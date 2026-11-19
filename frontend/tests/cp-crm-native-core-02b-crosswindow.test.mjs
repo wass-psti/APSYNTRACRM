@@ -7,6 +7,7 @@ import {
   keyFor,
   verifyNativeReply,
   signedInvalidation,
+  matchingSignedTabPair,
 } from "../../scripts/cp-crm-native-core-02b-crosswindow.mjs";
 const source = readFileSync(
   new URL(
@@ -108,24 +109,79 @@ test("nonpersistent invalidation sends scope and identifiers only, never applica
     /token|email|document|items|content|password/i,
   );
 });
+test("two-tab inventory refuses different signed users even when the workspace matches", () => {
+  const primary = {
+    page: { name: "p1" },
+    signed: true,
+    profileActive: true,
+    accountKey: "0123456789abcdef",
+    workspaceKey: "1111111111111111",
+  };
+  const other = {
+    page: { name: "p2" },
+    signed: true,
+    profileActive: true,
+    accountKey: "2222222222222222",
+    workspaceKey: "1111111111111111",
+  };
+  assert.equal(
+    matchingSignedTabPair([primary, other], primary.accountKey),
+    null,
+  );
+  assert.equal(matchingSignedTabPair([primary], primary.accountKey), null);
+  assert.equal(
+    matchingSignedTabPair(
+      [
+        primary,
+        { ...primary, page: { name: "p3" }, workspaceKey: "2222222222222222" },
+      ],
+      primary.accountKey,
+    ),
+    null,
+  );
+  assert.equal(
+    matchingSignedTabPair(
+      [primary, { ...primary, page: primary.page }],
+      primary.accountKey,
+    ),
+    null,
+  );
+  assert.equal(
+    matchingSignedTabPair(
+      [primary, { ...primary, page: { name: "p3" }, signed: false }],
+      primary.accountKey,
+    ),
+    null,
+  );
+  assert.equal(
+    matchingSignedTabPair(
+      [primary, { ...primary, page: { name: "p3" }, profileActive: false }],
+      primary.accountKey,
+    ),
+    null,
+  );
+  const eligible = { ...primary, page: { name: "p4" } };
+  assert.deepEqual(
+    matchingSignedTabPair([primary, other, eligible], primary.accountKey),
+    { original: primary, peer: eligible },
+  );
+});
 test("two-window test performs read-only signed app navigation and observes real server reconciliation", () => {
   for (const contract of [
     "connectOverCDP",
     "native_application_board_context",
     "waitForResponse",
     "page.reload(",
-    "peer?.close()",
+    "peerOriginal",
     "BroadcastChannel",
     "crossWindow",
   ])
     assert.ok(source.includes(contract), contract);
   assert.match(source, /businessWrites:\s*0,\s*permissionWrites:\s*0/);
   assert.doesNotMatch(source, /context\(\)\.newPage\(\)/);
-  assert.match(source, /waitForEvent\("popup"/);
-  assert.match(source, /window\.open\(url, "_blank"\)/);
-  assert.match(source, /second tab requires its own genuine signed session/);
-  assert.match(source, /candidate === page/);
-  assert.match(source, /peerCreated/);
+  assert.doesNotMatch(source, /context\(\)\.newPage\(\)|window\.open\(/);
+  assert.match(source, /matchingSignedTabPair\(inventory, expectedKey\)/);
+  assert.match(source, /same assigned employee and workspace are required/);
   assert.match(source, /peerOriginal/);
   for (const text of [
     "localStorage",

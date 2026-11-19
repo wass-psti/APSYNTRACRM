@@ -36,6 +36,30 @@ export function verifyNativeReply({
     (!workspaceId || p.workspaceId === workspaceId)
   );
 }
+/** Identity decisions must use signed server context, never visible role labels.
+ * An existing tab is eligible only when it is the same independently signed
+ * user AND workspace. A different valid employee remains untouched. */
+export function matchingSignedTabPair(entries, expectedKey) {
+  if (!Array.isArray(entries) || !/^[0-9a-f]{16}$/.test(expectedKey || ""))
+    throw Error("Invalid signed acceptance inventory");
+  const assigned = entries.filter(
+    (item) =>
+      item?.signed === true &&
+      item?.profileActive === true &&
+      item?.accountKey === expectedKey &&
+      /^[0-9a-f]{16}$/.test(item?.workspaceKey || ""),
+  );
+  if (assigned.length < 2) return null;
+  const original = assigned[0];
+  const peer = assigned.find(
+    (item) =>
+      item !== original &&
+      item.workspaceKey === original.workspaceKey &&
+      item.page !== original.page,
+  );
+  return peer ? { original, peer } : null;
+}
+
 export const signedInvalidation = (userId, workspaceId, boardId) => ({
   version: 1,
   type: "invalidate",
@@ -77,34 +101,94 @@ if (import.meta.url === pathToFileURL(process.argv[1] || "/dev/null").href) {
     );
     process.exitCode = 2;
   } else {
-    let browser,
-      page,
-      peer,
-      original,
-      peerOriginal,
-      peerCreated = false;
+    let browser, page, peer, original, peerOriginal;
     try {
       const { chromium } = await import("playwright");
       browser = await chromium.connectOverCDP(cdp);
+      // Preflight both tabs with the authoritative signed context RPC BEFORE
+      // navigating either tab to an app route. Do not touch a different user.
       const pages = browser
         .contexts()
         .flatMap((c) => c.pages())
         .filter((p) => p.url().startsWith(base));
+      const inventory = [];
       for (const candidate of pages) {
         const body = await candidate
           .locator("body")
           .innerText({ timeout: 5000 })
           .catch(() => "");
-        if (eligibleSignedPage(body, candidate.url())) {
-          page = candidate;
-          break;
-        }
-      }
-      if (!page)
-        throw Error(
-          "No genuine signed CRM tab; sign in directly with the assigned employee account",
+        if (!eligibleSignedPage(body, candidate.url())) continue;
+        const signedResponse = candidate.waitForResponse(
+          (r) =>
+            new URL(r.url()).pathname.endsWith(
+              "/rest/v1/rpc/wm_auth_access_context",
+            ),
+          { timeout: 25000 },
         );
+        void signedResponse.catch(() => {});
+        await candidate.reload({
+          waitUntil: "domcontentloaded",
+          timeout: 45000,
+        });
+        const response = await signedResponse;
+        if (response.status() !== 200) continue;
+        const raw = await response.json();
+        const context = Array.isArray(raw) ? raw[0] : raw;
+        if (
+          !uuid.test(context?.user_id || "") ||
+          !uuid.test(context?.workspace_id || "")
+        )
+          continue;
+        // A DOMContentLoaded event precedes async session restoration. Wait
+        // for signed UI instead of wrongly classifying a loading shell.
+        await candidate
+          .waitForFunction(
+            () => {
+              const body = document.body?.innerText || "";
+              return (
+                body.includes("Secure session") &&
+                body.includes("Sign out") &&
+                !body.includes("Sign in with your existing work account")
+              );
+            },
+            null,
+            { timeout: 15000 },
+          )
+          .catch(() => {});
+        const refreshedBody = await candidate
+          .locator("body")
+          .innerText({ timeout: 15000 })
+          .catch(() => "");
+        inventory.push({
+          page: candidate,
+          signed: eligibleSignedPage(refreshedBody, candidate.url()),
+          profileActive: context?.profile?.status === "active",
+          accountKey: keyFor(context.user_id),
+          workspaceKey: keyFor(context.workspace_id),
+        });
+      }
+      const pair = matchingSignedTabPair(inventory, expectedKey);
+      if (!pair) {
+        const matching = inventory.filter(
+          (x) => x.signed && x.accountKey === expectedKey,
+        );
+        report.preflight = {
+          validSignedTabs: inventory.filter((x) => x.signed).length,
+          matchingEmployeeTabs: matching.length,
+          matchingWorkspaceTabs: matching.length
+            ? matching.filter(
+                (x) => x.workspaceKey === matching[0].workspaceKey,
+              ).length
+            : 0,
+        };
+        throw Error(
+          "BLOCKED: two independently signed tabs for the same assigned employee and workspace are required",
+        );
+      }
+      page = pair.original.page;
+      peer = pair.peer.page;
       original = page.url();
+      peerOriginal = peer.url();
       let signedContext = null;
       async function validatePhase(target, action, phase) {
         const observed = target.waitForResponse(
@@ -159,45 +243,22 @@ if (import.meta.url === pathToFileURL(process.argv[1] || "/dev/null").href) {
         () => page.reload({ waitUntil: "domcontentloaded", timeout: 45000 }),
         "refresh",
       );
-      // Prefer a separately, genuinely signed CRM tab already present in the
-      // same authorized QA browser profile. No tab credentials are copied.
-      for (const candidate of page.context().pages()) {
-        if (candidate === page || !candidate.url().startsWith(base)) continue;
-        const candidateBody = await candidate
-          .locator("body")
-          .innerText({ timeout: 5000 })
-          .catch(() => "");
-        if (eligibleSignedPage(candidateBody, candidate.url())) {
-          peer = candidate;
-          peerOriginal = candidate.url();
-          break;
-        }
-      }
-      if (!peer) {
-        // A normal opener-created tab may or may not inherit a browser session.
-        // This is not a guarantee or a substitute for independent sign-in.
-        const popup = page.waitForEvent("popup", { timeout: 10000 });
-        void popup.catch(() => {});
-        await page.evaluate(
-          (url) => window.open(url, "_blank"),
-          base + app.route,
-        );
-        peer = await popup;
-        peerCreated = true;
-      }
+      // Same-account signed peer was selected BEFORE either tab's app route
+      // navigation, and no other account has been navigated or mutated.
       await peer.goto(base + app.route, {
         waitUntil: "domcontentloaded",
         timeout: 45000,
       });
       const peerBody = await peer.locator("body").innerText({ timeout: 15000 });
       if (!eligibleSignedPage(peerBody, peer.url()))
-        throw Error(
-          "BLOCKED: second tab requires its own genuine signed session",
-        );
-      // Observe the signed resolver from the beginning of a fresh reload.
+        throw Error("BLOCKED: second tab lost its genuine signed session");
       await validatePhase(
         peer,
-        () => peer.reload({ waitUntil: "domcontentloaded", timeout: 45000 }),
+        () =>
+          peer.reload({
+            waitUntil: "domcontentloaded",
+            timeout: 45000,
+          }),
         "reopen",
       );
       const crossRead = peer.waitForResponse(
@@ -249,8 +310,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] || "/dev/null").href) {
       report.blocker = error.message.slice(0, 230);
       process.exitCode = 1;
     } finally {
-      if (peerCreated) await peer?.close().catch(() => {});
-      else if (peer && peerOriginal)
+      if (peer && peerOriginal)
         await peer
           .goto(peerOriginal, { waitUntil: "domcontentloaded", timeout: 30000 })
           .catch(() => {});
