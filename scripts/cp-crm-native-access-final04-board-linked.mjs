@@ -6,7 +6,6 @@
  */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { chromium } from "playwright";
 import { BOARD_MODULES } from "../frontend/board/services/manifest.js";
 import { pathToFileURL } from "node:url";
 const BASE = "https://wass-psti.github.io/APSYNTRACRM/";
@@ -109,6 +108,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] || "/dev/null").href) {
       permissionWrites: 0,
     };
     try {
+      const { chromium } = await import("playwright");
       expected = validateAssignedBoards(
         JSON.parse(readFileSync(assignmentFile, "utf8")).assignments,
       );
