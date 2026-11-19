@@ -37,7 +37,7 @@ Both migrations were first executed inside rollback-only transactions against th
 - git diff --check: PASS.
 - Supabase transactional migration dry-runs: PASS.
 - Supabase catalog verification: PASS.
-- Supabase performance advisor no longer reports multiple permissive SELECT policies for public.tradelink_documents. Remaining global advisor findings are existing unrelated project findings; no unrelated policy or function was changed.
+- Migration-source manifest: PASS (222 recovered baseline migrations and 34 forward migrations, including both new files).\n- Supabase performance advisor no longer reports multiple permissive SELECT policies for public.tradelink_documents. Remaining global advisor findings are existing unrelated project findings; no unrelated policy or function was changed.
 
 ## Explicitly not claimed
 

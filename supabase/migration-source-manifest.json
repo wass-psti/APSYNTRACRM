@@ -1792,6 +1792,20 @@
       "file": "20261119033532_cp_crm_conn02f_native_context_compatibility.sql",
       "bytes": 6501,
       "sha256": "bc17a920a07724ab1220bc0b2fb4f1be6d49a6f25bb6ff0ed5e9565ae4c30b1c"
+    },
+    {
+      "version": "20261119073346",
+      "name": "tradelink_user_draft_creation",
+      "file": "20261119073346_tradelink_user_draft_creation.sql",
+      "bytes": 23270,
+      "sha256": "70a1b896a8503b5eb4706c5d1c170012c1e971eea2d8312d6c0f258a46f7413a"
+    },
+    {
+      "version": "20261119073608",
+      "name": "tradelink_document_read_policy_consolidation",
+      "file": "20261119073608_tradelink_document_read_policy_consolidation.sql",
+      "bytes": 2865,
+      "sha256": "c615e1e51ac9f568b9e9859692a1a5409e0a6204da56cb23f715df7217473003"
     }
   ]
 }
