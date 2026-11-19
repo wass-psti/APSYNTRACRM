@@ -71,7 +71,6 @@ $function$;
 REVOKE ALL ON FUNCTION public.has_module_access(text,uuid) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.has_module_access(text,uuid) TO authenticated;
 
-[executed on device: Informations-MacBook-Pro.local (10f2521c-3155-45ea-a2df-c3e0f07be3de)]
 
 -- CP-NATIVE-APP-ACCESS-01 TradeLink exact-record projection baseline.
 -- Only the TradeLink function is included here; unrelated native application
