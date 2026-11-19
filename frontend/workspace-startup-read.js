@@ -1,3 +1,15 @@
+/** A Board-catalog failure may be bypassed for the four native routes only
+ * when the catalog read is indeterminate. A confirmed denial, invalid scope,
+ * or missing resource must not be misreported as a temporary outage. The
+ * native application's independent signed resolver remains authoritative. */
+export function transientBoardCatalogFailure(error){
+ const status=Number(error?.status);
+ if(status>=400&&status<500&&status!==408&&status!==429)return false;
+ return [408,429,500,502,503,504].includes(status)||
+  (Number.isInteger(status)&&status>=500&&status<=599)||
+  ['NETWORK_UNAVAILABLE','REQUEST_TIMEOUT'].includes(error?.code);
+}
+
 /** Two independent, signed, post-context read operations. No caching,
  * background work, identity data, or permission fallbacks. */
 export async function readWorkspaceStartup({
@@ -8,7 +20,7 @@ export async function readWorkspaceStartup({
  const boardRead=Promise.resolve().then(listBoards).then(
   boards=>({boards,boardCatalogError:null}),
   error=>{
-   if(allowBoardListFailure!==true)throw error;
+   if(allowBoardListFailure!==true||!transientBoardCatalogFailure(error))throw error;
    return {boards:[],boardCatalogError:error};
   }
  );

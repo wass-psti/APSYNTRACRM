@@ -2116,9 +2116,12 @@ async function refreshSignedCrmRole({force=false}={}){
     state.context?.workspace_id===workspace&&!platformSyncEditInProgress())render();
 }
 async function refreshWorkspace(){
- boardCacheChannel.stop();db.invalidateBoardCache();
  const priorIdentity=state.context?.user_id,priorWorkspace=state.context?.workspace_id;
  const incomingContext=await startupCriticalPath.measure('workspace-context',()=>db.context());
+ // A transient context-read failure must not tear down the existing signed
+ // board sync or invalidate the active board cache. Rotate only after the
+ // authoritative context has resolved; identity/scope resets follow below.
+ boardCacheChannel.stop();db.invalidateBoardCache();
  state.context=mergeProfileAvatarContext(state.context,incomingContext);
  if(priorIdentity!==state.context?.user_id||priorWorkspace!==state.context?.workspace_id){
   trashBoardSelection.clear();
