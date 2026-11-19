@@ -29,8 +29,11 @@ test('acceptance uses an existing signed employee session and never submits busi
 });
 
 test('generic board denial simulation is ephemeral and does not modify backend policies',()=>{
-  assert.doesNotMatch(script,/wm_list_boards/);
+  assert.match(script,/wm_list_boards/);
   assert.match(script,/page\.route\(/);
+  assert.match(script,/await page\.reload\(/);
+  assert.match(script,/genericDenials\.some\(event=>event\.rpc==='wm_list_boards'\)/);
+  assert.doesNotMatch(script,/browser\.close\(\)/);
   assert.match(script,/route\.fulfill\(\{status:403/);
   assert.match(script,/productionPoliciesChanged=false/);
   assert.match(script,/list_module_activity/);

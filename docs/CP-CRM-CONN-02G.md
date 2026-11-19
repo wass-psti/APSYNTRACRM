@@ -58,14 +58,17 @@ The initial read-only production pass confirmed native resolver and domain reads
 
 A real signed employee browser session was used with the locally corrected frontend modules served on the production application origin. Playwright temporarily denied these generic board RPCs:
 
+- `wm_list_boards`
 - `work_board_access`
 - `wm_get_board_shell`
 - `wm_get_board_items_page`
 - `wm_board_ui_read`
 
-The shared `wm_list_boards` workspace catalog was intentionally preserved: it supplies the CRM workspace shell/navigation and is not the per-board view permission under test.
+The acceptance runner now reloads each native route while the temporary denial is active. This exercises cold workspace startup with `wm_list_boards` unavailable, using the native-route catalog-failure fallback delivered by CP-NATIVE-APP-ACCESS-02. The workspace shell may report the generic catalog as temporarily unavailable; the native application must still resolve its canonical board and load its own domain data.
 
-All four applications passed under the temporary denial. Each native resolver returned HTTP 200, each expected application-domain read returned HTTP 200, all expected native interface controls remained visible, and no generic `work_board_access` view request was issued. Best-effort edit/manage probes returned simulated HTTP 403 and did not block native startup. JavaScript page errors and failed network requests were both zero.
+The four applications passed the earlier production-origin simulation with generic per-board access and shell/item/layout reads denied. Each native resolver returned HTTP 200, each expected application-domain read returned HTTP 200, all expected native interface controls remained visible, and no generic `work_board_access` view request was issued. Best-effort edit/manage probes returned simulated HTTP 403 and did not block native startup. JavaScript page errors and failed network requests were both zero.
+
+The reusable acceptance script has since been strengthened to also deny `wm_list_boards` and reload each native route, exercising the cold-start catalog-failure fallback. That final five-RPC denial pass against a genuine employee session remains pending; it has not been inferred from the earlier four-RPC run or from administrator access.
 
 This was a browser-only simulation against production-origin signed session state. The local frontend source was injected for the test and the generic RPC responses were overridden in Playwright. No Supabase policies, roles, memberships, application assignments, or production data were modified. Final acceptance must be repeated against the merged and deployed follow-up commit.
 
@@ -101,7 +104,7 @@ node scripts/cp-crm-conn-02g-employee-browser-acceptance.mjs \
   --simulate-generic-denials
 ```
 
-The script accepts an already signed employee application tab, confirms the TimeTracker module role is `Employee`, and does not automate authentication or submit business writes. The generic-denial mode deliberately preserves the shared `wm_list_boards` workspace catalog while denying per-board view/shell reads.
+The script accepts an already signed employee application tab, confirms the TimeTracker module role is `Employee`, and does not automate authentication or submit business writes. In generic-denial mode it denies the workspace board catalog plus generic board view/shell/item/layout reads during a cold reload of each native application route. It restores the original URL and disconnects without closing the user-owned browser or signed-in tab.
 
 ## Scope and closeout
 
@@ -112,4 +115,4 @@ The script accepts an already signed employee application tab, confirms the Time
 - No production business data was written.
 - Existing native domain workflow entry points are visible and their read paths work for the tested employee session.
 
-**Current result:** Standard production read-only startup passed for all four applications. The follow-up correction also passed a four-application production-origin browser simulation with generic per-board view/shell RPCs denied. Final acceptance against the merged and deployed follow-up commit remains pending. Production write/transaction acceptance remains outside this read-only runtime milestone because it would create or alter real business records.
+**Current result:** Standard production read-only startup passed for all four applications. The follow-up correction passed a four-application production-origin browser simulation with generic per-board view/shell/item/layout RPCs denied. The final cold-start test with `wm_list_boards` also denied is implemented in the acceptance runner but still requires a genuine signed employee browser session after deployment. Production write/transaction acceptance remains outside this read-only runtime milestone because it would create or alter real business records.

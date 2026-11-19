@@ -9,7 +9,11 @@
  * Uses an already signed employee tab. It does not automate login, inspect cookies,
  * tokens or browser storage, click workflow actions, submit forms, or write records.
  * Generic-denial simulation is an ephemeral Playwright route override only; it
- * never changes production database policies or permissions.
+ * never changes production database policies or permissions. The shared workspace
+ * catalog is denied during each native-route cold start to verify startup fallback.
+ *
+ * The connected browser belongs to the user. This process disconnects by exiting;
+ * it never calls Browser.close or closes the user's tab/session.
  */
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
@@ -18,6 +22,7 @@ const BASE='https://wass-psti.github.io/APSYNTRACRM/';
 const cdpUrl=process.argv.find(value=>value.startsWith('--cdp-url='))?.slice('--cdp-url='.length);
 const simulateGenericDenials=process.argv.includes('--simulate-generic-denials');
 const deniedGenericRpcs=new Set([
+  'wm_list_boards',
   'work_board_access',
   'wm_get_board_shell',
   'wm_get_board_items_page',
@@ -50,13 +55,15 @@ const scenarios=[
   },
 ];
 
+let exitCode=0;
 if(!cdpUrl||!/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)){
   console.error('Provide --cdp-url=http://127.0.0.1:<existing-debug-port> for an existing signed employee browser.');
-  process.exitCode=2;
+  exitCode=2;
 }else{
   const browser=await chromium.connectOverCDP(cdpUrl);
   let page;
   let originalUrl;
+  let failure=null;
   const rpcEvents=[];
   const rpcRequests=[];
   const pageErrors=[];
@@ -75,11 +82,6 @@ if(!cdpUrl||!/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)){
     }
     assert.ok(page,'An existing signed employee application tab must be open; login is never automated.');
     originalUrl=page.url();
-    await page.goto(`${BASE}#/overview`,{waitUntil:'domcontentloaded',timeout:45000});
-    await page.waitForFunction(()=>{
-      const text=document.body.innerText;
-      return text.includes('Secure session')&&text.includes('Workspace member');
-    },null,{timeout:20000});
 
     page.on('pageerror',error=>pageErrors.push(error.message));
     page.on('requestfailed',request=>{
@@ -114,6 +116,9 @@ if(!cdpUrl||!/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)){
 
     for(const scenario of scenarios){
       console.log(`Checking ${scenario.label}...`);
+      // First set the native route, then reload it so workspace startup itself is
+      // exercised with the generic board catalog denial in place.
+      await page.goto(`${BASE}${scenario.route}`,{waitUntil:'domcontentloaded',timeout:45000});
       const eventStart=rpcEvents.length;
       const requestStart=rpcRequests.length;
       const nativeResolverPromise=page.waitForResponse(response=>{
@@ -125,18 +130,20 @@ if(!cdpUrl||!/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)){
         const url=new URL(response.url());
         return url.pathname.endsWith('/rpc/'+rpc)&&response.status()===200;
       },{timeout:30000}));
-      await page.goto(`${BASE}${scenario.route}`,{waitUntil:'domcontentloaded',timeout:45000});
+      await page.reload({waitUntil:'domcontentloaded',timeout:45000});
       const [nativeResponse]=await Promise.all([nativeResolverPromise,...domainPromises]);
       const payload=await nativeResponse.json();
       const context=Array.isArray(payload)?payload[0]:payload;
+      await page.waitForFunction(()=>document.body.innerText.includes('Secure session')&&
+        document.body.innerText.includes('Workspace member'),null,{timeout:20000});
       await page.waitForFunction(labels=>labels.every(label=>document.body.innerText.toLowerCase().includes(label.toLowerCase())),scenario.visible,{timeout:35000});
-      await page.waitForTimeout(1500);
+      await page.waitForTimeout(1200);
 
       const observed=rpcEvents.slice(eventStart);
       const domain=observed.filter(event=>scenario.domainRpcs.includes(event.rpc));
       const genericDenials=observed.filter(event=>deniedGenericRpcs.has(event.rpc)&&event.status===403);
       const genericViewRequests=rpcRequests.slice(requestStart).filter(request=>
-        request.rpc==='work_board_access'&&/\"p_required\"\s*:\s*\"view\"/.test(request.body));
+        request.rpc==='work_board_access'&&/"p_required"\s*:\s*"view"/.test(request.body));
       const result={
         application:scenario.label,
         resolverStatus:nativeResponse.status(),
@@ -150,7 +157,7 @@ if(!cdpUrl||!/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)){
         genericViewPermissionRequests:genericViewRequests.length,
       };
       report.applications.push(result);
-      console.log(`PASS ${scenario.label}: resolver and domain reads verified`);
+      console.log(`PASS ${scenario.label}: resolver, domain reads and native interface verified`);
 
       assert.equal(nativeResponse.status(),200,`${scenario.label} native resolver`);
       assert.equal(context?.moduleId,scenario.moduleId,`${scenario.label} module identity`);
@@ -161,8 +168,10 @@ if(!cdpUrl||!/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)){
       for(const rpc of scenario.domainRpcs)
         assert.ok(domain.some(event=>event.rpc===rpc&&event.status===200),`${scenario.label} ${rpc} read`);
       assert.equal(genericViewRequests.length,0,`${scenario.label} must not request generic board view permission`);
-      if(simulateGenericDenials)
+      if(simulateGenericDenials){
         assert.ok(genericDenials.some(event=>event.rpc==='work_board_access'),`${scenario.label} generic board-access denial was not exercised`);
+        assert.ok(genericDenials.some(event=>event.rpc==='wm_list_boards'),`${scenario.label} generic board-catalog denial was not exercised`);
+      }
     }
 
     const fuelTrackRole=report.applications.find(item=>item.application==='FuelTrack+')?.moduleRole;
@@ -177,7 +186,7 @@ if(!cdpUrl||!/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)){
     assert.deepEqual(unexpectedHttpErrors,[],'No unexpected HTTP errors');
     report.optionalActivityDenials=optionalActivityDenials;
     report.genericViewPermissionRequests=rpcRequests.filter(request=>
-      request.rpc==='work_board_access'&&/\"p_required\"\s*:\s*\"view\"/.test(request.body)).length;
+      request.rpc==='work_board_access'&&/"p_required"\s*:\s*"view"/.test(request.body)).length;
     report.outcome='PASS';
     report.pageErrors=pageErrors.length;
     report.failedRequests=failedRequests.length;
@@ -186,11 +195,23 @@ if(!cdpUrl||!/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)){
     report.productionDataWritten=false;
     report.workflowActionsSubmitted=false;
     console.log(JSON.stringify(report,null,2));
+  }catch(error){
+    failure=error;
   }finally{
     if(page&&originalUrl&&!page.isClosed()){
       await page.unroute('**/rest/v1/rpc/**').catch(()=>{});
       await page.goto(originalUrl,{waitUntil:'domcontentloaded',timeout:45000}).catch(()=>{});
     }
-    await browser.close();
+  }
+
+  if(failure){
+    console.error(failure);
+    exitCode=1;
   }
 }
+
+// Exit the CLI process without issuing Browser.close: the browser and signed-in
+// employee tab are user-owned resources and must remain open after acceptance.
+await new Promise(resolve=>process.stdout.write('',resolve));
+await new Promise(resolve=>process.stderr.write('',resolve));
+process.exit(exitCode);
