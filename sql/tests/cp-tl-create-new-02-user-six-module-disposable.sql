@@ -170,11 +170,12 @@ BEGIN
   THEN RAISE EXCEPTION 'Revision-two document/Board persistence mismatch for %',types[idx]; END IF;
 
   receipt:=public.tl03_document_save(board,doc_id,1,'update',revised,'draft');
-  IF receipt->>'idempotent'<>'true'
-   OR receipt->>'revision'<>'2'
-   OR (SELECT count(*) FROM public.tradelink_document_events e
-       WHERE e.document_id=doc_id)<>2
-  THEN RAISE EXCEPTION 'Idempotent update replay mismatch for %',types[idx]; END IF;
+  SELECT count(*) INTO event_count FROM public.tradelink_document_events e
+   WHERE e.document_id=doc_id;
+  IF receipt->>'idempotent'<>'true' OR receipt->>'revision'<>'2'
+   OR event_count<>2
+  THEN RAISE EXCEPTION 'Idempotent update replay mismatch for %: receipt %, document events %',
+   types[idx],receipt,event_count; END IF;
 
   stale:=pg_catalog.jsonb_set(revised,'{remarks}',
    pg_catalog.to_jsonb('CP02 stale competing payload · '||types[idx]));
