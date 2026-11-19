@@ -62,6 +62,7 @@ import {FuelTrackV3ReceiptStorageClient,validFuelTrackReceiptFile} from './fuelt
 import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns,
  isTradeLinkBoard} from './tradelink-board-items.js';
 import {TRADELINK_APPLICATION_ROUTE,tradeLinkApplicationHref,parseTradeLinkApplicationRoute} from './tradelink-application-route.js';
+import {MRH_APPLICATION_ROUTE,parseMaterialRequestHubRoute} from './apps/MaterialRequestHub/route.js';
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows,
  searchTradeLinkBoardItems,captureTradeLinkTabMotion,mountTradeLinkTabMotion} from './tradelink-ui.js';
 import {renderTradeLinkSavedDocumentOutput,mountTradeLinkSavedDocumentOutput,
@@ -213,6 +214,7 @@ const BOARD_BASE_COLUMNS=[{key:'record',title:'Item name'},{key:'status',title:'
  {key:'owner',title:'Owner'},{key:'due',title:'Due date'},{key:'actions',title:'Actions'}];
 const root=document.getElementById('app');
 let fm1Module=null;
+let mrhModule=null;
 const auth=new AuthClient();
 const db=new DomainApi(auth);
 const boardCacheChannel=new BoardCacheChannel({auth,onInvalidate:({boardId,revision,userId,workspaceId})=>{
@@ -558,7 +560,7 @@ function sidebar(){
  // Every link comes from a registered host route or a board returned by the
  // signed, workspace-scoped board catalog. Do not invent module access.
  const boardApplications=BOARD_MODULES.filter(module=>
-  !STANDALONE_APPLICATION_MODULE_KEYS.has(module.key)).map(module=>{
+  !STANDALONE_APPLICATION_MODULE_KEYS.has(module.key)&&module.key!=='materials').map(module=>{
    const board=state.boards.find(row=>moduleByBoardName(row.name)?.key===module.key);
    return board?sidebarNav('#/boards/'+board.id,module.name,'boards',
     active('recent:'+board.id)):'';
@@ -571,6 +573,7 @@ function sidebar(){
   sidebarNav('#/fund-tracker','Fund Tracker','finance',active('fund-tracker'))+
   sidebarNav(FUELTRACK_V3_APPLICATION_ROUTE,'FuelTrack+','fueltrack',active('fueltrack'))+
   sidebarNav(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',active('tradelink'))+
+   sidebarNav(MRH_APPLICATION_ROUTE,'Material Request Hub','boards',active('material-request-hub'))+
   (state.boards.some(b=>moduleByBoardName(b.name)?.key==='toolbox')?sidebarNav(TALKBOX_APPLICATION_ROUTE,'TalkBox','boards',active('talkbox')):'')+
   boardApplications+
   (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',active('foundation')):'')+
@@ -655,7 +658,7 @@ let shellSidebarSignature=null;
 let shellRoute=null;
 function shell(body){
  stopAuthVisuals();
- const crumb=state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.fuelTrackStandalone?'FuelTrack+':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':state.view==='invitation'?'Workspace invitation':'Settings';
+ const crumb=state.view==='mrh'?'Material Request Hub':state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.fuelTrackStandalone?'FuelTrack+':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':state.view==='invitation'?'Workspace invitation':'Settings';
  const identity=[state.context?.user_id,state.context?.workspace_id].join('|');
  const sidebarSignature=JSON.stringify([state.ttStandalone,state.frtStandalone,state.tlStandalone,state.fuelTrackStandalone,state.roleVerified,state.adminVerified,state.boardCatalogError,name(),
   state.context?.profile?.platform_role,state.crmRoleSnapshot?.effectiveRole,
@@ -716,6 +719,7 @@ function shell(body){
   root.querySelector('.main')?.classList.toggle('aps-fund-tracker-shell',state.frtStandalone===true||
    (state.view==='board'&&state.boardId===FRT_BOARD_ID&&state.tab==='finance'));
  root.querySelector('.main')?.classList.toggle('aps-tradelink-shell',state.tlStandalone===true);
+  root.querySelector('.main')?.classList.toggle('aps-mrh-shell',state.view==='mrh');
  root.querySelector('.main')?.classList.toggle('aps-fueltrack-shell',state.fuelTrackStandalone===true);
  root.querySelector('.main')?.classList.toggle('aps-overview-shell',state.view==='overview');
  root.querySelector('.main')?.classList.toggle('aps-fm1-shell',state.view==='fm1');
@@ -1452,8 +1456,9 @@ function render(){
   state.boardItemSearch='';state.boardItemSearchBoard=null;
   boardItemFilterScope=filterScope;
  }
- if(!state.context){fm1Module?.unmountFm1Application();closeTradeLinkSavedDocumentOutput();renderLogin();return;}
+ if(!state.context){fm1Module?.unmountFm1Application();mrhModule?.unmountMaterialRequestHubApplication();closeTradeLinkSavedDocumentOutput();renderLogin();return;}
  if(state.view!=='fm1')fm1Module?.unmountFm1Application();
+  if(state.view!=='mrh')mrhModule?.unmountMaterialRequestHubApplication();
  preserveTimeTrackerLogExpansion();
  captureTradeLinkTabMotion(root);
  if(state.view==='board')shell(boardPage());
@@ -1473,6 +1478,14 @@ function render(){
  }));
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='fm1'){shell('<div id="fm1-application-root"></div>');fm1Module?.mountFm1Application(root.querySelector('#fm1-application-root'),{userId:state.context?.user_id,workspaceId:state.context?.workspace_id,api:db});}
+  else if(state.view==='mrh'){
+   shell('<div id="mrh-application-root"></div>');
+   mrhModule?.mountMaterialRequestHubApplication(root.querySelector('#mrh-application-root'),{
+    auth,api:db,userId:state.context?.user_id,workspaceId:state.context?.workspace_id,
+    routeHash:location.hash,hasSourcingBoard:state.boards.some(b=>
+     b?.id===MATERIAL_SOURCING_BOARD_ID&&b.name==='Material Request Hub'&&b.status==='active')
+   });
+  }
  else if(state.view==='time-tracker')shell(renderTimeTrackerRouteUnavailable());
  else if(state.view==='tradelink')shell(renderTradeLinkRouteUnavailable(state.error));
  else if(state.view==='settings')shell(settingsPage());
@@ -4473,6 +4486,7 @@ async function onRoute(){
   state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkSection='overview';
  }
  if(parts[0]!=='fm1')fm1Module?.unmountFm1Application();
+  if(parts[0]!=='material-request-hub')mrhModule?.unmountMaterialRequestHubApplication();
  if(parts[0]==='invitations'&&parts[1]==='accept'){
   state.view='invitation';render();return;
  }
@@ -4483,7 +4497,20 @@ async function onRoute(){
   if(recordId&&recordId.length<=180)pendingNativeSearchSelection={applicationId:'fm1',recordId,boardId:null,
    userId:auth.userId,workspaceId:state.context?.workspace_id};
  }else if(parts[0]==='fm1'&&pendingNativeSearchSelection?.applicationId==='fm1')pendingNativeSearchSelection=null;
- if(parts[0]==='tradelink'){
+ if(parts[0]==='material-request-hub'){
+   const mrhRoute=parseMaterialRequestHubRoute(parts);
+   if(!mrhRoute){location.hash=MRH_APPLICATION_ROUTE+'/overview';return;}
+   if(mrhRoute.canonicalHash!==routePath)
+    history.replaceState(null,'',location.pathname+location.search+mrhRoute.canonicalHash);
+   const seq=++routeSerial,actor=state.context?.user_id,workspace=state.context?.workspace_id;
+   mrhModule=await import('./apps/MaterialRequestHub/index.js');
+   if(seq!==routeSerial||state.context?.user_id!==actor||
+      state.context?.workspace_id!==workspace||
+      location.hash.split('?')[0]!==mrhRoute.canonicalHash)return;
+   state.view='mrh';state.boardId=null;state.board=null;state.boardUi=null;
+   state.loading=false;state.error=null;render();return;
+  }
+  if(parts[0]==='tradelink'){
   state.tlStandalone=true;
   const tradeLinkRoute=parseTradeLinkApplicationRoute(parts);
   if(!tradeLinkRoute){state.view='tradelink';state.error='Invalid TradeLink application route.';render();return;}
