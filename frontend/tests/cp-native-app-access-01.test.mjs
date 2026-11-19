@@ -88,6 +88,11 @@ test('FuelTrack receipt storage exception is path-specific and retains request-o
  assert.doesNotMatch(sql,/DROP POLICY IF EXISTS wm_board_files_read/);
 });
 
+test('two-tab synthetic browser fixture serves the native resolver module imported by DomainApi',()=>{
+ const browser=read('scripts/board-cache-two-tab-browser.mjs');
+ assert.match(browser,/\/frontend\/native-application-access\.js/);
+});
+
 test('TradeLink reviewer access exposes one assigned document projection, not a generic item list',()=>{
  const projection=section(sql,'CREATE OR REPLACE FUNCTION private.tl03_board_projection',
   'CREATE OR REPLACE FUNCTION public.tl03_board_projection');
