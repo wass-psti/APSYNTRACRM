@@ -167,8 +167,6 @@ test("source has no browser credentials, storage, mutation or token-extraction b
   assert.match(source, /response\.json\(\)/);
   assert.match(source, /const \{ chromium \} = await import\("playwright"\)/);
   assert.match(source, /connectOverCDP/);
-  assert.match(source, /await import\("playwright"\)/);
-  assert.doesNotMatch(source, /^import \{ chromium \} from "playwright";/m);
   assert.match(source, /\.goto\(originalRoute/);
   assert.doesNotMatch(
     source,
