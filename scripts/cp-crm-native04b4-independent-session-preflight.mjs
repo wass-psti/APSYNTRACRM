@@ -124,7 +124,6 @@ function parseArgs(args) {
 }
 
 async function observe(entry) {
-  // Browser automation is optional for offline/CI contract validation.
   const { chromium } = await import("playwright");
   const browser = await chromium.connectOverCDP(entry.endpoint, {
     timeout: 7000,

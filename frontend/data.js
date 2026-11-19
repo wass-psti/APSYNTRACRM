@@ -223,7 +223,7 @@ export class DomainApi {
   this.onBoardMutation=null;
   this.extendedRefsSupported=null;
  }
- invalidateBoardCache(boardId=null,{revision=null}={}){
+ invalidateBoardCache(boardId=null,{revision=null,invalidateContext=true}={}){
   if(boardId!==null){
    if(!validUuid(boardId))return false;
    const prior=this.boardReadCache.get(boardId);
@@ -239,8 +239,10 @@ export class DomainApi {
   this.readRequests.clear();
   this.effectiveAccessPending.clear();
   if(boardId===null){
-   this.contextReadGeneration++;
-   this.contextPending.clear();
+   if(invalidateContext===true){
+    this.contextReadGeneration++;
+    this.contextPending.clear();
+   }
    this.boardReadCache.clear();
   }
   else this.boardReadCache.delete(boardId);
