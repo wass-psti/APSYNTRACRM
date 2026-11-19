@@ -23,7 +23,7 @@ import {sidebarActiveRoute} from './sidebar-active-route.js';
 import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-visuals.js';
 import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board/presentation/catalog-visuals.js';
 import {BOARD_ITEM_PAGE_SIZE,DomainApi,validUuid} from './data.js';
-import {nativeApplicationModuleForBoardRoute} from './native-application-access.js';
+import {nativeApplicationModuleForBoardRoute,workspaceRouteAllowsBoardCatalogFallback} from './native-application-access.js';
 import {BoardCacheChannel} from './board/cache-channel.js';
 import {BoardTrashPermanentDeleteClient,eligibleTrashBoard} from './board/crud/trash-permanent-delete.js';
 import {modalRecoveryKind,installModalRecoveryAction} from './modal-recovery.js';
@@ -389,7 +389,7 @@ const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
 let performanceProfileAbort=null;
 const startupCriticalPath=createStartupCriticalPath();
-const state={performanceBusy:false,performanceReport:null,context:null,crmRoleSnapshot:null,workspaceRelationSnapshot:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',boardItemSearch:'',mrhTrackerFilters:{...MATERIAL_TRACKER_DEFAULT_FILTERS},mrhTrackerScope:'',mrhAddView:false,mrhAddBusy:false,groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,boardPageBusy:false,boardPageError:'',issues:[],edit:false,boardManage:false,
+const state={performanceBusy:false,performanceReport:null,context:null,boardCatalogError:'',crmRoleSnapshot:null,workspaceRelationSnapshot:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',boardItemSearch:'',mrhTrackerFilters:{...MATERIAL_TRACKER_DEFAULT_FILTERS},mrhTrackerScope:'',mrhAddView:false,mrhAddBusy:false,groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,boardPageBusy:false,boardPageError:'',issues:[],edit:false,boardManage:false,
   view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceView:'tracker',frtStatusFilter:'all',ttStandalone:false,frtStandalone:false,tlStandalone:false,fuelTrackStandalone:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtExpandedRequestIds:[],ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttLogSelectedIds:[],ttLogAdminEditor:null,ttLogAdminDeleteConfirm:null,ttLogAdminBusy:false,ttLogAdminError:'',ttLogAdminSuccess:'',ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkAnalytics:null,tradeLinkAnalyticsBusy:false,tradeLinkAnalyticsRunId:0,tradeLinkAnalyticsError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,adminVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleSection:'applications',userRoleBoardSearch:'',userRoleBatchMode:false,userRoleBatchSelected:[],userRoleBatchMemberSearch:'',userRoleBatchIdentity:'',userRoleBatchScope:'module',userRoleBatchResource:'',userRoleBatchRole:'',userRoleBatchAction:'assign',userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
@@ -611,7 +611,7 @@ function sidebar(){
       '<span class="sidebar-board-initial sidebar-tone-'+tone+'" aria-hidden="true">'+
       e(title.slice(0,1).toUpperCase())+'</span>'+
       '<span class="nav-label">'+e(title)+'</span></a>';
-    }).join('')||'<div class="sidebar-empty-recent">No boards yet</div>')+`</nav>
+    }).join('')||(state.boardCatalogError?'<div class="sidebar-empty-recent">Board catalog unavailable</div>':'<div class="sidebar-empty-recent">No boards yet</div>'))+`</nav>
   </div>
  </aside>`;
 }
@@ -656,7 +656,7 @@ function shell(body){
  stopAuthVisuals();
  const crumb=state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.fuelTrackStandalone?'FuelTrack+':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':state.view==='invitation'?'Workspace invitation':'Settings';
  const identity=[state.context?.user_id,state.context?.workspace_id].join('|');
- const sidebarSignature=JSON.stringify([state.ttStandalone,state.frtStandalone,state.tlStandalone,state.fuelTrackStandalone,state.roleVerified,state.adminVerified,name(),
+ const sidebarSignature=JSON.stringify([state.ttStandalone,state.frtStandalone,state.tlStandalone,state.fuelTrackStandalone,state.roleVerified,state.adminVerified,state.boardCatalogError,name(),
   state.context?.profile?.platform_role,state.crmRoleSnapshot?.effectiveRole,
   state.workspaceRelationSnapshot?.relation,workspaceName(),
   state.boards.filter(board=>!isStandaloneApplicationBoard(board)).map(board=>[board.id,board.name]),
@@ -811,6 +811,7 @@ function overview(){
    <circle cx="145" cy="185" r="3" fill="#dce0ff" fill-opacity=".7"/>
   </svg>
  </section>
+ ` +(state.boardCatalogError?'<div class="panel boards-empty-state" role="alert"><strong>Board catalog temporarily unavailable</strong><p>'+e(state.boardCatalogError)+'</p><p>Native applications remain available. Retry workspace refresh to restore generic board discovery.</p><button type="button" class="secondary" data-action="refresh">Retry workspace refresh</button></div>':'')+ `
  <section class="stat-grid overview-stat-grid overview-entrance" aria-label="Workspace statistics">
   <div class="stat-card" role="group" aria-label="Active boards: `+countLabel(visibleBoards.length)+`">
    <span class="stat-icon">`+overviewIcon('grid')+`</span>
@@ -923,9 +924,11 @@ function boardsPage(){
   <p id="board-search-no-results" class="board-search-no-results" hidden>No boards match this search.</p>
   `+(items.length?
    '<div class="card-grid boards-catalog-grid boards-entrance" id="boards-catalog-grid">'+items.map(boardCard).join('')+'</div>':
-   '<div class="panel boards-empty-state" id="boards-catalog-grid">'+
-   empty(state.boardSearch?'No matching boards':state.showTrash?'Trash is empty':state.showArchived?'No archived boards':'No boards available',
-    state.boardSearch?'Try another search term or clear the search.':state.showTrash?'Moved boards can be restored here.':state.showArchived?'You have no archived boards in this workspace.':'Only boards allowed by your organization appear here.','')+'</div>')+`
+   (state.boardCatalogError?
+    '<div class="panel boards-empty-state" id="boards-catalog-grid" role="alert"><strong>Board catalog temporarily unavailable</strong><p>'+e(state.boardCatalogError)+'</p><p>Native applications remain available. Retry workspace refresh to restore the generic board catalog.</p><button type="button" class="secondary" data-action="refresh">Retry workspace refresh</button></div>':
+    '<div class="panel boards-empty-state" id="boards-catalog-grid">'+
+    empty(state.boardSearch?'No matching boards':state.showTrash?'Trash is empty':state.showArchived?'No archived boards':'No boards available',
+     state.boardSearch?'Try another search term or clear the search.':state.showTrash?'Moved boards can be restored here.':state.showArchived?'You have no archived boards in this workspace.':'Only boards allowed by your organization appear here.','')+'</div>'))+`
  </div>`;
 }
 function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle='Record',detail=state.board,columnLabels={},primaryEditable=false){
@@ -2132,14 +2135,18 @@ async function refreshWorkspace(){
  }
  // Both signed reads depend on the freshly validated access context, not
  // on each other. Parallelize only after context and recheck identity/scope
- // before committing either result; a denied board read remains fatal.
+ // before committing either result. Generic routes keep catalog failure fatal;
+ // overview/native routes may continue through their own signed data contracts.
  const signedId=state.context?.user_id,signedWorkspace=state.context?.workspace_id;
- const {boards,bootstrapVerified}=await readWorkspaceStartup({
+ const allowBoardListFailure=workspaceRouteAllowsBoardCatalogFallback(location.hash);
+ const {boards,bootstrapVerified,boardCatalogError}=await readWorkspaceStartup({
   listBoards:()=>startupCriticalPath.measure('board-list',()=>db.boards('active')),
   verifyBootstrap:()=>startupCriticalPath.measure('bootstrap-role',()=>roleConfig.bootstrapVerified()),
   isCurrent:()=>auth.isSignedIn&&auth.userId===signedId&&
-    state.context?.user_id===signedId&&state.context?.workspace_id===signedWorkspace
+    state.context?.user_id===signedId&&state.context?.workspace_id===signedWorkspace,
+  allowBoardListFailure
  });
+ state.boardCatalogError=boardCatalogError?errorMessage(boardCatalogError):'';
  state.boards=boards;
  state.user=auth.session?.user;
  // This role check is still signed and server-authoritative, never cached.
@@ -6611,7 +6618,8 @@ async function action(name,button){
    break;
  }
  case 'platform-sync-verify':{await platformSync.syncNow('manual',[]);break;}
- case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
+ case 'refresh':{try{await refreshWorkspace();render();toast(state.boardCatalogError?
+  'Native application access refreshed; board catalog remains unavailable.':'Workspace refreshed.');}catch(err){notice(err);}break;}
  case 'board-activity':{await openBoardActivity();break;}
  case 'board-import':{
   if(!activeBoardLayout()||!canManuallyEditBoard(state.board?.board,state.edit))

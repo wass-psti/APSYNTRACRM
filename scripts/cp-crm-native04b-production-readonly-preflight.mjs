@@ -8,14 +8,15 @@
  *   --cdp-url=http://127.0.0.1:9225
  */
 import assert from "node:assert/strict";
-import { chromium } from "playwright";
-
 const BASE = "https://wass-psti.github.io/APSYNTRACRM/";
 const cdp = process.argv.find((arg) => arg.startsWith("--cdp-url="))?.slice(10);
 if (!cdp || !/^http:\/\/127\.0\.0\.1:\d+$/.test(cdp)) {
   console.error("Provide --cdp-url=http://127.0.0.1:<existing-port>");
   process.exitCode = 2;
 } else {
+  // Keep the no-argument contract independent from optional browser tooling.
+  // CI jobs that only verify CLI validation do not need Playwright installed.
+  const { chromium } = await import("playwright");
   const browser = await chromium.connectOverCDP(cdp);
   let page;
   let oldUrl;

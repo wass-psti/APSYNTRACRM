@@ -59,6 +59,25 @@ export function normalizeNativeApplicationBoardContext(payload,{
  };
 }
 
+const NATIVE_APPLICATION_ROUTE_MODULES=Object.freeze({
+ 'time-tracker':'time-tracker',
+ 'fund-tracker':'fund-released-tracker',
+ 'fueltrack':'fueltrack-plus',
+ 'tradelink':'tradelink'
+});
+
+export function nativeApplicationModuleForRoute(hash){
+ const path=String(hash||'').split('?')[0].replace(/^#\/?/,'');
+ const route=path.split('/')[0];
+ return NATIVE_APPLICATION_ROUTE_MODULES[route]||null;
+}
+
+export function workspaceRouteAllowsBoardCatalogFallback(hash){
+ const path=String(hash||'').split('?')[0].replace(/^#\/?/,'');
+ const route=path.split('/')[0]||'overview';
+ return route==='overview'||nativeApplicationModuleForRoute(hash)!==null;
+}
+
 export function nativeApplicationModuleForBoardRoute(boardId,tab){
  const mapping={
   attendance:'time-tracker',

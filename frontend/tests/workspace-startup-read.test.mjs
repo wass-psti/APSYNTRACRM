@@ -22,6 +22,39 @@ test('server denial or network failure from board read remains fatal',async()=>{
   verifyBootstrap:()=>Promise.resolve(true),isCurrent:()=>true}),
   error=>error===denial);
 });
+test('native standalone startup can continue with an unavailable generic board catalog',async()=>{
+ const failure=Object.assign(new Error('Catalog temporarily unavailable'),{status:503});
+ const result=await readWorkspaceStartup({
+  listBoards:()=>Promise.reject(failure),
+  verifyBootstrap:()=>Promise.resolve(false),
+  isCurrent:()=>true,
+  allowBoardListFailure:true
+ });
+ assert.deepEqual(result.boards,[]);
+ assert.equal(result.bootstrapVerified,false);
+ assert.equal(result.boardCatalogError,failure);
+});
+
+test('native board-catalog fallback still rejects a changed signed workspace',async()=>{
+ const failure=Object.assign(new Error('Catalog temporarily unavailable'),{status:503});
+ await assert.rejects(readWorkspaceStartup({
+  listBoards:()=>Promise.reject(failure),
+  verifyBootstrap:()=>Promise.resolve(false),
+  isCurrent:()=>false,
+  allowBoardListFailure:true
+ }),/Signed workspace changed/);
+});
+
+test('generic board startup remains fatal when its catalog is unavailable',async()=>{
+ const failure=Object.assign(new Error('Catalog denied'),{status:403});
+ await assert.rejects(readWorkspaceStartup({
+  listBoards:()=>Promise.reject(failure),
+  verifyBootstrap:()=>Promise.resolve(false),
+  isCurrent:()=>true,
+  allowBoardListFailure:false
+ }),error=>error===failure);
+});
+
 test('bootstrap verifier failure denies role without failing authorized board read',async()=>{
  const result=await readWorkspaceStartup({listBoards:()=>Promise.resolve([{id:1}]),
   verifyBootstrap:()=>Promise.reject(new Error('not privileged')),
@@ -64,6 +97,12 @@ test('application keeps authoritative context read before overlapping the indepe
  assert.match(scope,/listBoards:\(\)=>startupCriticalPath\.measure\('board-list',\(\)=>db\.boards\('active'\)\)/);
  assert.match(scope,/verifyBootstrap:\(\)=>startupCriticalPath\.measure\('bootstrap-role',\(\)=>roleConfig\.bootstrapVerified\(\)\)/);
  assert.match(scope,/isCurrent:\(\)=>auth\.isSignedIn&&auth\.userId===signedId/);
+ assert.match(scope,/allowBoardListFailure=workspaceRouteAllowsBoardCatalogFallback\(location\.hash\)/);
+ assert.match(scope,/state\.boardCatalogError=boardCatalogError\?errorMessage\(boardCatalogError\):''/);
+ assert.match(app,/state\.adminVerified,state\.boardCatalogError,name\(\)/);
+ assert.match(app,/Retry workspace refresh/);
+ assert.match(app,/Native application access refreshed; board catalog remains unavailable/);
+ assert.match(app,/data-action=\"refresh\"/);
  assert.ok(scope.indexOf('state.boards=boards')>scope.indexOf('await readWorkspaceStartup('));
  assert.doesNotMatch(readFileSync('frontend/workspace-startup-read.js','utf8'),
   /localStorage|sessionStorage|indexedDB|fetch\(|sendBeacon|setInterval/);
