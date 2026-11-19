@@ -47,6 +47,12 @@ export function stopTimeTrackerPixi(){
 }
 
 export function mountTimeTrackerPixi(root,{load=()=>import(PIXI_V8_URL)}={}){
+ // The reference Clock screen is intentionally CSS-only. Do not initialize an
+ // invisible GPU scene or leave one running after switching to this screen.
+ if(root?.querySelector?.('.tt-native .tt-application')?.dataset?.ttView==='clock'){
+  stopTimeTrackerPixi();
+  return false;
+ }
  // Prefer the active TimeTracker content, reusing one GPU scene at a time.
  // Other application tabs retain the existing lightweight header decoration.
  const host=root?.querySelector?.('.tt-native .tt-calendar-command .tt-pixi-backdrop')||
