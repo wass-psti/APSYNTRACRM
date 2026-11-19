@@ -6,6 +6,7 @@ import {
  TT_LIVE_ATTENDANCE_WRITES_ACCEPTED,TT_POLICY
 } from './time-tracker-native.js';
 import {timeTrackerManilaDay} from './time-tracker-policy.js';
+import {formatTimeTrackerAutoClockoutTime} from './time-tracker-auto-clockout.js';
 import {renderTimeTrackerOverview} from './time-tracker-overview.js';
 import {renderTimeTrackerLog} from './time-tracker-log.js';
 import {renderTimeTrackerReports} from './time-tracker-reports.js';
@@ -99,6 +100,14 @@ export function syncTimeTrackerClock(root,at=new Date()){
   const progress=root.querySelector('#tt-session-progress');
   progress?.setAttribute?.('stroke-dashoffset',String((339.292*(1-session.progress)).toFixed(3)));
  }
+ const countdown=root?.querySelector?.('[data-tt-auto-clockout-countdown]');
+ if(countdown?.dataset?.deadline){
+  const remaining=Math.max(0,Date.parse(countdown.dataset.deadline)-new Date(at).getTime());
+  const seconds=Math.floor(remaining/1000);
+  const hours=Math.floor(seconds/3600),minutes=Math.floor((seconds%3600)/60),rest=seconds%60;
+  const label=remaining<=0?'Due now':String(hours).padStart(2,'0')+':'+String(minutes).padStart(2,'0')+':'+String(rest).padStart(2,'0');
+  if(countdown.textContent!==label)countdown.textContent=label;
+ }
  return true;
 }
 
@@ -173,6 +182,16 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
   creditedAttendanceMs(r.clockIn,now):r.creditedMs||0),0);
  const status=active?'Active':'Idle';
  const session=active?timeTrackerSessionElapsed(active.clockIn,now):null;
+ const autoClockout=active&&result.autoClockout?.recordId===active.id?result.autoClockout:null;
+ const autoDeadline=autoClockout?.nextAt||autoClockout?.cutoffAt;
+ const autoUnavailable=active&&result.autoClockoutUnavailable===true;
+ const autoLabel=autoUnavailable?'Automatic clock-out status unavailable':
+  !autoClockout?'':autoClockout.status==='MONITORING'?
+  'Automatic clock-out monitoring · nine-hour threshold at ':
+  autoClockout.status==='GRACE'?'Grace period active · automatic clock-out at ':
+  autoClockout.status==='OVERTIME'?'Approved overtime active · automatic clock-out at ':
+  autoClockout.status==='DUE'?'Automatic clock-out due · scheduled cutoff ':
+  'Automatic clock-out monitoring unavailable';
  let html='<div class="tt-clock-stage tt-command-center">'+
   '<div class="tt-command-layout">'+
    '<section class="tt-time-dashboard" aria-label="Live time and attendance summary">'+
@@ -225,6 +244,10 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
        '<div class="tt-session-ring-center"><strong id="tt-session-elapsed" data-clock-in="'+
         esc(active.clockIn)+'">'+session.label+'</strong><span>elapsed</span></div>'+
       '</div><p class="tt-session-progress-note">Session duration · credited hours may differ</p></div>'+
+      ((autoClockout||autoUnavailable)?'<p class="tt-clock-hint tt-auto-clockout-state" role="status">'+esc(autoLabel)+
+       (autoDeadline?'<strong>'+esc(formatTimeTrackerAutoClockoutTime(autoDeadline))+'</strong> · '+
+        '<span data-tt-auto-clockout-countdown data-deadline="'+esc(autoDeadline)+'">—</span> remaining':'')+
+       '</p>':'')+
       '<p class="tt-active-copy">Started '+esc(date(active.clockIn))+'</p>':'')+
     '<form id="tt-clock-form">'+
      (active?

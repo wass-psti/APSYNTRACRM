@@ -51,7 +51,7 @@ export function projectOwnAttendance(value,userId){
   const out=isRecord(x.clockOut)&&safeTime(x.clockOut.timestamp)?x.clockOut:null;
   const label=x.clockOut&&!out?'Unknown':out?'Completed':'Active';
   return Object.freeze({
-   id:x.id,clockIn:x.clockIn.timestamp,clockOut:out?.timestamp||null,
+   id:x.id,ownerId:x.ownerId,clockIn:x.clockIn.timestamp,clockOut:out?.timestamp||null,
    location:String(x.clockIn.location||'—').slice(0,100),
    department:String(x.clockIn.department||'—').slice(0,100),
    status:label,classification:attendanceClassification(x),
@@ -76,7 +76,8 @@ export function projectOwnOvertime(value,userId){
   typeof x.id==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(x.date||'')&&
   ['Draft','Submitted','Approved','Rejected'].includes(x.status))
  .map(x=>Object.freeze({
-   id:x.id.slice(0,140),date:x.date,status:x.status,
+   id:x.id.slice(0,140),ownerId:x.ownerId,date:x.date,status:x.status,
+   decidedAt:safeTime(x.decidedAt)?x.decidedAt:null,
    start:typeof x.start==='string'?x.start.slice(0,5):'—',
    end:typeof x.end==='string'?x.end.slice(0,5):'—',
    durationMinutes:Number.isInteger(x.durationMinutes)&&x.durationMinutes>=0&&
@@ -165,6 +166,8 @@ export class TimeTrackerNativeClient{
   // Backend scope checks remain authoritative; identity is checked again below.
   const otRead=this.api.rpc('timetracker_ot_snapshot',{p_board_id:boardId})
    .then(response=>({response}),error=>({error}));
+  const autoClockoutRead=this.api.rpc('timetracker_auto_clockout_snapshot',{p_board_id:boardId})
+   .then(response=>({response}),error=>({error}));
   const clockRead=this.attendanceCapability(boardId,access);
   const raw=await this.api.rpc('list_module_state',{p_module_id:moduleId});
   if(!Array.isArray(raw))deny('TimeTracker state API contract invalid');
@@ -214,9 +217,42 @@ export class TimeTrackerNativeClient{
    if(!/PGRST202|Could not find the function|Unexpected RPC timetracker_ot_snapshot/.test(msg))
     throw error;
   }
+  let autoClockout=null;
+  let autoClockoutUnavailable=false;
+  try{
+   const {response,error}=await autoClockoutRead;
+   if(error)autoClockoutUnavailable=true;
+   else if(!isRecord(response)||response.mode!=='ACTIVE'||
+      response.contract!=='tt-auto-clockout-1'||
+      response.actorId!==access.userId||response.workspaceId!==access.workspaceId||
+      response.boardId!==boardId)autoClockoutUnavailable=true;
+   else if(response.session!==null){
+    const session=response.session;
+    const active=records.find(x=>x.status==='Active');
+    if(!isRecord(session)||!active||session.recordId!==active.id||
+       !['MONITORING','GRACE','OVERTIME','ERROR'].includes(session.status)||
+       !safeTime(session.thresholdAt)||
+       (session.graceDeadlineAt!==null&&!safeTime(session.graceDeadlineAt))||
+       (session.overtimeCutoffAt!==null&&!safeTime(session.overtimeCutoffAt))||
+       (session.nextAt!==null&&!safeTime(session.nextAt)))
+     autoClockoutUnavailable=true;
+    else autoClockout=Object.freeze({
+     recordId:session.recordId,status:session.status,
+     thresholdAt:session.thresholdAt,
+     graceStartedAt:safeTime(session.graceStartedAt)?session.graceStartedAt:null,
+     graceDeadlineAt:safeTime(session.graceDeadlineAt)?session.graceDeadlineAt:null,
+     overtimeCutoffAt:safeTime(session.overtimeCutoffAt)?session.overtimeCutoffAt:null,
+     nextAt:safeTime(session.nextAt)?session.nextAt:null,
+     lastEvaluatedAt:safeTime(session.lastEvaluatedAt)?session.lastEvaluatedAt:null,
+     clockOutReason:typeof session.clockOutReason==='string'?session.clockOutReason:null
+    });
+   }
+  }catch{
+   autoClockoutUnavailable=true;
+  }
   const attendanceWritesAccepted=await clockRead;
   await checkIdentity(this.auth,this.api,access,boardId);
-  return {status:'VERIFIED_READ',access:{...access,...otAccess,attendanceWritesAccepted},records,otRequests,overview,log,revision:row?Number(row.revision):0,
+  return {status:'VERIFIED_READ',access:{...access,...otAccess,attendanceWritesAccepted},records,otRequests,autoClockout,autoClockoutUnavailable,overview,log,revision:row?Number(row.revision):0,
    active:records.find(x=>x.status==='Active')||null};
  }
  /** A fresh independently guarded bootstrap read; no Team information for normal users. */

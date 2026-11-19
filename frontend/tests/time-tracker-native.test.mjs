@@ -19,7 +19,7 @@ const example=(ownerId=user)=>({
  clockOut:null
 });
 function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=workspace,
- records=[],malformed=false,writeReady=false,foreignCapability=false}={}){
+ records=[],malformed=false,writeReady=false,foreignCapability=false,autoClockoutSnapshot=null}={}){
  let commitCount=0, lastWrite=null;
  const auth={userId:activeUser,getVerifiedUser:async()=>({id:activeUser})};
  let currentRecords=records;
@@ -41,6 +41,9 @@ function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=works
      display_name:'Test signed employee'}];
     case 'list_module_state':return [{state_key:'timetracker.attendance.v1',
      scope:'shared',revision:2,value:malformed?'not-json':JSON.stringify({version:1,records:currentRecords})}];
+    case 'timetracker_auto_clockout_snapshot':
+     if(autoClockoutSnapshot===null)throw Error('PGRST202: function not deployed');
+     return autoClockoutSnapshot;
     case 'timetracker_attendance_capabilities':
      if(!writeReady)throw Error('PGRST202: function not deployed');
      return {mode:'ACTIVE',contract:'tt-attendance-1',canClock:true,
@@ -84,6 +87,7 @@ test('native projection returns only signed actor fields, no GPS or foreign rows
  const r=projectOwnAttendance({version:1,records:[example(),example(other)]},user);
  assert.equal(r.length,1);
  assert.equal(r[0].status,'Active');
+ assert.equal(r[0].ownerId,'cloud:'+user);
  assert.equal(JSON.stringify(r).includes('123.4'),false);
  assert.equal(JSON.stringify(r).includes(other),false);
 });
@@ -112,6 +116,35 @@ test('read projects existing authoritative state and rejects malformed state',as
  assert.equal(snap.active.id,'session-1');
  assert.equal(snap.revision,2);
  await assert.rejects(setup({malformed:true}).client.snapshot(board),/malformed/);
+});
+
+
+test('signed automatic clock-out snapshot is bound to the active session and PHT schedule',async()=>{
+ const session={recordId:'session-1',status:'GRACE',
+  thresholdAt:'2026-11-20T10:00:00.000Z',
+  graceStartedAt:'2026-11-20T10:00:00.000Z',
+  graceDeadlineAt:'2026-11-20T10:30:00.000Z',
+  overtimeCutoffAt:null,nextAt:'2026-11-20T10:30:00.000Z',
+  lastEvaluatedAt:'2026-11-20T10:10:00.000Z',clockOutReason:null};
+ const response={mode:'ACTIVE',contract:'tt-auto-clockout-1',
+  actorId:user,workspaceId:workspace,boardId:board,session};
+ const snap=await setup({records:[example()],autoClockoutSnapshot:response}).client.snapshot(board);
+ assert.equal(snap.autoClockout.status,'GRACE');
+ assert.equal(snap.autoClockout.nextAt,'2026-11-20T10:30:00.000Z');
+ const mismatched=await setup({records:[example()],autoClockoutSnapshot:{
+  ...response,actorId:other
+ }}).client.snapshot(board);
+ assert.equal(mismatched.autoClockout,null);
+ assert.equal(mismatched.autoClockoutUnavailable,true);
+ const foreign=await setup({records:[example()],autoClockoutSnapshot:{
+  ...response,session:{...session,recordId:'foreign-session'}
+ }}).client.snapshot(board);
+ assert.equal(foreign.autoClockout,null);
+ assert.equal(foreign.autoClockoutUnavailable,true);
+ const legacy=await setup({records:[example()],autoClockoutSnapshot:{
+  ...response,session:null
+ }}).client.snapshot(board);
+ assert.equal(legacy.autoClockout,null);
 });
 
 test('clock-in validates offsite note, GPS and duplicate sessions before RPC',async()=>{

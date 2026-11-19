@@ -50,7 +50,8 @@ export function projectTimeTrackerOtRows(rows=[]){
   ['Draft','Submitted','Approved','Rejected'].includes(r.status)).map(r=>Object.freeze({
   id:r.id.slice(0,140),ownerId:String(r.ownerId||'').slice(0,48),
   name:String(r.name||'Signed employee').slice(0,100),
-  date:r.date,status:r.status,start:String(r.start||'').slice(0,5),
+  date:r.date,status:r.status,decidedAt:typeof r.decidedAt==='string'&&Number.isFinite(Date.parse(r.decidedAt))?r.decidedAt:null,
+  start:String(r.start||'').slice(0,5),
   end:String(r.end||'').slice(0,5),
   durationMinutes:Number.isInteger(r.durationMinutes)&&r.durationMinutes>=0&&
    r.durationMinutes<=360?r.durationMinutes:null,
