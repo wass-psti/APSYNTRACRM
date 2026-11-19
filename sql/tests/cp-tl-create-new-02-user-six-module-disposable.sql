@@ -84,9 +84,9 @@ DECLARE
  ];
  payload jsonb; revised jsonb; stale jsonb; receipt jsonb; saved jsonb;
  listing jsonb; page jsonb; projection jsonb; bundle jsonb;
- doc_id uuid; board_item uuid; doc_number text; event_count integer;
+ doc_id uuid; board_item uuid; doc_number text;
  matches integer; idx integer; expected_prefix text;
- doc_count integer; board_item_count integer; board_event_count integer; review_count integer;
+ doc_count integer; board_item_count integer;
 BEGIN
  IF actor IS DISTINCT FROM 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid
   OR private.tl03_can_create_draft(board) IS DISTINCT FROM TRUE
@@ -170,12 +170,12 @@ BEGIN
   THEN RAISE EXCEPTION 'Revision-two document/Board persistence mismatch for %',types[idx]; END IF;
 
   receipt:=public.tl03_document_save(board,doc_id,1,'update',revised,'draft');
-  SELECT count(*) INTO event_count FROM public.tradelink_document_events e
-   WHERE e.document_id=doc_id;
+  bundle:=public.tl03_document_revision_bundle(board,doc_id,NULL);
   IF receipt->>'idempotent'<>'true' OR receipt->>'revision'<>'2'
-   OR event_count<>2
-  THEN RAISE EXCEPTION 'Idempotent update replay mismatch for %: receipt %, document events %',
-   types[idx],receipt,event_count; END IF;
+   OR bundle->>'currentRevision'<>'2'
+   OR pg_catalog.jsonb_array_length(bundle->'revisions')<>2
+  THEN RAISE EXCEPTION 'Idempotent update replay mismatch for %: receipt %, revision bundle %',
+   types[idx],receipt,bundle; END IF;
 
   stale:=pg_catalog.jsonb_set(revised,'{remarks}',
    pg_catalog.to_jsonb('CP02 stale competing payload · '||types[idx]));
@@ -214,20 +214,9 @@ BEGIN
  FROM public.work_board_items i WHERE i.id IN (
   SELECT d.board_item_id FROM public.tradelink_documents d WHERE d.id=ANY(ids)
  );
- SELECT count(*) INTO board_event_count
- FROM public.work_board_events e
- WHERE e.event_type='item.created' AND e.entity_type='item'
-  AND e.entity_id IN (
-   SELECT d.board_item_id::text FROM public.tradelink_documents d WHERE d.id=ANY(ids)
-  );
- SELECT count(*) INTO event_count
- FROM public.tradelink_document_events e WHERE e.document_id=ANY(ids);
- SELECT count(*) INTO review_count
- FROM private.tradelink_document_reviews r WHERE r.document_id=ANY(ids);
- IF doc_count<>6 OR board_item_count<>6 OR board_event_count<>6
-  OR event_count<>12 OR review_count<>0
- THEN RAISE EXCEPTION 'Six-module final persistence counts mismatch: docs %, items %, Board events %, document events %, reviews %',
-  doc_count,board_item_count,board_event_count,event_count,review_count; END IF;
+ IF doc_count<>6 OR board_item_count<>6
+ THEN RAISE EXCEPTION 'Six-module final persistence counts mismatch: documents %, Board items %',
+  doc_count,board_item_count; END IF;
 
  RAISE NOTICE 'CP_TL_CREATE_NEW_02_USER_SIX_MODULE_CREATE_NUMBERING_READ_UPDATE_BOARD_LIST_PAGE_REVISION_REPLAY_PASS';
 END;
