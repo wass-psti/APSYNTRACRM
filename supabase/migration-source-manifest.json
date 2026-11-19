@@ -1827,6 +1827,27 @@
       "file": "20261119090447_cp_frt_flow03l_payee_correction_activation.sql",
       "bytes": 2642,
       "sha256": "693ce9e6a0afd377f14c16c1347e32ec1ae96a2b5b7bbdeea528f201b29c30d7"
+    },
+    {
+      "version": "20261119200735",
+      "name": "cp_tt_auto_clockout_01_conditional_session_expiration",
+      "file": "20261119200735_cp_tt_auto_clockout_01_conditional_session_expiration.sql",
+      "bytes": 31642,
+      "sha256": "f93de675ba172852adc0830185b15f915a22e49d86783be3eccaf1c5e022d4b0"
+    },
+    {
+      "version": "20261119203503",
+      "name": "cp_tt_auto_clockout_01_snapshot_overtime_cutoff",
+      "file": "20261119203503_cp_tt_auto_clockout_01_snapshot_overtime_cutoff.sql",
+      "bytes": 134,
+      "sha256": "675799e8b2a4a8031d566db69e5579dceeb14746f6827edac75c9c423b2dbc1c"
+    },
+    {
+      "version": "20261119203633",
+      "name": "cp_tt_auto_clockout_01_snapshot_overtime_cutoff_fix",
+      "file": "20261119203633_cp_tt_auto_clockout_01_snapshot_overtime_cutoff_fix.sql",
+      "bytes": 2425,
+      "sha256": "0ef5529b78b89fc95bd7ce94fbe7a0c3607deb9137a5547bfc388dc55abe58f8"
     }
   ]
 }
