@@ -158,3 +158,57 @@ test('canonical native board identity is stable across transient route-tab trans
   assert.equal(nativeApplicationModuleForBoardId(application.boardId),moduleId);
  assert.equal(nativeApplicationModuleForBoardId('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),null);
 });
+
+
+test('native context retries one invalidated in-flight read for the same signed session',async()=>{
+ const pending=[];
+ const auth={userId,accessToken:'same-token',authorized:async(path)=>{
+  const rpc=path.split('/').at(-1);
+  if(rpc==='wm_auth_access_context')return {user_id:userId,workspace_id:workspaceId,profile:{status:'active'}};
+  if(rpc==='native_application_board_context')return new Promise(resolve=>pending.push(resolve));
+  throw new Error('Unexpected RPC '+rpc);
+ }};
+ const api=new DomainApi(auth);
+ const result=api.nativeApplicationBoardContext('tradelink');
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(pending.length,1);
+ api.invalidateBoardCache();
+ pending.shift()(make('tradelink'));
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(pending.length,1);
+ pending.shift()(make('tradelink'));
+ assert.equal((await result).board.id,NATIVE_APPLICATIONS.tradelink.boardId);
+});
+
+test('native context never retries an in-flight response after token rotation',async()=>{
+ let complete;
+ let attempts=0;
+ const auth={userId,accessToken:'original-token',authorized:async(path)=>{
+  if(path.endsWith('wm_auth_access_context'))return {user_id:userId,workspace_id:workspaceId,profile:{status:'active'}};
+  attempts++;
+  return new Promise(resolve=>{complete=resolve});
+ }};
+ const api=new DomainApi(auth);
+ const result=api.nativeApplicationBoardContext('tradelink');
+ await new Promise(resolve=>setImmediate(resolve));
+ auth.accessToken='different-token';
+ api.invalidateBoardCache();
+ complete(make('tradelink'));
+ await assert.rejects(result,/Signed native application context changed/);
+ assert.equal(attempts,1);
+});
+
+test('native context bounds invalidation retries at one attempt',async()=>{
+ const pending=[];
+ const auth={userId,accessToken:'same-token',authorized:async(path)=>{
+  if(path.endsWith('wm_auth_access_context'))return {user_id:userId,workspace_id:workspaceId,profile:{status:'active'}};
+  return new Promise(resolve=>pending.push(resolve));
+ }};
+ const api=new DomainApi(auth);
+ const result=api.nativeApplicationBoardContext('tradelink');
+ await new Promise(resolve=>setImmediate(resolve));
+ api.invalidateBoardCache();pending.shift()(make('tradelink'));
+ await new Promise(resolve=>setImmediate(resolve));
+ api.invalidateBoardCache();pending.shift()(make('tradelink'));
+ await assert.rejects(result,/Signed native application context changed/);
+});
