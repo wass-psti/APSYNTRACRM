@@ -127,10 +127,7 @@ test("all legacy TimeTracker board URLs resolve to the dedicated application rou
     /sidebarNav\('#\/time-tracker','TimeTracker','clock',active\('time-tracker'\)\)/,
   );
   assert.match(app, /if\(parts\[0\]==='time-tracker'\)/);
-  assert.match(
-    app,
-    /db\.nativeApplicationBoardContext\('time-tracker'\)/,
-  );
+  assert.match(app, /db\.nativeApplicationBoardContext\('time-tracker'\)/);
   assert.match(
     app,
     /const timeTrackerBoard=state\.boards\.find\(b=>b\.id===parts\[1\]&&moduleByBoardName\(b\.name\)\?\.key==='timetracker'\)/,
