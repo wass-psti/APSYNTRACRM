@@ -3,7 +3,7 @@
  * existing signed-auth contract; no credentials are processed in this module.
  * @typedef {{message?:string,notice?:string,year?:number,mode?:string,resetReady?:boolean,emailValue?:string,requestAlias?:string,requestReceivedUrl?:string}} AuthMarkupOptions
  */
-import {formSubmitAction,FORM_SUBMIT_RECIPIENT_ALIAS,REQUEST_RECEIVED_URL} from './request-access.js';
+import {formSubmitAction,FORM_SUBMIT_RECIPIENT_ALIAS,REQUEST_RECEIVED_URL} from '../request-access.js';
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,
  char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 /** @param {AuthMarkupOptions} options */

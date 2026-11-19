@@ -24,7 +24,7 @@ test('invitation transport is disabled and no workspace invite flag is altered',
  assert.match(app,/case 'board-share-preview':/);
  assert.match(readFileSync('frontend/workspace-invitation-client.js','utf8'),
   /WS02D_INVITE_CLIENT_ENABLED=false/);
- assert.match(readFileSync('frontend/auth-account-flows.js','utf8'),
+ assert.match(readFileSync('frontend/auth/account-flows.js','utf8'),
   /REGISTRATION_ADMISSION_ENABLED=false/);
 });
 test('single recipient identity is normalized, lists/injection/control chars rejected',()=>{

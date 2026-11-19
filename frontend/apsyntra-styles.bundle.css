@@ -2581,7 +2581,7 @@
  width:100%;height:1px;pointer-events:none
 }
 
-/* frontend/auth-experience.css */
+/* frontend/auth/experience.css */
 /* APSYNTRA CRM / AUTH02 — intentionally scoped to the login route.
    No inline style attributes, CSSOM injection, font downloads or route-wide overrides. */
 #app .aps-auth-v2{

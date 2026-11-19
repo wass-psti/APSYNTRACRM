@@ -6,7 +6,7 @@ import {readFileSync} from 'node:fs';
 const logoPath='frontend/apsyntra-logo.webp';
 const bytes=readFileSync(logoPath);
 const app=readFileSync('frontend/app.js','utf8');
-const login=readFileSync('frontend/auth-markup.js','utf8');
+const login=readFileSync('frontend/auth/markup.js','utf8');
 const html=readFileSync('index.html','utf8');
 const css=readFileSync('frontend/styles.css','utf8');
 const loadingCss=readFileSync('frontend/initialization-core.css','utf8');

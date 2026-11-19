@@ -13,11 +13,11 @@ import {WorkspaceInvitationClient,WS02D_INVITE_CLIENT_ENABLED} from './workspace
 import {WorkspaceInvitationManagementClient,WS11_INVITATION_MANAGEMENT_ENABLED} from './workspace-invitation-management.js';
 import {WorkspaceInvitationAcceptanceClient,WS02D_ACCEPTANCE_ENABLED,captureInvitationLink,renderInvitationAcceptance} from './workspace-invitation-acceptance.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
-import {renderAuthMarkup} from './auth-markup.js';
+import {renderAuthMarkup} from './auth/markup.js';
 import {validateAccessRequest} from './request-access.js';
 import {captureAuthReturn,
- inspectRecoveryToken,requestPasswordRecovery,applyRecoveredPassword} from './auth-account-flows.js';
-import {mountAuthExperience} from './auth-experience.js';
+ inspectRecoveryToken,requestPasswordRecovery,applyRecoveredPassword} from './auth/account-flows.js';
+import {mountAuthExperience} from './auth/experience.js';
 import {sidebarIcon,animateSidebarSelection,stopSidebarSelection} from './sidebar-visuals.js';
 import {sidebarActiveRoute} from './sidebar-active-route.js';
 import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-visuals.js';

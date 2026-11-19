@@ -9,7 +9,7 @@
  *  @param {{sceneLoader?:()=>Promise<unknown>,device?:object}} options
  *  @returns {AuthExperienceHandle}
  */
-export function mountAuthExperience(layout,{sceneLoader=()=>import('./auth-scene.js'),
+export function mountAuthExperience(layout,{sceneLoader=()=>import('./scene.js'),
  device=typeof navigator==='undefined'?{}:navigator}={}){
  if(!layout||!layout.isConnected||typeof window==='undefined')
   return {destroy(){}};
