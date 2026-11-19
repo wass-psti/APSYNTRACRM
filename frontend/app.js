@@ -3622,9 +3622,16 @@ async function loadFuelTrackActivity(seq=routeSerial){
   if(native?.board?.id!==FUELTRACK_V3_ID||native.workspaceId!==workspaceId)
    throw new ApiError('FuelTrack native application activity scope is unavailable.',403);
   if(!same())return;
-  const rows=state.fuelTrackBackend?.snapshot?.role==='Admin'?
-   (await new FuelTrackV3DomainClient({api:db,auth,boardId:FUELTRACK_V3_ID,workspaceId}).audit({limit:200})).events:
-   await db.rpc('list_module_activity',{p_module_id:'fueltrack-plus',p_before_sequence:null,p_limit:250});
+  // The existing signed audit contract is Admin-only. User roles can open
+  // the Activity reference but should not issue a predictably denied RPC.
+  // This changes request scheduling only; no grants or role checks are added.
+  if(native.role!=='Admin'){
+   state.fuelTrackActivity=null;
+   state.fuelTrackActivityError='';
+   return;
+  }
+  const rows=(await new FuelTrackV3DomainClient({api:db,auth,
+    boardId:FUELTRACK_V3_ID,workspaceId}).audit({limit:200})).events;
   if(!same())return;
   if(!Array.isArray(rows))throw new ApiError('Unexpected FuelTrack activity response.',502);
   const snapshot={status:'VERIFIED_READ',boardId:FUELTRACK_V3_ID,workspaceId,events:rows};
