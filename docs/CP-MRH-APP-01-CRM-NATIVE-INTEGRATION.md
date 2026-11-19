@@ -30,7 +30,7 @@
 - The application is unmounted on sign-out, workspace change or navigation away, discarding its in-memory records; stale async responses are ignored.
 - Unknown/failed request mutations are not retried automatically. The UI warns the employee to inspect All Requests before resubmission.
 - Request identities and Material Sourcing Board item identities are never assumed to be identical. No source JSON database, demo accounts, `DEMO-REQ-*` records, or local upload bytes are imported.
-- CSS is isolated to `.mrh-app` and linked separately from the committed, generated bundle so no unrelated styles are modified.
+- CSS is isolated to `.mrh-app` and registered in the existing ordered, generated `frontend/apsyntra-styles.bundle.css` stylesheet. APSYNTRA continues to load exactly one stylesheet; no second CSS link, script, runtime or external provider is introduced.
 
 ## Verification
 
