@@ -241,7 +241,7 @@ test('reviewed mutation and read RPC contracts remain disjoint',()=>{
  };
  const reads=new Set(names('BOARD_READ_RPC'));
  const writes=names('BOARD_MUTATION_RPC');
- assert.equal(writes.length,68); // CP-FRT-FLOW-03K adds the audited payee-only CAS write.
+ assert.equal(writes.length,73); // Five signed scoped role setters also publish post-commit hints.
  for(const name of ['toolbox_issues_create_issue','toolbox_issues_update_issue','toolbox_issues_add_update','toolbox_issues_create_subitem','toolbox_issues_update_subitem'])
   assert.ok(writes.includes(name),'TalkBox writes must invalidate only after commit');
  assert.equal(new Set(writes).size,writes.length);
@@ -291,4 +291,40 @@ test('UI hooks source-cache invalidation into signed reconciliation and lifecycl
  assert.match(app,/state\.mrhAddView&&state\.tab==='sourcing'/);
  assert.match(app,/auth\.onExpired=\(\)=>\{boardCacheChannel\.stop\(\)/);
  assert.doesNotMatch(readFileSync(new URL('../board/cache-channel.js',import.meta.url),'utf8'),/localStorage|sessionStorage|indexedDB/);
+});
+
+test('signed role snapshots do not invalidate unrelated Board cache',async()=>{
+ let hints=0,reads=[];
+ const api=new DomainApi({userId:user,accessToken:'signed-token',authorized:async(path)=>{
+  reads.push(path.split('/').at(-1));return {adminVerified:true};
+ }});
+ api.onBoardMutation=()=>hints++;
+ const names=['apsyntra_role_user_management_snapshot','apsyntra_role_configuration_snapshot',
+  'apsyntra_crm_platform_role_snapshot','apsyntra_role_fueltrans_workspace_snapshot',
+  'apsyntra_role_tooltrace_workspace_snapshot','apsyntra_role_frt_workspace_snapshot',
+  'apsyntra_role_scoped_six_snapshot','apsyntra_role_charter_workspace_snapshot'];
+ const generation=api.boardReadGeneration;
+ for(const name of names)await api.rpc(name,{p_workspace_id:workspace});
+ assert.deepEqual(reads,names);
+ assert.equal(api.boardReadGeneration,generation);
+ assert.equal(hints,0);
+});
+test('scoped role writes publish post-success hints but never on denied responses',async()=>{
+ const hints=[],calls=[];
+ const api=new DomainApi({userId:user,accessToken:'signed-token',authorized:async(path,options)=>{
+  const name=path.split('/').at(-1);calls.push({name,kind:options.requestKind});
+  if(options.body?.p_role==='DENIED')throw Object.assign(Error('denied'),{status:403});
+  return {effective:true};
+ }});
+ api.onBoardMutation=hint=>hints.push(hint);
+ const names=['apsyntra_role_fueltrans_workspace_set','apsyntra_role_tooltrace_workspace_set',
+  'apsyntra_role_frt_workspace_set','apsyntra_role_scoped_six_set',
+  'apsyntra_role_charter_workspace_set'];
+ const generation=api.boardReadGeneration;
+ for(const name of names)await api.rpc(name,{p_workspace_id:workspace,p_role:'User'});
+ assert.equal(api.boardReadGeneration,generation+names.length);
+ assert.deepEqual(hints,names.map(()=>({boardId:null,revision:null})));
+ assert.deepEqual(calls.map(c=>c.kind),names.map(()=>'mutation'));
+ await assert.rejects(api.rpc(names[0],{p_workspace_id:workspace,p_role:'DENIED'}));
+ assert.equal(hints.length,names.length);
 });
