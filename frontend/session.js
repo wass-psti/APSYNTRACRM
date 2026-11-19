@@ -52,8 +52,15 @@ export class AuthClient {
       },timeoutMs);
     });
     try{
+      // Keep authenticated GETs and mutations out of the browser HTTP cache.
+      // Explicitly allowlisted read-only REST RPC POSTs use the default fetch
+      // cache mode so Chromium can reuse the independent CORS preflight cache
+      // (Access-Control-Max-Age: 3600). POST responses are not HTTP-cacheable
+      // without explicit freshness and Content-Location response metadata.
+      const reusePreflightCache=method==='POST'&&requestKind==='read'&&
+        path.startsWith('/rest/v1/rpc/');
       const response=await Promise.race([this.fetchImpl(SUPABASE_URL+path,{
-        method,mode:'cors',redirect:'error',cache:'no-store',
+        method,mode:'cors',redirect:'error',cache:reusePreflightCache?'default':'no-store',
         headers:{apikey:SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json',
            ...(accessToken?{Authorization:'Bearer '+accessToken}:{})},
         ...(body===undefined?{}:{body:JSON.stringify(body)}),
