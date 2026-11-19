@@ -9,6 +9,13 @@ const migration = readFileSync(
   ),
   "utf8",
 );
+const historicalMigration = readFileSync(
+  new URL(
+    "../../supabase/migrations/20261119080635_cp_tl_create_new_02_user_board_projection_insert.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const fixture = readFileSync(
   new URL(
     "../../sql/tests/cp-tl-create-new-02-user-fixture.sql",
@@ -71,6 +78,25 @@ test("TradeLink User Board projection is created inside the existing signed doma
   assert.doesNotMatch(
     migration,
     /GRANT .*work_board_access|INSERT INTO public\.work_board_members|UPDATE public\.work_board_members/,
+  );
+});
+
+test("migration ledger source preserves the failed attempt and effective follow-up separately", () => {
+  assert.match(
+    historicalMigration,
+    /old_call := \$old\$\n  item_id:=public\.wm_add_board_item/,
+  );
+  assert.match(
+    migration,
+    /old_call := \$old\$item_id:=public\.wm_add_board_item/,
+  );
+  assert.match(
+    runner,
+    /20261119085430_cp_tl_create_new_02_user_board_projection_insert\.sql/,
+  );
+  assert.doesNotMatch(
+    runner,
+    /20261119080635_cp_tl_create_new_02_user_board_projection_insert\.sql/,
   );
 });
 
