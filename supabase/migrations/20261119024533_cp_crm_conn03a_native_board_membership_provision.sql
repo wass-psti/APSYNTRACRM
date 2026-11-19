@@ -17,6 +17,7 @@ CREATE TABLE private.crm_native_board_provision (
   CHECK (module_id IN
     ('time-tracker','fund-released-tracker','fueltrack-plus','tradelink'))
 );
+ALTER TABLE private.crm_native_board_provision ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON private.crm_native_board_provision FROM PUBLIC, anon, authenticated;
 
 -- This private function is used only by database triggers and the bounded backfill.
