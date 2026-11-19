@@ -23,7 +23,7 @@ const snapshot={
 const data=validateTimeTrackerGps(snapshot,{userId:actor,workspaceId:ws,boardId:board});
 const render=opts=>renderTimeTrackerGps({data,eligible:true,now,...opts});
 const css=readFileSync('frontend/time-tracker-gps-command.css','utf8');
-const scene=readFileSync('frontend/time-tracker-pixi-scene.js','utf8');
+const scene=readFileSync('frontend/apps/TimeTracker/time-tracker-pixi-scene.js','utf8');
 const app=readFileSync('frontend/app.js','utf8');
 const index=readFileSync('index.html','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
@@ -84,7 +84,7 @@ test('privileged scope, map redaction, and tile origin policies remain unchanged
  assert.doesNotMatch(denied,/tt-gps-command-hero|Employee One/);
  assert.match(app,/gpsEligible:state\.roleVerified===true\|\|state\.ttAttendance\?\.access\?\.moduleRole==='Supervisor'/);
  assert.match(index,/img-src 'self' data: blob: https:\/\/tile\.openstreetmap\.org/);
- const map=readFileSync('frontend/time-tracker-map.js','utf8');
+ const map=readFileSync('frontend/apps/TimeTracker/time-tracker-map.js','utf8');
  assert.match(map,/TT_OSM_TILES/);
  assert.match(map,/L\.tileLayer/);
  assert.doesNotMatch(map,/maplibre|setHTML\(|innerHTML/);

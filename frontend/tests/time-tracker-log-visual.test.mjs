@@ -97,7 +97,7 @@ test('Log GPS loading uses dedicated signed RPC, maintains authorization and no 
  assert.match(app,/if\(next==='log'\)await loadTimeTrackerLogGps\(\)/);
  assert.match(app,/case 'tt-log-gps-load'/);
  assert.match(app,/state\.ttLogGpsData=null/);
- const raw=readFileSync('frontend/time-tracker-native.js','utf8');
+ const raw=readFileSync('frontend/apps/TimeTracker/time-tracker-native.js','utf8');
  assert.match(raw,/timetracker_gps_snapshot/);
 });
 

@@ -21,7 +21,7 @@ const directory=projectTimeTrackerTeamDirectory(snapshot,{workspaceId:workspace,
 const access={bootstrapTeamEligible:true,workspaceId:workspace,userId:actor};
 const render=options=>renderTimeTrackerTeam({directory,access,now:new Date('2026-11-04T08:00:00Z'),...options});
 const css=readFileSync('frontend/time-tracker-team-command.css','utf8');
-const scene=readFileSync('frontend/time-tracker-pixi-scene.js','utf8');
+const scene=readFileSync('frontend/apps/TimeTracker/time-tracker-pixi-scene.js','utf8');
 const index=readFileSync('index.html','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 const app=readFileSync('frontend/app.js','utf8');

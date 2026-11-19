@@ -337,7 +337,7 @@ test('opening a TimeTracker board canonicalizes to the dedicated app and bypasse
  const appRoute=boardPage.indexOf("if(moduleByBoardName(b.name)?.key==='timetracker')return renderTimeTrackerApplication();");
  const boardControls=boardPage.indexOf('const items=');
  assert.ok(appRoute>=0&&boardControls>appRoute,'TimeTracker application must return before generic board rendering');
- assert.match(readFileSync('frontend/time-tracker-ui.js','utf8'),/data-action="tt-tab"/);
+ assert.match(readFileSync('frontend/apps/TimeTracker/time-tracker-ui.js','utf8'),/data-action="tt-tab"/);
 });
 
 test('Clock backend capability is bound to signed actor, workspace and board',async()=>{

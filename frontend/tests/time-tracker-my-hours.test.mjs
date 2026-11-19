@@ -108,7 +108,7 @@ test('My Hours defensively filters any explicitly foreign owner and escapes meta
 });
 test('My Hours state/actions are wired and old write gates preserved',()=>{
  const app=readFileSync('frontend/app.js','utf8');
- const ui=readFileSync('frontend/time-tracker-ui.js','utf8');
+ const ui=readFileSync('frontend/apps/TimeTracker/time-tracker-ui.js','utf8');
  const css=readFileSync('frontend/styles.css','utf8');
  assert.match(ui,/records:result\.records,access:result\.access/);
  assert.match(ui,/\['hours','My Hours',true\]/);
@@ -118,10 +118,10 @@ test('My Hours state/actions are wired and old write gates preserved',()=>{
  assert.match(app,/ttHoursWeekOffset:0/);
  assert.match(app,/ttHoursSelectedDay/);
  assert.match(css,/CP-TT-MY-HOURS-01/);
- assert.match(readFileSync('frontend/time-tracker-native.js','utf8'),
+ assert.match(readFileSync('frontend/apps/TimeTracker/time-tracker-native.js','utf8'),
   /TT_LIVE_ATTENDANCE_WRITES_ACCEPTED=true/);
- assert.match(readFileSync('frontend/time-tracker-native.js','utf8'),
+ assert.match(readFileSync('frontend/apps/TimeTracker/time-tracker-native.js','utf8'),
   /cap\.mode==='ACTIVE'&&cap\.contract==='tt-attendance-1'/);
- assert.match(readFileSync('frontend/time-tracker-overtime.js','utf8'),
+ assert.match(readFileSync('frontend/apps/TimeTracker/time-tracker-overtime.js','utf8'),
   /TT_OT_WRITES_ACCEPTED=true/);
 });

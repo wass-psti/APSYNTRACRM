@@ -4,8 +4,8 @@ import {readFileSync} from 'node:fs';
 
 const migration=readFileSync('supabase/migrations/20261116084228_cp_tt_attendance_admin_record_management_01.sql','utf8');
 const app=readFileSync('frontend/app.js','utf8');
-const native=readFileSync('frontend/time-tracker-native.js','utf8');
-const log=readFileSync('frontend/time-tracker-log.js','utf8');
+const native=readFileSync('frontend/apps/TimeTracker/time-tracker-native.js','utf8');
+const log=readFileSync('frontend/apps/TimeTracker/time-tracker-log.js','utf8');
 
 test('admin record RPCs require the existing signed TimeTracker scope and exact System Admin role',()=>{
  assert.match(migration,/public\.timetracker_ot_require_scope\(p_board_id\)/);

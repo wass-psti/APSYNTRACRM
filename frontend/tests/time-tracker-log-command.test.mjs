@@ -15,7 +15,7 @@ const records=[
 const render=(extra={})=>renderTimeTrackerLog({records,now,...extra});
 const css=readFileSync('frontend/time-tracker-log-command.css','utf8');
 const adminCss=readFileSync('frontend/time-tracker-log-admin.css','utf8');
-const pixi=readFileSync('frontend/time-tracker-pixi-scene.js','utf8');
+const pixi=readFileSync('frontend/apps/TimeTracker/time-tracker-pixi-scene.js','utf8');
 const index=readFileSync('index.html','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 const styleManifest=readFileSync('scripts/priority5-style-manifest.mjs','utf8');

@@ -33,7 +33,7 @@ test('GPS presentation hides member coordinates unless explicitly eligible',()=>
  assert.match(shown,/class="tt-map-host" data-map-scope="hub"/);
 });
 test('broad attendance snapshot remains GPS-free and cannot supply the scoped GPS view',()=>{
- const native=readFileSync('frontend/time-tracker-native.js','utf8');
+ const native=readFileSync('frontend/apps/TimeTracker/time-tracker-native.js','utf8');
  assert.match(native,/projectOwnAttendance/);
  assert.match(native,/async gpsEvidence\(/);
  const sql=readFileSync('sql/cp-tt-gps01-staged-evidence.sql','utf8');

@@ -11,7 +11,7 @@ const css=readFileSync('frontend/time-tracker-pixi-experience.css','utf8');
 const app=readFileSync('frontend/app.js','utf8');
 const index=readFileSync('index.html','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
-const sceneCode=readFileSync('frontend/time-tracker-pixi-scene.js','utf8');
+const sceneCode=readFileSync('frontend/apps/TimeTracker/time-tracker-pixi-scene.js','utf8');
 
 test('Pixi v8 is pinned, lazy, decorative, and cannot touch signed data or controls',()=>{
  assert.equal(PIXI_V8_URL,'https://unpkg.com/pixi.js@8.22.0/dist/pixi.min.mjs');

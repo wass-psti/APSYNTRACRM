@@ -22,7 +22,7 @@ const rows=[
 ];
 const render=opts=>renderTimeTrackerOvertime({requests:rows,now,...opts});
 const css=readFileSync('frontend/time-tracker-overtime-command.css','utf8');
-const scene=readFileSync('frontend/time-tracker-pixi-scene.js','utf8');
+const scene=readFileSync('frontend/apps/TimeTracker/time-tracker-pixi-scene.js','utf8');
 const index=readFileSync('index.html','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 const app=readFileSync('frontend/app.js','utf8');

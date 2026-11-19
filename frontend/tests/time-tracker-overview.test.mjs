@@ -155,8 +155,8 @@ test('DOM filtering hides unauthorized filter matches without network calls',()=
 });
 test('native CRM app wires Overview, role isolation, and no new backend',()=>{
  const app=readFileSync('frontend/app.js','utf8');
- const native=readFileSync('frontend/time-tracker-native.js','utf8');
- const ui=readFileSync('frontend/time-tracker-ui.js','utf8');
+ const native=readFileSync('frontend/apps/TimeTracker/time-tracker-native.js','utf8');
+ const ui=readFileSync('frontend/apps/TimeTracker/time-tracker-ui.js','utf8');
  assert.match(app,/tt-overview-export/);
  assert.match(app,/syncTimeTrackerOverviewClock/);
  assert.match(app,/applyTimeTrackerOverviewFilters/);

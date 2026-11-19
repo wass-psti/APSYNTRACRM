@@ -97,7 +97,7 @@ test('Roles tab is absent, Monitor enabled; no persistent telemetry or polling i
  assert.match(app,/loadTimeTrackerMonitor/);
  assert.match(app,/case 'tt-monitor-refresh'/);
  assert.match(app,/case 'tt-monitor-clear'/);
- const monitor=readFileSync('frontend/time-tracker-monitor.js','utf8');
+ const monitor=readFileSync('frontend/apps/TimeTracker/time-tracker-monitor.js','utf8');
  assert.doesNotMatch(monitor,/localStorage|sessionStorage|setInterval|sendBeacon|WebSocket/);
 });
 
