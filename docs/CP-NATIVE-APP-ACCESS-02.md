@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19
 
-**Status:** Implemented locally; automated, syntax, lint, build, formatting, and TimeTracker fixture-browser checks pass. Pull request, CI, and deployment acceptance pending.
+**Status:** IMPLEMENTED, MERGED, AND DEPLOYED. Automated verification and live Pages asset integrity pass. Fresh signed-employee browser acceptance under a synthetic board-catalog outage remains pending.
 
 **Base:** Current origin/main after CP-NATIVE-APP-ACCESS-01 and subsequent merged work.
 
@@ -85,11 +85,29 @@ Build output retains existing warnings:
 - frontend/startup-guard.js is a classic script and is not bundled as a module.
 - The main application and PDF engine chunks exceed the configured 500 kB warning threshold.
 
-### Not yet verified
+### Merge, CI, and deployment evidence
 
-- A fresh browser-level synthetic wm_list_boards 403/503 injection against the new local build was not completed. It is not counted as a pass.
-- The four native routes have not yet been re-accepted against this exact unmerged build under a synthetic catalog outage.
-- Pull request CI, GitHub Pages deployment, and post-deployment acceptance remain pending.
+- **PR #582 merged** into main as merge commit ec10d74d071d2185b956f007250d351e03387a98.
+- The post-merge GitHub Pages deployment **run 44462709637 succeeded**.
+- The subsequent main deployment for commit 4569fc67d7d1d88a4b4480c51c45cc6f7299a227 **run 44463148620 succeeded**.
+- The latest frontend validation **run 44463149640 succeeded**. Its frontend job completed **2,800 / 2,800 tests**, with zero failures.
+- The same validation's live-pages job passed **Verify live GitHub Pages assets match this main commit**.
+- Live static-asset inspection returned HTTP 200 and confirmed the deployed native-application-access.js and app.js contain the route-scoped fallback implementation.
+- Local verification on the implementation branch: npm test **2,774 / 2,774 passed**; npm run check, npm run lint, npm run format:check, npm run build, and git diff --check all passed. The build retains the existing large-chunk warning (PDF engine and main application bundles exceed 500 kB).
+
+### Remaining production acceptance
+
+- A fresh browser-level synthetic wm_list_boards HTTP 403/503 injection across Overview and all four native application routes has **not** been completed against a genuine signed employee session. It is not counted as a pass.
+- The corresponding generic-board fail-closed behavior is covered by unit tests: a generic route still rejects a failed board catalog, while the explicitly enabled Overview/native fallback returns an empty catalog plus the original error.
+- Production browser acceptance must verify the same signed employee session reaches each native resolver and application-domain reads while the generic catalog is unavailable, then verify catalog recovery clears the degraded-state notice. No production writes or permission changes are required for this read-only test.
+
+### Acceptance status
+
+- Implementation: **VERIFIED**
+- Automated regression and build: **VERIFIED**
+- Merge and production deployment: **VERIFIED**
+- Live Pages asset integrity: **VERIFIED**
+- Genuine signed-employee synthetic catalog-outage browser acceptance: **PENDING**
 
 ## Acceptance criteria
 
