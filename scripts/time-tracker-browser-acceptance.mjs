@@ -94,9 +94,13 @@ try {
   await page.waitForFunction(() => window.__timeTrackerFixtureReady === true);
   // The reference-led header shows “TimeTracker”; the Clock page uses its
   // live greeting as the prominent heading rather than a redundant "Clock".
-  await page.getByRole("heading", { level: 1, name: "TimeTracker", exact: true }).waitFor();
+  await page
+    .getByRole("heading", { level: 1, name: "TimeTracker", exact: true })
+    .waitFor();
   await page.getByRole("tab", { name: "Clock" }).waitFor();
-  await page.getByRole("heading", { name: /^Good (morning|afternoon|evening),$/ }).waitFor();
+  await page
+    .getByRole("heading", { name: /^Good (morning|afternoon|evening),$/ })
+    .waitFor();
   await page.locator("#tt-clock-hours").waitFor();
 
   const desktopLayout = await page.evaluate(() => {
