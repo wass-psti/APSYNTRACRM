@@ -419,6 +419,12 @@
   color: #70665d;
   text-align: center;
 }
+/* Small attendance form labels must clear WCAG AA (4.5:1 on white).
+ * Override legacy Pixi-era muted colors without affecting other applications. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-clock-card form > label,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-attendance-console .tt-quick-location > span {
+  color: #665c53;
+}
 #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-attendance-console form {
   gap: 14px;
   margin: 0;
