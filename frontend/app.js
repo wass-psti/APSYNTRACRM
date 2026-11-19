@@ -27,6 +27,7 @@ import {BoardCacheChannel} from './board-cache-channel.js';
 import {BoardTrashPermanentDeleteClient,eligibleTrashBoard} from './board-trash-permanent-delete.js';
 import {modalRecoveryKind,installModalRecoveryAction} from './modal-recovery.js';
 import {openBoardSharePreview,closeBoardSharePreview} from './board-share.js';
+import {APPLICATION_ACCESS_DIALOG_ENABLED,APPLICATION_ACCESS_SUPPORTED_MODULES,openApplicationAccessDialog,closeApplicationAccessDialog} from './application-access-dialog.js';
 import {normalizeSignedBoardCandidates,BoardGroupAccessClient,
  BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
 import {CreatorAccessClient,WS10_CREATOR_POLICY_ACTIVE} from './ws10-ownership.js';
@@ -491,6 +492,7 @@ function renderLogin(message='',{mode=authViewFromHash(),notice='',emailValue=''
  // Clear detached protected item values on every signed-out transition.
  hideModal();
  stopAvatarPreview();
+ closeApplicationAccessDialog();
  syncFuelTrans({container:null});
  stopAuthVisuals();
  stopSidebarSelection();
@@ -746,6 +748,68 @@ function animateTabContent(selector){
  root.querySelector(selector)?.animate?.([{opacity:.88},{opacity:1}],{
   duration:170,easing:'cubic-bezier(.2,.75,.3,1)',fill:'none'
  });
+}
+/** App roles are not board roles. Only module-specific, workspace-scoped
+ * signed administrator RPCs can activate them; unsupported modules stay hidden.
+ */
+const APP_ACCESS_BOARD_MODULE_IDS=Object.freeze({
+ fueltrans:'fueltrans',tools:'tool-traceability',frt:'fund-released-tracker',
+ fueltrack:'fueltrack-plus',tradelink:'tradelink',timetracker:'time-tracker',
+ orders:'order-intake',evaluation:'employee-eval',aims:'aps-aims',
+ charter:'charter-navigator'
+});
+function currentApplicationInviteTarget(){
+ const board=state.board?.board,scope=state.context?.workspace_id;
+ if(state.view!=='board'||!auth.isSignedIn||state.adminVerified!==true||
+    !board||!validUuid(board.id)||board.workspace_id!==scope)return null;
+ const module=moduleByBoardName(board.name),moduleId=APP_ACCESS_BOARD_MODULE_IDS[module?.key];
+ if(!APPLICATION_ACCESS_SUPPORTED_MODULES.includes(moduleId))return null;
+ return Object.freeze({moduleId,moduleName:module.name,boardId:board.id,workspaceId:scope});
+}
+async function openCurrentApplicationInvites(){
+ if(!APPLICATION_ACCESS_DIALOG_ENABLED||!state.context||!auth.isSignedIn)return;
+ const target=currentApplicationInviteTarget(),actorId=auth.userId;
+ if(!target||!validUuid(actorId))return;
+ const roleOptions=target.moduleId==='fueltrans'?
+  FUELTRANS_WORKSPACE_ROLES:MODULE_ROLE_OPTIONS[target.moduleId];
+ if(!Array.isArray(roleOptions)||!roleOptions.length)return;
+ const signed=async()=>{
+  const user=await auth.getVerifiedUser();
+  const scope=currentApplicationInviteTarget();
+  if(user?.id!==actorId||auth.userId!==actorId||
+    !scope||scope.boardId!==target.boardId||
+    scope.moduleId!==target.moduleId||scope.workspaceId!==target.workspaceId)
+   throw new ApiError('Application access scope changed.',403);
+ };
+ const read=async()=>{
+  await signed();
+  const snapshot=await userRoleManager.snapshot(target.workspaceId,{
+   includeFuelTrans:target.moduleId==='fueltrans',
+   includeFundTracker:target.moduleId==='fund-released-tracker',
+   includeScopedSix:SCOPED_SIX_MODULE_IDS.includes(target.moduleId),
+   includeCharter:target.moduleId==='charter-navigator'
+  });
+  await signed();
+  if(snapshot?.adminVerified!==true||snapshot.workspaceId!==target.workspaceId)
+   throw new ApiError('Authorized application member directory unavailable.',403);
+  return snapshot;
+ };
+ const mutate=async({userId,role,enabled,expectedUpdatedAt})=>{
+  await signed();
+  const args={workspaceId:target.workspaceId,userId,role,enabled,expectedUpdatedAt};
+  if(SCOPED_SIX_MODULE_IDS.includes(target.moduleId))
+   return userRoleManager.setScopedSixRole({...args,moduleId:target.moduleId});
+  if(target.moduleId==='fund-released-tracker')
+   return userRoleManager.setFrtWorkspaceRole(args);
+  if(target.moduleId==='tool-traceability')
+   return userRoleManager.setToolTraceabilityWorkspaceRole(args);
+  if(target.moduleId==='fueltrans')
+   return userRoleManager.setFueltransWorkspaceRole(args);
+  if(target.moduleId==='charter-navigator')
+   return userRoleManager.setCharterWorkspaceRole(args);
+  throw new ApiError('Application role mutation not activated.',503);
+ };
+ openApplicationAccessDialog({...target,actorId,roleOptions,read,mutate});
 }
 function boardCard(board,index){
  const status=boardCardActionState(board),href='#/boards/'+e(board.id);
@@ -1276,7 +1340,7 @@ function boardPage(){
 
  return `<div class="page-head"><div><span class="label-top">Workspace / ${e(workspaceName())} / Board</span>
  <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
- <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><button type="button" class="secondary" data-action="board-share-preview">↗ Share &amp; access</button><button type="button" class="secondary" data-action="board-members">♙ People</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button>${engineeringUi?'<button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button>':''}<button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
+ <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><button type="button" class="secondary" data-action="board-share-preview">↗ Share &amp; access</button>${APPLICATION_ACCESS_DIALOG_ENABLED&&currentApplicationInviteTarget()?'<button type="button" class="secondary" data-action="application-invite-open">♙ Invite to application</button>':''}<button type="button" class="secondary" data-action="board-members">♙ People</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button>${engineeringUi?'<button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button>':''}<button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
  ${isMaterialSourcingBoard(b)&&state.edit&&['items','sourcing'].includes(state.tab)?'<button class="primary" data-action="mrh-new-part">＋ New part number</button>':''}
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ Add item</button>':''}
  </div></div>
@@ -6351,6 +6415,9 @@ async function openBoardStructure(){
 
 async function action(name,button){
  switch(name){
+ case 'application-invite-open':{
+  await openCurrentApplicationInvites();break;
+ }
  case 'profile-name-edit':{
   if(state.view!=='settings'||!state.context||!auth.isSignedIn)return;
   const section=button.closest('.settings-profile-editor');
@@ -6468,6 +6535,7 @@ async function action(name,button){
        !auth.isSignedIn||!state.context))break;
     pendingInvitation=null;invitationAcceptanceStatus='';
     startupRecoveryActive=false;
+    closeApplicationAccessDialog();
     closeWorkspacePanels();clearBulkActivation();platformSync.stop();
     let revoked=null;
     if(isB3LocalRevoke){
@@ -11073,6 +11141,7 @@ window.addEventListener('offline',()=>platformSync.network(false));
 // retained merely because an unsaved editor was open.
 window.addEventListener('hashchange',()=>{
  closeBoardSharePreview();
+ closeApplicationAccessDialog();
  // Scrub newly pasted invitation links even after the app has initialized.
  const incomingInvitation=captureInvitationLink(location,history);
  if(incomingInvitation){pendingInvitation=incomingInvitation;invitationAcceptanceStatus='';}
@@ -11131,7 +11200,7 @@ window.addEventListener('keydown',event=>{
   if(state.groupEditId&&!state.groupEditBusy){state.groupEditId=null;render();}
   if(state.ttOtModalOpen){state.ttOtModalOpen=false;render();}
 }});
-auth.onExpired=()=>{boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;globalSearchController?.close({restoreFocus:false});pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;pendingInvitation=null;invitationAcceptanceStatus='';startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
+auth.onExpired=()=>{closeApplicationAccessDialog();boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;globalSearchController?.close({restoreFocus:false});pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;pendingInvitation=null;invitationAcceptanceStatus='';startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
 async function boot(){
  if(startupBusy)return;
  startupBusy=true;
