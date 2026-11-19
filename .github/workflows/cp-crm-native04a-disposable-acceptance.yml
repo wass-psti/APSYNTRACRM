@@ -1,0 +1,47 @@
+name: CP-CRM-NATIVE-04A Four-Application Disposable Transaction Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/cp-crm-native04a-disposable-acceptance.yml'
+      - 'scripts/cp-crm-native04a-*.sh'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cp-crm-native04a-disposable-acceptance.yml'
+      - 'scripts/cp-crm-native04a-*.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native04a-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  disposable-transactions:
+    name: Four signed-fixture transaction lifecycles (isolated PostgreSQL)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify isolated runner and script syntax
+        run: |
+          set -euo pipefail
+          docker info >/dev/null
+          bash -n scripts/cp-crm-native04a-disposable-acceptance.sh
+          bash -n scripts/cp-crm-native04a-tradelink-disposable.sh
+          test -z "${SUPABASE_DB_URL:-}"
+          test -z "${DATABASE_URL:-}"
+      - name: Four-application transaction, signed readback, replay and concurrency acceptance
+        run: bash scripts/cp-crm-native04a-disposable-acceptance.sh
