@@ -27143,3 +27143,44 @@ html[data-aps-monday-theme="dark"] #app .aps-overview .overview-essentials .acti
 .tb-drawer{position:relative;width:min(560px,100%);height:100%;overflow-y:auto;background:var(--panel,#fff);box-shadow:-10px 0 40px #0002}
 .tb-drawer header{display:flex;justify-content:space-between;gap:12px;align-items:start;border-bottom:1px solid var(--border,#e2e8f0);padding:22px}.tb-drawer h3{margin:0}.tb-body{padding:22px;display:grid;gap:12px}.tb-body textarea{width:100%;box-sizing:border-box}.tb-update{border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:12px}.tb-update p{white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:640px){.tb-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* frontend/application-access-dialog.css */
+/* Application-specific People/Teams dialog, isolated from board sharing. */
+.aps-app-invite-overlay{position:fixed;inset:0;z-index:1505;display:flex;align-items:center;justify-content:center;background:#070a12ad;backdrop-filter:blur(4px);padding:18px}
+.aps-app-invite{box-sizing:border-box;width:min(750px,100%);max-height:min(790px,94dvh);display:flex;flex-direction:column;overflow:hidden;border-radius:19px;background:#292a2c;color:#f4f5f7;box-shadow:0 28px 90px #0505099c;padding:32px 36px 28px;font-family:inherit}
+.aps-app-invite button,.aps-app-invite select,.aps-app-invite input{font:inherit}
+.aps-app-invite-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:25px}
+.aps-app-invite-head h2{font-size:29px;line-height:1.2;margin:0 0 6px;font-weight:760;letter-spacing:-.6px;color:#f6f6f6}
+.aps-app-invite-head p{font-size:12px;color:#b1b3bb;margin:0}
+.aps-app-invite-head [data-app-invite-close]{display:grid;place-items:center;width:34px;height:34px;padding:0;border:0;border-radius:9px;background:transparent;color:#e5e7ec;font-size:29px;cursor:pointer}
+.aps-app-invite-head [data-app-invite-close]:hover{background:#404145}
+.aps-app-invite-search-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+.aps-app-invite #aps-app-invite-search{width:100%;padding:13px 11px;min-height:47px;box-sizing:border-box;border:1px solid #71727a;border-radius:4px;background:#111113;color:#fff;outline:none;font-size:14px}
+.aps-app-invite #aps-app-invite-search:focus{border-color:#3395f7;box-shadow:0 0 0 2px #3395f744}
+.aps-app-invite #aps-app-invite-search::placeholder{color:#abaeb7}
+.aps-app-invite-tabs{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:14px;border-bottom:2px solid #48494c}
+.aps-app-invite-tabs button{padding:13px;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;background:transparent;color:#c9c9cd;font-size:16px;font-weight:690;cursor:pointer}
+.aps-app-invite-tabs button[aria-current="true"]{color:#fff;border-bottom-color:#2385ec}
+.aps-app-invite-section{display:flex;align-items:center;justify-content:space-between;padding:18px 4px 9px;color:#dddde1;font-size:13px}
+.aps-app-invite-section strong{font-variant-numeric:tabular-nums;background:#40434a;padding:3px 7px;border-radius:20px}
+.aps-app-invite-list{overflow-y:auto;min-height:140px;max-height:380px;scrollbar-color:#73757c transparent}
+.aps-app-invite-member{display:flex;gap:13px;align-items:center;min-height:64px;padding:7px 4px;border-bottom:1px solid #ffffff13}
+.aps-app-invite-avatar{display:grid;place-items:center;width:43px;height:43px;flex:none;border-radius:50%;background:#5461a7;color:#fff;font-size:14px;font-weight:780}
+.aps-app-invite-member:nth-child(3n) .aps-app-invite-avatar{background:#0f857b}
+.aps-app-invite-member:nth-child(3n+2) .aps-app-invite-avatar{background:#a65376}
+.aps-app-invite-person{display:grid;min-width:0;gap:3px;flex:1}
+.aps-app-invite-person strong{font-size:14px;font-weight:660;color:#ececf0;overflow-wrap:anywhere}
+.aps-app-invite-person small{font-size:12px;color:#b0b1b8;overflow-wrap:anywhere}
+.aps-app-invite-member-actions{display:flex;align-items:center;gap:8px;flex:none}
+.aps-app-invite-member-actions select{max-width:165px;min-height:35px;border:1px solid #666970;background:#34363b;color:#fff;border-radius:7px;padding:6px 8px;font-size:12px}
+.aps-app-invite-member-actions button{min-height:34px;padding:5px 10px;border-radius:7px;border:1px solid #5e6570;background:#3a3d43;color:#f7f7f8;font-size:12px;font-weight:750;cursor:pointer}
+.aps-app-invite-member-actions .aps-app-invite-add{background:#207bea;border-color:#207bea}
+.aps-app-invite-member-actions .aps-app-invite-remove{font-size:21px;border:0;background:transparent}
+.aps-app-invite-member-actions button:hover:not(:disabled){filter:brightness(1.18)}
+.aps-app-invite-member-actions button:disabled,.aps-app-invite-member-actions select:disabled{opacity:.45;cursor:not-allowed}
+.aps-app-invite-protected{font-size:11px;color:#ababb3}
+.aps-app-invite-empty{padding:30px 12px;color:#bec0c5;text-align:center;font-size:13px}
+.aps-app-invite-note{font-size:11px;line-height:1.5;color:#b6b6be;margin:19px 0 0}
+.aps-app-invite-status{min-height:18px;font-size:12px;color:#a8cbff;margin:9px 0 0}
+.aps-app-invite :focus-visible{outline:2px solid #64a9ff;outline-offset:2px}
+@media(max-width:640px){.aps-app-invite-overlay{padding:8px}.aps-app-invite{max-height:96dvh;padding:21px 15px 18px;border-radius:12px}.aps-app-invite-head h2{font-size:23px}.aps-app-invite-member{gap:9px;flex-wrap:wrap}.aps-app-invite-member-actions{width:100%;justify-content:flex-end;padding-left:51px}.aps-app-invite-member-actions select{max-width:200px;flex:1}}

@@ -55,6 +55,7 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/time-tracker-application.css",
  "frontend/monday-inspired-ui.css",
  "frontend/login-minimal.css",
- "frontend/talkbox-application.css"
+ "frontend/talkbox-application.css",
+ "frontend/application-access-dialog.css"
 ]);
 export const STYLE_BUNDLE="frontend/apsyntra-styles.bundle.css";
