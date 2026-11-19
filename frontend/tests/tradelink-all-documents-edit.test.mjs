@@ -157,7 +157,7 @@ test('signed deep-link loading uses real revision and Board checks and no local 
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(source,/parseTradeLinkApplicationRoute\(parts\)/);
  assert.match(source,/tradeLinkRoute\.editId/);
- const route=readFileSync(new URL('../tradelink-application-route.js',import.meta.url),'utf8');
+ const route=readFileSync(new URL('../apps/TradeLink/tradelink-application-route.js',import.meta.url),'utf8');
  assert.ok(route.includes("if (raw[1] === 'edit' && validUuid(raw[2] || ''))"));
  assert.match(source,/state\.tradeLinkDraft\.editRequestId=draftEditId/);
  assert.match(source,/await openTradeLinkDraft\(target\)/);
