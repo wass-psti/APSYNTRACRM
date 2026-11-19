@@ -92,28 +92,41 @@ try {
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await page.waitForFunction(() => window.__timeTrackerFixtureReady === true);
+  // The reference-led header shows “TimeTracker”; the Clock page uses its
+  // live greeting as the prominent heading rather than a redundant "Clock".
   await page
-    .getByRole("heading", { level: 1, name: "TimeTracker Attendance" })
+    .getByRole("heading", { level: 1, name: "TimeTracker", exact: true })
     .waitFor();
   await page.getByRole("tab", { name: "Clock" }).waitFor();
-  await page.getByRole("heading", { name: "Clock", exact: true }).waitFor();
+  await page
+    .getByRole("heading", { name: /^Good (morning|afternoon|evening),$/ })
+    .waitFor();
+  await page.locator("#tt-clock-hours").waitFor();
 
   const desktopLayout = await page.evaluate(() => {
     const app = document.querySelector(".fm1-app");
     const header = document.querySelector(".tt-app-header");
-    const nav = document.querySelector(".tt-navigation");
+    const navScroll = document.querySelector(".tt-navigation-scroll");
+    const clockLayout = document.querySelector(".tt-command-layout");
+    const sessionCard = document.querySelector(".tt-attendance-console");
     return {
       appDisplay: getComputedStyle(app).display,
       headerRadius: getComputedStyle(header).borderRadius,
-      headerBackground: getComputedStyle(header).backgroundImage,
-      navOverflow: getComputedStyle(nav).overflowX,
+      headerBackground: getComputedStyle(header).backgroundColor,
+      navOverflow: getComputedStyle(navScroll).overflowX,
+      clockLayout: getComputedStyle(clockLayout).flexDirection,
+      sessionCardBackground: getComputedStyle(sessionCard).backgroundColor,
       root: document.querySelector(".tt-native")?.className,
     };
   });
-  assert.equal(desktopLayout.appDisplay, "grid");
-  assert.ok(desktopLayout.headerRadius.includes("22px"));
-  assert.ok(desktopLayout.headerBackground.includes("linear-gradient"));
+  // These assertions intentionally validate the new white, centered,
+  // accessible TimeTracker layout instead of the retired gradient dashboard.
+  assert.equal(desktopLayout.appDisplay, "flex");
+  assert.equal(desktopLayout.headerRadius, "0px");
+  assert.equal(desktopLayout.headerBackground, "rgb(255, 255, 255)");
   assert.equal(desktopLayout.navOverflow, "auto");
+  assert.equal(desktopLayout.clockLayout, "column");
+  assert.equal(desktopLayout.sessionCardBackground, "rgb(255, 255, 255)");
   assert.equal(desktopLayout.root, "tt-native");
 
   await page.addScriptTag({ content: axeSource });
