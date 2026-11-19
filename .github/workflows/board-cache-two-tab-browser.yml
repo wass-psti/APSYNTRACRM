@@ -3,7 +3,7 @@ on:
   pull_request:
     paths:
       - 'frontend/data.js'
-      - 'frontend/board-cache-channel.js'
+      - 'frontend/board/cache-channel.js'
       - 'frontend/board-window.js'
       - 'frontend/board-grid.js'
       - 'frontend/board-presentation.js'
@@ -20,7 +20,7 @@ on:
     branches: [main]
     paths:
       - 'frontend/data.js'
-      - 'frontend/board-cache-channel.js'
+      - 'frontend/board/cache-channel.js'
       - 'frontend/board-window.js'
       - 'frontend/board-grid.js'
       - 'frontend/board-presentation.js'

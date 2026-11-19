@@ -1,7 +1,7 @@
 /** Invalidation hints between same-origin CRM tabs. No board content or grants.
  * Browser messages are untrusted: all reads/permissions remain signed server RPCs.
  */
-import {validUuid} from './data.js';
+import {validUuid} from '../data.js';
 export const BOARD_CACHE_CHANNEL='apsyntra.crm.board-invalidation.v1';
 export class BoardCacheChannel {
  constructor({auth,onInvalidate=()=>{},Channel=globalThis.BroadcastChannel,

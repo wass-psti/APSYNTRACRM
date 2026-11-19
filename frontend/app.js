@@ -24,7 +24,7 @@ import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-vi
 import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board-catalog-visuals.js';
 import {BOARD_ITEM_PAGE_SIZE,DomainApi,validUuid} from './data.js';
 import {nativeApplicationModuleForBoardRoute} from './native-application-access.js';
-import {BoardCacheChannel} from './board-cache-channel.js';
+import {BoardCacheChannel} from './board/cache-channel.js';
 import {BoardTrashPermanentDeleteClient,eligibleTrashBoard} from './board-trash-permanent-delete.js';
 import {modalRecoveryKind,installModalRecoveryAction} from './modal-recovery.js';
 import {openBoardSharePreview,closeBoardSharePreview} from './board-share.js';
@@ -91,7 +91,7 @@ import {createB2SignedQaFixture,inspectB2SignedQaFixture,renderB2SignedQaFixture
 import {runB4SignedRecoveryPreflight,renderB4SignedRecoveryPreflight,sanitizeB4SignedRecoveryReport} from './board-col-delete-b4-signed-preflight.js';
 import {runPhaseBSignedDenial,renderPhaseBSignedDenial,sanitizePhaseBDenialReport} from './board-col-delete-phase-b-signed-denial.js';
 import {updateTradeLinkFinancePreview} from './tradelink-finance.js';
-import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board-scroll-state.js';
+import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board/scroll-state.js';
 import {canRetainVisibleBoard,replaceVisibleBoardContent} from './board-background-update.js';
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board-loading.js';
 import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
@@ -108,7 +108,7 @@ import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines,
  setOptionalVirtualColumnVisibility} from './board-structure-admin.js';
 import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board-card-lifecycle.js';
-import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board-bulk-selection.js';
+import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board/selection.js';
 import {boardCatalogResultLabel} from './board-catalog-results.js';
 import {resolveColumnTypeSelection,renderColumnTypeOptions} from './board-column-catalog.js';
 import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
