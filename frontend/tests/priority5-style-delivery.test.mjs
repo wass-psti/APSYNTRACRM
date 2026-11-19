@@ -17,7 +17,13 @@ test('Priority 5 preserves the exact-order consolidated CSS bundle',()=>{
  assert.match(index,/href="\.\/frontend\/apsyntra-styles\.bundle\.css"/);
  for(let i=0;i<STYLE_SOURCES.length;i++){
   const path=STYLE_SOURCES[i];
-  assert.match(path,/^frontend\/(?:[a-z0-9-]+\/)*[a-z0-9-]+\.css$/);
+  // Application-owned source folders may use the existing PascalCase app name.
+  // Keep root/other source paths on the original restrictive lowercase rule.
+  assert.ok(
+   /^frontend\/(?:[a-z0-9-]+\/)*[a-z0-9-]+\.css$/.test(path) ||
+   /^frontend\/apps\/[A-Z][A-Za-z0-9-]*\/[a-z0-9-]+\.css$/.test(path),
+   'Unexpected CSS source path: '+path
+  );
   assert.equal(readFileSync(path,'utf8').match(/@import|@charset|url\(/g),null,
    path+' requires explicit reviewed URL/import handling before concatenation');
   assert.ok(index.includes(path),'CSS source provenance missing from index: '+path);

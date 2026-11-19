@@ -12,6 +12,7 @@ import {
 } from "./frt-finance-readonly.js";
 import { createSignedFRTRequest, updateSignedFRTFiling } from "./frt-filing-workflow.js";
 import { updateFRTRequestDate } from "./frt-board-date-edit.js";
+import { loadFRTPayeeCorrection, saveFRTPayeeCorrection } from "./frt-payee-correction.js";
 import { loadFRTPersonAssignment, saveFRTPersonAssignment } from "./frt-board-person-assignment.js";
 import { executeFRTDomainAction, frtActionSpec } from "./frt-board-domain-actions.js";
 import { loadFRTLiquidation, submitFRTLiquidation } from "./frt-liquidation.js";
@@ -89,6 +90,14 @@ export class FundTrackerNativeClient {
 
   updateRequestDate(args = {}) {
     return updateFRTRequestDate({ ...args, auth: this.auth, api: this.api });
+  }
+
+  loadPayeeCorrection(args = {}) {
+    return loadFRTPayeeCorrection({ ...args, auth: this.auth, api: this.api });
+  }
+
+  savePayeeCorrection(args = {}) {
+    return saveFRTPayeeCorrection({ ...args, auth: this.auth, api: this.api });
   }
 
   loadPersonAssignment(args = {}) {

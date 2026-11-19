@@ -3,7 +3,7 @@
  */
 import {
  TT_LOCATIONS,TT_DEPARTMENTS,creditedAttendanceMs,filterMyAttendancePeriod,
- TT_LIVE_ATTENDANCE_WRITES_ACCEPTED
+ TT_LIVE_ATTENDANCE_WRITES_ACCEPTED,TT_POLICY
 } from './time-tracker-native.js';
 import {timeTrackerManilaDay} from './time-tracker-policy.js';
 import {renderTimeTrackerOverview} from './time-tracker-overview.js';
@@ -64,7 +64,21 @@ export function timeTrackerClockParts(at=new Date()){
  };
 }
 
-/** Update only four text nodes; never re-render the board or refetch records. */
+/** Elapsed session duration is presentation only, not credited work or payroll. */
+export function timeTrackerSessionElapsed(clockIn,at=new Date()){
+ const start=Date.parse(clockIn);
+ const now=new Date(at).getTime();
+ if(!Number.isFinite(start)||!Number.isFinite(now))return {label:'00:00',progress:0};
+ const elapsed=Math.max(0,now-start);
+ const hours=Math.floor(elapsed/3600000);
+ const minutes=Math.floor((elapsed%3600000)/60000);
+ return {
+  label:String(hours).padStart(2,'0')+':'+String(minutes).padStart(2,'0'),
+  progress:Math.min(1,elapsed/TT_POLICY.requiredWorkMs)
+ };
+}
+
+/** Synchronize the clock and elapsed-time ring without rerendering or refetching. */
 export function syncTimeTrackerClock(root,at=new Date()){
  const hours=root?.querySelector?.('#tt-clock-hours');
  if(!hours)return false;
@@ -77,6 +91,13 @@ export function syncTimeTrackerClock(root,at=new Date()){
  for(const [id,value] of Object.entries(nodes)){
   const node=root.querySelector('#'+id);
   if(node&&node.textContent!==value)node.textContent=value;
+ }
+ const elapsed=root.querySelector('#tt-session-elapsed');
+ if(elapsed?.dataset?.clockIn){
+  const session=timeTrackerSessionElapsed(elapsed.dataset.clockIn,at);
+  if(elapsed.textContent!==session.label)elapsed.textContent=session.label;
+  const progress=root.querySelector('#tt-session-progress');
+  progress?.setAttribute?.('stroke-dashoffset',String((339.292*(1-session.progress)).toFixed(3)));
  }
  return true;
 }
@@ -103,7 +124,7 @@ function navigation(view,busy,bootstrapEligible=false,gpsEligible=false){
    '>'+esc(label)+'</button>'
   ).join('')+'</div></nav>';
 }
-function head(access){
+function head(access,busy=false,view='clock'){
  return '<header class="tt-app-header fm1-app-header">'+
   '<div class="tt-pixi-backdrop" aria-hidden="true" data-pixi="fallback"></div>'+
   '<div class="tt-app-brand"><span class="tt-brand-icon" aria-hidden="true">◷</span>'+
@@ -111,6 +132,10 @@ function head(access){
     '<h1>TimeTracker <span>Attendance</span></h1>'+
     '<p>Attendance, scheduling &amp; team management</p></div></div>'+
   '<div class="tt-header-actions fm1-header-status">'+
+   (view==='clock'?'<button type="button" class="tt-header-refresh" data-action="tt-refresh"'+
+    (busy?' disabled':'')+' aria-label="Refresh TimeTracker attendance">↻ Refresh</button>':'')+
+   '<button type="button" class="tt-header-link" data-action="tt-tab" data-target="hours"'+
+    (busy?' disabled':'')+'>▦ &nbsp; My Hours <span aria-hidden="true">›</span></button>'+
    '<span class="tt-role-pill" title="Existing centralized TimeTracker role">'+
     esc(access?.moduleRole||'Signed access required')+'</span>'+
   '</div></header>';
@@ -147,6 +172,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
  const credited=todayRows.reduce((sum,r)=>sum+(r.creditedMs===null?
   creditedAttendanceMs(r.clockIn,now):r.creditedMs||0),0);
  const status=active?'Active':'Idle';
+ const session=active?timeTrackerSessionElapsed(active.clockIn,now):null;
  let html='<div class="tt-clock-stage tt-command-center">'+
   '<div class="tt-command-layout">'+
    '<section class="tt-time-dashboard" aria-label="Live time and attendance summary">'+
@@ -183,14 +209,23 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
    '</section>'+
    '<section class="tt-clock-card tt-attendance-console" aria-label="Attendance clock form">'+
     '<div class="tt-console-kicker"><span class="tt-console-kicker-mark" aria-hidden="true"></span> ATTENDANCE CONTROL</div>'+
-    '<div class="tt-clock-card-head"><h4>'+ (active?'Clock Out':'Clock In')+
+    '<div class="tt-clock-card-head"><h4>'+ (active?'Active Session':'Clock In')+
      '</h4><span class="tt-idle-badge '+(active?'tt-badge-active':'')+'">'+
       (active?'ACTIVE':'IDLE')+'</span></div>'+
     '<p class="tt-console-description">'+(active?
      'End the current signed attendance session using a fresh GPS fix.':
      'Start your work session with a signed record and a fresh GPS fix.')+'</p>'+
-    (active?'<p class="tt-active-copy">Your signed session began '+esc(date(active.clockIn))+
-      '.</p>':'')+
+    (active?'<div class="tt-session-progress-wrap">'+
+      '<div class="tt-session-ring" role="timer" aria-label="Elapsed time for active attendance session">'+
+       '<svg viewBox="0 0 128 128" aria-hidden="true" focusable="false">'+
+        '<circle class="tt-session-ring-track" cx="64" cy="64" r="54"></circle>'+
+        '<circle id="tt-session-progress" class="tt-session-ring-progress" cx="64" cy="64" r="54"'+
+         ' stroke-dasharray="339.292" stroke-dashoffset="'+
+         (339.292*(1-session.progress)).toFixed(3)+'"></circle></svg>'+
+       '<div class="tt-session-ring-center"><strong id="tt-session-elapsed" data-clock-in="'+
+        esc(active.clockIn)+'">'+session.label+'</strong><span>elapsed</span></div>'+
+      '</div><p class="tt-session-progress-note">Session duration · credited hours may differ</p></div>'+
+      '<p class="tt-active-copy">Started '+esc(date(active.clockIn))+'</p>':'')+
     '<form id="tt-clock-form">'+
      (active?
       '<div class="tt-active-session-context" aria-label="Active attendance details">'+
@@ -266,8 +301,8 @@ export function renderTimeTrackerNative({
  const selected=((view==='team'&&teamEligible!==true)||
   (view==='gps'&&gpsEligible!==true))?'clock':
  ['overview','clock','log','reports','calendar','ot','hours','team','monitor','gps'].includes(view)?view:'clock';
- let html='<section class="tt-native" aria-label="TimeTracker attendance application"><div class="fm1-app tt-application" data-tt-application-root>'+
-  head(verified?result.access:null)+navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true)+
+ let html='<section class="tt-native" aria-label="TimeTracker attendance application"><div class="fm1-app tt-application" data-tt-view="'+selected+'" data-tt-application-root>'+
+  head(verified?result.access:null,busy,selected)+navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true)+
   applicationHeading(selected,busy)+notifications(verified,verified&&result.access?.attendanceWritesAccepted===true);
  if(error)html+='<div class="tt-feedback tt-feedback-error" role="alert">'+esc(error)+'</div>';
  if(success)html+='<div class="tt-feedback tt-feedback-success" role="status">'+esc(success)+'</div>';
