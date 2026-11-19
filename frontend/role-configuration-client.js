@@ -4,6 +4,24 @@
 const VALID_OPERATIONS=new Set(['role.create','role.edit','role.activate','role.deactivate',
  'assignment.assign','assignment.revoke','permission.configure','workspace.configure']);
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+/** A proposal acknowledgement is not evidence of persisted staged state.
+ * Require the exact record in a fresh signed snapshot, without implying
+ * that its requested operational permission has been activated. */
+export function stagedProposalReadbackVerified(snapshot,{workspaceId,id,operation,payload}){
+ if(snapshot?.workspaceId!==workspaceId||snapshot?.mode!=='staged_only'||
+    !uuid.test(id||'')||!Array.isArray(snapshot.proposals))return false;
+ const record=snapshot.proposals.find(item=>item?.id===id);
+ if(!record||record.operation!==operation||record.status!=='proposed')return false;
+ return JSON.stringify(canonicalPayload(record.payload))===
+   JSON.stringify(canonicalPayload(payload));
+}
+function canonicalPayload(value){
+ if(Array.isArray(value))return value.map(canonicalPayload);
+ if(value&&typeof value==='object')return Object.fromEntries(
+   Object.keys(value).sort().map(key=>[key,canonicalPayload(value[key])]));
+ return value;
+}
+
 export class RoleConfigurationClient {
  constructor(api){this.api=api;}
  async bootstrapVerified(){
