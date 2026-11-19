@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {
  BOARD_SHARE_LINKS_ENABLED,BOARD_PRIVACY_MODES,SENSITIVE_MODULE_DEFAULTS,
  normalizeBoardSharePolicy,boardShareReadiness,renderBoardSharePreview
-} from '../board-share.js';
+} from '../board/collaboration/share.js';
 
 const boardId='11111111-1111-4111-8111-111111111111';
 const workspaceId='22222222-2222-4222-8222-222222222222';
@@ -83,7 +83,7 @@ test('share preview escapes untrusted board names and creates no link',()=>{
 
 test('integration preserves existing Work Management backend, auth and invite flags',()=>{
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert.match(source,/import \{openBoardSharePreview,closeBoardSharePreview\} from '\.\/board-share\.js'/);
+ assert.match(source,/import \{openBoardSharePreview,closeBoardSharePreview\} from '\.\/board\/collaboration\/share\.js'/);
  assert.match(source,/data-action="board-share-preview"/);
  assert.match(source,/case 'board-share-preview':/);
  assert.match(source,/state\.boardManage===true/);
@@ -96,7 +96,7 @@ test('integration preserves existing Work Management backend, auth and invite fl
 
 test('main-based integration does not activate or import disposable invitation SQL',()=>{
  const app=readFileSync('frontend/app.js','utf8');
- const ui=readFileSync('frontend/board-share.js','utf8');
+ const ui=readFileSync('frontend/board/collaboration/share.js','utf8');
  assert.match(ui,/renderBoardAccessChoices/);
  assert.match(ui,/data-bs09-tab/);
  assert.match(ui,/data-board-share-workspace-invite/);

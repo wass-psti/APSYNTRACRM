@@ -2,7 +2,7 @@
  * Data rows, credentials, documents, GPS, role grants and API payloads are forbidden.
  * The cache never authorizes a board view; hydrate only after signed view access.
  */
-import {preferenceKey} from './board-presentation.js';
+import {preferenceKey} from '../presentation/presentation.js';
 export const PREFERENCE_DB='apsyntra-public-ui-preferences';
 export const PREFERENCE_SCHEMA=1;
 export const PREFERENCE_STORE='board-layouts';

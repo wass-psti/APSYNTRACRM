@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {preferenceKey,columnWidth,reorderVisible,normalizeLayout,loadBoardLayout,
- saveBoardLayout,resetBoardLayout,boardTable,boardColumnMenu} from '../board-presentation.js';
-import {boardGrid,boardGridColumns} from '../board-grid.js';
+ saveBoardLayout,resetBoardLayout,boardTable,boardColumnMenu} from '../board/presentation/presentation.js';
+import {boardGrid,boardGridColumns} from '../board/presentation/grid.js';
 const a='11111111-1111-4111-8111-111111111111',
  b='22222222-2222-4222-8222-222222222222',
  c='33333333-3333-4333-8333-333333333333',

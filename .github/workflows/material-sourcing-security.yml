@@ -3,7 +3,7 @@ on:
   pull_request:
     paths:
       - 'frontend/material-sourcing-*.js'
-      - 'frontend/board-grid.js'
+      - 'frontend/board/presentation/grid.js'
       - 'frontend/tests/material-sourcing-*.test.mjs'
       - 'sql/mrh-sourcing-sensitive-vault-CANDIDATE-NOT-APPLIED.sql'
       - 'sql/tests/mrh-sourcing-sensitive-disposable-*.sql'
@@ -12,7 +12,7 @@ on:
     branches: [main]
     paths:
       - 'frontend/material-sourcing-*.js'
-      - 'frontend/board-grid.js'
+      - 'frontend/board/presentation/grid.js'
       - 'frontend/tests/material-sourcing-*.test.mjs'
       - 'sql/mrh-sourcing-sensitive-vault-CANDIDATE-NOT-APPLIED.sql'
       - 'sql/tests/mrh-sourcing-sensitive-disposable-*.sql'
@@ -34,7 +34,7 @@ jobs:
         run: |
           node --check frontend/material-sourcing-controlled-activation.js
           node --check frontend/material-sourcing-application.js
-          node --check frontend/board-grid.js
+          node --check frontend/board/presentation/grid.js
           node --test frontend/tests/material-sourcing-controlled-activation.test.mjs frontend/tests/material-sourcing-schema-plan.test.mjs frontend/tests/material-sourcing-application.test.mjs frontend/tests/board-structure-admin.test.mjs
   postgres-denial:
     runs-on: ubuntu-latest

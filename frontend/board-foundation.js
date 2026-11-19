@@ -2,7 +2,7 @@
  * Uses ONLY the existing Work Management RPCs; no backend/service-role bypass.
  * Provisioning is never automatic on login or page load.
  */
-import {BOARD_MODULES,boardDescription,boardColumns} from './board-manifest.js';
+import {BOARD_MODULES,boardDescription,boardColumns} from './board/services/manifest.js';
 function assert(ok,message){if(!ok)throw new Error(message);}
 const validId=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export async function inspectFoundation(api,{boards,context}={}){

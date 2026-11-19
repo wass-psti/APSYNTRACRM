@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {boardTable} from '../board-presentation.js';
+import {boardTable} from '../board/presentation/presentation.js';
 import {
  canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,
  visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
  renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility
-} from '../board-loading.js';
+} from '../board/presentation/loading.js';
 
 const app=readFileSync('frontend/app.js','utf8');
 const html=readFileSync('index.html','utf8');
@@ -76,7 +76,7 @@ test('effects remain board-scoped, compositor-friendly, accessible, and dependen
  assert.match(css,/rotate\(/);
  assert.doesNotMatch(css,/animation:\s*.*(?:top|left|width|height)|will-change|@import|url\(https?:|backdrop-filter/);
  assert.doesNotMatch(css,/(?:^|\n)\s*body\s*\{|(?:^|\n)\s*\.page-head\s*\{/);
- assert.doesNotMatch(readFileSync('frontend/board-loading.js','utf8'),
+ assert.doesNotMatch(readFileSync('frontend/board/presentation/loading.js','utf8'),
   /from ['"](?:react|three|gsap|@react-three|motion)/);
 });
 
@@ -86,6 +86,6 @@ test('loader assets are linked after the shared visual system and checked in Pag
  assert.ok(html.includes('frontend/apsyntra-styles.bundle.css'));
  assert.ok(manifest.includes(loaderLink));
  assert.ok(manifest.indexOf(loaderLink)>manifest.indexOf('frontend/board-visual-refresh.css'));
- assert.match(smoke,/frontend\/board-loading\.js/);
+ assert.match(smoke,/frontend\/board\/presentation\/loading\.js/);
  assert.match(smoke,/frontend\/board-loading\.css/);
 });

@@ -3,9 +3,9 @@
  */
 import {ApiError} from '../../session.js';
 import {validUuid} from '../../data.js';
-import {moduleByBoardName} from '../../board-manifest.js';
-import {isProtectedBoard} from '../../board-card-lifecycle.js';
-import {boardGridColumns} from '../../board-grid.js';
+import {moduleByBoardName} from '../services/manifest.js';
+import {isProtectedBoard} from '../services/card-lifecycle.js';
+import {boardGridColumns} from '../presentation/grid.js';
 import {SUPPORTED_COLUMN_TYPE_IDS,renderColumnTypeOptions,renderColumnCenterCards} from '../columns/column-catalog.js';
 
 export const BOARD_STRUCTURE_ADMIN_ENABLED=true;

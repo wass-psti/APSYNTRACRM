@@ -9,7 +9,7 @@ test('Priority 5F reduces the exact anonymous startup ES module graph without re
  assert.ok(baseline.sourceBytes-optimized.sourceBytes>=200000,'at least 200 KB decoded feature source removed');
  for(const path of ['frontend/session.js','frontend/data.js','frontend/initialization-core.js',
   'frontend/workspace-startup-read.js','frontend/performance-critical-path.js',
-  'frontend/board-grid.js','frontend/action-menu-experience.js','frontend/fueltrans-lazy.js'])
+  'frontend/board/presentation/grid.js','frontend/action-menu-experience.js','frontend/fueltrans-lazy.js'])
   assert.ok(optimized.modules.includes(path),'required startup dependency: '+path);
  for(const path of ['frontend/fueltrans-native.js','frontend/fueltrans/app.js',
   'frontend/fueltrans/supabase-client.js','frontend/board/import/import-ui.js',

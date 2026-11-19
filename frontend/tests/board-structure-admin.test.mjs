@@ -164,7 +164,7 @@ test('app is wired into board options while existing item permissions remain sep
 });
 
 test('typed domain board keeps restricted projection until approved config gate',async()=>{
- const {boardGridColumns,boardGrid}=await import('../board-grid.js');
+ const {boardGridColumns,boardGrid}=await import('../board/presentation/grid.js');
  const detail={board:{name:'TimeTracker Attendance'},columns:[
   {id:domain,name:'Attendance Ref',column_key:'col_original',data_type:'text',
    system_key:null,visible:true},

@@ -5,7 +5,7 @@ on:
     paths:
       - ".github/workflows/cp-tt-fm1-app-02.yml"
       - "frontend/app.js"
-      - "frontend/board-loading.js"
+      - "frontend/board/presentation/loading.js"
       - "frontend/sidebar-visuals.js"
       - "frontend/time-tracker-*.js"
       - "frontend/time-tracker-application.css"
@@ -25,7 +25,7 @@ on:
     paths:
       - ".github/workflows/cp-tt-fm1-app-02.yml"
       - "frontend/app.js"
-      - "frontend/board-loading.js"
+      - "frontend/board/presentation/loading.js"
       - "frontend/sidebar-visuals.js"
       - "frontend/time-tracker-*.js"
       - "frontend/time-tracker-application.css"
@@ -75,7 +75,7 @@ jobs:
       - name: Verify formatting and changed-module lint
         run: |
           npx prettier --check frontend/time-tracker-application.js frontend/time-tracker-application.css frontend/tests/time-tracker-application.test.mjs scripts/time-tracker-browser-acceptance.mjs docs/CP-TT-FM1-APP-01.md docs/CP-TT-FM1-APP-02.md package.json .github/workflows/cp-tt-fm1-app-02.yml
-          npx eslint frontend/app.js frontend/board-loading.js frontend/sidebar-visuals.js frontend/time-tracker-ui.js frontend/time-tracker-application.js frontend/tests/time-tracker-application.test.mjs frontend/tests/time-tracker-native.test.mjs scripts/time-tracker-browser-acceptance.mjs
+          npx eslint frontend/app.js frontend/board/presentation/loading.js frontend/sidebar-visuals.js frontend/time-tracker-ui.js frontend/time-tracker-application.js frontend/tests/time-tracker-application.test.mjs frontend/tests/time-tracker-native.test.mjs scripts/time-tracker-browser-acceptance.mjs
       - name: Build production frontend
         run: npm run build
       - name: Install Playwright Chromium

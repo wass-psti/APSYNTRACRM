@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {boardTable} from '../board-presentation.js';
+import {boardTable} from '../board/presentation/presentation.js';
 const app=readFileSync('frontend/app.js','utf8');
 const css=readFileSync('frontend/soft-minimalist.css','utf8');
 test('board view labels are native draggable links, with no visible reorder-arrow buttons',()=>{

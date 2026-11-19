@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {boardGridColumns,prepareBoardGrid,boardGrid} from '../board-grid.js';
-import {BOARD_MODULES,boardColumns,boardDescription} from '../board-manifest.js';
+import {boardGridColumns,prepareBoardGrid,boardGrid} from '../board/presentation/grid.js';
+import {BOARD_MODULES,boardColumns,boardDescription} from '../board/services/manifest.js';
 
 const ID='7af78b3f-67bf-4600-9aa1-9006d19d486e';
 const W='00000000-0000-4000-8000-000000000001';
@@ -64,7 +64,7 @@ test('group headings must display the exact persisted name, including Main group
  const detail=fixture(),group={id:'180e7ed3-08e8-451a-bc46-fd5b9e54e366',title:'Main group'};
  assert.equal(detail.board.id,ID);
  assert.equal(group.title,'Main group');
- const grid=readFileSync(new URL('../board-grid.js',import.meta.url),'utf8');
+ const grid=readFileSync(new URL('../board/presentation/grid.js',import.meta.url),'utf8');
  assert.doesNotMatch(grid,/title:'Group Title'/);
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/const displayTitle=title;/);

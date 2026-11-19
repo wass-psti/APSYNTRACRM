@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {DomainApi,BOARD_ITEM_PAGE_SIZE} from '../data.js';
-import {renderBoardPagination,mountBoardPagination} from '../board-pagination-ui.js';
-import {boardItemsComplete} from '../board-grid.js';
+import {renderBoardPagination,mountBoardPagination} from '../board/presentation/pagination-ui.js';
+import {boardItemsComplete} from '../board/presentation/grid.js';
 
 const board='11111111-1111-4111-8111-111111111111';
 const user='22222222-2222-4222-8222-222222222222';
@@ -247,7 +247,7 @@ test('application loads one page initially, preserves loaded depth on refresh, a
  assert.match(app,/case 'board-load-more':\{await loadMoreBoardItems\(\);break;\}/);
  assert.match(app,/mountBoardPagination\(root,\(\)=>loadMoreBoardItems\(\)\)/);
  assert.match(app,/renderBoardPagination\(state\.board\.pagination/);
- const boardGrid=readFileSync(new URL('../board-grid.js',import.meta.url),'utf8');
+ const boardGrid=readFileSync(new URL('../board/presentation/grid.js',import.meta.url),'utf8');
  assert.match(boardGrid,/virtualize:true/);
  assert.match(app,/virtualize:true,primaryEditable/);
 });

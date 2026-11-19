@@ -4,7 +4,7 @@
  */
 import {validUuid} from './data.js';
 import {canBulkEditBoard} from './board-bulk02-client.js';
-import {isProtectedBoard} from './board-card-lifecycle.js';
+import {isProtectedBoard} from './board/services/card-lifecycle.js';
 
 const check=(id,status,detail)=>Object.freeze({id,status,detail});
 const codeOf=error=>String(error?.code||'');

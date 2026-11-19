@@ -3,8 +3,8 @@
  */
 import {ApiError} from './session.js';
 import {validUuid} from './data.js';
-import {isProtectedBoard} from './board-card-lifecycle.js';
-import {moduleByBoardName} from './board-manifest.js';
+import {isProtectedBoard} from './board/services/card-lifecycle.js';
+import {moduleByBoardName} from './board/services/manifest.js';
 
 export const BOARD_BULK02_ENABLED=false; // Requires new production migration and real signed acceptance.
 const reject=(reason,status=403)=>{throw new ApiError(reason,status);};

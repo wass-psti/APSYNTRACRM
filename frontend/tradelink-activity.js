@@ -2,7 +2,7 @@
  * Source TradeLink's collaboration/mention notifications are NOT represented here:
  * they need a separate authorized domain API and must never be inferred from board events.
  */
-import {normalizeBoardActivity} from './board-activity-ui.js';
+import {normalizeBoardActivity} from './board/presentation/activity-ui.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const TRADELINK_ACTIVITY_LIMIT=100;
 export function renderTradeLinkActivity({events=null,busy=false,error=''}={}){

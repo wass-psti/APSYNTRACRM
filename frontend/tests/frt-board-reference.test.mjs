@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {boardGrid,boardGridColumns,prepareBoardGrid} from '../board-grid.js';
+import {boardGrid,boardGridColumns,prepareBoardGrid} from '../board/presentation/grid.js';
 import {FRT_BOARD_ID,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS,
  frtReferenceColumns,isFRTBoardReference,frtReferenceStatusLabel} from '../frt-board-reference.js';
 const ids=['11111111-1111-4111-8111-111111111111','22222222-2222-4222-8222-222222222222'];
@@ -76,6 +76,6 @@ test('board UI distinguishes source-mapped versus unavailable fields with no FRT
  assert.match(app,/isFRTBoardReference\(b\)/);
  assert.match(app,/FRT_REFERENCE_STATUS_LABELS\.join/);
  assert.match(app,/separate board mirror does not store FRT person assignments or private attachments\/QR files/);
- const grid=readFileSync(new URL('../board-grid.js',import.meta.url),'utf8');
+ const grid=readFileSync(new URL('../board/presentation/grid.js',import.meta.url),'utf8');
  assert.doesNotMatch(grid,/frt_request_action|frt_admin_users/);
 });

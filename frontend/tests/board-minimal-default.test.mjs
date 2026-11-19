@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {BoardStructureClient,normalizeBoardUi,parseChoiceConfig,columnOptionLines} from '../board/crud/structure-admin.js';
 import {genericBoardColumns} from '../board-inline-items.js';
-import {boardTable} from '../board-presentation.js';
+import {boardTable} from '../board/presentation/presentation.js';
 import {
  ITEM_ONLY_MODE,isItemOnlyBoard,enableItemOnlyBoard,createItemOnlyBoard,itemOnlyColumnKeys
 } from '../board-minimal-default.js';

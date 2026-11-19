@@ -5,8 +5,8 @@ on:
       - 'frontend/material-sourcing-schema-plan.js'
       - 'frontend/tests/material-sourcing-schema-plan.test.mjs'
       - 'frontend/board/crud/structure-admin.js'
-      - 'frontend/board-grid.js'
-      - 'frontend/board-manifest.js'
+      - 'frontend/board/presentation/grid.js'
+      - 'frontend/board/services/manifest.js'
       - '.github/workflows/material-sourcing-schema-plan.yml'
   push:
     branches: [main]
@@ -14,8 +14,8 @@ on:
       - 'frontend/material-sourcing-schema-plan.js'
       - 'frontend/tests/material-sourcing-schema-plan.test.mjs'
       - 'frontend/board/crud/structure-admin.js'
-      - 'frontend/board-grid.js'
-      - 'frontend/board-manifest.js'
+      - 'frontend/board/presentation/grid.js'
+      - 'frontend/board/services/manifest.js'
       - '.github/workflows/material-sourcing-schema-plan.yml'
 permissions:
   contents: read

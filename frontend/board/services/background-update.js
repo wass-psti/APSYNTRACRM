@@ -1,7 +1,7 @@
 /** Non-destructive presentation refresh of an already authorized board.
  * The caller alone decides the signed board identity, grants and fetch lifecycle.
  */
-import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board/scroll-state.js';
+import {captureBoardGroupScroll,restoreBoardGroupScroll} from '../scroll-state.js';
 
 export function canRetainVisibleBoard(state,{boardId,tab,userId,signed}={}){
  return signed===true&&state?.view==='board'&&state.boardId===boardId&&

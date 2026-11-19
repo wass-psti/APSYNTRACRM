@@ -1,6 +1,6 @@
 import {ApiError} from '../../session.js';
 import {validUuid} from '../../data.js';
-import {isProtectedBoard} from '../../board-card-lifecycle.js';
+import {isProtectedBoard} from '../services/card-lifecycle.js';
 
 const conflict=(message)=>new ApiError(message,409);
 export function eligibleTrashBoard(board){

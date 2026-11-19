@@ -1,7 +1,7 @@
 /** CRM Admin role configuration, backed by server-authorized RPC.
  * All writes are proposals. This UI cannot elevate a user or alter live membership.
  */
-import {BOARD_MODULES} from './board-manifest.js';
+import {BOARD_MODULES} from './board/services/manifest.js';
 import {roleConfigurationIcon} from './role-configuration-visuals.js';
 const actions=['view','create','edit','delete','approve','export','administer'];
 const x=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

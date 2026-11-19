@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {boardGroupArchiveSuffix} from '../board-group-counts.js';
+import {boardGroupArchiveSuffix} from '../board/presentation/group-counts.js';
 
 test('group archive suffix formats authoritative active and archived counts',()=>{
  assert.equal(boardGroupArchiveSuffix(12,3),' · 12 active · 3 archived');

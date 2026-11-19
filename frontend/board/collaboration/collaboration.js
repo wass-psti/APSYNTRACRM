@@ -1,6 +1,6 @@
 /** CP-BOARD-COL01 signed item collaboration: frontend preparation, disabled until approval. */
-import {ApiError} from './session.js';
-import {validUuid} from './data.js';
+import {ApiError} from '../../session.js';
+import {validUuid} from '../../data.js';
 export const BOARD_COL01_ITEM_READS_ENABLED=false;
 const MAX=50;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

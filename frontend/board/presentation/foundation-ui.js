@@ -1,9 +1,9 @@
 /** Phase A — dedicated board registry and operational readiness UI.
  * Verified statuses always come from live, authorized RPC responses.
  */
-import {BOARD_MODULES,boardColumns,BOARD_CONTRACT_VERSION} from './board-manifest.js';
-import {summarizeFoundation} from './board-foundation.js';
-import {foundationIcon} from './foundation-visuals.js';
+import {BOARD_MODULES,boardColumns,BOARD_CONTRACT_VERSION} from '../services/manifest.js';
+import {summarizeFoundation} from '../../board-foundation.js';
+import {foundationIcon} from '../../foundation-visuals.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function renderFoundation({rows=[],loading=false,provisioning=false,testing=false,testResult=null,log=[],error='',canProvision=false}={}){
  const summary=summarizeFoundation(rows);

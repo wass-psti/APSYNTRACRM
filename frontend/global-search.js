@@ -2,7 +2,7 @@
  * Reads only the current workspace's existing board/module content. Navigation
  * continues through the existing hash router; no writes or persisted history.
  */
-import {BOARD_MODULES} from './board-manifest.js';
+import {BOARD_MODULES} from './board/services/manifest.js';
 
 export const GLOBAL_SEARCH_MIN_QUERY=2;
 export const GLOBAL_SEARCH_MAX_QUERY=160;

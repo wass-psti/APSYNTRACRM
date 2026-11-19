@@ -1,10 +1,10 @@
 /** Authorized typed board-grid presentation. No domain records are synthesized. */
-import {moduleByBoardName} from './board-manifest.js';
-import {isMaterialSourcingRestrictedColumn,isApprovedPublicMaterialSourcingColumn} from './material-sourcing-schema-plan.js';
-import {isTradeLinkBoard,tradeLinkGridColumns,tradeLinkDisplayValue,TRADELINK_FILES_KEY} from './tradelink-board-items.js';
-import {boardTable} from './board-presentation.js';
-import {isFRTBoardReference,frtReferenceColumns,frtReferenceStatusLabel} from './frt-board-reference.js';
-import {configuredStatus} from './board-inline-items.js';
+import {moduleByBoardName} from '../services/manifest.js';
+import {isMaterialSourcingRestrictedColumn,isApprovedPublicMaterialSourcingColumn} from '../../material-sourcing-schema-plan.js';
+import {isTradeLinkBoard,tradeLinkGridColumns,tradeLinkDisplayValue,TRADELINK_FILES_KEY} from '../../tradelink-board-items.js';
+import {boardTable} from './presentation.js';
+import {isFRTBoardReference,frtReferenceColumns,frtReferenceStatusLabel} from '../../frt-board-reference.js';
+import {configuredStatus} from '../../board-inline-items.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function boardItemsComplete(detail){
  const paging=detail?.pagination||detail?.page||{};

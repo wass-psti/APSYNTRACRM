@@ -5,7 +5,7 @@ import {
  BOARD_MENTION_WRITES_ENABLED,normalizeBoardPeople,filterBoardPeople,
  renderBoardPeople,mentionQuery,mentionCandidates,insertMention,
  renderMentionDraft,renderMentionOptions
-} from '../board-people.js';
+} from '../board/collaboration/people.js';
 
 const boardId='11111111-1111-4111-8111-111111111111';
 const workspaceId='22222222-2222-4222-8222-222222222222';
@@ -29,7 +29,7 @@ test('mentions remain a local text draft: no posts, notifications or network cal
  assert.match(app,/mentionCandidates\(people,editor\.value,editor\.selectionStart\)/);
  assert.match(app,/case 'board-members'/);
  assert.match(app,/data-action="board-members">♙ People/);
- assert.doesNotMatch(readFileSync('frontend/board-people.js','utf8'),
+ assert.doesNotMatch(readFileSync('frontend/board/collaboration/people.js','utf8'),
   /wm_add_board_member|fetch\(|\.rpc\(|\.authorized\(|localStorage|sessionStorage/);
 });
 test('only exact signed-board explicit members are displayed',()=>{
