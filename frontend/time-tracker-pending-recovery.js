@@ -1,2 +1,2 @@
-/** Compatibility module. Edit the canonical implementation: frontend/apps/TimeTracker/time-tracker-pending-recovery.js. */
-export * from './apps/TimeTracker/time-tracker-pending-recovery.js';
+/** Compatibility re-export; edit the canonical apps/TimeTracker/time-tracker-pending-recovery.js module. */
+export * from "./apps/TimeTracker/time-tracker-pending-recovery.js";

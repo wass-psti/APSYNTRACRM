@@ -1,2 +1,2 @@
-/** Compatibility module. Edit the canonical implementation: frontend/apps/FuelTrack/fueltrack-v3-application-route.js. */
-export * from './apps/FuelTrack/fueltrack-v3-application-route.js';
+/** Compatibility re-export; edit the canonical apps/FuelTrack/fueltrack-v3-application-route.js module. */
+export * from "./apps/FuelTrack/fueltrack-v3-application-route.js";
