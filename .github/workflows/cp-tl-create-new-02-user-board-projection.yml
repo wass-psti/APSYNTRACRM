@@ -1,0 +1,54 @@
+name: APSYNTRA CP-TL-CREATE-NEW-02 — User Draft Board Projection
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/migrations/20261119080635_cp_tl_create_new_02_user_board_projection_insert.sql"
+      - "sql/tests/cp-tl-create-new-02-user-*"
+      - "scripts/cp-tl-create-new-02-user-draft-disposable.sh"
+      - "frontend/tests/tradelink-user-board-projection-create.test.mjs"
+      - "supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql"
+      - "supabase/migrations/20261112093727_tradelink_revision_required_edit_compat.sql"
+      - "supabase/migrations/20261113065300_tradelink_retry_safe_revision_bound_updates.sql"
+      - "supabase/migrations/20261116062500_cp_tl_legacy_analytics_summary.sql"
+      - "supabase/migrations/20261116070000_cp_tl_legacy_numbering_dates_aging.sql"
+      - "supabase/migrations/20261117020000_tradelink_immutable_revision_snapshots.sql"
+      - "supabase/migrations/20261117045417_tradelink_approved_revision_flow.sql"
+      - "supabase/migrations/20261119073346_tradelink_user_draft_creation.sql"
+      - "supabase/migrations/20261119073608_tradelink_document_read_policy_consolidation.sql"
+      - "sql/cp-tl03-staged-domain.sql"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/20261119080635_cp_tl_create_new_02_user_board_projection_insert.sql"
+      - "sql/tests/cp-tl-create-new-02-user-*"
+      - "scripts/cp-tl-create-new-02-user-draft-disposable.sh"
+      - "frontend/tests/tradelink-user-board-projection-create.test.mjs"
+      - "supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql"
+      - "supabase/migrations/20261112093727_tradelink_revision_required_edit_compat.sql"
+      - "supabase/migrations/20261113065300_tradelink_retry_safe_revision_bound_updates.sql"
+      - "supabase/migrations/20261116062500_cp_tl_legacy_analytics_summary.sql"
+      - "supabase/migrations/20261116070000_cp_tl_legacy_numbering_dates_aging.sql"
+      - "supabase/migrations/20261117020000_tradelink_immutable_revision_snapshots.sql"
+      - "supabase/migrations/20261117045417_tradelink_approved_revision_flow.sql"
+      - "supabase/migrations/20261119073346_tradelink_user_draft_creation.sql"
+      - "supabase/migrations/20261119073608_tradelink_document_read_policy_consolidation.sql"
+      - "sql/cp-tl03-staged-domain.sql"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  user-draft-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
+      - name: Disposable PostgreSQL 17 signed User acceptance
+        run: bash scripts/cp-tl-create-new-02-user-draft-disposable.sh
+      - name: TradeLink User Board projection contract
+        run: node --test frontend/tests/tradelink-user-board-projection-create.test.mjs
+      - name: Migration source manifest
+        run: node scripts/verify-migration-source-manifest.mjs
