@@ -1,0 +1,47 @@
+name: CP-NATIVE-APP-ACCESS-03 Outage Acceptance Contract
+on:
+  pull_request:
+    paths:
+      - "docs/CP-NATIVE-APP-ACCESS-03.md"
+      - "frontend/tests/cp-native-app-access-03-acceptance.test.mjs"
+      - "scripts/cp-native-app-access-03-employee-browser-acceptance.mjs"
+      - ".github/workflows/cp-native-app-access-03.yml"
+  push:
+    branches: [main]
+    paths:
+      - "docs/CP-NATIVE-APP-ACCESS-03.md"
+      - "frontend/tests/cp-native-app-access-03-acceptance.test.mjs"
+      - "scripts/cp-native-app-access-03-employee-browser-acceptance.mjs"
+      - ".github/workflows/cp-native-app-access-03.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  frontend:
+    name: CP-03 contract, regression, lint and production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run full frontend regression
+        run: npm test
+      - name: Verify source syntax and repository checks
+        run: npm run check
+      - name: Run repository lint
+        run: npm run lint
+      - name: Build production assets
+        run: npm run build
+      - name: Verify repository formatting
+        run: npm run format:check
+      - name: Verify CP-03 runner and test formatting/lint
+        run: |
+          npx eslint scripts/cp-native-app-access-03-employee-browser-acceptance.mjs frontend/tests/cp-native-app-access-03-acceptance.test.mjs
+          npx prettier --check scripts/cp-native-app-access-03-employee-browser-acceptance.mjs frontend/tests/cp-native-app-access-03-acceptance.test.mjs docs/CP-NATIVE-APP-ACCESS-03.md
