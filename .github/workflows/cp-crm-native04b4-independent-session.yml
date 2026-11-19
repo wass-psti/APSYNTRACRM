@@ -1,0 +1,49 @@
+name: CP-CRM-NATIVE-04B4 Genuine Independent Session Gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/cp-crm-native04b4-independent-session.yml'
+      - 'scripts/cp-crm-native04b4-independent-session-preflight.mjs'
+      - 'frontend/tests/cp-crm-native04b4-independent-session-preflight.test.mjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cp-crm-native04b4-independent-session.yml'
+      - 'scripts/cp-crm-native04b4-independent-session-preflight.mjs'
+      - 'frontend/tests/cp-crm-native04b4-independent-session-preflight.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native04b4-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  independent-session:
+    name: Independent signed-subject contract and no-production-write assurance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Ensure cross-profile preflight needs independent signed actors
+        run: |
+          set -euo pipefail
+          test -z "${SUPABASE_DB_URL:-}"
+          test -z "${DATABASE_URL:-}"
+          node --check scripts/cp-crm-native04b4-independent-session-preflight.mjs
+          node --test frontend/tests/cp-crm-native04b4-independent-session-preflight.test.mjs
+          npx eslint scripts/cp-crm-native04b4-independent-session-preflight.mjs frontend/tests/cp-crm-native04b4-independent-session-preflight.test.mjs
+      - name: Full frontend regression
+        run: npm test
