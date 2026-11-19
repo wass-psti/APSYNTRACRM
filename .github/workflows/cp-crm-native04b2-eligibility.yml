@@ -1,0 +1,48 @@
+name: CP-CRM-NATIVE-04B2 Read-Only Production Eligibility Contract
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/cp-crm-native04b2-eligibility.yml'
+      - 'sql/tests/cp-crm-native04b2-production-eligibility-readonly.sql'
+      - 'frontend/tests/cp-crm-native04b2-production-eligibility.test.mjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cp-crm-native04b2-eligibility.yml'
+      - 'sql/tests/cp-crm-native04b2-production-eligibility-readonly.sql'
+      - 'frontend/tests/cp-crm-native04b2-production-eligibility.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native04b2-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  read-only-audit:
+    name: Eligibility SQL no-write contract and frontend regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify role inventory stays read-only
+        run: |
+          set -euo pipefail
+          test -z "${SUPABASE_DB_URL:-}"
+          test -z "${DATABASE_URL:-}"
+          node --test frontend/tests/cp-crm-native04b2-production-eligibility.test.mjs
+          npx eslint frontend/tests/cp-crm-native04b2-production-eligibility.test.mjs
+      - name: Full frontend regression
+        run: npm test
