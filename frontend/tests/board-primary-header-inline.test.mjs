@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {boardTable} from '../board-presentation.js';
 import {boardGridColumns,boardGrid} from '../board-grid.js';
 import {genericBoardColumns} from '../board-inline-items.js';
-import {BoardStructureClient} from '../board-structure-admin.js';
+import {BoardStructureClient} from '../board/crud/structure-admin.js';
 import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
 import {MATERIAL_SOURCING_BOARD_ID} from '../material-sourcing-schema-plan.js';
 const board=readFileSync(new URL('../app.js',import.meta.url),'utf8');

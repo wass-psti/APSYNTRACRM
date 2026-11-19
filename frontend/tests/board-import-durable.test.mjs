@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {webcrypto} from 'node:crypto';
-import {initialImportMappings,buildImportPlan,reviewImportSourceRows} from '../board-import-core.js';
-import {executeBoardImportBatched} from '../board-import-batches.js';
+import {initialImportMappings,buildImportPlan,reviewImportSourceRows} from '../board/import/import-core.js';
+import {executeBoardImportBatched} from '../board/import/import-batches.js';
 import {readImportRecovery,sealImportRecovery,verifyImportRecovery,
- clearImportRecovery,importDigest,durableRecoveryKey} from '../board-import-durable.js';
+ clearImportRecovery,importDigest,durableRecoveryKey} from '../board/import/import-durable.js';
 const userId='11111111-1111-4111-8111-111111111111';
 const boardId='22222222-2222-4222-8222-222222222222';
 const workspaceId='33333333-3333-4333-8333-333333333333';

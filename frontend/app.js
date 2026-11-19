@@ -25,7 +25,7 @@ import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board-catalog-vi
 import {BOARD_ITEM_PAGE_SIZE,DomainApi,validUuid} from './data.js';
 import {nativeApplicationModuleForBoardRoute} from './native-application-access.js';
 import {BoardCacheChannel} from './board/cache-channel.js';
-import {BoardTrashPermanentDeleteClient,eligibleTrashBoard} from './board-trash-permanent-delete.js';
+import {BoardTrashPermanentDeleteClient,eligibleTrashBoard} from './board/crud/trash-permanent-delete.js';
 import {modalRecoveryKind,installModalRecoveryAction} from './modal-recovery.js';
 import {openBoardSharePreview,closeBoardSharePreview} from './board-share.js';
 import {normalizeSignedBoardCandidates,BoardGroupAccessClient,
@@ -106,16 +106,16 @@ import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcing
 import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} from './material-sourcing-controlled-activation.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines,
- setOptionalVirtualColumnVisibility} from './board-structure-admin.js';
+ setOptionalVirtualColumnVisibility} from './board/crud/structure-admin.js';
 import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board-card-lifecycle.js';
 import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board/selection.js';
 import {boardCatalogResultLabel} from './board-catalog-results.js';
-import {resolveColumnTypeSelection,renderColumnTypeOptions} from './board-column-catalog.js';
+import {resolveColumnTypeSelection,renderColumnTypeOptions} from './board/columns/column-catalog.js';
 import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
  projectConfirmedColumnRename,
  confirmInlineColumnDelete} from './board-inline-context.js';
-import {isQaBoardRecoveryInterfaceAllowed,canStartB4QaRecoveryDeletion,BoardColumnRecoveryClient,BoardColumnOperationalRecoveryClient,renderBoardColumnRecoveryList,explainColumnDeleteError} from './board-column-recovery.js';
-import {planBoardColumnRemoval} from './board-column-removal-plan.js';
+import {isQaBoardRecoveryInterfaceAllowed,canStartB4QaRecoveryDeletion,BoardColumnRecoveryClient,BoardColumnOperationalRecoveryClient,renderBoardColumnRecoveryList,explainColumnDeleteError} from './board/columns/column-recovery.js';
+import {planBoardColumnRemoval} from './board/columns/column-removal-plan.js';
 import {cmp02CreationConfig} from './board-typed-cmp02.js';
 import {resetBoardWindows,mountBoardWindows,filterBoardWindows,visibleBoardWindowIds} from './board-window.js';
 import {mountBoardPagination,renderBoardPagination} from './board-pagination-ui.js?v=cp-board-import-sync-01-20261115';
@@ -123,7 +123,7 @@ import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,vi
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
 import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
 import {createItemOnlyBoard,enableItemOnlyBoard,isItemOnlyBoard,itemOnlyColumnKeys} from './board-minimal-default.js';
-import {deleteOneAuthorizedItem,selectedDeleteCandidates} from './board-single-delete.js';
+import {deleteOneAuthorizedItem,selectedDeleteCandidates} from './board/crud/single-delete.js';
 import {moveTabInOrder,reorderManagedTimeTrackerTabs} from './board-tab-order.js';
 import {publicBoardDescription} from './board-public-copy.js';
 import {MANAGED_TT_GROUP_DELETE_ENABLED,isManagedTimeTrackerBoard,
@@ -135,7 +135,7 @@ import {runBoardTtSignedReadOnly} from './board-tt-signed-acceptance.js';
 import {normalizeBoardActivity,renderBoardActivityResults,boardItemSummary} from './board-activity-ui.js';
 import {BOARD_COL01_AUDIT_CURSOR_ENABLED,BOARD_COL01_AUDIT_MAX_PAGES,
  loadBoardInvitableDirectory,renderBoardInvitableDirectory,
- loadBoardAuditCursorPage,renderBoardAuditCursorPage} from './board-col01-readers.js';
+ loadBoardAuditCursorPage,renderBoardAuditCursorPage} from './board/columns/col01-readers.js';
 import {loadBoardCollaboration,renderBoardCollaboration} from './board-collaboration.js';
 import {normalizeBoardPeople,renderBoardPeople,renderMentionDraft,mentionCandidates,insertMention,renderMentionOptions} from './board-people.js';
 import {BoardPreferenceStore} from './board-preferences-idb.js';
@@ -6602,7 +6602,7 @@ async function action(name,button){
   const routeBoard=()=>location.hash.match(/^#\/boards\/([0-9a-f-]{36})(?:\/|$)/i)?.[1];
   if(routeBoard()!==selected)
    throw new ApiError('Board navigation is still updating. Retry import after the destination loads.',409);
-  const {openBoardImportWizard}=await import('./board-import-ui.js?v=cp-board-import-sync-01-20261115');
+  const {openBoardImportWizard}=await import('./board/import/import-ui.js?v=cp-board-import-sync-01-20261115');
   if(state.boardId!==selected||routeBoard()!==selected||
      !auth.isSignedIn||!canManuallyEditBoard(state.board?.board,state.edit))
    throw new ApiError('Board access changed before import opened.',403);

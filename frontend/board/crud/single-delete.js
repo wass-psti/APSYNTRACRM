@@ -2,9 +2,9 @@
  * The legacy server RPC is NOT CAS-aware. Never claim atomic stale-write protection.
  * Multi-item deletion is intentionally out of scope until a signed batch CAS contract exists.
  */
-import {ApiError} from './session.js';
-import {validUuid} from './data.js';
-import {canManuallyEditBoard} from './board-inline-items.js';
+import {ApiError} from '../../session.js';
+import {validUuid} from '../../data.js';
+import {canManuallyEditBoard} from '../../board-inline-items.js';
 
 function deny(message,status=403){throw new ApiError(message,status);}
 /** Resolve a selection to authoritative, active ordinary-board rows.

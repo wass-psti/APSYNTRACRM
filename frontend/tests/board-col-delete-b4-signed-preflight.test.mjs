@@ -6,7 +6,7 @@ import {
  sanitizeB4SignedRecoveryReport
 } from '../board-col-delete-b4-signed-preflight.js';
 import {B4_QA_BOARD_ID,B4_QA_BOARD_NAME,B4_QA_EXPIRES_AT}
- from '../board-column-recovery.js';
+ from '../board/columns/column-recovery.js';
 
 const actor='11111111-1111-4111-8111-111111111111';
 const workspace='22222222-2222-4222-8222-222222222222';

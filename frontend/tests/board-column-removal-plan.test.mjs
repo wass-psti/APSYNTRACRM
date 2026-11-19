@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {planBoardColumnRemoval} from '../board-column-removal-plan.js';
+import {planBoardColumnRemoval} from '../board/columns/column-removal-plan.js';
 test('empty columns use existing signed deletion contract',()=>{
  assert.deepEqual(planBoardColumnRemoval({storedCount:0}),
   {kind:'delete-empty',submitLabel:'Delete empty column'});

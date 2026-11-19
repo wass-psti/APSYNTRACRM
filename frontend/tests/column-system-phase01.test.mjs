@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {BOARD_STANDARD_COLUMN_CATALOG,SUPPORTED_COLUMN_TYPE_IDS,
  searchStandardColumns,findStandardColumnType,resolveColumnTypeSelection,
- renderColumnTypeOptions,renderColumnCenterCards} from '../board-column-catalog.js';
-import {parseChoiceConfig} from '../board-structure-admin.js';
-import {BOARD_STRUCTURE_TYPES,renderBoardStructureAdmin} from '../board-structure-admin.js';
+ renderColumnTypeOptions,renderColumnCenterCards} from '../board/columns/column-catalog.js';
+import {parseChoiceConfig} from '../board/crud/structure-admin.js';
+import {BOARD_STRUCTURE_TYPES,renderBoardStructureAdmin} from '../board/crud/structure-admin.js';
 import {detectMondayCheckboxMarkers,mondayCheckboxCell} from '../monday-import-compat.js';
-import {buildImportPlan} from '../board-import-core.js';
+import {buildImportPlan} from '../board/import/import-core.js';
 
 const bid='11111111-1111-4111-8111-111111111111';
 const wid='22222222-2222-4222-8222-222222222222';

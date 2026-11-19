@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {importChoiceLabels,choiceCreationPreview,
- provisionImportChoiceColumn} from '../board-import-choice-setup.js';
-import {initialImportMappings,buildImportPlan} from '../board-import-core.js';
+ provisionImportChoiceColumn} from '../board/import/import-choice-setup.js';
+import {initialImportMappings,buildImportPlan} from '../board/import/import-core.js';
 const boardId='11111111-1111-4111-8111-111111111111';
 const workspaceId='22222222-2222-4222-8222-222222222222';
 const ownerId='33333333-3333-4333-8333-333333333333';
@@ -142,7 +142,7 @@ test('definitive schema CAS denial is distinct from an uncertain server outcome'
  }),error=>error.status===409&&error.schemaOutcomeUncertain!==true);
 });
 test('UI integrates manager-only choice setup with a direct explicit create action',()=>{
- const ui=readFileSync('frontend/board-import-ui.js','utf8');
+ const ui=readFileSync('frontend/board/import/import-ui.js','utf8');
  assert.match(ui,/Configure new Status/);
  assert.match(ui,/Configure new Dropdown/);
  assert.match(ui,/remains available if you cancel the later record import/);

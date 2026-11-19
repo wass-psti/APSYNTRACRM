@@ -6,8 +6,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {deflateRawSync} from 'node:zlib';
 import {readFileSync} from 'node:fs';
-import {parseDelimited,parseImportFile} from '../board-import-parse.js';
-import {buildImportPlan,initialImportMappings,EXTENDED_REF_KEY} from '../board-import-core.js';
+import {parseDelimited,parseImportFile} from '../board/import/import-parse.js';
+import {buildImportPlan,initialImportMappings,EXTENDED_REF_KEY} from '../board/import/import-core.js';
 
 const u16=n=>{const b=Buffer.alloc(2);b.writeUInt16LE(n);return b;};
 const u32=n=>{const b=Buffer.alloc(4);b.writeUInt32LE(n>>>0);return b;};
@@ -459,7 +459,7 @@ test('1904-date workbook flag adjusts true numeric serials only',async()=>{
 });
 
 test('board import wizard module parses and can load in an isolated ES module runtime',async()=>{
- const module=await import('../board-import-ui.js');
+ const module=await import('../board/import/import-ui.js');
  assert.equal(typeof module.openBoardImportWizard,'function');
 });
 

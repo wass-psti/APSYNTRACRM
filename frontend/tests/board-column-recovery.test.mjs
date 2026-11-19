@@ -6,7 +6,7 @@ import {
  BOARD_COLUMN_RECOVERY_ENABLED,B4_QA_BOARD_ID,B4_QA_BOARD_NAME,B4_QA_COLUMN_NAME,
  B4_QA_EXPIRES_AT,isQaBoardRecoveryInterfaceAllowed,canStartB4QaRecoveryDeletion,
  BoardColumnRecoveryClient,renderBoardColumnRecoveryList,explainColumnDeleteError
-} from '../board-column-recovery.js';
+} from '../board/columns/column-recovery.js';
 const boardId=B4_QA_BOARD_ID;
 const inWindow=Date.parse('2026-11-06T03:30:00Z');
 const columnId='22222222-2222-4222-8222-222222222222';
@@ -144,7 +144,7 @@ test('populated column dialog provides a reversible action, not a dead-end block
  assert.match(app,/const capability=await boardColumnOperationalRecovery\.available\(snapshot\.boardId\)/);
  assert.doesNotMatch(app,/Deletion unavailable|submitDisabled:blocked/);
  assert.match(app,/plan\.submitLabel/);
- assert.match(readFileSync('frontend/board-column-removal-plan.js','utf8'),/Hide column \(keep data\)/);
+ assert.match(readFileSync('frontend/board/columns/column-removal-plan.js','utf8'),/Hide column \(keep data\)/);
  assert.match(app,/persistBoardLayout\(p=>\(\{\.\.\.p,hidden:/);
  assert.match(app,/boardColumnOperationalRecovery\.delete\(fresh,target,confirmation\)/);
  assert.match(app,/boardStructureClient\.mutate\(fresh,\{action:'delete'/);

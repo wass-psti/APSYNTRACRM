@@ -91,6 +91,6 @@ test('extended references must match an existing item and column and cannot over
 });
 
 test('import wizard explicitly opts into import-only extended-reference retrieval',()=>{
- const source=readFileSync(new URL('../board-import-ui.js',import.meta.url),'utf8');
+ const source=readFileSync(new URL('../board/import/import-ui.js',import.meta.url),'utf8');
  assert.match(source,/api\.board\(boardId,\{includeExtendedRefs:true\}\)/);
 });

@@ -3,9 +3,9 @@
  * authorize one audited, CAS-protected schema mutation, then review an
  * independent import preview. Do not silently mutate the board.
  */
-import {ApiError} from './session.js';
-import {validUuid} from './data.js';
-import {canManuallyEditBoard} from './board-inline-items.js';
+import {ApiError} from '../../session.js';
+import {validUuid} from '../../data.js';
+import {canManuallyEditBoard} from '../../board-inline-items.js';
 const fail=(message,status=400)=>{throw new ApiError(message,status);};
 const clean=value=>String(value??'').trim();
 const norm=value=>clean(value).toLocaleLowerCase();

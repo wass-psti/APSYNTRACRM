@@ -2,7 +2,7 @@
  * No privileged calls or creation, deletion, restoration, or activation writes.
  */
 import {inspectB2SignedQaFixture} from './board-col-delete-b2-signed-fixture.js';
-import {B4_QA_BOARD_ID,B4_QA_EXPIRES_AT} from './board-column-recovery.js';
+import {B4_QA_BOARD_ID,B4_QA_EXPIRES_AT} from './board/columns/column-recovery.js';
 
 const validStates=new Set(['PASS','BLOCKED','PENDING']);
 const validReasons=new Set(['NONE','SIGNED_SESSION_UNAVAILABLE','QA_FIXTURE_NOT_VERIFIED',

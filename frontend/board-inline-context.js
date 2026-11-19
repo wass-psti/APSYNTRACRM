@@ -4,7 +4,7 @@
  */
 import {ApiError} from './session.js';
 import {validUuid} from './data.js';
-import {describeBoardColumns,BOARD_STRUCTURE_TYPES} from './board-structure-admin.js';
+import {describeBoardColumns,BOARD_STRUCTURE_TYPES} from './board/crud/structure-admin.js';
 import {canManuallyEditBoard} from './board-inline-items.js';
 const fail=(message,status=403)=>{throw new ApiError(message,status);};
 export function resolveInlineColumn(detail,key,{canManage=false}={}){

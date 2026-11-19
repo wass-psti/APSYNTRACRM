@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {ApiError} from '../session.js';
-import {BoardColumnOperationalRecoveryClient} from '../board-column-recovery.js';
+import {BoardColumnOperationalRecoveryClient} from '../board/columns/column-recovery.js';
 const boardId='11111111-1111-4111-8111-111111111111',colId='22222222-2222-4222-8222-222222222222';
 const deletionId='33333333-3333-4333-8333-333333333333';
 const revision='2026-11-12T00:00:00.000Z',newRevision='2026-11-12T00:01:00.000Z';
