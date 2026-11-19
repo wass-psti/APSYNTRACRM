@@ -123,4 +123,9 @@ test("runner uses isolated PostgreSQL 17 with no network or production credentia
     runner,
     /20261119080635_cp_tl_create_new_02_user_board_projection_insert\.sql/,
   );
+  assert.ok(
+    runner.indexOf("20261116062500_cp_tl_legacy_analytics_summary.sql") <
+      runner.indexOf("20261116070000_cp_tl_legacy_numbering_dates_aging.sql"),
+    "legacy analytics prerequisite must precede the automatic numbering migration",
+  );
 });
