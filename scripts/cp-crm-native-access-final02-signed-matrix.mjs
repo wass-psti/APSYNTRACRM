@@ -17,7 +17,8 @@ export const APPS = [
     route: "#/time-tracker",
     label: "TimeTracker",
     boardId: "46bf4ee7-368a-4c35-842c-8593ea1f6ac3",
-    ready: "Signed Clock writes active",
+    selector:
+      "section.tt-native[data-tt-view], section.tt-native [data-tt-application-root]",
     domain: ["timetracker_attendance_capabilities", "timetracker_ot_snapshot"],
   },
   {
@@ -25,7 +26,7 @@ export const APPS = [
     route: "#/fund-tracker",
     label: "Fund Tracker",
     boardId: "f36da8fe-8d9d-4629-9938-12533cb3ca39",
-    ready: "New Fund Request",
+    selector: "section.frt-native[data-fund-tracker-root]",
     domain: [
       "frt_bootstrap",
       "frt_board_dashboard_safe",
@@ -37,15 +38,16 @@ export const APPS = [
     route: "#/fueltrack",
     label: "FuelTrack+",
     boardId: "7af78b3f-67bf-4600-9aa1-9006d19d486e",
-    ready: "Verified signed FuelTrack operations",
+    selector: "section.ft3-app",
     domain: ["fueltrack_v3_read"],
   },
   {
     moduleId: "tradelink",
     route: "#/tradelink/documents",
+    sidebarHref: "#/tradelink",
     label: "TradeLink",
     boardId: "264ca40d-6e4a-4e4f-97e6-3bd77c97cd88",
-    ready: "My Assigned Documents",
+    selector: ".aps-tradelink-app.tl-reference-portal",
     domain: ["tl03_assigned_documents"],
   },
 ];
@@ -58,6 +60,26 @@ export const safeUserKey = (id) =>
 export function classifyApp(result) {
   if (result.state === "NOT_ASSIGNED_BY_VERIFIED_INVENTORY")
     return "NOT_APPLICABLE";
+  // CORE-02: require independent initial and refreshed signed-read evidence.
+  // A successful first navigation must never mask a failed refresh.
+  if (result.phases !== undefined) {
+    if (
+      !Array.isArray(result.phases) ||
+      result.phases.length !== 2 ||
+      result.phases[0]?.phase !== "initial" ||
+      result.phases[1]?.phase !== "refresh"
+    )
+      return "FAILED";
+    for (const phase of result.phases) {
+      const outcome = classifyApp({
+        ...phase,
+        state: "PENDING",
+        moduleId: result.moduleId,
+        boardId: result.boardId,
+      });
+      if (outcome !== "VERIFIED") return outcome;
+    }
+  }
   if (!result.signed || result.uiReady !== true) return "BLOCKED";
   if (
     result.native?.status !== 200 ||
@@ -105,6 +127,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       expectedUserKey,
       expectedModules,
       milestone: "CP-CRM-NATIVE-ACCESS-FINAL-02",
+      verificationMilestone: "CP-CRM-NATIVE-CORE-02",
       mode: "genuine-employee-read-only",
       accountKey: null,
       workspaceKey: null,
@@ -164,7 +187,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
           row.status = "NOT_APPLICABLE";
           continue;
         }
-        if (!supported.some((h) => h.endsWith(app.route))) {
+        if (!supported.some((h) => h.endsWith(app.sidebarHref || app.route))) {
           row.state = "ASSIGNED_NAVIGATION_MISSING";
           row.status = "BLOCKED";
           row.reason =
@@ -172,7 +195,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
           break;
         }
         const responses = [];
-        const onResponse = async (response) => {
+        const parsers = [];
+        const onResponse = (response) => {
           const pathname = new URL(response.url()).pathname;
           if (!pathname.includes("/rest/v1/rpc/")) return;
           const rpc = pathname.split("/").at(-1),
@@ -185,56 +209,93 @@ if (import.meta.url === `file://${process.argv[1]}`) {
           )
             return;
           const record = { rpc, status };
-          if (rpc === "native_application_board_context" && status === 200) {
-            try {
-              const raw = await response.json();
-              const p = Array.isArray(raw) ? raw[0] : raw;
-              record.moduleId = p?.moduleId;
-              record.boardId = p?.board?.id;
-              record.userId = p?.userId;
-              record.workspaceId = p?.workspaceId;
-            } catch {
-              record.payloadError = true;
-            }
-          }
           responses.push(record);
+          if (rpc === "native_application_board_context" && status === 200) {
+            parsers.push(
+              response
+                .json()
+                .then((raw) => {
+                  const payload = Array.isArray(raw) ? raw[0] : raw;
+                  record.moduleId = payload?.moduleId;
+                  record.boardId = payload?.board?.id;
+                  record.userId = payload?.userId;
+                  record.workspaceId = payload?.workspaceId;
+                })
+                .catch(() => {
+                  record.payloadError = true;
+                }),
+            );
+          }
         };
+        let observedPageErrors = [];
         const onError = (error) =>
-          row.pageErrors.push(error.message.slice(0, 160));
+          observedPageErrors.push(error.message.slice(0, 160));
         page.on("response", onResponse);
         page.on("pageerror", onError);
         try {
-          await page.goto(BASE + app.route, {
-            waitUntil: "domcontentloaded",
-            timeout: 45000,
-          });
-          await page.waitForTimeout(1000);
-          await page.reload({ waitUntil: "domcontentloaded", timeout: 45000 });
-          await page.waitForFunction(
-            (expected) => document.body.innerText.includes(expected),
-            app.ready,
-            { timeout: 25000 },
-          );
-          const body = await page.locator("body").innerText();
-          row.signed = isSignedText(body);
-          row.uiReady = body.includes(app.ready);
-          const native = responses
-            .filter((r) => r.rpc === "native_application_board_context")
-            .at(-1);
-          row.native = native
-            ? {
-                status: native.status,
-                moduleId: native.moduleId,
-                boardId: native.boardId,
-              }
-            : null;
-          row.domainRpcs = responses
-            .filter((r) => app.domain.includes(r.rpc))
-            .map(({ rpc, status }) => ({ rpc, status }));
-          row.httpErrors = responses
-            .filter((r) => r.status >= 400)
-            .map(({ rpc, status }) => ({ rpc, status }));
-          if (native?.userId && native?.workspaceId) {
+          row.phases = [];
+          for (const [phaseName, action] of [
+            [
+              "initial",
+              () =>
+                page.goto(BASE + app.route, {
+                  waitUntil: "domcontentloaded",
+                  timeout: 45000,
+                }),
+            ],
+            [
+              "refresh",
+              () =>
+                page.reload({ waitUntil: "domcontentloaded", timeout: 45000 }),
+            ],
+          ]) {
+            responses.length = 0;
+            observedPageErrors = [];
+            await action();
+            await page
+              .locator(app.selector)
+              .waitFor({ state: "visible", timeout: 25000 });
+            // Ensure that post-render signed domain reads have had an opportunity
+            // to complete before recording this independent runtime phase.
+            for (
+              let attempt = 0;
+              attempt < 12 &&
+              (!responses.some(
+                (r) => r.rpc === "native_application_board_context",
+              ) ||
+                !responses.some((r) => app.domain.includes(r.rpc)));
+              attempt++
+            )
+              await page.waitForTimeout(300);
+            await Promise.all(parsers.splice(0));
+            const body = await page.locator("body").innerText();
+            const native = responses
+              .filter((r) => r.rpc === "native_application_board_context")
+              .at(-1);
+            const phase = {
+              phase: phaseName,
+              signed: isSignedText(body),
+              uiReady: await page.locator(app.selector).isVisible(),
+              native: native
+                ? {
+                    status: native.status,
+                    moduleId: native.moduleId,
+                    boardId: native.boardId,
+                  }
+                : null,
+              domainRpcs: responses
+                .filter((r) => app.domain.includes(r.rpc))
+                .map(({ rpc, status }) => ({ rpc, status })),
+              httpErrors: responses
+                .filter((r) => r.status >= 400)
+                .map(({ rpc, status }) => ({ rpc, status })),
+              pageErrors: [...observedPageErrors],
+            };
+            row.phases.push(phase);
+            if (!native?.userId || !native?.workspaceId)
+              throw new Error(
+                "Signed native identity or workspace context was not returned",
+              );
             if (identity && identity !== native.userId)
               throw new Error("Signed user changed during acceptance");
             if (workspace && workspace !== native.workspaceId)
@@ -247,8 +308,27 @@ if (import.meta.url === `file://${process.argv[1]}`) {
               );
             report.accountKey = safeUserKey(identity);
             report.workspaceKey = safeUserKey(workspace);
+            const phaseResult = classifyApp({
+              ...phase,
+              moduleId: app.moduleId,
+              boardId: app.boardId,
+            });
+            if (phaseResult !== "VERIFIED") {
+              row.status = phaseResult;
+              row.reason = phaseName + " signed native startup did not pass";
+              break;
+            }
           }
-          row.status = classifyApp(row);
+          const latest = row.phases.at(-1);
+          if (latest) {
+            row.signed = latest.signed;
+            row.uiReady = latest.uiReady;
+            row.native = latest.native;
+            row.domainRpcs = latest.domainRpcs;
+            row.httpErrors = latest.httpErrors;
+            row.pageErrors = latest.pageErrors;
+          }
+          if (row.status === null) row.status = classifyApp(row);
         } catch (e) {
           row.status = "BLOCKED";
           row.reason = e.message.slice(0, 220);

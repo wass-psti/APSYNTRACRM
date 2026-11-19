@@ -23,14 +23,14 @@ const script = readFileSync(
   "utf8",
 );
 
-test("all four canonical native applications and distinct cold-start readiness markers are registered", () => {
+test("all four canonical native applications and stable native route DOM selectors are registered", () => {
   assert.deepEqual(
     APPS.map((a) => a.moduleId),
     ["time-tracker", "fund-released-tracker", "fueltrack-plus", "tradelink"],
   );
   assert.equal(new Set(APPS.map((a) => a.boardId)).size, 4);
   assert.equal(new Set(APPS.map((a) => a.route)).size, 4);
-  assert.ok(APPS.every((a) => a.ready && a.domain.length));
+  assert.ok(APPS.every((a) => a.selector && a.domain.length));
 });
 test("stale in-memory startup state is never sufficient to certify a signed session", () => {
   assert.equal(
@@ -143,4 +143,108 @@ test("only authoritative expected assignment lists permit skipping unassigned ro
     script,
     /Signed user does not match authoritative expected account key/,
   );
+});
+
+test("CORE-02 checks stable native application roots rather than role-specific text", () => {
+  const expected = {
+    "time-tracker": "section.tt-native",
+    "fund-released-tracker": "section.frt-native",
+    "fueltrack-plus": "section.ft3-app",
+    tradelink: ".aps-tradelink-app.tl-reference-portal",
+  };
+  for (const app of APPS) {
+    assert.ok(app.selector.startsWith(expected[app.moduleId]));
+    assert.equal(typeof app.ready, "undefined");
+  }
+  const sources = [
+    "frontend/time-tracker-ui.js",
+    "frontend/fund-tracker-ui.js",
+    "frontend/fueltrack-v3-application.js",
+    "frontend/tradelink-application.js",
+  ].map((p) => readFileSync(p, "utf8"));
+  for (const marker of [
+    "tt-native",
+    "frt-native",
+    "ft3-app",
+    "tl-reference-portal",
+  ])
+    assert.ok(
+      sources.some((source) => source.includes(marker)),
+      marker,
+    );
+  assert.match(script, /locator\(app\.selector\)/);
+  assert.doesNotMatch(script, /app\.ready/);
+});
+
+test("CORE-02 requires each initial and reload phase independently to be signed and resolved", () => {
+  const app = APPS[3];
+  const valid = {
+    moduleId: app.moduleId,
+    boardId: app.boardId,
+    signed: true,
+    uiReady: true,
+    native: { status: 200, moduleId: app.moduleId, boardId: app.boardId },
+    domainRpcs: [{ rpc: "tl03_assigned_documents", status: 200 }],
+    httpErrors: [],
+    pageErrors: [],
+  };
+  const phases = [
+    { ...valid, phase: "initial" },
+    { ...valid, phase: "refresh" },
+  ];
+  assert.equal(classifyApp({ ...valid, phases }), "VERIFIED");
+  assert.equal(classifyApp({ ...valid, phases: [phases[0]] }), "FAILED");
+  assert.equal(
+    classifyApp({ ...valid, phases: [phases[1], phases[0]] }),
+    "FAILED",
+  );
+  assert.equal(
+    classifyApp({
+      ...valid,
+      phases: [phases[0], { ...phases[1], native: null }],
+    }),
+    "FAILED",
+  );
+  assert.equal(
+    classifyApp({
+      ...valid,
+      phases: [phases[0], { ...phases[1], domainRpcs: [] }],
+    }),
+    "FAILED",
+  );
+  assert.equal(
+    classifyApp({
+      ...valid,
+      phases: [phases[0], { ...phases[1], signed: false }],
+    }),
+    "BLOCKED",
+  );
+  assert.equal(
+    classifyApp({
+      ...valid,
+      phases: [
+        phases[0],
+        {
+          ...phases[1],
+          httpErrors: [{ rpc: "tl03_assigned_documents", status: 503 }],
+        },
+      ],
+    }),
+    "FAILED",
+  );
+  assert.equal(
+    classifyApp({
+      ...valid,
+      phases: [{ ...phases[0], uiReady: false }, phases[1]],
+    }),
+    "BLOCKED",
+  );
+  assert.equal(
+    APPS.find((a) => a.moduleId === "tradelink").sidebarHref,
+    "#/tradelink",
+  );
+  assert.match(script, /app\.sidebarHref \|\| app\.route/);
+  assert.match(script, /verificationMilestone: "CP-CRM-NATIVE-CORE-02"/);
+  assert.match(script, /Signed user changed during acceptance/);
+  assert.match(script, /Workspace changed during acceptance/);
 });
