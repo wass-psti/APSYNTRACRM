@@ -2,11 +2,15 @@ import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
 
 const STORE_KEY='apsyntra.crm.auth.v1';
 const isObject=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
+const browserSessionStorage=()=>{
+  try{return globalThis.sessionStorage??null;}
+  catch{return null;}
+};
 export class ApiError extends Error {
   constructor(message,status=0,code=''){ super(message);this.name='ApiError';this.status=status;this.code=code; }
 }
 export class AuthClient {
-  constructor({fetchImpl=globalThis.fetch?.bind(globalThis),storage=globalThis.sessionStorage,
+  constructor({fetchImpl=globalThis.fetch?.bind(globalThis),storage=browserSessionStorage(),
     clock=()=>Date.now(),requestTimeoutMs=12000,wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),
     random=Math.random,maxReadRetries=1,retryBaseDelayMs=250}={}){
     this.fetchImpl=fetchImpl;this.storage=storage;this.clock=clock;this.session=null;
@@ -25,10 +29,18 @@ export class AuthClient {
        ||!isObject(session.user)||typeof session.user.id!=='string')throw new ApiError('Invalid authentication response');
     this.session={access_token:session.access_token,refresh_token:session.refresh_token,
       expires_at:this.clock()+(Number(session.expires_in)||3600)*1000,user:session.user};
-    this.storage?.setItem(STORE_KEY,JSON.stringify(this.session));
+    // Browser storage is persistence, not the authentication authority. Keep
+    // the verified in-memory session usable if storage is unavailable/quota-limited.
+    try{this.storage?.setItem(STORE_KEY,JSON.stringify(this.session));}
+    catch{/* The current tab can continue; a later reload may require sign-in. */}
   }
-  clear(){this.session=null;this.verifiedUserPending=null;this.storage?.removeItem(STORE_KEY);}
-  async call(path,{method='GET',body,accessToken,signal,readTimeoutMs,requestKind='unknown',retryableRead=false}={}){
+  clear(){
+    this.session=null;this.verifiedUserPending=null;
+    // A storage failure must never prevent in-memory sign-out or token invalidation.
+    try{this.storage?.removeItem(STORE_KEY);}
+    catch{/* The stale persisted entry cannot be removed in this browser context. */}
+  }
+  async call(path,{method='GET',body,accessToken,signal,readTimeoutMs,requestKind='unknown',preflightCacheEligible=false}={}){
     if(signal?.aborted)throw new ApiError('Request was cancelled.',0,'REQUEST_ABORTED');
     const controller=new AbortController();
     const abort=()=>controller.abort();
@@ -58,7 +70,7 @@ export class AuthClient {
       // (Access-Control-Max-Age: 3600). POST responses are not HTTP-cacheable
       // without explicit freshness and Content-Location response metadata.
       const reusePreflightCache=method==='POST'&&requestKind==='read'&&
-        retryableRead===true&&path.startsWith('/rest/v1/rpc/');
+        preflightCacheEligible===true&&path.startsWith('/rest/v1/rpc/');
       const response=await Promise.race([this.fetchImpl(SUPABASE_URL+path,{
         method,mode:'cors',redirect:'error',cache:reusePreflightCache?'default':'no-store',
         headers:{apikey:SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json',
@@ -173,7 +185,18 @@ export class AuthClient {
     finally{if(this.verifiedUserPending===entry)this.verifiedUserPending=null;}
   }
   async restore(){
-    const raw=this.storage?.getItem(STORE_KEY);
+    let raw=null;
+    try{raw=this.storage?.getItem(STORE_KEY);}
+    catch{
+      // If storage becomes unavailable after this client already acquired a
+      // session, verify that in-memory session rather than discarding it.
+      if(!this.session)return false;
+      try{await this.getVerifiedUser();return true;}
+      catch(error){
+        if([400,401,403].includes(error?.status)){this.clear();return false;}
+        throw error;
+      }
+    }
     if(!raw)return false;
     let previous;
     try{
@@ -225,7 +248,7 @@ export class AuthClient {
     while(true){
       try{
         return await this.call(path,{...requestOptions,accessToken:token,
-          requestKind:requestOptions.requestKind||(retryableRead?'read':'unknown'),retryableRead});
+          requestKind:requestOptions.requestKind||(retryableRead?'read':'unknown')});
       }catch(error){
         if(error?.status===401&&retryUnauthorized&&!unauthorizedRetried){
           token=await this.refresh();
