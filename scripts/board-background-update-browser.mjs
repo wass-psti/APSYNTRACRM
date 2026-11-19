@@ -21,7 +21,7 @@ window.patchBoard=html=>replaceVisibleBoardContent(document.getElementById('app'
 const server=createServer((req,res)=>{
  const path=new URL(req.url,'http://127.0.0.1').pathname;
  if(path==='/'){res.setHeader('Content-Type','text/html');res.end(fixture);return;}
- if(path==='/frontend/board-background-update.js'||path==='/frontend/board-scroll-state.js'){
+ if(path==='/frontend/board-background-update.js'||path==='/frontend/board/scroll-state.js'){
   res.setHeader('Content-Type','text/javascript');res.end(readFileSync(resolve(root,path.slice(1))));return;
  }
  res.writeHead(404).end();

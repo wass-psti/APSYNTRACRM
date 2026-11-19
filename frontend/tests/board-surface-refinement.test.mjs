@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {captureBoardGroupScroll,restoreBoardGroupScroll} from '../board-scroll-state.js';
+import {captureBoardGroupScroll,restoreBoardGroupScroll} from '../board/scroll-state.js';
 
 const app=readFileSync('frontend/app.js','utf8');
 const css=readFileSync('frontend/styles.css','utf8');
