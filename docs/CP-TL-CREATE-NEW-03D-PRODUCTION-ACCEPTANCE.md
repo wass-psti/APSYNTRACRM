@@ -1,8 +1,11 @@
 # CP-TL-CREATE-NEW-03D — Six-module signed production acceptance
 
-**Date:** 2026-11-20 (Asia/Manila)  
-**Outcome:** VERIFIED — six production QA Draft records, six canonical Board items, six revision-two records, twelve audit events.  
-**Baseline:** `aca6414b`, signed TradeLink User with existing workspace and native module access.  
+**Date:** 2026-11-20 (Asia/Manila)
+
+**Outcome:** VERIFIED — six production QA Draft records, six canonical Board items, six revision-two records, twelve audit events.
+
+**Baseline:** `aca6414b`, signed TradeLink User with existing workspace and native module access.
+
 **Scope:** functionality and acceptance only. No permissions, roles, RLS policies, migrations, credentials, or production accounting workflow changes.
 
 ## Root causes and recovery
