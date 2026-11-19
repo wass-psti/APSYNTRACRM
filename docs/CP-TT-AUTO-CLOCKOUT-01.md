@@ -8,7 +8,7 @@ Implement conditional automatic Clock-Out for native TimeTracker attendance sess
 
 - The threshold is nine hours of **credited working time**, calculated with the existing TimeTracker policy. The existing unpaid 12:00–13:00 Asia/Manila lunch deduction remains authoritative.
 - The 30-minute grace period begins at the exact calculated threshold, not when a browser timer happens to wake up.
-- Approved OT that covers the threshold, or begins within the grace window, extends the session to the approved OT endpoint.
+- Approved OT that covers the threshold, or begins within the grace window and extends beyond the grace deadline, extends the session to the approved OT endpoint. OT ending at or before the grace deadline does not shorten the grace period.
 - OT approval must be recorded before the grace deadline to cancel grace expiration. Further contiguous approved OT can extend the cutoff when approved before the current endpoint.
 - Submitted, rejected, cancelled, expired, foreign-owner, non-covering, or late-approved requests do not extend the session.
 - Automatic closure timestamps use the exact grace deadline or approved OT endpoint, not the later cron processing time.
@@ -39,14 +39,15 @@ The migration records an activation timestamp and deliberately does not backfill
 
 ## Verification
 
-- TimeTracker test suite: 300 tests passed.
-- Full project test suite: 2,909 tests passed.
+- TimeTracker test suite: 302 tests passed.
+- Full project test suite: 2,921 tests passed.
 - Production build: passed.
-- Repository lint: passed.
 - Targeted ESLint for all changed TimeTracker JavaScript and test files: passed.
 - TimeTracker browser fixture acceptance: passed.
-- Database migration 20261119200735_cp_tt_auto_clockout_01_conditional_session_expiration is recorded in the linked Supabase project.
-- Production scheduler job tt-auto-clockout-processor is active at 30-second intervals; seven cron executions were observed as succeeded.
+- CP-TT-FM1-APP-02 GitHub Actions workflow: passed full regression, changed-module lint, production build, FM1 browser acceptance, and TimeTracker WCAG 2.2 AA acceptance.
+- Migration source manifest was reconciled to include all four TimeTracker forward migration files; local manifest verification passed. The repository-wide APSYNTRA CRM Frontend Validation workflow must be rerun against the reconciled manifest.
+- Four CP-TT-AUTO-CLOCKOUT-01 database migrations are recorded in the linked Supabase project: the base scheduler/worker, snapshot overtime-cutoff exposure, snapshot correction, and grace/overtime boundary correction.
+- Production scheduler job tt-auto-clockout-processor is active at 30-second intervals; 23 cron executions were observed as succeeded with no failed executions.
 - Database readback verified the attendance trigger, worker, signed snapshot RPC, OT lock ordering, and scheduler function. The signed snapshot is executable by authenticated users and not by anon; the private worker is not executable by authenticated users.
 - The scheduler table currently contains zero rows because no new Clock-In session has been created after activation. This is expected; the existing pre-activation session is intentionally excluded.
 

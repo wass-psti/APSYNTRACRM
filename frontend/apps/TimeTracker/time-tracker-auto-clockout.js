@@ -130,7 +130,7 @@ export function evaluateTimeTrackerAutoClockout({
   for (const interval of accepted) {
     const initialExtension = overtimeCutoffMs === thresholdMs;
     const coversCutoff = initialExtension
-      ? interval.start <= graceDeadlineMs && interval.end > thresholdMs
+      ? interval.start <= graceDeadlineMs && interval.end > graceDeadlineMs
       : interval.start <= overtimeCutoffMs && interval.end > overtimeCutoffMs;
     if (
       coversCutoff &&

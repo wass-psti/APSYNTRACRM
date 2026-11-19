@@ -182,6 +182,18 @@ test("pending, rejected, cancelled, expired, foreign-owner and OT starting after
   assert.equal(gap.status, "GRACE");
 });
 
+test("approved overtime ending before or exactly at grace deadline does not shorten the grace period", () => {
+  for (const end of ["18:25", "18:30"]) {
+    const request = { id: "ot-short-" + end, ownerId: owner, date: "2026-11-20",
+      start: "18:20", end, status: "Approved",
+      decidedAt: "2026-11-20T10:15:00.000Z" };
+    const result = evaluateTimeTrackerAutoClockout({ clockIn: "2026-11-20T00:00:00.000Z",
+      ownerId: owner, overtimeRequests: [request], now: "2026-11-20T10:20:00.000Z" });
+    assert.equal(result.status, "GRACE");
+    assert.equal(result.nextAt, "2026-11-20T10:30:00.000Z");
+  }
+});
+
 test("approved overtime beginning inside grace can bridge the threshold and uses its scheduled endpoint", () => {
   const request = {
     id: "ot-bridge",
@@ -344,6 +356,15 @@ test("database migration persists monitoring, serializes OT decisions and activa
     snapshotMigration,
     /WHEN s\.overtime_cutoff_at IS NOT NULL THEN s\.overtime_cutoff_at/,
   );
+  const boundaryMigration = readFileSync(
+    new URL(
+      "../../supabase/migrations/20261119204157_cp_tt_auto_clockout_01_grace_overtime_boundary.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(boundaryMigration, /v_ot_end>v_grace_deadline/);
+  assert.doesNotMatch(boundaryMigration, /v_ot_end>v_threshold/);
 });
 
 test("clock ticker resumes the persisted deadline countdown after a page refresh", () => {
