@@ -78,6 +78,12 @@ export function workspaceRouteAllowsBoardCatalogFallback(hash){
  return route==='overview'||nativeApplicationModuleForRoute(hash)!==null;
 }
 
+export function nativeApplicationModuleForBoardId(boardId){
+ for(const [moduleId,application] of Object.entries(NATIVE_APPLICATIONS))
+  if(application.boardId===boardId)return moduleId;
+ return null;
+}
+
 export function nativeApplicationModuleForBoardRoute(boardId,tab){
  const mapping={
   attendance:'time-tracker',

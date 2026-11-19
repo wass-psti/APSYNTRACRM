@@ -10,7 +10,6 @@
  * --session=tradeSecondaryReviewer:http://127.0.0.1:9227
  */
 import { readFileSync } from "node:fs";
-import { chromium } from "playwright";
 import { assessQaManifest } from "./cp-crm-native04b1-qa-manifest.mjs";
 
 const BASE = "https://wass-psti.github.io/APSYNTRACRM/";
@@ -125,6 +124,7 @@ function parseArgs(args) {
 }
 
 async function observe(entry) {
+  const { chromium } = await import("playwright");
   const browser = await chromium.connectOverCDP(entry.endpoint, {
     timeout: 7000,
   });

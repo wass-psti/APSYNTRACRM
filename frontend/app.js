@@ -23,7 +23,7 @@ import {sidebarActiveRoute} from './sidebar-active-route.js';
 import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-visuals.js';
 import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board/presentation/catalog-visuals.js';
 import {BOARD_ITEM_PAGE_SIZE,DomainApi,validUuid} from './data.js';
-import {nativeApplicationModuleForBoardRoute,workspaceRouteAllowsBoardCatalogFallback} from './native-application-access.js';
+import {nativeApplicationModuleForBoardId,nativeApplicationModuleForBoardRoute,workspaceRouteAllowsBoardCatalogFallback} from './native-application-access.js';
 import {BoardCacheChannel} from './board/cache-channel.js';
 import {BoardTrashPermanentDeleteClient,eligibleTrashBoard} from './board/crud/trash-permanent-delete.js';
 import {modalRecoveryKind,installModalRecoveryAction} from './modal-recovery.js';
@@ -235,7 +235,7 @@ const platformSync=new PlatformSync({
  onStatus:updatePlatformSyncIndicator,onInvalidate:async event=>{
   if(event.reason==='broadcast'&&event.boardIds?.length){
    for(const id of event.boardIds)db.invalidateBoardCache(id);
-  }else db.invalidateBoardCache();
+  }else db.invalidateBoardCache(null,{invalidateContext:event.reason==='cross-tab'});
   return reconcilePlatformSync(event);
  }
 });
@@ -1810,7 +1810,9 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  const sensitive=reason!=='broadcast';
  const boardChanged=boardId&&boardIds.includes(boardId);
  const refreshBoardCatalog=shouldRefreshWorkspaceBoardList({reason,view});
- const nativeModuleId=view==='board'?nativeApplicationModuleForBoardRoute(boardId,tab):null;
+ // Background reconciliation must recognize a canonical native board by ID,
+ // even during a route/tab transition when the tab key is temporarily stale.
+ const nativeModuleId=view==='board'?nativeApplicationModuleForBoardId(boardId):null;
  // Board broadcasts carry identifiers only; the server remains authoritative.
  if(reason==='broadcast'&&!boardChanged&&view==='board')return true;
  let who,current;

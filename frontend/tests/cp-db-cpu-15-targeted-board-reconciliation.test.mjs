@@ -25,6 +25,7 @@ test('app reconciliation uses targeted reads and preserves archived-board handli
  assert.match(reconcile,/refreshBoardCatalog&&!nativeModuleId\?await db\.boards\('active'\):state\.boards/);
  assert.match(reconcile,/if\(refreshBoardCatalog&&!nativeModuleId\)state\.boards=boards/);
  assert.match(reconcile,/!refreshBoardCatalog&&detail\.board\.status!=='active'/);
+ assert.match(reconcile,/nativeApplicationModuleForBoardId\(boardId\)/);
  assert.match(reconcile,/!nativeModuleId&&await db\.allowed\(boardId,'view'\)/);
  assert.match(reconcile,/nativeModuleId\?db\.nativeApplicationBoardContext\(nativeModuleId\)/);
  assert.match(reconcile,/nativeModuleId\?Promise\.resolve\(null\):readVisibleBoardSnapshot\(boardId,tab/);
