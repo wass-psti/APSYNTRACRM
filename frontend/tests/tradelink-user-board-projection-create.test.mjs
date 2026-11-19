@@ -16,6 +16,13 @@ const fixture = readFileSync(
   ),
   "utf8",
 );
+const grants = readFileSync(
+  new URL(
+    "../../sql/tests/cp-tl-create-new-02-user-rpc-grants.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const acceptance = readFileSync(
   new URL(
     "../../sql/tests/cp-tl-create-new-02-user-six-module-disposable.sql",
@@ -86,6 +93,23 @@ test("disposable fixture proves the existing TradeLink User has Viewer membershi
   );
   assert.match(fixture, /asenagan@watchdogautomation\.com\.ph/);
   assert.match(fixture, /dsenagan@watchdogautomation\.com\.ph/);
+});
+
+test("disposable signed RPC grants match the existing production contract", () => {
+  assert.match(grants, /REVOKE ALL ON FUNCTION public\.tl03_document_create/);
+  assert.match(
+    grants,
+    /GRANT EXECUTE ON FUNCTION public\.tl03_document_create/,
+  );
+  assert.match(grants, /REVOKE ALL ON FUNCTION public\.tl03_document_save/);
+  assert.match(
+    grants,
+    /GRANT EXECUTE ON FUNCTION public\.tl03_document_revision_bundle/,
+  );
+  assert.ok(
+    runner.indexOf("cp-tl-create-new-02-user-rpc-grants.sql") <
+      runner.indexOf("20261119073346_tradelink_user_draft_creation.sql"),
+  );
 });
 
 test("six-module acceptance covers numbering, creator readback, Board, list, page, revision and idempotency", () => {

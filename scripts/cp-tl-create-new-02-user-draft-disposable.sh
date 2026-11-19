@@ -45,6 +45,7 @@ apply supabase/migrations/20261116062500_cp_tl_legacy_analytics_summary.sql
 apply supabase/migrations/20261116070000_cp_tl_legacy_numbering_dates_aging.sql
 apply supabase/migrations/20261117020000_tradelink_immutable_revision_snapshots.sql
 apply supabase/migrations/20261117045417_tradelink_approved_revision_flow.sql
+apply sql/tests/cp-tl-create-new-02-user-rpc-grants.sql
 apply supabase/migrations/20261119073346_tradelink_user_draft_creation.sql
 apply supabase/migrations/20261119073608_tradelink_document_read_policy_consolidation.sql
 apply supabase/migrations/20261119080635_cp_tl_create_new_02_user_board_projection_insert.sql
