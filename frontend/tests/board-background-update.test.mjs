@@ -37,7 +37,7 @@ test('live refresh keeps the board and editing context while signed server reads
  assert.doesNotMatch(refresh,/state\.loading=true|state\.board=null;state\.boardUi=null;state\.boardManage=false;state\.error=null/);
  assert.match(refresh,/if\(changed\)deferVisibleBoardContent\(\)/);
  const loader=app.slice(app.indexOf('async function loadBoard('),app.indexOf('/** CP-TL-03D:'));
- assert.match(loader,/if\(canRetainVisibleBoard\(state,/);
+ assert.match(loader,/if\(!nativeModuleId&&canRetainVisibleBoard\(state,/);
  assert.match(loader,/return refreshVisibleBoard\(boardId,tab\)/);
  assert.ok(loader.indexOf('return refreshVisibleBoard(boardId,tab)')<loader.indexOf("state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true"));
 });

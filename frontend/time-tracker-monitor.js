@@ -105,10 +105,10 @@ export async function probeTimeTrackerMonitor({
  await run('TimeTracker module grant',()=>api.rpc('has_module_access',{
   p_module_id:'time-tracker',p_user_id:initialId
  }),response=>response===true);
- await run('Board view authorization',()=>api.allowed(boardId,'view'),r=>r===true);
- await run('Board and workspace binding',()=>api.board(boardId),
-  r=>r?.board?.id===boardId&&r.board.workspace_id===ctx.workspace_id&&
-   r.board.name==='TimeTracker Attendance');
+ await run('Native application board resolution',
+  ()=>api.nativeApplicationBoardContext('time-tracker'),
+  r=>r?.userId===initialId&&r?.workspaceId===ctx.workspace_id&&
+   r?.board?.id===boardId&&r.board.name==='TimeTracker Attendance');
  // A final identity check prevents stale readings after a role/session switch.
  const same=await run('Fresh signed identity',()=>api.context(),
   c=>auth.isSignedIn&&auth.userId===initialId&&c?.user_id===initialId&&
@@ -175,7 +175,7 @@ export function renderTimeTrackerMonitor({result=null,history=[],loading=false,e
     '<span class="tt-monitor-eyebrow"><span class="tt-monitor-signal" aria-hidden="true"></span>'+
      'APSYNTRA / OPERATIONAL INTELLIGENCE</span>'+
     '<h3>API Health Monitor</h3>'+
-    '<p>Authenticated diagnostics for the TimeTracker platform</p>'+
+    '<p>Authenticated diagnostics for the TimeTracker application</p>'+
     '<span class="tt-monitor-hero-scope">On demand · No recurring telemetry</span>'+
     '<span class="tt-monitor-hero-date">'+esc(pht(now))+'</span></div>'+
    '<div class="tt-monitor-hero-telemetry" aria-label="On-demand signed diagnostic summary">'+
@@ -243,6 +243,6 @@ export function renderTimeTrackerMonitor({result=null,history=[],loading=false,e
       '<div><span>'+esc(pht(sample.at))+'</span><strong>'+esc(sample.status)+
       '</strong><span>'+esc(formatMonitorDuration(sample.durationMs))+'</span></div>').join('')+
     '</div>':'')+
-  '<p class="tt-monitor-footnote">Checks use existing signed Supabase RPCs and board permissions; they do not alter data. Backend timings represent this browser’s observed requests. When enabled, PostgreSQL counters are aggregate and cumulative since stats reset; neither sample establishes a service-level guarantee. Unsupported browser metrics are shown as unavailable. No raw URLs, tokens, employee records, location coordinates or persistent monitoring logs are collected. Up to 12 bounded samples are retained only in current browser memory and can be cleared.</p>'+
+  '<p class="tt-monitor-footnote">Checks use existing signed Supabase RPCs and the assigned TimeTracker application role; generic board permissions are not required. Backend timings represent this browser’s observed requests. When enabled, PostgreSQL counters are aggregate and cumulative since stats reset; neither sample establishes a service-level guarantee. Unsupported browser metrics are shown as unavailable. No raw URLs, tokens, employee records, location coordinates or persistent monitoring logs are collected. Up to 12 bounded samples are retained only in current browser memory and can be cleared.</p>'+
  '</section>';
 }

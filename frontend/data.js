@@ -1,4 +1,5 @@
 import {ApiError} from './session.js';
+import {normalizeNativeApplicationBoardContext} from './native-application-access.js';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const BOARD_ITEM_PAGE_SIZE=200;
 export function validUuid(v){return typeof v==='string'&&uuid.test(v);}
@@ -134,6 +135,7 @@ function stableRequestValue(value){
 const BOARD_READ_RPC=new Set([
  'wm_get_board_shell','wm_get_board_items_page',
  'wm_auth_access_context','work_board_access','wm_list_boards',
+ 'native_application_board_context','tl03_board_projection','tl03_native_activity',
  // Signed workspace discovery is a read-only lifecycle contract.
  'wm_ws01_list',
  'wm_search_workspace_content',
@@ -513,6 +515,31 @@ export class DomainApi {
     throw new ApiError('Board list changed during loading. Reload to reconcile.',409);
    if(!Array.isArray(data))throw new ApiError('Unexpected board list response.');
    return structuredClone(data);
+ }
+ async nativeApplicationBoardContext(moduleId){
+   const userId=this.auth?.userId;
+   const token=this.auth?.accessToken;
+   const generation=this.contextReadGeneration;
+   if(!validUuid(userId)||typeof token!=='string'||!token)
+    throw new ApiError('Signed native application context is unavailable.',403);
+   const [context,payload]=await Promise.all([
+    this.context(),
+    this.rpc('native_application_board_context',{p_module_id:moduleId})
+   ]);
+   if(this.auth?.userId!==userId||this.auth?.accessToken!==token||
+      this.contextReadGeneration!==generation||
+      context?.user_id!==userId||context?.profile?.status!=='active')
+    throw new ApiError('Signed native application context changed during resolution.',409);
+   let resolved;
+   try{
+    resolved=normalizeNativeApplicationBoardContext(payload,{
+     moduleId,userId,workspaceId:context.workspace_id
+    });
+   }catch{
+    throw new ApiError('The native application returned an invalid canonical workspace context.',409,
+     'INVALID_NATIVE_APPLICATION_CONTEXT');
+   }
+   return resolved;
  }
  async board(boardId,{includeExtendedRefs=false,importVerification=false,complete=true,includeItems=true}={}){
    requireUuid(boardId);

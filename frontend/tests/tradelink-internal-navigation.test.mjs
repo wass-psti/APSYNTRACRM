@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const loadBoard=source.slice(
- source.indexOf('async function loadBoard(boardId,tab,draftType=null,draftEditId=null){'),
+ source.indexOf('async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeContext=null){'),
  source.indexOf('/** CP-TL-03D: authority and route bound Draft UI',source.indexOf('async function loadBoard('))
 );
 test('same signed TradeLink board route reuses existing verified board without resetting full-screen loading',()=>{

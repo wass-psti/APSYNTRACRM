@@ -118,6 +118,11 @@ test('native signed snapshot wires sanitized all-date Log without weakening pers
  const api={
   context:async()=>({user_id:manager,workspace_id:workspace,
    profile:{status:'active',platform_role:'hr'}}),
+  nativeApplicationBoardContext:async moduleId=>({
+   contract:'native-app-board-v1',moduleId,userId:manager,workspaceId:workspace,role:'HR',
+   board:{id:board,workspace_id:workspace,name:'TimeTracker Attendance',status:'active',
+    description:'[APSYNTRA:MODULE:timetracker:v1]',archived_at:null,trashed_at:null}
+  }),
   board:async()=>({board:{id:board,workspace_id:workspace,name:'TimeTracker Attendance'}}),
   allowed:async()=>true,
   rpc:async(name)=>{

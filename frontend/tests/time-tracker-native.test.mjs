@@ -25,8 +25,15 @@ function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=works
  let currentRecords=records;
  const api={
   context:async()=>({user_id:activeUser,workspace_id:ctxWs,profile:{status:'active',platform_role:'hr'}}),
-  board:async()=>({board:{id:board,workspace_id:ctxWs,name:'TimeTracker Attendance'}}),
-  allowed:async()=>view,
+  nativeApplicationBoardContext:async moduleId=>{
+   assert.equal(moduleId,'time-tracker');
+   return {userId:activeUser,workspaceId:ctxWs,role,
+    board:{id:board,workspace_id:ctxWs,name:'TimeTracker Attendance',
+     status:'active',description:'[APSYNTRA:MODULE:timetracker:v1]',
+     archived_at:null,trashed_at:null}};
+  },
+  board:async()=>{throw Error('Generic board reads must not gate native TimeTracker access');},
+  allowed:async()=>{throw Error('Generic board permissions must not gate native TimeTracker access');},
   rpc:async(name,args)=>{
    switch(name){
     case 'has_module_access':return grant;
@@ -88,9 +95,11 @@ test('malformed records or conflicting active sessions deny rather than fabricat
  assert.throws(()=>projectOwnAttendance({version:1,records:two},user),/Conflicting active/);
 });
 
-test('signed module role, board permission and workspace context guard access',async()=>{
+test('signed module role and native workspace context guard access without generic board permission',async()=>{
  await assert.rejects(setup({grant:false}).client.snapshot(board),/application grant/);
- await assert.rejects(setup({view:false}).client.snapshot(board),/Board access/);
+ const withoutBoardView=setup({view:false});
+ const nativeSnapshot=await withoutBoardView.client.snapshot(board);
+ assert.equal(nativeSnapshot.access.moduleRole,'Employee');
  await assert.rejects(setup({role:'invalid'}).client.snapshot(board),/role assignment/);
  const s=setup();s.auth.userId=other;
  await assert.rejects(s.client.snapshot(board),/signed|identity/i);
@@ -320,6 +329,8 @@ test('opening a TimeTracker board canonicalizes to the dedicated app and bypasse
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/const defaultClock=!parts\[2\]/);
  assert.match(app,/defaultClock\?'attendance':'items'/);
+ assert.match(app,/db\.nativeApplicationBoardContext\('time-tracker'\)/);
+ assert.match(app,/db\.nativeApplicationBoardContext\('time-tracker'\)/);
  assert.match(app,/const timeTrackerBoard=state\.boards\.find/);
  assert.match(app,/TIMETRACKER_APPLICATION_ROUTE/);
  const boardPage=app.slice(app.indexOf('function boardPage(){'),app.indexOf('async function onRoute(){'));

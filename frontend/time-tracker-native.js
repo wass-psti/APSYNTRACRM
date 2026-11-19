@@ -124,12 +124,10 @@ export class TimeTrackerNativeClient{
   const ctx=await api.context();
   verifiedContext(auth,ctx,boardId);
   if(who?.id!==ctx.user_id)deny('Signed identity mismatch');
-  const board=await api.board(boardId);
-  if(board?.board?.id!==boardId||board.board.workspace_id!==ctx.workspace_id||
-     board.board.name!=='TimeTracker Attendance')
-   deny('TimeTracker board identity or workspace mismatch');
-  if(await api.allowed(boardId,'view')!==true)
-   deny('Board access denied');
+  const native=await api.nativeApplicationBoardContext(moduleId);
+  if(native?.userId!==who.id||native?.workspaceId!==ctx.workspace_id||
+     native?.board?.id!==boardId||native.board.name!=='TimeTracker Attendance')
+   deny('TimeTracker native application identity or workspace mismatch');
   const granted=await api.rpc('has_module_access',{p_module_id:moduleId,p_user_id:who.id});
   if(granted!==true)deny('TimeTracker application grant required');
   const users=await api.rpc('list_module_directory',{p_module_id:moduleId});

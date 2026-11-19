@@ -161,5 +161,5 @@ test('reference split workspace omits duplicate board table and technical draft 
  const source=readFileSync('frontend/app.js','utf8');
  assert.match(source,/if\(parts\[0\]==='tradelink'\)/);
  assert.match(source,/state\.tradeLinkSection=tradeLinkRoute\.section/);
- assert.match(source,/loadBoard\(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute\.draftType,tradeLinkRoute\.editId\)/);
+ assert.match(source,/loadBoard\(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute\.draftType,tradeLinkRoute\.editId,tradeLinkContext\)/);
 });

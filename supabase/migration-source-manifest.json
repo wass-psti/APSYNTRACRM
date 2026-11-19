@@ -1764,6 +1764,20 @@
       "file": "20261118105649_cp_bimp_source_cell_capacity_131072.sql",
       "bytes": 3047,
       "sha256": "1e5d460fc0187240aefb2c12121433a17b4f614fab0462b8b97983081490ed72"
+    },
+    {
+      "version": "20261119024303",
+      "name": "cp_native_app_access_01",
+      "file": "20261119024303_cp_native_app_access_01.sql",
+      "bytes": 20977,
+      "sha256": "c52e7f4466edd7f0291f1ef784150647606a81a209b76405c4e3c4300a927c21"
+    },
+    {
+      "version": "20261119025306",
+      "name": "cp_crm_conn03a_native_board_membership_provision",
+      "file": "20261119025306_cp_crm_conn03a_native_board_membership_provision.sql",
+      "bytes": 9406,
+      "sha256": "abc5fc555d2a9bc7ded52b7e0167a6ad583db8cc1337c21dcd261211079a66ed"
     }
   ]
 }

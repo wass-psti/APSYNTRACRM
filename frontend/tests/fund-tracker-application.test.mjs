@@ -145,11 +145,11 @@ test("Fund Tracker route reuses the existing board host, adapter, renderer and d
   for (const fragment of [
     "import {FundTrackerNativeClient} from './fund-tracker-native.js'",
     "import {renderFundTrackerNative} from './fund-tracker-ui.js'",
-    "findFundTrackerBoard(state.boards)",
+    "db.nativeApplicationBoardContext('fund-released-tracker')",
     "if(parts[0]==='fund-tracker'){",
     "pendingNativeSearchSelection={applicationId:'frt',recordId:selectedRecord.requestId",
     "navigationScope:selectedRecord.companyCode",
-    "await loadBoard(fundTrackerBoard.id,'finance');",
+    "await loadBoard(fundTrackerBoard.id,'finance',null,null,fundTrackerContext);",
     "const fundTracker=new FundTrackerNativeClient({auth,api:db})",
     "fundTracker.snapshot(",
     "fundTracker.searchRequests(query,{limit})",

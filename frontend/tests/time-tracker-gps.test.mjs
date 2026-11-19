@@ -52,6 +52,11 @@ test('signed server GPS endpoint accepts only bootstrap or assigned Supervisor',
    auth:{userId:id,isSignedIn:true,getVerifiedUser:async()=>({id})},
    api:{
     context:async()=>({user_id:id,workspace_id:ws,profile:{status:'active'}}),
+    nativeApplicationBoardContext:async moduleId=>({
+     contract:'native-app-board-v1',moduleId,userId:id,workspaceId:ws,role:moduleRole,
+     board:{id:board,workspace_id:ws,name:'TimeTracker Attendance',status:'active',
+      description:'[APSYNTRA:MODULE:timetracker:v1]',archived_at:null,trashed_at:null}
+    }),
     board:async()=>({board:{id:board,workspace_id:ws,name:'TimeTracker Attendance'}}),
     allowed:async()=>true,
     rpc:async(name)=>{

@@ -5,7 +5,7 @@ import {TimeTrackerNativeClient} from '../time-tracker-native.js';
 const actor='00000000-0000-4000-8000-000000000003';
 const employee='00000000-0000-4000-8000-000000000004';
 const workspace='00000000-0000-4000-8000-000000000001';
-const board='00000000-0000-4000-8000-000000000002';
+const board='46bf4ee7-368a-4c35-842c-8593ea1f6ac3';
 const recordId='00000000-0000-4000-8000-000000000020';
 const record={id:recordId,ownerId:`cloud:${employee}`,ownerName:'Test Employee',
  clockIn:{timestamp:'2026-11-16T00:15:00.000Z',location:'Office-Base Duty',
@@ -18,6 +18,12 @@ function setup({role='System Admin',receiptOverride={}}={}){
  const api={
   async context(){return {user_id:actor,workspace_id:workspace,
    profile:{status:'active',platform_role:'admin_general_manager'}};},
+  async nativeApplicationBoardContext(moduleId){return {
+   contract:'native-app-board-v1',moduleId,userId:actor,workspaceId:workspace,
+   role,board:{id:board,workspace_id:workspace,name:'TimeTracker Attendance',
+    status:'active',description:'[APSYNTRA:MODULE:timetracker:v1]',
+    archived_at:null,trashed_at:null}
+  };},
   async board(id){return {board:{id,workspace_id:workspace,name:'TimeTracker Attendance'}};},
   async allowed(){return true;},
   async rpc(name,args,options){

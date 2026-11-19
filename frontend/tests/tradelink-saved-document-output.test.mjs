@@ -212,7 +212,7 @@ test('print action reloads signed record and matching Board before mounting the 
  assert.ok(start>0&&end>start);
  const flow=source.slice(start,end);
  for(const pattern of [
-  /tradeLinkDraftWorkspace\.revisionBundle\(documentId,targetRevision\)/,/db\.board\(TRADELINK_BOARD_ID\)/,
+  /tradeLinkDraftWorkspace\.revisionBundle\(documentId,targetRevision\)/,/tradeLinkDraftWorkspace\.boardProjection\(documentId\)/,
   /record\.revision!==targetRevision/,
   /record\.workflow_state!=='approved'/,
   /record\.board_item_id!==listed\.boardItemId/,

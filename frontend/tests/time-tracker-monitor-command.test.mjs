@@ -8,13 +8,13 @@ import {
 import {renderTimeTrackerNative} from '../time-tracker-ui.js';
 const now=new Date('2026-11-04T08:00:00.000Z');
 const checks=['Supabase Auth identity','Workspace admission','TimeTracker module grant',
- 'Board view authorization','Board and workspace binding','Fresh signed identity'];
+ 'Native application board resolution','Fresh signed identity'];
 const sample={
  status:'VERIFIED',sampledAt:'2026-11-04T07:45:00Z',
  checks:checks.map(name=>({name,status:'PASS',durationMs:15,detail:'Verified signed response'})),
  client:{navigationMs:108,domInteractiveMs:45,transferBytes:12800,
   slowResources:1,longTasks:null,heapMb:4},
- network:{sampleMs:97,successful:6,total:6}
+ network:{sampleMs:97,successful:5,total:5}
 };
 const render=options=>renderTimeTrackerMonitor({now,...options});
 const css=readFileSync('frontend/time-tracker-monitor-command.css','utf8');
@@ -45,7 +45,7 @@ test('Monitor hero renders actual signed on-demand metrics and bounded session h
  assert.equal(classifyTimeTrackerMonitor(sample),'HEALTHY AT CHECK');
  assert.match(html,/HEALTHY AT CHECK/);
  assert.match(html,/tt-monitor-indicator tt-monitor-healthy/);
- assert.match(html,/>6 \/ 6<\/strong><span>Signed checks<\/span>/);
+ assert.match(html,/>5 \/ 5<\/strong><span>Signed checks<\/span>/);
  assert.match(html,/>97 ms<\/strong><span>Check duration<\/span>/);
  assert.match(html,/>1<\/strong><span>Memory samples<\/span>/);
  assert.match(html,/ON-DEMAND HISTORY/);

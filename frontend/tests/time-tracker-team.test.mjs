@@ -37,6 +37,12 @@ test('fresh bootstrap RPC is necessary even when module role is administrative',
   api:{
    context:async()=>({user_id:teamActor,workspace_id:teamWs,
     profile:{status:'active',platform_role:'admin_general_manager'}}),
+   nativeApplicationBoardContext:async moduleId=>({
+    contract:'native-app-board-v1',moduleId,userId:teamActor,workspaceId:teamWs,
+    role:'System Admin',board:{id:'46bf4ee7-368a-4c35-842c-8593ea1f6ac3',
+     workspace_id:teamWs,name:'TimeTracker Attendance',status:'active',
+     description:'[APSYNTRA:MODULE:timetracker:v1]',archived_at:null,trashed_at:null}
+   }),
    board:async()=>({board:{id:'46bf4ee7-368a-4c35-842c-8593ea1f6ac3',
     workspace_id:teamWs,name:'TimeTracker Attendance'}}),
    allowed:async()=>true,

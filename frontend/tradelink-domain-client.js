@@ -304,21 +304,35 @@ export class TradeLinkDomainClient{
   return {actorId:actor.id,workspaceId:context.workspace_id};
  }
  async reviewerSession(){
-  if(!this.api?.context||!this.api?.board||!this.api?.allowed||!this.api?.rpc||
+  if(!this.api?.context||!this.api?.nativeApplicationBoardContext||!this.api?.rpc||
     !this.auth?.getVerifiedUser)deny('Signed TradeLink reviewer API unavailable.');
-  const [actor,context,detail,canView]=await Promise.all([
+  const [actor,context,native]=await Promise.all([
    this.auth.getVerifiedUser(),this.api.context(),
-   this.api.board(TRADELINK_BOARD_ID),
-   this.api.allowed(TRADELINK_BOARD_ID,'view')
+   this.api.nativeApplicationBoardContext('tradelink')
   ]);
   if(!validUuid(actor?.id)||actor.id!==this.auth.userId||
     context?.user_id!==actor.id||context?.profile?.status!=='active'||
     !validUuid(context.workspace_id))
    deny('TradeLink reviewer identity or workspace changed.');
-  if(!isTradeLinkBoard(detail?.board)||
-    detail.board.workspace_id!==context.workspace_id||canView!==true)
-   deny('TradeLink Board view access is required for assigned review.');
+  if(native?.userId!==actor.id||native?.workspaceId!==context.workspace_id||
+    !isTradeLinkBoard(native?.board))
+   deny('TradeLink native application assignment or workspace is unavailable.');
   return {actorId:actor.id,workspaceId:context.workspace_id};
+ }
+ async boardProjection(documentId){
+  if(!validUuid(documentId))deny('Invalid TradeLink document ID.',400);
+  const {workspaceId}=await this.reviewerSession();
+  const result=await this.api.rpc('tl03_board_projection',{
+   p_document_id:documentId
+  });
+  const board=result?.board,item=result?.item;
+  if(result?.contract!=='tradelink-board-projection-v1'||
+    !isTradeLinkBoard(board)||board.workspace_id!==workspaceId||
+    !validUuid(item?.id)||typeof item?.title!=='string'||
+    item.archived_at!==null||typeof item.updated_at!=='string'||
+    !Number.isFinite(Date.parse(item.updated_at)))
+   deny('Invalid or unavailable signed TradeLink document projection.',409);
+  return {board,items:[item]};
  }
  async analyticsSummary({from=null,to=null}={}){
   if(!TL03_ANALYTICS_ENABLED)
