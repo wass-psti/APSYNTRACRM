@@ -199,7 +199,8 @@ import {findTimeTrackerAttendanceBoard,TIMETRACKER_APPLICATION_ROUTE} from './ti
 import {attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError} from './time-tracker-clock-recovery.js';
 import {signedMapPoints,mountTimeTrackerMaps,disposeTimeTrackerMaps,setTimeTrackerMapTheme,retryTimeTrackerMaps,toggleTimeTrackerMapFullscreen} from './time-tracker-map.js';
 import {inspectMySignedEffectiveAccess,sanitizeEffectiveAccessReport} from './signed-effective-access.js';
-import {RoleConfigurationClient,stagedProposalReadbackVerified} from './role-configuration-client.js';
+import {RoleConfigurationClient} from './role-configuration-client.js';
+import {stagedProposalReadbackVerified} from './role-configuration-client.js';
 import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-ui.js';
 import {mountRoleConfigurationMotion,stopRoleConfigurationMotion} from './role-configuration-visuals.js';
 import {mountUserRoleMotion,stopUserRoleMotion} from './user-role-visuals.js';
