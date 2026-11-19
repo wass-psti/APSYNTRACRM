@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {boardGrid,prepareBoardGrid} from '../board-grid.js';
+import {boardGrid,prepareBoardGrid} from '../board/presentation/grid.js';
 
 const detail={
  board:{id:'board-a',name:'FuelTrans Standalone'},

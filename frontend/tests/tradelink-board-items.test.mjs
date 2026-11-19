@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {searchTradeLinkBoardItems} from '../tradelink-application.js';
-import {boardGrid,boardGridColumns,prepareBoardGrid} from '../board-grid.js';
+import {boardGrid,boardGridColumns,prepareBoardGrid} from '../board/presentation/grid.js';
 import {
  TRADELINK_BOARD_ID,TRADELINK_WORKFLOW_STATUS,TRADELINK_QUOTE_STATUS,
  TRADELINK_FIELDS,TRADELINK_FILES_KEY,isTradeLinkBoard,tradeLinkSetupStatus,
@@ -107,7 +107,7 @@ test('denied, changed workspace, nonempty board and incompatible status options 
 });
 test('source integration uses the existing signed CAS schema mutation, not SQL or fake uploads',()=>{
  const app=readFileSync('frontend/app.js','utf8');
- const structure=readFileSync('frontend/board-structure-admin.js','utf8');
+ const structure=readFileSync('frontend/board/crud/structure-admin.js','utf8');
  const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
  assert.match(app,/case 'tradelink-configure'/);
  assert.match(app,/configureTradeLinkColumns\(\{auth,api:db,structure:boardStructureClient\}\)/);

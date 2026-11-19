@@ -2,9 +2,9 @@ name: APSYNTRA Selective IndexedDB Preference Acceptance
 on:
   pull_request:
     paths:
-      - 'frontend/board-preferences-idb.js'
+      - 'frontend/board/services/preferences-idb.js'
       - 'frontend/app.js'
-      - 'frontend/board-presentation.js'
+      - 'frontend/board/presentation/presentation.js'
       - 'frontend/tests/board-preferences-idb.test.mjs'
       - 'frontend/tests/fixtures/board-preferences-browser.html'
       - 'scripts/board-preferences-browser.mjs'
@@ -12,9 +12,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'frontend/board-preferences-idb.js'
+      - 'frontend/board/services/preferences-idb.js'
       - 'frontend/app.js'
-      - 'frontend/board-presentation.js'
+      - 'frontend/board/presentation/presentation.js'
       - 'frontend/tests/board-preferences-idb.test.mjs'
       - 'frontend/tests/fixtures/board-preferences-browser.html'
       - 'scripts/board-preferences-browser.mjs'

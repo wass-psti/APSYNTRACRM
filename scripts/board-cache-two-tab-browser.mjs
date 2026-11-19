@@ -52,9 +52,9 @@ const server=createServer(async(req,res)=>{
  const allowStatic=new Set([
   '/frontend/tests/fixtures/board-cache-two-tab.html',
   '/frontend/data.js','/frontend/session.js','/frontend/config.js',
-  '/frontend/native-application-access.js','/frontend/board-cache-channel.js',
+  '/frontend/native-application-access.js','/frontend/board/cache-channel.js',
   '/frontend/tests/fixtures/board-virtual-browser.html',
-  '/frontend/board-presentation.js','/frontend/board-window.js',
+  '/frontend/board/presentation/presentation.js','/frontend/board/presentation/window.js',
   '/frontend/styles.css'
  ]);
  const file=resolve(root,'.'+pathname);

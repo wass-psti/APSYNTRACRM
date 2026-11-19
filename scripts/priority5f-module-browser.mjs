@@ -102,7 +102,7 @@ async function run(){
       login:!!document.querySelector('#app form, #app [data-auth-form]'),
       loadMs:Math.round(nav.loadEventEnd-nav.startTime),
       fueltransFetched:files.some(x=>x.name.includes('fueltrans-native.js')),
-      importFetched:files.some(x=>x.name.includes('board-import-ui.js'))};
+      importFetched:files.some(x=>new URL(x.name).pathname.endsWith('/board/import/import-ui.js'))};
    })()`);
    checks[variant]=report;
   }

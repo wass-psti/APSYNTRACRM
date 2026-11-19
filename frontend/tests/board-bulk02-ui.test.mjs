@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {BOARD_BULK02_ENABLED} from '../board-bulk02-client.js';
+import {BOARD_BULK02_ENABLED} from '../board/bulk/bulk02-client.js';
 const app=readFileSync('frontend/app.js','utf8');
 test('bulk controls remain fail-closed before genuine per-session preflight',()=>{
  assert.equal(BOARD_BULK02_ENABLED,false);

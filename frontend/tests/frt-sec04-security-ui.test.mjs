@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {renderSecurityAcceptance} from '../board-security-ui.js';
+import {renderSecurityAcceptance} from '../board/acceptance/security-ui.js';
 
 const context={workspace_id:'11111111-1111-4111-8111-111111111111',
  profile:{status:'active',platform_role:'employee'}};

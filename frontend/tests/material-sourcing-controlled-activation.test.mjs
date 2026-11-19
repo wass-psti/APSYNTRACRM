@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {boardGridColumns} from '../board-grid.js';
+import {boardGridColumns} from '../board/presentation/grid.js';
 import {MATERIAL_SOURCING_ADDITIONS,MATERIAL_SOURCING_EXISTING,
  MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,
  isMaterialSourcingRestrictedColumn} from '../material-sourcing-schema-plan.js';

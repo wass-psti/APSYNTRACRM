@@ -1,19 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {renderAuthMarkup} from '../auth-markup.js';
+import {renderAuthMarkup} from '../auth/markup.js';
 import {formSubmitAction,validateAccessRequest,FORM_SUBMIT_RECIPIENT_ALIAS} from '../request-access.js';
 import {
  REGISTRATION_ADMISSION_ENABLED,REGISTRATION_BLOCKED,RECOVERY_REDIRECT_URL,
  RECOVERY_CONFIRMATION,validateRegistration,validatePassword,
  safeRecoveryError,captureAuthReturn,inspectRecoveryToken,requestPasswordRecovery,
  applyRecoveredPassword
-} from '../auth-account-flows.js';
+} from '../auth/account-flows.js';
 
 const client=readFileSync('frontend/session.js','utf8');
 const app=readFileSync('frontend/app.js','utf8');
-const source=readFileSync('frontend/auth-account-flows.js','utf8');
-const css=readFileSync('frontend/auth-experience.css','utf8');
+const source=readFileSync('frontend/auth/account-flows.js','utf8');
+const css=readFileSync('frontend/auth/experience.css','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 
 test('activated FormSubmit request form never creates a Supabase account',()=>{
@@ -238,5 +238,5 @@ test('auth styling uses existing responsive design and strict CSP',()=>{
   '@media(prefers-contrast:more)'])assert.ok(css.includes(part),part);
  assert.doesNotMatch(css,/@import|url\(https?:|@keyframes|animation:.*infinite/);
  assert.doesNotMatch(source,/\.innerHTML\s*=|document\.write|eval\(|\.storage\.setItem\(|\.storage\.getItem\(/);
- assert.match(smoke,/'frontend\/auth-account-flows\.js'/);
+ assert.match(smoke,/'frontend\/auth\/account-flows\.js'/);
 });

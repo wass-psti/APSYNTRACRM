@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {spawn} from 'node:child_process';
 import {setTimeout as delay} from 'node:timers/promises';
-import {renderAuthMarkup} from '../frontend/auth-markup.js';
+import {renderAuthMarkup} from '../frontend/auth/markup.js';
 const root=process.cwd();
 const markup=renderAuthMarkup({emailValue:'person@example.com',message:'Sign-in unsuccessful'});
 const html='<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/frontend/apsyntra-styles.bundle.css"></head><body><div id="app">'+markup+'</div></body></html>';

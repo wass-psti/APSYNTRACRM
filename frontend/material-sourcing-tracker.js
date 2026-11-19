@@ -2,7 +2,7 @@
  * financial figures, test data, or guessed supplier values enter this view. */
 import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,
  isApprovedPublicMaterialSourcingColumn} from './material-sourcing-schema-plan.js';
-import {boardItemsComplete} from './board-grid.js';
+import {boardItemsComplete} from './board/presentation/grid.js';
 import {renderMaterialSourcingAddMaterial} from './material-sourcing-add-material.js';
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

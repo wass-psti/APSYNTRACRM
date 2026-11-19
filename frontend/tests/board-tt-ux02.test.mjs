@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {ApiError} from '../session.js';
-import {moveTabInOrder,reorderManagedTimeTrackerTabs} from '../board-tab-order.js';
-import {publicBoardDescription} from '../board-public-copy.js';
-import {boardGrid} from '../board-grid.js';
-import {renderGroupAddRow} from '../board-inline-items.js';
+import {moveTabInOrder,reorderManagedTimeTrackerTabs} from '../board/services/tab-order.js';
+import {publicBoardDescription} from '../board/foundation/public-copy.js';
+import {boardGrid} from '../board/presentation/grid.js';
+import {renderGroupAddRow} from '../board/inline/inline-items.js';
 import {MANAGED_TT_GROUP_DELETE_ENABLED} from '../managed-time-tracker-groups.js';
 
 const BID='46bf4ee7-368a-4c35-842c-8593ea1f6ac3';
@@ -150,8 +150,8 @@ test('tab ordering is server-authoritative for TimeTracker only; other board rou
  assert.match(app,/state\.tabMoveBusy/);
  assert.match(app,/publicBoardDescription\(b\)/);
  assert.match(app,/publicBoardDescription\(board\)/);
- const grid=readFileSync('frontend/board-grid.js','utf8');
- const inline=readFileSync('frontend/board-inline-items.js','utf8');
+ const grid=readFileSync('frontend/board/presentation/grid.js','utf8');
+ const inline=readFileSync('frontend/board/inline/inline-items.js','utf8');
  assert.doesNotMatch(grid,/Operational records will appear here/);
  assert.doesNotMatch(inline,/Application-managed records are created through their authorized module workflow/);
 });

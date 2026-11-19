@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {BOARD_MODULES} from '../board-manifest.js';
+import {BOARD_MODULES} from '../board/services/manifest.js';
 
 const app=readFileSync('frontend/app.js','utf8');
 const presentation=readFileSync('frontend/monday-inspired-ui.js','utf8');

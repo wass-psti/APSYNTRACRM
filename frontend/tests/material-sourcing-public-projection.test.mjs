@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {boardGridColumns,prepareBoardGrid,boardGrid} from '../board-grid.js';
+import {boardGridColumns,prepareBoardGrid,boardGrid} from '../board/presentation/grid.js';
 import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,
  MATERIAL_SOURCING_EXISTING,MATERIAL_SOURCING_ADDITIONS,
  isApprovedPublicMaterialSourcingColumn} from '../material-sourcing-schema-plan.js';

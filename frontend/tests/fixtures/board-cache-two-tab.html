@@ -3,7 +3,7 @@
 <p>Isolated synthetic signed-session browser test. No production credentials or APIs.</p>
 <script type="module">
 import {DomainApi} from '../../data.js';
-import {BoardCacheChannel} from '../../board-cache-channel.js';
+import {BoardCacheChannel} from '../../board/cache-channel.js';
 const BOARD='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88';
 let context=null,identity=null,auth=null,api=null,channel=null;
 const activity={updates:[],errors:[],serverReads:0,lastBoard:null};

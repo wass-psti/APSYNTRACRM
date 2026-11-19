@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {normalizeBoardActivity,filterBoardActivity,pageBoardActivity,
- renderBoardActivityResults,renderBoardActivityActorAvatar,boardItemSummary,BOARD_ACTIVITY_PAGE_SIZE} from '../board-activity-ui.js';
-import {boardGrid} from '../board-grid.js';
+ renderBoardActivityResults,renderBoardActivityActorAvatar,boardItemSummary,BOARD_ACTIVITY_PAGE_SIZE} from '../board/presentation/activity-ui.js';
+import {boardGrid} from '../board/presentation/grid.js';
 const events=[
  {id:9,event_type:'item.updated',message:'Status to Done',actor_name:'Alex',actor_id:'a',
   created_at:'2026-11-01T09:00:00Z',entity_type:'item',entity_id:'i-1'},

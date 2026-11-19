@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {reconcileImportSummary} from '../board-import-summary.js';
+import {reconcileImportSummary} from '../board/import/import-summary.js';
 
 test('source rows reconcile against valid, rejected and explicitly excluded worksheet rows',()=>{
  const result=reconcileImportSummary({sourceRows:420,validRows:320,rejectedRows:90,

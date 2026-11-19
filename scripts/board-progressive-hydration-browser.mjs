@@ -17,7 +17,7 @@ const html='<!doctype html><html lang="en"><head><meta charset="utf-8">'+
  '<style>body{margin:0;padding:20px}.test-row{height:52px;box-sizing:border-box;padding:15px;border-bottom:1px solid #ddd}.test-list{max-width:900px;margin:auto}</style>'+
  '</head><body><main id="app" class="test-list"></main>'+
  '<script type="module">'+
- 'import {renderBoardPagination,mountBoardPagination} from "/frontend/board-pagination-ui.js";'+
+ 'import {renderBoardPagination,mountBoardPagination} from "/frontend/board/presentation/pagination-ui.js";'+
  'const root=document.querySelector("#app");let loaded=200,calls=0,busy=false,error="",failNext=false,dispose=null;'+
  'const rows=()=>Array.from({length:loaded},(_,i)=>"<div class=\\"test-row\\">Board record "+(i+1)+"</div>").join("");'+
  'function render(){dispose?.();root.innerHTML="<section aria-label=\\"Synthetic board rows\\">"+rows()+"</section>"+renderBoardPagination({loaded_count:loaded,has_more:loaded<600},{busy,error});dispose=mountBoardPagination(root,loadMore);}'+
@@ -28,7 +28,7 @@ const html='<!doctype html><html lang="en"><head><meta charset="utf-8">'+
 const server=createServer((req,res)=>{
  const pathname=new URL(req.url,'http://127.0.0.1').pathname;
  if(pathname==='/'){res.setHeader('Content-Type','text/html; charset=utf-8');res.end(html);return;}
- if(pathname==='/frontend/board-pagination-ui.js'||pathname==='/frontend/apsyntra-styles.bundle.css'){
+ if(pathname==='/frontend/board/presentation/pagination-ui.js'||pathname==='/frontend/apsyntra-styles.bundle.css'){
   const file=resolve(root,'.'+pathname);
   res.setHeader('Content-Type',extname(file)==='.js'?'text/javascript; charset=utf-8':'text/css; charset=utf-8');
   res.end(readFileSync(file));return;

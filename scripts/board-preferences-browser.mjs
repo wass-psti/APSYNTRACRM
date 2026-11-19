@@ -8,8 +8,8 @@ import {setTimeout as sleep} from 'node:timers/promises';
 import assert from 'node:assert/strict';
 const root=resolve(import.meta.dirname,'..');
 const allow=new Set(['/frontend/tests/fixtures/board-preferences-browser.html',
- '/frontend/board-preferences-idb.js','/frontend/board-presentation.js',
- '/frontend/board-window.js']);
+ '/frontend/board/services/preferences-idb.js','/frontend/board/presentation/presentation.js',
+ '/frontend/board/presentation/window.js']);
 const server=createServer((req,res)=>{
  const url=new URL(req.url,'http://127.0.0.1');
  if(!allow.has(url.pathname)){res.writeHead(404);res.end('not found');return;}
@@ -91,7 +91,7 @@ async function run(){
   // Wait for the exact loopback fixture document, not a stale initial target.
   await until(()=>page.evaluate("location.pathname==='/frontend/tests/fixtures/board-preferences-browser.html'&&document.readyState==='complete'"));
   const test=await page.evaluate(`(async()=>{
-   const mod=await import('/frontend/board-preferences-idb.js');
+   const mod=await import('/frontend/board/services/preferences-idb.js');
    const {BoardPreferenceStore,PREFERENCE_DB,PREFERENCE_TTL_MS,
     PREFERENCE_ENTRY_LIMIT}=mod;
    const user='11111111-1111-4111-8111-111111111111',

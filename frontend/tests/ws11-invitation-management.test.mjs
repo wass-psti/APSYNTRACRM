@@ -104,7 +104,7 @@ test('board invite picker exposes viewer grants only behind verified signed gate
 test('trusted UI and migrations remain OFF until separate production activation',()=>{
  const ui=readFileSync('frontend/workspace-ui.js','utf8');
  const app=readFileSync('frontend/app.js','utf8');
- const share=readFileSync('frontend/board-share.js','utf8');
+ const share=readFileSync('frontend/board/collaboration/share.js','utf8');
  const sql=readFileSync('sql/ws11-invitation-management-CANDIDATE-NOT-APPLIED.sql','utf8');
  const board=readFileSync('sql/bs11-direct-board-access-CANDIDATE-NOT-APPLIED.sql','utf8');
  assert.match(ui,/data-ws11-refresh/);

@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {initialImportMappings,buildImportPlan,inferImportType} from '../board-import-core.js';
+import {initialImportMappings,buildImportPlan,inferImportType} from '../board/import/import-core.js';
 import {importMappingReadiness,skipPendingImportChoice,
- matchConfiguredImportChoice} from '../board-import-readiness.js';
+ matchConfiguredImportChoice} from '../board/import/import-readiness.js';
 
 const boardId='11111111-1111-4111-8111-111111111111';
 const workspaceId='22222222-2222-4222-8222-222222222222';
@@ -81,7 +81,7 @@ test('configured Status is mapped by verified column ID; second-stage ordinary c
  assert.throws(()=>matchConfiguredImportChoice(mapped,1,statusId),/verified configured/);
 });
 test('the mapping UI exposes resolve and skip controls instead of a dead-end Next button',()=>{
- const ui=readFileSync('frontend/board-import-ui.js','utf8');
+ const ui=readFileSync('frontend/board/import/import-ui.js','utf8');
  const css=readFileSync('frontend/board-import.css','utf8');
  assert.match(ui,/data-imp-review-choice/);
  assert.match(ui,/data-imp-skip-choice/);

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {ApiError} from '../session.js';
 import {readFileSync} from 'node:fs';
-import {deleteOneAuthorizedItem,selectedDeleteCandidates} from '../board-single-delete.js';
+import {deleteOneAuthorizedItem,selectedDeleteCandidates} from '../board/crud/single-delete.js';
 const boardId='11111111-1111-4111-8111-111111111111';
 const ws='22222222-2222-4222-8222-222222222222';
 const actor='33333333-3333-4333-8333-333333333333';

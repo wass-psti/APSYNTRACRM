@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {boardTable} from '../board-presentation.js';
+import {boardTable} from '../board/presentation/presentation.js';
 import {
  canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,
  visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,
  groupColumnSummaries,parseCellForm,inputForColumn
-} from '../board-inline-items.js';
+} from '../board/inline/inline-items.js';
 
 const b='11111111-1111-4111-8111-111111111111',
  group='22222222-2222-4222-8222-222222222222',

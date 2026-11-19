@@ -6,7 +6,7 @@ import {
  BOARD_STRUCTURE_ADMIN_ENABLED,BoardStructureClient,describeBoardColumns,
  normalizeBoardUi,applyBoardViewSettings,displayColumnLabel,
  renderBoardStructureAdmin
-} from '../board-structure-admin.js';
+} from '../board/crud/structure-admin.js';
 
 const board='33333333-3333-4333-8333-333333333333';
 const domain='11111111-1111-4111-8111-111111111111';
@@ -164,7 +164,7 @@ test('app is wired into board options while existing item permissions remain sep
 });
 
 test('typed domain board keeps restricted projection until approved config gate',async()=>{
- const {boardGridColumns,boardGrid}=await import('../board-grid.js');
+ const {boardGridColumns,boardGrid}=await import('../board/presentation/grid.js');
  const detail={board:{name:'TimeTracker Attendance'},columns:[
   {id:domain,name:'Attendance Ref',column_key:'col_original',data_type:'text',
    system_key:null,visible:true},

@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {boardTable} from '../board-presentation.js';
-import {boardItemsComplete} from '../board-grid.js';
+import {boardTable} from '../board/presentation/presentation.js';
+import {boardItemsComplete} from '../board/presentation/grid.js';
 import {BOARD_WINDOW_THRESHOLD,BOARD_WINDOW_SIZE,boardWindowSlice,
- resetBoardWindows,visibleBoardWindowIds} from '../board-window.js';
+ resetBoardWindows,visibleBoardWindowIds} from '../board/presentation/window.js';
 const id=i=>'00000000-0000-4000-8000-'+String(i+1).padStart(12,'0');
 const rows=Array.from({length:500},(_,i)=>({itemId:id(i),search:'record '+i,
  cells:{record:'Record '+i,status:'Ready'}}));
@@ -54,12 +54,12 @@ test('Priority 2 integrates scoped local filtering, group selection and lifecycl
  assert.match(source,/visibleGroupSelectionIds\(input\.dataset\.boardSelectAll\)/);
  assert.match(source,/visibleSelectionOrder\(\)/);
  assert.match(source,/if\(event\.target\.id==='search-board-items'&&state\.view==='board'&&state\.tab==='items'\)/);
- assert.doesNotMatch(readFileSync(new URL('../board-window.js',import.meta.url),'utf8'),
+ assert.doesNotMatch(readFileSync(new URL('../board/presentation/window.js',import.meta.url),'utf8'),
   /localStorage|sessionStorage|indexedDB|caches\.open/);
 });
 
 test('Priority 5 avoids unchanged-query DOM reconstruction and normalizes searchable rows once',()=>{
- const source=readFileSync(new URL('../board-window.js',import.meta.url),'utf8');
+ const source=readFileSync(new URL('../board/presentation/window.js',import.meta.url),'utf8');
  assert.match(source,/lastQuery:''/);
  assert.match(source,/searchIndex:rows\.map\(row=>String\(row\.search\|\|''\)\.toLocaleLowerCase\(\)\)/);
  assert.match(source,/if\(model\.lastQuery===needle\)continue/);

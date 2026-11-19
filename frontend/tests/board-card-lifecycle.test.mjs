@@ -5,7 +5,7 @@ import {ApiError} from '../session.js';
 import {
  BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,
  BoardCardLifecycleClient
-} from '../board-card-lifecycle.js';
+} from '../board/services/card-lifecycle.js';
 
 const actor='20000000-0000-4000-8000-000000000001';
 const ws='10000000-0000-4000-8000-000000000001';

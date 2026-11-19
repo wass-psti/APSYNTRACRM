@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {BoardTrashPermanentDeleteClient,eligibleTrashBoard} from '../board-trash-permanent-delete.js';
+import {BoardTrashPermanentDeleteClient,eligibleTrashBoard} from '../board/crud/trash-permanent-delete.js';
 
 const user='10000000-0000-4000-8000-000000000001';
 const workspace='20000000-0000-4000-8000-000000000001';

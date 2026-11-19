@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from '../board-bulk-selection.js';
-import {boardTable} from '../board-presentation.js';
-import {boardGrid} from '../board-grid.js';
+import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from '../board/selection.js';
+import {boardTable} from '../board/presentation/presentation.js';
+import {boardGrid} from '../board/presentation/grid.js';
 import {DomainApi} from '../data.js';
 
 const a='11111111-1111-4111-8111-111111111111';

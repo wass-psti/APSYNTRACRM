@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DomainApi} from '../data.js';
-import {boardPaginationStatus} from '../board-pagination-ui.js';
+import {boardPaginationStatus} from '../board/presentation/pagination-ui.js';
 
 const USER='11111111-1111-4111-8111-111111111111';
 const WORKSPACE='22222222-2222-4222-8222-222222222222';

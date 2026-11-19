@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {BoardCacheChannel,BOARD_CACHE_CHANNEL} from '../board-cache-channel.js';
+import {BoardCacheChannel,BOARD_CACHE_CHANNEL} from '../board/cache-channel.js';
 import {DomainApi} from '../data.js';
 const user='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const other='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -290,5 +290,5 @@ test('UI hooks source-cache invalidation into signed reconciliation and lifecycl
  assert.match(app,/state\.fuelTrackBackendBusy\|\|state\.fuelTrackActivityBusy/);
  assert.match(app,/state\.mrhAddView&&state\.tab==='sourcing'/);
  assert.match(app,/auth\.onExpired=\(\)=>\{boardCacheChannel\.stop\(\)/);
- assert.doesNotMatch(readFileSync(new URL('../board-cache-channel.js',import.meta.url),'utf8'),/localStorage|sessionStorage|indexedDB/);
+ assert.doesNotMatch(readFileSync(new URL('../board/cache-channel.js',import.meta.url),'utf8'),/localStorage|sessionStorage|indexedDB/);
 });

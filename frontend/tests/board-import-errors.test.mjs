@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeImportFailure} from '../board-import-errors.js';
+import {normalizeImportFailure} from '../board/import/import-errors.js';
 
 test('file decoding token errors remain retryable and confirm no board mutation',()=>{
  const result=normalizeImportFailure(new SyntaxError('Invalid or unexpected token'),'file-read');

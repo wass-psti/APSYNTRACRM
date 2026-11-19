@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {BoardPreferenceStore,PREFERENCE_DB,PREFERENCE_SCHEMA,PREFERENCE_STORE,
- PREFERENCE_TTL_MS,PREFERENCE_ENTRY_LIMIT,PREFERENCE_MAX_BYTES} from '../board-preferences-idb.js';
-import {preferenceKey,normalizeLayout,loadBoardLayout,saveBoardLayout,resetBoardLayout} from '../board-presentation.js';
+ PREFERENCE_TTL_MS,PREFERENCE_ENTRY_LIMIT,PREFERENCE_MAX_BYTES} from '../board/services/preferences-idb.js';
+import {preferenceKey,normalizeLayout,loadBoardLayout,saveBoardLayout,resetBoardLayout} from '../board/presentation/presentation.js';
 const user='11111111-1111-4111-8111-111111111111';
 const workspace='22222222-2222-4222-8222-222222222222';
 const board='33333333-3333-4333-8333-333333333333';
@@ -61,7 +61,7 @@ test('existing signed application uses scoped adapter after verified board acces
  assert.match(source,/loadBoardLayout\(state\.context,state\.boardId,tabs,columns,boardPreferences\)/);
  assert.match(source,/resetBoardLayout\(state\.context,state\.boardId,boardPreferences\)/);
  assert.match(source,/auth\.onExpired=\(\)=>\{boardCacheChannel\.stop\(\);db\.invalidateBoardCache\(\);boardPreferences\.clearMemory\(\)/);
- const module=readFileSync(new URL('../board-preferences-idb.js',import.meta.url),'utf8');
+ const module=readFileSync(new URL('../board/services/preferences-idb.js',import.meta.url),'utf8');
  assert.doesNotMatch(module,/fetch\(|sessionStorage|localStorage\.setItem|auth\.session|bearer|service_role/);
 });
 
