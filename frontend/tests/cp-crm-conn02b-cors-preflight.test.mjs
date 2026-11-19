@@ -75,7 +75,12 @@ test("authenticated GETs and mutating or non-RPC POSTs remain no-store", async (
     body: {},
     requestKind: "read",
   });
-  assert.equal(calls.length, 4);
+  await auth.call("/rest/v1/rpc/unreviewed_read_rpc", {
+    method: "POST",
+    body: {},
+    requestKind: "read",
+  });
+  assert.equal(calls.length, 5);
   assert.ok(calls.every((call) => call.options.cache === "no-store"));
 });
 

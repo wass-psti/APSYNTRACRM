@@ -28,7 +28,7 @@ export class AuthClient {
     this.storage?.setItem(STORE_KEY,JSON.stringify(this.session));
   }
   clear(){this.session=null;this.verifiedUserPending=null;this.storage?.removeItem(STORE_KEY);}
-  async call(path,{method='GET',body,accessToken,signal,readTimeoutMs,requestKind='unknown'}={}){
+  async call(path,{method='GET',body,accessToken,signal,readTimeoutMs,requestKind='unknown',retryableRead=false}={}){
     if(signal?.aborted)throw new ApiError('Request was cancelled.',0,'REQUEST_ABORTED');
     const controller=new AbortController();
     const abort=()=>controller.abort();
@@ -58,7 +58,7 @@ export class AuthClient {
       // (Access-Control-Max-Age: 3600). POST responses are not HTTP-cacheable
       // without explicit freshness and Content-Location response metadata.
       const reusePreflightCache=method==='POST'&&requestKind==='read'&&
-        path.startsWith('/rest/v1/rpc/');
+        retryableRead===true&&path.startsWith('/rest/v1/rpc/');
       const response=await Promise.race([this.fetchImpl(SUPABASE_URL+path,{
         method,mode:'cors',redirect:'error',cache:reusePreflightCache?'default':'no-store',
         headers:{apikey:SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json',
@@ -225,7 +225,7 @@ export class AuthClient {
     while(true){
       try{
         return await this.call(path,{...requestOptions,accessToken:token,
-          requestKind:requestOptions.requestKind||(retryableRead?'read':'unknown')});
+          requestKind:requestOptions.requestKind||(retryableRead?'read':'unknown'),retryableRead});
       }catch(error){
         if(error?.status===401&&retryUnauthorized&&!unauthorizedRetried){
           token=await this.refresh();

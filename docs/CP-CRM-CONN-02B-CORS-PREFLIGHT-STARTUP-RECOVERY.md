@@ -48,11 +48,12 @@ Both POST requests still reached the API. The test used an intentionally malform
 
 ### Request cache classification
 
-`frontend/session.js` now uses the default fetch cache mode only when all three conditions hold:
+`frontend/session.js` now uses the default fetch cache mode only when all four conditions hold:
 
 1. HTTP method is POST.
 2. The caller explicitly classifies the operation as `requestKind: 'read'`.
-3. The path is a REST RPC path under `/rest/v1/rpc/`.
+3. The existing read-only RPC contract sets `retryableRead: true`.
+4. The path is a REST RPC path under `/rest/v1/rpc/`.
 
 This uses the existing `BOARD_READ_RPC` allowlist in `frontend/data.js`; it does not create a second RPC allowlist.
 
