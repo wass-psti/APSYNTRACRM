@@ -1,7 +1,7 @@
 /** Read-only projection of existing signed Work Management events. */
-import {validUuid} from './data.js';
-import {verifiedBoardAvatarPath} from './board-people.js';
-import {avatarImageMarkup} from './profile-avatar.js';
+import {validUuid} from '../../data.js';
+import {verifiedBoardAvatarPath} from '../collaboration/people.js';
+import {avatarImageMarkup} from '../../profile-avatar.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const MAX_EVENTS=200;
 export const BOARD_ACTIVITY_PAGE_SIZE=25;

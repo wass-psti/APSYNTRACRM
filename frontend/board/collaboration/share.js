@@ -2,8 +2,8 @@
  * Presentation only. This module NEVER issues links or mutates Supabase
  * records, policy flags, authentication, board memberships or permissions.
  */
-import {validUuid} from './data.js';
-import {renderBoardAccessChoices} from './workspace-board-groups.js';
+import {validUuid} from '../../data.js';
+import {renderBoardAccessChoices} from '../../workspace-board-groups.js';
 
 export const BOARD_SHARE_LINKS_ENABLED=false;
 export const BOARD_PRIVACY_MODES=Object.freeze([

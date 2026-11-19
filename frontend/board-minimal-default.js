@@ -5,7 +5,7 @@
 import {ApiError} from './session.js';
 import {validUuid} from './data.js';
 import {canManuallyEditBoard} from './board-inline-items.js';
-import {moduleByBoardName} from './board-manifest.js';
+import {moduleByBoardName} from './board/services/manifest.js';
 export const ITEM_ONLY_MODE='item_only_v1';
 export const newOrdinaryTabs=()=>[
  {key:'items',label:'Board items',visible:true},

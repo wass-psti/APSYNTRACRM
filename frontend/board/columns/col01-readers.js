@@ -1,7 +1,7 @@
 /** CP-BOARD-COL01 prepared signed readers. Disabled until security acceptance. */
 import {ApiError} from '../../session.js';
 import {validUuid} from '../../data.js';
-import {renderBoardActivityActorAvatar} from '../../board-activity-ui.js';
+import {renderBoardActivityActorAvatar} from '../presentation/activity-ui.js';
 export const BOARD_COL01_DIRECTORY_ENABLED=false;
 export const BOARD_COL01_AUDIT_CURSOR_ENABLED=false;
 export const BOARD_COL01_AUDIT_MAX_PAGES=20;

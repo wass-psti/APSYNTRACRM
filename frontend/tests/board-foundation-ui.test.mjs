@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {renderOperationalResult} from '../board-foundation-ui.js';
+import {renderOperationalResult} from '../board/presentation/foundation-ui.js';
 test('per-board acceptance report does not confuse structural READY with operational PASS',()=>{
  const html=renderOperationalResult({status:'fail',passed:0,results:[]});
  assert.equal((html.match(/NOT RUN/g)||[]).length,12);

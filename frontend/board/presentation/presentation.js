@@ -1,4 +1,4 @@
-import {registerBoardWindow} from './board-window.js';
+import {registerBoardWindow} from './window.js';
 /**
  * APSYNTRA board presentation state. Never grants access or changes record schemas.
  * Each harmless layout value is scoped to a verified actor/workspace/board identity.

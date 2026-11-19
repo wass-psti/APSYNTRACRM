@@ -112,7 +112,7 @@ test('active attendance preserves empty clock-out GPS and duration',()=>{
 test('frontend wiring keeps private GPS separate from normal board item projection',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const css=readFileSync('frontend/styles.css','utf8');
- const manifest=readFileSync('frontend/board-manifest.js','utf8');
+ const manifest=readFileSync('frontend/board/services/manifest.js','utf8');
  assert.match(app,/TT_BOARD_GPS_PROJECTION_ENABLED/);
  assert.match(app,/async function openTimeTrackerBoardProjectedGps\(\)/);
  assert.match(app,/case 'tt-board-gps'/);

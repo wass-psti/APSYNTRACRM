@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {mountBoardCatalogMotion,stopBoardCatalogMotion} from '../board-catalog-visuals.js';
+import {mountBoardCatalogMotion,stopBoardCatalogMotion} from '../board/presentation/catalog-visuals.js';
 
 const app=readFileSync('frontend/app.js','utf8');
 const css=readFileSync('frontend/board-catalog-experience.css','utf8');
@@ -24,7 +24,7 @@ test('My boards catalogue is isolated to its own signed view and keeps the share
  assert.match(catalog,/class="card-grid boards-catalog-grid boards-entrance"/);
  assert.match(html,/frontend\/board-catalog-experience\.css/);
  assert.match(smoke,/'frontend\/board-catalog-experience\.css'/);
- assert.match(smoke,/'frontend\/board-catalog-visuals\.js'/);
+ assert.match(smoke,/'frontend\/board\/presentation\/catalog-visuals\.js'/);
 });
 
 test('all ten requested areas retain exact functional hooks and signed state',()=>{
@@ -108,11 +108,11 @@ test('mounted boards components remain stationary on entry and refresh',()=>{
  stopBoardCatalogMotion();
  assert.equal(queries,0,'no entrance element traversal');
  assert.equal(animations,0,'no mount-time animations');
- const source=readFileSync('frontend/board-catalog-visuals.js','utf8');
+ const source=readFileSync('frontend/board/presentation/catalog-visuals.js','utf8');
  assert.doesNotMatch(source,/\.animate\s*\(|translate3d\(|requestAnimationFrame\s*\(/);
 });
 test('short, hidden and reduced-motion states cannot start a continuous GPU loop',()=>{
- const js=readFileSync('frontend/board-catalog-visuals.js','utf8');
+ const js=readFileSync('frontend/board/presentation/catalog-visuals.js','utf8');
  assert.doesNotMatch(js,/WebGL|requestAnimationFrame|setInterval|fetch\(|XMLHttpRequest|new Worker/);
  assert.doesNotMatch(js,/\.style\s*\.|\.cssText\s*=|setAttribute\s*\(\s*['"]style/);
  const oldWindow=globalThis.window,oldDocument=globalThis.document;

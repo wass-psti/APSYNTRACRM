@@ -21,12 +21,12 @@ import {mountAuthExperience} from './auth/experience.js';
 import {sidebarIcon,animateSidebarSelection,stopSidebarSelection} from './sidebar-visuals.js';
 import {sidebarActiveRoute} from './sidebar-active-route.js';
 import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-visuals.js';
-import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board-catalog-visuals.js';
+import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board/presentation/catalog-visuals.js';
 import {BOARD_ITEM_PAGE_SIZE,DomainApi,validUuid} from './data.js';
 import {BoardCacheChannel} from './board/cache-channel.js';
 import {BoardTrashPermanentDeleteClient,eligibleTrashBoard} from './board/crud/trash-permanent-delete.js';
 import {modalRecoveryKind,installModalRecoveryAction} from './modal-recovery.js';
-import {openBoardSharePreview,closeBoardSharePreview} from './board-share.js';
+import {openBoardSharePreview,closeBoardSharePreview} from './board/collaboration/share.js';
 import {normalizeSignedBoardCandidates,BoardGroupAccessClient,
  BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
 import {CreatorAccessClient,WS10_CREATOR_POLICY_ACTIVE} from './ws10-ownership.js';
@@ -42,12 +42,12 @@ import {NativeIssueClient} from './native-client.js';
 import {TalkBoxNativeClient} from './talkbox-native.js';
 import {renderTalkBoxApplication} from './talkbox-ui.js';
 import {findTalkBoxBoard,TALKBOX_APPLICATION_ROUTE,talkBoxIssueHref} from './talkbox-application.js';
-import {BOARD_MODULES,moduleByBoardName} from './board-manifest.js';
+import {BOARD_MODULES,moduleByBoardName} from './board/services/manifest.js';
 import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
-import {renderFoundation} from './board-foundation-ui.js';
+import {renderFoundation} from './board/presentation/foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
-import {boardGrid,boardGridColumns,prepareBoardGrid} from './board-grid.js';
-import {boardGroupArchiveSuffix} from './board-group-counts.js';
+import {boardGrid,boardGridColumns,prepareBoardGrid} from './board/presentation/grid.js';
+import {boardGroupArchiveSuffix} from './board/presentation/group-counts.js';
 import {FUELTRACK_V3_ID,findFuelTrackV3Board,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-ui.js';
 import {FUELTRACK_V3_APPLICATION_ROUTE,parseFuelTrackApplicationRoute} from './fueltrack-v3-application-route.js';
 import {verifyFuelTrackBackendSnapshot} from './fueltrack-v3-backend-projections.js';
@@ -91,8 +91,8 @@ import {runB4SignedRecoveryPreflight,renderB4SignedRecoveryPreflight,sanitizeB4S
 import {runPhaseBSignedDenial,renderPhaseBSignedDenial,sanitizePhaseBDenialReport} from './board-col-delete-phase-b-signed-denial.js';
 import {updateTradeLinkFinancePreview} from './tradelink-finance.js';
 import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board/scroll-state.js';
-import {canRetainVisibleBoard,replaceVisibleBoardContent} from './board-background-update.js';
-import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board-loading.js';
+import {canRetainVisibleBoard,replaceVisibleBoardContent} from './board/services/background-update.js';
+import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board/presentation/loading.js';
 import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
 import {MATERIAL_TRACKER_DEFAULT_FILTERS,renderMaterialSourcingTracker,isMaterialTrackerBoard,materialTrackerRows,filterMaterialTrackerRows,materialTrackerPublicCsv} from './material-sourcing-tracker.js';
 import {parseMaterialAddForm,materialAddPublicColumns} from './material-sourcing-add-material.js';
@@ -106,9 +106,9 @@ import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} 
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines,
  setOptionalVirtualColumnVisibility} from './board/crud/structure-admin.js';
-import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board-card-lifecycle.js';
+import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board/services/card-lifecycle.js';
 import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board/selection.js';
-import {boardCatalogResultLabel} from './board-catalog-results.js';
+import {boardCatalogResultLabel} from './board/presentation/catalog-results.js';
 import {resolveColumnTypeSelection,renderColumnTypeOptions} from './board/columns/column-catalog.js';
 import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
  projectConfirmedColumnRename,
@@ -116,14 +116,14 @@ import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
 import {isQaBoardRecoveryInterfaceAllowed,canStartB4QaRecoveryDeletion,BoardColumnRecoveryClient,BoardColumnOperationalRecoveryClient,renderBoardColumnRecoveryList,explainColumnDeleteError} from './board/columns/column-recovery.js';
 import {planBoardColumnRemoval} from './board/columns/column-removal-plan.js';
 import {cmp02CreationConfig} from './board-typed-cmp02.js';
-import {resetBoardWindows,mountBoardWindows,filterBoardWindows,visibleBoardWindowIds} from './board-window.js';
-import {mountBoardPagination,renderBoardPagination} from './board-pagination-ui.js?v=cp-board-import-sync-01-20261115';
+import {resetBoardWindows,mountBoardWindows,filterBoardWindows,visibleBoardWindowIds} from './board/presentation/window.js';
+import {mountBoardPagination,renderBoardPagination} from './board/presentation/pagination-ui.js?v=cp-board-import-sync-01-20261115';
 import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board-inline-items.js';
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
 import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
 import {createItemOnlyBoard,enableItemOnlyBoard,isItemOnlyBoard,itemOnlyColumnKeys} from './board-minimal-default.js';
 import {deleteOneAuthorizedItem,selectedDeleteCandidates} from './board/crud/single-delete.js';
-import {moveTabInOrder,reorderManagedTimeTrackerTabs} from './board-tab-order.js';
+import {moveTabInOrder,reorderManagedTimeTrackerTabs} from './board/services/tab-order.js';
 import {publicBoardDescription} from './board-public-copy.js';
 import {MANAGED_TT_GROUP_DELETE_ENABLED,isManagedTimeTrackerBoard,
  canSafelyHideEmptyTimeTrackerGroup,isRedundantEmptyTimeTrackerGroup,
@@ -131,20 +131,20 @@ import {MANAGED_TT_GROUP_DELETE_ENABLED,isManagedTimeTrackerBoard,
  restoreHiddenTimeTrackerGroups,deleteEmptyManagedTimeTrackerGroup} from './managed-time-tracker-groups.js';
 import {isRow01Fixture,readRow01Pending,prepareRow01Acceptance,finalizeRow01Acceptance,sanitizeRow01Report} from './board-row01-signed-acceptance.js';
 import {runBoardTtSignedReadOnly} from './board-tt-signed-acceptance.js';
-import {normalizeBoardActivity,renderBoardActivityResults,boardItemSummary} from './board-activity-ui.js';
+import {normalizeBoardActivity,renderBoardActivityResults,boardItemSummary} from './board/presentation/activity-ui.js';
 import {BOARD_COL01_AUDIT_CURSOR_ENABLED,BOARD_COL01_AUDIT_MAX_PAGES,
  loadBoardInvitableDirectory,renderBoardInvitableDirectory,
  loadBoardAuditCursorPage,renderBoardAuditCursorPage} from './board/columns/col01-readers.js';
-import {loadBoardCollaboration,renderBoardCollaboration} from './board-collaboration.js';
-import {normalizeBoardPeople,renderBoardPeople,renderMentionDraft,mentionCandidates,insertMention,renderMentionOptions} from './board-people.js';
-import {BoardPreferenceStore} from './board-preferences-idb.js';
+import {loadBoardCollaboration,renderBoardCollaboration} from './board/collaboration/collaboration.js';
+import {normalizeBoardPeople,renderBoardPeople,renderMentionDraft,mentionCandidates,insertMention,renderMentionOptions} from './board/collaboration/people.js';
+import {BoardPreferenceStore} from './board/services/preferences-idb.js';
 import {sampleBrowserFrames} from './performance-profile.js';
 import {createStartupCriticalPath} from './performance-critical-path.js';
 import {summarizeEntryWaterfall} from './performance-entry-waterfall.js';
 import {readWorkspaceStartup} from './workspace-startup-read.js';
 import {startupVerifiedRead,startupFailureDescription} from './startup-recovery-policy.js';
 import {boardTable,boardColumnMenu,loadBoardLayout,saveBoardLayout,resetBoardLayout,reorderVisible,
- normalizeLayout,BOARD_REQUIRED_COLUMNS,BOARD_COLUMN_MIN,BOARD_COLUMN_MAX,columnWidth} from './board-presentation.js';
+ normalizeLayout,BOARD_REQUIRED_COLUMNS,BOARD_COLUMN_MIN,BOARD_COLUMN_MAX,columnWidth} from './board/presentation/presentation.js';
 import {runSignedNegativeBoardAcceptance,sanitizeNegativeReport} from './board-negative-acceptance.js';
 import {renderSecurityAcceptance} from './board-security-ui.js';
 import {mountSecurityMotion,stopSecurityMotion} from './security-experience.js';

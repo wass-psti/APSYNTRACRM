@@ -3,7 +3,7 @@ name: Board Card Lifecycle Focused Regression
 on:
   pull_request:
     paths:
-      - frontend/board-card-lifecycle.js
+      - frontend/board/services/card-lifecycle.js
       - frontend/tests/board-card-lifecycle.test.mjs
       - .github/workflows/board-card-lifecycle-regression.yml
   workflow_dispatch:

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {boardCatalogResultLabel} from '../board-catalog-results.js';
+import {boardCatalogResultLabel} from '../board/presentation/catalog-results.js';
 test('board directory labels reflect status, query, plural and readable count',()=>{
  assert.equal(boardCatalogResultLabel(182),'182 active boards');
  assert.equal(boardCatalogResultLabel(1),'1 active board');

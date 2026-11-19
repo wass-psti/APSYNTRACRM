@@ -4,8 +4,8 @@
  * admins, policy overrides or independently approved guests may be absent.
  * Mentions are local text drafts ONLY: no update write or notification.
  */
-import {validUuid} from './data.js';
-import {avatarImageMarkup} from './profile-avatar.js';
+import {validUuid} from '../../data.js';
+import {avatarImageMarkup} from '../../profile-avatar.js';
 
 const MAX_PEOPLE=300,MAX_NAME=180;
 const ROLES=new Set(['owner','editor','viewer']);

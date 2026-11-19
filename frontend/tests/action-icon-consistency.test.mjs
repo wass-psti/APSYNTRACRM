@@ -8,7 +8,7 @@ import {
 const js=readFileSync('frontend/action-menu-experience.js','utf8');
 const css=readFileSync('frontend/action-menu-experience.css','utf8');
 const app=readFileSync('frontend/app.js','utf8');
-const board=readFileSync('frontend/board-presentation.js','utf8');
+const board=readFileSync('frontend/board/presentation/presentation.js','utf8');
 const overlay=readFileSync('frontend/foreground-overlay.js','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 

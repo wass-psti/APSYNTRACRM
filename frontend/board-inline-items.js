@@ -3,8 +3,8 @@
  * must be populated via their own authoritative application workflow.
  */
 import {ApiError} from './session.js';
-import {isProtectedBoard} from './board-card-lifecycle.js';
-import {moduleByBoardName} from './board-manifest.js';
+import {isProtectedBoard} from './board/services/card-lifecycle.js';
+import {moduleByBoardName} from './board/services/manifest.js';
 import {validUuid} from './data.js';
 import {cmp02Validate,cmp02VisibleValue,cmp02RatingMax,
  cmp02PercentageDecimals} from './board-typed-cmp02.js';

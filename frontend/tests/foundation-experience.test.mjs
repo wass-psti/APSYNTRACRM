@@ -1,15 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {BOARD_MODULES,BOARD_CONTRACT_VERSION} from '../board-manifest.js';
-import {renderFoundation} from '../board-foundation-ui.js';
+import {BOARD_MODULES,BOARD_CONTRACT_VERSION} from '../board/services/manifest.js';
+import {renderFoundation} from '../board/presentation/foundation-ui.js';
 import {foundationIcon,mountFoundationMotion,stopFoundationMotion} from '../foundation-visuals.js';
 
 const app=readFileSync('frontend/app.js','utf8');
 const css=readFileSync('frontend/foundation-experience.css','utf8');
 const html=readFileSync('index.html','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
-const screen=readFileSync('frontend/board-foundation-ui.js','utf8');
+const screen=readFileSync('frontend/board/presentation/foundation-ui.js','utf8');
 const goodRows=BOARD_MODULES.map((module,index)=>({
  module,status:'ready',boardId:'11111111-1111-4111-8111-'+String(index+1).padStart(12,'0'),
  note:'Live details and typed columns verified',columns:8,items:0

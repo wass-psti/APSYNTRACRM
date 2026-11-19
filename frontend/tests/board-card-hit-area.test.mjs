@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {BOARD_CARD_LIFECYCLE_ENABLED,boardCardActionState}
- from '../board-card-lifecycle.js';
+ from '../board/services/card-lifecycle.js';
 
 const app=readFileSync('frontend/app.js','utf8');
 const catalogCss=readFileSync('frontend/board-catalog-experience.css','utf8');

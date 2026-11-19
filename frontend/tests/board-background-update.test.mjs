@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {canRetainVisibleBoard,replaceVisibleBoardContent} from '../board-background-update.js';
+import {canRetainVisibleBoard,replaceVisibleBoardContent} from '../board/services/background-update.js';
 const ID='3c92c3a3-2799-4264-95cc-77b2daf65ca7';
 const ACTOR='11111111-1111-4111-8111-111111111111';
 const WS='22222222-2222-4222-8222-222222222222';

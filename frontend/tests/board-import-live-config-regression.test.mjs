@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {initialImportMappings,buildImportPlan,availableImportColumns} from '../board/import/import-core.js';
 import {importMappingReadiness} from '../board/import/import-readiness.js';
-import {isProtectedBoard} from '../board-card-lifecycle.js';
+import {isProtectedBoard} from '../board/services/card-lifecycle.js';
 
 // Synthetic data derived from read-only schema metadata on 2026-11-12.
 // No operational items, personal data, URLs, keys, passwords, or credentials.

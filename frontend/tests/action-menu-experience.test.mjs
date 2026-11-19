@@ -14,7 +14,7 @@ const css=readFileSync('frontend/action-menu-experience.css','utf8');
 const app=readFileSync('frontend/app.js','utf8');
 const index=readFileSync('index.html','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
-const board=readFileSync('frontend/board-presentation.js','utf8');
+const board=readFileSync('frontend/board/presentation/presentation.js','utf8');
 
 test('global enhancement targets real action menus, not generic disclosure controls',()=>{
  assert.deepEqual(ACTION_MENU_SELECTORS,[

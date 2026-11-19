@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {BOARD_MODULES,boardColumns,boardDescription,validateModuleBlueprint} from '../board-manifest.js';
+import {BOARD_MODULES,boardColumns,boardDescription,validateModuleBlueprint} from '../board/services/manifest.js';
 import {inspectFoundation,provisionMissingBoards,summarizeFoundation} from '../board-foundation.js';
 const U='11111111-1111-4111-8111-111111111111';
 const W='22222222-2222-4222-8222-222222222222';

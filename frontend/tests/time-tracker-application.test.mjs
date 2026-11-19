@@ -10,7 +10,7 @@ import { renderTimeTrackerNative } from "../time-tracker-ui.js";
 import {
   renderBoardLoading,
   renderBoardLoadingError,
-} from "../board-loading.js";
+} from "../board/presentation/loading.js";
 
 const app = readFileSync("frontend/app.js", "utf8");
 const sidebar = readFileSync("frontend/sidebar-visuals.js", "utf8");

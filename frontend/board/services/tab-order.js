@@ -1,8 +1,8 @@
 /** CP-TT-BOARD-UX02: signed manager-only, server-authoritative view ordering.
  * Reuses existing CAS-protected board configuration; no new grants or RPCs.
  */
-import {ApiError} from './session.js';
-import {isManagedTimeTrackerBoard} from './managed-time-tracker-groups.js';
+import {ApiError} from '../../session.js';
+import {isManagedTimeTrackerBoard} from '../../managed-time-tracker-groups.js';
 
 export function moveTabInOrder(keys,source,target){
  if(!Array.isArray(keys)||new Set(keys).size!==keys.length||
