@@ -21,3 +21,7 @@ No new authentication restrictions, access grants, permissions, RLS policies, da
 ## Closeout boundary
 
 The two reproducible recovery defects are corrected and testable. The native application runtime is **not universally certified** until a genuinely signed employee can exercise the four native routes with their module read APIs, refresh/reopen, and workspace switching through the deployed version. If local/build/CI checks pass, close the code implementation and retain a **runtime acceptance blocker** rather than inventing production verification.
+
+## CI dependency portability correction
+
+During PR validation, jobs that intentionally omit development/browser dependencies failed when importing the older FINAL-02 and FINAL-04 read-only QA scripts into Node unit tests: both eagerly imported optional `playwright` at module load. The scripts now dynamically import Playwright **only inside their CLI execution path**. Their exported pure helpers can be tested without a browser dependency, and genuine browser execution still requires the existing local Playwright installation and authenticated Chromium. No new dependency, bypass, or functional behavior was introduced. A focused regression prevents reintroducing eager browser imports.

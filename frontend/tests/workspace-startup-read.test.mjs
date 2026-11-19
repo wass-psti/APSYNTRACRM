@@ -209,3 +209,14 @@ test("context read completes before cache sync teardown to preserve visible Boar
     /if\(priorIdentity!==state.context\?\.user_id\|\|priorWorkspace!==state.context\?\.workspace_id\)/,
   );
 });
+
+
+test('optional signed-browser acceptance tools do not require Playwright during unit-test module import',()=>{
+ for(const file of ['cp-crm-native-access-final02-signed-matrix.mjs','cp-crm-native-access-final04-board-linked.mjs']){
+  const contents=readFileSync('scripts/'+file,'utf8');
+  assert.doesNotMatch(contents,/^import\s+.*from\s+['"]playwright['"];?/m);
+  assert.match(contents,/const \{ chromium \} = await import\(['"]playwright['"]\)/);
+  assert.ok(contents.indexOf('await import("playwright")')>contents.indexOf('import.meta.url'),
+   'only the executable browser path may load the optional dependency');
+ }
+});

@@ -9,7 +9,6 @@
  */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { chromium } from "playwright";
 
 export const BASE = "https://wass-psti.github.io/APSYNTRACRM/";
 export const APPS = [
@@ -115,6 +114,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     };
     let browser, page, originalUrl;
     try {
+      const { chromium } = await import("playwright");
       browser = await chromium.connectOverCDP(cdp);
       const candidates = browser
         .contexts()
