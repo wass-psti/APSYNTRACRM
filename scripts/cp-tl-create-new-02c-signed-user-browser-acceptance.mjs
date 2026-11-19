@@ -27,7 +27,7 @@ const writeMode = process.argv.includes("--create-approved-qa-drafts");
 const writeApproved =
   process.env.CP_TL_CREATE_NEW_02C_PRODUCTION_QA_APPROVED === "YES";
 const marker = "CP-TL-CREATE-NEW-02C QA ONLY";
-const modules = [
+const allModules = [
   { type: "esi", label: "Electronic SI", prefix: "ESI-" },
   { type: "quotation", label: "Quotation", prefix: "Q-" },
   { type: "packing", label: "Packing List", prefix: "PL-" },
@@ -35,14 +35,27 @@ const modules = [
   { type: "payment", label: "Payment AR", prefix: "AR-" },
   { type: "po", label: "PO to Suppliers", prefix: "PO-" },
 ];
-const rpcResponse = (page, name) =>
-  page.waitForResponse(
+// Resume only after previously created modules have been independently
+// reconciled. Never repeat a committed create with a fresh document ID.
+const resumeType = process.argv.find((value) => value.startsWith("--start-module="))
+  ?.slice("--start-module=".length) ?? "esi";
+const resumeIndex = allModules.findIndex((module) => module.type === resumeType);
+const modules = resumeIndex < 0 ? [] : allModules.slice(resumeIndex);
+const rpcResponse = (page, name) => {
+  const pending = page.waitForResponse(
     (response) => {
       const url = new URL(response.url());
       return url.pathname.endsWith("/rest/v1/rpc/" + name);
     },
     { timeout: 45000 },
   );
+  // Multiple readbacks are observed concurrently after a write. If one
+  // response never arrives, preserve the main acceptance report instead of
+  // terminating Node with an unhandled rejection before the write outcome is
+  // reconciled. The original promise still rejects when awaited.
+  void pending.catch(() => {});
+  return pending;
+};
 const rpcName = (url) => new URL(url).pathname.split("/").at(-1);
 const one = (value) => (Array.isArray(value) ? value[0] : value);
 const localDate = (days = 0) => {
@@ -59,6 +72,8 @@ const report = {
   mode: writeMode
     ? "approved-production-qa-create-update"
     : "read-only-signed-user-preflight",
+  startModule: resumeType,
+  moduleCount: modules.length,
   status: "PENDING",
   productionWriteOutcome: "NOT_STARTED",
   productionDataWriteAttempted: false,
@@ -69,7 +84,10 @@ const report = {
   failures: [],
 };
 
-if (!cdpUrl || !/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)) {
+if (resumeIndex < 0) {
+  console.error("BLOCKED: invalid --start-module value.");
+  process.exitCode = 2;
+} else if (!cdpUrl || !/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)) {
   console.error(
     "BLOCKED: supply --cdp-url=http://127.0.0.1:<port> for an already signed browser.",
   );
@@ -108,6 +126,14 @@ if (!cdpUrl || !/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)) {
       "BLOCKED: sign in manually with an existing TradeLink User account in an APSYNTRA CRM tab.",
     );
     originalUrl = page.url();
+    // A same-URL navigation may reuse the current SPA route without issuing
+    // the native context RPC. Start the acceptance from a different read-only
+    // route so the first module triggers a real signed context resolution.
+    if (new URL(originalUrl).hash.startsWith("#/tradelink/drafts/")) {
+      await page.goto(BASE + "#/overview", {
+        waitUntil: "domcontentloaded", timeout: 45000,
+      });
+    }
     page.on("pageerror", (error) => pageErrors.push(error.message));
     page.on("response", (response) => {
       const url = new URL(response.url());
@@ -351,6 +377,15 @@ if (!cdpUrl || !/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)) {
       };
       if (writeMode) {
         await fillQaDraft(module.type, form);
+        // HTML required-field validation can prevent requestSubmit() from
+        // dispatching any RPC. Fail before attempting a production write.
+        const invalidFields = await form.evaluate((element) =>
+          [...element.querySelectorAll(":invalid")]
+            .filter((field) => field.name)
+            .map((field) => field.name),
+        );
+        assert.deepEqual(invalidFields, [],
+          module.label + " QA form failed native browser validation");
         const createPromise = rpcResponse(page, "tl03_document_create");
         const readPromise = rpcResponse(page, "tl03_document_read");
         const listPromise = rpcResponse(page, "tl03_documents_list");
@@ -683,7 +718,7 @@ if (!cdpUrl || !/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)) {
     report.status = writeMode ? "PASS" : "READY_FOR_APPROVED_QA_WRITES";
     if (writeMode)
       report.productionWriteOutcome =
-        "SIX_MODULES_CREATE_UPDATE_REFRESH_REOPEN_VERIFIED";
+        modules.length + "_MODULES_CREATE_UPDATE_REFRESH_REOPEN_VERIFIED";
   } catch (error) {
     report.status = writeAttempted ? "PARTIAL_OR_UNCERTAIN" : "BLOCKED";
     report.failures.push({
@@ -699,5 +734,8 @@ if (!cdpUrl || !/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)) {
         .catch(() => {});
     }
     console.log(JSON.stringify(report, null, 2));
+    // Disconnect Playwright without closing the user's existing QA Chromium.
+    // Prevent completed acceptance processes retaining a live CDP connection.
+    await browser.close().catch(() => {});
   }
 }
