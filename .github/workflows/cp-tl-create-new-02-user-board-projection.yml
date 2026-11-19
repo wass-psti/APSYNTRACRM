@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
       - name: Disposable PostgreSQL 17 signed User acceptance
         run: bash scripts/cp-tl-create-new-02-user-draft-disposable.sh
       - name: TradeLink User Board projection contract
