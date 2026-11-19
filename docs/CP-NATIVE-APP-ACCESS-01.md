@@ -94,7 +94,7 @@ The separately approved CP-CRM-CONN-03A viewer-provisioning migration remains an
 
 ### Frontend
 
-- Full frontend regression: **2,769 / 2,769 passed**.
+- Full frontend regression: **2,770 / 2,770 passed**.
 - `npm run check`: PASS.
 - `npm run lint`: PASS.
 - `npm run build`: PASS; existing Vite chunk/startup warnings remain.
