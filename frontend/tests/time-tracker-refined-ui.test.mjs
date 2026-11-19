@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {mountTimeTrackerPixi} from '../time-tracker-pixi-scene.js';
 import {
  renderTimeTrackerNative,timeTrackerSessionElapsed,syncTimeTrackerClock
 } from '../time-tracker-ui.js';
@@ -79,4 +80,14 @@ test('refined stylesheet remains scoped, responsive and uses native controls',()
  assert.match(css,/focus-visible/);
  assert.doesNotMatch(css,/@import|url\(|animation:.*infinite|!important/);
  assert.match(manifest,/frontend\/apps\/TimeTracker\/time-tracker-refined\.css/);
+});
+
+test('Clock view never starts hidden decorative GPU work',()=>{
+ let loads=0;
+ const root={querySelector(selector){
+  if(selector==='.tt-native .tt-application')return {dataset:{ttView:'clock'}};
+  return {isConnected:true,dataset:{pixi:'fallback'}};
+ }};
+ assert.equal(mountTimeTrackerPixi(root,{load:async()=>{loads++;return {};}}),false);
+ assert.equal(loads,0);
 });
