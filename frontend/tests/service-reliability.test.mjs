@@ -122,6 +122,47 @@ test('verified user reads are coalesced only while the same signed identity requ
  assert.equal(a.id,userId);assert.equal(b.id,userId);assert.equal(calls,1);
 });
 
+test('concurrent token refresh requests share one refresh-token exchange',async()=>{
+ const gate=deferred();let calls=0;
+ const now=1700000000000;
+ const auth=new AuthClient({clock:()=>now,fetchImpl:async(url,options)=>{
+  calls++;assert.ok(url.includes('/auth/v1/token?grant_type=refresh_token'));
+  assert.equal(options.method,'POST');
+  await gate.promise;
+  return response(200,{access_token:'rotated-access',refresh_token:'rotated-refresh',
+   expires_in:3600,user:{id:userId}});
+ },storage:{getItem:()=>null,setItem:()=>{},removeItem:()=>{}}});
+ auth.save({access_token:'old-access',refresh_token:'old-refresh',expires_in:1,user:{id:userId}});
+ const first=auth.token(),second=auth.token();
+ await Promise.resolve();await Promise.resolve();
+ assert.equal(calls,1);
+ gate.resolve();
+ assert.deepEqual(await Promise.all([first,second]),['rotated-access','rotated-access']);
+ assert.equal(calls,1);
+});
+
+test('DomainApi coalesces startup context and board-list reads without caching completed results',async()=>{
+ const gate=deferred(),calls=[];
+ const auth={userId,accessToken:'signed-token',authorized:async(path,options)=>{
+  calls.push({path,options});await gate.promise;
+  return path.endsWith('/wm_auth_access_context')?
+   {user_id:userId,workspace_id:workspaceId,profile:{status:'active'}}:[];
+ }};
+ const api=new DomainApi(auth);
+ const contextA=api.context(),contextB=api.context();
+ const boardsA=api.boards('active'),boardsB=api.boards('active');
+ await Promise.resolve();await Promise.resolve();
+ assert.equal(calls.length,2,'one context request and one board-list request');
+ gate.resolve();
+ const [a,b,firstBoards,secondBoards]=await Promise.all([contextA,contextB,boardsA,boardsB]);
+ assert.equal(a.user_id,userId);assert.equal(b.user_id,userId);
+ assert.notEqual(a,b,'each caller receives an isolated context object');
+ assert.deepEqual(firstBoards,[]);assert.deepEqual(secondBoards,[]);
+ assert.notEqual(firstBoards,secondBoards,'board-list arrays are isolated');
+ assert.equal(calls.filter(call=>call.path.endsWith('/wm_auth_access_context')).length,1);
+ assert.equal(calls.filter(call=>call.path.endsWith('/wm_list_boards')).length,1);
+});
+
 test('DomainApi coalesces identical allowlisted read RPCs in flight, but never caches completed results',async()=>{
  const gate=deferred(),calls=[];
  const auth={userId,accessToken:'signed-token',authorized:async(path,options)=>{
@@ -137,6 +178,18 @@ test('DomainApi coalesces identical allowlisted read RPCs in flight, but never c
  assert.equal(calls[0].options.requestKind,'read');
  await api.rpc('work_board_access',{p_board_id:boardId,p_required:'view'});
  assert.equal(calls.length,2,'settled read result is not cached');
+});
+
+test('unreviewed RPC cannot opt into preflight caching with a caller-supplied read hint',async()=>{
+ const calls=[];
+ const auth=authFixture({fetchImpl:async(url,options)=>{
+  calls.push({url,options});return response();
+ }});
+ const api=new DomainApi(auth);
+ await api.rpc('unreviewed_read_rpc',{}, {requestKind:'read'});
+ assert.equal(calls.length,1);
+ assert.ok(calls[0].url.endsWith('/rest/v1/rpc/unreviewed_read_rpc'));
+ assert.equal(calls[0].options.cache,'no-store');
 });
 
 test('DomainApi does not deduplicate writes and separates reads across signed token generations',async()=>{

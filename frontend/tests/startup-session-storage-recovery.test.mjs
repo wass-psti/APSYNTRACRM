@@ -21,6 +21,11 @@ const fixtureStorage=()=>{
 const reply=(status,body)=>new Response(JSON.stringify(body),{
  status,headers:{'Content-Type':'application/json'}
 });
+const deferred=()=>{
+ let resolve,reject;
+ const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});
+ return {promise,resolve,reject};
+};
 test('verified user remains signed in if optional browser metadata storage write fails',async()=>{
  const storage=fixtureStorage();
  let reads=0;
@@ -38,6 +43,83 @@ test('verified user remains signed in if optional browser metadata storage write
  assert.equal(storage.removes,0);
  // Failure to update metadata never changes the previously signed token.
  assert.equal(JSON.parse(storage.getItem(STORE_KEY)).access_token,'signed-example-token');
+});
+test('normal sign-in completes when browser storage writes and cleanup are unavailable',async()=>{
+ let writes=0,verifiedReads=0;
+ const storage={
+  getItem(){throw new Error('Storage access blocked');},
+  setItem(){writes++;throw new Error('Storage quota unavailable');},
+  removeItem(){throw new Error('Storage cleanup blocked');}
+ };
+ const auth=new AuthClient({storage,fetchImpl:async(url,init)=>{
+  if(url.includes('/auth/v1/token?grant_type=password')){
+   assert.equal(init.method,'POST');
+   return reply(200,{access_token:'fresh-signed-access',refresh_token:'fresh-signed-refresh',
+    expires_in:3600,user:{id:userId,email:'verified@example.invalid'}});
+  }
+  assert.ok(url.endsWith('/auth/v1/user'));
+  verifiedReads++;
+  return reply(200,{id:userId,email:'verified@example.invalid'});
+ }});
+ const user=await auth.signIn('verified@example.invalid','synthetic-test-password');
+ assert.equal(user.id,userId);
+ assert.equal(verifiedReads,1);
+ assert.equal(writes,2,'initial session and verified profile writes are both best-effort');
+ assert.equal(auth.isSignedIn,true);
+ assert.equal(auth.accessToken,'fresh-signed-access');
+ assert.doesNotThrow(()=>auth.clear());
+ assert.equal(auth.isSignedIn,false);
+});
+test('blocked sessionStorage getter does not prevent AuthClient construction',async()=>{
+ const descriptor=Object.getOwnPropertyDescriptor(globalThis,'sessionStorage');
+ Object.defineProperty(globalThis,'sessionStorage',{
+  configurable:true,get(){throw new Error('Storage access blocked');}
+ });
+ try{
+  const auth=new AuthClient({fetchImpl:async()=>reply(200,{id:userId})});
+  assert.equal(await auth.restore(),false);
+  assert.equal(auth.isSignedIn,false);
+ }finally{
+  if(descriptor)Object.defineProperty(globalThis,'sessionStorage',descriptor);
+  else delete globalThis.sessionStorage;
+ }
+});
+test('storage read failure can verify an existing in-memory session without clearing it',async()=>{
+ let reads=0;
+ const storage={getItem(){throw new Error('Storage access blocked');},
+  setItem(){throw new Error('Storage write blocked');},
+  removeItem(){throw new Error('Storage cleanup blocked');}};
+ const auth=new AuthClient({storage,fetchImpl:async url=>{
+  reads++;assert.ok(url.endsWith('/auth/v1/user'));
+  return reply(200,{id:userId,email:'verified@example.invalid'});
+ }});
+ auth.save({access_token:'memory-access',refresh_token:'memory-refresh',expires_in:3600,user:{id:userId}});
+ assert.equal(await auth.restore(),true);
+ assert.equal(reads,1);
+ assert.equal(auth.isSignedIn,true);
+ assert.equal(auth.accessToken,'memory-access');
+});
+test('storage read failure without an in-memory session returns to sign-in without a network request',async()=>{
+ let reads=0;
+ const auth=new AuthClient({storage:{getItem(){throw new Error('Storage access blocked');}},
+  fetchImpl:async()=>{reads++;return reply(200,{id:userId});}});
+ assert.equal(await auth.restore(),false);
+ assert.equal(reads,0);
+ assert.equal(auth.isSignedIn,false);
+});
+test('concurrent session restoration shares one verified-user request',async()=>{
+ const gate=deferred();let reads=0;
+ const storage={getItem:key=>key===STORE_KEY?JSON.stringify(freshStoredSession()):null,
+  setItem(){},removeItem(){}};
+ const auth=new AuthClient({storage,fetchImpl:async()=>{
+  reads++;await gate.promise;return reply(200,{id:userId,email:'verified@example.invalid'});
+ }});
+ const first=auth.restore(),second=auth.restore();
+ await Promise.resolve();await Promise.resolve();
+ assert.equal(reads,1);
+ gate.resolve();
+ assert.deepEqual(await Promise.all([first,second]),[true,true]);
+ assert.equal(reads,1);
 });
 test('revoked, forbidden or changed identity still fails closed when browser storage writes fail',async()=>{
  for(const [status,payload] of [

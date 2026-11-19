@@ -388,7 +388,7 @@ export class DomainApi {
    const requestPath='/rest/v1/rpc/'+name;
    const requestOptions={method:'POST',body:args,...options,
     requestKind:mutates?'mutation':knownRead?'read':(options.requestKind||'unknown'),
-    retryableRead:knownRead};
+    preflightCacheEligible:knownRead,retryableRead:knownRead};
    const token=this.auth?.accessToken,userId=this.auth?.userId;
    const shareRead=knownRead&&typeof token==='string'&&token.length>0&&!options.signal;
    const readKey=shareRead?JSON.stringify([userId,token,this.boardReadGeneration,name,
