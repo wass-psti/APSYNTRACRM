@@ -129,7 +129,7 @@ test("all legacy TimeTracker board URLs resolve to the dedicated application rou
   assert.match(app, /if\(parts\[0\]==='time-tracker'\)/);
   assert.match(
     app,
-    /findTimeTrackerAttendanceBoard\(state\.boards,moduleByBoardName\)/,
+    /db\.nativeApplicationBoardContext\('time-tracker'\)/,
   );
   assert.match(
     app,

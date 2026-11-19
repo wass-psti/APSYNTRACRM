@@ -27,7 +27,7 @@ test('TradeLink activity route and navigation are scoped to the existing managed
  const html=renderTradeLinkApplication({detail,workspaceId:ws,section:'activity',
   activity:{events:[],busy:false,error:''}});
  assert.match(html,/data-tl-section="activity"/);
- assert.match(html,/Signed board audit/);
+ assert.match(html,/Signed application audit/);
  assert.doesNotMatch(html,/data-action="tradelink-activity-refresh" disabled/);
  const denied=renderTradeLinkApplication({detail,workspaceId:
   '22222222-2222-4222-8222-222222222222',section:'activity',
@@ -46,12 +46,12 @@ test('signed board activity is deduped, HTML escaped and does not pretend to be 
  assert.match(html,/&lt;img src=x onerror=alert\(1\)&gt;/);
  assert.match(html,/&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
  assert.doesNotMatch(html,/<img\s|<script>|should disappear/);
- assert.match(html,/Latest 2 authorized board events/);
+ assert.match(html,/Latest 2 authorized application events/);
  assert.match(html,/not the source application/);
 });
 test('activity error and loading states neither invent rows nor leak prior data',()=>{
  const loading=renderTradeLinkActivity({busy:true,events:[]});
- assert.match(loading,/Loading authorized board activity/);
+ assert.match(loading,/Loading authorized application activity/);
  assert.match(loading,/tradelink-activity-refresh" disabled/);
  const failure=renderTradeLinkActivity({error:'<private>',events:[
   {id:1,message:'restricted evidence',event_type:'activity'}]});
@@ -61,8 +61,8 @@ test('activity error and loading states neither invent rows nor leak prior data'
 test('existing signed server RPC and session-bound route checks are required before displaying audit',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/async function loadTradeLinkActivity\(seq=routeSerial\)/);
- assert.match(app,/db\.allowed\(TRADELINK_BOARD_ID,'view'\)/);
- assert.match(app,/db\.boardEvents\(TRADELINK_BOARD_ID,100\)/);
+ assert.match(app,/db\.rpc\('tl03_native_activity',\{p_limit:100\}\)/);
+ assert.doesNotMatch(app,/db\.boardEvents\(TRADELINK_BOARD_ID/);
  assert.match(app,/state\.context\?\.user_id===userId/);
  assert.match(app,/state\.context\?\.workspace_id===workspaceId/);
  assert.match(app,/seq===routeSerial&&auth\.isSignedIn/);

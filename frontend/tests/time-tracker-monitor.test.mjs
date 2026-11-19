@@ -19,8 +19,13 @@ function source({granted=true,userId=user,workspace=ws,authValid=true}={}){
  const api={
   context:async()=>({user_id:userId,workspace_id:workspace,profile:{status:'active'}}),
   rpc:async(name)=>name==='has_module_access'?granted:null,
-  allowed:async()=>granted,
-  board:async()=>({board:{id:board,name:'TimeTracker Attendance',workspace_id:ws}})
+  nativeApplicationBoardContext:async()=> {
+   if(!granted)throw Object.assign(new Error('Native application assignment denied'),{status:403});
+   return {userId,workspaceId:ws,role:'Employee',
+    board:{id:board,name:'TimeTracker Attendance',workspace_id:ws}};
+  },
+  allowed:async()=>{throw Error('Generic board permission must not be checked');},
+  board:async()=>{throw Error('Generic board read must not be checked');}
  };
  const monotonic=()=>{counter+=7;return counter};
  const clock=()=>Date.parse('2026-11-02T11:00:00Z');
@@ -32,12 +37,12 @@ test('Monitor starts as NOT CHECKED, never invents live metrics',()=>{
  assert.doesNotMatch(html,/HEALTHY AT CHECK|GPS CACHE HIT/);
  assert.doesNotMatch(html,/data-action="tt-monitor-refresh" disabled/);
 });
-test('authenticated backend probes verify board, role, workspace and session',async()=>{
+test('authenticated backend probes verify native application, role, workspace and session',async()=>{
  const sample=await probeTimeTrackerMonitor(source());
  assert.equal(sample.status,'VERIFIED');
- assert.equal(sample.checks.length,6);
- assert.equal(sample.network.successful,6);
- assert.equal(sample.network.total,6);
+ assert.equal(sample.checks.length,5);
+ assert.equal(sample.network.successful,5);
+ assert.equal(sample.network.total,5);
  assert.ok(sample.checks.every(c=>c.status==='PASS'&&c.durationMs>=0));
  assert.equal(classifyTimeTrackerMonitor(sample),'HEALTHY AT CHECK');
  assert.equal(sample.client.navigationMs,108);
@@ -45,7 +50,7 @@ test('authenticated backend probes verify board, role, workspace and session',as
  assert.equal(sample.client.transferBytes,12800);
  assert.equal(sample.client.heapMb,4);
 });
-test('ungranted module and board result in degraded, never pass',async()=>{
+test('unassigned native module access results in degraded, never pass',async()=>{
  const data=await probeTimeTrackerMonitor(source({granted:false}));
  assert.equal(data.status,'DEGRADED');
  assert.ok(data.checks.filter(c=>c.status==='FAIL').length>=2);
@@ -60,7 +65,7 @@ test('identity failure blocks all backend follow-up probes',async()=>{
 test('foreign workspace board binding fails closed',async()=>{
  const data=await probeTimeTrackerMonitor(source({workspace:'00000000-0000-4000-8000-000000000002'}));
  assert.equal(data.status,'DEGRADED');
- assert.equal(data.checks.find(c=>c.name==='Board and workspace binding')?.status,'FAIL');
+ assert.equal(data.checks.find(c=>c.name==='Native application board resolution')?.status,'FAIL');
 });
 test('client browser metrics are optional and never fabricate unsupported readings',()=>{
  const result=collectTimeTrackerClientMetrics(null);
@@ -75,7 +80,7 @@ test('Monitor rendering includes runtime and signed backend measurements only',a
  const sample=await probeTimeTrackerMonitor(source());
  const html=renderTimeTrackerMonitor({result:sample});
  for(const word of ['API Health Monitor','CLIENT RUNTIME','Supabase Auth identity',
-  'Workspace admission','Board and workspace binding','LONG TASKS','SECURITY SCOPE'])
+  'Workspace admission','Native application board resolution','LONG TASKS','SECURITY SCOPE'])
   assert.ok(html.includes(word),word);
  assert.doesNotMatch(html,/10000000-0000-4000-8000-000000000011|Bearer |sb_secret_|latitude/);
  assert.match(html,/data-action="tt-monitor-clear"/);

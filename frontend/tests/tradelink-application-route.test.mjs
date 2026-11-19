@@ -31,8 +31,8 @@ test('TradeLink route rejects malformed record IDs and normalizes unknown sectio
 test('TradeLink opens the native renderer inside the existing host and uses the existing board only as its data source',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/if\(parts\[0\]==='tradelink'\)/);
- assert.match(app,/const tradeLinkBoard=state\.boards\.find\(board=>board\?\.id===TRADELINK_BOARD_ID/);
- assert.match(app,/await loadBoard\(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute\.draftType,tradeLinkRoute\.editId\)/);
+ assert.match(app,/db\.nativeApplicationBoardContext\('tradelink'\)/);
+ assert.match(app,/await loadBoard\(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute\.draftType,tradeLinkRoute\.editId,tradeLinkContext\)/);
  assert.match(app,/if\(state\.tlStandalone&&isTradeLinkBoard\(b\)\)return renderTradeLinkApplication/);
  assert.match(app,/if\(parts\[1\]===TRADELINK_BOARD_ID\)/);
  assert.match(app,/if\(parts\[0\]!=='tradelink'\)\{\s*if\(state\.tradeLinkAnalyticsBusy\)/);

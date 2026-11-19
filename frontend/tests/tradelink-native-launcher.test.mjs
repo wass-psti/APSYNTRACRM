@@ -17,7 +17,7 @@ test('TradeLink has a dedicated sidebar icon rather than the generic board fallb
 test('TradeLink launcher opens the canonical standalone application route',()=>{
  assert.ok(app.includes("sidebarNav(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',active('tradelink'))"));
  assert.match(app,/if\(parts\[0\]==='tradelink'\)/);
- assert.match(app,/loadBoard\(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute\.draftType,tradeLinkRoute\.editId\)/);
+ assert.match(app,/loadBoard\(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute\.draftType,tradeLinkRoute\.editId,tradeLinkContext\)/);
  assert.match(app,/state\.tlStandalone&&isTradeLinkBoard\(b\)/);
 });
 

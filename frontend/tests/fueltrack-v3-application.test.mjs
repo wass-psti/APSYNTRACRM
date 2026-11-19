@@ -129,7 +129,8 @@ test('FuelTrack opens from its standalone route while preserving its existing Bo
  const index=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
  assert.match(app,/sidebarNav\(FUELTRACK_V3_APPLICATION_ROUTE,'FuelTrack\+'/);
  assert.match(app,/if\(parts\[0\]==='fueltrack'\)/);
- assert.match(app,/loadBoard\(FUELTRACK_V3_ID,'fueltrack'\)/);
+ assert.match(app,/db\.nativeApplicationBoardContext\('fueltrack-plus'\)/);
+ assert.match(app,/loadBoard\(FUELTRACK_V3_ID,'fueltrack',null,null,fuelTrackContext\)/);
  assert.match(app,/renderFuelTrackV3Application\(\{detail:state\.board/);
  assert.match(app,/if\(parts\[1\]===FUELTRACK_V3_ID\)/);
  assert.doesNotMatch(app,/key:'fueltrack',href:/);

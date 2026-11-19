@@ -281,3 +281,38 @@ test('concurrent signed preflight denies wrong workspace and denied manager with
   assert.equal(calls,0);
  }
 });
+
+test('assigned TradeLink reviewers resolve the native app and one document projection without generic board view',async()=>{
+ const calls=[];
+ const board={id:TRADELINK_BOARD_ID,workspace_id:workspace,name:'TradeLink',
+  status:'active',description:'[APSYNTRA:MODULE:tradelink:v1] canonical board'};
+ const auth={userId:id,getVerifiedUser:async()=>({id})};
+ const api={
+  context:async()=>({user_id:id,workspace_id:workspace,profile:{status:'active'}}),
+  nativeApplicationBoardContext:async moduleId=>{
+   calls.push(['native',moduleId]);
+   return {userId:id,workspaceId:workspace,role:'User',board};
+  },
+  board:async()=>{calls.push(['generic-board']);throw Error('generic board read forbidden');},
+  allowed:async()=>{calls.push(['generic-view']);throw Error('generic board view forbidden');},
+  rpc:async(name,args)=>{
+   calls.push([name,args]);
+   if(name==='tl03_assigned_documents')return [];
+   if(name==='tl03_board_projection')return {
+    contract:'tradelink-board-projection-v1',board,
+    item:{id:item,title:'Q-2026-001',archived_at:null,
+     updated_at:'2026-11-19T00:00:00Z'}
+   };
+   throw Error('Unexpected RPC '+name);
+  }
+ };
+ const client=new TradeLinkDomainClient({auth,api});
+ assert.deepEqual(await client.assignedDocuments(),[]);
+ const projection=await client.boardProjection(id);
+ assert.equal(projection.board.id,TRADELINK_BOARD_ID);
+ assert.equal(projection.items.length,1);
+ assert.equal(projection.items[0].title,'Q-2026-001');
+ assert.ok(calls.some(call=>call[0]==='native'&&call[1]==='tradelink'));
+ assert.ok(calls.some(call=>call[0]==='tl03_board_projection'));
+ assert.equal(calls.some(call=>call[0]==='generic-board'||call[0]==='generic-view'),false);
+});

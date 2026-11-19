@@ -23,6 +23,7 @@ import {sidebarActiveRoute} from './sidebar-active-route.js';
 import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-visuals.js';
 import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board-catalog-visuals.js';
 import {BOARD_ITEM_PAGE_SIZE,DomainApi,validUuid} from './data.js';
+import {nativeApplicationModuleForBoardRoute} from './native-application-access.js';
 import {BoardCacheChannel} from './board-cache-channel.js';
 import {BoardTrashPermanentDeleteClient,eligibleTrashBoard} from './board-trash-permanent-delete.js';
 import {modalRecoveryKind,installModalRecoveryAction} from './modal-recovery.js';
@@ -2423,12 +2424,26 @@ async function loadMoreBoardItems(){
   }
  }
 }
-async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
- if(canRetainVisibleBoard(state,{boardId,tab,userId:auth.userId,signed:auth.isSignedIn}))
+async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeContext=null){
+ const nativeModuleId=nativeApplicationModuleForBoardRoute(boardId,tab);
+ if(nativeModuleId&&(!nativeContext||nativeContext.moduleId!==nativeModuleId||
+    nativeContext.userId!==state.context?.user_id||
+    nativeContext.workspaceId!==state.context?.workspace_id||
+    nativeContext.board?.id!==boardId||
+    nativeContext.detail?.board?.workspace_id!==state.context?.workspace_id)){
+  boardCacheChannel.stop();pendingBoardContent=null;
+  state.view='board';state.boardId=boardId;state.tab=tab;state.loading=false;
+  state.board=null;state.boardUi=null;state.boardManage=false;state.edit=false;
+  state.error='Native application context changed before route initialization.';
+  render();return;
+ }
+ if(!nativeModuleId&&canRetainVisibleBoard(state,{boardId,tab,userId:auth.userId,signed:auth.isSignedIn}))
   return refreshVisibleBoard(boardId,tab);
- // Initial load, another board, or another tab still uses the original loader.
+ // Native application routes use their module-scoped canonical board resolver;
+ // generic board caching/realtime remains unchanged for ordinary boards.
  pendingBoardContent=null;
- boardCacheChannel.start({userId:state.context?.user_id,workspaceId:state.context?.workspace_id});
+ if(nativeModuleId)boardCacheChannel.stop();
+ else boardCacheChannel.start({userId:state.context?.user_id,workspaceId:state.context?.workspace_id});
  // Reuse the already authorized TradeLink board only for intra-application
  // navigation in the same signed user/workspace context. Never cache grants
  // across sessions, workspace changes, board switches, or initial loading.
@@ -2492,17 +2507,28 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
  state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true;state.board=null;state.boardUi=null;state.boardPageBusy=false;state.boardPageError='';state.boardManage=false;state.error=null;state.issues=[];state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;state.frtFinanceView='tracker';state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
  render();
  try{
-   const [detail,view,edit,manage,boardUi]=await Promise.all([
-    readVisibleBoardSnapshot(boardId,tab),
-    db.allowed(boardId,'view'),db.allowed(boardId,'edit'),
-    db.allowed(boardId,'manage'),boardStructureClient.read(boardId)]);
+   const [resolvedNative,genericDetail,view,edit,manage,boardUi]=await Promise.all([
+    nativeModuleId?(nativeContext?Promise.resolve(nativeContext):
+      db.nativeApplicationBoardContext(nativeModuleId)):Promise.resolve(null),
+    nativeModuleId?Promise.resolve(null):readVisibleBoardSnapshot(boardId,tab),
+    nativeModuleId?Promise.resolve(true):db.allowed(boardId,'view'),
+    db.allowed(boardId,'edit').catch(()=>false),
+    db.allowed(boardId,'manage').catch(()=>false),
+    nativeModuleId?Promise.resolve(null):boardStructureClient.read(boardId)
+   ]);
+   const detail=nativeModuleId?resolvedNative?.detail:genericDetail;
+   if(nativeModuleId&&(!resolvedNative||resolvedNative.moduleId!==nativeModuleId||
+      resolvedNative.userId!==state.context?.user_id||
+      resolvedNative.workspaceId!==state.context?.workspace_id||
+      resolvedNative.board?.id!==boardId))
+    throw new ApiError('Native application context changed during initialization.',409);
    if(!view)throw new ApiError('Board view access changed.',403);
    if(!auth.isSignedIn||state.context?.user_id!==auth.userId||
       detail?.board?.workspace_id!==state.context?.workspace_id)
     throw new ApiError('Signed board cache scope changed.',403);
    if(seq!==routeSerial)return;
-   // The signed view grant precedes even reading non-sensitive local layout.
-   await boardPreferences.hydrate(state.context,boardId);
+   // Generic layout hydration is intentionally separate from native module access.
+   if(!nativeModuleId)await boardPreferences.hydrate(state.context,boardId);
    if(seq!==routeSerial||!auth.isSignedIn||auth.userId!==state.context?.user_id||
       detail.board.workspace_id!==state.context?.workspace_id)return;
    state.board=detail;state.edit=edit;state.boardManage=manage;state.boardUi=boardUi;
@@ -2794,7 +2820,7 @@ async function openTradeLinkDocumentRevision(documentId,revision){
 async function verifyTradeLinkAttachmentCommit(documentId,listed,receipt,operation){
  const [record,list,board,attachments,events]=await Promise.all([
   tradeLinkDraftWorkspace.read(documentId),tradeLinkDraftWorkspace.list(),
-  db.board(TRADELINK_BOARD_ID),tradeLinkAttachments.list(documentId),
+  tradeLinkDraftWorkspace.boardProjection(documentId),tradeLinkAttachments.list(documentId),
   tradeLinkDraftWorkspace.history(documentId)
  ]);
  const latest=events?.[0];
@@ -2915,7 +2941,7 @@ async function openTradeLinkAssignedDocument(documentId){
   message:'Loading the document assigned to your signed account…'};render();
  try{
   const [record,board]=await Promise.all([
-   tradeLinkDraftWorkspace.readAssigned(documentId),db.board(TRADELINK_BOARD_ID)
+   tradeLinkDraftWorkspace.readAssigned(documentId),tradeLinkDraftWorkspace.boardProjection(documentId)
   ]);
   if(!same())return;
   const boardItem=board?.items?.find(item=>item.id===listed.boardItemId);
@@ -2928,7 +2954,6 @@ async function openTradeLinkAssignedDocument(documentId){
     boardItemId:listed.boardItemId,documentNumber:listed.documentNumber,
     updatedAt:record.updated_at}))
    throw new ApiError('Assigned document, revision or Board projection could not be verified.',409);
-  state.board=board;
   state.tradeLinkDraft={...state.tradeLinkDraft,
    documentPreview:{documentId,record},
    message:'Read-only document preview loaded from the signed TradeLink record. Review the content before validating.'};
@@ -2952,7 +2977,7 @@ async function printTradeLinkDocument(documentId,revision=null){
  state.tradeLinkDraft.busy=true;state.tradeLinkDraft.error='';render();
  try{
   const [bundle,board]=await Promise.all([
-   tradeLinkDraftWorkspace.revisionBundle(documentId,targetRevision),db.board(TRADELINK_BOARD_ID)
+   tradeLinkDraftWorkspace.revisionBundle(documentId,targetRevision),tradeLinkDraftWorkspace.boardProjection(documentId)
   ]);
   if(!same())return;
   const record=bundle?.selected;
@@ -3022,7 +3047,7 @@ async function commitTradeLinkDraft(form){
   if(!same())return;
   const [record,list,board]=await Promise.all([
    tradeLinkDraftWorkspace.read(documentId),tradeLinkDraftWorkspace.list(),
-   db.board(TRADELINK_BOARD_ID)
+   tradeLinkDraftWorkspace.boardProjection(documentId)
   ]);
   if(!same())return;
   const savedDraft={...draft,documentNumber:receipt.documentNumber||draft.documentNumber};
@@ -3040,7 +3065,6 @@ async function commitTradeLinkDraft(form){
   // The original signed list is bounded to 50. Its absence is not proof
   // that an exactly read and Board-verified saved document was not committed.
   const verifiedList=reconcileTradeLinkSavedListing(list,record,receipt);
-  state.board=board;
   state.tradeLinkDraft={...initialTradeLinkDraftView(),
    status:'AUTHORIZED_READ',rows:verifiedList.rows,
    message:'Saved '+(workflowState==='draft'?'Draft':'For Approval document')+' revision '+receipt.revision+'; TradeLink, Board items and All Documents are synchronized.'};
@@ -3113,7 +3137,7 @@ async function submitTradeLinkDocument(documentId){
   if(!same())return;
   const [record,list,board]=await Promise.all([
    tradeLinkDraftWorkspace.read(documentId),tradeLinkDraftWorkspace.list(),
-   db.board(TRADELINK_BOARD_ID)
+   tradeLinkDraftWorkspace.boardProjection(documentId)
   ]);
   if(!same())return;
   if(!record||record.revision!==receipt.revision||
@@ -3130,7 +3154,6 @@ async function submitTradeLinkDocument(documentId){
       boardItemId:receipt.boardItemId,documentNumber:listed.documentNumber,
       updatedAt:record.updated_at})))
    throw new ApiError('TradeLink submitted state or Board verification incomplete.',409);
-  state.board=board;
   state.tradeLinkDraft={...initialTradeLinkDraftView(),...list,
    message:'TradeLink '+receipt.state+' at revision '+receipt.revision+
     ' verified against the signed document and Board.'};
@@ -3182,7 +3205,7 @@ async function reviewTradeLinkDocument(documentId,action){
   if(!same())return;
   const [record,list,board,events]=await Promise.all([
    tradeLinkDraftWorkspace.read(documentId),tradeLinkDraftWorkspace.list(),
-   db.board(TRADELINK_BOARD_ID),tradeLinkDraftWorkspace.history(documentId)
+   tradeLinkDraftWorkspace.boardProjection(documentId),tradeLinkDraftWorkspace.history(documentId)
   ]);
   if(!same())return;
   if(!record||record.revision!==receipt.revision||
@@ -3203,7 +3226,6 @@ async function reviewTradeLinkDocument(documentId,action){
       boardItemId:receipt.boardItemId,documentNumber:listed.documentNumber,
       updatedAt:record.updated_at})))
    throw new ApiError('Signed TradeLink review/audit synchronization incomplete.',409);
-  state.board=board;
   state.tradeLinkDraft={...initialTradeLinkDraftView(),...list,
    message:'Signed '+receipt.state+' workflow decision verified at revision '+
     receipt.revision+' in document, Board and audit history.'};
@@ -3257,7 +3279,7 @@ async function decideTradeLinkDocument(documentId,action){
   if(!same())return;
   const [record,list,board,events]=await Promise.all([
    tradeLinkDraftWorkspace.read(documentId),tradeLinkDraftWorkspace.list(),
-   db.board(TRADELINK_BOARD_ID),tradeLinkDraftWorkspace.history(documentId)
+   tradeLinkDraftWorkspace.boardProjection(documentId),tradeLinkDraftWorkspace.history(documentId)
   ]);
   if(!same())return;
   const event=events?.[0];
@@ -3282,7 +3304,6 @@ async function decideTradeLinkDocument(documentId,action){
      boardItemId:receipt.boardItemId,documentNumber:listed.documentNumber,
      updatedAt:record.updated_at})))
    throw new ApiError('Signed TradeLink decision/audit/Board reconciliation incomplete.',409);
-  state.board=board;
   state.tradeLinkDraft={...initialTradeLinkDraftView(),...list,
    message:'Signed '+receipt.state+' decision verified at revision '+
      receipt.revision+' against document, Board and audit.'};
@@ -3347,7 +3368,7 @@ async function operateTradeLinkDocument(documentId,action){
   if(!same())return;
   const [record,list,board,events]=await Promise.all([
    tradeLinkDraftWorkspace.read(documentId),tradeLinkDraftWorkspace.list(),
-   db.board(TRADELINK_BOARD_ID),tradeLinkDraftWorkspace.history(documentId)
+   tradeLinkDraftWorkspace.boardProjection(documentId),tradeLinkDraftWorkspace.history(documentId)
   ]);
   if(!same())return;
   const event=events?.[0];
@@ -3376,7 +3397,6 @@ async function operateTradeLinkDocument(documentId,action){
      boardItemId:receipt.boardItemId,documentNumber:listed.documentNumber,
      updatedAt:record.updated_at})))
    throw new ApiError('Signed TradeLink operational/Board/audit reconciliation incomplete.',409);
-  state.board=board;
   state.tradeLinkDraft={...initialTradeLinkDraftView(),...list,
    message:'Signed '+operation+' verified at revision '+
     receipt.revision+' in document, Board and audit history.'};
@@ -3409,7 +3429,7 @@ async function changeTradeLinkDraftState(documentId,operation){
   // Verify the authoritative revision and refresh Board projection as a
   // separate read; never synthesize archived document or Board rows locally.
   const [list,board,updated]=await Promise.all([
-   tradeLinkDraftWorkspace.list(),db.board(TRADELINK_BOARD_ID),
+   tradeLinkDraftWorkspace.list(),tradeLinkDraftWorkspace.boardProjection(documentId),
    tradeLinkDraftWorkspace.read(documentId)
   ]);
   if(!same())return;
@@ -3422,7 +3442,6 @@ async function changeTradeLinkDraftState(documentId,operation){
     (updated.archived_at!==null)!==(operation==='archive')||
     board?.board?.workspace_id!==ws)
    throw new ApiError('TradeLink document state reconciliation incomplete.',409);
-  state.board=board;
   state.tradeLinkDraft={...initialTradeLinkDraftView(),...list,
    message:'Signed Draft '+operation+' confirmed at revision '+receipt.revision+'.'};
   toast('TradeLink Draft '+operation+' confirmed.');
@@ -3558,8 +3577,9 @@ async function loadFuelTrackBackend(seq=routeSerial){
  state.fuelTrackBackendError='';
  state.fuelTrackBackendBusy=true;render();
  try{
-  if(await db.allowed(FUELTRACK_V3_ID,'view')!==true)
-   throw new ApiError('FuelTrack access denied.',403);
+  const native=await db.nativeApplicationBoardContext('fueltrack-plus');
+  if(native?.board?.id!==FUELTRACK_V3_ID||native.workspaceId!==ws)
+   throw new ApiError('FuelTrack native application workspace is unavailable.',403);
   if(!same())return;
   const client=new FuelTrackV3DomainClient({api:db,auth,boardId:FUELTRACK_V3_ID,workspaceId:ws});
   const snapshot=await client.read({limit:200});
@@ -3598,7 +3618,9 @@ async function loadFuelTrackActivity(seq=routeSerial){
  if(!same()||state.fuelTrackActivityBusy)return;
  state.fuelTrackActivityBusy=true;state.fuelTrackActivityError='';render();
  try{
-  if(await db.allowed(FUELTRACK_V3_ID,'view')!==true)throw new ApiError('FuelTrack activity access denied.',403);
+  const native=await db.nativeApplicationBoardContext('fueltrack-plus');
+  if(native?.board?.id!==FUELTRACK_V3_ID||native.workspaceId!==workspaceId)
+   throw new ApiError('FuelTrack native application activity scope is unavailable.',403);
   if(!same())return;
   const rows=state.fuelTrackBackend?.snapshot?.role==='Admin'?
    (await new FuelTrackV3DomainClient({api:db,auth,boardId:FUELTRACK_V3_ID,workspaceId}).audit({limit:200})).events:
@@ -3624,10 +3646,9 @@ async function loadTradeLinkActivity(seq=routeSerial){
  if(!same()||state.tradeLinkActivityBusy)return;
  state.tradeLinkActivityBusy=true;state.tradeLinkActivityError='';render();
  try{
-  if(await db.allowed(TRADELINK_BOARD_ID,'view')!==true)
-   throw new ApiError('TradeLink activity access denied.',403);
-  if(!same())return;
-  const events=await db.boardEvents(TRADELINK_BOARD_ID,100);
+  const events=await db.rpc('tl03_native_activity',{p_limit:100});
+  if(!Array.isArray(events)||events.length>100)
+   throw new ApiError('TradeLink application activity response is invalid.',409);
   if(!same())return;
   state.tradeLinkActivity=events;
  }catch(err){
@@ -4409,8 +4430,14 @@ async function onRoute(){
   if(!tradeLinkRoute){state.view='tradelink';state.error='Invalid TradeLink application route.';render();return;}
   if(tradeLinkRoute.canonicalHash!==routePath)
    history.replaceState(null,'',location.pathname+location.search+tradeLinkRoute.canonicalHash);
-  const tradeLinkBoard=state.boards.find(board=>board?.id===TRADELINK_BOARD_ID&&
-   moduleByBoardName(board?.name)?.key==='tradelink');
+  let tradeLinkContext;
+  try{tradeLinkContext=await db.nativeApplicationBoardContext('tradelink');}
+  catch(error){
+   routeSerial++;state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
+   state.boardManage=false;state.edit=false;state.error='TradeLink native application access is unavailable: '+errorMessage(error);
+   state.view='tradelink';render();return;
+  }
+  const tradeLinkBoard=tradeLinkContext.board;
   state.tradeLinkSection=tradeLinkRoute.section;
   if(state.tradeLinkSection!=='analytics'){
    state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;
@@ -4420,12 +4447,12 @@ async function onRoute(){
    pendingNativeSearchSelection={applicationId:'tradelink',recordId:tradeLinkRoute.recordId,
     boardId:TRADELINK_BOARD_ID,userId:auth.userId,workspaceId:state.context?.workspace_id};
   }else if(pendingNativeSearchSelection?.applicationId==='tradelink')pendingNativeSearchSelection=null;
-  if(!tradeLinkBoard){
+  if(!tradeLinkBoard?.id){
    routeSerial++;state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
-   state.boardManage=false;state.edit=false;state.error='The existing TradeLink board was not found in this workspace.';
+   state.boardManage=false;state.edit=false;state.error='The canonical TradeLink application board is unavailable in this workspace.';
    state.view='tradelink';render();return;
   }
-  await loadBoard(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute.draftType,tradeLinkRoute.editId);
+  await loadBoard(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute.draftType,tradeLinkRoute.editId,tradeLinkContext);
   await openPendingGlobalSearchItem(TRADELINK_BOARD_ID);
   await openPendingNativeSearchRecord(TRADELINK_BOARD_ID);
   return;
@@ -4436,7 +4463,14 @@ async function onRoute(){
   if(!fuelTrackRoute){state.error='Invalid FuelTrack application route.';state.view='board';render();return;}
   if(fuelTrackRoute.canonicalHash!==routePath)
    history.replaceState(null,'',location.pathname+location.search+fuelTrackRoute.canonicalHash);
-  const fuelTrackBoard=findFuelTrackV3Board(state.boards);
+  let fuelTrackContext;
+  try{fuelTrackContext=await db.nativeApplicationBoardContext('fueltrack-plus');}
+  catch(error){
+   routeSerial++;state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
+   state.boardManage=false;state.edit=false;state.error='FuelTrack+ native application access is unavailable: '+errorMessage(error);
+   state.view='board';render();return;
+  }
+  const fuelTrackBoard=fuelTrackContext.board;
   state.fuelTrackSection=fuelTrackRoute.section;
   state.fuelTrackAnalyticsView=fuelTrackRoute.analyticsView;
   state.fuelTrackAnalyticsRange=fuelTrackRoute.analyticsRange;
@@ -4446,12 +4480,12 @@ async function onRoute(){
    pendingNativeSearchSelection={applicationId:'fueltrack',recordId:fuelTrackRoute.recordId,
     boardId:FUELTRACK_V3_ID,userId:auth.userId,workspaceId:state.context?.workspace_id};
   }else if(pendingNativeSearchSelection?.applicationId==='fueltrack')pendingNativeSearchSelection=null;
-  if(!fuelTrackBoard){
+  if(!fuelTrackBoard?.id){
    routeSerial++;state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
-   state.boardManage=false;state.edit=false;state.error='The existing FuelTrack+ v3 board was not found in this workspace.';
+   state.boardManage=false;state.edit=false;state.error='The canonical FuelTrack+ v3 application board is unavailable in this workspace.';
    state.view='board';render();return;
   }
-  await loadBoard(FUELTRACK_V3_ID,'fueltrack');
+  await loadBoard(FUELTRACK_V3_ID,'fueltrack',null,null,fuelTrackContext);
   await openPendingGlobalSearchItem(FUELTRACK_V3_ID);
   await openPendingNativeSearchRecord(FUELTRACK_V3_ID);
   return;
@@ -4470,7 +4504,16 @@ async function onRoute(){
  }
  if(parts[0]==='fund-tracker'){
   state.frtStandalone=true;
-  const fundTrackerBoard=findFundTrackerBoard(state.boards);
+  let fundTrackerContext;
+  try{fundTrackerContext=await db.nativeApplicationBoardContext('fund-released-tracker');}
+  catch(error){
+   routeSerial++;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;
+   state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;
+   state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
+   state.error='Fund Tracker native application access is unavailable: '+errorMessage(error);
+   state.view='board';render();return;
+  }
+  const fundTrackerBoard=fundTrackerContext.board;
   const selectedRecord=parseFundTrackerRecordRoute(parts);
   if(fundTrackerBoard&&selectedRecord){
    pendingNativeSearchSelection={applicationId:'frt',recordId:selectedRecord.requestId,
@@ -4479,20 +4522,27 @@ async function onRoute(){
   }else if(pendingNativeSearchSelection?.applicationId==='frt'){
    pendingNativeSearchSelection=null;
   }
-  if(!fundTrackerBoard){
+  if(!fundTrackerBoard?.id){
    routeSerial++;
    state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;
    state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;
    state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
-   state.error='The existing Fund Released Tracker board was not found in this workspace.';
+   state.error='The canonical Fund Released Tracker application board is unavailable in this workspace.';
    state.view='board';render();return;
   }
-  await loadBoard(fundTrackerBoard.id,'finance');
+  await loadBoard(fundTrackerBoard.id,'finance',null,null,fundTrackerContext);
   return;
  }
  if(parts[0]==='time-tracker'){
   state.ttStandalone=true;
-  const attendanceBoard=findTimeTrackerAttendanceBoard(state.boards,moduleByBoardName);
+  let timeTrackerContext;
+  try{timeTrackerContext=await db.nativeApplicationBoardContext('time-tracker');}
+  catch(error){
+   routeSerial++;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;
+   state.ttError='TimeTracker native application access is unavailable: '+errorMessage(error);
+   state.boardId=null;state.board=null;state.boardUi=null;state.view='time-tracker';render();return;
+  }
+  const attendanceBoard=timeTrackerContext.board;
   const attendanceRecordId=parts[1]==='attendance'&&validUuid(parts[2])?parts[2]:null;
   const overtimeRecordId=parts[1]==='overtime'&&validUuid(parts[2])?parts[2]:null;
   if(attendanceBoard?.id&&(attendanceRecordId||overtimeRecordId)){
@@ -4500,12 +4550,12 @@ async function onRoute(){
     recordType:attendanceRecordId?'Attendance session':'Overtime request',boardId:attendanceBoard.id,
     userId:auth.userId,workspaceId:state.context?.workspace_id};
   }else if(pendingNativeSearchSelection?.applicationId==='timetracker')pendingNativeSearchSelection=null;
-  if(!attendanceBoard){
+  if(!attendanceBoard?.id){
    routeSerial++;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;
-   state.ttError='The existing TimeTracker Attendance board was not found in this workspace.';
+   state.ttError='The canonical TimeTracker Attendance application board is unavailable in this workspace.';
    state.boardId=null;state.board=null;state.view='time-tracker';render();return;
   }
-  await loadBoard(attendanceBoard.id,'attendance');
+  await loadBoard(attendanceBoard.id,'attendance',null,null,timeTrackerContext);
   return;
  }
  if(parts[0]==='boards'&&validUuid(parts[1])){
@@ -7062,7 +7112,7 @@ async function action(name,button){
     documentId,expectedRevision:listed.revision,targetState});
    if(!same())break;
    const [record,board]=await Promise.all([
-    tradeLinkDraftWorkspace.read(documentId),db.board(TRADELINK_BOARD_ID)
+    tradeLinkDraftWorkspace.read(documentId),tradeLinkDraftWorkspace.boardProjection(documentId)
    ]);
    if(!same())break;
    const boardItem=board?.items?.find(item=>item.id===listed.boardItemId);
@@ -7073,7 +7123,6 @@ async function action(name,button){
       boardItemId:listed.boardItemId,documentNumber:listed.documentNumber,
       updatedAt:record.updated_at}))
     throw new ApiError('Status was changed, but the refreshed document/Board projection could not be verified.',409);
-   state.board=board;
    state.tradeLinkDraft={...state.tradeLinkDraft,
     rows:state.tradeLinkDraft.rows.map(row=>row.documentId===documentId?{
      ...row,workflowState:targetState,updatedAt:record.updated_at
@@ -7158,7 +7207,7 @@ async function action(name,button){
     const [record,reviewStages,board]=await Promise.all([
      tradeLinkDraftWorkspace.read(documentId),
      tradeLinkDraftWorkspace.reviewStages(documentId),
-     db.board(TRADELINK_BOARD_ID)
+     tradeLinkDraftWorkspace.boardProjection(documentId)
     ]);
     if(!same())break;
     const boardItem=board?.items?.find(item=>item.id===listed.boardItemId);
@@ -7168,7 +7217,6 @@ async function action(name,button){
         boardItemId:listed.boardItemId,documentNumber:listed.documentNumber,
         updatedAt:record.updated_at}))
      throw new ApiError('Review was recorded, but the refreshed document/Board projection could not be verified.',409);
-    state.board=board;
     state.tradeLinkDraft={...state.tradeLinkDraft,
      selected:{documentId,record},reviewStages,
      message:receipt.state==='approved'?
@@ -7180,7 +7228,7 @@ async function action(name,button){
     }else toast('Validation recorded. Awaiting the second reviewer.');
    }else{
     const [board,rows]=await Promise.all([
-     db.board(TRADELINK_BOARD_ID),tradeLinkDraftWorkspace.assignedDocuments()
+     tradeLinkDraftWorkspace.boardProjection(documentId),tradeLinkDraftWorkspace.assignedDocuments()
     ]);
     if(!same())break;
     const refreshed=rows.find(row=>row.documentId===documentId);
@@ -7191,7 +7239,6 @@ async function action(name,button){
         boardItemId:refreshed.boardItemId,documentNumber:refreshed.documentNumber,
         updatedAt:refreshed.updatedAt}))
      throw new ApiError('Review was recorded, but the refreshed Board/list projection could not be verified. Refresh before retrying.',409);
-    state.board=board;
     state.tradeLinkDraft={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',
      assignedOnly:true,rows,message:receipt.state==='approved'?
       'Both assigned reviewers have validated this document. Status is now Approved.':
@@ -7362,8 +7409,9 @@ async function action(name,button){
   if(!same()||state.fuelTrackPreflightBusy||state.fuelTrackBackendBusy)break;
   state.fuelTrackPreflight=null;state.fuelTrackPreflightBusy=true;render();
   try{
-   if(await db.allowed(FUELTRACK_V3_ID,'view')!==true)
-    throw new ApiError('FuelTrack Board read access denied.',403);
+   const native=await db.nativeApplicationBoardContext('fueltrack-plus');
+   if(native?.board?.id!==FUELTRACK_V3_ID||native.workspaceId!==workspaceId)
+    throw new ApiError('FuelTrack native application preflight scope is unavailable.',403);
    if(!same())break;
    const client=new FuelTrackV3DomainClient({api:db,auth,
     boardId:FUELTRACK_V3_ID,workspaceId});

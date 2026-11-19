@@ -67,6 +67,11 @@ function setup({role='System Admin',snapshot=null}={}){
  const api={
   context:async()=>({user_id:admin,workspace_id:workspace,
    profile:{status:'active',platform_role:'admin_general_manager'}}),
+  nativeApplicationBoardContext:async moduleId=>({
+   contract:'native-app-board-v1',moduleId,userId:admin,workspaceId:workspace,role,
+   board:{id:board,workspace_id:workspace,name:'TimeTracker Attendance',status:'active',
+    description:'[APSYNTRA:MODULE:timetracker:v1]',archived_at:null,trashed_at:null}
+  }),
   board:async()=>({board:{id:board,name:'TimeTracker Attendance',workspace_id:workspace}}),
   allowed:async()=>true,
   rpc:async(name)=>{

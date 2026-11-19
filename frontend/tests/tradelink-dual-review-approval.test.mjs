@@ -68,7 +68,7 @@ test('PDF printing requires a freshly verified Approved revision; no official te
  assert.doesNotMatch(ui,/@page|jsPDF|pdf-lib|pdfmake/);
 });
 
-test('assigned reviewer client uses signed VIEW context and records only the requested stage',async()=>{
+test('assigned reviewer client uses signed native application context and records only the requested stage',async()=>{
  const actor='11111111-1111-4111-8111-111111111111';
  const documentId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
  const boardItemId='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -80,6 +80,9 @@ test('assigned reviewer client uses signed VIEW context and records only the req
  const client=new TradeLinkDomainClient({
   auth:{userId:actor,getVerifiedUser:async()=>({id:actor})},
   api:{context:async()=>({user_id:actor,workspace_id:workspaceId,profile:{status:'active'}}),
+   nativeApplicationBoardContext:async moduleId=>({
+    contract:'native-app-board-v1',moduleId,userId:actor,workspaceId,role:'User',board:detail.board
+   }),
    board:async()=>detail,allowed:async(_id,action)=>action==='view',
    rpc:async(name,args)=>{
     calls.push({name,args});
@@ -109,20 +112,30 @@ test('assigned reviewer client uses signed VIEW context and records only the req
  assert.equal(calls[1].args.p_stage,'primary');
 });
 
-test('reviewer without existing Board VIEW is denied before any domain RPC',async()=>{
+test('assigned reviewer can read assigned TradeLink documents without generic Board VIEW',async()=>{
  const actor='11111111-1111-4111-8111-111111111111';
  const workspaceId='00000000-0000-4000-8000-000000000001';
- let rpcCalls=0;
+ let rpcCalls=0,nativeCalls=0,genericCalls=0;
+ const board={id:'264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',
+  workspace_id:workspaceId,name:'TradeLink',status:'active',
+  description:'[APSYNTRA:MODULE:tradelink:v1]'};
  const client=new TradeLinkDomainClient({
   auth:{userId:actor,getVerifiedUser:async()=>({id:actor})},
   api:{context:async()=>({user_id:actor,workspace_id:workspaceId,profile:{status:'active'}}),
-   board:async()=>({board:{id:'264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',
-    workspace_id:workspaceId,name:'TradeLink',status:'active',
-    description:'[APSYNTRA:MODULE:tradelink:v1]'}}),
-   allowed:async()=>false,rpc:async()=>{rpcCalls++;throw new Error('RPC must not run');}}
+   nativeApplicationBoardContext:async moduleId=>{
+    nativeCalls++;return {contract:'native-app-board-v1',moduleId,userId:actor,
+     workspaceId,role:'User',board};
+   },
+   board:async()=>{genericCalls++;throw new Error('Generic board read must not run');},
+   allowed:async()=>{genericCalls++;throw new Error('Generic board view must not run');},
+   rpc:async name=>{rpcCalls++;if(name==='tl03_assigned_documents')return [];
+    throw new Error('Unexpected RPC '+name);}
+  }
  });
- await assert.rejects(()=>client.assignedDocuments(),/Board view access is required/);
- assert.equal(rpcCalls,0);
+ assert.deepEqual(await client.assignedDocuments(),[]);
+ assert.equal(nativeCalls,1);
+ assert.equal(rpcCalls,1);
+ assert.equal(genericCalls,0);
 });
 
 test('new editor exposes Save, not the former Preview action, and preserves current legacy status labels',async()=>{

@@ -51,7 +51,8 @@ test('FuelTrack host mounts its native renderer and adapter through the existing
   const app = readFileSync('frontend/app.js', 'utf8');
   assert.match(app, /if\(parts\[0\]==='fueltrack'\)/);
   assert.match(app, /parseFuelTrackApplicationRoute\(parts\)/);
-  assert.match(app, /loadBoard\(FUELTRACK_V3_ID,'fueltrack'\)/);
+  assert.match(app, /db\.nativeApplicationBoardContext\('fueltrack-plus'\)/);
+  assert.match(app, /loadBoard\(FUELTRACK_V3_ID,'fueltrack',null,null,fuelTrackContext\)/);
   assert.match(app, /if\(state\.fuelTrackStandalone&&isFuelTrackV3ApplicationBoard\(b\)\)/);
   assert.match(app, /from '\.\/fueltrack-v3-native\.js'/);
   assert.match(app, /from '\.\/fueltrack-v3-ui\.js'/);

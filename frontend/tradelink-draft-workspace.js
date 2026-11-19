@@ -424,6 +424,10 @@ export class TradeLinkDraftWorkspace{
   if(!TL03_DUAL_REVIEW_ENABLED)disabled();
   return this.client.readAssigned(documentId);
  }
+ async boardProjection(documentId){
+  if(!TL03_DOMAIN_READS_ENABLED)disabled();
+  return this.client.boardProjection(documentId);
+ }
  async recordReviewStage(input={}){
   if(!TL03_DUAL_REVIEW_ENABLED)disabled();
   return this.client.recordReviewStage(input);

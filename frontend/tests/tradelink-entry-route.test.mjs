@@ -12,7 +12,7 @@ test('TradeLink root and legacy overview canonicalize to Create New, preserving 
  assert.match(source,/parseTradeLinkApplicationRoute\(parts\)/);
  assert.match(source,/if\(parts\[1\]===TRADELINK_BOARD_ID\)/);
  assert.match(source,/tradeLinkApplicationHref\(legacy\.join\('\/'\)\)/);
- assert.match(source,/loadBoard\(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute\.draftType,tradeLinkRoute\.editId\)/);
+ assert.match(source,/loadBoard\(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute\.draftType,tradeLinkRoute\.editId,tradeLinkContext\)/);
  assert.match(source,/sidebarNav\(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink'/);
 });
 test('obsolete landing widgets are removed but signed form, documents, and activity remain available',()=>{
