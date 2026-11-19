@@ -1,0 +1,187 @@
+{
+  "milestone": "CP-NATIVE-APP-ACCESS-03",
+  "mode": "genuine-signed-employee-read-only",
+  "catalogFailureStatuses": [403, 503],
+  "overview": [
+    {
+      "status": 403,
+      "result": "PASS",
+      "catalogFailureObserved": true,
+      "nativeNavigationRetained": true
+    },
+    {
+      "status": 503,
+      "result": "PASS",
+      "catalogFailureObserved": true,
+      "nativeNavigationRetained": true
+    }
+  ],
+  "applications": [
+    {
+      "application": "TimeTracker",
+      "catalogStatus": 403,
+      "resolverStatus": 200,
+      "moduleId": "time-tracker",
+      "canonicalBoardId": "46bf4ee7-368a-4c35-842c-8593ea1f6ac3",
+      "workspaceResolved": true,
+      "domainReads": [
+        {
+          "rpc": "timetracker_ot_snapshot",
+          "status": 200
+        },
+        {
+          "rpc": "timetracker_attendance_capabilities",
+          "status": 200
+        }
+      ],
+      "nativeInterfaceVisible": true,
+      "result": "PASS"
+    },
+    {
+      "application": "Fund Tracker",
+      "catalogStatus": 403,
+      "resolverStatus": 200,
+      "moduleId": "fund-released-tracker",
+      "canonicalBoardId": "f36da8fe-8d9d-4629-9938-12533cb3ca39",
+      "workspaceResolved": true,
+      "domainReads": [
+        {
+          "rpc": "frt_bootstrap",
+          "status": 200
+        },
+        {
+          "rpc": "frt_board_dashboard_safe",
+          "status": 200
+        },
+        {
+          "rpc": "frt_board_list_safe",
+          "status": 200
+        }
+      ],
+      "nativeInterfaceVisible": true,
+      "result": "PASS"
+    },
+    {
+      "application": "FuelTrack+",
+      "catalogStatus": 403,
+      "resolverStatus": 200,
+      "moduleId": "fueltrack-plus",
+      "canonicalBoardId": "7af78b3f-67bf-4600-9aa1-9006d19d486e",
+      "workspaceResolved": true,
+      "domainReads": [
+        {
+          "rpc": "fueltrack_v3_read",
+          "status": 200
+        }
+      ],
+      "nativeInterfaceVisible": true,
+      "result": "PASS"
+    },
+    {
+      "application": "TradeLink",
+      "catalogStatus": 403,
+      "resolverStatus": 200,
+      "moduleId": "tradelink",
+      "canonicalBoardId": "264ca40d-6e4a-4e4f-97e6-3bd77c97cd88",
+      "workspaceResolved": true,
+      "domainReads": [
+        {
+          "rpc": "tl03_assigned_documents",
+          "status": 200
+        }
+      ],
+      "nativeInterfaceVisible": true,
+      "result": "PASS"
+    },
+    {
+      "application": "TimeTracker",
+      "catalogStatus": 503,
+      "resolverStatus": 200,
+      "moduleId": "time-tracker",
+      "canonicalBoardId": "46bf4ee7-368a-4c35-842c-8593ea1f6ac3",
+      "workspaceResolved": true,
+      "domainReads": [
+        {
+          "rpc": "timetracker_ot_snapshot",
+          "status": 200
+        },
+        {
+          "rpc": "timetracker_attendance_capabilities",
+          "status": 200
+        }
+      ],
+      "nativeInterfaceVisible": true,
+      "result": "PASS"
+    },
+    {
+      "application": "Fund Tracker",
+      "catalogStatus": 503,
+      "resolverStatus": 200,
+      "moduleId": "fund-released-tracker",
+      "canonicalBoardId": "f36da8fe-8d9d-4629-9938-12533cb3ca39",
+      "workspaceResolved": true,
+      "domainReads": [
+        {
+          "rpc": "frt_bootstrap",
+          "status": 200
+        },
+        {
+          "rpc": "frt_board_dashboard_safe",
+          "status": 200
+        },
+        {
+          "rpc": "frt_board_list_safe",
+          "status": 200
+        }
+      ],
+      "nativeInterfaceVisible": true,
+      "result": "PASS"
+    },
+    {
+      "application": "FuelTrack+",
+      "catalogStatus": 503,
+      "resolverStatus": 200,
+      "moduleId": "fueltrack-plus",
+      "canonicalBoardId": "7af78b3f-67bf-4600-9aa1-9006d19d486e",
+      "workspaceResolved": true,
+      "domainReads": [
+        {
+          "rpc": "fueltrack_v3_read",
+          "status": 200
+        }
+      ],
+      "nativeInterfaceVisible": true,
+      "result": "PASS"
+    },
+    {
+      "application": "TradeLink",
+      "catalogStatus": 503,
+      "resolverStatus": 200,
+      "moduleId": "tradelink",
+      "canonicalBoardId": "264ca40d-6e4a-4e4f-97e6-3bd77c97cd88",
+      "workspaceResolved": true,
+      "domainReads": [
+        {
+          "rpc": "tl03_assigned_documents",
+          "status": 200
+        }
+      ],
+      "nativeInterfaceVisible": true,
+      "result": "PASS"
+    }
+  ],
+  "recovery": {
+    "catalogStatus": 200,
+    "degradedNoticeCleared": true,
+    "result": "PASS"
+  },
+  "productionDataWritten": false,
+  "workflowActionsSubmitted": false,
+  "productionPoliciesChanged": false,
+  "sameSignedEmployeeAcrossAllApplications": true,
+  "sameWorkspaceAcrossAllApplications": true,
+  "pageErrors": 0,
+  "failedRequests": 0,
+  "unexpectedHttpErrors": 0,
+  "outcome": "PASS"
+}

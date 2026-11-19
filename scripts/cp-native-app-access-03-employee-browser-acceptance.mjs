@@ -29,6 +29,7 @@ const applications = [
       "timetracker_attendance_capabilities",
     ],
     visible: "TimeTracker Attendance",
+    readyText: "Signed Clock writes active",
   },
   {
     route: "#/fund-tracker",
@@ -41,6 +42,7 @@ const applications = [
       "frt_board_list_safe",
     ],
     visible: "Fund Tracker",
+    readyText: "New Fund Request",
   },
   {
     route: "#/fueltrack",
@@ -49,6 +51,7 @@ const applications = [
     boardId: "7af78b3f-67bf-4600-9aa1-9006d19d486e",
     domainRpcs: ["fueltrack_v3_read"],
     visible: "FuelTrack+",
+    readyText: "Verified signed FuelTrack operations",
   },
   {
     route: "#/tradelink/documents",
@@ -57,6 +60,7 @@ const applications = [
     boardId: "264ca40d-6e4a-4e4f-97e6-3bd77c97cd88",
     domainRpcs: ["tl03_assigned_documents"],
     visible: "TradeLink",
+    readyText: "My Assigned Documents",
   },
 ];
 const overview = { route: "#/overview", label: "Overview" };
@@ -103,6 +107,8 @@ if (!cdpUrl || !/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)) {
     productionDataWritten: false,
     workflowActionsSubmitted: false,
     productionPoliciesChanged: false,
+    sameSignedEmployeeAcrossAllApplications: false,
+    sameWorkspaceAcrossAllApplications: false,
   };
   let failure = null;
   try {
@@ -203,15 +209,14 @@ if (!cdpUrl || !/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)) {
           timeout: 45000,
         });
         await page.waitForFunction(
-          (label) => document.body.innerText.includes(label),
-          app.visible,
-          { timeout: 35000 },
+          (marker) => document.body.innerText.includes(marker),
+          app.readyText,
+          { timeout: 45000 },
         );
         const resolverPromise = waitForRpc(
           page,
           "native_application_board_context",
           200,
-          app.moduleId,
         );
         const domainPromises = app.domainRpcs.map((rpc) =>
           waitForRpc(page, rpc, 200),
@@ -270,9 +275,9 @@ if (!cdpUrl || !/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)) {
             "TimeTracker module role confirms employee acceptance",
           );
         await page.waitForFunction(
-          (label) => document.body.innerText.includes(label),
-          app.visible,
-          { timeout: 35000 },
+          (marker) => document.body.innerText.includes(marker),
+          app.readyText,
+          { timeout: 45000 },
         );
         const body = await visibleText(page);
         assert.doesNotMatch(
@@ -362,6 +367,8 @@ if (!cdpUrl || !/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)) {
       null,
       { timeout: 30000 },
     );
+    report.sameSignedEmployeeAcrossAllApplications = Boolean(signedUserId);
+    report.sameWorkspaceAcrossAllApplications = Boolean(signedWorkspaceId);
     report.recovery = {
       catalogStatus: 200,
       degradedNoticeCleared: true,

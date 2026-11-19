@@ -1,8 +1,8 @@
 # CP-NATIVE-APP-ACCESS-03 — Four-Application Employee Cold-Start and Recovery Acceptance
 
-**Date:** 2026-11-19  
-**Status:** Acceptance runner implemented; local regression verified; genuine signed-employee outage/recovery run pending a signed session on the connected CDP browser.  
-**Repository:** `wass-psti/APSYNTRACRM`  
+**Date:** 2026-11-19
+**Status:** Genuine signed-employee 403/503 cold-start matrix and catalog recovery PASS; CI/deployment closeout pending.
+**Repository:** `wass-psti/APSYNTRACRM`
 **Production:** GitHub Pages; existing Supabase project `jtlusodorfnyzgyuewkz`
 
 ## Objective
@@ -30,7 +30,7 @@ node scripts/cp-native-app-access-03-employee-browser-acceptance.mjs \
 The runner performs these read-only scenarios:
 
 1. Overview cold start with `wm_list_boards` returning HTTP 403; native application links and degraded-catalog notice remain visible.
-2. Each of the four native routes is cold-reloaded with the same HTTP 403 catalog failure; the signed native resolver must return the exact module and canonical board, and expected application-domain reads must return HTTP 200.
+2. Each of the four native routes is cold-reloaded with the same HTTP 403 catalog failure; the signed native resolver must return the exact module and canonical board, and expected application-domain reads must return HTTP 200 and each native interface must reach its signed-ready state (not merely display its sidebar label).
 3. Repeat Overview and all four native routes with HTTP 503.
 4. Re-enter Overview while the 503 notice is present, remove the ephemeral browser-only override, invoke the existing non-mutating Retry workspace refresh action, confirm the real catalog RPC returns HTTP 200, and confirm the notice clears.
 5. Confirm the same signed employee and workspace are retained across all four application contexts; TimeTracker must report the `Employee` module role.
@@ -49,13 +49,22 @@ The runner performs these read-only scenarios:
 
 - CP-03 acceptance contract and related native resolver/startup tests: **24/24 PASS**.
 - Full frontend regression: **2,813/2,813 PASS**.
-- The live employee browser acceptance was attempted against local CDP port `9225`; that browser profile was at the APSYNTRA login page and had no signed employee tab. The run correctly reported **BLOCKED** without automating login or reading credentials.
+- Genuine signed employee acceptance executed against the already signed Chromium CDP session on port `9225`.
+- Overview HTTP 403: PASS; Overview HTTP 503: PASS.
+- TimeTracker, Fund Tracker, FuelTrack+, and TradeLink cold-start under HTTP 403: 4/4 PASS.
+- TimeTracker, Fund Tracker, FuelTrack+, and TradeLink cold-start under HTTP 503: 4/4 PASS.
+- All four native resolvers returned HTTP 200 with exact canonical module and board identities; all required application-domain reads returned HTTP 200.
+- The same signed employee and workspace remained consistent across all four applications.
+- Catalog recovery after removing the temporary override and invoking the existing non-mutating workspace refresh retry: HTTP 200, degraded notice cleared — PASS.
+- JavaScript page errors: 0; failed REST requests: 0; unexpected HTTP errors: 0.
+- Production data writes, workflow submissions, and policy changes: 0.
+- Sanitized machine-readable runtime evidence: `docs/evidence/cp-native-app-access-03g-employee-runtime.json`.
 
 ## Current acceptance status
 
 - Existing native resolver and catalog fallback implementation: **VERIFIED by existing tests and deployed baseline**.
 - CP-03 403/503/recovery runner and contract coverage: **IMPLEMENTED; local tests PASS**.
-- Genuine signed employee cold-start under 403: **PENDING**.
-- Genuine signed employee cold-start under 503: **PENDING**.
-- Genuine employee catalog recovery: **PENDING**.
-- Final production runtime certification: **PENDING** until the above browser scenarios pass against the deployed assets.
+- Genuine signed employee cold-start under 403: **VERIFIED — 5/5 scenarios**.
+- Genuine signed employee cold-start under 503: **VERIFIED — 5/5 scenarios**.
+- Genuine employee catalog recovery: **VERIFIED — HTTP 200; degraded notice cleared**.
+- Final production runtime certification: **VERIFIED for the deployed application build**; this CP-03G change only strengthens acceptance tooling and documentation.
