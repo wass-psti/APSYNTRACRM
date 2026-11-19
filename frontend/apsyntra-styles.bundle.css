@@ -17734,7 +17734,7 @@
 
 /* CP-TL-SPLIT-01 — TradeLink document workspace split view.
    Presentation only; signed routes, retrieval, and document actions remain authoritative. */
-.tl-reference-portal[data-tl-section="drafts"][data-tl-can-manage="true"] .tl-app-layout{
+.tl-reference-portal[data-tl-section="drafts"][data-tl-can-create="true"] .tl-app-layout{
  display:grid;grid-template-columns:minmax(220px,260px) minmax(0,1fr);
  align-items:start;gap:20px;min-width:0;
 }
@@ -17766,8 +17766,9 @@
 .tl-reference-portal .tl-app-nav .tl-module-link:hover{
  color:#214fbd;background:#f4f7ff;
 }
-/* The legacy draft-shell rule hides module links; restore them in the split editor. */
-.tl-reference-portal[data-tl-section="drafts"][data-tl-can-manage="true"] .tl-app-nav .tl-module-link{
+/* The legacy draft-shell rule hides module links; restore them for any existing
+   TradeLink document creator, including User accounts without Board MANAGE. */
+.tl-reference-portal[data-tl-section="drafts"][data-tl-can-create="true"] .tl-app-nav .tl-module-link{
  display:flex;
 }
 .tl-reference-portal .tl-app-nav .tl-module-link.active{
@@ -17841,7 +17842,7 @@
  .tl-reference-portal .tl-reference-portal-links{overflow-x:auto;flex-wrap:nowrap;max-width:100%}
  .tl-reference-portal .tl-reference-portal-links>a{flex:none}
  .tl-reference-portal .tl-app-layout,
- .tl-reference-portal[data-tl-section="drafts"][data-tl-can-manage="true"] .tl-app-layout{
+ .tl-reference-portal[data-tl-section="drafts"][data-tl-can-create="true"] .tl-app-layout{
   grid-template-columns:minmax(0,1fr);gap:13px;
  }
  .tl-reference-portal .tl-app-nav{
