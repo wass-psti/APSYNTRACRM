@@ -141,7 +141,7 @@ test('native signed snapshot wires sanitized all-date Log without weakening pers
  assert.equal(snapshot.log.rows.length,4);
  assert.equal(snapshot.log.scope,'AUTHORIZED_WORKSPACE_TEAM');
  assert.equal(snapshot.log.rows[0].name,'Engineering Member');
- const native=readFileSync('frontend/time-tracker-ui.js','utf8');
+ const native=readFileSync('frontend/apps/TimeTracker/time-tracker-ui.js','utf8');
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(native,/result\.log\?\.rows/);
  assert.match(app,/timeTrackerLogCsv/);

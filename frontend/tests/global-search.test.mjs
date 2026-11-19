@@ -257,7 +257,7 @@ test('wires TradeLink to its existing bounded signed document search and native 
 });
 
 test('binds FRT, FuelTrack+ and TimeTracker through existing signed native clients and detail views',()=>{
- const overtime=readFileSync('frontend/time-tracker-overtime.js','utf8');
+ const overtime=readFileSync('frontend/apps/TimeTracker/time-tracker-overtime.js','utf8');
  const fuelTrack=readFileSync('frontend/fueltrack-v3-domain-client.js','utf8');
  const frt=readFileSync('frontend/frt-finance-readonly.js','utf8');
  assert.ok(app.includes("fundTracker.searchRequests(query,{limit})"));

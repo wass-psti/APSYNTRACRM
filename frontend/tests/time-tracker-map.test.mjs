@@ -51,7 +51,7 @@ test('opt-in map does not trigger tile requests during signed TimeTracker loadin
 });
 
 test('nonessential signed TimeTracker reads are concurrent but access checks remain first',()=>{
- const native=readFileSync('frontend/time-tracker-native.js','utf8');
+ const native=readFileSync('frontend/apps/TimeTracker/time-tracker-native.js','utf8');
  const body=native.slice(native.indexOf('async snapshot(boardId){'),
   native.indexOf('async teamDirectory(boardId){'));
  assert.match(body,/const access=await this\.access\(boardId\)/);
@@ -61,7 +61,7 @@ test('nonessential signed TimeTracker reads are concurrent but access checks rem
  assert.ok(body.indexOf('const access=await')<body.indexOf('const otRead='));
  assert.ok(body.indexOf('const otRead=')<body.indexOf('const raw=await'));
  assert.match(body,/await checkIdentity\(this\.auth,this\.api,access,boardId\)/);
- const map=readFileSync('frontend/time-tracker-map.js','utf8');
+ const map=readFileSync('frontend/apps/TimeTracker/time-tracker-map.js','utf8');
  assert.match(map,/L\.circleMarker/);
  assert.match(map,/L\.tileLayer/);
  assert.match(map,/\.on\('tileerror'/);
@@ -78,7 +78,7 @@ test('default street map is identity-bound and nonprivileged views never initial
  assert.match(app,/setTimeTrackerMapTheme\(theme\)/);
  assert.match(app,/Date\.now\(\)-state\.ttLogGpsCacheAt<15000/);
  assert.match(app,/Date\.now\(\)-state\.ttGpsCacheAt<15000/);
- const module=readFileSync('frontend/time-tracker-map.js','utf8');
+ const module=readFileSync('frontend/apps/TimeTracker/time-tracker-map.js','utf8');
  assert.match(module,/L\.circleMarker/);
  assert.match(module,/L\.tileLayer/);
  assert.match(module,/export function setTimeTrackerMapTheme/);
@@ -87,7 +87,7 @@ test('default street map is identity-bound and nonprivileged views never initial
 });
 
 test('Leaflet tile lifecycle keeps signed GPS points visible during tile errors',()=>{
- const source=readFileSync('frontend/time-tracker-map.js','utf8');
+ const source=readFileSync('frontend/apps/TimeTracker/time-tracker-map.js','utf8');
  assert.match(source,/L\.circleMarker\(latlng/);
  assert.match(source,/L\.polyline\(\[\[pair\.in\.latitude/);
  assert.match(source,/map\.fitBounds\(bounds/);

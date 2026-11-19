@@ -59,7 +59,7 @@ test('dynamic acceptance check status uses named CSS classes',()=>{
 });
 
 test('Leaflet migration loads approved pinned script and standard OSM raster tiles',()=>{
- const map=readFileSync('frontend/time-tracker-map.js','utf8');
+ const map=readFileSync('frontend/apps/TimeTracker/time-tracker-map.js','utf8');
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(map,/leaflet@1\.9\.4/);
  assert.match(map,/https:\/\/tile\.openstreetmap\.org/);

@@ -26,7 +26,7 @@ const render=(extra={})=>renderTimeTrackerReports({
 });
 const reportCss=readFileSync('frontend/time-tracker-reports-command.css','utf8');
 const app=readFileSync('frontend/app.js','utf8');
-const pixi=readFileSync('frontend/time-tracker-pixi-scene.js','utf8');
+const pixi=readFileSync('frontend/apps/TimeTracker/time-tracker-pixi-scene.js','utf8');
 const index=readFileSync('index.html','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 

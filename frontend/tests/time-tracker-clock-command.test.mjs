@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {renderTimeTrackerNative,syncTimeTrackerClock} from '../time-tracker-ui.js';
 
 const css=readFileSync('frontend/time-tracker-clock-command.css','utf8');
-const pixi=readFileSync('frontend/time-tracker-pixi-scene.js','utf8');
+const pixi=readFileSync('frontend/apps/TimeTracker/time-tracker-pixi-scene.js','utf8');
 const app=readFileSync('frontend/app.js','utf8');
 const index=readFileSync('index.html','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');

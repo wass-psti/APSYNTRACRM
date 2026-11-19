@@ -18,11 +18,11 @@ const sample={
 };
 const render=options=>renderTimeTrackerMonitor({now,...options});
 const css=readFileSync('frontend/time-tracker-monitor-command.css','utf8');
-const scene=readFileSync('frontend/time-tracker-pixi-scene.js','utf8');
+const scene=readFileSync('frontend/apps/TimeTracker/time-tracker-pixi-scene.js','utf8');
 const index=readFileSync('index.html','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 const app=readFileSync('frontend/app.js','utf8');
-const monitorSource=readFileSync('frontend/time-tracker-monitor.js','utf8');
+const monitorSource=readFileSync('frontend/apps/TimeTracker/time-tracker-monitor.js','utf8');
 
 test('Monitor command hero contains a single passive GPU host and no fabricated measurements',()=>{
  const html=render();

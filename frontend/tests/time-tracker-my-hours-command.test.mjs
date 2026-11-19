@@ -26,7 +26,7 @@ const records=[
 ];
 const render=options=>renderTimeTrackerMyHours({records,access,now,month:'2026-11',...options});
 const css=readFileSync('frontend/time-tracker-my-hours-command.css','utf8');
-const scene=readFileSync('frontend/time-tracker-pixi-scene.js','utf8');
+const scene=readFileSync('frontend/apps/TimeTracker/time-tracker-pixi-scene.js','utf8');
 const index=readFileSync('index.html','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 const app=readFileSync('frontend/app.js','utf8');

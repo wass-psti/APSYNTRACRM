@@ -6,7 +6,7 @@ const read=path=>readFileSync(path,'utf8');
 const sql=read('supabase/migrations/20261119024303_cp_native_app_access_01.sql');
 const app=read('frontend/app.js');
 const data=read('frontend/data.js');
-const tt=read('frontend/time-tracker-native.js');
+const tt=read('frontend/apps/TimeTracker/time-tracker-native.js');
 const tl=read('frontend/tradelink-domain-client.js');
 
 const section=(source,start,next)=>{

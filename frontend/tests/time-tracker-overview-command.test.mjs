@@ -32,7 +32,7 @@ const render=(role='HR')=>renderTimeTrackerOverview({
 const html=readFileSync('index.html','utf8');
 const app=readFileSync('frontend/app.js','utf8');
 const css=readFileSync('frontend/time-tracker-overview-command.css','utf8');
-const pixi=readFileSync('frontend/time-tracker-pixi-scene.js','utf8');
+const pixi=readFileSync('frontend/apps/TimeTracker/time-tracker-pixi-scene.js','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 
 test('Overview is a distinct signed workforce command dashboard with one decorative scene',()=>{

@@ -65,7 +65,7 @@ test('abort is distinguished from ordinary network loss',async()=>{
 });
 
 test('attendance commit is the sole non-replayed bounded write RPC',()=>{
- const native=readFileSync('frontend/time-tracker-native.js','utf8');
+ const native=readFileSync('frontend/apps/TimeTracker/time-tracker-native.js','utf8');
  const api=readFileSync('frontend/data.js','utf8');
  const auth=readFileSync('frontend/session.js','utf8');
  assert.match(native,/AbortSignal\?\.timeout\?\.\(25000\)/);

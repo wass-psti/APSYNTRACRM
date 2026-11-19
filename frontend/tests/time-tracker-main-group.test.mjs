@@ -119,7 +119,7 @@ test('server-redacted HR and own history joins only matching source record IDs; 
 
 test('no stale GPS fallback, group-specific replacement and existing 11 boards remain untouched',()=>{
  const app=readFileSync('frontend/app.js','utf8');
- const module=readFileSync('frontend/time-tracker-main-group.js','utf8');
+ const module=readFileSync('frontend/apps/TimeTracker/time-tracker-main-group.js','utf8');
  const css=readFileSync('frontend/time-tracker-main-group.css','utf8');
  assert.match(app,/moduleKey==='timetracker'&&String\(g\.title\|\|'\'\)\.trim\(\)\.toLowerCase\(\)==='main group'/);
  assert.match(app,/renderTimeTrackerMainGroup\(/);
