@@ -121,7 +121,7 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
    '</div></nav>':'';
  return '<div class="aps-tradelink-app tl-reference-portal" data-tl-section="'+esc(current)+'" data-tl-can-manage="'+(canManage?'true':'false')+'">'+
   '<header class="tl-reference-topbar" aria-label="TradeLink portal">'+
-   '<a class="tl-reference-brand" href="'+base+(canManage?'/drafts/quotation':'/documents')+'" aria-label="TradeLink Create New">'+
+   '<a class="tl-reference-brand" href="'+base+(canManage?'/drafts/quotation':'/documents')+'" aria-label="'+(canManage?'TradeLink Create New':'TradeLink All Documents')+'">'+
     '<span class="tl-reference-logo" aria-hidden="true">▦</span>'+
     '<span><strong>TradeLink</strong><small>PORTAL</small></span></a>'+
    '<nav class="tl-reference-portal-links" aria-label="TradeLink actions">'+
@@ -148,7 +148,7 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
   '</header>'+
   '<div class="tl-app-layout">'+workspaceNavigation+
    '<main class="tl-app-main">'+
-    (m?renderModule(m,canManage):current==='drafts'&&!canManage?'<section class="tl-content-panel" aria-labelledby="tl-reviewer-access-title"><h2 id="tl-reviewer-access-title">Create New is unavailable for this signed account</h2><p>Document creation requires the existing signed Board manager capability. No additional permission is granted here. Open All Documents to inspect documents assigned to your account and use the available reviewer actions.</p></section>':current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail,showModuleTabs:false}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage,canReview,actorEmail):current==='activity'?renderTradeLinkActivity(activity||{}):current==='analytics'?renderTradeLinkAnalytics({summary:analytics,busy:analyticsBusy,error:analyticsError,enabled:analyticsEnabled}):renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail,showModuleTabs:false}))+
+    (m?renderModule(m,canManage):current==='drafts'&&!canManage?'<section class="tl-content-panel" aria-labelledby="tl-reviewer-access-title"><h2 id="tl-reviewer-access-title">Create New is unavailable for this signed account</h2><p>Document creation requires the existing signed Board manager capability. No additional permission is granted here. Open All Documents to inspect documents assigned to your account and use the available reviewer actions.</p><p><a class="secondary" href="'+tradeLinkApplicationHref('documents')+'">Open All Documents</a></p></section>':current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail,showModuleTabs:false}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage,canReview,actorEmail):current==='activity'?renderTradeLinkActivity(activity||{}):current==='analytics'?renderTradeLinkAnalytics({summary:analytics,busy:analyticsBusy,error:analyticsError,enabled:analyticsEnabled}):renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail,showModuleTabs:false}))+
    '</main></div></div>';
 }
 /** Pure DOM filtering of already-authorized board rows; no additional network
