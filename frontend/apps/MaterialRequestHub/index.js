@@ -19,7 +19,7 @@ class Controller{
   this.access=null;this.summary=null;this.items=[];this.cursor=null;
   this.selected=null;this.section='overview';this.requestId=null;
   this.search='';this.rejectId=null;this.editing=false;
-  this.loading=false;this.busy=false;this.loaded=false;
+  this.loading=false;this.busy=false;this.loaded=false;this.uncertainCreate=false;
   this.error='';this.notice='';this.run=0;this.alive=true;
   this.sourcingHref=null;this.container=null;
   this.onClick=event=>{void this.click(event);};
@@ -44,7 +44,7 @@ class Controller{
    this.section=route.section;this.requestId=route.requestId;
    this.rejectId=null;this.editing=false;this.search='';
    this.items=[];this.summary=null;this.cursor=null;
-   this.loaded=false;this.notice='';this.error='';
+   this.loaded=false;this.notice='';this.error='';this.loading=false;this.busy=false;this.uncertainCreate=false;
    this.run++;
   }
   this.draw();
@@ -161,19 +161,21 @@ class Controller{
    if(!reason)return;
    await this.change('reject',id,Number(form.getAttribute('data-version')),reason);return;
   }
+  const payload=Object.fromEntries(new FormData(form));
   const seq=++this.run;
   this.busy=true;this.error='';this.notice='';this.draw();
   try{
    if(form.hasAttribute('data-mrh-comment')){
     if(!this.requestId)throw new Error('Open a request before commenting.');
-    await this.client.comment(this.requestId,new FormData(form).get('text'));
+    await this.client.comment(this.requestId,payload.text);
     if(!this.same(seq))return;
     this.selected=await this.client.detail(this.requestId);
     if(!this.same(seq))return;
     this.notice='Update recorded.';
    }else{
-    const values=Object.fromEntries(new FormData(form));
+    const values=payload;
     const editing=form.getAttribute('data-mrh-form')==='edit';
+    if(!editing&&this.uncertainCreate)throw new Error('The previous create result is uncertain. Check All Requests before attempting another creation.');
     if(editing&&(!this.requestId||!this.selected))
      throw new Error('Refresh the saved request before editing.');
     const result=editing?
@@ -188,6 +190,7 @@ class Controller{
   }catch(error){
    if(this.same(seq)){
     const uncertain=error?.mayHaveCommitted||/network|timeout|interrupted|uncertain/i.test(String(error?.message||''));
+    if(uncertain&&!form.hasAttribute('data-mrh-comment')&&form.getAttribute('data-mrh-form')==='create')this.uncertainCreate=true;
     this.error=uncertain?'The request outcome cannot be confirmed. Do not submit again until you have checked All Requests. '+issue(error):issue(error);
    }
   }finally{if(this.same(seq)){this.busy=false;this.draw();}}
