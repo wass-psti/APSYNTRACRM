@@ -1,9 +1,9 @@
 # CP-CRM-CONN-02C — Startup and Connectivity Reliability
 
-**Date:** 2026-11-19  
-**Status:** IMPLEMENTED — local verification passed; deployment acceptance pending  
-**Repository:** wass-psti/APSYNTRACRM  
-**Base commit:** 2e45559 (merge of PR #557, CP-CRM-CONN-02B)  
+**Date:** 2026-11-19
+**Status:** IMPLEMENTED — local unit, browser and build verification PASS; PR #558 checks and deployed acceptance pending
+**Repository:** wass-psti/APSYNTRACRM
+**Base commit:** 2e45559 (merge of PR #557, CP-CRM-CONN-02B)
 **Supabase project:** jtlusodorfnyzgyuewkz
 
 ## Objective
@@ -87,9 +87,14 @@ The merged CP02B change removes avoidable repeated preflights. It does not prove
 - [x] Duplicate initialization is prevented by the existing boot/startup guards.
 - [x] Static module failure recovery passes in disposable Chromium.
 - [x] Signed-session startup recovers after two transient verification failures; repeated online events do not start duplicate boot flows.
-- [x] Full frontend regression passes (2,752 tests, 0 failures).
+- [x] Focused connection/startup regression passes (48/48).
+- [x] Full frontend regression passes (2,752/2,752; 0 failures, 0 skipped).
+- [x] Disposable Chromium CORS acceptance passes: repeated read-only RPC requests reduce OPTIONS from 2 to 1 while both POST requests reach the API.
+- [x] Disposable Chromium startup acceptance passes: one injected entry-module HTTP 503 recovers to the sign-in screen.
+- [x] Disposable Chromium signed-session acceptance passes: two transient verification failures recover to AUTHENTICATED; repeated online events do not duplicate startup.
+- [x] Disposable Chromium sign-in acceptance passes when sessionStorage writes fail; workspace loads.
 - [x] Production build, syntax, lint, and Prettier format checks pass.
-- [ ] CP02C pull request checks and merge complete.
+- [ ] PR #558 required checks complete and merge.
 - [ ] Deployed signed-user acceptance confirms real account login, workspace loading, and board reads.
 - [ ] Post-deployment gateway sample confirms reduced OPTIONS-to-read-RPC ratio.
 - [ ] Provider-side CEB/HKG extreme tail is attributed or escalated with trace IDs.
