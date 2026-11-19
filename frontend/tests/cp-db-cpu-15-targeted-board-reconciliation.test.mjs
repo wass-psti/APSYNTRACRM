@@ -22,9 +22,10 @@ test('app reconciliation uses targeted reads and preserves archived-board handli
  const reconcile=app.slice(app.indexOf('async function reconcilePlatformSync('),
   app.indexOf('\nlet workspaceRelationReadGeneration',app.indexOf('async function reconcilePlatformSync(')));
  assert.match(reconcile,/shouldRefreshWorkspaceBoardList\(\{reason,view\}\)/);
- assert.match(reconcile,/refreshBoardCatalog\?await db\.boards\('active'\):state\.boards/);
- assert.match(reconcile,/if\(refreshBoardCatalog\)state\.boards=boards/);
+ assert.match(reconcile,/refreshBoardCatalog&&!nativeModuleId\?await db\.boards\('active'\):state\.boards/);
+ assert.match(reconcile,/if\(refreshBoardCatalog&&!nativeModuleId\)state\.boards=boards/);
  assert.match(reconcile,/!refreshBoardCatalog&&detail\.board\.status!=='active'/);
- assert.match(reconcile,/db\.allowed\(boardId,'view'\)/);
- assert.match(reconcile,/readVisibleBoardSnapshot\(boardId,tab/);
+ assert.match(reconcile,/!nativeModuleId&&await db\.allowed\(boardId,'view'\)/);
+ assert.match(reconcile,/nativeModuleId\?db\.nativeApplicationBoardContext\(nativeModuleId\)/);
+ assert.match(reconcile,/nativeModuleId\?Promise\.resolve\(null\):readVisibleBoardSnapshot\(boardId,tab/);
 });

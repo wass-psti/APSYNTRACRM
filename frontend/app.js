@@ -1807,6 +1807,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  const sensitive=reason!=='broadcast';
  const boardChanged=boardId&&boardIds.includes(boardId);
  const refreshBoardCatalog=shouldRefreshWorkspaceBoardList({reason,view});
+ const nativeModuleId=view==='board'?nativeApplicationModuleForBoardRoute(boardId,tab):null;
  // Board broadcasts carry identifiers only; the server remains authoritative.
  if(reason==='broadcast'&&!boardChanged&&view==='board')return true;
  let who,current;
@@ -1825,7 +1826,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  }
  // Revocation takes precedence over preserving local editor state. This is
  // an authoritative signed board-view check, not a client-side visibility rule.
- if(view==='board'&&boardId&&await db.allowed(boardId,'view')!==true){
+ if(view==='board'&&boardId&&!nativeModuleId&&await db.allowed(boardId,'view')!==true){
   if(isCurrent()){
    platformSync.stop();state.board=null;state.boardUi=null;
    state.ttAttendance=null;state.ttBoardAttendance=null;
@@ -1836,14 +1837,17 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  // Authorization reads must occur even while an unsaved editor is open.
  if(platformSyncEditInProgress())return false;
  const roleChanged=current.profile?.platform_role!==state.context.profile?.platform_role;
- const boards=refreshBoardCatalog?await db.boards('active'):state.boards;
+ // Native application refresh is resolved through its module-scoped canonical
+ // context. A generic board catalog refresh must never evict an application
+ // route whose signed module assignment is already valid.
+ const boards=refreshBoardCatalog&&!nativeModuleId?await db.boards('active'):state.boards;
  if(!isCurrent())return false;
- if(refreshBoardCatalog&&!boards.some(board=>board.id===boardId)&&view==='board'){
+ if(refreshBoardCatalog&&!nativeModuleId&&!boards.some(board=>board.id===boardId)&&view==='board'){
   platformSync.stop();state.board=null;location.hash='#/boards';return false;
  }
  if(platformSyncEditInProgress())return false;
- let changedBoards=refreshBoardCatalog&&JSON.stringify(state.boards)!==JSON.stringify(boards);
- if(refreshBoardCatalog)state.boards=boards;
+ let changedBoards=refreshBoardCatalog&&!nativeModuleId&&JSON.stringify(state.boards)!==JSON.stringify(boards);
+ if(refreshBoardCatalog&&!nativeModuleId)state.boards=boards;
  state.context=mergeProfileAvatarContext(state.context,current);state.user=auth.session?.user;
  const roleRecheck=shouldRecheckWorkspaceRoles({reason,roleChanged,
   lastReadAt:crmRoleLastReadAt,now:Date.now()});
@@ -1877,12 +1881,22 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  if(view==='board'&&boardId){
   let detail,edit,manage,boardUi;
   try{
-   [detail,edit,manage,boardUi]=await Promise.all([
-    readVisibleBoardSnapshot(boardId,tab,{
+   const [resolvedNative,genericDetail,editResult,manageResult,uiResult]=await Promise.all([
+    nativeModuleId?db.nativeApplicationBoardContext(nativeModuleId):Promise.resolve(null),
+    nativeModuleId?Promise.resolve(null):readVisibleBoardSnapshot(boardId,tab,{
      itemCount:state.board?.items?.length||BOARD_ITEM_PAGE_SIZE
-    }),db.allowed(boardId,'edit'),db.allowed(boardId,'manage'),
-    boardStructureClient.read(boardId)
+    }),
+    nativeModuleId?db.allowed(boardId,'edit').catch(()=>false):db.allowed(boardId,'edit'),
+    nativeModuleId?db.allowed(boardId,'manage').catch(()=>false):db.allowed(boardId,'manage'),
+    nativeModuleId?Promise.resolve(null):boardStructureClient.read(boardId)
    ]);
+   if(nativeModuleId&&(!resolvedNative||resolvedNative.moduleId!==nativeModuleId||
+      resolvedNative.userId!==userId||resolvedNative.workspaceId!==workspaceId||
+      resolvedNative.board?.id!==boardId||
+      resolvedNative.detail?.board?.workspace_id!==workspaceId))
+    throw new ApiError('Native application context changed during background refresh.',409);
+   detail=nativeModuleId?resolvedNative.detail:genericDetail;
+   edit=editResult;manage=manageResult;boardUi=uiResult;
   }catch(error){
    if(isCurrent()&&([403,404].includes(Number(error?.status))||
       error?.code==='42501')){

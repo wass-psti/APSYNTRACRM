@@ -1,7 +1,7 @@
 # CP-NATIVE-APP-ACCESS-01 — Native Application Resolution
 
 **Date:** 2026-11-19
-**Status:** Backend migration applied; frontend implementation and regression acceptance complete; release pending pull-request integration.
+**Status:** Production migration and frontend deployed; standard signed-employee runtime acceptance completed. CP-CRM-CONN-02G is closing a remaining generic background-sync dependency under simulated denial.
 **Repository:** `wass-psti/APSYNTRACRM`
 **Supabase project:** Existing project `jtlusodorfnyzgyuewkz`
 
@@ -104,4 +104,4 @@ The separately approved CP-CRM-CONN-03A viewer-provisioning migration remains an
 
 ## Release state
 
-The production database migration is applied. The frontend changes are not yet deployed to GitHub Pages. Release remains pending PR integration, required repository checks and post-deployment signed-user acceptance for each native application.
+The production database migration is applied and the frontend implementation is merged to `main` and deployed to GitHub Pages. Standard signed-employee startup and domain-read acceptance for all four native application routes passed. A stronger generic-RPC denial simulation subsequently exposed a remaining platform-sync dependency; its correction and final post-deployment acceptance are tracked in [CP-CRM-CONN-02G](CP-CRM-CONN-02G.md). Generic board permissions and application assignments were not changed.
