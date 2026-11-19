@@ -2,7 +2,7 @@
  * This is presentation-only; route resolution and authorization remain in the host.
  */
 const PRIMARY_ROUTES=new Set([
- 'overview','boards','fm1','time-tracker','fund-tracker','fueltrack','tradelink','talkbox',
+ 'overview','boards','fm1','time-tracker','fund-tracker','fueltrack','tradelink','talkbox','material-request-hub',
  'foundation','security','role-configuration','user-role-management','settings','acceptance'
 ]);
 export function sidebarActiveRoute(hash,{
