@@ -12,7 +12,7 @@ const boardItemId='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const timestamp='2026-11-08T06:23:14.478231+00:00';
 const row={documentId,boardItemId,documentType:'quotation',
  documentNumber:'Q-0001',revision:5,workflowState:'draft',
- archived:false,updatedAt:timestamp};
+ archived:false,updatedAt:timestamp,createdByActor:false};
 const page={rows:[row],hasMore:true,nextCursor:{documentId,updatedAt:timestamp}};
 const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
  name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'},
@@ -51,7 +51,7 @@ test('malformed inputs are blocked before the network and denied Board manager n
  }
  assert.equal(calls.length,0);
  const denied=signedClient({allowed:false,rpc:()=>{throw Error('Denied client reached RPC');}});
- await assert.rejects(()=>denied.client.searchPage(),/manager scope required/);
+ await assert.rejects(()=>denied.client.searchPage(),/manager scope required|Create New context is unavailable/);
  assert.equal(denied.calls.length,0);
 });
 test('untrusted page envelopes, revisions, times, and cursors fail closed',async()=>{

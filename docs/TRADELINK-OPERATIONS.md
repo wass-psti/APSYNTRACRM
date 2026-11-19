@@ -133,3 +133,21 @@ rehearsal remain separate requirements. The existing whole-project
 24-hour RPO/RTO targets and mandatory recovery rehearsal have been
 retired by the owner; these synthetic tests do not prove runtime acceptance. New Storage permissions/production
 migration require separately scoped authorization and live signed acceptance.
+
+## CP-TL-CREATE-NEW-01 — Existing User Draft creation (2026-11-19)
+
+**Status:** BACKEND IMPLEMENTED AND APPLIED; FRONTEND DEPLOYMENT AND GENUINE SIGNED-USER ACCEPTANCE PENDING.
+
+The existing TradeLink module role User can now use the source-defined Create New workflow without being assigned generic Board edit or manage capability. This is a TradeLink document-domain capability only; it does not change the account's module role, workspace membership, Board access assignment, or any other application.
+
+- The canonical TradeLink board and current signed workspace/session are verified by the existing native application context.
+- A User may create a new Draft and revise only a Draft they created. The existing server transaction retains revision CAS, idempotent retry, document numbering, Board-item synchronization and audit events.
+- The existing manager workflow remains unchanged. User does not receive Board management, archive/restore, manager-only submission/decision/operational actions, or attachment management.
+- All Documents combines the signed account's creator-owned documents with the existing independently assigned reviewer documents. Reviewer actions continue to use the assigned-review API and assignment stages.
+- Creator readback uses the existing document read/list/page, revision bundle and Board projection APIs. The consolidated tl03_docs_read policy preserves the original manager predicate and adds only the canonical-board, current-actor, existing TradeLink User branch.
+- Applied migrations: 20261119073346_tradelink_user_draft_creation and 20261119073608_tradelink_document_read_policy_consolidation.
+- No user roles, application assignments, workspace memberships, generic Board permissions, or business records were changed by the migrations.
+
+**Local evidence:** 2,825 frontend tests pass; production build, JavaScript syntax, ESLint, and focused TradeLink acceptance tests pass. The SQL migrations passed transactional dry-run preflight/postflight before application. Live Supabase catalog checks confirm the helpers, authenticated-only execution, owner read branch, existing manager branch and exact migration history. Supabase performance advisor no longer reports multiple permissive SELECT policies for tradelink_documents.
+
+**Remaining acceptance:** deploy the frontend changes, use an already signed TradeLink User session to verify all six Create New forms, create one explicitly QA-labelled Draft, then refresh, reopen, verify its single Board item and All Documents readback. No live document write has been claimed yet.

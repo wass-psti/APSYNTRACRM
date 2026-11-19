@@ -277,9 +277,103 @@ test('concurrent signed preflight denies wrong workspace and denied manager with
    allowed:async()=>override.manage!==false,
    rpc:async()=>{calls++;return [];}};
   await assert.rejects(()=>new TradeLinkDomainClient({auth,api}).list(),
-   /identity or workspace changed|board manager scope required/);
+   /identity or workspace changed|Board manager scope required|signed document capability is unavailable|Create New context is unavailable/);
   assert.equal(calls,0);
  }
+});
+
+
+test('existing TradeLink User module role can create and list own Drafts without Board manage',async()=>{
+ const calls=[];
+ const board={id:TRADELINK_BOARD_ID,workspace_id:workspace,name:'TradeLink',
+  status:'active',description:'[APSYNTRA:MODULE:tradelink:v1] canonical board'};
+ const auth={userId:id,getVerifiedUser:async()=>({id})};
+ const api={
+  context:async()=>({user_id:id,workspace_id:workspace,profile:{status:'active'}}),
+  allowed:async(boardId,permission)=>{
+   calls.push(['allowed',boardId,permission]);
+   return false;
+  },
+  nativeApplicationBoardContext:async moduleId=>{
+   calls.push(['native',moduleId]);
+   return {moduleId,userId:id,workspaceId:workspace,role:'User',board};
+  },
+  rpc:async(name,args)=>{
+   calls.push(['rpc',name,args]);
+   if(name==='tl03_documents_list')return [{
+    documentId:id,boardItemId:item,documentType:'quotation',
+    workflowState:'draft',revision:1,createdByActor:true
+   }];
+   if(name==='tl03_document_create')return {
+    documentId:id,boardItemId:item,documentNumber:'Q-20261119000001',
+    revision:1,state:'draft',operation:'create',idempotent:false
+   };
+   throw new Error('Unexpected RPC '+name);
+  }
+ };
+ const client=new TradeLinkDomainClient({auth,api});
+ const rows=await client.list();
+ assert.equal(rows.length,1);
+ assert.equal(rows[0].createdByActor,true);
+ const receipt=await client.commit({documentId:id,expectedRevision:0,
+  operation:'create',draft:{...draft,documentNumber:''},initialState:'draft'});
+ assert.equal(receipt.documentNumber,'Q-20261119000001');
+ await assert.rejects(()=>client.commit({documentId:id,expectedRevision:1,
+  operation:'archive',expectedState:'draft',draft:null}),
+  /supports document creation and own Draft updates only/);
+ assert.ok(calls.some(call=>call[0]==='allowed'&&call[2]==='manage'));
+ assert.ok(calls.some(call=>call[0]==='native'&&call[1]==='tradelink'));
+ assert.ok(calls.some(call=>call[0]==='rpc'&&call[1]==='tl03_document_create'));
+ assert.equal(calls.some(call=>call[0]==='rpc'&&call[1]==='tl03_document_commit'),false);
+ assert.equal(calls.some(call=>call[0]==='boardCached'),false);
+});
+
+
+test('existing TradeLink User role can create all six document types with the existing server number prefixes',async()=>{
+ const board={id:TRADELINK_BOARD_ID,workspace_id:workspace,name:'TradeLink',
+  status:'active',description:'[APSYNTRA:MODULE:tradelink:v1] canonical board'};
+ const prefixes={esi:'ESI-',packing:'PL-',delivery:'DR-',payment:'AR-',quotation:'Q-',po:'PO-'};
+ const created=[];
+ const auth={userId:id,getVerifiedUser:async()=>({id})};
+ const api={
+  context:async()=>({user_id:id,workspace_id:workspace,profile:{status:'active'}}),
+  allowed:async()=>false,
+  nativeApplicationBoardContext:async moduleId=>({
+   moduleId,userId:id,workspaceId:workspace,role:'User',board
+  }),
+  rpc:async(name,args)=>{
+   assert.equal(name,'tl03_document_create');
+   created.push(args.p_data.documentType);
+   return {documentId:id,boardItemId:item,
+    documentNumber:prefixes[args.p_data.documentType]+'20261119000001',
+    revision:1,state:args.p_initial_state,operation:'create',idempotent:false};
+  }
+ };
+ const client=new TradeLinkDomainClient({auth,api});
+ for(const type of Object.keys(prefixes)){
+  const receipt=await client.commit({documentId:id,expectedRevision:0,
+   operation:'create',initialState:'draft',draft:{...draft,documentType:type,documentNumber:''}});
+  assert.ok(receipt.documentNumber.startsWith(prefixes[type]),type);
+ }
+ assert.deepEqual(created,Object.keys(prefixes));
+});
+
+test('non-User TradeLink module roles cannot use the Create New client capability',async()=>{
+ const board={id:TRADELINK_BOARD_ID,workspace_id:workspace,name:'TradeLink',
+  status:'active',description:'[APSYNTRA:MODULE:tradelink:v1] canonical board'};
+ const auth={userId:id,getVerifiedUser:async()=>({id})};
+ let rpcCalls=0;
+ const api={
+  context:async()=>({user_id:id,workspace_id:workspace,profile:{status:'active'}}),
+  allowed:async()=>false,
+  nativeApplicationBoardContext:async moduleId=>({
+   moduleId,userId:id,workspaceId:workspace,role:'Viewer',board
+  }),
+  rpc:async()=>{rpcCalls++;return [];}
+ };
+ await assert.rejects(()=>new TradeLinkDomainClient({auth,api}).list(),
+  /Board manager scope required/);
+ assert.equal(rpcCalls,0);
 });
 
 test('assigned TradeLink reviewers resolve the native app and one document projection without generic board view',async()=>{

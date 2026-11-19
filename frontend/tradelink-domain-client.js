@@ -267,8 +267,9 @@ export class TradeLinkDomainClient{
   this.api=api;this.auth=auth;
   this.automaticNumberingEnabled=automaticNumberingEnabled===true;
  }
- async session({verifyBoard=true}={}){
-  if(!this.api?.context||(verifyBoard&&!this.api?.board&&!this.api?.boardCached)||
+ async session({verifyBoard=true,allowCreateUser=false}={}){
+  if(!this.api?.context||
+    (verifyBoard&&!this.api?.board&&!this.api?.boardCached&&!this.api?.nativeApplicationBoardContext)||
     !this.api?.allowed||!this.api?.rpc||!this.auth?.getVerifiedUser)
    deny('Signed TradeLink domain API unavailable.');
   // Resolve the signed actor, workspace and manager decision concurrently.
@@ -285,23 +286,37 @@ export class TradeLinkDomainClient{
     context?.user_id!==actor.id||context?.profile?.status!=='active'||
     !validUuid(context.workspace_id))
    deny('TradeLink signed identity or workspace changed.');
+  let canCreateUser=false,native=null;
+  if(canManage!==true&&allowCreateUser){
+   if(typeof this.api.nativeApplicationBoardContext!=='function')
+    deny('TradeLink Board manager scope required; signed User Create New context is unavailable.');
+   native=await this.api.nativeApplicationBoardContext('tradelink');
+   canCreateUser=native?.moduleId==='tradelink'&&native?.role==='User'&&
+    native?.userId===actor.id&&native?.workspaceId===context.workspace_id&&
+    isTradeLinkBoard(native?.board)&&native.board.workspace_id===context.workspace_id;
+  }
   if(verifyBoard){
-   const detail=typeof this.api.boardCached==='function'?
-    await this.api.boardCached(TRADELINK_BOARD_ID,{
-     userId:actor.id,workspaceId:context.workspace_id,includeItems:false
-    }):await this.api.board(TRADELINK_BOARD_ID);
+   const detail=canManage===true?
+    (typeof this.api.boardCached==='function'?
+     await this.api.boardCached(TRADELINK_BOARD_ID,{
+      userId:actor.id,workspaceId:context.workspace_id,includeItems:false
+     }):await this.api.board(TRADELINK_BOARD_ID)):
+    canCreateUser?{board:native.board}:null;
    if(!isTradeLinkBoard(detail?.board)||
-      detail.board.workspace_id!==context.workspace_id||canManage!==true)
-    deny('TradeLink board manager scope required.');
+      detail.board.workspace_id!==context.workspace_id||
+      (canManage!==true&&!canCreateUser))
+    deny('TradeLink Board manager scope required; signed User Create New capability is unavailable.');
   }else if(canManage!==true){
    // The read-only analytics RPC independently verifies its board and
    // workspace context. Retain the signed manager preflight without loading
    // an unrelated full board snapshot before that authoritative read.
    deny('TradeLink board manager scope required.');
   }
-  // Server additionally requires a live auth.sessions row and an effective
-  // General Manager module role beneath the centralized platform ceiling.
-  return {actorId:actor.id,workspaceId:context.workspace_id};
+  // The server still decides every read/write. This client capability only
+  // routes an existing TradeLink User through the signed native context; it
+  // never turns the account into a generic Board editor or manager.
+  return {actorId:actor.id,workspaceId:context.workspace_id,
+   canManage:canManage===true,canCreate:canManage===true||canCreateUser};
  }
  async reviewerSession(){
   if(!this.api?.context||!this.api?.nativeApplicationBoardContext||!this.api?.rpc||
@@ -362,12 +377,13 @@ export class TradeLinkDomainClient{
   if(!TL03_DOMAIN_READS_ENABLED)deny('TradeLink domain reads await production activation.',503);
   if(!Number.isSafeInteger(limit)||limit<1||limit>100)
    deny('TradeLink list limit must be 1–100.',400);
-  await this.session();
+  await this.session({allowCreateUser:true});
   const rows=await this.api.rpc('tl03_documents_list',{
    p_board_id:TRADELINK_BOARD_ID,p_limit:limit});
   if(!Array.isArray(rows)||rows.length>limit||rows.some(r=>!validUuid(r?.documentId)||
       !validUuid(r?.boardItemId)||!TYPES.has(r?.documentType)||
-      !STATES.has(r?.workflowState)||!Number.isSafeInteger(r?.revision)||r.revision<1))
+      !STATES.has(r?.workflowState)||!Number.isSafeInteger(r?.revision)||r.revision<1||
+      typeof r?.createdByActor!=='boolean'))
    deny('Invalid TradeLink document list response.',409);
   return rows;
  }
@@ -384,7 +400,7 @@ export class TradeLinkDomainClient{
       !Number.isFinite(Date.parse(cursor.updatedAt))||
       !validUuid(cursor.documentId))))
    deny('Invalid TradeLink server search request.',400);
-  await this.session();
+  await this.session({allowCreateUser:true});
   const response=await this.api.rpc('tl03_documents_page',{
    p_board_id:TRADELINK_BOARD_ID,p_search:query,
    p_document_type:documentType,p_workflow_state:workflowState,
@@ -402,6 +418,7 @@ export class TradeLinkDomainClient{
     response.rows.some(r=>!validUuid(r?.documentId)||!validUuid(r?.boardItemId)||
       !TYPES.has(r?.documentType)||!STATES.has(r?.workflowState)||
       typeof r?.documentNumber!=='string'||typeof r?.archived!=='boolean'||
+      typeof r?.createdByActor!=='boolean'||
       !Number.isSafeInteger(r?.revision)||r.revision<1||
       typeof r?.updatedAt!=='string'||!Number.isFinite(Date.parse(r.updatedAt)))||
     (response.hasMore&&(!response.rows.length||
@@ -621,7 +638,7 @@ export class TradeLinkDomainClient{
  async read(documentId){
   if(!TL03_DOMAIN_READS_ENABLED)deny('TradeLink domain reads await production activation.',503);
   if(!validUuid(documentId))deny('Invalid document identifier.',400);
-  const {workspaceId}=await this.session();
+  const {workspaceId}=await this.session({allowCreateUser:true});
   const row=await this.api.rpc('tl03_document_read',{
    p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId});
   return row===null?null:normalizeTradeLinkDomainRow(row,workspaceId,documentId);
@@ -631,7 +648,7 @@ export class TradeLinkDomainClient{
   if(!validUuid(documentId)||(revision!==null&&
    (!Number.isSafeInteger(revision)||revision<1)))
    deny('Invalid TradeLink revision history request.',400);
-  const {workspaceId}=await this.session();
+  const {workspaceId}=await this.session({allowCreateUser:true});
   let result;
   try{
    result=await this.api.rpc('tl03_document_revision_bundle',{
@@ -669,7 +686,9 @@ export class TradeLinkDomainClient{
    deny('Invalid TradeLink revision, operation or payload.',400);
   if(['create','update','revise-approved'].includes(operation))validateTradeLinkDraftEnvelope(draft,
    {allowUnassignedNumber:operation==='create'&&this.automaticNumberingEnabled});
-  await this.session();
+  const session=await this.session({allowCreateUser:true});
+  if(!session.canManage&&!['create','update'].includes(operation))
+   deny('TradeLink User capability supports document creation and own Draft updates only.',403);
   const receipt=operation==='create'&&this.automaticNumberingEnabled?
    await this.api.rpc('tl03_document_create',{
     p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,

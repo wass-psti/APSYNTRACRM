@@ -65,7 +65,7 @@ test('Signed API sends explicit operation and accepts only revision-bound 3 resp
   return {documentId:doc,boardItemId:item,revision:3,
    state:'for-approval',operation:'update',idempotent:false};
  }},auth:{}});
- client.session=async()=>({actorId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',workspaceId:workspace});
+ client.session=async()=>({actorId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',workspaceId:workspace,canManage:true});
  const revised=await client.commit({documentId:doc,expectedRevision:2,
   operation:'revise-approved',draft:{...content,remarks:'Negotiated change'},
   initialState:'for-approval'});

@@ -36,7 +36,7 @@ const row={id:docId,board_id:TRADELINK_BOARD_ID,workspace_id:ws,
  board_item_id:itemId,document_type:'quotation',document_number:'Q-2026-01',
  workflow_state:'draft',revision:2,content:draft};
 const listed={documentId:docId,boardItemId:itemId,documentType:'quotation',
- documentNumber:'Q-2026-01',workflowState:'draft',revision:2,archived:false};
+ documentNumber:'Q-2026-01',workflowState:'draft',revision:2,archived:false,createdByActor:false};
 function entries(extra={}){
  const raw={documentType:'quotation',documentNumber:'Q-2026-01',
  customerName:'Prospect',customerEmail:'prospect@example.test',
@@ -168,8 +168,8 @@ test('unauthorized actor, wrong workspace and invalid response cannot reveal sav
   rpc:async()=>{rpcCount++;return [listed];}
  };
  const client=new TradeLinkDomainClient({auth,api});
- await assert.rejects(()=>client.list(),/manager scope required/);
- await assert.rejects(()=>client.read(docId),/manager scope required/);
+ await assert.rejects(()=>client.list(),/manager scope required|Create New context is unavailable/);
+ await assert.rejects(()=>client.read(docId),/manager scope required|Create New context is unavailable/);
  assert.equal(rpcCount,0);
  const wrong=new TradeLinkDomainClient({auth,api:{...api,
   allowed:async()=>true,rpc:async()=>{rpcCount++;return {...row,workspace_id:foreign};}}});
