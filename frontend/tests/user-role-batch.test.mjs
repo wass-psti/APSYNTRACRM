@@ -106,3 +106,13 @@ test('batch must verify refreshed assignments before announcing success',()=>{
  assert.match(block,/unverifiedBatchRoleAssignments\(state\.userRoleData,plan\.operations\)/);
  assert.match(block,/verifiedReadback=true/);
 });
+
+test('partial batch reports verified persisted prefix, not raw RPC acknowledgement counts',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const block=app.slice(app.indexOf("case 'user-role-batch-review':"),app.indexOf("case 'user-role-section':"));
+ assert.ok(block.includes('unverifiedBatchRoleAssignments(state.userRoleData,plan.operations.slice(0,completed)).length'));
+ assert.ok(block.includes('const persisted=completed-unverified'));
+ assert.ok(block.includes('write acknowledgement(s) remain unverified'));
+ assert.ok(!block.includes('changes applied. Stopped on failure'));
+ assert.ok(block.includes('verified in authoritative assignment readback'));
+});
