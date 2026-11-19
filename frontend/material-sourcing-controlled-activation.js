@@ -4,7 +4,7 @@
  * server-side storage and a deployed, tested authorization contract.
  */
 import {ApiError} from './session.js';
-import {BoardStructureClient} from './board-structure-admin.js';
+import {BoardStructureClient} from './board/crud/structure-admin.js';
 import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,
  planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
 

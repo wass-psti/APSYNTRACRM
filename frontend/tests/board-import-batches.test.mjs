@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildImportPlan,initialImportMappings} from '../board-import-core.js';
-import {executeBoardImportBatched,IMPORT_BATCH_SIZE,importBatchSize,EXTENDED_IMPORT_CELL_BUDGET,EXTENDED_IMPORT_PAYLOAD_BUDGET,STANDARD_IMPORT_CELL_BUDGET} from '../board-import-batches.js';
-import {parseDelimited} from '../board-import-parse.js';
+import {buildImportPlan,initialImportMappings} from '../board/import/import-core.js';
+import {executeBoardImportBatched,IMPORT_BATCH_SIZE,importBatchSize,EXTENDED_IMPORT_CELL_BUDGET,EXTENDED_IMPORT_PAYLOAD_BUDGET,STANDARD_IMPORT_CELL_BUDGET} from '../board/import/import-batches.js';
+import {parseDelimited} from '../board/import/import-parse.js';
 const boardId='11111111-1111-4111-8111-111111111111';
 const workspace='22222222-2222-4222-8222-222222222222';
 const actor='33333333-3333-4333-8333-333333333333';

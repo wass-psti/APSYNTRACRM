@@ -38,7 +38,7 @@ export function originalImportBaseline(source=readFileSync(appFile,'utf8')){
   throw Error('Expected the scoped Priority 5F lazy feature integration');
  return source.replace("import {syncFuelTrans} from './fueltrans-lazy.js';",
   "import {syncFuelTrans} from './fueltrans-native.js';")+
-  "\nimport {openBoardImportWizard} from './board-import-ui.js';"+
+  "\nimport {openBoardImportWizard} from './board/import/import-ui.js';"+
   "\nimport {runTwelveBoardQa} from './board-operational-qa.js';\n";
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
@@ -50,6 +50,6 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   deferred:{modules:removed.length,bytes:baseline.sourceBytes-optimized.sourceBytes,
    sample:removed.filter(path=>/fueltrans|board-import|operational-qa/.test(path)).slice(0,25)}}));
  if(optimized.modules.includes('frontend/fueltrans-native.js')||
-  optimized.modules.includes('frontend/board-import-ui.js')||
+  optimized.modules.includes('frontend/board/import/import-ui.js')||
   optimized.modules.includes('frontend/board-operational-qa.js'))process.exitCode=1;
 }

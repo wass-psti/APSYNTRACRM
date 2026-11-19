@@ -1,8 +1,8 @@
 /** BIMP-13: bounded, sequential, readback-verified ordinary-board import.
  * Every batch continues to use m143-v1, never per-item mutations.
  */
-import {buildImportPlan,executeBoardImport} from './board-import-core.js';
-import {ApiError} from './session.js';
+import {buildImportPlan,executeBoardImport} from './import-core.js';
+import {ApiError} from '../../session.js';
 
 // Keep ordinary import transactions small enough for the existing signed
 // HTTP request deadline. A 617-row file must not become one long ambiguous write.

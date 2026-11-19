@@ -107,7 +107,7 @@ test('denied, changed workspace, nonempty board and incompatible status options 
 });
 test('source integration uses the existing signed CAS schema mutation, not SQL or fake uploads',()=>{
  const app=readFileSync('frontend/app.js','utf8');
- const structure=readFileSync('frontend/board-structure-admin.js','utf8');
+ const structure=readFileSync('frontend/board/crud/structure-admin.js','utf8');
  const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
  assert.match(app,/case 'tradelink-configure'/);
  assert.match(app,/configureTradeLinkColumns\(\{auth,api:db,structure:boardStructureClient\}\)/);

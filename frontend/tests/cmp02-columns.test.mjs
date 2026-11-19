@@ -5,11 +5,11 @@ import {
  cmp02DefaultConfig,cmp02Validate,cmp02VisibleValue
 } from '../board-typed-cmp02.js';
 import {BOARD_STANDARD_COLUMN_CATALOG,CMP02_STAGED_CATALOG,
- renderColumnCenterCards} from '../board-column-catalog.js';
+ renderColumnCenterCards} from '../board/columns/column-catalog.js';
 import {genericBoardColumns,inputForColumn,parseCellForm,visibleValue
 } from '../board-inline-items.js';
 import {buildImportPlan,initialImportMappings,inferImportType,
- CREATABLE_IMPORT_TYPES} from '../board-import-core.js';
+ CREATABLE_IMPORT_TYPES} from '../board/import/import-core.js';
 
 const b='11111111-1111-4111-8111-111111111111';
 const w='22222222-2222-4222-8222-222222222222';

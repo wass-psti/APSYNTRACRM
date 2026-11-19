@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {initialImportMappings,buildImportPlan,availableImportColumns} from '../board-import-core.js';
-import {importMappingReadiness} from '../board-import-readiness.js';
+import {initialImportMappings,buildImportPlan,availableImportColumns} from '../board/import/import-core.js';
+import {importMappingReadiness} from '../board/import/import-readiness.js';
 import {isProtectedBoard} from '../board-card-lifecycle.js';
 
 // Synthetic data derived from read-only schema metadata on 2026-11-12.
@@ -85,7 +85,7 @@ test('live mismatched Qty. checkbox vs numeric source is an explained, explicit 
  assert.equal(importMappingReadiness(mappings,true).ready,false);
  assert.throws(()=>buildImportPlan({sheet:input,detail,mappings,group,matches,
   allowColumns:true}),/explicitly confirm exclusion/);
- const ui=readFileSync(new URL('../board-import-ui.js',import.meta.url),'utf8');
+ const ui=readFileSync(new URL('../board/import/import-ui.js',import.meta.url),'utf8');
  assert.match(ui,/same-name board column exists/);
  assert.match(ui,/worksheet row/);
  assert.match(ui,/Value omitted for incompatible source/);
@@ -132,5 +132,5 @@ test('CP-BIMP-17C the board import lazy module is versioned without changing the
  const index=readFileSync('index.html','utf8');
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(index,/<script type="module" src="\.\/frontend\/app\.js"><\/script>/);
- assert.match(app,/board-import-ui\.js\?v=cp-board-import-sync-01-20261115/);
+ assert.match(app,/board\/import\/import-ui\.js\?v=cp-board-import-sync-01-20261115/);
 });

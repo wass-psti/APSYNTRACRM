@@ -46,7 +46,7 @@ on:
       - "supabase/migrations/20261115132051_cp_board_import_sync_01_authoritative_counts.sql"
       - "sql/tests/cp-board-import-sync-01-disposable-setup.sql"
       - "sql/tests/cp-board-import-sync-01-disposable-acceptance.sql"
-      - "frontend/board-import-summary.js"
+      - "frontend/board/import/import-summary.js"
       - "frontend/tests/board-import-summary.test.mjs"
       - "frontend/tests/board-pagination-counts.test.mjs"
       - "docs/CP-BOARD-IMPORT-SYNC-01-AUTHORITATIVE-COUNTS-AND-IMPORT-RECONCILIATION.md"

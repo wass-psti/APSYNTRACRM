@@ -1,12 +1,12 @@
 /** CP-BOARD-CONFIG01 — server-authoritative board structure and view preparation.
  * The production feature remains disabled pending independent SQL activation review.
  */
-import {ApiError} from './session.js';
-import {validUuid} from './data.js';
-import {moduleByBoardName} from './board-manifest.js';
-import {isProtectedBoard} from './board-card-lifecycle.js';
-import {boardGridColumns} from './board-grid.js';
-import {SUPPORTED_COLUMN_TYPE_IDS,renderColumnTypeOptions,renderColumnCenterCards} from './board-column-catalog.js';
+import {ApiError} from '../../session.js';
+import {validUuid} from '../../data.js';
+import {moduleByBoardName} from '../../board-manifest.js';
+import {isProtectedBoard} from '../../board-card-lifecycle.js';
+import {boardGridColumns} from '../../board-grid.js';
+import {SUPPORTED_COLUMN_TYPE_IDS,renderColumnTypeOptions,renderColumnCenterCards} from '../columns/column-catalog.js';
 
 export const BOARD_STRUCTURE_ADMIN_ENABLED=true;
 export const BOARD_STRUCTURE_TYPES=SUPPORTED_COLUMN_TYPE_IDS;

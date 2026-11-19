@@ -6,7 +6,7 @@ import {
  BOARD_STRUCTURE_ADMIN_ENABLED,BoardStructureClient,describeBoardColumns,
  normalizeBoardUi,applyBoardViewSettings,displayColumnLabel,
  renderBoardStructureAdmin
-} from '../board-structure-admin.js';
+} from '../board/crud/structure-admin.js';
 
 const board='33333333-3333-4333-8333-333333333333';
 const domain='11111111-1111-4111-8111-111111111111';

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {BoardStructureClient,normalizeBoardUi,parseChoiceConfig,columnOptionLines} from '../board-structure-admin.js';
+import {BoardStructureClient,normalizeBoardUi,parseChoiceConfig,columnOptionLines} from '../board/crud/structure-admin.js';
 import {genericBoardColumns} from '../board-inline-items.js';
 import {boardTable} from '../board-presentation.js';
 import {

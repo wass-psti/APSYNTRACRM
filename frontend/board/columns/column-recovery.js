@@ -3,9 +3,9 @@
  * Backend signed actor, board-manager rights, RLS and expiry remain authoritative.
  * Activity is an audit feed; private recovery RPCs own restoration.
  */
-import {ApiError} from './session.js';
-import {validUuid} from './data.js';
-import {columnStoredValueCount} from './board-inline-context.js';
+import {ApiError} from '../../session.js';
+import {validUuid} from '../../data.js';
+import {columnStoredValueCount} from '../../board-inline-context.js';
 
 // Phase B5: previous time-limited QA recovery window is complete.
 // Preserve the historical acceptance guard; no production UI recovery is enabled.

@@ -2,9 +2,9 @@
  * The user must reselect the identical source and review the remaining mapping.
  * This does not retry unknown/uncertain writes or change backend authorization.
  */
-import {buildImportPlan} from './board-import-core.js';
-import {boardImportFingerprint} from './board-import-batches.js';
-import {ApiError} from './session.js';
+import {buildImportPlan} from './import-core.js';
+import {boardImportFingerprint} from './import-batches.js';
+import {ApiError} from '../../session.js';
 
 const VERSION=1;
 const prefix='apsyntra:bimp15-recovery:';

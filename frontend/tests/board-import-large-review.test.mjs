@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {parseDelimited,splitWorksheetSections} from '../board-import-parse.js';
-import {buildImportPlan,reviewImportSourceRows} from '../board-import-core.js';
-import {importBatchSize,STANDARD_IMPORT_CELL_BUDGET} from '../board-import-batches.js';
+import {parseDelimited,splitWorksheetSections} from '../board/import/import-parse.js';
+import {buildImportPlan,reviewImportSourceRows} from '../board/import/import-core.js';
+import {importBatchSize,STANDARD_IMPORT_CELL_BUDGET} from '../board/import/import-batches.js';
 const board='11111111-1111-4111-8111-111111111111';
 const ws='22222222-2222-4222-8222-222222222222';
 const group='33333333-3333-4333-8333-333333333333';
@@ -99,8 +99,8 @@ test('wide ordinary imports budget by heaviest mapped row and UTF-8 transport pa
  assert.equal(importBatchSize(narrow,{extendedReferences:false}),200);
 });
 test('UI requires explicit rejection acknowledgement and preserves durable source reconciliation',()=>{
- const ui=readFileSync('frontend/board-import-ui.js','utf8');
- const durable=readFileSync('frontend/board-import-durable.js','utf8');
+ const ui=readFileSync('frontend/board/import/import-ui.js','utf8');
+ const durable=readFileSync('frontend/board/import/import-durable.js','utf8');
  assert.match(ui,/data-imp="rejections-confirm"/);
  assert.match(ui,/data-imp="rejections-download"/);
  assert.match(ui,/state\.rejectedAckKey!==rejectionKey\(report\)/);
@@ -117,5 +117,5 @@ test('a worksheet containing only invalid rows remains an explicit zero-write re
  assert.equal(report.acceptedRows,0);
  assert.equal(report.rejected.length,1);
  assert.equal(report.sheet.rows.length,0);
- assert.match(readFileSync('frontend/board-import-ui.js','utf8'),/if\(rowReview\(\)\.acceptedRows\)\s*computePlan/);
+ assert.match(readFileSync('frontend/board/import/import-ui.js','utf8'),/if\(rowReview\(\)\.acceptedRows\)\s*computePlan/);
 });

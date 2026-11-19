@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {BOARD_COL01_DIRECTORY_ENABLED,BOARD_COL01_AUDIT_CURSOR_ENABLED,
  BOARD_COL01_AUDIT_MAX_PAGES,loadBoardInvitableDirectory,renderBoardInvitableDirectory,
- loadBoardAuditCursorPage,renderBoardAuditCursorPage} from '../board-col01-readers.js';
+ loadBoardAuditCursorPage,renderBoardAuditCursorPage} from '../board/columns/col01-readers.js';
 
 const board='33333333-3333-4333-8333-333333333333';
 const person='11111111-1111-4111-8111-111111111111';

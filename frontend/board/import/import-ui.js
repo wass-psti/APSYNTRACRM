@@ -1,18 +1,18 @@
 /** BIMP-03: reusable, signed board-import wizard for ordinary APSYNTRA boards. */
-import {ApiError} from './session.js';
-import {canManuallyEditBoard} from './board-inline-items.js';
-import {parseImportFile} from './board-import-parse.js';
-import {normalizeImportFailure} from './board-import-errors.js';
-import {choiceCreationPreview,provisionImportChoiceColumn} from './board-import-choice-setup.js';
-import {detectMondayCheckboxMarkers} from './monday-import-compat.js';
+import {ApiError} from '../../session.js';
+import {canManuallyEditBoard} from '../../board-inline-items.js';
+import {parseImportFile} from './import-parse.js';
+import {normalizeImportFailure} from './import-errors.js';
+import {choiceCreationPreview,provisionImportChoiceColumn} from './import-choice-setup.js';
+import {detectMondayCheckboxMarkers} from '../../monday-import-compat.js';
 import {importMappingReadiness,skipPendingImportChoice,
- matchConfiguredImportChoice,reassignImportItemMapping} from './board-import-readiness.js';
+ matchConfiguredImportChoice,reassignImportItemMapping} from './import-readiness.js';
 import {availableImportColumns,initialImportMappings,CREATABLE_IMPORT_TYPES,
- buildImportPlan,reviewImportSourceRows} from './board-import-core.js';
-import {executeBoardImportBatched,IMPORT_BATCH_SIZE,importBatchSize} from './board-import-batches.js';
+ buildImportPlan,reviewImportSourceRows} from './import-core.js';
+import {executeBoardImportBatched,IMPORT_BATCH_SIZE,importBatchSize} from './import-batches.js';
 import {readImportRecovery,clearImportRecovery,sealImportRecovery,
- importDigest,verifyImportRecovery} from './board-import-durable.js';
-import {reconcileImportSummary} from './board-import-summary.js';
+ importDigest,verifyImportRecovery} from './import-durable.js';
+import {reconcileImportSummary} from './import-summary.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const choice=(id,label,selected)=>'<option value="'+esc(id)+'"'+(selected?' selected':'')+'>'+esc(label)+'</option>';

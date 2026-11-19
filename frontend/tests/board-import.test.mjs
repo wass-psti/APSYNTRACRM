@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {parseDelimited,parseImportFile} from '../board-import-parse.js';
+import {parseDelimited,parseImportFile} from '../board/import/import-parse.js';
 import {inferImportType,initialImportMappings,buildImportPlan,
- executeBoardImport,availableImportColumns} from '../board-import-core.js';
-import {importMappingReadiness,reassignImportItemMapping} from '../board-import-readiness.js';
+ executeBoardImport,availableImportColumns} from '../board/import/import-core.js';
+import {importMappingReadiness,reassignImportItemMapping} from '../board/import/import-readiness.js';
 const boardId='11111111-1111-4111-8111-111111111111';
 const ws='22222222-2222-4222-8222-222222222222';
 const actor='33333333-3333-4333-8333-333333333333';
@@ -65,8 +65,8 @@ test('number and date conversion accepts common export formats without guessing 
   /unambiguous day\/month or month\/day date/);
 });
 test('board import core and parser pin the shared date normalizer to a versioned module URL',()=>{
- const coreSource=readFileSync(new URL('../board-import-core.js',import.meta.url),'utf8');
- const parserSource=readFileSync(new URL('../board-import-parse.js',import.meta.url),'utf8');
+ const coreSource=readFileSync(new URL('../board/import/import-core.js',import.meta.url),'utf8');
+ const parserSource=readFileSync(new URL('../board/import/import-parse.js',import.meta.url),'utf8');
  assert.ok(coreSource.includes('excel-date-normalization.js?v=cp-bimp-06-utc-20261111'));
  assert.ok(parserSource.includes('excel-date-normalization.js?v=cp-bimp-06-utc-20261111'));
 });
@@ -490,7 +490,7 @@ test('signed workspace, permissions and stale revisions fail without any write',
 });
 test('UI and entrypoint are wired without bypassing the domain restriction',()=>{
  const app=readFileSync('frontend/app.js','utf8');
- const ui=readFileSync('frontend/board-import-ui.js','utf8');
+ const ui=readFileSync('frontend/board/import/import-ui.js','utf8');
  const data=readFileSync('frontend/data.js','utf8');
  const html=readFileSync('index.html','utf8');
  assert.match(app,/data-action="board-import"/);
@@ -515,7 +515,7 @@ test('UI and entrypoint are wired without bypassing the domain restriction',()=>
 });
 
 test('legacy col_ and hidden physical columns remain available import targets',()=>{
- const ui=readFileSync(new URL('../board-import-ui.js',import.meta.url),'utf8');
+ const ui=readFileSync(new URL('../board/import/import-ui.js',import.meta.url),'utf8');
  assert.match(ui,/c\.visible===false\?' · hidden'/);
  const legacyId='66666666-6666-4666-8666-666666666666';
  const hiddenId='77777777-7777-4777-8777-777777777777';
@@ -596,7 +596,7 @@ test('CP-BIMP-12 reported UTC date and plain-text columns retain their intended 
 
 
 test('CP-BIMP-12 empty workbook is a no-op notice, not a failed mutation',()=>{
- const ui=readFileSync(new URL('../board-import-ui.js',import.meta.url),'utf8');
+ const ui=readFileSync(new URL('../board/import/import-ui.js',import.meta.url),'utf8');
  assert.match(ui,/workbook contains no importable item rows/);
  assert.match(ui,/No records or columns were changed/);
  assert.match(ui,/state.notice=.*no importable item rows/i);

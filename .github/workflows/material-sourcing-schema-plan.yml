@@ -4,7 +4,7 @@ on:
     paths:
       - 'frontend/material-sourcing-schema-plan.js'
       - 'frontend/tests/material-sourcing-schema-plan.test.mjs'
-      - 'frontend/board-structure-admin.js'
+      - 'frontend/board/crud/structure-admin.js'
       - 'frontend/board-grid.js'
       - 'frontend/board-manifest.js'
       - '.github/workflows/material-sourcing-schema-plan.yml'
@@ -13,7 +13,7 @@ on:
     paths:
       - 'frontend/material-sourcing-schema-plan.js'
       - 'frontend/tests/material-sourcing-schema-plan.test.mjs'
-      - 'frontend/board-structure-admin.js'
+      - 'frontend/board/crud/structure-admin.js'
       - 'frontend/board-grid.js'
       - 'frontend/board-manifest.js'
       - '.github/workflows/material-sourcing-schema-plan.yml'

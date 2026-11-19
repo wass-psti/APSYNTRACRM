@@ -12,8 +12,8 @@ test('Priority 5F reduces the exact anonymous startup ES module graph without re
   'frontend/board-grid.js','frontend/action-menu-experience.js','frontend/fueltrans-lazy.js'])
   assert.ok(optimized.modules.includes(path),'required startup dependency: '+path);
  for(const path of ['frontend/fueltrans-native.js','frontend/fueltrans/app.js',
-  'frontend/fueltrans/supabase-client.js','frontend/board-import-ui.js',
-  'frontend/board-import-parse.js','frontend/board-operational-qa.js']){
+  'frontend/fueltrans/supabase-client.js','frontend/board/import/import-ui.js',
+  'frontend/board/import/import-parse.js','frontend/board-operational-qa.js']){
   assert.ok(baseline.modules.includes(path),'original baseline included '+path);
   assert.ok(!optimized.modules.includes(path),'feature module must not run before requested: '+path);
  }

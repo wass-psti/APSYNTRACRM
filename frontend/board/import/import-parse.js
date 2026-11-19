@@ -1,5 +1,5 @@
-import {normalizeExcelCellDate,normalizeTextDate,excelDateFormat} from './excel-date-normalization.js?v=cp-bimp-06-utc-20261111';
-import {MAX_IMPORT_CELL_CHARACTERS} from './board-import-limits.js';
+import {normalizeExcelCellDate,normalizeTextDate,excelDateFormat} from '../../excel-date-normalization.js?v=cp-bimp-06-utc-20261111';
+import {MAX_IMPORT_CELL_CHARACTERS} from './import-limits.js';
 /** BIMP-01: bounded, dependency-free CSV/XLSX data reader. No workbook formula evaluation. */
 // Source workbook width is independent of the 30 physical-column ceiling
 // enforced when a destination board creates columns. Allow wide exports to
