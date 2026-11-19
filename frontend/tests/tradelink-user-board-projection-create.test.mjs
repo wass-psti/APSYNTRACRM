@@ -45,6 +45,10 @@ test("TradeLink User Board projection is created inside the existing signed doma
   );
   assert.match(
     migration,
+    /old_call := \$old\$item_id:=public\.wm_add_board_item/,
+  );
+  assert.match(
+    migration,
     /IF private\.tl03_can_manage\(p_board_id\) IS TRUE THEN/,
   );
   assert.match(
