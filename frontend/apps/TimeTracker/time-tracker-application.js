@@ -174,8 +174,7 @@ export function renderTimeTrackerEmployees({directory=null,access={},search='',l
      '>No employees match this search.</p></div>'+
    '<p class="tt-employees-footnote">Count includes active members with an assigned TimeTracker role. '+
     'Supabase accounts without TimeTracker access are not counted. '+
-    'Department changes use the audited server API, never a local personnel registry.</p>'+
-:
+    'Department changes use the audited server API, never a local personnel registry.</p>':
    '<p class="tt-employees-unavailable" role="status">'+
     (loading?'Loading current registered employees…':
      'The signed TimeTracker employee directory is unavailable.')+'</p>')+
