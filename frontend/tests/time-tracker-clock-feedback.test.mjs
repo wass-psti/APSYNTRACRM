@@ -58,13 +58,14 @@ test('confirmed Clock In and Clock Out use prominent green in-context accessible
  const inHtml=renderTimeTrackerNative({result,view:'clock',geoPermission:'granted',
   success:'Clock In successfully recorded and confirmed by the server.'});
  assert.match(inHtml,/tt-clock-confirmed/);
- assert.match(inHtml,/Clock In successful/);
+ assert.match(inHtml,/Successfully clocked in/);
+ assert.doesNotMatch(inHtml,/<strong>Clock In successful<\/strong>/);
  assert.match(inHtml,/role="status" aria-live="polite"/);
  assert.match(inHtml,/Location access enabled/);
  assert.match(inHtml,/new GPS fix is captured/);
  const outHtml=renderTimeTrackerNative({result,view:'clock',
   success:'Clock Out successfully recorded and confirmed by the server.'});
- assert.match(outHtml,/Clock Out successful/);
+ assert.match(outHtml,/Successfully clocked out/);
  assert.doesNotMatch(inHtml,/tt-feedback tt-feedback-success/);
 });
 
