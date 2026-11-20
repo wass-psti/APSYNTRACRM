@@ -71,7 +71,8 @@ export class TeamsController {
    if(seq!==this.seq)return;
    this.snapshot=null;this.error='Unable to verify Teams access. '+String(error?.message||'Please retry.');
   }finally{
-   if(seq===this.seq){this.loading=false;this.render();}
+   if(seq===this.seq){this.loading=false;this.render();
+     this.host?.querySelector('#teams-search')?.focus({preventScroll:true});}
   }
  }
  render(){
@@ -125,9 +126,26 @@ export class TeamsController {
  }
  closeDialog(){this.modal=null;this.pending=null;this.render();}
  onKey(event){
-  if(event.key!=='Escape'||!this.host)return;
-  event.preventDefault();event.stopImmediatePropagation();
-  if(this.modal)this.closeDialog();else this.onClose?.();
+  if(!this.host)return;
+  if(event.key==='Escape'){
+   event.preventDefault();event.stopImmediatePropagation();
+   if(this.modal)this.closeDialog();else this.onClose?.();
+   return;
+  }
+  if(event.key!=='Tab')return;
+  const panel=this.modal?this.host.querySelector('.teams-subdialog'):
+   this.host.querySelector('.teams-dialog');
+  if(!panel)return;
+  const eligible=[...panel.querySelectorAll(
+   'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),summary,[tabindex]:not([tabindex="-1"])'
+  )].filter(el=>el.getClientRects().length>0&&!el.closest('[hidden]'));
+  if(!eligible.length){event.preventDefault();panel.focus();return;}
+  const first=eligible[0],last=eligible[eligible.length-1];
+  if(event.shiftKey&&(document.activeElement===first||!panel.contains(document.activeElement))){
+   event.preventDefault();last.focus();
+  }else if(!event.shiftKey&&(document.activeElement===last||!panel.contains(document.activeElement))){
+   event.preventDefault();first.focus();
+  }
  }
  onOutside(event){
   if(!this.host)return;
@@ -151,7 +169,7 @@ export class TeamsController {
  onChange(event){
   if(!this.host?.contains(event.target))return;
   if(event.target.id==='teams-filter-select'){
-   event.stopImmediatePropagation();this.teamFilter=event.target.value==='has-admins'?'has-admins':'all';this.filterOpen=false;
+   event.stopImmediatePropagation();this.teamFilter=['has-admins','without-admins'].includes(event.target.value)?event.target.value:'all';this.filterOpen=false;
    this.render();
   }else if(event.target.id==='teams-admins-only'){
    event.stopImmediatePropagation();this.systemAdminsOnly=event.target.checked===true;this.render();
@@ -159,6 +177,22 @@ export class TeamsController {
  }
  async onClick(event){
   if(!this.host?.contains(event.target))return;
+  const summary=event.target.closest('.teams-menu > summary');
+  if(summary){
+   const details=summary.parentElement;
+   // Table menus float over the scroll viewport without clipping the rows.
+   requestAnimationFrame(()=>{
+    if(!details.open||!this.host?.contains(details))return;
+    const panel=details.querySelector('.teams-popover'),rect=summary.getBoundingClientRect();
+    if(!panel)return;
+    panel.style.position='fixed';
+    const width=panel.offsetWidth||235;
+    panel.style.left=Math.max(8,Math.min(rect.right-width,window.innerWidth-width-8))+'px';
+    panel.style.top=(rect.bottom+Math.min(panel.scrollHeight||0,400)>window.innerHeight-8?
+      Math.max(8,rect.top-Math.min(panel.scrollHeight||0,400)):rect.bottom)+'px';
+   });
+   return;
+  }
   if(event.target.matches('[data-teams-backdrop]')){
    event.preventDefault();event.stopImmediatePropagation();this.onClose?.();return;
   }
