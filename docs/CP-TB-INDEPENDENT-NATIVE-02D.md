@@ -21,8 +21,8 @@ The user specifically requested approved transactional Native V2 production acti
 
 Only these version-controlled SQL migrations may be applied through the existing Supabase managed migration tool, in order:
 
-1. supabase/migrations/20261120200000_cp_tb_native_02d_thread_media_activation.sql
-2. supabase/migrations/20261120200100_cp_tb_native_02d_server_timer_activation.sql
+1. supabase/migrations/20261120101751_cp_tb_native_02d_thread_media_activation.sql
+2. supabase/migrations/20261120101929_cp_tb_native_02d_server_timer_activation.sql
 
 Migration source is pinned to the reviewed candidate; no project creation, access widening, data backfill or direct monday.com synchronization. The frontend already dynamically gates V2 controls based on the signed backend capability receipt.
 
@@ -41,3 +41,13 @@ Feature-parity acceptance requires two independently authenticated real CRM sess
 - Transactional migration rehearsal and rollback: VERIFIED in isolated PostgreSQL.
 - Production activation: mark only after the live tool reports success and independent readback matches.
 - Genuine two-account browser acceptance and final native functional parity: PENDING until evidence is obtained.
+
+## Verified production activation and migration-history alignment
+
+The user-approved production migrations succeeded on November 20, 2026 through Supabase managed migration actions. Actual recorded production versions: 20261120101751 (cp_tb_native_02d_thread_media_activation) and 20261120101929 (cp_tb_native_02d_server_timer_activation). The SQL bodies remain identical; repository filenames have been aligned to these authoritative versions to prevent duplicate replay.
+
+Production readback confirms all six Native V2/timer RPCs and three additive columns, functions owned by postgres, SECURITY DEFINER with empty search_path, authenticated EXECUTE allowed and anon EXECUTE denied. All four original issues, three updates, one subitem, zero attachment records and 28 audit events remain. A private on-Mac preactivation snapshot was independently compared against fresh production rows; every pre-existing stored JSONB field matches, with only the new reply_to_update_id=null field on original update rows. No production test issue was created.
+
+PostgreSQL 17 activation and non-destructive rollback rehearsal: 14/14 PASS. Production backend activation: VERIFIED. Genuine two-account independently signed browser functional acceptance remains BLOCKED: both desktop browsers currently disallow JavaScript automation and no second independently signed user session was established. Final native functional parity is therefore PENDING.
+
+Next milestone: CP-TB-INDEPENDENT-NATIVE-02E — Genuine Two-Account Signed Native TalkBox Workflow Acceptance, Attachment Lifecycle, Timer Continuity, and Final Production Functional Closeout.
