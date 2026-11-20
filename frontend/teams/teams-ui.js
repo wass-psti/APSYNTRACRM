@@ -84,7 +84,7 @@ export function renderTeamsConsole({snapshot=null,loading=false,error='',selecte
    visibleTeams.map(team=>'<button type="button" data-action="teams-select" data-team-id="'+esc(team.id)+'" class="teams-nav-row'+(selected?.id===team.id?' selected':'')+'" aria-current="'+(selected?.id===team.id?'true':'false')+'">'+avatar(team.name,team.id,'nav',team.avatarUrl||null)+
     '<span class="teams-side-name">'+esc(team.name)+(team.isSystem?' '+icon('shield','teams-system-team-icon'):'')+'</span><span class="teams-side-count">'+team.memberCount+'</span></button>').join(''))+'</nav></aside>';
  const avatarBig=avatar(title,selected?.id||'all','large',selected?.avatarUrl||null);
- const media=selected?.coverUrl?'<div class="teams-cover teams-cover-image" style="background-image:url(&quot;'+esc(selected.coverUrl)+'&quot;)"></div>':'<div class="teams-cover"></div>';
+ const media=selected?.coverUrl?'<div class="teams-cover teams-cover-image"><img src="'+esc(selected.coverUrl)+'" alt="" loading="lazy"></div>':'<div class="teams-cover"></div>';
  const headerDetail=media+(selected&&canManage?'<button class="teams-change-cover" data-action="teams-change-cover">'+icon('camera')+' Change cover</button>':'')+'<div class="teams-detail-head">'+
   '<div class="teams-head-avatar">'+avatarBig+(canManage?'<button data-action="teams-change-avatar" aria-label="Change team avatar" title="Change avatar">'+icon('camera')+'</button>':'')+'</div>'+
   '<div class="teams-heading"><h2>'+esc(title)+'</h2><small>'+memberCount+' '+plural(memberCount,'member')+'</small></div>'+
