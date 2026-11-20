@@ -2487,6 +2487,8 @@ async function loadUserRoleManagement(){
  const ctx=await db.context();
  if(ctx.user_id!==state.context?.user_id||ctx.workspace_id!==state.context?.workspace_id)throw new ApiError('Authoritative workspace changed.',403);
  state.userRoleData=await userRoleManager.snapshot(ctx.workspace_id,{includeFuelTrans:true,includeFundTracker:true,includeScopedSix:true,includeCharter:true});
+ if(state.systemAdminData?.workspaceId!==ctx.workspace_id||state.systemAdminData?.actorId!==ctx.user_id)
+  state.systemAdminData=null;
  const batchIdentity=ctx.workspace_id+':'+ctx.user_id;
  if(state.userRoleBatchIdentity!==batchIdentity){
   state.userRoleBatchSelected=[];
