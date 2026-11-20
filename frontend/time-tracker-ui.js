@@ -271,9 +271,8 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
        (employeeDepartment?'':'<small>Ask your TimeTracker administrator to assign your department before clocking in.</small>')+
       '</div>')+
      '<label for="tt-note" class="tt-note-field" id="tt-note-wrap"'+
-      (((active&&active.location==='Offsite (Home)')||(!active&&offsite))?'':' hidden')+
-      ((!active&&offsite)?' required':'')+'>'+
-      'Offsite Work Note<textarea id="tt-note" maxlength="500" rows="3" placeholder="Describe your offsite work"></textarea></label>'+
+      (((active&&active.location==='Offsite (Home)')||(!active&&offsite))?'':' hidden')+'>'+
+      'Offsite Work Note<textarea id="tt-note"'+((!active&&offsite)?' required':'')+' maxlength="500" rows="3" placeholder="Describe your offsite work"></textarea></label>'+
      (clockPending?
       '<p class="tt-clock-hint" role="status">'+(clockPendingAction==='clock-in'?'Clock-in':'Clock-out')+
       ' status needs verification. A second attendance write is blocked until a fresh signed read confirms the result.</p>'+
