@@ -98,9 +98,9 @@
 .aps-invite-footnote{display:none!important}
 .aps-invite-help{font-size:12px!important;color:#5B6178!important}
 .aps-invite-status{font-size:12px!important}
-.aps-invite-footer:before{content:"Viewer can see every item but cannot change anything.\A Editor can add and edit items, columns and groups.";
- white-space:pre-line;display:block;background:#F7F8FC;border-radius:10px;padding:12px 14px;
- color:#4A5068;font-size:13px;line-height:1.55;margin-bottom:9px}
+.aps-invite-legend{display:grid;gap:5px;background:#F7F8FC;border-radius:10px;padding:12px 14px;color:#4A5068;font-size:13px;line-height:1.5;margin-bottom:9px}
+.aps-invite-legend p{margin:0}
+.aps-invite-legend strong{color:#1B1F3B}
 @media(max-width:680px){
  .aps-invite-overlay{padding:8px!important}
  .aps-invite-dialog{padding:19px!important;max-height:95dvh!important}
