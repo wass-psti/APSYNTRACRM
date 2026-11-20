@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Cache-Control" content="no-store">
+<title>APSYNTRA · Isolated Staging Invitation Acceptance</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color-scheme:light dark}
+body{max-width:820px;margin:2rem auto;padding:0 1rem;line-height:1.55}
+main{display:grid;gap:1rem}section{border:1px solid #8886;border-radius:10px;padding:1rem}
+label{display:block;margin:.7rem 0 .25rem}input{box-sizing:border-box;width:100%;padding:.6rem;font:inherit}
+button{padding:.6rem .85rem;margin:.6rem .4rem .2rem 0;font:inherit;cursor:pointer}
+output{display:block;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:.7rem}
+small{display:block;color:inherit;opacity:.8}h1{font-size:1.5rem}h2{font-size:1.1rem}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>APSYNTRA · Staging-only invitation acceptance</h1>
+<p>This tool uses <strong>only</strong> the isolated staging Supabase project. It is not the production CRM sign-in. Credentials and signed tokens remain in this browser tab's memory only; close the tab to clear them. Use a private window on a trusted computer.</p>
+</header>
+<section>
+<h2>1. Sign in as inviter</h2>
+<label for="inviter-email">Verified inviter</label><input id="inviter-email" type="email" autocomplete="username" readonly value="lmsenagan@watchdogautomation.com.ph">
+<label for="inviter-password">Staging account password</label><input id="inviter-password" type="password" autocomplete="off">
+<button type="button" data-login="inviter">Sign in inviter</button>
+<button type="button" data-otp="inviter">Email sign-in code</button>
+<label for="inviter-code">Email OTP code (if your email template provides one)</label><input id="inviter-code" type="text" inputmode="numeric" autocomplete="one-time-code">
+<button type="button" data-verify="inviter">Verify inviter code</button>
+<output id="inviter-status" role="status">Not signed in</output>
+</section>
+<section>
+<h2>2. Sign in as recipient</h2>
+<label for="recipient-email">Verified recipient</label><input id="recipient-email" type="email" autocomplete="username" readonly value="jspagsuguiron@watchdogautomation.com.ph">
+<label for="recipient-password">Staging account password</label><input id="recipient-password" type="password" autocomplete="off">
+<button type="button" data-login="recipient">Sign in recipient</button>
+<button type="button" data-otp="recipient">Email sign-in code</button>
+<label for="recipient-code">Email OTP code (if your email template provides one)</label><input id="recipient-code" type="text" inputmode="numeric" autocomplete="one-time-code">
+<button type="button" data-verify="recipient">Verify recipient code</button>
+<output id="recipient-status" role="status">Not signed in</output>
+</section>
+<section>
+<h2>3. Signed pairing and invitation</h2>
+<button type="button" id="pair">Verify both genuine signed users</button>
+<label for="workspace">Inviter's isolated staging workspace ID (available after onboarding)</label>
+<input id="workspace" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
+<button type="button" id="send">Send one staging invitation</button>
+<button type="button" id="list">Read invitation delivery states</button>
+<label for="invitation-token">One-time token from the recipient's invitation email</label>
+<input id="invitation-token" type="password" autocomplete="off">
+<button type="button" id="accept">Accept as recipient</button>
+<output id="result" role="status">Two genuine sign-ins are required before staging onboarding. Email delivery and workspace permissions are not altered by signing in.</output>
+<small>Never paste passwords, verification codes, access tokens, or invitation tokens into chat. No production endpoint is used. Email submission does not prove inbox receipt.</small>
+</section>
+</main>
+<script type="module">
+const BASE='https://jeqwjlxubntsddeauvqa.supabase.co';
+const KEY='sb_publishable_i7UQfD8eqxNadP8mhmxy3g_w4gbyWco';
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const INVITE_TOKEN=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[0-9a-f]{64}$/;
+const slots={inviter:null,recipient:null};
+const $=id=>document.getElementById(id);
+const status=(id,message)=>{$(id).textContent=message};
+async function api(path,body,token){
+ const r=await fetch(BASE+path,{method:'POST',headers:{apikey:KEY,'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{})},body:JSON.stringify(body),cache:'no-store',referrerPolicy:'no-referrer'});
+ const payload=await r.json().catch(()=>({}));
+ if(!r.ok)throw Error('Request denied ('+r.status+')'+(typeof payload?.error_description==='string'?': '+payload.error_description:''));
+ return payload;
+}
+async function identity(which){
+ const jwt=slots[which]?.access_token;
+ if(!jwt)throw Error('Sign in '+which+' first');
+ const r=await fetch(BASE+'/auth/v1/user',{headers:{apikey:KEY,authorization:'Bearer '+jwt},cache:'no-store'});
+ if(!r.ok)throw Error('Signed '+which+' session rejected ('+r.status+')');
+ const user=await r.json();
+ if(!UUID.test(user.id)||!user.email_confirmed_at||user.is_anonymous===true||
+  user.email?.toLowerCase()!==$(which+'-email').value)throw Error('Verified staging identity mismatch');
+ return {id:user.id,email:user.email.toLowerCase()};
+}
+async function pair(){
+ const [a,b]=await Promise.all([identity('inviter'),identity('recipient')]);
+ if(a.id===b.id)throw Error('Two independent users required');
+ status('result','Verified two independent signed staging accounts. Workspace onboarding is now eligible for server-side inspection.');
+ return {a,b};
+}
+function showError(where,e){status(where,'Action not completed: '+(e instanceof Error?e.message:'Unexpected error'))}
+async function save(which,result){
+ if(typeof result?.access_token!=='string'||result.access_token.length<50)throw Error('No authenticated session returned');
+ slots[which]={access_token:result.access_token}; // memory only; never persist or print
+ await identity(which);
+ status(which+'-status','Authenticated with confirmed staging GoTrue session');
+}
+document.querySelectorAll('[data-login]').forEach(b=>b.addEventListener('click',async()=>{
+ const which=b.dataset.login,field=$(which+'-password'),password=field.value;
+ field.value='';if(!password){status(which+'-status','Enter the staging account password');return}
+ try{await save(which,await api('/auth/v1/token?grant_type=password',{email:$(which+'-email').value,password}))}
+ catch(e){slots[which]=null;showError(which+'-status',e)}
+}));
+document.querySelectorAll('[data-otp]').forEach(b=>b.addEventListener('click',async()=>{
+ const which=b.dataset.otp;
+ try{await api('/auth/v1/otp',{email:$(which+'-email').value,create_user:false});status(which+'-status','Sign-in email requested. Use a code only if your email template includes one. Never forward the link into production.')}
+ catch(e){showError(which+'-status',e)}
+}));
+document.querySelectorAll('[data-verify]').forEach(b=>b.addEventListener('click',async()=>{
+ const which=b.dataset.verify,field=$(which+'-code'),token=field.value.trim();field.value='';
+ if(!/^\d{6,8}$/.test(token)){status(which+'-status','Enter the one-time email code');return}
+ try{await save(which,await api('/auth/v1/verify',{email:$(which+'-email').value,token,type:'email'}))}
+ catch(e){slots[which]=null;showError(which+'-status',e)}
+}));
+$('pair').addEventListener('click',async()=>{try{await pair()}catch(e){showError('result',e)}});
+function workspace(){const id=$('workspace').value.trim();if(!UUID.test(id))throw Error('Valid isolated staging workspace ID required');return id}
+async function edge(route,body,which){
+ const token=slots[which]?.access_token;if(!token)throw Error('Sign in '+which+' first');
+ return api('/functions/v1/ws02d-'+route,body,token);
+}
+$('send').addEventListener('click',async()=>{
+ try{await pair();const result=await edge('invite',{workspaceId:workspace(),requestId:crypto.randomUUID(),email:$('recipient-email').value,role:'member',message:''},'inviter');
+  status('result','Invitation provider response: '+String(result.state||'unknown')+'. Check recipient inbox and server delivery ledger. Do not retry uncertain sends.')}
+ catch(e){showError('result',e)}
+});
+$('list').addEventListener('click',async()=>{
+ try{await identity('inviter');const result=await edge('manage',{operation:'list',workspaceId:workspace()},'inviter');
+  const states=Array.isArray(result.invitations)?result.invitations.map(x=>x.state).join(', '):'unavailable';
+  status('result','Manager states: '+states)}
+ catch(e){showError('result',e)}
+});
+$('accept').addEventListener('click',async()=>{
+ const input=$('invitation-token'),token=input.value.trim();input.value='';
+ try{await pair();if(!INVITE_TOKEN.test(token))throw Error('Valid one-time inbox invitation token required');
+  const result=await edge('accept',{token},'recipient');
+  status('result',result.state==='accepted'?'Signed recipient acceptance confirmed; check membership via server readback':'Unexpected acceptance state')}
+ catch(e){showError('result',e)}
+});
+</script>
+</body>
+</html>
