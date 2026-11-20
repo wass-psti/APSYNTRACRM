@@ -4,6 +4,13 @@ on:
     paths:
       - 'access-preview/**'
       - 'scripts/access-v2-browser-acceptance.mjs'
+      - 'frontend/access-v2/**'
+      - 'frontend/tests/access-model-v2.test.mjs'
+      - 'frontend/board/collaboration/invite.js'
+      - 'frontend/tests/board-invite-header.test.mjs'
+      - 'frontend/role-configuration-ui.js'
+      - 'sql/ACCESS_MODEL_V2_REVIEW_ONLY.sql'
+      - 'supabase/functions/access-v2/**'
       - '.github/workflows/access-v2-preview.yml'
   workflow_dispatch:
 jobs:
@@ -19,6 +26,13 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - name: Signed role and old Invite regression tests
+        run: |
+          node --check frontend/app.js
+          node --check frontend/access-v2/workspace-ui.js
+          node --check frontend/access-v2/app-roles-ui.js
+          node --check frontend/access-v2/app-roles-controller.js
+          node --test frontend/tests/access-model-v2.test.mjs frontend/tests/board-invite-header.test.mjs
       - run: npm install --no-audit --no-fund
         working-directory: access-preview
       - run: npm run build
