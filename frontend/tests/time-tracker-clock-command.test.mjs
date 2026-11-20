@@ -56,7 +56,7 @@ test('Clock is a genuine two-panel layout, not the legacy centered vertical stac
  assert.equal((markup.match(/<form id="tt-clock-form"/g)||[]).length,1);
 });
 
-test('Idle Clock preserves signed Clock In controls and GPS-related context',()=>{
+test('Idle Clock preserves signed Clock In controls without requesting GPS',()=>{
  const markup=render();
  assert.match(markup,/name="tt-action" value="clock-in"/);
  assert.match(markup,/id="tt-location" name="tt-location" required/);
@@ -65,7 +65,8 @@ test('Idle Clock preserves signed Clock In controls and GPS-related context',()=
  assert.match(markup,/data-action="tt-location-shortcut" data-location="Office-Base Duty"/);
  assert.match(markup,/data-action="tt-location-shortcut" data-location="Offsite \(Home\)"/);
  assert.match(markup,/id="tt-note-wrap" hidden/);
- assert.match(markup,/signed PostgreSQL timestamps and current GPS permission/);
+ assert.match(markup,/Your session is securely recorded when you start or end attendance/);
+ assert.doesNotMatch(markup,/tt-location-readiness/);
  assert.match(markup,/Start your work session with a signed record/);
  assert.doesNotMatch(markup,/value="clock-out"/);
  assert.doesNotMatch(markup,/<canvas|<script|style=|onclick=/);

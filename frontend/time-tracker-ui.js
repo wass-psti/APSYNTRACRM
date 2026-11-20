@@ -176,7 +176,7 @@ function heading(title,desc){
   esc(desc)+'</p></div></div>';
 }
 function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-out',locationPreference='',{
- success='',geoPermission='unknown',geoChecking=false,geoMessage='',clockStage='idle'
+ success='',clockCorrectionNotice='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle'
 }={}){
  const {access,records,active}=result;
  const writeReady=TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&access?.attendanceWritesAccepted===true;
@@ -188,16 +188,19 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
  const status=active?'Active':'Idle';
  const locationEnabled=geoPermission==='granted';
  const geoWarning=geoPermission==='denied'||geoPermission==='unavailable';
- const geoTitle=locationEnabled?'Location access enabled':
+ const geoTitle=clockStage==='location'?'Getting GPS for this attendance action…':
+  locationEnabled?'Location captured for this action':
   geoPermission==='denied'?'Location permission blocked':
-  geoPermission==='unavailable'?'GPS unavailable':'Location required for attendance';
- const geoDescription=geoMessage||(locationEnabled?
-  'Your site has location permission. A new GPS fix is captured for every Clock In and Clock Out.':
+  geoPermission==='unavailable'?'GPS unavailable':'Location could not be verified';
+ const geoDescription=clockStage==='location'?
+  'Location is requested because you pressed Start Session or End Session.':
+  geoMessage||(locationEnabled?
+  'A fresh GPS fix was captured for this attendance attempt.':
   geoPermission==='denied'?
-  'In your browser site settings, allow Location for this site. Also turn on your phone or computer Location Services.':
+  'Allow Location for this site in your browser settings and enable device Location Services, then press Start Session or End Session again.':
   geoPermission==='unavailable'?
-  'Enable Location Services on your device and check your GPS signal. Then recheck location.':
-  'Use Enable location to allow browser access. Your location will be requested again when you clock in or out.');
+  'Enable device Location Services and check connectivity, then press Start Session or End Session again.':
+  'Please press Start Session or End Session to request a fresh location fix.');
  const employeeDepartment=access?.employeeDepartment||null;
  const location=TT_LOCATIONS.includes(locationPreference)?locationPreference:'';
  const offsite=location==='Offsite (Home)'&&access?.moduleRole!=='System Admin';
@@ -251,6 +254,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
      '<span class="tt-clock-confirmed-icon" aria-hidden="true">✓</span>'+
      '<div><strong>'+(success.startsWith('Clock Out')?'Successfully clocked out':'Successfully clocked in')+
      '</strong><p>'+esc(success)+'</p></div></div>':'')+
+    (clockCorrectionNotice?'<p class="tt-clock-sync-status" role="status" aria-live="polite">'+esc(clockCorrectionNotice)+'</p>':'')+
     '<div class="tt-console-kicker"><span class="tt-console-kicker-mark" aria-hidden="true"></span> ATTENDANCE CONTROL</div>'+
     '<div class="tt-clock-card-head"><h4>'+ (active?'Active Session':'Clock In')+
      '</h4><span class="tt-idle-badge '+(active?'tt-badge-active':'')+'">'+
@@ -294,16 +298,11 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
      '<label for="tt-note" class="tt-note-field" id="tt-note-wrap"'+
       (((active&&active.location==='Offsite (Home)')||(!active&&offsite))?'':' hidden')+'>'+
       'Offsite Work Note<textarea id="tt-note"'+((!active&&offsite)?' required':'')+' maxlength="500" rows="3" placeholder="Describe your offsite work"></textarea></label>'+
-     '<div class="tt-location-readiness '+(locationEnabled?'is-ready':geoWarning?'needs-action':'needs-permission')+
+     (geoPromptVisible?'<div class="tt-location-readiness '+(locationEnabled?'is-ready':geoWarning?'needs-action':'needs-permission')+
       '" role="status" aria-live="polite">'+
       '<span class="tt-location-indicator" aria-hidden="true">'+(locationEnabled?'✓':'⌖')+'</span>'+
       '<div class="tt-location-content"><strong>'+esc(geoTitle)+'</strong>'+
-      '<p>'+esc(geoDescription)+'</p></div>'+
-      (!locationEnabled?'<button type="button" data-action="tt-location-check"'+
-       (geoChecking||busy?' disabled':'')+'>'+
-       (geoChecking?'Checking GPS…':geoPermission==='prompt'||geoPermission==='unknown'?
-        'Enable location':'Recheck location')+'</button>':'')+
-     '</div>'+
+      '<p>'+esc(geoDescription)+'</p></div></div>':'')+
      (clockPending?
       '<p class="tt-clock-hint" role="status">'+(clockPendingAction==='clock-in'?'Clock-in':'Clock-out')+
       ' status needs verification. A second attendance write is blocked until a fresh signed read confirms the result.</p>'+
@@ -318,7 +317,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
         active?'End session':'Start session')+'</button>')+
      (!writeReady?
       '<p class="tt-write-restriction" role="status">Live writes remain disabled until server-side offsite work-note, dedicated-board authorization and audit logging are accepted.</p>':
-      '<p class="tt-clock-hint">Your attendance uses signed PostgreSQL timestamps and current GPS permission.</p>')+
+      '<p class="tt-clock-hint">Your session is securely recorded when you start or end attendance.</p>')+
     '</form>'+
    '</section>'+
   '</div>'+
@@ -358,7 +357,7 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',geoPermission='unknown',geoChecking=false,geoMessage='',clockStage='idle',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
+ result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',clockCorrectionNotice='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError='',
  adminEligible=false,adminFullAccess=adminEligible,adminDirectory=[],adminSelectedIds=[],adminEditor=null,adminDeleteConfirm=null,adminBusy=false,adminError='',adminSuccess=''
 }={}){
@@ -388,7 +387,7 @@ export function renderTimeTrackerNative({
   overview:result.overview,access:result.access,now,filters:overviewFilters
  });
  if(selected==='clock')html+=clockPage(result,busy,new Date(now),clockPending,clockPendingAction,locationPreference,{
-  success,geoPermission,geoChecking,geoMessage,clockStage
+  success,clockCorrectionNotice,geoPromptVisible,geoPermission,geoMessage,clockStage
  });
  if(selected==='employees')html+=renderTimeTrackerEmployees({
   directory:result.access?.employees,access:result.access,search:employeesSearch,loading:busy

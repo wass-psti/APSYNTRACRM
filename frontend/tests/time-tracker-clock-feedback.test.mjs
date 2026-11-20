@@ -51,7 +51,7 @@ test('Clock-only signed snapshot excludes unrelated OT and department administra
  assert.equal(calls.includes('timetracker_auto_clockout_snapshot'),true);
 });
 
-test('confirmed Clock In and Clock Out use prominent green in-context accessible indicators',()=>{
+test('confirmed Clock In and Clock Out show green in-context success without an idle GPS prompt',()=>{
  const result={status:'VERIFIED_READ',records:[],active:null,access:{
   moduleRole:'Employee',employeeDepartment:'Engineering',attendanceWritesAccepted:true
  }};
@@ -61,30 +61,66 @@ test('confirmed Clock In and Clock Out use prominent green in-context accessible
  assert.match(inHtml,/Successfully clocked in/);
  assert.doesNotMatch(inHtml,/<strong>Clock In successful<\/strong>/);
  assert.match(inHtml,/role="status" aria-live="polite"/);
- assert.match(inHtml,/Location access enabled/);
- assert.match(inHtml,/new GPS fix is captured/);
+ assert.doesNotMatch(inHtml,/tt-location-readiness/);
  const outHtml=renderTimeTrackerNative({result,view:'clock',
   success:'Clock Out successfully recorded and confirmed by the server.'});
  assert.match(outHtml,/Successfully clocked out/);
+ assert.doesNotMatch(outHtml,/tt-location-readiness/);
  assert.doesNotMatch(inHtml,/tt-feedback tt-feedback-success/);
 });
 
-test('blocked or unknown GPS has specific mobile-friendly remediation and explicit check action',()=>{
+test('GPS banner stays hidden until Start/End is pressed, even if permission was denied before',()=>{
  const result={status:'VERIFIED_READ',records:[],active:null,access:{
   moduleRole:'Employee',employeeDepartment:'Engineering',attendanceWritesAccepted:true
  }};
- const denied=renderTimeTrackerNative({result,geoPermission:'denied'});
+ for(const permission of ['unknown','prompt','denied','unavailable','granted']){
+  const idle=renderTimeTrackerNative({result,geoPermission:permission});
+  assert.doesNotMatch(idle,/tt-location-readiness/);
+  assert.doesNotMatch(idle,/data-action="tt-location-check"/);
+  assert.doesNotMatch(idle,/Enable location|Recheck location/);
+ }
+ const activeRow={id:'a',clockIn:'2026-11-20T00:00:00Z',location:'Office-Base Duty',
+  department:'Engineering',status:'Active',creditedMs:null};
+ const active=renderTimeTrackerNative({result:{...result,records:[activeRow],active:activeRow},
+  geoPermission:'unavailable'});
+ assert.doesNotMatch(active,/tt-location-readiness/);
+ assert.match(active,/End session/);
+});
+
+test('user-triggered GPS acquisition has readable desktop/mobile states and no extra GPS request button',()=>{
+ const result={status:'VERIFIED_READ',records:[],active:null,access:{
+  moduleRole:'Employee',employeeDepartment:'Engineering',attendanceWritesAccepted:true
+ }};
+ const requesting=renderTimeTrackerNative({result,view:'clock',busy:true,
+  geoPromptVisible:true,geoPermission:'unknown',clockStage:'location'});
+ assert.match(requesting,/tt-location-readiness/);
+ assert.match(requesting,/Getting GPS for this attendance action/);
+ assert.match(requesting,/because you pressed Start Session or End Session/);
+ assert.match(requesting,/Getting GPS…/);
+ assert.doesNotMatch(requesting,/data-action="tt-location-check"/);
+ const denied=renderTimeTrackerNative({result,geoPromptVisible:true,geoPermission:'denied'});
  assert.match(denied,/Location permission blocked/);
- assert.match(denied,/browser site settings/);
- assert.match(denied,/Location Services/);
- assert.match(denied,/data-action="tt-location-check"/);
- const prompt=renderTimeTrackerNative({result,geoPermission:'prompt'});
- assert.match(prompt,/Enable location/);
- const checking=renderTimeTrackerNative({result,geoPermission:'prompt',geoChecking:true});
- assert.match(checking,/Checking GPS…/);
- assert.match(checking,/disabled/);
- const ready=renderTimeTrackerNative({result,geoPermission:'granted'});
- assert.doesNotMatch(ready,/data-action="tt-location-check"/);
+ assert.match(denied,/browser settings/);
+ assert.match(denied,/Start Session or End Session again/);
+ const unavailable=renderTimeTrackerNative({result,geoPromptVisible:true,geoPermission:'unavailable'});
+ assert.match(unavailable,/GPS unavailable/);
+ const captured=renderTimeTrackerNative({result,geoPromptVisible:true,geoPermission:'granted',clockStage:'saving'});
+ assert.match(captured,/Location captured for this action/);
+ assert.doesNotMatch(captured,/data-action="tt-location-check"/);
+});
+
+test('only explicit Clock action requests GPS; entry, refresh and permission change never poll location',()=>{
+ assert.doesNotMatch(appSource,/refreshTimeTrackerGeoPermission/);
+ assert.doesNotMatch(appSource,/navigator\.permissions\.query\(\{name:'geolocation'\}\)/);
+ assert.doesNotMatch(appSource,/case 'tt-location-check'/);
+ const begin=appSource.indexOf('async function submitTimeTrackerAction(');
+ const end=appSource.indexOf('async function loadIssues(',begin);
+ assert.ok(begin>=0&&end>begin);
+ const action=appSource.slice(begin,end);
+ assert.match(action,/state\.ttGeoPromptVisible=true/);
+ assert.match(action,/await captureAttendanceGeo\(navigator\.geolocation\)/);
+ assert.match(action,/state\.ttGeoPromptVisible=false/);
+ assert.match(appSource,/state\.ttGeoPromptVisible=false;state\.ttGeoMessage='';state\.ttGeoPermission='unknown'/);
 });
 
 test('Clock initial loading indicates verification rather than false backend failure',()=>{
@@ -148,7 +184,8 @@ test('Clock write still preserves fresh GPS and signed read-after-write requirem
  assert.match(appSource,/clockOnly:state\.ttView==='clock'/);
  assert.match(appSource,/clockOnly:true/);
  assert.match(appSource,/requiresDetail=next!=='clock'/);
- assert.match(appSource,/case 'tt-location-check'/);
+ assert.doesNotMatch(appSource,/case 'tt-location-check'/);
+ assert.match(appSource,/await captureAttendanceGeo\(navigator\.geolocation\)/);
  assert.match(appSource,/verifiedAccess:state\.ttAttendance\.access/);
  assert.doesNotMatch(appSource,/await loadTimeTracker\(seq\);\s*if\(state\.ttAttendance\?\.access\?\.employees\?\.members/);
 });
