@@ -212,7 +212,6 @@ import {mountRoleConfigurationMotion,stopRoleConfigurationMotion} from './role-c
 import {mountUserRoleMotion,stopUserRoleMotion} from './user-role-visuals.js';
 import {settingsIcon,mountSettingsMotion,stopSettingsMotion} from './settings-visuals.js';
 import {crmPlatformRoleChangeNeeded,FUELTRANS_WORKSPACE_ROLES,SCOPED_SIX_MODULE_IDS,UserRoleManagementClient,renderUserRoleManagement,selectDefaultUserRoleTarget,defaultModuleRoleForAssignment,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
-import {planUserRoleBatch,unverifiedBatchRoleAssignments} from './user-role-batch.js';
 import {parseSignedCrmRole,signedCrmRoleLabel,signedCrmIdentityLabel,currentSignedCrmRole} from './crm-role-context.js';
 import {workspaceRelationFromCatalog,workspaceRelationLabel} from './workspace-relation-context.js';
 
@@ -9505,6 +9504,7 @@ async function action(name,button){
  case 'user-role-batch-select-eligible':{
    if(!state.adminVerified||state.userRoleBusy||!state.userRoleBatchMode||
       !state.userRoleData)break;
+   const {planUserRoleBatch}=await import('./user-role-batch.js');
    const data=state.userRoleData,scope=state.userRoleBatchScope;
    const choices=scope==='module'?ROLE_MODULE_OPTIONS:data.boards.map(b=>[b.id,b.name]);
    const resourceId=choices.some(([id])=>id===state.userRoleBatchResource)?
@@ -9526,6 +9526,7 @@ async function action(name,button){
  case 'user-role-batch-review':{
    if(!state.adminVerified||state.userRoleBusy||!state.userRoleData||
       !state.userRoleBatchMode||state.view!=='user-role-management')break;
+   const {planUserRoleBatch,unverifiedBatchRoleAssignments}=await import('./user-role-batch.js');
    const snapshot=state.userRoleData;
    const scope=state.userRoleBatchScope;
    const choices=scope==='module'?ROLE_MODULE_OPTIONS:
