@@ -1,0 +1,42 @@
+name: CP-TB Native 02D Production Migration and Rollback Rehearsal
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/*cp_tb_native_02d*"
+      - "supabase/migration-candidates/cp_tb_native_02d_rollback_non_destructive.sql"
+      - "scripts/tests/talkbox-native-02d-rollback-pg.test.mjs"
+      - "docs/CP-TB-INDEPENDENT-NATIVE-02D.md"
+      - ".github/workflows/cp-tb-independent-native-02d.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/*cp_tb_native_02d*"
+      - "supabase/migration-candidates/cp_tb_native_02d_rollback_non_destructive.sql"
+      - "scripts/tests/talkbox-native-02d-rollback-pg.test.mjs"
+      - ".github/workflows/cp-tb-independent-native-02d.yml"
+permissions:
+  contents: read
+jobs:
+  isolated-rollback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install isolated pinned PostgreSQL 17
+        run: npm install --prefix "$RUNNER_TEMP/tb-pg17" --no-save --ignore-scripts --no-audit --no-fund @electric-sql/pglite@0.3.16
+      - name: Exercise additive schema activation and non-destructive rollback
+        run: |
+          export PGLITE_MODULE="$RUNNER_TEMP/tb-pg17/node_modules/@electric-sql/pglite/dist/index.js"
+          node --test scripts/tests/talkbox-native-02d-rollback-pg.test.mjs
+          node --test scripts/tests/talkbox-native-02c-pg.test.mjs
+      - name: Native TalkBox affected client contracts and production build
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          node --test frontend/tests/talkbox-native-*.test.mjs frontend/tests/board-cache-channel.test.mjs
+          npm run build
+          npm run lint
+          node scripts/build-priority5-styles.mjs --check
