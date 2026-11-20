@@ -57,7 +57,7 @@ export function renderTeamsConsole({snapshot=null,loading=false,error='',selecte
  const teams=ready?snapshot.teams:[];
  const total=teams.length;
  const selected=teams.find(t=>t.id===selectedTeamId)||null;
- const all=ready&&!selectedTeamId;
+ const all=ready&&!selected;
  const currentMembers=ready?(all?uniqueMembers(snapshot.members):snapshot.members.filter(m=>m.teamId===selected.id)):[];
  const currentContent=ready?(all?snapshot.content:snapshot.content.filter(c=>c.teamId===selected.id)):[];
  const needle=sig(teamSearch),memberNeedle=sig(userSearch),contentNeedle=sig(contentSearch);
