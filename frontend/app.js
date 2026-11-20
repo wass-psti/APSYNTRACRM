@@ -1139,7 +1139,8 @@ function renderTimeTrackerApplication(){
   logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,
   logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,
   logExpandedRecordIds:state.ttLogExpandedIds,
-  adminEligible:state.ttAttendance?.access?.moduleRole==='System Admin',
+  adminEligible:['System Admin','IT Administrator'].includes(state.ttAttendance?.access?.moduleRole),
+  adminFullAccess:state.ttAttendance?.access?.moduleRole==='System Admin',
   adminDirectory:state.ttLogAdminEditor?.directory||state.ttAttendance?.access?.overviewDirectory||[],
   adminSelectedIds:state.ttLogSelectedIds,adminEditor:state.ttLogAdminEditor,adminDeleteConfirm:state.ttLogAdminDeleteConfirm,
   adminBusy:state.ttLogAdminBusy,adminError:state.ttLogAdminError,adminSuccess:state.ttLogAdminSuccess,
@@ -3827,7 +3828,7 @@ async function loadTimeTracker(seq=routeSerial){
 function timeTrackerAdminLogReady(){
  return auth.isSignedIn&&state.view==='board'&&state.tab==='attendance'&&
   state.ttView==='log'&&state.ttAttendance?.status==='VERIFIED_READ'&&
-  state.ttAttendance?.access?.moduleRole==='System Admin'&&
+  ['System Admin','IT Administrator'].includes(state.ttAttendance?.access?.moduleRole)&&
   state.context?.user_id===auth.userId&&
   state.ttAttendance.access?.userId===auth.userId&&
   state.ttAttendance.access?.workspaceId===state.context?.workspace_id&&
@@ -3837,6 +3838,7 @@ function timeTrackerAdminLogReady(){
 }
 async function openTimeTrackerAdminEditor(recordIds,mode='single'){
  if(!timeTrackerAdminLogReady()||state.ttLogAdminBusy)return;
+ if(state.ttAttendance.access.moduleRole!=='System Admin'&&mode!=='single')return;
  const ids=[...new Set(recordIds||[])];
  if(!ids.length||ids.length>TT_ADMIN_RECORD_LIMIT||
     (mode==='single'&&ids.length!==1)||
@@ -3849,7 +3851,8 @@ async function openTimeTrackerAdminEditor(recordIds,mode='single'){
   const snapshot=await timeTracker.attendanceAdminRecords(boardId,ids);
   if(seq!==routeSerial||!timeTrackerAdminLogReady()||state.context?.user_id!==identity||
      state.context?.workspace_id!==workspace||state.boardId!==boardId)return;
-  state.ttLogAdminEditor={mode,recordIds:ids,records:snapshot.records,
+  state.ttLogAdminEditor={mode,timeOnly:state.ttAttendance.access.moduleRole==='IT Administrator',
+   recordIds:ids,records:snapshot.records,
    directory:snapshot.directory,revision:snapshot.revision,
    actorId:snapshot.actorId,workspaceId:snapshot.workspaceId,boardId:snapshot.boardId};
  }catch(err){
@@ -3872,6 +3875,11 @@ async function saveTimeTrackerAdminEditor(form){
   plan=buildTimeTrackerAdminPatch(new FormData(form),{
    mode:editor.mode,record:editor.records[0]||null,records:editor.records
   });
+  if(editor.timeOnly&&(
+     editor.mode!=='single'||Object.keys(plan.patch).some(k=>!['clockInAt','clockOutAt'].includes(k))))
+   throw Error('IT Administrators can only correct recorded times.');
+  if((plan.patch.clockInAt||plan.patch.clockOutAt)&&plan.reason.trim().length<10)
+   throw Error('Explain the time correction in at least 10 characters.');
  }catch(err){state.ttLogAdminError=errorMessage(err);render();return;}
  const seq=routeSerial,boardId=state.boardId;
  state.ttLogAdminBusy=true;state.ttLogAdminError='';render();
@@ -3901,6 +3909,7 @@ async function saveTimeTrackerAdminEditor(form){
  }
 }
 function deleteTimeTrackerAdminRecords(recordIds){
+ if(state.ttAttendance?.access?.moduleRole!=='System Admin')return;
  if(!timeTrackerAdminLogReady()||state.ttLogAdminBusy||state.ttLogAdminEditor)return;
  const ids=[...new Set(recordIds||[])];
  if(!ids.length||ids.length>TT_ADMIN_RECORD_LIMIT)return;
@@ -3923,6 +3932,7 @@ function cancelTimeTrackerAdminDeletion(){
  state.ttLogAdminDeleteConfirm=null;render();
 }
 async function confirmTimeTrackerAdminDeletion(){
+ if(state.ttAttendance?.access?.moduleRole!=='System Admin')return;
  const confirmation=state.ttLogAdminDeleteConfirm;
  if(!confirmation||!timeTrackerAdminLogReady()||state.ttLogAdminBusy)return;
  const ids=[...confirmation.recordIds];
@@ -8071,6 +8081,48 @@ async function action(name,button){
  case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
  case 'tt-clock-verify':{await verifyTimeTrackerAttendance();break;}
  case 'tt-refresh':{if(!state.ttBusy&&!state.ttLogAdminBusy){const team=state.ttView==='team',gps=state.ttView==='gps',log=state.ttView==='log';await loadTimeTracker();if(team&&state.roleVerified===true&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerTeam();if(gps&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerGps();if(log&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerLogGps();}break;}
+ case 'tt-employees-department-edit':{
+   if(state.ttBusy||state.ttView!=='employees'||state.ttAttendance?.status!=='VERIFIED_READ'||
+      !['System Admin','IT Administrator'].includes(state.ttAttendance.access.moduleRole)||
+      state.ttAttendance.access.employees?.departmentsReady!==true)return;
+   const member=state.ttAttendance.access.employees.members.find(m=>m.id===button.dataset.userId);
+   if(!member)return;
+   const seq=routeSerial,boardId=state.boardId,actorId=state.context?.user_id,
+    workspaceId=state.context?.workspace_id;
+   openModal('Assign department · '+member.name,
+    '<p class="note">Employee: '+e(member.name)+'. Department changes affect new clock-ins; historical records remain unchanged.</p>'+
+    select('Department','department',[['','Select a department'],...TT_DEPARTMENTS.map(d=>[d,d])],member.department||''),
+    async fd=>{
+     if(seq!==routeSerial||state.view!=='board'||state.tab!=='attendance'||
+        state.ttView!=='employees'||state.context?.user_id!==actorId||
+        state.context?.workspace_id!==workspaceId||state.boardId!==boardId)
+      throw Error('Signed TimeTracker workspace changed; refresh and try again');
+     const department=String(fd.get('department')||'');
+     if(!TT_DEPARTMENTS.includes(department))throw Error('Select a valid department');
+     await timeTracker.assignEmployeeDepartment(boardId,member.id,department);
+     if(seq!==routeSerial||state.context?.user_id!==actorId||
+        state.context?.workspace_id!==workspaceId||state.boardId!==boardId)
+      throw Error('Department saved but the session changed; refresh Employees');
+     await loadTimeTracker(seq);
+     if(state.ttAttendance?.access?.employees?.members?.find(m=>m.id===member.id)?.department!==department)
+      throw Error('Department update could not be verified; refresh Employees');
+    },{submitLabel:'Save department',successMessage:'Department assignment saved.'});
+   break;
+  }
+ case 'tt-employees-attendance':{
+   if(state.ttBusy||state.ttView!=='employees'||state.ttAttendance?.status!=='VERIFIED_READ'||
+      !['System Admin','IT Administrator'].includes(state.ttAttendance.access.moduleRole))return;
+   const member=state.ttAttendance.access.employees?.members.find(m=>m.id===button.dataset.userId);
+   if(!member)return;
+   state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS,employeeId:member.id};
+   state.ttView='log';render();
+   break;
+  }
+ case 'tt-log-employee-clear':{
+   if(state.ttView!=='log'||state.ttAttendance?.status!=='VERIFIED_READ')return;
+   state.ttLogFilters={...state.ttLogFilters,employeeId:null};
+   render();break;
+  }
  case 'tt-employees-refresh':{
   if(state.ttBusy||state.ttView!=='employees'||state.ttAttendance?.status!=='VERIFIED_READ')return;
   await loadTimeTracker();break;
@@ -8131,7 +8183,7 @@ async function action(name,button){
   await openTimeTrackerAdminEditor([button.dataset.recordId],'single');break;
  }
  case 'tt-log-admin-bulk-edit':{
-  if(!timeTrackerAdminLogReady())return;
+  if(!timeTrackerAdminLogReady()||state.ttAttendance.access.moduleRole!=='System Admin')return;
   await openTimeTrackerAdminEditor(state.ttLogSelectedIds,'bulk');break;
  }
  case 'tt-log-admin-delete':{
@@ -8145,10 +8197,11 @@ async function action(name,button){
   cancelTimeTrackerAdminDeletion();break;
  }
  case 'tt-log-admin-bulk-delete':{
-  if(!timeTrackerAdminLogReady())return;
+  if(!timeTrackerAdminLogReady()||state.ttAttendance.access.moduleRole!=='System Admin')return;
   await deleteTimeTrackerAdminRecords(state.ttLogSelectedIds);break;
  }
  case 'tt-log-admin-clear-selection':{
+  if(state.ttAttendance?.access?.moduleRole!=='System Admin')return;
   if(!timeTrackerAdminLogReady()||state.ttLogAdminBusy)return;
   state.ttLogSelectedIds=[];render();break;
  }

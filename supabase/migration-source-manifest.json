@@ -1869,6 +1869,13 @@
       "file": "20261120111000_cp_tt_department_team_directory_read.sql",
       "bytes": 1470,
       "sha256": "b3e27cc02de03e7e8a81d1b7ed46b53b971545e91b922981158f247fd6d7c79d"
+    },
+    {
+      "version": "20261120120000",
+      "name": "cp_tt_employee_departments_and_time_corrections",
+      "file": "20261120120000_cp_tt_employee_departments_and_time_corrections.sql",
+      "bytes": 16506,
+      "sha256": "97218db089bdb6ef21a4bfc093be72d6210104cbfd3b85f96ee534f6a6c89e23"
     }
   ]
 }

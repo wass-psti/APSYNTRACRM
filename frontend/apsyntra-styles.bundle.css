@@ -26689,6 +26689,41 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   }
 }
 
+/* TimeTracker Employees: centrally assigned departments and attendance shortcuts. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-department-notice {
+  margin: 11px 0 17px;
+  padding: 11px 15px;
+  background: #fff8f3;
+  border: 1px solid #f0d8c9;
+  border-radius: 8px;
+  color: #83462d;
+  font-size: 12px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employee-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 180px;
+  flex-wrap: wrap;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employee-actions button,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-employee-clear {
+  padding: 7px 10px;
+  border: 1px solid #efc6b0;
+  border-radius: 7px;
+  background: #fff;
+  color: #ae481f;
+  font: 650 11px Inter, system-ui, sans-serif;
+  cursor: pointer;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employee-actions button:hover,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employee-actions button:focus-visible,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-employee-clear:hover,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-employee-clear:focus-visible {
+  background: #fff4eb;
+  border-color: #d45b2b;
+}
+
 /* frontend/monday-inspired-ui.css */
 /* APSYNTRA CRM / Monday-inspired UI — isolated presentation pass.
  * Boards and the workspace chrome only. No domain, auth, or RPC overrides.
