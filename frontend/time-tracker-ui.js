@@ -14,6 +14,7 @@ import {renderTimeTrackerCalendar} from './time-tracker-calendar.js';
 import {renderTimeTrackerOvertime} from './time-tracker-overtime.js';
 import {renderTimeTrackerMyHours} from './time-tracker-my-hours.js';
 import {renderTimeTrackerTeam} from './time-tracker-team.js';
+import {renderTimeTrackerEmployees} from './apps/TimeTracker/time-tracker-employees.js';
 import {renderTimeTrackerMonitor} from './time-tracker-monitor.js';
 import {renderTimeTrackerGps} from './time-tracker-gps.js';
 
@@ -24,7 +25,7 @@ const date=v=>v&&Number.isFinite(Date.parse(v))?
  new Date(v).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'}):'—';
 const hrs=ms=>Number.isFinite(ms)?(ms/3600000).toFixed(2)+' h':'—';
 const sections=[
- ['overview','Overview',true],['clock','Clock',true],['log','Log',true],
+ ['overview','Overview',true],['clock','Clock',true],['employees','Employees',true],['log','Log',true],
  ['reports','Reports',true],['calendar','Calendar',true],
  ['ot','OT',true],['hours','My Hours',true],['team','Team',true],
  ['monitor','Monitor',true],['gps','GPS',true]
@@ -32,6 +33,7 @@ const sections=[
 const sectionMeta=Object.freeze({
  overview:['Overview','Daily attendance activity and operational summary.'],
  clock:['Clock','Start or end your attendance session using the existing clock workflow.'],
+ employees:['Employees','View active users with registered TimeTracker access in this workspace.'],
  log:['Attendance Log','Review attendance history and available attendance evidence.'],
  reports:['Reports','Review attendance summaries and export the available records.'],
  calendar:['Calendar','Review attendance across the Philippine calendar.'],
@@ -324,14 +326,14 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
+ result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError='',
  adminEligible=false,adminDirectory=[],adminSelectedIds=[],adminEditor=null,adminDeleteConfirm=null,adminBusy=false,adminError='',adminSuccess=''
 }={}){
  const verified=result?.status==='VERIFIED_READ';
  const selected=((view==='team'&&teamEligible!==true)||
   (view==='gps'&&gpsEligible!==true))?'clock':
- ['overview','clock','log','reports','calendar','ot','hours','team','monitor','gps'].includes(view)?view:'clock';
+ ['overview','clock','employees','log','reports','calendar','ot','hours','team','monitor','gps'].includes(view)?view:'clock';
  let html='<section class="tt-native" aria-label="TimeTracker attendance application"><div class="fm1-app tt-application" data-tt-view="'+selected+'" data-tt-application-root>'+
   head(verified?result.access:null,busy,selected)+navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true)+
   applicationHeading(selected,busy)+notifications(verified,verified&&result.access?.attendanceWritesAccepted===true);
@@ -348,6 +350,9 @@ export function renderTimeTrackerNative({
   overview:result.overview,access:result.access,now,filters:overviewFilters
  });
  if(selected==='clock')html+=clockPage(result,busy,new Date(now),clockPending,clockPendingAction,locationPreference);
+ if(selected==='employees')html+=renderTimeTrackerEmployees({
+  directory:result.access?.employees,access:result.access,search:employeesSearch,loading:busy
+ });
  if(selected==='log')html+=renderTimeTrackerLog({
   records:result.log?.rows||result.records,
   scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
