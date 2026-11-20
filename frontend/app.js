@@ -10923,22 +10923,51 @@ function openBoardColumnContext(trigger){
  node.querySelector('[role="menuitem"]')?.focus();
 }
 let boardDrag=null,boardResize=null,boardTouch=null,boardSuppressedClick=false;
+function boardColumnWidthLimits(key){
+ if(key==='record')return {min:200,max:600,default:300};
+ if(key==='status')return {min:100,max:260,default:132};
+ if(key==='owner')return {min:100,max:280,default:140};
+ if(key==='due')return {min:108,max:240,default:136};
+ if(key==='actions')return {min:84,max:200,default:100};
+ const field=key?.startsWith('col:')?(state.board?.columns||[])
+  .find(col=>col.id===key.slice(4)):null;
+ const name=String(field?.name||'').trim().toLowerCase();
+ if(/^(work request id|record id|item id|reference id)$/.test(name))
+  return {min:84,max:200,default:116};
+ return ({
+  number:{min:88,max:280,default:120},rating:{min:88,max:220,default:120},
+  people:{min:100,max:280,default:140},date:{min:108,max:240,default:136},
+  status:{min:100,max:260,default:132},timeline:{min:128,max:400,default:180},
+  url:{min:110,max:360,default:160},text:{min:100,max:520,default:160},
+  long_text:{min:100,max:520,default:185}
+ })[field?.data_type]||{min:100,max:520,default:160};
+}
+function boundBoardColumnWidth(key,value){
+ const {min,max}=boardColumnWidthLimits(key);
+ return Math.min(max,Math.max(min,Math.round(Number(value)||min)));
+}
 const boardResizeFrames=createFrameCoalescer({
  requestFrame:callback=>requestAnimationFrame(callback),
  cancelFrame:handle=>cancelAnimationFrame(handle),
  apply:width=>{
   if(!boardResize)return;
-  const current=boardResize;
-  current.col.setAttribute('width',String(width));
-  current.table.setAttribute('width',String(current.tableWidth+width-current.start));
-  current.current=width;
+  const current=boardResize,fit=boundBoardColumnWidth(current.key,width);
+  for(const target of current.targets){
+   if(!target.col.isConnected||!target.table.isConnected)continue;
+   target.col.setAttribute('width',String(fit));
+   target.table.setAttribute('width',String(target.tableWidth+fit-target.start));
+  }
+  current.current=fit;
  }
 });
 function cancelBoardResize(){
  boardResizeFrames.cancel();
  if(boardResize){
-  boardResize.col.setAttribute('width',String(boardResize.start));
-  boardResize.table.setAttribute('width',String(boardResize.tableWidth));
+  for(const target of boardResize.targets){
+   target.col.setAttribute('width',String(target.start));
+   target.table.setAttribute('width',String(target.tableWidth));
+  }
+  boardResize.guide?.remove();
  }
  boardResize=null;
 }
@@ -11048,11 +11077,19 @@ root.addEventListener('pointerdown',event=>{
   const table=resize.closest('table.board-table-custom');
   const col=table?.querySelector('col[data-column-key="'+resize.dataset.columnKey+'"]');
   if(!col||!th)return;
+  const key=resize.dataset.columnKey;
   const start=Number(col.getAttribute('width'))||th.getBoundingClientRect().width;
-  const tableWidth=Number(table.getAttribute('width'))||table.getBoundingClientRect().width;
-  boardResize={pointerId:event.pointerId,x:event.clientX,key:resize.dataset.columnKey,
-   col,table,start,current:start,tableWidth};
-  resize.setPointerCapture?.(event.pointerId);event.preventDefault();return;
+  const targets=[...root.querySelectorAll('table.board-table-custom,table.board-collapsed-rollup-table')]
+   .map(table=>{
+    const col=[...table.querySelectorAll('col[data-column-key]')].find(c=>c.dataset.columnKey===key);
+    return col?{col,table,start:Number(col.getAttribute('width'))||start,
+     tableWidth:Number(table.getAttribute('width'))||table.getBoundingClientRect().width}:null;
+   }).filter(Boolean);
+  const guide=document.createElement('div');guide.className='board-column-resize-guide';
+  guide.setAttribute('aria-hidden','true');guide.style.left=event.clientX+'px';
+  root.append(guide);
+  boardResize={pointerId:event.pointerId,x:event.clientX,key,start,current:start,targets,guide};
+  event.preventDefault();return;
  }
  // Native drag is for mouse/trackpad; pointer reorder supports touch and pen.
  if(event.pointerType==='mouse')return;
@@ -11070,7 +11107,8 @@ root.addEventListener('pointerdown',event=>{
 });
 window.addEventListener('pointermove',event=>{
  if(boardResize&&event.pointerId===boardResize.pointerId){
-  boardResizeFrames.schedule(columnWidth(boardResize.start+event.clientX-boardResize.x));
+  boardResize.guide.style.left=event.clientX+'px';
+   boardResizeFrames.schedule(boundBoardColumnWidth(boardResize.key,boardResize.start+event.clientX-boardResize.x));
   return;
  }
 });
@@ -11078,8 +11116,9 @@ window.addEventListener('pointerup',event=>{
  if(boardResize&&event.pointerId===boardResize.pointerId){
   const current=boardResize;
   boardResizeFrames.flush();
-  const width=columnWidth(current.current);
+  const width=boundBoardColumnWidth(current.key,current.current);
   persistBoardLayout(p=>({...p,widths:{...p.widths,[current.key]:width}}));
+  current.guide?.remove();
   boardResize=null;return;
  }
  if(boardTouch&&event.pointerId===boardTouch.pointerId){
