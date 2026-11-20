@@ -1513,7 +1513,7 @@ ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSour
  <button type="button" class="secondary board-delete-one" data-action="delete-selected-item" ${itemSelection.size>0&&state.edit&&canManuallyEditBoard(b,true)?'':'disabled title="Select an editable ordinary-board item"'}>${itemSelection.size>1?'Delete one of '+itemSelection.size+'…':'Delete item'}</button>
  <span class="muted">${!canBulkEditBoard(b)?'Protected application records: selection and export only; domain-specific bulk writes require separate server authorization.':bulkReadyFor(b)?'Max 50 records per atomic batch.':'Bulk actions verify this signed session before changes; unsupported field edits and multi-delete are unavailable.'}</span></div>
  ${shownGroups.length?shownGroups.map(g=>`${groupHeading(g,groupedItems.get(g.id)?.length||0,{columns,layout,items:groupedItems.get(g.id)||[]})}
- ${boardGroupCollapsed(g.id,groupedItems.get(g.id)?.length||0)?'':({moduleKey==='timetracker'&&String(g.title||'').trim().toLowerCase()==='main group'?
+ ${boardGroupCollapsed(g.id,groupedItems.get(g.id)?.length||0)?'':(moduleKey==='timetracker'&&String(g.title||'').trim().toLowerCase()==='main group'?
   renderTimeTrackerMainGroup({groupId:g.id,groupItems:groupedItems.get(g.id)||[],
    boardColumns:state.board.columns||[],boardValues:state.board.values||[],
    projection:state.ttBoardAttendance,userId:state.context?.user_id,
