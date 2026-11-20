@@ -26,3 +26,7 @@ Updated the staging-only sign-in HTML to enforce exactly eight numeric character
 **IMPLEMENTED:** Eight-digit input enforcement (source changes).
 
 **PENDING:** Confirmed numeric email delivery, genuine OTP verification and invalid/expired responses, staging invitation gate activation and persistent membership acceptance. No production cutover or role/permission changes.
+
+## Unrelated migration manifest repair (CI prerequisite)
+
+PR #677 renamed two TalkBox 02D migration files to their authoritative, already-applied production versions without listing them in the source manifest. Added only their existing, exact file identities, byte lengths, and SHA-256 hashes to `supabase/migration-source-manifest.json` (no SQL edits or database changes). The source manifest integrity verifier now passes with 222 baseline + 52 forward migration files.
