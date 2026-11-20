@@ -71,7 +71,7 @@ export function boardTable({columns=[],rows=[],empty='No persisted records',layo
  const visible=pref.columns.filter(k=>!pref.hidden.includes(k));
  const lookup=new Map(columns.map(c=>[c.key,c]));
  const cells=visible.map(k=>lookup.get(k));
- const tableWidth=visible.reduce((total,k)=>total+pref.widths[k],0)+(addColumn?150:0);
+ const tableWidth=visible.reduce((total,k)=>total+pref.widths[k],0)+(addColumn?56:0);
  const renderRows=(batch,offset=0)=>batch.map((row,index)=>'<tr data-searchable="'+esc(row.search||'')+'"'+
    (selection?.enabled&&row.itemId&&selection.selected?.has(row.itemId)?' class="board-row-selected" aria-selected="true"':'')+
    (selection?.enabled&&row.itemId?' data-bulk-row="'+esc(row.itemId)+'"':'')+
@@ -85,7 +85,7 @@ export function boardTable({columns=[],rows=[],empty='No persisted records',layo
   '<table class="board-table board-table-custom" data-group-id="'+esc(groupId)+'"'+
   (windowed!==null?' data-board-virtual="true" aria-rowcount="'+(rows.length+1)+'"':'')+
   ' width="'+tableWidth+'">'+
-  '<colgroup>'+visible.map(k=>'<col data-column-key="'+esc(k)+'" width="'+pref.widths[k]+'">').join('')+(addColumn?'<col width="150">':'')+'</colgroup>'+
+  '<colgroup>'+visible.map(k=>'<col data-column-key="'+esc(k)+'" width="'+pref.widths[k]+'">').join('')+(addColumn?'<col width="56">':'')+'</colgroup>'+
   '<thead><tr>'+cells.map((c,i)=>'<th scope="col" data-column-key="'+esc(c.key)+'" draggable="'+(i>1||(minimal&&i>0))+'"'+
     (i===0?' class="board-frozen-column"':'')+
     (i>1||(minimal&&i>0)?' tabindex="0" aria-keyshortcuts="Alt+Shift+ArrowLeft Alt+Shift+ArrowRight" title="Drag column to reorder; Alt+Shift+Left/Right to move"':'')+'>'+
@@ -96,7 +96,7 @@ export function boardTable({columns=[],rows=[],empty='No persisted records',layo
     'aria-haspopup="menu" aria-expanded="false" title="Column options">⋮</button>'+
    '<button type="button" class="board-column-resize" data-column-key="'+esc(c.key)+'" '+
     'aria-label="Resize '+esc(c.title)+' column" title="Drag to resize">↔</button>'+
-   '</th>').join('')+(addColumn?'<th scope="col" class="board-add-column-header"><button type="button" data-action="board-add-column" aria-label="Add a new board column">＋ Add Column</button></th>':'')+'</tr></thead>'+
+   '</th>').join('')+(addColumn?'<th scope="col" class="board-add-column-header"><button type="button" data-action="board-add-column" aria-label="Add a new board column" title="Add column">＋</button></th>':'')+'</tr></thead>'+
   '<tbody>'+(rows.length?(windowed??renderRows(rows)):
    '<tr><td colspan="'+(visible.length+(addColumn?1:0))+'" class="board-empty-row">'+esc(empty)+'</td></tr>')+
   '</tbody>'+
