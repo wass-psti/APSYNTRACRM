@@ -1,25 +1,31 @@
 import assert from 'node:assert/strict';
-import {spawn} from 'node:child_process';
-import {mkdir} from 'node:fs/promises';
+import {createServer} from 'node:http';
+import {readFile,mkdir} from 'node:fs/promises';
+import {extname,resolve,sep} from 'node:path';
 import {chromium} from 'playwright';
 const port=5192;
 const host='http://127.0.0.1:'+port;
-const child=spawn('npm',['run','dev'],{cwd:'access-preview',stdio:'pipe',detached:true,env:{...process.env}});
-let output='';
-child.stdout.on('data',s=>output+=String(s));
-child.stderr.on('data',s=>output+=String(s));
-async function waitReady(){
- for(let i=0;i<50;i++){
-  if(child.exitCode!==null)throw Error('Preview server ended: '+output);
-  try{const r=await fetch(host+'/?screen=workspace');
-   if(r.ok)return;}catch{}
-  await new Promise(resolve=>setTimeout(resolve,250));
- }
- throw Error('Preview Vite not ready: '+output);
-}
+const dist=resolve('access-preview/dist');
+const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8',
+ '.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};
+const server=createServer(async(req,res)=>{
+ try{
+  const pathname=decodeURIComponent(new URL(req.url,host).pathname);
+  const wanted=resolve(dist,'.'+(pathname==='/'?'/index.html':pathname));
+  if(wanted!==dist&&!wanted.startsWith(dist+sep)){
+   res.writeHead(403);res.end('Forbidden');return;
+  }
+  const bytes=await readFile(wanted);
+  res.writeHead(200,{'content-type':types[extname(wanted)]||'application/octet-stream',
+   'cache-control':'no-store'});
+  res.end(bytes);
+ }catch{res.writeHead(404);res.end('Not found');}
+});
+await new Promise((resolve,reject)=>{
+ server.once('error',reject);server.listen(port,'127.0.0.1',resolve);
+});
 let browser=null;
 try{
- await waitReady();
  browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_BIN||undefined,
   args:['--no-sandbox','--disable-gpu']});
  await mkdir('artifacts/access-v2',{recursive:true});
@@ -85,7 +91,6 @@ try{
  console.log('ACCESS_V2_DESKTOP_MOBILE_REACT_ACCEPTANCE_PASS');
 }finally{
  if(browser)await browser.close();
- try{process.kill(-child.pid,'SIGTERM');}
- catch{child.kill('SIGTERM');}
- child.stdout.destroy();child.stderr.destroy();child.unref();
+ server.closeAllConnections();
+ await new Promise(resolve=>server.close(resolve));
 }
