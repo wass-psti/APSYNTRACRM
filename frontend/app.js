@@ -30,6 +30,7 @@ import {BoardCacheChannel} from './board/cache-channel.js';
 import {BoardTrashPermanentDeleteClient,eligibleTrashBoard} from './board/crud/trash-permanent-delete.js';
 import {modalRecoveryKind,installModalRecoveryAction} from './modal-recovery.js';
 import {openBoardSharePreview,closeBoardSharePreview} from './board/collaboration/share.js';
+import {openBoardInviteDialog,closeBoardInviteDialog,boardInviteControl} from './board/collaboration/invite.js';
 import {normalizeSignedBoardCandidates,BoardGroupAccessClient,
  BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
 import {CreatorAccessClient,WS10_CREATOR_POLICY_ACTIVE} from './ws10-ownership.js';
@@ -1577,11 +1578,13 @@ function boardPage(){
  const preparedGrid=moduleKey&&state.tab==='items'?
   prepareBoardGrid(state.board,{primaryTitle,columnLabels,allowCustom}):null;
 
- const boardToolbarMore = `<details class="board-actions-menu"><summary aria-label="More board actions" title="More board actions">⋯</summary><div class="board-actions-popover"><button type="button" data-action="board-activity">Activity history</button><button type="button" data-action="board-share-preview">Share &amp; access</button><button type="button" data-action="board-members">People &amp; members</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button>${engineeringUi?'<button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button>':''}<button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button>${state.tab==='items'?'<button type="button" data-action="board-groups-collapse-all">Collapse all groups</button><button type="button" data-action="board-groups-expand-all">Expand all groups</button>':''}${state.edit&&canManuallyEditBoard(b,true)?'<button type="button" data-action="board-import">Import CSV/XLSX</button>':''}</div></details>`;
+ const boardToolbarMore = `<details class="board-actions-menu"><summary aria-label="More board actions" title="More board actions">⋯</summary><div class="board-actions-popover"><button type="button" data-action="board-activity">Activity history</button><button type="button" data-action="board-members">People &amp; members</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button>${engineeringUi?'<button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button>':''}<button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button>${state.tab==='items'?'<button type="button" data-action="board-groups-collapse-all">Collapse all groups</button><button type="button" data-action="board-groups-expand-all">Expand all groups</button>':''}${state.edit&&canManuallyEditBoard(b,true)?'<button type="button" data-action="board-import">Import CSV/XLSX</button>':''}</div></details>`;
  return `<div class="page-head"><div><span class="label-top">Workspace / ${e(workspaceName())} / Board</span>
  <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
  <div class="head-actions">
  ${isMaterialSourcingBoard(b)&&state.edit&&['items','sourcing'].includes(state.tab)?'<button class="primary" data-action="mrh-new-part">＋ New part number</button>':''}
+ ${boardInviteControl(normalizeBoardPeople(state.board,{boardId:b.id,workspaceId:b.workspace_id}))}
+ ${boardToolbarMore}
  </div></div>
  <div class="tabs board-draggable-tabs" role="tablist" aria-label="Board views">
  ${tabOrder.map(t=>'<div class="board-tab-slot" data-board-tab-slot="'+e(t.key)+'">'+
@@ -1602,7 +1605,6 @@ ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSour
  <details class="board-tool-menu"><summary>⇅ Sort</summary><div class="board-tool-menu-panel"><label for="board-sort-mode">Sort displayed rows</label><select id="board-sort-mode" name="board-sort-mode">${[['board','Board order'],['title_asc','Item A–Z'],['title_desc','Item Z–A'],['due_asc','Due date ↑'],['due_desc','Due date ↓']].map(([value,label])=>'<option value="'+value+'"'+(boardViewFilter.sort===value?' selected':'')+'>'+label+'</option>').join('')}</select></div></details>
  ${boardColumnMenu(columns,layout)}
  <details class="board-tool-menu"><summary>▣ Group by</summary><div class="board-tool-menu-panel" role="note"><strong>Saved board groups</strong><p>Items remain in their authorized group. Re-grouping will be enabled after a verified projection is available.</p></div></details>
- ${boardToolbarMore}
 
  ${moduleKey==='tradelink'&&state.boardManage&&!tradeLinkSetupStatus(state.board).ready?'<button type="button" class="secondary" data-action="tradelink-configure" '+(state.tradeLinkSetupBusy?'disabled':'')+'>'+(state.tradeLinkSetupBusy?'Configuring TradeLink…':'Configure TradeLink columns')+'</button>':''}
   ${moduleKey==='timetracker'&&TT_BOARD_GPS_PROJECTION_ENABLED&&(state.roleVerified===true||state.ttBoardGpsEligible===true)?'<button type="button" class="secondary" data-action="tt-board-gps">Restricted attendance GPS</button>':''}
@@ -8186,6 +8188,18 @@ async function action(name,button){
      !state.tradeLinkActivityBusy)await loadTradeLinkActivity(routeSerial);
   break;
  }
+ case 'board-copy-link':{
+  if(!auth.isSignedIn||state.view!=='board'||state.board?.board?.id!==state.boardId)break;
+  try{
+   if(!navigator.clipboard?.writeText)throw new Error('Clipboard not available');
+   const url=new URL(location.href);
+   url.search='';
+   if(!url.hash.includes(state.boardId))throw new Error('Board route not verified');
+   await navigator.clipboard.writeText(url.href);
+   toast('Board link copied. Existing permissions still apply.');
+  }catch{toast('Board link could not be copied.',true);}
+  break;
+ }
  case 'board-share-preview':{
   if(!auth.isSignedIn||!state.context||!state.board?.board||!state.boardId)break;
   const board=state.board.board;
@@ -8197,10 +8211,40 @@ async function action(name,button){
    catch{rawDirectory={status:'ERROR',users:[]};}}
   if(!auth.isSignedIn||auth.userId!==userId||state.boardId!==boardId||
      state.context?.workspace_id!==workspaceId||state.view!=='board')break;
-  const peopleDirectory=normalizeSignedBoardCandidates({
+  let peopleDirectory=normalizeSignedBoardCandidates({
     ...rawDirectory,boardId,workspaceId,manage
   },{boardId,workspaceId});
-  openBoardSharePreview({
+  const people=normalizeBoardPeople(state.board,{boardId,workspaceId});
+  openBoardInviteDialog({
+   people,workspaceName:workspaceName(),currentUserId:userId,
+   onToast:message=>toast(message),
+   onMountAvatars:node=>{void mountAvatarImages(node,profileAvatarClient,null,null);},
+   onCountChange:count=>{
+    if(state.view==='board'&&state.boardId===boardId&&state.context?.workspace_id===workspaceId){
+     const target=root.querySelector('[data-board-invite-count]');
+     if(target)target.textContent=count===null?'—':String(count);
+    }
+   },
+   onRefreshMembers:async()=>{
+    if(!auth.isSignedIn||auth.userId!==userId||state.boardId!==boardId||
+      state.context?.workspace_id!==workspaceId||state.view!=='board')
+     throw new ApiError('Board scope changed.',403);
+    const fresh=await db.board(boardId);
+    const verified=normalizeBoardPeople(fresh,{boardId,workspaceId});
+    if(verified.status!=='SIGNED_MEMBERSHIP')
+     throw new ApiError('Signed board membership unavailable.',409);
+    if(state.board?.board?.id===boardId)state.board.members=fresh.members;
+    return verified;
+   },
+   onSearchDirectory:async query=>{
+    if(!auth.isSignedIn||auth.userId!==userId||state.boardId!==boardId||
+      state.context?.workspace_id!==workspaceId||!manage)
+     throw new ApiError('Board scope changed.',403);
+    const fresh=await loadBoardInvitableDirectory(db,boardId,{query});
+    peopleDirectory=normalizeSignedBoardCandidates({...fresh,boardId,workspaceId,manage},
+      {boardId,workspaceId});
+    return peopleDirectory;
+   },
    board,moduleKey:moduleByBoardName(board.name)?.key||null,
    workspaceId,manage,peopleDirectory,
    accessEnabled:BOARD_GROUP_ACCESS_ENABLED&&manage,
@@ -8239,8 +8283,9 @@ async function action(name,button){
        state.boardId!==boardId||state.context?.workspace_id!==workspaceId)
      throw new ApiError('Board changed.',403);
     const fresh=await loadBoardInvitableDirectory(db,boardId);
-    return normalizeSignedBoardCandidates({...fresh,boardId,workspaceId,manage},
+    peopleDirectory=normalizeSignedBoardCandidates({...fresh,boardId,workspaceId,manage},
      {boardId,workspaceId});
+    return peopleDirectory;
    },
    onInviteWorkspace:()=>{
     if(!auth.isSignedIn||auth.userId!==userId||
@@ -12232,7 +12277,7 @@ window.addEventListener('offline',()=>platformSync.network(false));
 // Authentication expiry remains authoritative: a revoked session is never
 // retained merely because an unsaved editor was open.
 window.addEventListener('hashchange',()=>{
- closeBoardSharePreview();
+ closeBoardSharePreview();closeBoardInviteDialog();
  // Scrub newly pasted invitation links even after the app has initialized.
  const incomingInvitation=captureInvitationLink(location,history);
  if(incomingInvitation){pendingInvitation=incomingInvitation;invitationAcceptanceStatus='';}
