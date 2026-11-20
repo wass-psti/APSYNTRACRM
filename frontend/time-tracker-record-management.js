@@ -4,7 +4,7 @@ import {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
 export const TT_ADMIN_RECORD_LIMIT=100;
 export const TT_ADMIN_DEPARTMENTS=Object.freeze([
   'HR','Materials and Logistics','Engineering','Finance and Accounting',
-  'Sales and Marketing','Information Technology'
+  'Sales and Marketing','Information Technology','General Administration'
 ]);
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({
@@ -169,10 +169,36 @@ function gpsFields(record,kind,{bulk=false}={}){
     '</div><p>Changed coordinates are stored as administrative corrections, not browser-captured GPS.</p></fieldset>';
 }
 
-export function renderTimeTrackerAdminEditor({editor,directory=[],busy=false,error=''}={}){
+export function renderTimeTrackerAdminEditor({editor,directory=[],busy=false,error='',timeOnly=false}={}){
   if(!editor)return '';
   const bulk=editor.mode==='bulk';
   const record=bulk?null:editor.records?.[0]||null;
+  if(timeOnly){
+    if(bulk||!record)return '';
+    const active=!hasClockOut(record);
+    return '<div class="tt-admin-editor-backdrop" data-tt-admin-backdrop>'+
+     '<form id="tt-attendance-admin-form" class="tt-admin-editor" role="dialog" aria-modal="true" aria-labelledby="tt-admin-editor-title" data-mode="single" data-tt-admin-dialog>'+
+     '<header class="tt-admin-editor-head"><div class="tt-admin-editor-title-group">'+
+      '<span class="tt-admin-eyebrow">AUTHORIZED ADMIN · TIME CORRECTION ONLY</span>'+
+      '<h3 id="tt-admin-editor-title">Correct attendance times</h3>'+
+      '<p>Changes are recorded in the private append-only audit history.</p></div>'+
+      '<button type="button" class="tt-admin-close" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+' aria-label="Close editor">×</button></header>'+
+     (error?'<p class="tt-admin-error" role="alert">'+esc(error)+'</p>':'')+
+     '<fieldset class="tt-admin-editor-fields"'+(busy?' disabled':'')+'><div class="tt-admin-editor-body">'+
+      '<div class="tt-admin-record-context"><div><strong>'+esc(record.ownerName||'Employee')+'</strong>'+
+       '<small>'+esc(active?'Active clock-in session':'Completed attendance session')+'</small></div></div>'+
+      '<section class="tt-admin-field-section"><h4>Philippine Time (UTC+08:00)</h4><div class="tt-admin-grid tt-admin-grid-two">'+
+       inputField('Clock-In date and time','clockInAt',timeTrackerAdminDateTimeLocal(record.clockIn?.timestamp),{type:'datetime-local'})+
+       (active?'':inputField('Clock-Out date and time','clockOutAt',timeTrackerAdminDateTimeLocal(record.clockOut?.timestamp),{type:'datetime-local'}))+
+      '</div><p>Active sessions remain active. Existing GPS and employee ownership cannot be changed. Corrected times automatically recalculate credited hours.</p></section>'+
+      '<section class="tt-admin-field-section"><h4>Correction reason</h4>'+
+       '<label class="tt-admin-field"><span>Why is this correction necessary?</span>'+
+       '<textarea name="reason" minlength="10" maxlength="500" required rows="3" placeholder="Describe the verified timekeeping discrepancy"></textarea></label></section>'+
+      '</div></fieldset><footer class="tt-admin-editor-actions"><span class="tt-admin-editor-footnote">Original timestamps and corrected values remain in the audit trail.</span><div>'+
+       '<button type="button" class="secondary" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+'>Cancel</button>'+
+       '<button type="submit" class="primary"'+(busy?' disabled':'')+'>Save time correction</button>'+
+      '</div></footer></form></div>';
+  }
   const currentEmployee=employeeId(record);
   const employeeItems=[...directory.map(member=>({
     value:member.id,label:member.displayName||member.display_name||'Workforce member'
