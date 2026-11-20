@@ -1911,6 +1911,13 @@
       "file": "20261120190000_cp_frt_native_role_source_parity.sql",
       "bytes": 1803,
       "sha256": "2a9e63992c3a9ae5da173bf2b10aaa9eaf57d28381f5a9be1d7c1e859bf04f75"
+    },
+    {
+      "version": "20261120194000",
+      "name": "cp_board_group_view_01_user_prefs",
+      "file": "20261120194000_cp_board_group_view_01_user_prefs.sql",
+      "bytes": 7239,
+      "sha256": "459193082663cfa1f0d82c9ed0e87e9e0b354e4dca5dbe2d38d17f94726f2263"
     }
   ]
 }
