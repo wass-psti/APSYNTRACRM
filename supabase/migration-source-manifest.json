@@ -1874,8 +1874,8 @@
       "version": "20261120120000",
       "name": "cp_tt_employee_departments_and_time_corrections",
       "file": "20261120120000_cp_tt_employee_departments_and_time_corrections.sql",
-      "bytes": 15645,
-      "sha256": "5006be0beb15fdb2020d0a1b64f1b9f5501cd39302d0851dc5c4f4774f6d0314"
+      "bytes": 16506,
+      "sha256": "97218db089bdb6ef21a4bfc093be72d6210104cbfd3b85f96ee534f6a6c89e23"
     }
   ]
 }

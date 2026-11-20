@@ -91,6 +91,23 @@ BEGIN
   IF v_count<>pg_catalog.cardinality(p_record_ids) THEN
     RAISE EXCEPTION 'One or more selected attendance records no longer exist' USING ERRCODE='P0002';
   END IF;
+  -- IT Administrators correct recorded times, not location evidence.
+  -- Do not return raw GPS, device metadata, recovery flags or mutable audit state.
+  IF v_role='IT Administrator' THEN
+    SELECT COALESCE(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+      'id',r.value->>'id',
+      'ownerId',r.value->>'ownerId',
+      'ownerName',COALESCE(r.value->>'ownerName','Employee'),
+      'clockIn',pg_catalog.jsonb_build_object(
+        'timestamp',r.value#>>'{clockIn,timestamp}'),
+      'clockOut',CASE WHEN pg_catalog.jsonb_typeof(r.value->'clockOut')='object'
+        THEN pg_catalog.jsonb_build_object(
+          'timestamp',r.value#>>'{clockOut,timestamp}')
+        ELSE 'null'::jsonb END
+    ) ORDER BY r.ordinality),'[]'::jsonb)
+    INTO v_records
+    FROM pg_catalog.jsonb_array_elements(v_records) WITH ORDINALITY r(value,ordinality);
+  END IF;
   SELECT COALESCE(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
     'id',p.id,'displayName',COALESCE(NULLIF(pg_catalog.btrim(p.display_name),''),p.email,'Workforce member')
   ) ORDER BY pg_catalog.lower(COALESCE(p.display_name,p.email))), '[]'::jsonb)
