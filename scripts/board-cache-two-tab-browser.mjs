@@ -190,7 +190,8 @@ async function run(){
   const first=await v.evaluate('virtualAcceptance.stats()');
   assert.ok(first.count>0&&first.count<=64,'initial DOM window bounded');
   assert.equal(first.visibleTotal,600);
-  assert.ok(first.tableHeight>=30000,'spacers must preserve natural page scroll height');
+  // 600 fixed-height 36px rows now occupy ~21,600px, not legacy 52px geometry.
+  assert.ok(first.tableHeight>=600*36,'spacers must preserve natural page scroll height');
   const keyboard=await v.evaluate('virtualAcceptance.keyboard(false)');
   assert.equal(keyboard.focusRow,50,'Tab from last rendered row must focus next virtual record');
   const reverse=await v.evaluate('virtualAcceptance.keyboard(true)');
