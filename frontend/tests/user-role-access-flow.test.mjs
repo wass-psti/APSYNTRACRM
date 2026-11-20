@@ -30,7 +30,7 @@ test('a single per-user screen switches between separate applications and boards
  }
  assert.match(app,/case 'user-role-section':/);
  assert.match(app,/state\.userRoleSection=section;/);
- assert.match(app,/accessSection:state\.userRoleSection/);
+ assert.match(app,/teamsController\?\.mount\(root\.querySelector\('#teams-route-host'\)\)/);
  assert.match(css,/user-role-access-section\[hidden\]\{display:none!important\}/);
 });
 test('role dialogs require an explicit submit button, not typed acknowledgement; server and subject authorization remain',()=>{
