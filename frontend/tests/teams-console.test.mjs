@@ -52,7 +52,7 @@ test('UI reproduces Teams shell, two panes, users/content, crown and inherited s
   if(text==='Information Technology')continue;
   assert.ok(html.includes(text),'missing '+text);
  }
- assert.match(html,/data-action="teams-admin-revoke"[^>]*disabled/);
+ assert.match(html,/Remove this user from General administration to revoke/);
  assert.match(html,/data-action="teams-close"/);
  assert.match(html,/data-action="teams-theme"/);
  assert.match(html,/data-teams-theme="dark"/);
