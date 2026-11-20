@@ -144,7 +144,7 @@ test('record click opens an accessible popup and highlights rows using the share
   adminFullAccess:true,selectedIds:['today']});
  assert.match(html,/data-action="tt-log-open-detail" data-record-id="today"/);
  assert.match(html,/tt-log-filterable aps-record-selectable is-selected board-row-selected/);
- assert.match(html,/data-tt-log-detail-dialog role="dialog" aria-modal="true"/);
+ assert.match(html,/data-tt-log-detail-dialog data-record-id="today" role="dialog" aria-modal="true"/);
  assert.match(html,/aria-labelledby="tt-log-modal-title"/);
  assert.match(html,/data-action="tt-log-detail-close"/);
  assert.match(html,/data-action="tt-log-admin-select-visible"/);
