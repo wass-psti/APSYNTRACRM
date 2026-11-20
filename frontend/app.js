@@ -8365,6 +8365,14 @@ async function action(name,button){
     else toast('Select at most '+TT_ADMIN_RECORD_LIMIT+' attendance records.',true);
    }else selected=new Set([id]);
    state.ttLogSelectedIds=[...selected];
+   // Modified clicks extend/toggle the selection without obstructing bulk selection.
+   // An ordinary click still opens the signed record details popup.
+   if(button.dataset.multiSelect==='true'){
+    render();
+    [...root.querySelectorAll('[data-action="tt-log-open-detail"]')]
+     .find(row=>row.dataset.recordId===id)?.focus();
+    break;
+   }
   }
   state.ttLogExpandedIds=[id];render();
   root.querySelector('[data-tt-log-detail-dialog] [data-action="tt-log-detail-close"]')?.focus();
