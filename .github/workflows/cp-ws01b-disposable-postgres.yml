@@ -26,6 +26,7 @@ on:
       - 'sql/tests/cp-ws01b-*.sql'
       - 'sql/tests/cp-ws01c-*.sql'
       - 'sql/tests/cp-ws02*.sql'
+      - 'sql/tests/cp-crm-workspace-invite-01-*.sql'
       - 'frontend/workspace-ui.js'
       - 'frontend/app.js'
       - 'frontend/workspace-lifecycle-client.js'
@@ -218,6 +219,12 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-d-provider-event-ledger-candidate.sql
       - name: Verify provider webhook correlation, monotonic delivery and replay denial
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-d-provider-event-ledger-disposable.sql
+      - name: Stage owner-scoped invitation history and revocation (disposable only)
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/ws11-invitation-management-CANDIDATE-NOT-APPLIED.sql
+      - name: Stage token-free trusted delivery ledger (disposable only)
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/ws02d-invitation-delivery-ledger-STAGING-CANDIDATE.sql
+      - name: Verify combined invitation issuance, delivery receipt, recipient acceptance and manager revocation
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-crm-workspace-invite-01-integrated-lifecycle.sql
       - name: Stage private additive workspace permission ceiling
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-permission-ceiling-candidate.sql
       - name: Verify viewer-write denial, admin gating and workspace scope
