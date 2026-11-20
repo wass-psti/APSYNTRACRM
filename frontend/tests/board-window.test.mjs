@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {boardTable} from '../board/presentation/presentation.js';
 import {boardItemsComplete} from '../board/presentation/grid.js';
-import {BOARD_WINDOW_THRESHOLD,BOARD_WINDOW_SIZE,boardWindowSlice,
+import {BOARD_WINDOW_THRESHOLD,BOARD_WINDOW_SIZE,BOARD_WINDOW_ROW_HEIGHT,boardWindowSlice,
  resetBoardWindows,visibleBoardWindowIds} from '../board/presentation/window.js';
 const id=i=>'00000000-0000-4000-8000-'+String(i+1).padStart(12,'0');
 const rows=Array.from({length:500},(_,i)=>({itemId:id(i),search:'record '+i,
@@ -33,7 +33,8 @@ test('window slices have bounded lengths and maintain full scroll height',()=>{
   const view=boardWindowSlice(500,position,900);
   assert.ok(view.start>=0&&view.end<=500&&view.end>=view.start);
   assert.ok(view.end-view.start<=BOARD_WINDOW_SIZE+18);
-  assert.equal(view.above+view.below+(view.end-view.start)*52,500*52);
+  assert.equal(BOARD_WINDOW_ROW_HEIGHT,36);
+  assert.equal(view.above+view.below+(view.end-view.start)*BOARD_WINDOW_ROW_HEIGHT,500*BOARD_WINDOW_ROW_HEIGHT);
  }
 });
 test('partial server pages are never virtualized or mistaken for full loaded board data',()=>{
