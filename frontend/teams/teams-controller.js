@@ -11,7 +11,7 @@ export class TeamsController {
   this.api=api;this.auth=auth;this.getContext=getContext;this.getBoards=getBoards;
   this.onClose=onClose;this.onToast=onToast;this.client=new TeamsClient(api);
   this.host=null;this.seq=0;this.busy=false;this.loading=false;this.error='';
-  this.snapshot=null;this.selectedTeamId=null;this.teamSearch='';this.teamFilter='all';
+  this.snapshot=null;this.selectedTeamId=null;this.teamSearch='';this.teamFilter='all';this.filterOpen=false;
   this.tab='users';this.userSearch='';this.contentSearch='';this.systemAdminsOnly=false;
   this.addUsersOpen=false;this.addUsersSearch='';this.theme='dark';this.modal=null;
   this.onClick=this.onClick.bind(this);this.onInput=this.onInput.bind(this);
@@ -69,7 +69,7 @@ export class TeamsController {
   if(!this.host)return;
   this.host.innerHTML=renderTeamsConsole({
    snapshot:this.snapshot,loading:this.loading,error:this.error,selectedTeamId:this.selectedTeamId,
-   teamSearch:this.teamSearch,teamFilter:this.teamFilter,tab:this.tab,userSearch:this.userSearch,
+   teamSearch:this.teamSearch,teamFilter:this.teamFilter,filterOpen:this.filterOpen,tab:this.tab,userSearch:this.userSearch,
    contentSearch:this.contentSearch,systemAdminsOnly:this.systemAdminsOnly,
    addUsersOpen:this.addUsersOpen,addUsersSearch:this.addUsersSearch,theme:this.theme
   })+(this.modal||'');
@@ -142,7 +142,7 @@ export class TeamsController {
  onChange(event){
   if(!this.host?.contains(event.target))return;
   if(event.target.id==='teams-filter-select'){
-   event.stopImmediatePropagation();this.teamFilter=event.target.value==='has-admins'?'has-admins':'all';
+   event.stopImmediatePropagation();this.teamFilter=event.target.value==='has-admins'?'has-admins':'all';this.filterOpen=false;
    this.render();
   }else if(event.target.id==='teams-admins-only'){
    event.stopImmediatePropagation();this.systemAdminsOnly=event.target.checked===true;this.render();
@@ -171,7 +171,7 @@ export class TeamsController {
    this.addUsersOpen=false;this.tab='users';this.render();return;}
   if(action==='teams-tab'){this.tab=button.dataset.tab==='content'?'content':'users';
    this.addUsersOpen=false;this.render();return;}
-  if(action==='teams-filter'){this.host.querySelector('#teams-filter-select')?.focus();return;}
+  if(action==='teams-filter'){this.filterOpen=!this.filterOpen;this.render();if(this.filterOpen)this.host.querySelector('#teams-filter-select')?.focus();return;}
   const {s,team}=this.scope();
   const userId=button.dataset.userId;
   const member=s.members.find(m=>m.userId===userId&&m.teamId===team?.id);
