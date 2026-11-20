@@ -4,7 +4,7 @@ import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-
 import {projectTimeTrackerLog} from './time-tracker-history.js';
 import {projectTimeTrackerOtRows,validateOvertimeDraft,TT_OT_WRITES_ACCEPTED} from './time-tracker-overtime.js';
 import {projectTimeTrackerTeamDirectory} from './time-tracker-team.js';
-import {projectTimeTrackerEmployees} from './apps/TimeTracker/time-tracker-employees.js';
+import {projectTimeTrackerEmployees} from './time-tracker-application.js';
 import {validateTimeTrackerGps} from './time-tracker-gps.js';
 /**
  * TimeTracker native APSYNTRA adapter. Source reference: TimeTracker v2.0.14.
