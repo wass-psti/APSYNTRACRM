@@ -6,6 +6,10 @@
 export const TT_TEAM_ROLES=Object.freeze([
  'System Admin','HR','Supervisor','Finance','IT Administrator','OJT','Employee'
 ]);
+export const TT_TEAM_DEPARTMENTS=Object.freeze([
+ 'HR','Materials and Logistics','Engineering','Finance and Accounting',
+ 'Sales and Marketing','Information Technology','General Administration'
+]);
 const adminRoles=new Set(['System Admin','IT Administrator','HR']);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -53,6 +57,29 @@ export function projectTimeTrackerTeamDirectory(snapshot,{workspaceId,actorId}={
   members:Object.freeze(members)
  });
 }
+/** A workspace-scoped signed department snapshot is the only source of assignments. */
+export function projectTimeTrackerTeamDepartments(directory,snapshot,{boardId}={}){
+ if(directory?.scope!=='BOOTSTRAP_WORKSPACE_DIRECTORY'||!Array.isArray(directory.members))
+  throw Error('Verified Team directory required for department projection');
+ if(snapshot===null)return Object.freeze({...directory,departmentsReady:false,
+  members:Object.freeze(directory.members.map(m=>Object.freeze({...m,department:null})))});
+ if(!uuid.test(boardId||'')||snapshot?.contract!=='tt-department-directory-1'||
+    snapshot.actorId!==directory.actorId||snapshot.workspaceId!==directory.workspaceId||
+    snapshot.boardId!==boardId||!Array.isArray(snapshot.assignments)||
+    snapshot.assignments.length>directory.members.length)
+  throw Error('Signed Team department snapshot contract invalid');
+ const roster=new Set(directory.members.map(m=>m.id)),map=new Map();
+ for(const row of snapshot.assignments){
+  if(!uuid.test(row?.userId||'')||!roster.has(row.userId)||
+     map.has(row.userId)||!TT_TEAM_DEPARTMENTS.includes(row.department))
+   throw Error('Signed Team department assignment invalid');
+  map.set(row.userId,row.department);
+ }
+ return Object.freeze({...directory,departmentsReady:true,
+  members:Object.freeze(directory.members.map(m=>Object.freeze({
+   ...m,department:map.get(m.id)||null
+  })))});
+}
 export function filterTimeTrackerTeam(data,{search='',role='All',layout='list'}={}){
  if(data?.scope!=='BOOTSTRAP_WORKSPACE_DIRECTORY'||!Array.isArray(data.members))
   throw Error('Verified Team directory required');
@@ -78,7 +105,7 @@ export function timeTrackerTeamSummary(data){
   admins:data.members.filter(m=>m.status==='Active'&&adminRoles.has(m.role)).length
  });
 }
-function memberCard(m,layout,query=''){
+function memberCard(m,layout,query='',departmentsReady=false){
  const searchText=m.searchText||[m.name,m.email,m.role,roleName(m.role)].join(' ').toLocaleLowerCase();
  const hidden=query&&!searchText.includes(query);
  const statusClass=m.status==='Active'?'active':m.status==='Deactivated'?'deactivated':'unknown';
@@ -88,8 +115,12 @@ function memberCard(m,layout,query=''){
    '<span class="tt-team-role tt-team-role-'+
      esc(m.role.toLowerCase().replaceAll(/[^a-z]+/g,'-'))+'">'+
     esc(roleName(m.role))+'</span>'+
-   '<small>'+esc(m.email||'Email unavailable')+'</small></div>'+
+   '<small>'+esc(m.email||'Email unavailable')+'</small>'+
+   '<small class="tt-team-department">Department: '+esc(departmentsReady?(m.department||'Not assigned'):'Unavailable')+'</small></div>'+
   '<span class="tt-team-status tt-team-status-'+statusClass+'">'+esc(m.status)+'</span>'+
+  (departmentsReady&&m.status==='Active'&&m.role!=='Unassigned'?
+   '<button type="button" class="tt-team-department-edit" data-action="tt-team-department-edit" data-user-id="'+esc(m.id)+
+   '" aria-label="Edit department for '+esc(m.name)+'">Edit department</button>':'')+
   '<span class="tt-team-locked" title="Role changes are managed only through centralized User Role Management" aria-label="Central role management only">♙</span>'+
  '</article>';
 }
@@ -124,7 +155,7 @@ export function renderTimeTrackerTeam({
      'APSYNTRA / WORKFORCE DIRECTORY</span>'+
     '<h3>Team Directory</h3>'+
     '<p>Authorized workspace members and centralized TimeTracker roles</p>'+
-    '<span class="tt-team-hero-scope">Bootstrap verified · Read-only directory</span>'+
+    '<span class="tt-team-hero-scope">Bootstrap verified · Roles read-only · Department management</span>'+
     '<span class="tt-team-hero-date">'+esc(date)+'</span></div>'+
    '<div class="tt-team-hero-telemetry" aria-label="Signed workspace team snapshot">'+
     '<span class="tt-team-telemetry-caption">SIGNED WORKSPACE SNAPSHOT</span>'+
@@ -139,6 +170,10 @@ export function renderTimeTrackerTeam({
    '</p></div>'+actions+'</header>';
  return '<section class="tt-team-directory tt-team-command" aria-label="Bootstrap-only TimeTracker Team Directory">'+
   pageHeader+
+  (valid?'<div class="tt-team-department-summary" aria-label="Department assignment status"><strong>Department management</strong><span>'+
+   (directory.departmentsReady?'Use Edit department on an active TimeTracker member to manage their assignment.':
+    'Department assignments unavailable until the authorized Supabase migration is deployed.')+
+   '</span></div>':'')+
   (error?'<p class="tt-team-error" role="alert">'+esc(error)+'</p>':'')+
   (loading?'<p class="tt-team-loading" role="status">Verifying bootstrap authorization and loading current workspace members…</p>':
    !valid?'<p class="tt-team-loading">Team directory unavailable until signed bootstrap authorization is verified.</p>':
@@ -164,15 +199,16 @@ export function renderTimeTrackerTeam({
    '<div class="tt-team-section-title"><strong>MEMBER LIST</strong><span data-tt-team-count>'+
      state.members.length+' of '+state.roleMembers.length+' members</span></div>'+
    (state.roleMembers.length?'<div class="tt-team-members tt-team-members-'+state.layout+'">'+
-     state.roleMembers.map(m=>memberCard(m,state.layout,state.search)).join('')+'</div>':'')+
+     state.roleMembers.map(m=>memberCard(m,state.layout,state.search,directory.departmentsReady===true)).join('')+'</div>':'')+
    '<p class="tt-team-empty" data-tt-team-empty'+(state.members.length?' hidden':'')+'>No authorized workspace members match your filters.</p>'+
-   '<p class="tt-team-footnote">Only verified bootstrap administrators can view this workspace directory. TimeTracker role assignments originate from centralized role management; member changes must be made there. Email, status, and counts reflect the signed workspace snapshot, not screenshot sample data.</p>')+
+   '<p class="tt-team-footnote">Only verified bootstrap administrators can view this workspace directory. TimeTracker roles are controlled by centralized User Role Management. Department assignments are written to Supabase with an audit trail and affect future clock-ins, not historical attendance. Employees and totals reflect the signed workspace.</p>')+
  '</section>';
 }
 export function timeTrackerTeamCsv(data){
  if(data?.scope!=='BOOTSTRAP_WORKSPACE_DIRECTORY')throw Error('Bootstrap-verified export required');
  const quote=v=>'"'+String(v??'').replace(/^[=+\-@\t\r]/,"'").replaceAll('"','""')+'"';
- const rows=[['Name','Email','TimeTracker Role','Status'],
- ...data.members.map(m=>[m.name,m.email,m.role,m.status])];
+ const rows=[['Name','Email','TimeTracker Role','Status','Department'],
+ ...data.members.map(m=>[m.name,m.email,m.role,m.status,
+  data.departmentsReady===true?(m.department||'Not assigned'):'Unavailable'])];
  return '\uFEFF'+rows.map(row=>row.map(quote).join(',')).join('\r\n')+'\r\n';
 }

@@ -340,3 +340,23 @@
   border-color:#7588af;
  }
 }
+
+/* Bootstrap-only employee department management. */
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-department-summary{
+ display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:12px 0;
+ padding:13px 17px;border:1px solid #dfe7f5;border-radius:12px;
+ background:#f6f9ff;color:#405b86;font-size:12px;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-department-summary strong{font-size:13px;}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-member-main .tt-team-department{
+ display:block;margin-top:5px;color:#405b86;font-size:12px;font-weight:650;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-department-edit{
+ border:1px solid #c9d6ef;border-radius:8px;padding:7px 10px;
+ background:#fff;color:#285b9b;font:650 11px Inter,system-ui,sans-serif;
+ cursor:pointer;white-space:nowrap;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-department-edit:hover,
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-department-edit:focus-visible{
+ border-color:#739dd9;background:#eef5ff;
+}

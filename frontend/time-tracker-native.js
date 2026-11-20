@@ -3,7 +3,7 @@ export {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
 import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-overview.js';
 import {projectTimeTrackerLog} from './time-tracker-history.js';
 import {projectTimeTrackerOtRows,validateOvertimeDraft,TT_OT_WRITES_ACCEPTED} from './time-tracker-overtime.js';
-import {projectTimeTrackerTeamDirectory} from './time-tracker-team.js';
+import {projectTimeTrackerTeamDirectory,projectTimeTrackerTeamDepartments,TT_TEAM_DEPARTMENTS} from './time-tracker-team.js';
 import {projectTimeTrackerEmployees} from './time-tracker-application.js';
 import {validateTimeTrackerGps} from './time-tracker-gps.js';
 /**
@@ -17,10 +17,7 @@ const moduleId='time-tracker';
 export const TT_LIVE_ATTENDANCE_WRITES_ACCEPTED=true;
 const stateKey='timetracker.attendance.v1';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-export const TT_DEPARTMENTS=Object.freeze([
- 'HR','Materials and Logistics','Engineering','Finance and Accounting',
- 'Sales and Marketing','Information Technology','General Administration'
-]);
+export const TT_DEPARTMENTS=TT_TEAM_DEPARTMENTS;
 export const TT_ROLES=Object.freeze([
  'System Admin','IT Administrator','HR','Supervisor','Finance','OJT','Employee'
 ]);
@@ -297,10 +294,42 @@ export class TimeTrackerNativeClient{
   const directory=projectTimeTrackerTeamDirectory(response,{
    workspaceId:access.workspaceId,actorId:access.userId
   });
+  let departmentSnapshot=null;
+  try{
+   departmentSnapshot=await this.api.rpc('timetracker_employee_department_directory_snapshot',{
+    p_board_id:boardId
+   });
+  }catch(err){
+   if(!/PGRST202|Could not find the function|Unexpected RPC timetracker_employee_department_directory_snapshot/
+     .test(String(err?.message||err)))throw err;
+   // Missing migration: Team remains readable but assignment editing is disabled.
+  }
+  const result=projectTimeTrackerTeamDepartments(directory,departmentSnapshot,{boardId});
   await checkIdentity(this.auth,this.api,access,boardId);
   if(await this.api.rpc('apsyntra_role_is_bootstrap')!==true)
    deny('Bootstrap authorization changed during Team Directory read');
-  return directory;
+  return result;
+ }
+ /** One admin-controlled department change; no optimistic update. */
+ async assignTeamDepartment(boardId,userId,department){
+  if(!uuid.test(userId||'')||!TT_DEPARTMENTS.includes(department))
+   deny('Valid employee and department required');
+  const before=await this.teamDirectory(boardId);
+  if(!before.departmentsReady)deny('Department management is not deployed');
+  const member=before.members.find(m=>m.id===userId);
+  if(!member||member.status!=='Active'||member.role==='Unassigned')
+   deny('Only active TimeTracker members can be assigned');
+  const receipt=await this.api.rpc('timetracker_employee_department_set',{
+   p_board_id:boardId,p_target_user_id:userId,p_department:department
+  });
+  if(!isRecord(receipt)||receipt.contract!=='tt-department-set-1'||
+     receipt.actorId!==before.actorId||receipt.workspaceId!==before.workspaceId||
+     receipt.targetUserId!==userId||receipt.department!==department)
+   deny('Signed department update receipt invalid');
+  const after=await this.teamDirectory(boardId);
+  if(after.members.find(m=>m.id===userId)?.department!==department)
+   deny('Department update could not be verified after saving');
+  return after;
  }
  /** Read privileged signed attendance coordinates without exposing raw module state. */
  async gpsEvidence(boardId,{from,to,userId=null}={}){

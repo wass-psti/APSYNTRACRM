@@ -33,7 +33,7 @@ test('verified Team hero has one decorative Pixi host and signed directory metri
  assert.match(html,/APSYNTRA \/ WORKFORCE DIRECTORY/);
  assert.match(html,/class="tt-team-graphics" aria-hidden="true"/);
  assert.match(html,/class="tt-team-hero-telemetry" aria-label="Signed workspace team snapshot"/);
- assert.match(html,/Bootstrap verified · Read-only directory/);
+ assert.match(html,/Bootstrap verified · Roles read-only · Department management/);
  assert.equal((html.match(/class="tt-pixi-backdrop"/g)||[]).length,1);
  assert.match(html,/>2<\/strong><span>Authorized members/);
  assert.match(html,/>1<\/strong><span>Active<\/span>/);
