@@ -288,7 +288,7 @@ export function renderTimeTrackerLog({
  records=[],scope='OWN_ATTENDANCE_ONLY',filters={},now=new Date(),busy=false,
  gpsEligible=false,gpsData=null,gpsBusy=false,gpsError='',gpsErrorRecordId='',
  expandedRecordIds=[],mapEnabled=false,mapTheme='map',
- adminEligible=false,adminFullAccess=false,adminDirectory=[],selectedIds=[],adminEditor=null,adminDeleteConfirm=null,
+ adminEligible=false,adminFullAccess=adminEligible,adminDirectory=[],selectedIds=[],adminEditor=null,adminDeleteConfirm=null,
  adminBusy=false,adminError='',adminSuccess=''
 }={}){
  const options={...TT_LOG_DEFAULT_FILTERS,...filters};
