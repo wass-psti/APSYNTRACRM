@@ -12,7 +12,7 @@ WHERE config_key='default';
 CREATE TEMP TABLE tt_auto_clockout_expected(
  employee_id uuid PRIMARY KEY,
  record_id uuid UNIQUE NOT NULL,
- clock_in_at timestamptz NOT NULL
+ clock_in_at timestamptz NOT NULL,
  threshold_at timestamptz
 ) ON COMMIT DROP;
 
