@@ -445,8 +445,17 @@ try {
   );
   await page.getByText("Manage attendance records", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Select visible" }).waitFor();
-  await page.locator('[data-action="tt-log-open-detail"][data-record-id="' + adminRecordId + '"]').waitFor();
-  assert.equal(await page.locator('[data-tt-log-select], [data-tt-log-select-all]').count(), 0);
+  await page
+    .locator(
+      '[data-action="tt-log-open-detail"][data-record-id="' +
+        adminRecordId +
+        '"]',
+    )
+    .waitFor();
+  assert.equal(
+    await page.locator("[data-tt-log-select], [data-tt-log-select-all]").count(),
+    0,
+  );
   await page.getByRole("button", { name: "Edit selected" }).waitFor();
   await page.getByRole("button", { name: "Delete selected" }).waitFor();
   const managementSurface = await page
@@ -503,8 +512,12 @@ try {
   await page.getByRole("button", { name: "Close details" }).waitFor();
   await page.getByRole("button", { name: "Edit record" }).waitFor();
   await page.getByRole("button", { name: "Delete record" }).waitFor();
-  const selectedRow = page.locator('[data-record-id="' + adminRecordId + '"].tt-log-filterable');
-  assert.ok((await selectedRow.getAttribute("class")).includes("board-row-selected"));
+  const selectedRow = page.locator(
+    '[data-record-id="' + adminRecordId + '"].tt-log-filterable',
+  );
+  assert.ok(
+    (await selectedRow.getAttribute("class")).includes("board-row-selected"),
+  );
   await checkAccessibilityWithin(
     ".tt-log-admin-toolbar",
     "System Admin attendance toolbar",
