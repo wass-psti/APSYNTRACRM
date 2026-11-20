@@ -49,7 +49,8 @@ test('idle state displays the original clock-in form without a misleading sessio
  });
  assert.doesNotMatch(html,/id="tt-session-elapsed"/);
  assert.match(html,/id="tt-location"/);
- assert.match(html,/id="tt-department"/);
+ assert.doesNotMatch(html,/id="tt-department"/);
+ assert.match(html,/Assigned employee department/);
  assert.match(html,/name="tt-action" value="clock-in"/);
  assert.match(html,/Start session/);
 });

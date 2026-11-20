@@ -60,7 +60,8 @@ test('Idle Clock preserves signed Clock In controls and GPS-related context',()=
  const markup=render();
  assert.match(markup,/name="tt-action" value="clock-in"/);
  assert.match(markup,/id="tt-location" name="tt-location" required/);
- assert.match(markup,/id="tt-department" name="tt-department" required/);
+ assert.doesNotMatch(markup,/id="tt-department"/);
+ assert.match(markup,/Assigned employee department/);
  assert.match(markup,/data-action="tt-location-shortcut" data-location="Office-Base Duty"/);
  assert.match(markup,/data-action="tt-location-shortcut" data-location="Offsite \(Home\)"/);
  assert.match(markup,/id="tt-note-wrap" hidden/);

@@ -20,11 +20,11 @@ function completedRow(){return {...activeRow(),status:'Completed',
  clockOut:'2026-11-04T04:31:00Z',creditedMs:60000000};}
 function ownSnapshot(row=activeRow()){
  return {status:'VERIFIED_READ',access:{userId,workspaceId,boardId,
-  attendanceWritesAccepted:true,moduleRole:'Employee'},records:[row],
+  attendanceWritesAccepted:true,moduleRole:'Employee',employeeDepartment:'HR'},records:[row],
   active:row.status==='Active'?row:null,revision:2};
 }
 function idleSnapshot(){return {status:'VERIFIED_READ',access:{userId,workspaceId,boardId,
- attendanceWritesAccepted:true,moduleRole:'Employee'},records:[],active:null,revision:2};}
+ attendanceWritesAccepted:true,moduleRole:'Employee',employeeDepartment:'HR'},records:[],active:null,revision:2};}
 function newClockInRow(){return {...activeRow(),id:'new-clock-in-record'};}
 function harness({commit=async()=>({action:'clock-out',revision:2,recordId}),
  snapshot=async()=>ownSnapshot(completedRow()),initialAttendance=ownSnapshot(),
