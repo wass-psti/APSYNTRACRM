@@ -3,11 +3,16 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {dormantWorkspaceInvitationHandler} from '../../supabase/functions/_shared/ws02d-inactive.mjs';
 const origin='https://wass-psti.github.io';
-for(const name of ['ws02d-invite','ws02d-accept']){
- test(`${name}: deployed source cannot issue invitations, accept tokens or bypass gateway JWT`,()=>{
+for(const [name,mode] of [['ws02d-invite','invite'],['ws02d-accept','accept']]){
+ test(`${name}: repository route is a default-off trusted candidate, not proof of deployment`,()=>{
   const source=readFileSync(`supabase/functions/${name}/index.ts`,'utf8');
-  assert.match(source,/Deno\.serve\(dormantWorkspaceInvitationHandler\)/);
-  assert.doesNotMatch(source,/--no-verify-jwt|private\.ws02d|sendEmail|service_role/);
+  assert.match(source,/import \{serveInvitationRoute\} from '\.\.\/_shared\/ws02d-trusted\.ts'/);
+  assert.match(source,new RegExp(`serveInvitationRoute\\('${mode}'\\)`));
+  assert.doesNotMatch(source,/--no-verify-jwt|service_role/);
+  const transport=readFileSync('supabase/functions/_shared/ws02d-trusted.ts','utf8');
+  assert.match(transport,/APSYNTRA_INVITES_EDGE_ENABLED/);
+  assert.match(transport,/!== 'true'/);
+  assert.match(transport,/private\.ws01_signed_actor_session\(\)/);
  });
 }
 test('dormant routes deny foreign origins and never read or persist invitation payloads',async()=>{
