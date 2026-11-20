@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {renderRoleConfiguration,PERMISSION_ACTIONS} from '../role-configuration-ui.js';
+import {renderRoleConfiguration} from '../role-configuration-ui.js';
 import {roleConfigurationIcon,mountRoleConfigurationMotion,stopRoleConfigurationMotion} from '../role-configuration-visuals.js';
 
 const app=readFileSync('frontend/app.js','utf8');
@@ -73,15 +73,16 @@ test('summary metrics are derived strictly from provided server snapshot',()=>{
  assert.doesNotMatch(loading,/role-config-tabs/);
 });
 
-test('five tabs preserve server data and original action handlers, selection and search',()=>{
- const keys=['roles','users','matrix','workspace','audit'];
+test('only the three retained reference tabs are available after removing global matrix',()=>{
+ const keys=['roles','workspace','audit'];
  for(const key of keys){
   const result=renderRoleConfiguration({verified:true,data,tab:key});
-  assert.equal((result.match(/data-action="role-tab"/g)||[]).length,5);
+  assert.equal((result.match(/data-action="role-tab"/g)||[]).length,3);
   assert.equal((result.match(/aria-pressed="true"/g)||[]).length,1);
-  assert.equal((result.match(/aria-pressed="false"/g)||[]).length,4);
+  assert.equal((result.match(/aria-pressed="false"/g)||[]).length,2);
   assert.match(result,new RegExp('data-tab="'+key+'" aria-pressed="true"'));
   assert.ok(result.endsWith('</div>'));
+  assert.doesNotMatch(result,/Permission matrix|data-action="role-propose-permission"|data-action="role-propose-assign"/);
  }
  const roles=renderRoleConfiguration({verified:true,data,tab:'roles'});
  assert.match(roles,/id="search-system-roles"/);
@@ -90,33 +91,16 @@ test('five tabs preserve server data and original action handlers, selection and
  assert.match(roles,/data-action="role-propose-edit"/);
  assert.match(roles,/data-action="role-propose-activation"/);
  assert.match(roles,/class="board-table role-data-table"/);
- assert.match(roles,/scope="col"/);
- const matrix=renderRoleConfiguration({verified:true,data,tab:'matrix'});
- assert.equal((matrix.match(/data-action="role-propose-permission"/g)||[]).length,12*PERMISSION_ACTIONS.length);
- assert.match(matrix,/not effective grants/);
- const assignments=renderRoleConfiguration({verified:true,data,tab:'users'});
- assert.match(assignments,/data-action="role-propose-assign"/);
- assert.match(assignments,/pending proposals do not grant access/);
  const workspace=renderRoleConfiguration({verified:true,data,tab:'workspace'});
  assert.match(workspace,/data-action="role-propose-workspace"/);
  const audit=renderRoleConfiguration({verified:true,data,tab:'audit'});
  assert.match(audit,/Every staged proposal produces a server-side append-only event/);
- for(const action of ['role-refresh','role-tab','role-propose-create','role-propose-edit','role-propose-activation','role-propose-permission','role-propose-assign','role-propose-workspace'])
+ for(const action of ['role-refresh','role-tab','role-propose-create',
+  'role-propose-edit','role-propose-activation','role-propose-workspace'])
   assert.ok(app.includes("case '"+action+"'"),action);
+ for(const deprecated of ['role-propose-permission','role-propose-assign'])
+  assert.doesNotMatch(app,new RegExp("case '"+deprecated+"'"));
 });
-
-test('Assignments rows render four intact cells, including correct staged-only account actions',()=>{
- const nonbootstrap=renderRoleConfiguration({verified:true,data,tab:'users'});
- assert.match(nonbootstrap,/No existing module assignment<\/span><\/td><td><button class="secondary" data-action="role-propose-assign"/);
- const assigned=renderRoleConfiguration({verified:true,data:{...data,
-  assignments:[{userId:data.users[0].id,moduleId:'time-tracker',role:'viewer',enabled:true}]},tab:'users'});
- assert.match(assigned,/time-tracker: viewer<\/span><\/td><td><button class="secondary" data-action="role-propose-assign"/);
- const protectedUser=renderRoleConfiguration({verified:true,data:{...data,
-  users:[{...data.users[0],bootstrapProtected:true}]},tab:'users'});
- assert.match(protectedUser,/Protected bootstrap identity<\/span><\/td><\/tr>/);
- assert.doesNotMatch(protectedUser,/data-action="role-propose-assign"/);
-});
-
 test('untrusted names and errors are escaped and native controls remain CSP compatible',()=>{
  const result=renderRoleConfiguration({verified:true,data:{...data,
   roles:[{roleKey:'<svg onload=alert(1)>',displayName:'<script>x</script>',kind:'custom_draft',state:'proposal'}]},
