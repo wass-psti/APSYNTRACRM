@@ -36,21 +36,32 @@ function avatar(person){
  return '<span class="aps-invite-avatar" aria-hidden="true">'+
   avatarImageMarkup(initials(person.name),{path,userId:path?person.id:null})+'</span>';
 }
-function personLine(person,{canRemove=false,highlight=false,currentUserId=null}={}){
+function personLine(person,{canRemove=false,highlight=false,currentUserId=null,roleChangeEnabled=false}={}){
  const role=person.role;
+ const editable=roleChangeEnabled&&role!=='owner';
+ const badge=role==='owner'?
+  '<span class="aps-invite-role-pill owner">Owner</span>':
+  '<span class="aps-invite-role-select"><select aria-label="Board access for '+esc(person.name)+'"'+
+   ' data-aps-invite-role="'+esc(person.id)+'"'+(editable?'':' disabled title="Role changes require signed Viewer/Editor authorization"')+'>'+
+    '<option value="viewer"'+(role==='viewer'?' selected':'')+'>Viewer</option>'+
+    '<option value="editor"'+(role==='editor'?' selected':'')+'>Editor</option></select></span>';
  return '<div class="aps-invite-person'+(highlight?' is-new':'')+'">'+
   avatar(person)+
   '<div class="aps-invite-person-copy"><strong>'+esc(person.name)+'</strong>'+
-  '<small>'+esc(role==='owner'?'Board owner':'Board '+cap(role))+'</small></div>'+
-  '<span class="aps-invite-role" title="Role changes require a separately authorized server operation">'+cap(role)+'</span>'+
-  '<span class="aps-invite-crown'+(role==='owner'?' is-owner':'')+'" aria-label="'+
-  (role==='owner'?'Board owner':'Member')+'" title="'+
-  (role==='owner'?'Board owner':'Owner promotion is not available')+'">♛</span>'+
-  (canRemove&&person.id!==currentUserId&&(role==='viewer'||role==='editor')?
+  '<small>'+esc(person.title|| (role==='owner'?'Board owner':'Board '+cap(role)))+'</small></div>'+
+  badge+
+  (canRemove&&role!=='owner'&&person.id!==currentUserId?
    '<button type="button" class="aps-invite-remove" data-aps-invite-revoke="'+esc(person.id)+
-   '" aria-label="Remove '+esc(person.name)+' from this board" title="'+
-   (person.id===currentUserId?'Remove your own access':'Remove viewer access')+'">×</button>':
+   '" aria-label="Remove '+esc(person.name)+' from this board" title="Remove board access">×</button>':
    '<span class="aps-invite-remove-placeholder" aria-hidden="true"></span>')+'</div>';
+}
+function teamLine(team){
+ return '<div class="aps-invite-person">'+
+  '<span class="aps-invite-avatar" aria-hidden="true">T</span>'+
+  '<div class="aps-invite-person-copy"><strong>'+esc(team.name)+'</strong>'+
+  '<small>'+team.memberCount+' member'+(team.memberCount===1?'':'s')+'</small></div>'+
+  '<span class="aps-invite-role-pill viewer">Viewer</span>'+
+  '<span class="aps-invite-remove-placeholder" aria-hidden="true"></span></div>';
 }
 function highlight(value,q){
  const name=String(value||''),i=name.toLocaleLowerCase().indexOf(q.toLocaleLowerCase());
@@ -73,36 +84,48 @@ function suggestions(directory,query,{enabled=false}={}){
   ).join(''):'<p class="aps-invite-none">No matching people</p>')+
   '</div>';
 }
-export function renderBoardInviteDialog({people,directory,teamDirectory=null,workspaceName='',manage=false,accessEnabled=false,teamInviteEnabled=false,query='',highlightId=null,currentUserId=null}={}){
+export function renderBoardInviteDialog({people,directory,teamDirectory=null,workspaceName='',manage=false,accessEnabled=false,teamInviteEnabled=false,query='',highlightId=null,currentUserId=null,tab='people',isPublic=false,roleChangeEnabled=false}={}){
  const verified=verifiedMembers(people);
  const list=verified?people.people:[];
  const canWrite=manage&&accessEnabled===true&&verifiedCandidates(directory);
  const searchEnabled=manage;
  return '<section class="aps-invite-dialog" role="dialog" aria-modal="true" aria-labelledby="aps-invite-title">'+
   '<header class="aps-invite-heading"><h2 id="aps-invite-title">Invite to this board</h2>'+
-   '<div class="aps-invite-heading-actions"><button class="aps-invite-feedback" type="button" disabled title="Feedback is not configured" aria-label="Feedback unavailable">◉</button>'+
+   '<div class="aps-invite-heading-actions">'+
    '<button type="button" class="aps-invite-close" data-aps-invite-close aria-label="Close invitation dialog">×</button></div></header>'+
-  '<div class="aps-invite-search-region"><label class="aps-invite-sr" for="aps-invite-search">Search workspace members</label>'+
+  '<div class="aps-invite-search-region"><label class="aps-invite-sr" for="aps-invite-search">Search by name, team or email</label>'+
    '<input type="text" inputmode="search" id="aps-invite-search" role="combobox" aria-expanded="'+Boolean(query.trim()&&searchEnabled)+
-   '" aria-controls="aps-invite-matches" aria-autocomplete="list" placeholder="Search workspace people or teams"'+
+   '" aria-controls="aps-invite-matches" aria-autocomplete="list" placeholder="Search by name, team or email"'+
    ' maxlength="120" autocomplete="off" value="'+esc(query)+'"'+(!searchEnabled?' disabled':'')+' />'+
    '<div class="aps-invite-search-results" data-aps-invite-suggestions>'+
-    (query.trim()?suggestions(directory,query,{enabled:canWrite})+teamSuggestions(teamDirectory,query,{enabled:manage&&teamInviteEnabled}):'')+
+    (query.trim()?(tab==='people'?suggestions(directory,query,{enabled:canWrite}):teamSuggestions(teamDirectory,query,{enabled:manage&&teamInviteEnabled})):'')+
    '</div></div>'+
 
-  '<p class="aps-invite-policy"><span aria-hidden="true">▤</span> Board access is limited by '+esc(workspaceName||'workspace')+
-   ' membership and the board’s own permissions.</p>'+
-  '<div class="aps-invite-members-title"><strong>People invited to this board</strong>'+
-   '<small>'+(verified?list.length+' assigned':'Unavailable')+'</small></div>'+
+  '<nav class="aps-invite-tabs" role="tablist" aria-label="Invite type">'+
+   '<button type="button" role="tab" data-aps-invite-tab="people" aria-selected="'+(tab==='people')+'">People</button>'+
+   '<button type="button" role="tab" data-aps-invite-tab="teams" aria-selected="'+(tab==='teams')+'">Teams</button></nav>'+
+  '<button type="button" class="aps-invite-policy" disabled title="Board visibility requires a separately authorized server operation">'+
+   '<span aria-hidden="true">▤</span> '+(isPublic?
+   'Anyone at '+esc(workspaceName||'APSGroup of Companies')+' can view this board':
+   'Only invited people can access this board')+'</button>'+
+  '<div class="aps-invite-members-title"><strong>'+(tab==='people'?'People':'Teams')+' invited to this board</strong>'+
+   '<small>'+(tab==='people'?(verified?list.length+' assigned':'Unavailable'):
+     (verifiedTeams(teamDirectory)?teamDirectory.teams.filter(t=>t.hasAccess).length+' assigned':'Unavailable'))+'</small></div>'+
   '<div class="aps-invite-members" data-aps-invite-members>'+(
-   !verified?'<p class="aps-invite-help" role="status">Unable to verify board members. Refresh the board and try again.</p>':
-   list.length?list.map(p=>personLine(p,{canRemove:canWrite&&(p.role==='viewer'||directory?.source==='SIGNED_ADMIN_BOARD_DIRECTORY'),highlight:p.id===highlightId,currentUserId})).join(''):
-   '<p class="aps-invite-help">Invite teammates to view this board.</p>')+'</div>'+
+   tab==='people'?(!verified?'<p class="aps-invite-help" role="status">Unable to verify board members. Refresh the board and try again.</p>':
+   list.length?list.map(p=>personLine(p,{canRemove:canWrite&&(p.role==='viewer'||directory?.source==='SIGNED_ADMIN_BOARD_DIRECTORY'),
+    highlight:p.id===highlightId,currentUserId,roleChangeEnabled})).join(''):
+   '<p class="aps-invite-help">Invite teammates to view this board.</p>'):
+   !verifiedTeams(teamDirectory)?'<p class="aps-invite-help">Authorized team invitations are not activated for this board.</p>':
+   teamDirectory.teams.some(t=>t.hasAccess)?teamDirectory.teams.filter(t=>t.hasAccess).map(teamLine).join(''):
+   '<p class="aps-invite-help">Invite a team to give every member Viewer access.</p>')+'</div>'+
   '<div class="aps-invite-footer">'+
+   '<div class="aps-invite-legend"><p><strong>Viewer</strong> can see every item but cannot change anything.</p>'+
+   '<p><strong>Editor</strong> can add and edit items, columns and groups.</p></div>'+
    (!manage?'<p class="aps-invite-help">Only an authorized board manager can invite people.</p>':
     !verifiedCandidates(directory)?'<p class="aps-invite-help">The authorized workspace member directory is unavailable for your account. The search field cannot return other members until access is granted.</p>':
     !canWrite?'<p class="aps-invite-help">Board access updates are currently disabled. Search is read-only.</p>':'')+
-   '<button type="button" class="aps-invite-request" data-aps-invite-workspace>Request to invite a new member by email</button>'+
+   (!query?'<button type="button" class="aps-invite-request" data-aps-invite-workspace>Request to invite a new member by email</button>':'')+
    '<p class="aps-invite-footnote">New workspace membership is separate from board access. Copying a board link does not grant permission.</p>'+
    '<p class="aps-invite-status" data-aps-invite-status role="status" aria-live="polite"></p>'+
    '</div></section>';
@@ -119,14 +142,21 @@ export function closeBoardInviteDialog(){
 export function openBoardInviteDialog(options={}){
  if(typeof document==='undefined'||!document.body)return null;
  closeBoardInviteDialog();
+ // The V2 light appearance is route-scoped and loaded only when Invite opens.
+ if(!document.head.querySelector('link[data-apsyntra-board-v2-css]')){
+  const style=document.createElement('link');
+  style.rel='stylesheet';style.href='./frontend/access-v2/board-invite.css';
+  style.dataset.apsyntraBoardV2Css='true';document.head.append(style);
+ }
  const previous=document.activeElement;
  const overlay=document.createElement('div');
  overlay.className='aps-invite-overlay';
  let directory=options.peopleDirectory,people=options.people,teamDirectory=options.teamDirectory;
- let query='',highlightId=null,working=false,searchToken=0,searchTimer=null;
+ let query='',viewTab='people',highlightId=null,working=false,searchToken=0,searchTimer=null;
  const manage=options.manage===true,accessEnabled=manage&&options.accessEnabled===true;
  overlay.innerHTML=renderBoardInviteDialog({people,directory,workspaceName:options.workspaceName,
-  manage,accessEnabled,teamDirectory,teamInviteEnabled:options.teamInviteEnabled,currentUserId:options.currentUserId});
+  manage,accessEnabled,teamDirectory,teamInviteEnabled:options.teamInviteEnabled,currentUserId:options.currentUserId,
+  tab:viewTab,isPublic:options.isPublic===true,roleChangeEnabled:typeof options.onChangeBoardRole==='function'});
  const status=(message,isError=false)=>{
   const el=overlay.querySelector('[data-aps-invite-status]');
   if(el){el.textContent=message;el.classList.toggle('is-error',isError);}
@@ -135,7 +165,8 @@ export function openBoardInviteDialog(options={}){
   const existing=overlay.querySelector('.aps-invite-dialog');
   if(!existing||!overlay.isConnected)return;
   existing.outerHTML=renderBoardInviteDialog({people,directory,workspaceName:options.workspaceName,
-   manage,accessEnabled,teamDirectory,teamInviteEnabled:options.teamInviteEnabled,query,highlightId,currentUserId:options.currentUserId});
+   manage,accessEnabled,teamDirectory,teamInviteEnabled:options.teamInviteEnabled,query,highlightId,currentUserId:options.currentUserId,
+   tab:viewTab,isPublic:options.isPublic===true,roleChangeEnabled:typeof options.onChangeBoardRole==='function'});
   options.onMountAvatars?.(overlay);
   if(focus){
    const field=overlay.querySelector('#aps-invite-search');
@@ -145,8 +176,8 @@ export function openBoardInviteDialog(options={}){
  const setCandidates=()=>{
   const host=overlay.querySelector('[data-aps-invite-suggestions]');
   if(host){
-   host.innerHTML=query.trim()?suggestions(directory,query,{enabled:accessEnabled})+
-     teamSuggestions(teamDirectory,query,{enabled:manage&&options.teamInviteEnabled===true}):'';
+   host.innerHTML=query.trim()?(viewTab==='people'?suggestions(directory,query,{enabled:accessEnabled}):
+     teamSuggestions(teamDirectory,query,{enabled:manage&&options.teamInviteEnabled===true})):'';
    overlay.querySelector('#aps-invite-search')?.setAttribute('aria-expanded',String(Boolean(query.trim())));
   }
  };
@@ -170,8 +201,8 @@ export function openBoardInviteDialog(options={}){
   searchTimer=setTimeout(async()=>{
    try{
     const updates=await Promise.all([
-      typeof options.onSearchDirectory==='function'?options.onSearchDirectory(query):null,
-      typeof options.onSearchTeams==='function'?options.onSearchTeams(query):null
+      viewTab==='people'&&typeof options.onSearchDirectory==='function'?options.onSearchDirectory(query):null,
+      viewTab==='teams'&&typeof options.onSearchTeams==='function'?options.onSearchTeams(query):null
      ]);
      if(active?.overlay!==overlay||token!==searchToken)return;
      if(updates[0]){
@@ -205,7 +236,37 @@ export function openBoardInviteDialog(options={}){
    event.preventDefault();
   }
  });
+ overlay.addEventListener('change',async event=>{
+  const roleSelect=event.target.closest?.('[data-aps-invite-role]');
+  if(!roleSelect||working||!options.onChangeBoardRole)return;
+  const userId=roleSelect.dataset.apsInviteRole;
+  const before=people?.people?.find(p=>p.id===userId);
+  const role=roleSelect.value;
+  if(!before||before.role==='owner'||!['viewer','editor'].includes(role)||role===before.role){
+   repaint();return;
+  }
+  working=true;roleSelect.disabled=true;
+  status('Saving board role…');
+  try{
+   await options.onChangeBoardRole(userId,role);
+   const after=await options.onRefreshMembers?.();
+   if(!verifiedMembers(after)||after.people.find(p=>p.id===userId)?.role!==role)
+    throw Error('Signed Viewer/Editor readback missing');
+   people=after;repaint();
+   options.onToast?.('Board role updated to '+role+'.');
+  }catch{
+   if(active?.overlay===overlay){repaint();status('Board role change could not be verified.',true);}
+  }finally{working=false;}
+ });
  overlay.addEventListener('click',async event=>{
+  const switcher=event.target.closest?.('[data-aps-invite-tab]');
+  if(switcher){
+   const next=switcher.dataset.apsInviteTab;
+   if(!['people','teams'].includes(next))return;
+   viewTab=next;query='';highlightId=null;
+   if(searchTimer!==null)clearTimeout(searchTimer);
+   searchToken++;repaint(true);return;
+  }
   if(event.target===overlay||event.target.closest?.('[data-aps-invite-close]')){
    closeBoardInviteDialog();return;
   }

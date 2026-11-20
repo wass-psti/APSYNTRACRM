@@ -1,0 +1,110 @@
+/* Screenshot V2 Board Invite overlay; use only inside the board collaboration UI. */
+#app .aps-board-shell .aps-board-invite-control{background:#4F46E5!important;color:#fff!important;border-color:#4F46E5!important;border-radius:8px}
+#app .aps-board-shell .aps-board-invite-control button{color:#fff!important;font-weight:600}
+#app .aps-board-shell .aps-board-invite-control button:hover{background:#4338CA!important}
+#app .aps-board-shell .aps-board-invite-link{border-left-color:#756FF0!important}
+.aps-invite-overlay{
+ --invite-bg:#fff!important;--invite-input:#fff!important;--invite-text:#1B1F3B!important;
+ --invite-muted:#5B6178!important;--invite-border:#E3E6F0!important;
+ --invite-hover:#F7F8FC!important;--invite-accent:#4F46E5!important;
+ background:rgba(27,31,59,.45)!important;padding:16px!important;
+ font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important
+}
+.aps-invite-dialog{
+ width:min(680px,100%)!important;max-height:min(92dvh,820px)!important;
+ border-radius:14px!important;
+ box-shadow:0 24px 60px rgba(27,31,59,.28)!important;
+ padding:28px!important;color:#1B1F3B!important;font-size:14px!important
+}
+.aps-invite-heading{padding:0 0 20px!important}
+.aps-invite-heading h2{font-size:24px!important;font-weight:700!important;letter-spacing:-.5px}
+.aps-invite-heading-actions button{font-size:24px!important;color:#5B6178!important}
+.aps-invite-search-region{padding:0!important}
+.aps-invite-search-region input{
+ height:44px!important;min-height:44px!important;border:1px solid #C9CDE0!important;
+ background:#fff!important;border-radius:8px!important;font-size:14px!important;
+ color:#1B1F3B!important;padding:10px 14px!important
+}
+.aps-invite-search-region input:focus{
+ outline:1px solid #4F46E5!important;border:2px solid #4F46E5!important
+}
+.aps-invite-suggestions{
+ background:#fff!important;box-shadow:0 12px 28px rgba(27,31,59,.16)!important;
+ border:1px solid #D5D9E8!important;border-radius:10px!important;
+ top:5px!important;max-height:360px!important;overflow:auto!important;
+ padding:10px!important
+}
+.aps-invite-suggestion-head{
+ padding:6px 9px!important;color:#5B6178!important;font-weight:700!important;
+ text-transform:uppercase;font-size:11px!important;letter-spacing:.05em
+}
+.aps-invite-candidate{height:auto;min-height:53px;border-radius:7px!important;padding:8px 9px!important}
+.aps-invite-candidate-copy strong{font-size:14px!important;font-weight:600!important}
+.aps-invite-candidate-copy small{font-size:12px!important}
+.aps-invite-candidate-state{font-size:11px!important}
+.aps-invite-candidate:hover:not(:disabled),.aps-invite-candidate:focus-visible{background:#E8E7FD!important}
+.aps-invite-tabs{
+ display:flex!important;grid-template-columns:none!important;gap:26px!important;
+ margin:13px 0 0!important;padding:0!important;
+ border-bottom:1px solid #E3E6F0!important
+}
+.aps-invite-tabs button{
+ flex:none!important;text-align:left!important;font-size:14px!important;
+ font-weight:500!important;color:#4A5068!important;
+ padding:12px 2px!important
+}
+.aps-invite-tabs button[aria-selected="true"]{
+ color:#3730A3!important;border-bottom:2px solid #4F46E5!important;font-weight:600!important
+}
+.aps-invite-policy{
+ padding:14px 0!important;display:flex!important;gap:10px!important;
+ background:transparent!important;border:0!important;text-align:left!important;
+ width:100%;font-size:13px!important;color:#4A5068!important;
+ line-height:1.4!important
+}
+.aps-invite-policy span{font-size:19px!important}
+.aps-invite-members-title{padding:8px 0 10px!important}
+.aps-invite-members-title strong{font-size:15px!important;font-weight:700!important}
+.aps-invite-members-title small{font-size:12px!important}
+.aps-invite-members{padding:0!important;min-height:65px!important;max-height:360px!important}
+.aps-invite-person{height:auto;min-height:56px;border-top:1px solid #E3E6F0!important;border-radius:0!important;padding:8px 1px!important}
+.aps-invite-person-copy strong{font-size:14px!important}
+.aps-invite-person-copy small{font-size:12px!important;color:#5B6178!important}
+.aps-invite-role-pill{
+ display:inline-flex;align-items:center;justify-content:center;
+ min-height:27px;border-radius:999px;padding:5px 11px;
+ font-size:12px;font-weight:600;white-space:nowrap
+}
+.aps-invite-role-pill.owner{background:#FDE9D7;color:#8A3B00}
+.aps-invite-role-pill.viewer{background:#EEF0F6;color:#2F3550}
+.aps-invite-role-select{position:relative}
+.aps-invite-role-select select{
+ appearance:auto;border:0;border-radius:999px;padding:5px 9px;
+ background:#EEF0F6;color:#2F3550;min-width:78px;font-size:12px;font-weight:600;
+ cursor:pointer
+}
+.aps-invite-role-select select:has(option[value="editor"]:checked){
+ background:#E8E7FD;color:#3730A3
+}
+.aps-invite-role-select select:disabled{opacity:1!important;cursor:not-allowed}
+.aps-invite-remove{font-size:19px!important;color:#5B6178!important}
+.aps-invite-footer{border:0!important;padding:14px 0 0!important;margin-top:6px!important}
+.aps-invite-request{
+ min-height:39px!important;border:1px solid #C9CDE0!important;
+ border-radius:8px!important;background:#fff!important;color:#1B1F3B!important;
+ font-size:13px!important;font-weight:600!important
+}
+.aps-invite-request:hover{background:#F7F8FC!important}
+.aps-invite-footnote{display:none!important}
+.aps-invite-help{font-size:12px!important;color:#5B6178!important}
+.aps-invite-status{font-size:12px!important}
+.aps-invite-legend{display:grid;gap:5px;background:#F7F8FC;border-radius:10px;padding:12px 14px;color:#4A5068;font-size:13px;line-height:1.5;margin-bottom:9px}
+.aps-invite-legend p{margin:0}
+.aps-invite-legend strong{color:#1B1F3B}
+@media(max-width:680px){
+ .aps-invite-overlay{padding:8px!important}
+ .aps-invite-dialog{padding:19px!important;max-height:95dvh!important}
+ .aps-invite-heading h2{font-size:21px!important}
+ .aps-invite-members{max-height:42dvh!important}
+ .aps-invite-candidate-state{display:none!important}
+}

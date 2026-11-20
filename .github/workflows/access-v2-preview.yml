@@ -1,0 +1,53 @@
+name: Access Model V2 React Preview
+on:
+  pull_request:
+    paths:
+      - 'access-preview/**'
+      - 'scripts/access-v2-browser-acceptance.mjs'
+      - 'frontend/access-v2/**'
+      - 'frontend/tests/access-model-v2.test.mjs'
+      - 'frontend/board/collaboration/invite.js'
+      - 'frontend/tests/board-invite-header.test.mjs'
+      - 'frontend/role-configuration-ui.js'
+      - 'sql/ACCESS_MODEL_V2_REVIEW_ONLY.sql'
+      - 'supabase/functions/access-v2/**'
+      - '.github/workflows/access-v2-preview.yml'
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  react-preview:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Signed role and old Invite regression tests
+        run: |
+          node --check frontend/app.js
+          node --check frontend/access-v2/workspace-ui.js
+          node --check frontend/access-v2/app-roles-ui.js
+          node --check frontend/access-v2/app-roles-controller.js
+          node --test frontend/tests/access-model-v2.test.mjs frontend/tests/board-invite-header.test.mjs frontend/tests/role-configuration-ui.test.mjs frontend/tests/role-configuration-qol.test.mjs frontend/tests/role-configuration-experience.test.mjs frontend/tests/cp-role-ui01.test.mjs
+      - run: npm install --no-audit --no-fund
+        working-directory: access-preview
+      - run: npm run build
+        working-directory: access-preview
+      - name: Verify four screens in real Chromium
+        run: |
+          export CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN" || { echo 'Chromium unavailable'; exit 1; }
+          node scripts/access-v2-browser-acceptance.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: apsyntra-access-v2-preview-screenshots
+          path: artifacts/access-v2/*.png
+          if-no-files-found: ignore

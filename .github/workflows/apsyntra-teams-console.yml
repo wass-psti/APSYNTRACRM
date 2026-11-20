@@ -10,6 +10,9 @@ on:
       - 'sql/cp-teams-role-management-CANDIDATE-NOT-APPLIED.sql'
       - '.github/workflows/apsyntra-teams-console.yml'
   workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   teams-frontend:
     runs-on: ubuntu-latest

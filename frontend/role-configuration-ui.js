@@ -15,10 +15,7 @@ const summaryCards=(d)=>{
   ['Pending proposals',proposals.length,'proposals']
  ].map(([label,value,icon])=>'<div class="stat-card role-stat-card role-stat-'+icon+'"><span class="role-stat-icon" aria-hidden="true">'+roleConfigurationIcon(icon)+'</span><div class="stat-label">'+x(label)+'</div><div class="stat-value">'+value+'</div></div>').join('')+'</section>';
 };
-const tabs=[
- ['roles','Role catalog'],['users','Assignments'],
- ['matrix','Permission matrix'],['workspace','Workspace access'],['audit','Change history']
-];
+const tabs=[['roles','Role catalog'],['workspace','Workspace access'],['audit','Change history']];
 function sectionTable(headers,body,label='Role configuration records'){
  return '<div class="panel role-table-panel"><div class="table-scroll role-table-scroll" tabindex="0" role="region" aria-label="'+x(label)+', scroll horizontally for more columns"><table class="board-table role-data-table" aria-label="'+x(label)+'"><thead><tr>'+
  headers.map(h=>'<th scope="col">'+x(h)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div></div>';
@@ -68,19 +65,6 @@ function assignments(d){
  sectionTable(['Account','Platform role','Actual module assignments','Proposal'],rows||'<tr><td colspan="4">No members</td></tr>','Workspace member role assignments')+
  '<div class="note">Effective access is still decided by the existing central backend, active workspace and module-specific guards. These records show authoritative stored assignments; pending proposals do not grant access.</div>';
 }
-function matrix(d){
- const roleNames=(d.roles||[]).map(r=>r.roleKey).filter(Boolean);
- let rows='';
- for(const module of BOARD_MODULES){
-  rows+='<tr data-searchable="'+x(module.name.toLowerCase())+'"><td><strong>'+x(module.name)+'</strong></td>'+
-  actions.map(action=>'<td><button class="secondary" data-action="role-propose-permission" data-module-id="'+x(ROLE_MODULE_OPTIONS.find(m=>m[1]===module.name)?.[0]||module.key)+'" data-capability="'+action+'" aria-label="Stage '+x(action)+' proposal for '+x(module.name)+'; no live permission change" title="Stage a proposal; no live change">Stage</button></td>').join('')+'</tr>';
- }
- return '<div class="section-header"><strong>Module permission matrix</strong><span class="muted">12 modules × 7 capabilities</span></div>'+
- '<div class="note">All matrix entries are proposal controls, <strong>not effective grants</strong>. Module-specific roles remain mapped to the existing authorization system. Approval and activation are disabled until separately authorized.</div>'+
- '<input id="filter-role-permission-modules" type="search" class="search-input csp-u057" placeholder="Filter application modules" aria-label="Filter application modules" autocomplete="off">'+
- sectionTable(['Module',...actions],rows,'Module permission proposal matrix')+
- '<p class="muted csp-u027" >Available role keys: '+x(roleNames.join(', '))+'</p>';
-}
 function workspaces(d){
  const boardCount=(d.boards||[]).length;
  return '<div class="panel"><div class="panel-header"><h3>Workspace policy configuration</h3></div><div class="panel-body">'+
@@ -117,7 +101,7 @@ export function renderRoleConfiguration({verified=false,loading=false,data=null,
  html+='<div class="role-overview-caption"><div><span class="role-content-eyebrow">Workspace overview</span>'+
   '<h2>Role management at a glance</h2></div><span class="role-overview-caption-note">Signed workspace data</span></div>';
  html+=summaryCards(data);
- const tabIcons={roles:'shield',users:'users',matrix:'boards',workspace:'boards',audit:'proposals'};
+ const tabIcons={roles:'shield',workspace:'boards',audit:'proposals'};
  html+='<div class="role-config-layout"><nav class="role-config-tabs role-entrance" aria-label="Role configuration sections">'+
   '<div class="role-nav-intro"><span class="role-content-eyebrow">Manage</span><strong>Configuration</strong>'+
   '<small>Select a section to review proposals and authoritative data.</small></div>'+
@@ -128,8 +112,6 @@ export function renderRoleConfiguration({verified=false,loading=false,data=null,
   '<span>Changes require separate authorization. This page stages proposals only.</span></div></nav>';
  const sections={
   roles:['Role catalog','Review central reference roles and prepare controlled proposals.'],
-  users:['Assignments','Inspect existing workspace memberships and stage proposed assignments.'],
-  matrix:['Permission matrix','Review module capabilities without changing effective grants.'],
   workspace:['Workspace access','Inspect signed workspace policy and stage proposed restrictions.'],
   audit:['Change history','Review staged proposals and append-only audit events.']
  };
@@ -140,8 +122,7 @@ export function renderRoleConfiguration({verified=false,loading=false,data=null,
   '<p>'+x(description)+'</p></div>'+
   '<span class="role-content-mode" aria-label="Proposal-only mode">Proposal-only</span></header>'+
   '<div class="role-content-body">';
- html+=tab==='roles'?roles(data):tab==='users'?assignments(data):
- tab==='matrix'?matrix(data):tab==='workspace'?workspaces(data):audit(data);
+ html+=tab==='roles'?roles(data):tab==='workspace'?workspaces(data):audit(data);
  return html+'</div></section></div></div>';
 }
 export const ROLE_MODULE_OPTIONS=BOARD_MODULES.map(m=>[{

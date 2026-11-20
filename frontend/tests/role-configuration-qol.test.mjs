@@ -4,14 +4,12 @@ import {readFileSync} from 'node:fs';
 import {renderRoleConfiguration} from '../role-configuration-ui.js';
 
 const data={workspaceId:'example-workspace',roles:[],users:[],boards:[],assignments:[],proposals:[],audit:[]};
-test('matrix proposes no new effective privileges and each action identifies its module and capability',()=>{
- const markup=renderRoleConfiguration({verified:true,data,tab:'matrix'});
- const names=[...markup.matchAll(/aria-label="Stage ([^"]+)"/g)].map(m=>m[1]);
- assert.equal(names.length,84);
- assert.equal(new Set(names).size,84);
- assert.ok(names.every(name=>name.includes('proposal for ')&&name.includes('no live permission change')));
- assert.equal((markup.match(/data-action="role-propose-permission"/g)||[]).length,84);
- assert.equal((markup.match(/title="Stage a proposal; no live change"/g)||[]).length,84);
+test('deprecated global matrix cannot stage app permissions or members',()=>{
+ const markup=renderRoleConfiguration({verified:true,data,tab:'roles'});
+ assert.doesNotMatch(markup,/data-action="role-propose-permission"|data-action="role-propose-assign"/);
+ assert.doesNotMatch(markup,/Permission matrix|Module permission proposal matrix/);
+ const source=readFileSync('frontend/role-configuration-ui.js','utf8');
+ assert.doesNotMatch(source,/function matrix\(/);
 });
 test('role configuration tables expose scrollable accessible regions without disclosing denied data',()=>{
  const allowed=renderRoleConfiguration({verified:true,data,tab:'roles'});
