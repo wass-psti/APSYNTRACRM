@@ -1,6 +1,7 @@
 import {syncFuelTrans} from './fueltrans-lazy.js';
 import {applySearchVisibility} from './interaction-search.js';
 import {createFrameCoalescer} from './frame-coalescer.js';
+import {mountBoardHorizontalRail} from './board/presentation/horizontal-rail.js';
 import {AuthClient,ApiError} from './session.js';
 import {createTimeTrackerPendingRecovery,timeTrackerPendingKeyMatches} from './time-tracker-pending-recovery.js';
 import {readTimeTrackerLocationPreference,saveTimeTrackerLocationPreference} from './apps/TimeTracker/time-tracker-preferences.js';
@@ -1576,7 +1577,7 @@ ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSour
  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,canCreate:state.boardManage||state.tradeLinkModuleRole==='User',actorId:state.context?.user_id||'',actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='talkbox'&&moduleKey==='toolbox'?renderTalkBoxApplication({page:talkBoxState.page,selected:talkBoxState.selected,busy:talkBoxState.busy,error:talkBoxState.error,canEdit:state.edit}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar">
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ New item</button>':''}
- <div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="⌕ Search…" value="${e(state.boardItemSearch)}" /></div>
+ <div class="search-wrap board-toolbar-search"><svg class="board-toolbar-search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 5 5"></path></svg><input id="search-board-items" class="search-input" aria-label="Search board items" placeholder="Search" value="${e(state.boardItemSearch)}" /></div>
  <details class="board-tool-menu"><summary>♙ Person</summary><div class="board-tool-menu-panel"><label for="board-person-filter">Assigned person</label><select id="board-person-filter" name="board-person-filter"><option value="">All people</option>${(state.board.members||[]).filter(m=>m.user_id).map(m=>'<option value="'+e(m.user_id)+'"'+(boardViewFilter.person===m.user_id?' selected':'')+'>'+e(m.display_name||m.email||'Member')+'</option>').join('')}</select></div></details>
  <details class="board-tool-menu"><summary>▽ Filter</summary><div class="board-tool-menu-panel"><label for="board-status-filter">Status</label><select id="board-status-filter" name="board-status-filter"><option value="">All statuses</option>${boardStatusOptions.map(s=>'<option value="'+e(s)+'"'+(boardViewFilter.status===s?' selected':'')+'>'+e(s)+'</option>').join('')}</select></div></details>
  <details class="board-tool-menu"><summary>⇅ Sort</summary><div class="board-tool-menu-panel"><label for="board-sort-mode">Sort displayed rows</label><select id="board-sort-mode" name="board-sort-mode">${[['board','Board order'],['title_asc','Item A–Z'],['title_desc','Item Z–A'],['due_asc','Due date ↑'],['due_desc','Due date ↓']].map(([value,label])=>'<option value="'+value+'"'+(boardViewFilter.sort===value?' selected':'')+'>'+label+'</option>').join('')}</select></div></details>
@@ -1625,7 +1626,8 @@ ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSour
     groupedItems.get(g.id).length+(state.board.pagination?.has_more?' loaded':' records')}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels,primaryEditable))}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
  ${ungroupedItems.length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:ungroupedItems},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},primaryEditable}):groupRows(ungroupedItems,state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels,primaryEditable)}`:''}`}${state.tab==='items'&&state.edit?'<button type="button" class="secondary board-add-group-bottom" data-action="new-group">＋ Add new group</button>':''}
- ${state.tab==='items'?renderBoardPagination(state.board.pagination,{busy:state.boardPageBusy,error:state.boardPageError}):''}</div>`;
+ ${state.tab==='items'?renderBoardPagination(state.board.pagination,{busy:state.boardPageBusy,error:state.boardPageError}):''}
+ ${state.tab==='items'?'<div class="board-horizontal-rail-slot" data-board-horizontal-rail-slot><div class="board-horizontal-rail" data-board-horizontal-rail role="region" tabindex="0" aria-label="Board horizontal scrollbar"><div class="board-horizontal-rail-spacer" data-board-horizontal-rail-spacer aria-hidden="true"></div></div></div>':''}</div>`;
 }
 function settingsPage(){
  const p=state.context.profile;
@@ -1796,6 +1798,7 @@ function render(){
   syncBoardSelectionUi();
   mountBoardPaginationUi();
  }
+ mountBoardHorizontalRail(root);
  if(state.context&&auth.isSignedIn)platformSync.start({
   userId:state.context.user_id,workspaceId:state.context.workspace_id,
   priorityBoardId:state.view==='board'?state.boardId:null,
@@ -2643,6 +2646,7 @@ function flushVisibleBoardContent({afterLocalSave=false}={}){
     applyBoardItemFilter(state.boardItemSearch);
     syncBoardSelectionUi();
     mountBoardPaginationUi();
+    mountBoardHorizontalRail(root);
    }
   }
  });
@@ -11157,15 +11161,18 @@ window.addEventListener('pointerup',event=>{
 });
 window.addEventListener('pointercancel',()=>{cancelBoardResize();boardTouch=null;});
 
-/** Synchronized horizontal scroll keeps collapsed rollups on the same tracks. */
+/** All group tables, collapsed rollups and the viewport sticky rail share one X offset. */
 let boardGroupScrollSyncing=false;
 root.addEventListener('scroll',event=>{
  const source=event.target;
- if(boardGroupScrollSyncing||!source?.matches?.('.board-group-scroll,.board-collapsed-rollup-scroll'))return;
+ const selector='.board-group-scroll,.board-collapsed-rollup-scroll,[data-board-horizontal-rail]';
+ if(boardGroupScrollSyncing||!source?.matches?.(selector))return;
+ if(!source.closest('.aps-board-shell'))return;
  boardGroupScrollSyncing=true;
- for(const other of root.querySelectorAll('.board-group-scroll,.board-collapsed-rollup-scroll'))
-  if(other!==source&&other.scrollLeft!==source.scrollLeft)other.scrollLeft=source.scrollLeft;
- boardGroupScrollSyncing=false;
+ try{
+  for(const other of root.querySelectorAll(selector))
+   if(other!==source&&other.scrollLeft!==source.scrollLeft)other.scrollLeft=source.scrollLeft;
+ }finally{boardGroupScrollSyncing=false;}
 },true);
 /** Double-click the right-edge handle to fit currently loaded, authorized text. */
 root.addEventListener('dblclick',event=>{
