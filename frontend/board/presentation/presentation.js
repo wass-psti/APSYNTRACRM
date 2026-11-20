@@ -107,19 +107,21 @@ export function boardTable({columns=[],rows=[],empty='No persisted records',layo
   '</tfoot>':'')+
   '</table></div></div>';
 }
+/** Toolbar Hide is visibility-only; column management stays in the header context menu. */
 export function boardColumnMenu(columns,layout){
  const pref=normalizeLayout(layout||{},[],columns.map(c=>c.key));
- return '<details class="board-column-menu"><summary>Columns</summary>'+
-  '<div class="board-column-menu-content"><strong>Visible columns</strong>'+
-  columns.map(c=>'<label for="board-column-'+esc(c.key)+'"><input id="board-column-'+esc(c.key)+'" type="checkbox" data-board-column-toggle="'+esc(c.key)+'" '+
+ return '<details class="board-column-menu board-hide-columns"><summary aria-label="Hide or show columns">◉ Hide</summary>'+
+  '<div class="board-column-menu-content" role="group" aria-label="Column visibility">'+
+  '<div class="board-hide-columns-title"><strong>Hide columns</strong><span>Personal board view</span></div>'+
+  '<label class="sr-only" for="board-hide-search">Find a column</label>'+
+  '<input type="search" id="board-hide-search" data-board-hide-search placeholder="Search columns…" autocomplete="off" />'+
+  '<div class="board-hide-columns-list">'+
+  columns.map(c=>'<label class="board-hide-columns-choice" data-board-hide-option="'+esc(c.title.toLocaleLowerCase())+'" for="board-column-'+esc(c.key)+'">'+
+   '<span>'+esc(c.title)+'</span><input id="board-column-'+esc(c.key)+'" type="checkbox" role="switch" data-board-column-toggle="'+esc(c.key)+'" '+
    (!pref.hidden.includes(c.key)?'checked ':'')+
-   (BOARD_REQUIRED_COLUMNS.includes(c.key)||c.key==='actions'?'disabled ':'')+'/>'+
-   '<span>'+esc(c.title)+'</span></label>').join('')+
-  '<p>Drag the table headers to reorder or use the arrow controls.</p>'+
-  pref.columns.filter(k=>!BOARD_REQUIRED_COLUMNS.includes(k)).map(k=>
-   '<div class="board-column-order"><span>'+esc(columns.find(c=>c.key===k)?.title||k)+'</span>'+
-   '<button type="button" data-action="board-column-move" data-key="'+esc(k)+'" data-direction="-1" aria-label="Move '+esc(k)+' left">←</button>'+
-   '<button type="button" data-action="board-column-move" data-key="'+esc(k)+'" data-direction="1" aria-label="Move '+esc(k)+' right">→</button></div>').join('')+
-  '<button type="button" class="secondary" data-action="board-layout-reset">Reset layout</button>'+
+   (BOARD_REQUIRED_COLUMNS.includes(c.key)||c.key==='actions'?'disabled title="Required board column" ':'')+
+   'aria-label="Show '+esc(c.title)+'" /></label>').join('')+'</div>'+
+  '<div class="board-hide-columns-actions"><button type="button" data-action="board-columns-hide-all">Hide all</button>'+
+  '<button type="button" data-action="board-columns-show-all">Show all</button></div>'+
   '</div></details>';
 }
