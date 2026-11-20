@@ -287,7 +287,8 @@ function renderTimeTrackerLogDetailDialog({row,now,gpsEligible=false,gpsData=nul
 }
 const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
  const hidden=query&&!searchText(r).includes(query.toLocaleLowerCase().trim());
- const selected=gpsOptions.selectedIds?.includes(r.id)===true;
+ const selected=gpsOptions.selectedIds?.includes(r.id)===true||
+  gpsOptions.expandedRecordIds?.includes(r.id)===true;
  const done=r.status==='Completed';
  const state=r.classification==='Administrative closure'?
   'Administrative closure':done?'Completed':r.status==='Active'?'Active':'Unknown';
