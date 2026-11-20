@@ -1,0 +1,47 @@
+name: CP-CRM-URM-INTEGRITY-03F Disposable Role Readback
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cp-crm-urm-integrity-03f-acceptance.yml'
+      - 'scripts/cp-crm-urm-integrity-03f-signed-preflight.mjs'
+      - 'frontend/tests/cp-crm-urm-integrity-03f.test.mjs'
+      - 'docs/CP-CRM-URM-INTEGRITY-03F.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verified-disposable-role-workflow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate migration manifest
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Verify cross-session and signed preflight invariants
+        run: node --test frontend/tests/cp-crm-urm-integrity-02.test.mjs frontend/tests/cp-crm-urm-integrity-03.test.mjs frontend/tests/cp-crm-urm-integrity-03f.test.mjs
+      - name: Verify genuine role writer contract on synthetic isolated actors
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-urm-scoped02b-setup.sql \
+            -f sql/tests/cp-urm-scoped02b-live-role-baseline.sql \
+            -f supabase/migrations/20261118062000_cp_urm_scoped02b_six_modules.sql \
+            -f sql/tests/cp-urm-scoped02b-acceptance.sql
