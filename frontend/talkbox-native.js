@@ -2,10 +2,21 @@
 const statuses=['Working on it','Stuck','Done'];
 const isId=x=>/^[1-9][0-9]{0,18}$/.test(String(x||''));
 const id=x=>{if(!isId(x))throw new TypeError('Invalid issue ID');return String(x)};
+const date=x=>{
+ const value=String(x??'');
+ if(value&&!/^\d{4}-\d{2}-\d{2}$/.test(value))throw new TypeError('Invalid target date');
+ if(value){
+  const parsed=new Date(value+'T00:00:00Z');
+  if(!Number.isFinite(parsed.valueOf())||parsed.toISOString().slice(0,10)!==value)
+   throw new TypeError('Invalid target date');
+ }
+ return value||null;
+};
 export function projectTalkBoxIssue(x){
  if(!x||!isId(x.id))throw new TypeError('Invalid Toolbox issue payload');
  return {id:String(x.id),name:String(x.name||''),status:String(x.status||'Working on it'),
   date:x.date||null,version:Number(x.version),person:Array.isArray(x.person)?x.person:[],
+  timeTracking:x.timeTracking||{hours:0,minutes:0},assets:Array.isArray(x.assets)?x.assets:[],
   creator:x.creator||null,updatedAt:x.updatedAt||null,
   updates:Array.isArray(x.updates)?x.updates:[],subitems:Array.isArray(x.subitems)?x.subitems:[]};
 }
@@ -20,8 +31,16 @@ export class TalkBoxNativeClient{
   this.api=api;this.workspaceId=workspaceId;
  }
  rpc(name,args={}){return this.api.rpc('toolbox_issues_'+name,{p_workspace_id:this.workspaceId,...args});}
- async list(cursor=null){
-  const result=await this.rpc('list_issues',{p_where:null,p_order_by:{column:'updatedAt',direction:'desc'},p_limit:50,p_cursor:cursor});
+ async list(cursor=null,filter={}){
+  const name=String(filter.name||'').trim();
+  if(name.length>500)throw new TypeError('Issue search is too long');
+  const status=String(filter.status||'').trim();
+  if(status&&status!=='All'&&!statuses.includes(status))throw new TypeError('Invalid issue status filter');
+  const where={};
+  if(name)where.name=name;
+  if(status&&status!=='All')where.status=status;
+  const result=await this.rpc('list_issues',{p_where:Object.keys(where).length?where:null,
+   p_order_by:{column:'updatedAt',direction:'desc'},p_limit:50,p_cursor:cursor});
   if(!Array.isArray(result?.items))throw new Error('Invalid Toolbox issue list');
   return {items:result.items.map(projectTalkBoxIssue),cursor:result.cursor||null,total:Number(result.total)||0};
  }
@@ -39,6 +58,15 @@ export class TalkBoxNativeClient{
   if(Object.hasOwn(fields,'status')){
    if(!statuses.includes(fields.status))throw new TypeError('Invalid status');
    changes.status=fields.status;
+  }
+  if(Object.hasOwn(fields,'date'))changes.date=date(fields.date);
+  if(Object.hasOwn(fields,'timeTracking')){
+   const value=fields.timeTracking;
+   if(!value||typeof value!=='object'||Array.isArray(value)||
+      !Number.isSafeInteger(value.hours)||value.hours<0||value.hours>100000||
+      !Number.isSafeInteger(value.minutes)||value.minutes<0||value.minutes>59)
+    throw new TypeError('Tracked hours must be 0–100,000 and minutes 0–59');
+   changes.timeTracking={...value,hours:value.hours,minutes:value.minutes};
   }
   if(!Object.keys(changes).length||!Number.isSafeInteger(version)||version<1)throw new TypeError('Changes and current version required');
   return projectTalkBoxIssue(await this.rpc('update_issue',{p_issue_id:id(issueId),p_updates:changes,p_expected_version:version}));
@@ -61,7 +89,15 @@ export class TalkBoxNativeClient{
   const receipt=await this.update(issueId,fields,version);
   const record=await this.get(issueId);
   if(record.version!==receipt.version||
-     Object.entries(fields).some(([key,value])=>record[key]!==value))
+     Object.entries(fields).some(([key,value])=>{
+      if(key==='timeTracking')return record.timeTracking?.hours!==receipt.timeTracking?.hours||
+       record.timeTracking?.minutes!==receipt.timeTracking?.minutes||
+       receipt.timeTracking?.hours!==value.hours||receipt.timeTracking?.minutes!==value.minutes;
+      if(key==='name')return record.name!==receipt.name||record.name!==String(value).trim();
+      if(key==='date')return record.date!==receipt.date||
+       record.date!==(value||null);
+      return record[key]!==receipt[key]||record[key]!==value;
+     }))
    throw new Error('Updated issue readback did not match');
   return record;
  }
@@ -82,19 +118,51 @@ export class TalkBoxNativeClient{
    throw new Error('Subtask creation could not be verified by signed readback');
   return record;
  }
- async updateSubitem(issueId,subitemId,status){
-  if(!statuses.includes(status))throw new TypeError('Invalid subtask status');
-  const receipt=await this.rpc('update_subitem',{p_subitem_id:id(subitemId),p_updates:{status}});
+ async updateSubitem(issueId,subitemId,changes){
+  const updates=typeof changes==='string'?{status:changes}:changes;
+  if(!updates||typeof updates!=='object'||Array.isArray(updates))throw new TypeError('Invalid subtask changes');
+  const validated={};
+  if(Object.hasOwn(updates,'name')){
+   validated.name=String(updates.name||'').trim();
+   if(!validated.name||validated.name.length>500)throw new TypeError('Subtask name must be 1–500 characters');
+  }
+  if(Object.hasOwn(updates,'status')){
+   if(!statuses.includes(updates.status))throw new TypeError('Invalid subtask status');
+   validated.status=updates.status;
+  }
+  if(!Object.keys(validated).length)throw new TypeError('Subtask changes required');
+  const receipt=await this.rpc('update_subitem',{p_subitem_id:id(subitemId),p_updates:validated});
   const record=await this.get(issueId);
-  if(!record.subitems.some(item=>String(item.id)===String(receipt?.id)&&item.status===status))
+  if(!record.subitems.some(item=>String(item.id)===String(receipt?.id)&&
+      Object.entries(validated).every(([key,value])=>item[key]===value)))
    throw new Error('Subtask update could not be verified by signed readback');
   return record;
+ }
+ async archiveVerified(issueId){
+  const issue=id(issueId);
+  const receipt=await this.rpc('archive_issue',{p_issue_id:issue});
+  if(receipt?.success!==true||String(receipt.id)!==issue)
+   throw new Error('Archive acknowledgement did not match the requested issue');
+  // A single list page is insufficient evidence: inspect every page in the
+  // signed active issue projection, with bounded cursor cycle detection.
+  const seen=new Set();
+  let cursor=null,first=null;
+  do{
+   const page=await this.list(cursor);
+   first??=page;
+   if(page.items.some(item=>item.id===issue))
+    throw new Error('Archived issue remains in the active issue list');
+   if(!page.cursor)return first;
+   if(seen.has(page.cursor)||seen.size>=1000)
+    throw new Error('Archived issue list pagination cannot be verified');
+   seen.add(page.cursor);cursor=page.cursor;
+  }while(true);
  }
  async saveAssignees(issueId,people,version){
   if(!Array.isArray(people)||people.length>100||
     people.some(p=>!p||typeof p!=='object'||typeof p.id!=='string'||
       !/^[1-9][0-9]{0,19}$/.test(p.id)))
-   throw new TypeError('An existing monday-compatible people identity array is required');
+   throw new TypeError('An existing Toolbox person identity array is required');
   const receipt=await this.rpc('update_issue',{
    p_issue_id:id(issueId),p_updates:{person:people},p_expected_version:version});
   const record=await this.get(issueId);

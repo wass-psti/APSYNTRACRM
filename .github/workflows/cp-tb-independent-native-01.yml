@@ -1,0 +1,43 @@
+name: CP-TB Independent Native TalkBox
+on:
+  pull_request:
+    paths:
+      - "frontend/talkbox-*"
+      - "frontend/app.js"
+      - "frontend/data.js"
+      - "frontend/apsyntra-styles.bundle.css"
+      - "frontend/tests/talkbox-native-*.test.mjs"
+      - "frontend/tests/board-cache-channel.test.mjs"
+      - ".github/workflows/cp-tb-independent-native-01.yml"
+  push:
+    branches: [main]
+    paths:
+      - "frontend/talkbox-*"
+      - "frontend/app.js"
+      - "frontend/data.js"
+      - "frontend/apsyntra-styles.bundle.css"
+      - "frontend/tests/talkbox-native-*.test.mjs"
+      - "frontend/tests/board-cache-channel.test.mjs"
+      - ".github/workflows/cp-tb-independent-native-01.yml"
+permissions:
+  contents: read
+jobs:
+  native-talkbox-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install existing locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Native TalkBox and RPC contract regression
+        run: node --test frontend/tests/talkbox-native-*.test.mjs frontend/tests/board-cache-channel.test.mjs
+      - name: Exact CSS delivery contract
+        run: node scripts/build-priority5-styles.mjs --check
+      - name: All frontend regression tests
+        run: npm test
+      - name: Production Vite build
+        run: npm run build
