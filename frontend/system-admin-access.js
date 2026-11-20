@@ -73,7 +73,7 @@ export class SystemAdminClient {
   return raw;
  }
 }
-export function renderSystemAdminSection({data=null,selectedUser=null,actorId=null,busy=false,hidden=false}={}){
+export function renderSystemAdminSection({data=null,selectedUser=null,actorId=null,busy=false,hidden=false,loading=false,error=''}={}){
  const verified=data?.status==='VERIFIED_SYSTEM_ADMIN';
  const member=verified&&selectedUser?data.roles.find(p=>p.userId===selectedUser.id):null;
  const count=verified?data.roles.filter(p=>p.active).length:null;
@@ -88,7 +88,7 @@ export function renderSystemAdminSection({data=null,selectedUser=null,actorId=nu
   ' aria-label="System Admin management"'+(hidden?' hidden':'')+'>'+
   '<div class="section-header user-role-section-header"><strong>System Admin</strong>'+
    '<span class="status '+(verified?'done':'todo')+'">'+
-    (verified?'Verified global-role directory':'Pending backend activation')+'</span></div>'+
+    (verified?'Verified global-role directory':loading?'Checking authorization':'Pending backend activation')+'</span></div>'+
   '<div class="note security-note user-role-ceiling-note">System Admin is an explicitly appointed, global APSYNTRA authority for the trusted IT administration team and General Manager / CEO. Assigning the Information Technology department or the TimeTracker System Admin application role does not confer this role. Operational powers remain subject to each server-side domain policy and signed authorization.</div>'+
   (verified?
    '<div class="panel user-role-platform-panel"><div class="panel-body">'+
@@ -115,7 +115,8 @@ export function renderSystemAdminSection({data=null,selectedUser=null,actorId=nu
       'All changes require a recorded justification, server authorization and signed readback.')+
     '</p>':
    '<div class="panel user-role-platform-panel"><div class="panel-body">'+
-    '<div class="note" role="status">The System Admin management backend is not activated. No global administrator accounts have been inferred or changed. A reviewed SQL activation and signed multi-account acceptance are required before assignments can be made.</div>'+
+    '<div class="note" role="status">'+(loading?'Checking signed System Admin authorization…':
+     error?escape(error):'The System Admin management backend is not activated. No global administrator accounts have been inferred or changed. A reviewed SQL activation and signed multi-account acceptance are required before assignments can be made.')+'</div>'+
    '</div></div>')+
   '</section>';
 }
