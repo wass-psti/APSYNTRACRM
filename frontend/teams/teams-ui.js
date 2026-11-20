@@ -21,7 +21,9 @@ const icon=(id,cls='')=>{
  return '<svg class="teams-icon '+esc(cls)+'" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(paths[id]||paths.people)+'</svg>';
 };
 const color=id=>['#684bf1','#2f7bdf','#0fa5a1','#c65eac','#dd7058','#5b7bc7','#8c63b5'][[...String(id||'')].reduce((n,c)=>n+c.charCodeAt(0),0)%7];
-const avatar=(name,id,size='small')=>'<span class="teams-avatar '+size+'" aria-hidden="true" style="--teams-avatar-color:'+color(id)+'">'+esc(initials(name))+'</span>';
+const avatar=(name,id,size='small',src=null)=>'<span class="teams-avatar '+size+'" aria-hidden="true" style="--teams-avatar-color:'+color(id)+'">'+
+  (typeof src==='string'&&/^https:\/\/(jtlusodorfnyzgyuewkz\.supabase\.co\/storage\/v1\/object\/public\/|wass-psti\.github\.io\/APSYNTRACRM\/)/i.test(src)?
+   '<img alt="" src="'+esc(src)+'" loading="lazy">':esc(initials(name)))+'</span>';
 const shield=user=>{
  if(user.systemAdminSource!=='inherited'&&user.systemAdminSource!=='explicit')return '';
  const label=user.systemAdminSource==='inherited'?'Inherited from General administration':
@@ -43,14 +45,14 @@ function rowMenu(member,team,snapshot){
   items.push('<button type="button" data-action="teams-member-remove" data-user-id="'+esc(member.userId)+'">Remove from this team</button>');
  }
  if(sys){
-  if(!explicit&&!inherited)items.push('<button type="button" data-action="teams-admin-grant" data-user-id="'+esc(member.userId)+'">Grant System Admin</button>');
-  if(explicit)items.push('<button type="button" data-action="teams-admin-revoke" data-user-id="'+esc(member.userId)+'">Revoke System Admin</button>');
-  else if(inherited)items.push('<button disabled title="Remove this user from General administration to revoke">Revoke System Admin</button>');
+  if(!explicit)items.push('<button type="button" data-action="teams-admin-grant" data-user-id="'+esc(member.userId)+'">'+(inherited?'Grant explicit System Admin':'Grant System Admin')+'</button>');
+  if(explicit)items.push('<button type="button" data-action="teams-admin-revoke" data-user-id="'+esc(member.userId)+'">Revoke explicit System Admin</button>');
+  if(inherited)items.push('<button disabled title="Remove this user from General administration to revoke">Revoke inherited System Admin</button>');
  }
  return '<details class="teams-menu"><summary aria-label="Actions for '+esc(member.name)+'">'+icon('more')+'</summary><div class="teams-popover" role="group" aria-label="User actions">'+items.join('')+'</div></details>';
 }
 const uniqueMembers=members=>[...new Map(members.map(m=>[m.userId,m])).values()];
-export function renderTeamsConsole({snapshot=null,loading=false,error='',selectedTeamId=null,teamSearch='',teamFilter='all',tab='users',userSearch='',contentSearch='',systemAdminsOnly=false,addUsersOpen=false,addUsersSearch='',theme='dark'}={}){
+export function renderTeamsConsole({snapshot=null,loading=false,error='',selectedTeamId=null,teamSearch='',teamFilter='all',tab='users',userSearch='',contentSearch='',systemAdminsOnly=false,addUsersOpen=false,addUsersSearch='',theme='dark',filterOpen=false}={}){
  const ready=snapshot?.status==='VERIFIED_TEAMS';
  const teams=ready?snapshot.teams:[];
  const total=teams.length;
@@ -69,21 +71,21 @@ export function renderTeamsConsole({snapshot=null,loading=false,error='',selecte
  const memberCount=currentMembers.length;
  const contentCount=currentContent.length;
  const header='<div class="teams-modal-head"><div><h1 id="teams-title">Teams</h1><p>Organize your account users into teams and assign them to content. <a href="https://github.com/wass-psti/APSYNTRACRM/blob/main/docs/CP-SYSADMIN-01-IMPLEMENTATION-AND-ACTIVATION.md" target="_blank" rel="noopener noreferrer">Learn more</a></p></div>'+
-  '<button type="button" class="teams-close" data-action="teams-close" aria-label="Close Teams">'+icon('close')+'</button></div>';
+  '<div class="teams-header-actions"><button type="button" class="teams-theme" data-action="teams-theme" aria-label="Switch to '+(theme==='dark'?'light':'dark')+' theme" title="Switch to '+(theme==='dark'?'light':'dark')+' theme">'+(theme==='dark'?'☀':'☾')+'</button><button type="button" class="teams-close" data-action="teams-close" aria-label="Close Teams">'+icon('close')+'</button></div></div>';
  const aside='<aside class="teams-sidebar" aria-label="Teams list">'+
   '<button type="button" class="teams-new" data-action="teams-create"'+(!ready||!snapshot.canManageSystemAdmins?' disabled':'')+'>'+icon('plus')+' New team</button>'+
   '<div class="teams-side-search"><label class="teams-sr" for="teams-search">Search teams</label>'+icon('search')+
   '<input id="teams-search" type="text" placeholder="Search teams" autocomplete="off" maxlength="120" value="'+esc(teamSearch)+'">'+
   '<button type="button" data-action="teams-filter" aria-label="Filter teams" aria-expanded="false" title="Filter teams">'+icon('filter')+'</button></div>'+
-  '<div class="teams-filter-controls"><label class="teams-sr" for="teams-filter-select">Filter by System Admin</label><select id="teams-filter-select" aria-label="Team filter"><option value="all"'+(teamFilter==='all'?' selected':'')+'>All teams</option><option value="has-admins"'+(teamFilter==='has-admins'?' selected':'')+'>Has System Admins</option></select></div>'+
+  '<div class="teams-filter-controls"'+(filterOpen?'':' hidden')+'><label class="teams-sr" for="teams-filter-select">Filter by System Admin</label><select id="teams-filter-select" aria-label="Team filter"><option value="all"'+(teamFilter==='all'?' selected':'')+'>All teams</option><option value="has-admins"'+(teamFilter==='has-admins'?' selected':'')+'>Has System Admins</option></select></div>'+
   '<nav class="teams-nav" aria-label="Choose team">'+
   '<button type="button" data-action="teams-select" data-team-id="" class="teams-nav-row'+(all?' selected':'')+'" aria-current="'+(all?'true':'false')+'"><span class="teams-nav-symbol">'+icon('people')+'</span><span>All teams</span><span class="teams-side-count">'+(ready?total:'—')+'</span></button>'+
   (loading?Array.from({length:7},()=>'<div class="teams-skeleton teams-skeleton-side"></div>').join(''):
-   visibleTeams.map(team=>'<button type="button" data-action="teams-select" data-team-id="'+esc(team.id)+'" class="teams-nav-row'+(selected?.id===team.id?' selected':'')+'" aria-current="'+(selected?.id===team.id?'true':'false')+'">'+avatar(team.name,team.id,'nav')+
+   visibleTeams.map(team=>'<button type="button" data-action="teams-select" data-team-id="'+esc(team.id)+'" class="teams-nav-row'+(selected?.id===team.id?' selected':'')+'" aria-current="'+(selected?.id===team.id?'true':'false')+'">'+avatar(team.name,team.id,'nav',team.avatarUrl||null)+
     '<span class="teams-side-name">'+esc(team.name)+(team.isSystem?' '+icon('shield','teams-system-team-icon'):'')+'</span><span class="teams-side-count">'+team.memberCount+'</span></button>').join(''))+'</nav></aside>';
- const avatarBig=avatar(title,selected?.id||'all','large');
+ const avatarBig=avatar(title,selected?.id||'all','large',selected?.avatarUrl||null);
  const media=selected?.coverUrl?'<div class="teams-cover teams-cover-image" style="background-image:url(&quot;'+esc(selected.coverUrl)+'&quot;)"></div>':'<div class="teams-cover"></div>';
- const headerDetail=media+'<div class="teams-detail-head">'+
+ const headerDetail=media+(selected&&canManage?'<button class="teams-change-cover" data-action="teams-change-cover">'+icon('camera')+' Change cover</button>':'')+'<div class="teams-detail-head">'+
   '<div class="teams-head-avatar">'+avatarBig+(canManage?'<button data-action="teams-change-avatar" aria-label="Change team avatar" title="Change avatar">'+icon('camera')+'</button>':'')+'</div>'+
   '<div class="teams-heading"><h2>'+esc(title)+'</h2><small>'+memberCount+' '+plural(memberCount,'member')+'</small></div>'+
   (selected&&canManage?'<details class="teams-menu teams-header-menu"><summary aria-label="Team options">'+icon('more')+'</summary><div class="teams-popover" role="group">'+
