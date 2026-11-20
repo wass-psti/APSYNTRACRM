@@ -14,7 +14,7 @@ import {renderTimeTrackerCalendar} from './time-tracker-calendar.js';
 import {renderTimeTrackerOvertime} from './time-tracker-overtime.js';
 import {renderTimeTrackerMyHours} from './time-tracker-my-hours.js';
 import {renderTimeTrackerTeam} from './time-tracker-team.js';
-import {renderTimeTrackerEmployees} from './apps/TimeTracker/time-tracker-employees.js';
+import {renderTimeTrackerEmployees} from './time-tracker-application.js';
 import {renderTimeTrackerMonitor} from './time-tracker-monitor.js';
 import {renderTimeTrackerGps} from './time-tracker-gps.js';
 
