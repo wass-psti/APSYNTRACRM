@@ -184,7 +184,8 @@ test('Clock write still preserves fresh GPS and signed read-after-write requirem
  assert.match(appSource,/clockOnly:state\.ttView==='clock'/);
  assert.match(appSource,/clockOnly:true/);
  assert.match(appSource,/requiresDetail=next!=='clock'/);
- assert.match(appSource,/case 'tt-location-check'/);
+ assert.doesNotMatch(appSource,/case 'tt-location-check'/);
+ assert.match(appSource,/await captureAttendanceGeo\(navigator\.geolocation\)/);
  assert.match(appSource,/verifiedAccess:state\.ttAttendance\.access/);
  assert.doesNotMatch(appSource,/await loadTimeTracker\(seq\);\s*if\(state\.ttAttendance\?\.access\?\.employees\?\.members/);
 });
