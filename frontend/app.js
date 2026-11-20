@@ -2843,6 +2843,9 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
    if(seq!==routeSerial||!auth.isSignedIn||auth.userId!==state.context?.user_id||
       detail.board.workspace_id!==state.context?.workspace_id)return;
    state.board=detail;state.edit=edit;state.boardManage=manage;state.boardUi=boardUi;
+   if(tab==='items'&&!nativeModuleId)
+    void readBoardGroupPreferences({userId:state.context.user_id,
+     workspaceId:state.context.workspace_id,boardId});
  }catch(err){if(seq!==routeSerial)return;state.error=errorMessage(err);}
  finally{if(seq===routeSerial){state.loading=false;render();}}
  if(seq!==routeSerial||!state.board)return;
@@ -8240,13 +8243,20 @@ async function action(name,button){
   if(state.view!=='board'||state.tab!=='items'||state.board?.board?.id!==state.boardId)return;
   const id=button.dataset.id;
   if(!(state.board.groups||[]).some(g=>g.id===id))return;
-  const key=boardGroupCollapseKey(id);
-  const collapsed=button.getAttribute('aria-expanded')==='true';
-  boardGroupCollapsedByScope.set(key,collapsed);
-  render();
+  const count=(state.board.items||[]).filter(row=>row.group_id===id).length;
+  const newState=!boardGroupCollapsed(id,count);
+  await persistBoardGroupCollapsed(id,newState);
   [...root.querySelectorAll('[data-action="board-group-toggle"]')]
    .find(el=>el.dataset.id===id)?.focus({preventScroll:true});
   break;
+ }
+ case 'board-groups-collapse-all':{
+  if(state.tab!=='items'||!activeBoardLayout())return;
+  await persistAllBoardGroupsCollapsed(true);break;
+ }
+ case 'board-groups-expand-all':{
+  if(state.tab!=='items'||!activeBoardLayout())return;
+  await persistAllBoardGroupsCollapsed(false);break;
  }
  case 'board-add-column':{
   if(!activeBoardLayout()||!state.boardManage)return;
@@ -11186,6 +11196,12 @@ root.addEventListener('toggle',event=>{
  if(card)card.classList.toggle('board-card-menu-open',event.target.open);
  if(event.target.open)closeBoardCardMenus(event.target);
 },true);
+root.addEventListener('keydown',event=>{
+ const trigger=event.target.closest?.('.board-group-summary-trigger[role="button"]');
+ if(trigger&&['Enter',' '].includes(event.key)){
+  event.preventDefault();trigger.click();
+ }
+});
 root.addEventListener('click',event=>{
  const activeRefueling=root.querySelector('.ft3-refuel-dialog');
  if(activeRefueling&&!activeRefueling.contains(event.target)){
@@ -11951,6 +11967,12 @@ document.addEventListener('visibilitychange',()=>{
 // Window focus is distinct from document visibility: switching between two
 // visible application windows may not emit visibilitychange in either one.
 window.addEventListener('focus',()=>platformSync.focusChanged());
+window.addEventListener('focus',()=>{
+ if(state.view==='board'&&state.tab==='items'&&state.board?.board?.id===state.boardId&&
+    state.context?.user_id===auth.userId)
+  void readBoardGroupPreferences({userId:state.context.user_id,
+   workspaceId:state.context.workspace_id,boardId:state.boardId});
+});
 window.addEventListener('focus',()=>void refreshCorrectedTimeTrackerClock({onFocus:true}));
 // An additional tab may begin a Clock action; surface its pending marker
 // immediately, without replaying writes or trusting browser data as attendance.
