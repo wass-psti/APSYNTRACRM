@@ -213,7 +213,6 @@ import {mountUserRoleMotion,stopUserRoleMotion} from './user-role-visuals.js';
 import {settingsIcon,mountSettingsMotion,stopSettingsMotion} from './settings-visuals.js';
 import {crmPlatformRoleChangeNeeded,FUELTRANS_WORKSPACE_ROLES,SCOPED_SIX_MODULE_IDS,UserRoleManagementClient,renderUserRoleManagement,selectDefaultUserRoleTarget,defaultModuleRoleForAssignment,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
 import {planUserRoleBatch,unverifiedBatchRoleAssignments} from './user-role-batch.js';
-import {SystemAdminClient,SYSTEM_ADMIN_DESIGNATIONS} from './system-admin-access.js';
 import {parseSignedCrmRole,signedCrmRoleLabel,signedCrmIdentityLabel,currentSignedCrmRole} from './crm-role-context.js';
 import {workspaceRelationFromCatalog,workspaceRelationLabel} from './workspace-relation-context.js';
 
@@ -404,7 +403,14 @@ const timeTracker=new TimeTrackerNativeClient({auth,api:db});
 const fundTracker=new FundTrackerNativeClient({auth,api:db});
 const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
-const systemAdminClient=new SystemAdminClient(db);
+let systemAdminClient=null;
+async function getSystemAdminClient(){
+ if(!systemAdminClient){
+  const {SystemAdminClient}=await import('./system-admin-access.js');
+  systemAdminClient=new SystemAdminClient(db);
+ }
+ return systemAdminClient;
+}
 let performanceProfileAbort=null;
 const startupCriticalPath=createStartupCriticalPath();
 const state={performanceBusy:false,performanceReport:null,context:null,boardCatalogError:'',crmRoleSnapshot:null,workspaceRelationSnapshot:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',boardItemSearch:'',mrhTrackerFilters:{...MATERIAL_TRACKER_DEFAULT_FILTERS},mrhTrackerScope:'',mrhAddView:false,mrhAddBusy:false,groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,boardPageBusy:false,boardPageError:'',issues:[],edit:false,boardManage:false,
@@ -2512,7 +2518,7 @@ async function loadSystemAdminManagement(){
  if(identity?.id!==ctx.user_id||ctx.user_id!==state.context?.user_id||
     ctx.workspace_id!==state.context?.workspace_id)
    throw new ApiError('System Admin workspace scope changed.',403);
- const snapshot=await systemAdminClient.snapshot({
+ const snapshot=await (await getSystemAdminClient()).snapshot({
   workspaceId:ctx.workspace_id,actorId:ctx.user_id,users:state.userRoleData.users
  });
  if(!auth.isSignedIn||auth.userId!==identity.id||
@@ -9657,7 +9663,7 @@ async function action(name,button){
    openModal(revoking?'Revoke System Admin':'Assign System Admin',fields,async fd=>{
     const requestedDesignation=revoking?designation:String(fd.get('designation')||'');
     const reason=String(fd.get('reason')||'').trim();
-    if(!SYSTEM_ADMIN_DESIGNATIONS.includes(requestedDesignation)||
+    if(!['trusted_it','general_manager'].includes(requestedDesignation)||
        reason.length<12||reason.length>180)
      throw new ApiError('Choose a valid designation and provide at least 12 characters of justification.',400);
     state.userRoleBusy=true;
@@ -9668,7 +9674,7 @@ async function action(name,button){
         state.context?.user_id!==ctx.user_id||
         state.context?.workspace_id!==ctx.workspace_id)
       throw new ApiError('Signed administrator identity or workspace changed.',403);
-     const fresh=await systemAdminClient.snapshot({
+     const fresh=await (await getSystemAdminClient()).snapshot({
       workspaceId:ctx.workspace_id,actorId:ctx.user_id,users:state.userRoleData.users
      });
      const freshRole=fresh.roles?.find(r=>r.userId===targetId);
@@ -9676,12 +9682,12 @@ async function action(name,button){
         freshRole?.revision!==role.revision||freshRole?.active!==role.active)
       throw new ApiError('System Admin role changed. Refresh before retrying.',409);
      state.systemAdminData=null; // do not show stale authority on ambiguous writes
-     await systemAdminClient.change({
+     await (await getSystemAdminClient()).change({
       workspaceId:ctx.workspace_id,actorId:ctx.user_id,userId:targetId,
       action:revoking?'revoke':'grant',designation:requestedDesignation,
       reason,expectedRevision:role.revision
      });
-     const verified=await systemAdminClient.snapshot({
+     const verified=await (await getSystemAdminClient()).snapshot({
       workspaceId:ctx.workspace_id,actorId:ctx.user_id,users:state.userRoleData.users
      });
      const finalRole=verified.roles.find(r=>r.userId===targetId);
