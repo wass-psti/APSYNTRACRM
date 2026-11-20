@@ -49,6 +49,34 @@ export function assessSignedPair(records, expectedKeys) {
     reason: "Genuine same-workspace signed accounts verified",
   };
 }
+/** A same-workspace read-only pair is not an administrator-to-employee
+ * mutation pair unless authoritative effective-role projection proves it.
+ * This assesses test eligibility; it never authorizes or performs a write. */
+export function assessAdminEmployeePair(records, expectedKeys) {
+  const pairStatus = assessSignedPair(records, expectedKeys);
+  if (pairStatus.status !== "ELIGIBLE") return pairStatus;
+  const selected = expectedKeys.map((key) =>
+    records.find(
+      (r) => r.signed === true && r.active === true && r.accountKey === key,
+    ),
+  );
+  const roles = selected.map((r) => r?.access?.effectivePlatformRole);
+  if (
+    !roles.includes("admin") ||
+    !roles.some((role) => ["employee", "supervisor", "viewer"].includes(role))
+  )
+    return {
+      status: "BLOCKED",
+      reason:
+        "Same-workspace pair has no signed administrator and non-admin target",
+    };
+  return {
+    status: "ELIGIBLE",
+    reason:
+      "Independent same-workspace administrator and target sessions verified; mutation not executed",
+  };
+}
+
 const arg = (k) =>
   process.argv.find((x) => x.startsWith(k + "="))?.slice(k.length + 1);
 const cdp = arg("--cdp-url"),
@@ -317,6 +345,9 @@ if (import.meta.url === pathToFileURL(process.argv[1] || "/dev/null").href) {
       const pair = assessSignedPair(inventory, keys);
       report.crossUserAcceptance = pair.status;
       report.crossUserReason = pair.reason;
+      const mutationPair = assessAdminEmployeePair(inventory, keys);
+      report.adminEmployeeMutationAcceptance = mutationPair.status;
+      report.adminEmployeeMutationReason = mutationPair.reason;
     } catch (e) {
       report.blocker = e.message.slice(0, 220);
       process.exitCode = 1;
