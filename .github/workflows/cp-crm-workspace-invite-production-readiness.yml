@@ -1,0 +1,24 @@
+name: CP-CRM-WORKSPACE-INVITE Production Activation Preflight
+on:
+  pull_request:
+    paths:
+      - 'server/ws02d-production-readiness.mjs'
+      - 'server/tests/ws02d-production-readiness.test.mjs'
+      - 'sql/diagnostics/cp-crm-workspace-invite-production-readiness.sql'
+      - 'docs/CP-CRM-WORKSPACE-INVITE-PRODUCTION-ACTIVATION-01.md'
+      - '.github/workflows/cp-crm-workspace-invite-production-readiness.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  readonly-production-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify unmodified migration inventory
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Verify production preflight and all existing invitation contracts
+        run: node --test server/tests/ws02d-*.test.mjs frontend/tests/workspace-invitation*.test.mjs
