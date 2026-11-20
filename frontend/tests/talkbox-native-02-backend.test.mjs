@@ -14,16 +14,16 @@ const base={id:'301',name:'Native',person:[],version:1,date:null,timeTracking:{h
 
 test('native V2 features remain off if backend is absent',async()=>{
  const c=new TalkBoxNativeClient({workspaceId,api:{rpc:async()=>{throw Error('RPC missing');}}});
- assert.deepEqual(await c.nativeV2Capabilities(),{threadedReplies:false,attachmentRemoval:false});
+ assert.deepEqual(await c.nativeV2Capabilities(),{threadedReplies:false,attachmentRemoval:false,serverTimer:false});
 });
 
 test('native V2 feature flags use real signed backend receipt, never a UI guess',async()=>{
  const c=new TalkBoxNativeClient({workspaceId,api:{rpc:async(name,args)=>{
   assert.equal(name,'toolbox_issues_native_v2_capabilities');
   assert.equal(args.p_workspace_id,workspaceId);
-  return {threadedReplies:true,attachmentRemoval:true};
+  return {threadedReplies:true,attachmentRemoval:true,serverTimer:false};
  }}});
- assert.deepEqual(await c.nativeV2Capabilities(),{threadedReplies:true,attachmentRemoval:true});
+ assert.deepEqual(await c.nativeV2Capabilities(),{threadedReplies:true,attachmentRemoval:true,serverTimer:false});
 });
 
 test('thread reply verifies parent and independent readback',async()=>{

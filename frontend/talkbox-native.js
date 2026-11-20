@@ -172,9 +172,10 @@ export class TalkBoxNativeClient{
   try{
    const result=await this.rpc('native_v2_capabilities');
    return {threadedReplies:result?.threadedReplies===true,
-    attachmentRemoval:result?.attachmentRemoval===true};
+    attachmentRemoval:result?.attachmentRemoval===true,
+    serverTimer:result?.serverTimer===true};
   }catch{
-   return {threadedReplies:false,attachmentRemoval:false};
+   return {threadedReplies:false,attachmentRemoval:false,serverTimer:false};
   }
  }
  async replyVerified(issueId,parentId,message){
@@ -232,17 +233,39 @@ export class TalkBoxNativeClient{
    throw new Error('Subtask remains present after delete');
   return after;
  }
- async startTimerVerified(issueId,now=new Date()){
+ async startTimerVerified(issueId,now=new Date(),{serverTimer=false}={}){
   const issue=id(issueId),current=await this.get(issue);
   if(activeTimer(current))throw new Error('TalkBox timer already running');
+  if(serverTimer){
+   const receipt=projectTalkBoxIssue(await this.rpc('timer_start',{
+    p_issue_id:issue,p_expected_version:current.version}));
+   const record=await this.get(issue);
+   if(record.version!==receipt.version||!record.timeTracking?.running?.startedAt||
+      record.timeTracking.running.startedAt!==receipt.timeTracking?.running?.startedAt||
+      record.timeTracking.clockSource!=='postgresql')
+    throw new Error('Server timer start could not be verified by signed readback');
+   return record;
+  }
   const startedAt=new Date(now).toISOString();
   const tracking={...current.timeTracking,running:{startedAt}};
   return this.updateVerified(issue,{timeTracking:tracking},current.version);
  }
- async stopTimerVerified(issueId,now=new Date()){
+ async stopTimerVerified(issueId,now=new Date(),{serverTimer=false}={}){
   const issue=id(issueId),current=await this.get(issue);
   const running=activeTimer(current);
   if(!running)throw new Error('No TalkBox timer is running');
+  if(serverTimer&&current.timeTracking.clockSource==='postgresql'){
+   const receipt=projectTalkBoxIssue(await this.rpc('timer_stop',{
+    p_issue_id:issue,p_expected_version:current.version}));
+   const record=await this.get(issue);
+   if(record.version!==receipt.version||record.timeTracking?.running||
+      record.timeTracking?.totalSeconds!==receipt.timeTracking?.totalSeconds||
+      record.timeTracking?.clockSource!=='postgresql')
+    throw new Error('Server timer stop could not be verified by signed readback');
+   return record;
+  }
+  if(current.timeTracking.clockSource==='postgresql')
+   throw new Error('Server timer capability is required to stop this session');
   const elapsed=Math.floor((new Date(now).getTime()-isoTime(running.startedAt).getTime())/1000);
   if(!Number.isSafeInteger(elapsed)||elapsed<0||elapsed>366*24*3600)
    throw new Error('Invalid elapsed TalkBox session duration');
