@@ -12,13 +12,12 @@ export function boardPaginationStatus(pagination){
   const archived=Number.isSafeInteger(pagination.archived_count)?pagination.archived_count:null;
   const split=active!==null&&archived!==null?
    ' ('+active.toLocaleString('en-US')+' active, '+archived.toLocaleString('en-US')+' archived)':'';
-  return loaded.toLocaleString('en-US')+' loaded · '+
-   remaining.toLocaleString('en-US')+' remaining · '+
-   total.toLocaleString('en-US')+' total'+split;
+  return 'Showing '+loaded.toLocaleString('en-US')+' of '+total.toLocaleString('en-US')+' items'+
+   (remaining>0?' · '+remaining.toLocaleString('en-US')+' more available':'')+split;
  }
  return pagination.has_more===true?
-  'Showing '+loaded+' loaded items. More items are available.':
-  'All available items loaded · '+loaded+' items.';
+  'Showing '+loaded.toLocaleString('en-US')+' items · More available':
+  'Showing all '+loaded.toLocaleString('en-US')+' items';
 }
 export function renderBoardPagination(pagination,{busy=false,error=''}={}){
  if(!pagination||!Number.isSafeInteger(Number(pagination.loaded_count)))return '';
