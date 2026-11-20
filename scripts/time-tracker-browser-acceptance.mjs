@@ -102,6 +102,44 @@ try {
     .getByRole("heading", { name: /^Good (morning|afternoon|evening),$/ })
     .waitFor();
   await page.locator("#tt-clock-hours").waitFor();
+  // CP-TT-12H-FORMAT-02: real Chromium acceptance for visible AM/PM
+  // presentation. Exercise forms without submitting or modifying attendance.
+  const twelveHour = await page.evaluate(async () => {
+    const {formatTimeTrackerClock,formatTimeTrackerDateTime} =
+      await import("/frontend/time-tracker-time-format.js");
+    const {renderTimeTrackerOvertime} =
+      await import("/frontend/time-tracker-overtime.js");
+    const {renderTimeTrackerAdminEditor} =
+      await import("/frontend/time-tracker-record-management.js");
+    const host = document.createElement("div");
+    host.innerHTML = renderTimeTrackerOvertime({
+      now:new Date("2026-11-20T04:00:00Z"),modalOpen:true,
+      requests:[{id:"test-ot",name:"Test Employee",date:"2026-11-20",
+        status:"Submitted",start:"18:00",end:"20:00",durationMinutes:120,
+        task:"Acceptance fixture"}]
+    });
+    const otStart = host.querySelector("#tt-ot-start");
+    const otDetails = host.querySelector(".tt-ot-detail")?.textContent;
+    host.innerHTML = renderTimeTrackerAdminEditor({timeOnly:true,
+      editor:{mode:"single",records:[{ownerId:"cloud:fixture",ownerName:"Test Employee",
+        clockIn:{timestamp:"2026-11-20T10:05:00.000Z"},clockOut:null}]}});
+    const adminInput = host.querySelector('input[name="clockInAt"]');
+    return {
+      midnight:formatTimeTrackerClock("2026-11-20T16:00:00Z"),
+      noon:formatTimeTrackerClock("2026-11-20T04:00:00Z"),
+      date:formatTimeTrackerDateTime("2026-11-20T10:05:00Z"),
+      otStartType:otStart?.type,otStartValue:otStart?.value,
+      otDetails,adminType:adminInput?.type,adminValue:adminInput?.value
+    };
+  });
+  assert.equal(twelveHour.midnight,"12:00 AM");
+  assert.equal(twelveHour.noon,"12:00 PM");
+  assert.equal(twelveHour.date,"Nov 20, 2026, 06:05 PM");
+  assert.equal(twelveHour.otStartType,"text");
+  assert.equal(twelveHour.otStartValue,"06:00 PM");
+  assert.match(twelveHour.otDetails,/06:00 PM/);
+  assert.equal(twelveHour.adminType,"text");
+  assert.equal(twelveHour.adminValue,"2026-11-20 06:05 PM");
 
   const desktopLayout = await page.evaluate(() => {
     const app = document.querySelector(".fm1-app");
