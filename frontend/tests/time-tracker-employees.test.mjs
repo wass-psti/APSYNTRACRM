@@ -97,6 +97,18 @@ test('native reader reuses one existing Supabase directory RPC under signed boar
  assert.equal(access.employees.members.length,2);
  assert.equal(access.workspaceId,workspace);
  assert.equal(names.filter(x=>x==='list_module_directory').length,1);
+ const invalidApi={...api,rpc:async(name,...rest)=>{
+  if(name==='list_module_directory')return [
+   {...rows[0],workspace_id:'70000000-0000-4000-8000-000000000001'},
+   rows[1]
+  ];
+  return api.rpc(name,...rest);
+ }};
+ const safe=await new TimeTrackerNativeClient({
+  auth:{userId:actor,getVerifiedUser:async()=>({id:actor})},api:invalidApi
+ }).access(board);
+ // Optional directory corruption blocks the roster, never core attendance.
+ assert.equal(safe.employees,null);
 });
 
 test('the menu refreshes on open and search never fetches raw Supabase Auth accounts',()=>{
