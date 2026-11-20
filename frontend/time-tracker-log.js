@@ -385,7 +385,7 @@ export function renderTimeTrackerLog({
     '<button type="button" data-action="tt-log-admin-select-visible"'+(!visible.length||adminBusy?' disabled':'')+'>Select visible</button>'+
     '<button type="button" data-action="tt-log-admin-bulk-edit"'+(selectedIds.length&&!adminBusy?'':' disabled')+'><span aria-hidden="true">✎</span> Edit selected</button>'+
     '<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-bulk-delete"'+(selectedIds.length&&!adminBusy?'':' disabled')+'><span aria-hidden="true">⌫</span> Delete selected</button>'+
-    '<button type="button" class="tt-log-admin-clear" data-action="tt-log-admin-clear-selection"'+(selectedIds.length&&!adminBusy?'':' disabled')+'>Clear selection</button></div></div>':'')+
+    '<button type="button" class="tt-log-admin-reset" data-action="tt-log-admin-clear-selection"'+(selectedIds.length&&!adminBusy?'':' disabled')+'>Clear selection</button></div></div>':'')+
    (adminError&&!adminEditor?'<p class="tt-log-admin-feedback is-error" role="alert">'+esc(adminError)+'</p>':'')+
    (adminSuccess?'<p class="tt-log-admin-feedback is-success" role="status">'+esc(adminSuccess)+'</p>':'')+
    (rows.length?'<div class="tt-log-day"><div class="tt-log-table-scroll">'+
