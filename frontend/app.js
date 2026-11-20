@@ -2,7 +2,6 @@ import {syncFuelTrans} from './fueltrans-lazy.js';
 import {applySearchVisibility} from './interaction-search.js';
 import {createFrameCoalescer} from './frame-coalescer.js';
 import {mountBoardHorizontalRail} from './board/presentation/horizontal-rail.js';
-import {installBoardToolbarPopoverBehavior} from './board/presentation/toolbar-popovers.js';
 import {AuthClient,ApiError} from './session.js';
 import {createTimeTrackerPendingRecovery,timeTrackerPendingKeyMatches} from './time-tracker-pending-recovery.js';
 import {readTimeTrackerLocationPreference,saveTimeTrackerLocationPreference} from './apps/TimeTracker/time-tracker-preferences.js';
@@ -1798,6 +1797,7 @@ function render(){
   applyBoardItemFilter(state.boardItemSearch);
   syncBoardSelectionUi();
   mountBoardPaginationUi();
+  void ensureBoardToolbarPopoverBehavior();
  }
  mountBoardHorizontalRail(root);
  if(state.context&&auth.isSignedIn)platformSync.start({
@@ -11304,8 +11304,19 @@ root.addEventListener('toggle',event=>{
  if(card)card.classList.toggle('board-card-menu-open',event.target.open);
  if(event.target.open)closeBoardCardMenus(event.target);
 },true);
-// Keep Search-adjacent Board toolbar popovers exclusive and dismissible.
-installBoardToolbarPopoverBehavior(root,document);
+// Load Board-only menu behavior on demand, not in the anonymous startup graph.
+let boardToolbarPopoverPromise=null;
+function ensureBoardToolbarPopoverBehavior(){
+ if(boardToolbarPopoverPromise)return boardToolbarPopoverPromise;
+ boardToolbarPopoverPromise=import('./board/presentation/toolbar-popovers.js')
+  .then(({installBoardToolbarPopoverBehavior})=>
+   installBoardToolbarPopoverBehavior(root,document))
+  .catch(error=>{
+   boardToolbarPopoverPromise=null;
+   console.error('Board toolbar popovers unavailable:',error);
+  });
+ return boardToolbarPopoverPromise;
+}
 root.addEventListener('keydown',event=>{
  const trigger=event.target.closest?.('.board-group-summary-trigger[role="button"]');
  if(trigger&&['Enter',' '].includes(event.key)){
