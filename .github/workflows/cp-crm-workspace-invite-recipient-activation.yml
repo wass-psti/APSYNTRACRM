@@ -1,0 +1,27 @@
+name: CP-CRM Workspace Invitation Recipient Activation
+on:
+  pull_request:
+    paths:
+      - 'frontend/app.js'
+      - 'frontend/workspace-invitation-acceptance.js'
+      - 'frontend/tests/workspace-invitation-acceptance.test.mjs'
+      - 'frontend/tests/cp-crm-invite-recipient-activation.test.mjs'
+      - 'docs/CP-CRM-WORKSPACE-INVITE-RECIPIENT-ACTIVATION.md'
+      - '.github/workflows/cp-crm-workspace-invite-recipient-activation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verified-recipient-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install from existing lockfile
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify recipient link/signed member acceptance, fail-closed and refresh
+        run: node --test frontend/tests/workspace-invitation-acceptance.test.mjs frontend/tests/cp-crm-invite-recipient-activation.test.mjs frontend/tests/cp-crm-workspace-invite-preflight.test.mjs server/tests/ws02d-*.test.mjs
+      - name: Verify deployed bundle and source integrity
+        run: npm run build && node scripts/verify-migration-source-manifest.mjs
