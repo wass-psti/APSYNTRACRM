@@ -1,0 +1,164 @@
+/* APSYNTRA Teams — dedicated modal; screenshot-proportional, dark + light.
+ * Scope every rule to this dialog to avoid modifying CRM board styles.
+ */
+#app .teams-backdrop{
+ position:fixed!important;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;
+ padding:clamp(8px,2vw,32px);background:rgba(5,7,14,.76);backdrop-filter:blur(3px)
+}
+#app .teams-dialog{
+ --tc-bg:#101113;--tc-side:#292a2e;--tc-head:#0e0f11;--tc-text:#f3f4f6;
+ --tc-muted:#b5b6bf;--tc-line:#56575d;--tc-input:#292a2e;--tc-selected:#244d9d;
+ --tc-hover:#383a40;--tc-accent:#6685ff;--tc-banner:#eef0f4;--tc-popup:#24262d;
+ width:min(100%,1760px);height:min(94dvh,1020px);min-height:420px;border-radius:18px 18px 12px 12px;
+ background:var(--tc-bg);color:var(--tc-text);overflow:hidden;
+ box-shadow:0 26px 100px #0008;display:flex;flex-direction:column;
+ font:14px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ color-scheme:dark
+}
+#app .teams-dialog[data-teams-theme="light"]{
+ --tc-bg:#fff;--tc-side:#f4f5f8;--tc-head:#fff;--tc-text:#1d2330;
+ --tc-muted:#657085;--tc-line:#dce1e9;--tc-input:#fff;--tc-selected:#e8ecff;
+ --tc-hover:#e9edf5;--tc-accent:#515be0;--tc-banner:#e7eaf2;--tc-popup:#fff;
+ color-scheme:light
+}
+#app .teams-dialog *,#app .teams-dialog *:before,#app .teams-dialog *:after{box-sizing:border-box}
+#app .teams-dialog button,#app .teams-dialog input,#app .teams-dialog select{
+ font:inherit;color:inherit;box-shadow:none;text-transform:none;letter-spacing:normal
+}
+#app .teams-dialog button{transition:background .15s,border-color .15s}
+#app .teams-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:25px;
+ background:var(--tc-head);padding:17px 24px 18px;border-bottom:1px solid var(--tc-line);flex:none}
+#app .teams-modal-head h1{font-size:26px;line-height:1.13;font-weight:750;margin:0 0 4px;letter-spacing:-.7px;color:var(--tc-text)}
+#app .teams-modal-head p{font-size:13px;margin:0;color:var(--tc-text)}
+#app .teams-modal-head a{color:var(--tc-accent);font-weight:600;text-decoration:none}
+#app .teams-close{display:grid;place-items:center;flex:none;border:0;border-radius:6px;padding:5px;background:transparent;color:var(--tc-text)}
+#app .teams-close:hover{background:var(--tc-hover)}
+#app .teams-icon{display:inline-block;vertical-align:middle;flex:none}
+#app .teams-body{display:grid;grid-template-columns:clamp(300px,23%,370px) minmax(0,1fr);min-height:0;flex:1}
+#app .teams-sidebar{min-height:0;overflow:auto;background:var(--tc-side);border-right:1px solid var(--tc-line);padding:18px 16px 28px}
+#app .teams-new{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;height:43px;border:1px solid #85868d;
+ background:transparent;border-radius:5px;font-weight:600}
+#app .teams-new:hover:not(:disabled){background:var(--tc-hover)}
+#app .teams-side-search{position:relative;display:flex;align-items:center;margin:16px 0 17px;height:42px;border:1px solid #81838b;border-radius:5px;background:var(--tc-input)}
+#app .teams-side-search>.teams-icon{position:absolute;left:12px;color:var(--tc-muted);pointer-events:none}
+#app .teams-side-search input{width:100%;min-width:0;padding:8px 43px 8px 40px;background:transparent!important;border:0!important;border-radius:5px!important;outline:0!important;
+ box-shadow:none!important;font-size:14px}
+#app .teams-side-search input::placeholder,#app .teams-dialog input::placeholder{color:var(--tc-muted);opacity:1}
+#app .teams-side-search>button{position:absolute;right:3px;top:3px;height:34px;width:34px;border:0;background:transparent;display:grid;place-items:center;color:var(--tc-text)}
+#app .teams-side-search>button:hover{background:var(--tc-hover)}
+#app .teams-filter-controls{padding:0 0 8px}
+#app .teams-filter-controls select{background:var(--tc-input);border:1px solid var(--tc-line);border-radius:6px;padding:7px 8px;font-size:12px;width:100%}
+#app .teams-nav{display:grid;gap:2px}
+#app .teams-nav-row{display:flex;align-items:center;gap:11px;border:0;border-radius:5px;min-height:40px;
+ padding:5px 9px;width:100%;text-align:left;background:transparent;font-size:13px;font-weight:600}
+#app .teams-nav-row:hover{background:var(--tc-hover)}
+#app .teams-nav-row.selected{background:var(--tc-selected);color:#fff}
+#app .teams-dialog[data-teams-theme="light"] .teams-nav-row.selected{color:#24346e}
+#app .teams-nav-row>.teams-nav-symbol{width:32px;height:32px;display:grid;place-items:center;color:var(--tc-muted)}
+#app .teams-nav-row .teams-side-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+#app .teams-nav-row .teams-side-count{margin-left:auto;color:var(--tc-muted);font-weight:500;font-size:12px}
+#app .teams-nav-row.selected .teams-side-count{color:inherit}
+#app .teams-nav-row .teams-system-team-icon{width:14px;height:14px;color:var(--tc-accent);vertical-align:-2px}
+#app .teams-avatar{display:inline-grid;place-items:center;flex:none;background:var(--teams-avatar-color,#5068b3);color:#fff;
+ border-radius:50%;font-size:11px;font-weight:780;letter-spacing:0;width:32px;height:32px}
+#app .teams-avatar.nav{width:30px;height:30px;font-size:10px}
+#app .teams-avatar.large{width:100px;height:100px;border:5px solid var(--tc-bg);font-size:32px;box-shadow:0 4px 8px #0003}
+#app .teams-detail{position:relative;min-height:0;overflow:auto;background:var(--tc-bg)}
+#app .teams-cover{width:100%;height:clamp(110px,24%,195px);min-height:135px;background:var(--tc-banner);background-position:center;background-size:cover}
+#app .teams-detail-head{position:relative;min-height:104px;padding:11px 25px 14px 170px;display:flex;align-items:flex-start;gap:20px}
+#app .teams-head-avatar{position:absolute;left:37px;top:-48px;width:106px;height:106px}
+#app .teams-head-avatar>button{position:absolute;bottom:0;right:0;background:var(--tc-side);color:var(--tc-text);border:1px solid var(--tc-line);border-radius:50%;padding:5px;opacity:0}
+#app .teams-head-avatar:hover>button,#app .teams-head-avatar>button:focus-visible{opacity:1}
+#app .teams-heading{flex:1;min-width:0}
+#app .teams-heading h2{margin:0 0 4px;font-size:23px;font-weight:730;line-height:1.2;letter-spacing:-.4px;overflow-wrap:anywhere}
+#app .teams-heading small{font-size:13px;color:var(--tc-muted)}
+#app .teams-menu{position:relative;flex:none}
+#app .teams-menu>summary{display:grid;place-items:center;list-style:none;cursor:pointer;width:34px;height:32px;color:var(--tc-muted);border-radius:5px}
+#app .teams-menu>summary::-webkit-details-marker{display:none}
+#app .teams-menu>summary:hover{background:var(--tc-hover)}
+#app .teams-popover{position:absolute;top:100%;right:0;min-width:235px;max-height:400px;overflow:auto;z-index:20;
+ background:var(--tc-popup);border:1px solid var(--tc-line);border-radius:8px;padding:5px;box-shadow:0 12px 30px #0006}
+#app .teams-popover>button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:9px 11px;
+ border-radius:5px;white-space:nowrap;font-size:12px}
+#app .teams-popover>button:hover:not(:disabled){background:var(--tc-hover)}
+#app .teams-tabs{display:flex;align-items:center;gap:2px;border-bottom:1px solid var(--tc-line);margin:0 27px;padding-left:0}
+#app .teams-tabs button{padding:12px 16px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--tc-muted);font-size:13px}
+#app .teams-tabs button.active{border-color:var(--tc-accent);color:var(--tc-text)}
+#app .teams-detail-content{padding:32px 27px 28px;min-height:0}
+#app .teams-system-banner{display:flex;align-items:center;gap:9px;color:var(--tc-accent);padding:11px 27px;font-size:12px;border-bottom:1px solid var(--tc-line)}
+#app .teams-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 25px}
+#app .teams-toolbar-end{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-left:auto}
+#app .teams-search{display:flex;align-items:center;gap:9px;border:1px solid var(--tc-line);background:var(--tc-input);border-radius:5px;padding:0 11px;height:40px;width:min(100%,265px)}
+#app .teams-search .teams-icon{color:var(--tc-muted)}
+#app .teams-search input{min-width:0;width:100%;height:100%;background:transparent!important;border:0!important;outline:none!important;box-shadow:none!important;padding:0!important;font-size:13px}
+#app .teams-primary{display:flex;align-items:center;gap:7px;padding:8px 12px;min-height:36px;border:1px solid var(--tc-accent);background:var(--tc-accent);color:#fff!important;border-radius:5px;font-size:12px;font-weight:650}
+#app .teams-primary:hover{filter:brightness(1.09)}
+#app .teams-admin-filter{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--tc-muted)}
+#app .teams-admin-filter input{accent-color:var(--tc-accent)}
+#app .teams-table-wrap{max-height:min(47dvh,550px);overflow:auto;border:1px solid var(--tc-line);border-radius:5px;position:relative}
+#app .teams-table{width:100%;border-collapse:separate;border-spacing:0;min-width:610px;text-align:left}
+#app .teams-table thead{position:sticky;top:0;z-index:3;background:var(--tc-bg)}
+#app .teams-table th{padding:12px 17px;font-weight:500;font-size:12px;color:var(--tc-muted);border-bottom:1px solid var(--tc-line)}
+#app .teams-table td{height:44px;padding:6px 17px;font-size:12px;border-bottom:1px solid var(--tc-line);vertical-align:middle}
+#app .teams-table tbody tr:last-child td{border-bottom:0}
+#app .teams-table tbody tr:hover{background:var(--tc-hover)}
+#app .teams-table .teams-name-cell{display:flex;align-items:center;gap:10px;min-width:185px}
+#app .teams-table .teams-name-copy{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0}
+#app .teams-name-copy strong{font-size:12px;font-weight:640}
+#app .teams-table .teams-email{max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#app .teams-table .teams-actions{min-width:93px;white-space:nowrap;text-align:right}
+#app .teams-table .teams-actions .teams-owner{display:inline-grid;place-items:center;color:var(--tc-accent);margin-right:7px;vertical-align:middle}
+#app .teams-table .teams-actions .teams-menu{display:inline-block;vertical-align:middle}
+#app .teams-table .teams-actions>button{background:transparent;border:0}
+#app .teams-system-badge{display:inline-flex;align-items:center;gap:3px;border:1px solid #697ed84d;background:#657cf21b;color:var(--tc-accent);border-radius:4px;font-size:10px;padding:2px 4px}
+#app .teams-system-badge .teams-icon{width:12px;height:12px}
+#app .teams-content-name{display:inline-flex;align-items:center;gap:9px}
+#app .teams-access-pill{display:inline-flex;background:#6070bc25;color:var(--tc-accent);padding:3px 9px;border-radius:5px;font-size:11px}
+#app .teams-empty{display:flex;flex-direction:column;align-items:center;padding:56px 18px;color:var(--tc-muted);text-align:center}
+#app .teams-empty>.teams-icon{width:44px;height:44px;color:var(--tc-accent)}
+#app .teams-empty h3{font-size:17px;color:var(--tc-text);margin:16px 0 4px}
+#app .teams-empty p{font-size:12px;margin:0 0 18px}
+#app .teams-add-users{border:1px solid var(--tc-line);padding:13px;margin:-10px 0 18px;border-radius:8px;background:var(--tc-popup);max-width:490px}
+#app .teams-add-results{max-height:210px;overflow:auto;margin-top:7px}
+#app .teams-add-results>button{width:100%;display:flex;align-items:center;gap:9px;background:transparent;border:0;padding:7px;border-radius:5px;text-align:left}
+#app .teams-add-results>button:hover{background:var(--tc-hover)}
+#app .teams-add-results>button>span:nth-child(2){display:grid;flex:1;min-width:0}
+#app .teams-add-results small{color:var(--tc-muted);font-size:11px}
+#app .teams-pending-body{padding:35px}
+#app .teams-pending-body h2{font-size:21px;margin:0 0 8px}
+#app .teams-pending-body p{max-width:620px;color:var(--tc-muted)}
+#app .teams-skeleton{border-radius:5px;background:linear-gradient(100deg,#878ba320,#9da8cf55,#878ba320);background-size:220% 100%;animation:teams-skel 1.3s ease-in-out infinite}
+#app .teams-skeleton-side{height:38px;margin:6px 0}
+#app .teams-skeleton-heading{height:25px;width:40%;margin-bottom:26px}
+#app .teams-skeleton-row{height:41px;margin:7px 0}
+#app .teams-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+@keyframes teams-skel{to{background-position-x:-220%}}
+@media(max-width:860px){
+ #app .teams-backdrop{padding:0}
+ #app .teams-dialog{height:100dvh;max-height:100dvh;border-radius:0}
+ #app .teams-body{grid-template-columns:225px minmax(0,1fr)}
+ #app .teams-sidebar{padding:13px 9px}
+ #app .teams-detail-head{padding-left:114px}
+ #app .teams-head-avatar{left:14px;width:85px}
+ #app .teams-avatar.large{width:80px;height:80px;font-size:24px}
+ #app .teams-toolbar{align-items:flex-start}
+ #app .teams-detail-content{padding:17px 14px}
+ #app .teams-tabs{margin:0 14px}
+}
+@media(max-width:600px){
+ #app .teams-modal-head{padding:12px 13px}
+ #app .teams-modal-head h1{font-size:21px}
+ #app .teams-modal-head p{font-size:11px}
+ #app .teams-body{grid-template-columns:minmax(0,1fr)}
+ #app .teams-sidebar{height:210px;min-height:150px;border-right:0;border-bottom:1px solid var(--tc-line);padding:10px 12px}
+ #app .teams-nav{grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:5px}
+ #app .teams-nav-row{padding:5px}
+ #app .teams-detail{min-height:0}
+ #app .teams-cover{min-height:78px;height:90px}
+ #app .teams-detail-head{min-height:78px;padding:12px 12px 8px 96px}
+ #app .teams-head-avatar{left:10px;top:-31px}
+ #app .teams-avatar.large{width:74px;height:74px}
+ #app .teams-heading h2{font-size:17px}
+ #app .teams-table-wrap{max-height:39dvh}
+}
+@media(prefers-reduced-motion:reduce){#app .teams-skeleton{animation:none}}
