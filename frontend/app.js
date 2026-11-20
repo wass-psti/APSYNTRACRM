@@ -51,6 +51,7 @@ import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.j
 import {boardGrid,boardGridColumns,prepareBoardGrid} from './board/presentation/grid.js';
 import {boardGroupArchiveSuffix} from './board/presentation/group-counts.js';
 import {renderBoardCollapsedRollup} from './board/presentation/group-rollups.js';
+import {BoardGroupStateClient} from './board/preferences/group-state-client.js';
 import {FUELTRACK_V3_ID,findFuelTrackV3Board,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-ui.js';
 import {FUELTRACK_V3_APPLICATION_ROUTE,parseFuelTrackApplicationRoute} from './fueltrack-v3-application-route.js';
 import {verifyFuelTrackBackendSnapshot} from './fueltrack-v3-backend-projections.js';
@@ -1162,16 +1163,105 @@ function applyBoardViewFilter(rows){
  }
  return filtered;
 }
-/** Collapse affects only presentation; signed records stay mounted and unchanged. */
+/** Board-group presentation preferences never provide access to data.
+ * Signed Supabase is authoritative when its forward migration is deployed.
+ * A server outage leaves an explicitly temporary in-tab view.
+ */
 const boardGroupCollapsedByScope=new Map();
+const boardGroupRevisions=new Map();
+const boardGroupSaveBusy=new Set();
 function boardGroupCollapseKey(groupId){
  return [state.context?.user_id,state.context?.workspace_id,state.boardId,groupId].join('|');
 }
+function boardGroupScopeMatches(snapshot){
+ return auth.isSignedIn&&auth.userId===snapshot.userId&&
+  state.context?.user_id===snapshot.userId&&
+  state.context?.workspace_id===snapshot.workspaceId&&
+  state.boardId===snapshot.boardId&&state.view==='board'&&
+  state.board?.board?.id===snapshot.boardId;
+}
+async function readBoardGroupPreferences(snapshot){
+ if(!boardGroupScopeMatches(snapshot))return false;
+ try{
+  const result=await new BoardGroupStateClient(db).read(snapshot.boardId);
+  if(!boardGroupScopeMatches(snapshot))return false;
+  const allowed=new Set((state.board.groups||[]).map(g=>g.id));
+  for(const group of result){
+   if(!allowed.has(group.group_id))continue;
+   const key=boardGroupCollapseKey(group.group_id);
+   boardGroupCollapsedByScope.set(key,group.collapsed);
+   boardGroupRevisions.set(key,group.revision);
+  }
+  render();return true;
+ }catch{
+  // RPC may be absent before controlled migration deployment.
+  // Never confuse local state with a confirmed cross-device save.
+  return false;
+ }
+}
 function boardGroupCollapsed(groupId,count){
+ const search=String(state.boardItemSearch||'').trim().toLowerCase();
+ const viewFiltered=!!(boardViewFilter.person||boardViewFilter.status);
+ if((search||viewFiltered)&&(state.board?.items||[]).some(i=>
+   i.group_id===groupId&&(!search||String(i.title||'').toLowerCase().includes(search))&&
+   (!boardViewFilter.person||i.assignee_id===boardViewFilter.person)&&
+   (!boardViewFilter.status||i.status===boardViewFilter.status)))return false;
  const key=boardGroupCollapseKey(groupId);
  if(boardGroupCollapsedByScope.has(key))return boardGroupCollapsedByScope.get(key);
- return count===0&&state.board?.pagination?.loaded===true&&
-  state.board?.pagination?.has_more!==true;
+ const groups=state.board?.groups||[];
+ return groups.length>5&&groups[0]?.id!==groupId;
+}
+async function persistBoardGroupCollapsed(groupId,collapsed){
+ const snapshot={userId:state.context?.user_id,workspaceId:state.context?.workspace_id,
+  boardId:state.boardId};
+ if(!boardGroupScopeMatches(snapshot)||!(state.board.groups||[]).some(g=>g.id===groupId))return;
+ const key=boardGroupCollapseKey(groupId);
+ if(boardGroupSaveBusy.has(key))return;
+ const count=(state.board.items||[]).filter(i=>i.group_id===groupId).length;
+ const before=boardGroupCollapsed(groupId,count);
+ boardGroupCollapsedByScope.set(key,collapsed);render();
+ const expected=boardGroupRevisions.get(key);
+ if(!Number.isSafeInteger(expected)){
+  toast('Group state is temporary until Board preference synchronization is deployed.',true);
+  return;
+ }
+ boardGroupSaveBusy.add(key);
+ try{
+  const receipt=await new BoardGroupStateClient(db).set(snapshot.boardId,groupId,collapsed,expected);
+  if(boardGroupScopeMatches(snapshot))boardGroupRevisions.set(key,receipt.revision);
+ }catch(error){
+  if(boardGroupScopeMatches(snapshot)){
+   boardGroupCollapsedByScope.set(key,before);render();
+   toast('Group preference was not saved. Refresh the board and retry.',true);
+  }
+ }finally{boardGroupSaveBusy.delete(key);}
+}
+async function persistAllBoardGroupsCollapsed(collapsed){
+ const snapshot={userId:state.context?.user_id,workspaceId:state.context?.workspace_id,
+  boardId:state.boardId};
+ if(!boardGroupScopeMatches(snapshot))return;
+ const ids=(state.board.groups||[]).map(g=>g.id);
+ const previous=new Map(ids.map(id=>[id,boardGroupCollapsedByScope.get(boardGroupCollapseKey(id))]));
+ ids.forEach(id=>boardGroupCollapsedByScope.set(boardGroupCollapseKey(id),collapsed));
+ render();
+ try{
+  const result=await new BoardGroupStateClient(db).setAll(snapshot.boardId,collapsed);
+  if(!boardGroupScopeMatches(snapshot))return;
+  for(const group of result){
+   const key=boardGroupCollapseKey(group.group_id);
+   boardGroupCollapsedByScope.set(key,group.collapsed);
+   boardGroupRevisions.set(key,group.revision);
+  }
+  render();
+ }catch{
+  if(!boardGroupScopeMatches(snapshot))return;
+  for(const [id,prior] of previous){
+   const key=boardGroupCollapseKey(id);
+   if(prior===undefined)boardGroupCollapsedByScope.delete(key);
+   else boardGroupCollapsedByScope.set(key,prior);
+  }
+  render();toast('Expand/collapse all was not saved to your account.',true);
+ }
 }
 function groupHeading(group,count,{columns=[],layout=null,items=[]}={}){
  const collapsed=boardGroupCollapsed(group.id,count);
