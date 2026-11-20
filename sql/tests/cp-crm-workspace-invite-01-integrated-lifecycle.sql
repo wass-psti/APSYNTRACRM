@@ -75,7 +75,7 @@ DECLARE r jsonb; listing jsonb; revoked jsonb; id uuid;
 BEGIN
  listing:=private.ws11_list_invitations('00000000-0000-4000-8000-000000000001');
  IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(listing->'invitations') x
-  WHERE x->>'id'=(SELECT id::text FROM pg_temp.ws02d_integrated_receipts WHERE kind='accept')
+  WHERE x->>'id'=(SELECT receipt.id::text FROM pg_temp.ws02d_integrated_receipts AS receipt WHERE receipt.kind='accept')
    AND x->>'state'='accepted')
  THEN RAISE EXCEPTION 'Manager does not observe accepted state'; END IF;
  r:=private.ws02d_issue('00000000-0000-4000-8000-000000000001',
