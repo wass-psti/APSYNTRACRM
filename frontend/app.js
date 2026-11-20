@@ -8373,7 +8373,8 @@ async function action(name,button){
  case 'tt-log-detail-close':{
   if(state.ttView!=='log'||!state.ttLogExpandedIds.length)return;
   const id=state.ttLogExpandedIds[0];state.ttLogExpandedIds=[];render();
-  root.querySelector('[data-action="tt-log-open-detail"][data-record-id="'+id+'"]')?.focus();
+  [...root.querySelectorAll('[data-action="tt-log-open-detail"]')]
+   .find(row=>row.dataset.recordId===id)?.focus();
   break;
  }
  case 'tt-log-detail-toggle-select':{
