@@ -29,7 +29,7 @@ test('Invite / N is derived only from a verified direct-board membership snapsho
 test('modal renders named members, roles, owner crown and viewer-only revoke',()=>{
  const html=renderBoardInviteDialog({people,directory,workspaceName:'WAO',manage:true,accessEnabled:true});
  assert.match(html,/Invite to this board/);
- assert.match(html,/Search workspace people by name or email/);
+ assert.match(html,/Search workspace people or teams/);
  assert.match(html,/People invited to this board/);
  assert.match(html,/Alex Rivera/);
  assert.match(html,/Blair Santos/);
