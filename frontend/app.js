@@ -1145,7 +1145,19 @@ function canRequestBulk(board){
  return auth.isSignedIn&&state.edit&&canBulkEditBoard(board)&&
   !state.bulk02Busy&&itemSelection.size>0&&itemSelection.size<=50;
 }
+/** Collapse affects only presentation; signed records stay mounted and unchanged. */
+const boardGroupCollapsedByScope=new Map();
+function boardGroupCollapseKey(groupId){
+ return [state.context?.user_id,state.context?.workspace_id,state.boardId,groupId].join('|');
+}
+function boardGroupCollapsed(groupId,count){
+ const key=boardGroupCollapseKey(groupId);
+ if(boardGroupCollapsedByScope.has(key))return boardGroupCollapsedByScope.get(key);
+ return count===0&&state.board?.pagination?.loaded===true&&
+  state.board?.pagination?.has_more!==true;
+}
 function groupHeading(group,count){
+ const collapsed=boardGroupCollapsed(group.id,count);
  const id=e(group.id),editing=state.groupEditId===group.id;
  const managedEmpty=state.board?.pagination?.loaded===true&&state.board?.pagination?.has_more!==true&&canSafelyHideEmptyTimeTrackerGroup(state.board?.board,group,
   state.board?.groups||[],state.board?.items||[]);
@@ -1160,9 +1172,9 @@ function groupHeading(group,count){
  const archivedCount=Number.isSafeInteger(group.archived_item_count)?group.archived_item_count:null;
  const archiveSuffix=boardGroupArchiveSuffix(activeCount,archivedCount);
  const groupCountLabel=persistedCount===null?
-  count+(state.board?.pagination?.has_more===true?' loaded':' items'):
+  count+' item'+(count===1?'':'s')+(state.board?.pagination?.has_more===true?' shown':''):
   count===persistedCount?persistedCount+' items'+archiveSuffix:
-   count+' loaded / '+persistedCount+' total'+archiveSuffix;
+   'Showing '+count+' of '+persistedCount+' items'+archiveSuffix;
  const fuelTrackEditable=state.edit&&state.board?.board?.id==='7af78b3f-67bf-4600-9aa1-9006d19d486e'&&
   state.board?.board?.name==='FuelTrack+ v3'&&
   String(state.board.board.description||'').startsWith('[APSYNTRA:MODULE:fueltrack:v1]');
@@ -1173,7 +1185,8 @@ function groupHeading(group,count){
   '<button type="submit" class="primary"'+(state.groupEditBusy?' disabled':'')+'>Save</button>'+
   '<button type="button" class="secondary" data-action="group-inline-cancel"'+(state.groupEditBusy?' disabled':'')+'>Cancel</button>'+
   '</form></div>';
- return '<div class="group-heading" data-group-id="'+id+'"><h3>'+displayTitle+'</h3>'+
+ return '<div class="group-heading'+(collapsed?' is-collapsed':'')+'" data-group-id="'+id+'" data-group-collapsed="'+collapsed+'">'+
+  '<button type="button" class="board-group-toggle" data-action="board-group-toggle" data-id="'+id+'" aria-expanded="'+(!collapsed)+'" aria-label="'+(collapsed?'Expand ':'Collapse ')+displayTitle+' group">'+(collapsed?'▸':'▾')+'</button><h3>'+displayTitle+'</h3>'+
   (fuelTrackEditable?'<button type="button" class="board-group-rename-trigger" data-action="group-inline-edit" data-id="'+id+'" aria-label="Edit name inline for '+displayTitle+'" title="Edit name inline">✎ <span>Edit name</span></button>':'')+
   (state.board?.pagination?.loaded===true?'<small>'+groupCountLabel+'</small>':'')+
   (state.edit?'<details class="board-group-actions"><summary aria-label="Actions for '+displayTitle+
@@ -7912,6 +7925,18 @@ async function action(name,button){
    }
   }catch(err){if(state.context?.user_id===userId)notice(err);}
   finally{state.tradeLinkSetupBusy=false;if(state.context?.user_id===userId)render();}
+  break;
+ }
+ case 'board-group-toggle':{
+  if(state.view!=='board'||state.tab!=='items'||state.board?.board?.id!==state.boardId)return;
+  const id=button.dataset.id;
+  if(!(state.board.groups||[]).some(g=>g.id===id))return;
+  const key=boardGroupCollapseKey(id);
+  const collapsed=button.getAttribute('aria-expanded')==='true';
+  boardGroupCollapsedByScope.set(key,collapsed);
+  render();
+  [...root.querySelectorAll('[data-action="board-group-toggle"]')]
+   .find(el=>el.dataset.id===id)?.focus({preventScroll:true});
   break;
  }
  case 'board-add-column':{
