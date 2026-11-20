@@ -8354,9 +8354,48 @@ async function action(name,button){
     db.invalidateBoardCache(boardId,{invalidateContext:false});
     return result;
   };
+  let boardTeamClient=null,verifiedTeamDirectory=null;
+  if(manage){
+   try{
+    const {BoardTeamInviteClient}=await import('./teams/team-board-invite.js');
+    const client=new BoardTeamInviteClient(db);
+    const candidate=await client.search({workspaceId,boardId,actorId:userId});
+    if(candidate.status==='VERIFIED_BOARD_TEAM_CANDIDATES'){
+     boardTeamClient=client;verifiedTeamDirectory=candidate;
+    }
+   }catch{/* Missing or denied optional Teams RPC never enables writes. */}
+  }
+  if(!currentBoard())break;
+  const searchBoardTeams=async(query='')=>{
+   if(!boardTeamClient)throw new ApiError('Team invitations are not activated.',403);
+   await assertManager();
+   const candidate=await boardTeamClient.search({workspaceId,boardId,actorId:userId,query});
+   if(candidate.status!=='VERIFIED_BOARD_TEAM_CANDIDATES')
+    throw new ApiError('Signed workspace team search unavailable.',403);
+   verifiedTeamDirectory=candidate;return candidate;
+  };
+  const inviteBoardTeam=async(teamId)=>{
+   if(!boardTeamClient)throw new ApiError('Team invitations are not activated.',403);
+   await assertManager();
+   const candidate=await searchBoardTeams('');
+   const team=candidate.teams.find(t=>t.teamId===teamId&&!t.hasAccess);
+   if(!team)throw new ApiError('Team or permission changed before the invite.',409);
+   const receipt=await boardTeamClient.invite({
+    workspaceId,boardId,teamId,actorId:userId,expectedRevision:candidate.revision
+   });
+   const after=await searchBoardTeams('');
+   if(after.revision!==receipt.revision||
+      !after.teams.some(t=>t.teamId===teamId&&t.hasAccess))
+    throw new ApiError('Team invitation did not reconcile after server commit.',409);
+   db.invalidateBoardCache(boardId,{invalidateContext:false});
+   return receipt;
+  };
   openBoardInviteDialog({
     board,workspaceId,manage,
     people,peopleDirectory,workspaceName:workspaceName(),currentUserId:userId,
+    teamDirectory:verifiedTeamDirectory,teamInviteEnabled:!!boardTeamClient,
+    onSearchTeams:boardTeamClient?searchBoardTeams:null,
+    onInviteTeam:boardTeamClient?inviteBoardTeam:null,
     accessEnabled:directoryMode==='admin'||
       directoryMode==='board'&&BOARD_GROUP_ACCESS_ENABLED,
     onToast:message=>toast(message),
