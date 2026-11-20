@@ -130,7 +130,7 @@ test('complete hydration rejects group redistribution despite an unchanged board
 test('pagination status distinguishes visible, loaded, remaining and total records',()=>{
  assert.equal(boardPaginationStatus({loaded_count:200,total_count:320,remaining_count:120,
   active_count:319,archived_count:1}),
-  '200 loaded · 120 remaining · 320 total (319 active, 1 archived)');
+  'Showing 200 of 320 items · 120 more available (319 active, 1 archived)');
  assert.equal(boardPaginationStatus({loaded_count:200,has_more:true}),
-  'Showing 200 loaded items. More items are available.');
+  'Showing 200 items · More available');
 });
