@@ -6,7 +6,7 @@ const actions=new Set(['create','rename','duplicate','delete','add_member','remo
 const levels=new Set(['viewer','editor','manager']);
 const kinds=new Set(['board','folder','app']);
 const validUrl=value=>value===null||(typeof value==='string'&&value.length<=500&&
- /^https:\/\/(?:[a-z0-9.-]+)(?::443)?\/[^\s<>]*$/i.test(value));
+ /^https:\/\/(?:jtlusodorfnyzgyuewkz\.supabase\.co\/storage\/v1\/object\/public\/|wass-psti\.github\.io\/APSYNTRACRM\/)[^\s<>]*$/i.test(value));
 const failure=Object.freeze({status:'UNAVAILABLE',teams:[],members:[],directory:[],
  content:[],canManageSystemAdmins:false});
 export function validateTeamsSnapshot(raw,{workspaceId,actorId}={}){
