@@ -391,7 +391,7 @@ test('Clock backend capability is bound to signed actor, workspace and board',as
 
 test('Clock button activates only after signed backend capability is in snapshot',()=>{
  const access={moduleRole:'Employee',platformRole:'employee',name:'User',
-  attendanceWritesAccepted:true};
+  attendanceWritesAccepted:true,employeeDepartment:'HR'};
  const html=renderTimeTrackerNative({result:{status:'VERIFIED_READ',access,
   records:[],active:null}});
  assert.match(html,/name="tt-action" value="clock-in"/);
