@@ -30,7 +30,8 @@ import {BoardCacheChannel} from './board/cache-channel.js';
 import {BoardTrashPermanentDeleteClient,eligibleTrashBoard} from './board/crud/trash-permanent-delete.js';
 import {modalRecoveryKind,installModalRecoveryAction} from './modal-recovery.js';
 import {openBoardSharePreview,closeBoardSharePreview} from './board/collaboration/share.js';
-import {openBoardInviteDialog,closeBoardInviteDialog,boardInviteControl} from './board/collaboration/invite.js';
+// Invite modal is loaded only after an authorized board invitation gesture.
+let closeBoardInviteDialog=()=>{};
 import {normalizeSignedBoardCandidates,BoardGroupAccessClient,
  BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
 import {CreatorAccessClient,WS10_CREATOR_POLICY_ACTIVE} from './ws10-ownership.js';
@@ -143,7 +144,7 @@ import {BOARD_COL01_AUDIT_CURSOR_ENABLED,BOARD_COL01_AUDIT_MAX_PAGES,
  loadBoardInvitableDirectory,renderBoardInvitableDirectory,
  loadBoardAuditCursorPage,renderBoardAuditCursorPage} from './board/columns/col01-readers.js';
 import {loadBoardCollaboration,renderBoardCollaboration} from './board/collaboration/collaboration.js';
-import {normalizeBoardPeople,renderBoardPeople,renderMentionDraft,mentionCandidates,insertMention,renderMentionOptions} from './board/collaboration/people.js';
+import {normalizeBoardPeople,renderBoardPeople,boardInviteControl,renderMentionDraft,mentionCandidates,insertMention,renderMentionOptions} from './board/collaboration/people.js';
 import {BoardPreferenceStore} from './board/services/preferences-idb.js';
 import {sampleBrowserFrames} from './performance-profile.js';
 import {createStartupCriticalPath} from './performance-critical-path.js';
@@ -8215,6 +8216,10 @@ async function action(name,button){
     ...rawDirectory,boardId,workspaceId,manage
   },{boardId,workspaceId});
   const people=normalizeBoardPeople(state.board,{boardId,workspaceId});
+  const {openBoardInviteDialog,closeBoardInviteDialog:closeInvite}=await import('./board/collaboration/invite.js');
+  if(!auth.isSignedIn||auth.userId!==userId||state.boardId!==boardId||
+    state.context?.workspace_id!==workspaceId||state.view!=='board')break;
+  closeBoardInviteDialog=closeInvite;
   openBoardInviteDialog({
    people,workspaceName:workspaceName(),currentUserId:userId,
    onToast:message=>toast(message),
