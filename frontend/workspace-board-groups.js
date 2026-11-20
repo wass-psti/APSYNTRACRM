@@ -85,6 +85,23 @@ export function normalizeAdminBoardCandidates(snapshot,{workspaceId,boardId,acto
   canManage:true,source:'SIGNED_ADMIN_BOARD_DIRECTORY'});
 }
 
+
+/** UI preflight only; the signed User Role Management RPC rechecks all rules. */
+export function adminBoardChangeTarget(directory,{memberId,action,actorId}={}){
+ if(directory?.status!=='VERIFIED_SIGNED_CANDIDATES'||
+    directory.source!=='SIGNED_ADMIN_BOARD_DIRECTORY'||
+    !validUuid(memberId)||!validUuid(actorId)||!['grant','revoke'].includes(action))
+   return null;
+ const person=directory.members.find(p=>p.id===memberId);
+ if(!person||person.protected||person.id===actorId)return null;
+ if(action==='grant'&&person.boardRole!==null)return null;
+ if(action==='revoke'&&!['viewer','editor'].includes(person.boardRole))return null;
+ return Object.freeze({
+   role:action==='grant'?'viewer':person.boardRole,
+   expectedUpdatedAt:person.updatedAt||null
+ });
+}
+
 /** Groups must come from a *separate* authenticated workspace RPC.
  * Never trust localStorage, arbitrary user lists or the board data itself.
  */
