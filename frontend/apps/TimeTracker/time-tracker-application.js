@@ -128,6 +128,21 @@ export function renderTimeTrackerEmployees({directory=null,access={},search='',l
     (canEdit?'Edit employee assignments here, manage department names below, or open Attendance to correct times.':
      'Department assignments unavailable until the signed Supabase read is deployed.')+
     '</p>':'')+
+    (manager?'<section class="tt-departments-management" aria-label="Department Management">'+
+     '<div class="tt-departments-head"><div><h4>Department Management</h4>'+
+     '<p>Workspace departments are stored and audited in Supabase.</p></div>'+
+     (catalogReady?'<button type="button" data-action="tt-departments-add">+ Add department</button>':'')+
+     '</div>'+
+     (catalogReady?'<div class="tt-departments-list">'+
+       catalog.departments.map(dep=>'<div class="tt-department-item">'+
+        '<div><strong>'+esc(dep.name)+'</strong><span>'+dep.assignedCount+
+        ' employee'+(dep.assignedCount===1?'':'s')+' assigned</span></div>'+
+        '<div class="tt-department-actions">'+
+        '<button type="button" data-action="tt-departments-rename" data-department-id="'+esc(dep.id)+'">Rename</button>'+
+        '<button type="button" class="tt-department-danger" data-action="tt-departments-delete" data-department-id="'+esc(dep.id)+'">Delete</button>'+
+        '</div></div>').join('')+'</div>':
+       '<p role="status" class="tt-employees-department-notice">Signed department catalog unavailable. Editing is disabled.</p>')+
+     '</section>':'')+
    '<div class="tt-employees-toolbar">'+
     '<label for="tt-employees-search">Find employee'+
      '<input type="search" id="tt-employees-search" maxlength="120" autocomplete="off" '+
@@ -160,21 +175,7 @@ export function renderTimeTrackerEmployees({directory=null,access={},search='',l
    '<p class="tt-employees-footnote">Count includes active members with an assigned TimeTracker role. '+
     'Supabase accounts without TimeTracker access are not counted. '+
     'Department changes use the audited server API, never a local personnel registry.</p>'+
-    (manager?'<section class="tt-departments-management" aria-label="Department Management">'+
-     '<div class="tt-departments-head"><div><h4>Department Management</h4>'+
-     '<p>Workspace departments are stored and audited in Supabase.</p></div>'+
-     (catalogReady?'<button type="button" data-action="tt-departments-add">+ Add department</button>':'')+
-     '</div>'+
-     (catalogReady?'<div class="tt-departments-list">'+
-       catalog.departments.map(dep=>'<div class="tt-department-item">'+
-        '<div><strong>'+esc(dep.name)+'</strong><span>'+dep.assignedCount+
-        ' employee'+(dep.assignedCount===1?'':'s')+' assigned</span></div>'+
-        '<div class="tt-department-actions">'+
-        '<button type="button" data-action="tt-departments-rename" data-department-id="'+esc(dep.id)+'">Rename</button>'+
-        '<button type="button" class="tt-department-danger" data-action="tt-departments-delete" data-department-id="'+esc(dep.id)+'">Delete</button>'+
-        '</div></div>').join('')+'</div>':
-       '<p role="status" class="tt-employees-department-notice">Signed department catalog unavailable. Editing is disabled.</p>')+
-     '</section>':''):
+:
    '<p class="tt-employees-unavailable" role="status">'+
     (loading?'Loading current registered employees…':
      'The signed TimeTracker employee directory is unavailable.')+'</p>')+
