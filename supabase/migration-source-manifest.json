@@ -1876,6 +1876,13 @@
       "file": "20261120120000_cp_tt_employee_departments_and_time_corrections.sql",
       "bytes": 16506,
       "sha256": "97218db089bdb6ef21a4bfc093be72d6210104cbfd3b85f96ee534f6a6c89e23"
+    },
+    {
+      "version": "20261120140000",
+      "name": "cp_tt_department_catalog_management",
+      "file": "20261120140000_cp_tt_department_catalog_management.sql",
+      "bytes": 19707,
+      "sha256": "941c7b77b799caacb2c804a4166c51610037f71d17582da0ced5e6623c209ff5"
     }
   ]
 }
