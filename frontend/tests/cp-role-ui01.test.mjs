@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {renderRoleConfiguration,PERMISSION_ACTIONS} from '../role-configuration-ui.js';
+import {renderRoleConfiguration} from '../role-configuration-ui.js';
 
 const ui=readFileSync('frontend/role-configuration-ui.js','utf8');
 const css=readFileSync('frontend/role-configuration-experience.css','utf8');
@@ -16,27 +16,24 @@ const data={
  boards:[{id:'33333333-3333-4333-8333-333333333333',name:'Example board'}],
  assignments:[],proposals:[],audit:[]
 };
-test('five role sections share Overview-aligned workspace hierarchy without new authority',()=>{
- const names={roles:'Role catalog',users:'Assignments',matrix:'Permission matrix',
- workspace:'Workspace access',audit:'Change history'};
+test('three retained configuration sections have Overview-aligned hierarchy and no new authority',()=>{
+ const names={roles:'Role catalog',workspace:'Workspace access',audit:'Change history'};
  for(const [tab,name] of Object.entries(names)){
   const markup=renderRoleConfiguration({verified:true,data,tab});
   assert.match(markup,/class="role-content-workspace" aria-labelledby="role-content-heading"/);
   assert.match(markup,new RegExp('<h2 id="role-content-heading">'+name+'</h2>'));
   assert.match(markup,/class="role-content-mode" aria-label="Proposal-only mode"/);
   assert.match(markup,/class="role-content-body"/);
-  assert.equal((markup.match(/data-action="role-tab"/g)||[]).length,5);
+  assert.equal((markup.match(/data-action="role-tab"/g)||[]).length,3);
   assert.equal((markup.match(/aria-pressed="true"/g)||[]).length,1);
   assert.match(markup,/Change control: STAGED ONLY/);
   assert.match(markup,/production roles, permissions, board access and memberships cannot be altered/);
   assert.ok(markup.endsWith('</div></section></div></div>'));
  }
 });
-test('accessible table regions are individually named and keyboard-scrollable',()=>{
+test('retained reference and audit tables remain accessible and named',()=>{
  const expected={
   roles:['CRM platform role reference','Central role catalog'],
-  users:['Workspace member role assignments'],
-  matrix:['Module permission proposal matrix'],
   workspace:[],
   audit:['Staged role change proposals','Append-only role audit history']
  };
@@ -49,22 +46,24 @@ test('accessible table regions are individually named and keyboard-scrollable',(
   assert.equal((markup.match(/tabindex="0" role="region"/g)||[]).length,names.length);
  }
 });
-test('all pre-existing proposal controls, data sources and native search inputs remain intact',()=>{
+test('deprecated global matrix and assignments are absent while reference controls stay intact',()=>{
  const actions=[
   ['roles','role-propose-create'],['roles','role-propose-activation'],
-  ['roles','role-propose-edit'],['users','role-propose-assign'],
-  ['matrix','role-propose-permission'],['workspace','role-propose-workspace']];
+  ['roles','role-propose-edit'],['workspace','role-propose-workspace']
+ ];
  for(const [tab,action] of actions){
   assert.match(renderRoleConfiguration({verified:true,data,tab}),
    new RegExp('data-action="'+action+'"'));
   assert.ok(app.includes("case '"+action+"'"),action);
  }
- assert.equal((renderRoleConfiguration({verified:true,data,tab:'matrix'})
-  .match(/data-action="role-propose-permission"/g)||[]).length,12*PERMISSION_ACTIONS.length);
- for(const [tab,id] of [['roles','search-system-roles'],['users','search-workspace-members'],
-  ['matrix','filter-role-permission-modules'],['audit','search-role-proposals']]){
-  const markup=renderRoleConfiguration({verified:true,data,tab});
-  assert.match(markup,new RegExp('id="'+id+'"[^>]*type="search"|type="search"[^>]*id="'+id+'"'));
+ const markup=renderRoleConfiguration({verified:true,data,tab:'roles'});
+ assert.doesNotMatch(markup,/Permission matrix|data-action="role-propose-permission"|data-action="role-propose-assign"/);
+ assert.doesNotMatch(ui,/function matrix\(/);
+ for(const deprecated of ['role-propose-permission','role-propose-assign'])
+  assert.doesNotMatch(app,new RegExp("case '"+deprecated+"'"));
+ for(const [tab,id] of [['roles','search-system-roles'],['audit','search-role-proposals']]){
+  const html=renderRoleConfiguration({verified:true,data,tab});
+  assert.match(html,new RegExp('id="'+id+'"[^>]*type="search"|type="search"[^>]*id="'+id+'"'));
  }
  const denied=renderRoleConfiguration({verified:false,data:{...data,users:[{email:'secret@example.invalid'}]}});
  assert.doesNotMatch(denied,/secret@example.invalid|role-content-workspace/);
