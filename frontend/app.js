@@ -474,10 +474,8 @@ function maintainTimeTrackerClock(){
  };
  tick();
  if(ttClockTimer===null)ttClockTimer=setInterval(()=>{
-  if(!document.hidden){
-   tick();
-   if(state.ttView==='clock')void refreshCorrectedTimeTrackerClock();
-  }
+  if(!document.hidden)tick();
+  if(!document.hidden&&state.ttView==='clock')void refreshCorrectedTimeTrackerClock();
  },1000);
 }
 /** A periodic signed read reconciles administrator corrections made in another browser.
@@ -551,9 +549,9 @@ function stopAuthVisuals(){
 }
 function renderLogin(message='',{mode=authViewFromHash(),notice='',emailValue=''}={}){
  stopTimeTrackerClock();
+ stopTimeTrackerPixi();
  ttClockSyncScope='';ttClockLastCheckAt=0;
  state.ttClockCorrectionNotice='';
- stopTimeTrackerPixi();
  // Clear detached protected item values on every signed-out transition.
  hideModal();
  stopAvatarPreview();
@@ -4328,7 +4326,8 @@ async function submitTimeTrackerAction(form,actionName){
   state.boardId===boardId&&state.context?.user_id===identity&&
   state.context?.workspace_id===ws;
  let commitAttempted=false;
- state.ttBusy=true;state.ttClockStage='location';state.ttClockCorrectionNotice='';state.ttError='';state.ttSuccess='';render();
+ state.ttClockCorrectionNotice='';
+ state.ttBusy=true;state.ttClockStage='location';state.ttError='';state.ttSuccess='';render();
  try{
   const geo=await captureAttendanceGeo(navigator.geolocation);
   if(sameSession()){
@@ -11530,7 +11529,8 @@ document.addEventListener('visibilitychange',()=>{
 });
 // Window focus is distinct from document visibility: switching between two
 // visible application windows may not emit visibilitychange in either one.
-window.addEventListener('focus',()=>{platformSync.focusChanged();void refreshCorrectedTimeTrackerClock({onFocus:true});});
+window.addEventListener('focus',()=>platformSync.focusChanged());
+window.addEventListener('focus',()=>void refreshCorrectedTimeTrackerClock({onFocus:true}));
 // An additional tab may begin a Clock action; surface its pending marker
 // immediately, without replaying writes or trusting browser data as attendance.
 window.addEventListener('storage',event=>{
