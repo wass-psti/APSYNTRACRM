@@ -1857,13 +1857,6 @@
       "sha256": "da8629f5bdb69cc33e279a968baab60608234e01c614f3ada23ecfc17ab56e6e"
     },
     {
-      "version": "20261120043846",
-      "name": "cp_frt_native_role_source_parity",
-      "file": "20261120043846_cp_frt_native_role_source_parity.sql",
-      "bytes": 1803,
-      "sha256": "2a9e63992c3a9ae5da173bf2b10aaa9eaf57d28381f5a9be1d7c1e859bf04f75"
-    },
-    {
       "version": "20261120100000",
       "name": "cp_tt_employee_departments_qol",
       "file": "20261120100000_cp_tt_employee_departments_qol.sql",
