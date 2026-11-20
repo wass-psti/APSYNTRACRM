@@ -62,7 +62,7 @@ export function renderTeamsConsole({snapshot=null,loading=false,error='',selecte
  const currentContent=ready?(all?snapshot.content:snapshot.content.filter(c=>c.teamId===selected.id)):[];
  const needle=sig(teamSearch),memberNeedle=sig(userSearch),contentNeedle=sig(contentSearch);
  const visibleTeams=teams.filter(t=>(!needle||sig(t.name).includes(needle))&&
-  (teamFilter!=='has-admins'||t.systemAdminCount>0));
+  (teamFilter==='has-admins'?t.systemAdminCount>0:teamFilter==='without-admins'?t.systemAdminCount===0:true));
  const filteredMembers=currentMembers.filter(m=>(!memberNeedle||sig(m.name+' '+m.email).includes(memberNeedle))&&
   (!systemAdminsOnly||m.systemAdminSource==='inherited'||m.systemAdminSource==='explicit'));
  const filteredContent=currentContent.filter(c=>!contentNeedle||sig(c.name).includes(contentNeedle));
@@ -77,7 +77,7 @@ export function renderTeamsConsole({snapshot=null,loading=false,error='',selecte
   '<div class="teams-side-search"><label class="teams-sr" for="teams-search">Search teams</label>'+icon('search')+
   '<input id="teams-search" type="text" placeholder="Search teams" autocomplete="off" maxlength="120" value="'+esc(teamSearch)+'">'+
   '<button type="button" data-action="teams-filter" aria-label="Filter teams" aria-expanded="false" title="Filter teams">'+icon('filter')+'</button></div>'+
-  '<div class="teams-filter-controls"'+(filterOpen?'':' hidden')+'><label class="teams-sr" for="teams-filter-select">Filter by System Admin</label><select id="teams-filter-select" aria-label="Team filter"><option value="all"'+(teamFilter==='all'?' selected':'')+'>All teams</option><option value="has-admins"'+(teamFilter==='has-admins'?' selected':'')+'>Has System Admins</option></select></div>'+
+  '<div class="teams-filter-controls"'+(filterOpen?'':' hidden')+'><label class="teams-sr" for="teams-filter-select">Filter by System Admin</label><select id="teams-filter-select" aria-label="Team filter"><option value="all"'+(teamFilter==='all'?' selected':'')+'>All teams</option><option value="has-admins"'+(teamFilter==='has-admins'?' selected':'')+'>Has System Admins</option><option value="without-admins"'+(teamFilter==='without-admins'?' selected':'')+'>Without System Admins</option></select></div>'+
   '<nav class="teams-nav" aria-label="Choose team">'+
   '<button type="button" data-action="teams-select" data-team-id="" class="teams-nav-row'+(all?' selected':'')+'" aria-current="'+(all?'true':'false')+'"><span class="teams-nav-symbol">'+icon('people')+'</span><span>All teams</span><span class="teams-side-count">'+(ready?total:'—')+'</span></button>'+
   (loading?Array.from({length:7},()=>'<div class="teams-skeleton teams-skeleton-side"></div>').join(''):
