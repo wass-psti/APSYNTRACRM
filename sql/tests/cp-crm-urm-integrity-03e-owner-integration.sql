@@ -21,8 +21,8 @@ BEGIN
   END IF;
  END LOOP;
  IF public.has_module_access('order-intake',usr) THEN RAISE EXCEPTION 'Unexpected access to fifth application'; END IF;
- IF public.has_module_access('time-tracker','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb') THEN
-  RAISE EXCEPTION 'Employee unexpectedly inherited owner role'; END IF;
+ IF public.module_role_for('time-tracker','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb') IS DISTINCT FROM 'Supervisor' THEN
+  RAISE EXCEPTION 'Employee existing scoped role was unexpectedly changed'; END IF;
 END;$test$;
 -- Explicit disabled scoped assignment is authoritative over the proposal.
 INSERT INTO public.apsyntra_workspace_module_roles(workspace_id,user_id,module_id,role,enabled)
