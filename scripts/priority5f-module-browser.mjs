@@ -112,6 +112,7 @@ async function run(){
   assert.equal(checks.baseline.importFetched,true);
   assert.equal(checks.optimized.fueltransFetched,false);
   assert.equal(checks.optimized.importFetched,false);
+  console.log('PRIORITY5F_BROWSER_COUNTS: '+JSON.stringify({baseline:checks.baseline.sourceCount,optimized:checks.optimized.sourceCount}));
   assert.ok(checks.optimized.sourceCount<checks.baseline.sourceCount-20);
   const before=inspectStaticModuleGraph({appSource:appOriginal}),after=inspectStaticModuleGraph();
   assert.ok(before.count-after.count>=30);
