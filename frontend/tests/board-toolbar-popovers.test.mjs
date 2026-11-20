@@ -104,7 +104,9 @@ test('non-board menus are unaffected and handler survives rerendered toolbar',()
 
 test('only the ordinary signed board toolbar installs exclusivity once',()=>{
  const app=readFileSync('frontend/app.js','utf8');
- assert.match(app,/import \{installBoardToolbarPopoverBehavior\} from '\.\/board\/presentation\/toolbar-popovers\.js'/);
+ assert.doesNotMatch(app,/^import \{installBoardToolbarPopoverBehavior\} from /m);
+ assert.match(app,/boardToolbarPopoverPromise=import\('\.\/board\/presentation\/toolbar-popovers\.js'\)/);
+ assert.match(app,/void ensureBoardToolbarPopoverBehavior\(\)/);
  assert.equal((app.match(/installBoardToolbarPopoverBehavior\(root,document\)/g)||[]).length,1);
  assert.match(BOARD_TOOLBAR_POPOVER_SELECTOR,/\.aps-board-shell/);
  assert.match(BOARD_TOOLBAR_POPOVER_SELECTOR,/details:is\(\.board-tool-menu,\.board-column-menu,\.board-actions-menu\)/);
