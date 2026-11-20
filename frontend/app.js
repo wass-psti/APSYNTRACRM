@@ -1187,13 +1187,17 @@ async function readBoardGroupPreferences(snapshot){
   const result=await new BoardGroupStateClient(db).read(snapshot.boardId);
   if(!boardGroupScopeMatches(snapshot))return false;
   const allowed=new Set((state.board.groups||[]).map(g=>g.id));
+  let changed=false;
   for(const group of result){
    if(!allowed.has(group.group_id))continue;
    const key=boardGroupCollapseKey(group.group_id);
+   if(boardGroupCollapsedByScope.get(key)!==group.collapsed)changed=true;
    boardGroupCollapsedByScope.set(key,group.collapsed);
    boardGroupRevisions.set(key,group.revision);
   }
-  render();return true;
+  // Foreground focus must not discard an inline editor when preferences are unchanged.
+  if(changed)render();
+  return true;
  }catch{
   // RPC may be absent before controlled migration deployment.
   // Never confuse local state with a confirmed cross-device save.
