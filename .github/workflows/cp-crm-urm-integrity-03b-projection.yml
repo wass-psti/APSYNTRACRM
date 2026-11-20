@@ -1,0 +1,47 @@
+name: CP-CRM-URM-INTEGRITY-03B Projection-Native Parity
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cp-crm-urm-integrity-03b-projection.yml'
+      - 'sql/cp-crm-urm-integrity-03b-projection-candidate.sql'
+      - 'sql/tests/cp-crm-urm-integrity-03b-projection-disposable.sql'
+      - 'frontend/tests/cp-crm-urm-integrity-03b.test.mjs'
+      - 'docs/CP-CRM-URM-INTEGRITY-03B.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-projection-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify source migration integrity
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Prove workspace-owner projection mismatch and repair against canonical existing authority
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-urm-scoped02b-setup.sql \
+            -f sql/tests/cp-urm-scoped02b-live-role-baseline.sql \
+            -f supabase/migrations/20261118062000_cp_urm_scoped02b_six_modules.sql \
+            -f sql/tests/cp-crm-urm-integrity-03b-projection-disposable.sql
+      - name: Verify scope and source invariants
+        run: node --test frontend/tests/cp-crm-urm-integrity-03b.test.mjs
