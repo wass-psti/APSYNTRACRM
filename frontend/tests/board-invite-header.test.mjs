@@ -29,7 +29,7 @@ test('Invite / N is derived only from a verified direct-board membership snapsho
 test('modal renders named members, roles, owner crown and viewer-only revoke',()=>{
  const html=renderBoardInviteDialog({people,directory,workspaceName:'WAO',manage:true,accessEnabled:true});
  assert.match(html,/Invite to this board/);
- assert.match(html,/Search by name, team, or email address/);
+ assert.match(html,/Search workspace people by name or email/);
  assert.match(html,/People invited to this board/);
  assert.match(html,/Alex Rivera/);
  assert.match(html,/Blair Santos/);
@@ -38,8 +38,7 @@ test('modal renders named members, roles, owner crown and viewer-only revoke',()
  assert.doesNotMatch(html,/data-aps-invite-revoke="11111111-/);
  assert.match(html,/Request to invite a new member by email/);
  assert.match(html,/does not grant permission/);
- assert.match(html,/Agents<\/button>/);
- assert.match(html,/Connected agent invitations are not enabled/);
+ assert.doesNotMatch(html,/>Agents<|aria-label="Invite category"/);
 });
 test('search can find an existing signed candidate, disables previously invited people',()=>{
  const html=renderBoardInviteDialog({people,directory,workspaceName:'WAO',manage:true,
@@ -48,6 +47,13 @@ test('search can find an existing signed candidate, disables previously invited 
  assert.match(html,/Jerome/);
  assert.match(html,/data-aps-invite-assign="33333333-/);
  assert.doesNotMatch(html,/data-aps-invite-assign="33333333-[^>]* disabled/);
+ const unsafeDirectory={...directory,members:directory.members.map(p=>p.id===c?
+  {...p,protected:true}:p)};
+ const protectedHtml=renderBoardInviteDialog({people,directory:unsafeDirectory,manage:true,
+  accessEnabled:true,query:'Jerome'});
+ assert.match(protectedHtml,/data-aps-invite-assign="33333333-[^>]* disabled/);
+ assert.match(protectedHtml,/Protected/);
+
  const invited=renderBoardInviteDialog({people,directory,manage:true,accessEnabled:true,query:'Alex'});
  assert.match(invited,/data-aps-invite-assign="11111111-[^>]* disabled/);
  assert.match(invited,/Already invited/);
@@ -59,7 +65,8 @@ test('unverified or nonmanager directory fails closed with no assignable candida
  assert.match(unauthorized,/data-aps-invite-assign="33333333-[^>]* disabled/);
  const unavailable=renderBoardInviteDialog({people,directory:{status:'UNAVAILABLE'},manage:true,
   accessEnabled:true,query:'Jerome'});
- assert.match(unavailable,/Workspace member search is awaiting signed server activation/);
+ assert.match(unavailable,/authorized workspace member directory is unavailable/);
+ assert.doesNotMatch(unavailable,/id="aps-invite-search"[^>]* disabled/);
  assert.doesNotMatch(unavailable,/data-aps-invite-assign=/);
 });
 test('untrusted names, emails and workspace labels are escaped',()=>{

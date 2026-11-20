@@ -2,6 +2,15 @@
 
 This guide is for developers changing the board's **Share & Access** window and its separately controlled authorization behavior. It reflects the staged frontend and backend contracts, **not** proof that production invitations are activated.
 
+## Current Invite / N board header (November 20, 2026)
+
+- The single top-right **Invite / N** control is rendered by `boardInviteControl()` in `frontend/board/collaboration/people.js`. The invitation modal is lazily loaded from `frontend/board/collaboration/invite.js`; the old Share & Access popup remains in the repository for compatibility but is not launched by the main board toolbar.
+- The modal has **People only**, no Agents placeholder. Signed managers can type in the search field. Search results are drawn from verified server-scoped workspace members, never guessed from browser profiles.
+- A verified CRM Administrator can use the existing `apsyntra_role_user_management_snapshot` + `apsyntra_role_manage_user_access` contracts through `UserRoleManagementClient`. Only a Viewer grant, or an existing Viewer/Editor revocation, is offered for a nonprotected user. The server rechecks administrator scope, active workspace and board permissions. Owner/self/protected role changes are denied and post-write membership is reconciled.
+- Nonadministrator board managers may use the separately authorized COL01 directory **if deployed**; the BS09 direct-member writer remains disabled. If the server denies either directory, the modal must show a clear unavailable status and never silently claim an invitation succeeded.
+- Workspace invitations by email are **not** board membership. An administrator adding an existing member through this dialog does not grant workspace membership, edit application roles or bypass the server ACL.
+- After UI changes, run `node --test frontend/tests/board-invite-header.test.mjs frontend/tests/board-invite-admin-access.test.mjs frontend/tests/board-share.test.mjs frontend/tests/ws11-invitation-management.test.mjs` and `npm run build`.
+
 ## Start here
 
 | Goal | Primary file | What to look for |
