@@ -392,7 +392,7 @@ export class TimeTrackerNativeClient{
  /** Read selected full attendance records for the System Admin editor only. */
  async attendanceAdminRecords(boardId,recordIds=[]){
   const access=await this.access(boardId);
-  if(access.moduleRole!=='System Admin')deny('System Admin attendance management required');
+  if(!['System Admin','IT Administrator'].includes(access.moduleRole))deny('TimeTracker administrator attendance management required');
   if(!Array.isArray(recordIds)||recordIds.length<1||recordIds.length>100||
      recordIds.some(id=>!uuid.test(id))||new Set(recordIds).size!==recordIds.length)
    deny('Attendance record selection is invalid');
@@ -405,20 +405,20 @@ export class TimeTrackerNativeClient{
      result.boardId!==boardId||!Number.isSafeInteger(Number(result.revision))||
      Number(result.revision)<1||!Array.isArray(result.records)||
      result.records.length!==recordIds.length||!Array.isArray(result.directory))
-   deny('System Admin attendance snapshot is unverified');
+   deny('TimeTracker administrator attendance snapshot is unverified');
   const returned=new Set(result.records.map(record=>record?.id));
   if(recordIds.some(id=>!returned.has(id)))deny('Attendance snapshot did not return every selected record');
   const directory=result.directory.map(member=>{
    if(!isRecord(member)||!uuid.test(member.id||'')||
       typeof member.displayName!=='string'||member.displayName.length>120)
-    deny('System Admin employee directory is invalid');
+    deny('TimeTracker administrator employee directory is invalid');
    return Object.freeze({id:member.id,displayName:member.displayName});
   });
   const records=result.records.map(record=>{
    if(!isRecord(record)||!uuid.test(record.id||'')||
       typeof record.ownerId!=='string'||!record.ownerId.startsWith('cloud:')||
       !isRecord(record.clockIn)||!safeTime(record.clockIn.timestamp))
-    deny('System Admin attendance record is invalid');
+    deny('TimeTracker administrator attendance record is invalid');
    return record;
   });
   await checkIdentity(this.auth,this.api,access,boardId);
@@ -428,7 +428,13 @@ export class TimeTrackerNativeClient{
  /** Atomic compare-and-swap edit/delete. A lost response must be reconciled by a fresh read. */
  async mutateAttendanceRecords(boardId,{action,recordIds,patch={},reason='',expectedRevision}={}){
   const access=await this.access(boardId);
-  if(access.moduleRole!=='System Admin')deny('System Admin attendance management required');
+  if(!['System Admin','IT Administrator'].includes(access.moduleRole))
+   deny('TimeTracker administrator attendance management required');
+  if(access.moduleRole==='IT Administrator'&&(
+     action!=='edit'||recordIds?.length!==1||
+     !isRecord(patch)||Object.keys(patch).some(k=>!['clockInAt','clockOutAt'].includes(k))||
+     !Object.keys(patch).length||typeof reason!=='string'||reason.trim().length<10))
+   deny('IT Administrator may correct one session’s times only with a reason');
   if(!['edit','bulk-edit','delete','bulk-delete'].includes(action)||
      !Array.isArray(recordIds)||recordIds.length<1||recordIds.length>100||
      recordIds.some(id=>!uuid.test(id))||new Set(recordIds).size!==recordIds.length||
