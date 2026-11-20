@@ -48,7 +48,7 @@ test('signed department is shown read-only and persisted offsite choice is selec
  assert.match(html,/aria-label="Assigned employee department"/);
  assert.match(html,/<strong>Engineering<\/strong>/);
  assert.doesNotMatch(html,/<select id="tt-department"/);
- assert.match(html,/id="tt-note-wrap" required/);
+ assert.match(html,/textarea id="tt-note" required/);
  assert.match(html,/value="clock-in"/);
 });
 test('missing department prevents new attendance, never guesses from location or screenshot',()=>{
