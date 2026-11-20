@@ -1890,6 +1890,13 @@
       "file": "20261120150000_cp_crm_urm_integrity_03c_projection_parity.sql",
       "bytes": 1982,
       "sha256": "9aa027c2f5cc9ed26628f3a165e982752ee90c0f540eff4b76954ae3d8c461fd"
+    },
+    {
+      "version": "20261120170000",
+      "name": "cp_tt_auto_clockout_02c_atomic_board_projection_restore",
+      "file": "20261120170000_cp_tt_auto_clockout_02c_atomic_board_projection_restore.sql",
+      "bytes": 7813,
+      "sha256": "a1d648b53c14b46f48c6a2119d759c2e5bba473a3c1169fda8c5f226bef77ea5"
     }
   ]
 }
