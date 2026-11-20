@@ -18,7 +18,7 @@ Target account: `senaganlexx06@gmail.com`, active member of **Work Management**.
 
 ## Scoped source-of-truth fix
 
-The additive migration `20261120043846_cp_frt_native_role_source_parity.sql` only replaces the existing `public.apsyntra_scoped_module_role(text,uuid,uuid)` definition:
+The additive migration `20261120190000_cp_frt_native_role_source_parity.sql` only replaces the existing `public.apsyntra_scoped_module_role(text,uuid,uuid)` definition:
 
 - For canonical `fund-released-tracker`, an existing workspace-specific `frt_memberships` row takes precedence. Only `enabled=true AND status='active'` projects a role; a disabled membership remains an explicit denial, without reviving stale legacy assignments.
 - With no FRT workspace membership, the original `apsyntra_workspace_module_roles` and `module_role_assignments` behavior is retained. Other modules, including TimeTracker, FuelTrack+ and TradeLink, use unchanged branches.

@@ -41,7 +41,7 @@ jobs:
         run: |
           psql -X -v ON_ERROR_STOP=1 \
             -f sql/tests/cp-frt-native-role-source-setup.sql \
-            -f supabase/migrations/20261120043846_cp_frt_native_role_source_parity.sql \
+            -f supabase/migrations/20261120190000_cp_frt_native_role_source_parity.sql \
             -f sql/tests/cp-frt-native-role-source-acceptance.sql
       - name: Verify canonical Fund Tracker client mapping
         run: node --test frontend/tests/cp-frt-native-role-source.test.mjs frontend/tests/user-role-frt-scoped.test.mjs

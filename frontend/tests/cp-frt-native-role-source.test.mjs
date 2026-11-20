@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {nativeApplicationModuleForRoute,NATIVE_APPLICATIONS} from '../native-application-access.js';
 import {MODULE_ROLE_OPTIONS,UserRoleManagementClient} from '../user-role-management.js';
-const sql=readFileSync('supabase/migrations/20261120043846_cp_frt_native_role_source_parity.sql','utf8');
+const sql=readFileSync('supabase/migrations/20261120190000_cp_frt_native_role_source_parity.sql','utf8');
 test('Fund Tracker UI route and URM assignment share one canonical module ID',()=>{
  assert.equal(nativeApplicationModuleForRoute('#/fund-tracker'),'fund-released-tracker');
  assert.ok(NATIVE_APPLICATIONS['fund-released-tracker']);
