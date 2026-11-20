@@ -4,7 +4,7 @@ import {mkdir} from 'node:fs/promises';
 import {chromium} from 'playwright';
 const port=5192;
 const host='http://127.0.0.1:'+port;
-const child=spawn('npm',['run','dev'],{cwd:'access-preview',stdio:'pipe',env:{...process.env}});
+const child=spawn('npm',['run','dev'],{cwd:'access-preview',stdio:'pipe',detached:true,env:{...process.env}});
 let output='';
 child.stdout.on('data',s=>output+=String(s));
 child.stderr.on('data',s=>output+=String(s));
@@ -85,5 +85,7 @@ try{
  console.log('ACCESS_V2_DESKTOP_MOBILE_REACT_ACCEPTANCE_PASS');
 }finally{
  if(browser)await browser.close();
- child.kill('SIGTERM');
+ try{process.kill(-child.pid,'SIGTERM');}
+ catch{child.kill('SIGTERM');}
+ child.stdout.destroy();child.stderr.destroy();child.unref();
 }
