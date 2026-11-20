@@ -198,7 +198,9 @@ AS $role$
        AND c.content_type='board' AND c.content_id=b.id) THEN 'viewer'
   ELSE NULL END
  FROM public.work_boards b
- WHERE b.id=p_board_id AND b.workspace_id=public.current_workspace_id(auth.uid())
+ WHERE b.id=p_board_id AND b.status='active'
+  AND b.trashed_at IS NULL AND b.archived_at IS NULL
+  AND b.workspace_id=public.current_workspace_id(auth.uid())
   AND EXISTS(SELECT 1 FROM public.workspace_members wm
    JOIN public.profiles p ON p.id=wm.user_id
    WHERE wm.user_id=auth.uid() AND wm.workspace_id=b.workspace_id
@@ -253,6 +255,7 @@ BEGIN
   SELECT c.*,CASE WHEN c.content_type='board' THEN b.name ELSE c.content_type END AS display_name
   FROM public.apsyntra_team_content c JOIN visible t ON t.id=c.team_id
   LEFT JOIN public.work_boards b ON b.id=c.content_id AND c.content_type='board'
+   AND b.workspace_id=t.workspace_id
  )
  SELECT jsonb_build_object(
   'contract','apsyntra-teams-v1','workspaceId',p_workspace_id,
@@ -383,11 +386,11 @@ BEGIN
     IF EXISTS(SELECT 1 FROM private.apsyntra_system_admin_grants g
       WHERE g.user_id=p_target_user_id AND g.revoked_at IS NULL)
     THEN RAISE EXCEPTION 'System Admin already explicitly granted' USING ERRCODE='PT409'; END IF;
-    INSERT INTO private.apsyntra_system_admin_grants(user_id,granted_by,granted_at,revoked_by,revoked_at,revision)
+    INSERT INTO private.apsyntra_system_admin_grants AS grant_row(user_id,granted_by,granted_at,revoked_by,revoked_at,revision)
     VALUES(p_target_user_id,v_actor,clock_timestamp(),NULL,NULL,1)
     ON CONFLICT(user_id) DO UPDATE SET granted_by=excluded.granted_by,
      granted_at=excluded.granted_at,revoked_by=NULL,revoked_at=NULL,
-     revision=private.apsyntra_system_admin_grants.revision+1;
+     revision=grant_row.revision+1;
    ELSE
     IF NOT EXISTS(SELECT 1 FROM private.apsyntra_system_admin_grants g
        WHERE g.user_id=p_target_user_id AND g.revoked_at IS NULL)
@@ -439,6 +442,13 @@ BEGIN
   IF p_content_type NOT IN ('board','folder','app') OR p_content_id IS NULL
   THEN RAISE EXCEPTION 'Valid content reference required' USING ERRCODE='22023'; END IF;
   IF p_action='assign_content' THEN
+   -- A team owner must not grant access to any board merely by knowing its UUID.
+   -- The actor must additionally control the board itself, or be System Admin.
+   IF NOT v_sys AND NOT EXISTS (
+    SELECT 1 FROM public.work_board_members bm
+    WHERE bm.board_id=p_content_id AND bm.user_id=v_actor AND bm.role='owner'
+   ) THEN RAISE EXCEPTION 'Board owner authority required for team grant'
+     USING ERRCODE='42501'; END IF;
    -- Folder and app permissions need their own authoritative resource registries,
    -- not arbitrary client-supplied UUIDs.
    IF p_content_type<>'board' OR p_access_level NOT IN ('viewer','editor') OR
