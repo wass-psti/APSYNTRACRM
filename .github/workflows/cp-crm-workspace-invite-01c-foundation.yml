@@ -1,0 +1,23 @@
+name: CP-CRM-WORKSPACE-INVITE-01C Staging Foundation and Trusted Routes
+on:
+  pull_request:
+    paths:
+      - 'sql/staging/cp-crm-workspace-invite-01c-*'
+      - 'server/tests/ws02d-01c-staging-foundation.test.mjs'
+      - 'docs/CP-CRM-WORKSPACE-INVITE-01C.md'
+      - '.github/workflows/cp-crm-workspace-invite-01c-foundation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  staging-foundation-source-and-trusted-routes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify migration integrity
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Verify staging-only foundation and existing trusted invitation transport
+        run: node --test server/tests/ws02d-01c-staging-foundation.test.mjs server/tests/ws02d-staging-readiness.test.mjs server/tests/ws02d-dormant-edge-handlers.test.mjs server/tests/ws02d-invitation-http-boundary.test.mjs server/tests/ws02d-invitation-accept-http-boundary.test.mjs server/tests/ws02d-resend-transport.test.mjs frontend/tests/workspace-invitation-client.test.mjs
