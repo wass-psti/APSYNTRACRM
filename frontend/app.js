@@ -201,6 +201,7 @@ import {attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError} fr
 import {signedMapPoints,mountTimeTrackerMaps,disposeTimeTrackerMaps,setTimeTrackerMapTheme,retryTimeTrackerMaps,toggleTimeTrackerMapFullscreen} from './time-tracker-map.js';
 import {inspectMySignedEffectiveAccess,sanitizeEffectiveAccessReport} from './signed-effective-access.js';
 import {RoleConfigurationClient} from './role-configuration-client.js';
+import {stagedProposalReadbackVerified} from './role-configuration-client.js';
 import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-ui.js';
 import {mountRoleConfigurationMotion,stopRoleConfigurationMotion} from './role-configuration-visuals.js';
 import {mountUserRoleMotion,stopUserRoleMotion} from './user-role-visuals.js';
@@ -2291,9 +2292,12 @@ async function stageRoleProposal(operation,payload){
     context.workspace_id!==state.context?.workspace_id||
     !(await roleConfig.adminVerified()))
   throw new ApiError('CRM administrator or active workspace changed.',403);
- await roleConfig.propose(context.workspace_id,operation,payload);
+ const proposalId=await roleConfig.propose(context.workspace_id,operation,payload);
  await loadRoleConfiguration();
- toast('Change proposal recorded. No production access has changed.');
+ if(!stagedProposalReadbackVerified(state.roleData,{
+  workspaceId:context.workspace_id,id:proposalId,operation,payload}))
+  throw new ApiError('The proposal RPC returned success, but its exact staged record could not be confirmed by authoritative readback. Refresh the audit history before attempting another submission.',409);
+ toast('Staged proposal persisted and verified. No production access has changed.');
  render();
 }
 async function refreshFoundation(){
@@ -8550,13 +8554,19 @@ async function action(name,button){
      throw new ApiError('The role writes returned success, but refreshed assignment readback could not confirm every target. Review current assignments before retrying.',409);
     }
     if(failed){
-     // Prevent a second click from accidentally reissuing successful writes.
+     // RPC acknowledgements are not persistence proof. Verify the successful
+     // prefix independently after partial failure, never recommend blind retry.
+     const unverified=verifiedReadback?
+      unverifiedBatchRoleAssignments(state.userRoleData,plan.operations.slice(0,completed)).length:
+      completed;
+     const persisted=completed-unverified;
      hideModal();
-     throw new ApiError(completed+' of '+plan.operations.length+
-      ' changes applied. Stopped on failure: '+errorMessage(failed)+
-      '. Refresh the current assignments before retrying.',failed.status||409);
+     throw new ApiError(persisted+' of '+plan.operations.length+
+      ' changes verified in authoritative readback; '+unverified+
+      ' write acknowledgement(s) remain unverified. Stopped on failure: '+errorMessage(failed)+
+      '. Inspect refreshed assignments before any retry.',failed.status||409);
     }
-    toast('Batch complete: '+completed+' role change'+(completed===1?'':'s')+' applied and audited.');
+    toast('Batch complete: '+completed+' role change'+(completed===1?'':'s')+' verified in authoritative assignment readback.');
    },{submitLabel:enabled?'Apply '+plan.operations.length+' changes':'Confirm '+plan.operations.length+' revocations',
      destructive:!enabled,successMessage:''});
    break;

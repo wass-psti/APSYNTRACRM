@@ -143,6 +143,11 @@ const BOARD_READ_RPC=new Set([
  'wm_import_extended_refs_read',
  'apsyntra_crm_my_effective_access',
  'apsyntra_role_is_admin','apsyntra_role_is_bootstrap',
+ // Signed STABLE role snapshots are verified reads, not unknown operations.
+ 'apsyntra_role_user_management_snapshot','apsyntra_role_configuration_snapshot',
+ 'apsyntra_crm_platform_role_snapshot','apsyntra_role_fueltrans_workspace_snapshot',
+ 'apsyntra_role_tooltrace_workspace_snapshot','apsyntra_role_frt_workspace_snapshot',
+ 'apsyntra_role_scoped_six_snapshot','apsyntra_role_charter_workspace_snapshot',
  'tl03_documents_page','tl03_document_read','tl03_document_history','tl03_document_revision_bundle',
  // Assigned reviewer projection is read-only despite its VOLATILE PL/pgSQL wrapper.
  'tl03_assigned_documents',
@@ -198,6 +203,10 @@ const BOARD_MUTATION_RPC=new Set([
  'frt_set_request_filing_status','frt_submit_liquidation_v2','frt_update_request_date_cas',
  'frt_correct_request_payee_cas',
  'apsyntra_crm_platform_role_set','apsyntra_role_manage_user_access',
+ // Scoped role writes must invalidate caches only after successful commits.
+ 'apsyntra_role_fueltrans_workspace_set','apsyntra_role_tooltrace_workspace_set',
+ 'apsyntra_role_frt_workspace_set','apsyntra_role_scoped_six_set',
+ 'apsyntra_role_charter_workspace_set',
  'apsyntra_role_configuration_propose','update_own_profile'
 ]);
 
