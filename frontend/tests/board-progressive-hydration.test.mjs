@@ -166,7 +166,7 @@ test('page continuation cannot cross an access-token generation',async()=>{
 
 test('board UI exposes manual pagination, status, retry and completed states accessibly',()=>{
  const partial=renderBoardPagination({loaded_count:200,has_more:true});
- assert.match(partial,/Showing 200 loaded items/);
+ assert.match(partial,/Showing 200 items · More available/);
  assert.match(partial,/data-action="board-load-more"/);
  assert.match(partial,/data-board-pagination-sentinel/);
  const busy=renderBoardPagination({loaded_count:200,has_more:true},{busy:true});
@@ -177,7 +177,7 @@ test('board UI exposes manual pagination, status, retry and completed states acc
  assert.match(failed,/Retry loading items/);
  assert.doesNotMatch(failed,/data-board-pagination-sentinel/);
  const complete=renderBoardPagination({loaded_count:401,has_more:false});
- assert.match(complete,/All available items loaded/);
+ assert.match(complete,/Showing all 401 items/);
  assert.doesNotMatch(complete,/data-action="board-load-more"/);
 });
 
