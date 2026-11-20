@@ -1,0 +1,47 @@
+name: CP-FRT-NATIVE-ROLE-01 Fund Tracker Role Source Parity
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/*cp_frt_native_role_source_parity.sql'
+      - 'supabase/migration-source-manifest.json'
+      - 'sql/tests/cp-frt-native-role-source-*.sql'
+      - 'frontend/tests/cp-frt-native-role-source.test.mjs'
+      - '.github/workflows/cp-frt-native-role-source.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  disposable-fund-tracker-role-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U postgres'
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify migration manifest
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Verify actual SQL role projection in disposable Postgres 17
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-frt-native-role-source-setup.sql \
+            -f supabase/migrations/20261120043846_cp_frt_native_role_source_parity.sql \
+            -f sql/tests/cp-frt-native-role-source-acceptance.sql
+      - name: Verify canonical Fund Tracker client mapping
+        run: node --test frontend/tests/cp-frt-native-role-source.test.mjs frontend/tests/user-role-frt-scoped.test.mjs
