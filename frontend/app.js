@@ -9600,16 +9600,97 @@ async function action(name,button){
  case 'user-role-section':{
    if(!state.adminVerified||state.view!=='user-role-management')break;
    const section=button.dataset.section;
-   if(!['applications','boards'].includes(section)||state.userRoleSection===section)break;
+   if(!['applications','boards','system-admins'].includes(section)||
+      state.userRoleSection===section)break;
    state.userRoleSection=section;
    render();
+   if(section==='system-admins'){
+    state.systemAdminBusy=true;render();
+    try{await loadSystemAdminManagement();}
+    catch(err){
+     state.systemAdminData=null;
+     state.systemAdminError='Unable to verify the System Admin backend. No role assignments were changed.';
+     notice(err);
+    }finally{state.systemAdminBusy=false;render();}
+   }
    break;
  }
  case 'user-role-refresh':{
    if(!state.adminVerified||state.userRoleBusy)return;
    state.userRoleBusy=true;render();
-   try{await loadUserRoleManagement();}catch(err){state.userRoleError=errorMessage(err);notice(err);}
+   try{
+    await loadUserRoleManagement();
+    if(state.userRoleSection==='system-admins')await loadSystemAdminManagement();
+   }catch(err){state.userRoleError=errorMessage(err);notice(err);}
    finally{state.userRoleBusy=false;render();}
+   break;
+ }
+ case 'user-role-grant-system-admin':
+ case 'user-role-revoke-system-admin':{
+   if(state.view!=='user-role-management'||state.adminVerified!==true||
+      state.userRoleBusy||state.systemAdminBusy||!state.userRoleData)return;
+   const snapshot=state.systemAdminData;
+   if(snapshot?.status!=='VERIFIED_SYSTEM_ADMIN'||snapshot.canManage!==true||
+      snapshot.workspaceId!==state.context?.workspace_id||
+      snapshot.actorId!==state.context?.user_id)
+    throw new ApiError('Signed System Admin authority is unavailable.',403);
+   const targetId=button.dataset.userId;
+   if(targetId!==state.userRoleSelected||targetId===state.context.user_id)
+    throw new ApiError('System Admin self-assignment or stale target denied.',403);
+   const target=state.userRoleData.users.find(u=>u.id===targetId);
+   const role=snapshot.roles.find(r=>r.userId===targetId);
+   const revoking=name==='user-role-revoke-system-admin';
+   const count=snapshot.roles.filter(r=>r.active).length;
+   if(!target||!role||revoking&&(!role.active||target.protected||count<=1)||
+      !revoking&&role.active)
+    throw new ApiError('Protected, last-admin or stale System Admin assignment.',403);
+   const designation=revoking?role.designation:null;
+   const fields='<div class="note">System Admin is a global designation reserved for trusted IT '+ 
+     'administrators and the General Manager / CEO. Employee departments never confer '+ 
+     'administrative authority. Changes are audited; self-promotion is prohibited.</div>'+
+     (revoking?'':select('Explicit designation','designation',[
+      ['trusted_it','Trusted IT administrator'],['general_manager','General Manager / CEO']
+     ],'trusted_it'))+
+     input('Reason for change (minimum 12 characters)','reason','','text',true);
+   openModal(revoking?'Revoke System Admin':'Assign System Admin',fields,async fd=>{
+    const requestedDesignation=revoking?designation:String(fd.get('designation')||'');
+    const reason=String(fd.get('reason')||'').trim();
+    if(!SYSTEM_ADMIN_DESIGNATIONS.includes(requestedDesignation)||
+       reason.length<12||reason.length>180)
+     throw new ApiError('Choose a valid designation and provide at least 12 characters of justification.',400);
+    state.userRoleBusy=true;
+    try{
+     const identity=await auth.getVerifiedUser(),ctx=await db.context();
+     if(identity?.id!==snapshot.actorId||ctx.user_id!==snapshot.actorId||
+        ctx.workspace_id!==snapshot.workspaceId||
+        state.context?.user_id!==ctx.user_id||
+        state.context?.workspace_id!==ctx.workspace_id)
+      throw new ApiError('Signed administrator identity or workspace changed.',403);
+     const fresh=await systemAdminClient.snapshot({
+      workspaceId:ctx.workspace_id,actorId:ctx.user_id,users:state.userRoleData.users
+     });
+     const freshRole=fresh.roles?.find(r=>r.userId===targetId);
+     if(fresh.status!=='VERIFIED_SYSTEM_ADMIN'||!fresh.canManage||
+        freshRole?.revision!==role.revision||freshRole?.active!==role.active)
+      throw new ApiError('System Admin role changed. Refresh before retrying.',409);
+     state.systemAdminData=null; // do not show stale authority on ambiguous writes
+     await systemAdminClient.change({
+      workspaceId:ctx.workspace_id,actorId:ctx.user_id,userId:targetId,
+      action:revoking?'revoke':'grant',designation:requestedDesignation,
+      reason,expectedRevision:role.revision
+     });
+     const verified=await systemAdminClient.snapshot({
+      workspaceId:ctx.workspace_id,actorId:ctx.user_id,users:state.userRoleData.users
+     });
+     const finalRole=verified.roles.find(r=>r.userId===targetId);
+     if(verified.status!=='VERIFIED_SYSTEM_ADMIN'||
+        finalRole?.active===revoking||finalRole?.revision!==role.revision+1)
+      throw new ApiError('System Admin change could not be verified. Refresh before retrying.',409);
+     state.systemAdminData=verified;
+     toast(revoking?'System Admin revoked and verified.':'System Admin assigned and verified.');
+    }finally{state.userRoleBusy=false;render();}
+   },{submitLabel:revoking?'Confirm System Admin revocation':'Assign System Admin',
+     destructive:revoking,successMessage:''});
    break;
  }
  case 'user-role-edit-crm-platform':
