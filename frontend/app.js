@@ -3,6 +3,7 @@ import {applySearchVisibility} from './interaction-search.js';
 import {createFrameCoalescer} from './frame-coalescer.js';
 import {AuthClient,ApiError} from './session.js';
 import {createTimeTrackerPendingRecovery,timeTrackerPendingKeyMatches} from './time-tracker-pending-recovery.js';
+import {readTimeTrackerLocationPreference,saveTimeTrackerLocationPreference} from './apps/TimeTracker/time-tracker-preferences.js';
 import {avatarPreviewMarkup,mountAvatarPreview,stopAvatarPreview,mergeProfileAvatarContext} from './profile-avatar.js';
 import {ProfileAvatarClient} from './profile-avatar-client.js';
 import {mountAvatarImages} from './profile-avatar.js';
@@ -1119,6 +1120,9 @@ function issuesPage(){
 function renderTimeTrackerApplication(){
  return renderTimeTrackerNative({
   result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,clockPendingAction:state.ttClockPending?.action||'clock-out',
+  locationPreference:readTimeTrackerLocationPreference(typeof localStorage==='undefined'?null:localStorage,{
+   userId:state.context?.user_id,workspaceId:state.context?.workspace_id
+  }),
   error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,
   view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,
   reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,
@@ -4200,7 +4204,11 @@ async function submitTimeTrackerAction(form,actionName){
  const location=actionName==='clock-out'?String(active.location||''):
   String(values.get('tt-location')||'');
  const department=actionName==='clock-out'?String(active.department||''):
-  String(values.get('tt-department')||'');
+  String(state.ttAttendance.access?.employeeDepartment||'');
+ if(actionName==='clock-in'&&!department){
+  state.ttError='Your department has not been assigned by a TimeTracker administrator. Clock In is unavailable until it is verified.';
+  render();return;
+ }
  const workNote=String(form.querySelector('#tt-note')?.value||'');
  const seq=routeSerial,run=++state.ttRunId,identity=state.context.user_id,
   ws=state.context.workspace_id,boardId=state.boardId;
@@ -10748,6 +10756,16 @@ root.addEventListener('change',event=>{
   }
  }
  if(event.target.id==='tt-location'){
+  saveTimeTrackerLocationPreference(typeof localStorage==='undefined'?null:localStorage,{
+   userId:state.context?.user_id,workspaceId:state.context?.workspace_id
+  },event.target.value);
+  // Collapse the native popup; selection is retained across re-renders/logins.
+  event.target.blur?.();
+  for(const chip of root.querySelectorAll('[data-action="tt-location-shortcut"]')){
+   const chosen=chip.dataset.location===event.target.value;
+   chip.classList.toggle('is-selected',chosen);
+   chip.setAttribute('aria-pressed',String(chosen));
+  }
   const group=root.querySelector('#tt-note-wrap');
   const note=root.querySelector('#tt-note');
   if(group&&note){
