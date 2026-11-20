@@ -18,9 +18,9 @@ The candidate is guarded by exact expected current source fragments and fails on
 | Gate | Evidence | Status |
 | --- | --- | --- |
 | Existing five workspace-scoped role setters: write, readback, stale revision, revoke and denial | CP-CRM-URM-INTEGRITY-03 disposable PG17 CI | VERIFIED (previous milestone) |
-| Reproduce workspace owner reporting native module allowed despite backend module denial | New isolated synthetic PG17 acceptance | PENDING CI |
-| After candidate, four native response entries equal authoritative signed module permission and role | New isolated synthetic PG17 acceptance | PENDING CI |
-| Non-native application projection unchanged | New isolated synthetic PG17 acceptance | PENDING CI |
+| Reproduce workspace owner reporting native module allowed despite backend module denial | New isolated synthetic PG17 acceptance; GitHub Actions run 44654617932 | VERIFIED |
+| After candidate, four native response entries equal authoritative signed module permission and role | New isolated synthetic PG17 acceptance; GitHub Actions run 44654617932 | VERIFIED |
+| Non-native application projection unchanged | New isolated synthetic PG17 acceptance; GitHub Actions run 44654617932 | VERIFIED |
 | Genuine employee account four-native-app signed initial read | Previous signed employee browser evidence | VERIFIED (previous milestone) |
 | Genuine owner account native TimeTracker 403 | Previous signed account/read-only evidence | VERIFIED (previous milestone) |
 | Same-workspace two-account runtime role-change and revocation, refresh, reopen, reauth and propagation | Requires two genuinely signed nonproduction users in same workspace and scoped reversible role fixtures | BLOCKED |
@@ -31,3 +31,12 @@ The candidate is guarded by exact expected current source fragments and fails on
 The candidate fixes **representation of native availability**, not the policy decision about whether a workspace owner ought to receive a native module assignment. The latter is a production authorization and role-policy question, and this work deliberately preserves existing roles and guards. Native access stays denied unless the authoritative server already allows it. Do not infer that an unavailable native Board is missing based on the module 403.
 
 **Next implementation if blocked:** `CP-CRM-URM-INTEGRITY-03C — Controlled Effective-Access Projection Activation, Same-Workspace Two-Account Runtime Readback, and Native Capability Closeout`. First verify approved intended role semantics, then production activation separately if authorized; use independent nonproduction signed accounts for cross-user mutation and readback. No new Supabase project is required.
+
+## Verified disposable evidence (GitHub Actions, 2026-11-20)
+
+- `CP_CRM_URM_INTEGRITY_03B_PROJECTION_PARITY_PASS` in [run 44654617932](https://github.com/wass-psti/APSYNTRACRM/actions/runs/44654617932).
+- The fixture explicitly reproduced **owner projection allowed / native module authority denied** before the candidate.
+- After applying the candidate to disposable PostgreSQL 17, all four native-module entries matched `has_module_access` and `module_role_for`; unrelated Order Intake remained unchanged. A synthetic authorized TimeTracker assignment was also reflected without changing native guard code.
+- The other five disposable role-domain jobs passed in PR #624. These are nonproduction tests; the signed production accounts still occupy different workspaces.
+
+**Release boundary:** This PR is intentionally safe to merge without changing runtime behavior. The candidate remains under `sql/` and is not part of `supabase/migrations/`; GitHub Pages can deploy its audit and test source without activating the database function candidate. Do not confuse PR/Pages success with production projection activation or signed cross-user role acceptance.
