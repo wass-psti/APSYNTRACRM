@@ -3,6 +3,7 @@
  */
 import {ROLE_MODULE_OPTIONS} from './role-configuration-ui.js';
 import {roleConfigurationIcon} from './role-configuration-visuals.js';
+import {renderSystemAdminSection} from './system-admin-access.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const APSYNTRA_CRM_PLATFORM_ROLES=Object.freeze(['admin','supervisor','employee','viewer']);
@@ -362,7 +363,7 @@ function accountRoleLabel(data,user){
  return 'CRM '+crm.effectiveRole+' ('+crmRoleSourceLabel(crm)+')'+
   ' · Identity '+user.platformRole;
 }
-export function renderUserRoleManagement({verified=false,data=null,selectedUserId=null,actorUserId=null,busy=false,error='',accessSection='applications',boardSearch='',batchMode=false,batchSelected=[],batchScope='module',batchResource='',batchRole='viewer',batchAction='assign',batchMemberSearch=''}={}){
+export function renderUserRoleManagement({verified=false,data=null,selectedUserId=null,actorUserId=null,busy=false,error='',accessSection='applications',systemAdminData=null,boardSearch='',batchMode=false,batchSelected=[],batchScope='module',batchResource='',batchRole='viewer',batchAction='assign',batchMemberSearch=''}={}){
  if(!verified)return '<div class="access-denied">Role management unavailable</div>';
  let html='<div class="aps-user-role-management"><section class="page-head user-role-hero user-role-entrance" aria-labelledby="user-role-title"><div class="user-role-hero-copy"><span class="label-top"><span class="user-role-hero-dot" aria-hidden="true"></span>Administration / CRM Admin</span>'+
  '<h1 id="user-role-title">User Role Management<span class="user-role-heading-stop">.</span></h1><p>Manage APSYNTRA CRM platform, application and board roles from the central backend.</p></div>'+
@@ -454,10 +455,11 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  (!data.fueltransWorkspaceAvailable?'<div class="note user-role-fueltrans-scope-unavailable">FuelTrans role changes require its authoritative workspace membership integration. The legacy global role action is disabled to prevent assigning a role in another workspace.</div>':'')+
  (!data.workspaceScopedMrhAvailable?'<div class="note security-note user-role-mrh-scope-unavailable">Workspace-scoped Material Request Hub role management is not yet confirmed by the backend. Its role changes remain disabled until the CP-RC03 migration is installed.</div>':'')+
  '</div></section>';
- const section=accessSection==='boards'?'boards':'applications';
+ const section=['applications','boards','system-admins'].includes(accessSection)?accessSection:'applications';
  html+='<nav class="user-role-access-nav" aria-label="Access configuration sections" role="group">'+
   '<button type="button" data-action="user-role-section" data-section="applications" aria-pressed="'+(section==='applications')+'">Application access</button>'+
-  '<button type="button" data-action="user-role-section" data-section="boards" aria-pressed="'+(section==='boards')+'">Board access ('+data.boards.length.toLocaleString('en-US')+')</button></nav>'+
+  '<button type="button" data-action="user-role-section" data-section="boards" aria-pressed="'+(section==='boards')+'">Board access ('+data.boards.length.toLocaleString('en-US')+')</button>'+
+  '<button type="button" data-action="user-role-section" data-section="system-admins" aria-pressed="'+(section==='system-admins')+'">System Admin</button></nav>'+
   '<section class="user-role-access-section" data-role-access-section="applications" aria-label="Application access settings"'+(section==='applications'?'':' hidden')+'>';
  const locked=!!u.protected||isSelf||busy;
  const crm=data.crmPlatformRoles?.find(r=>r.userId===u.id)||null;
@@ -544,5 +546,6 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   '</td></tr>';
  }
  html+='</tbody></table></div></div><p class="muted user-role-boundary-note">'+roleConfigurationIcon('shield')+'<span>The existing backend still governs approval, export, finance and domain-specific operations separately. A board membership alone does not grant access to sensitive domain records.</span></p>';
- return html+'</section></div>';
+ return html+'</section>'+renderSystemAdminSection({data:systemAdminData,
+   selectedUser:u,actorId:actorUserId,busy,hidden:section!=='system-admins'})+'</div>';
 }
