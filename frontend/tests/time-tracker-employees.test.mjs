@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {projectTimeTrackerEmployees,renderTimeTrackerEmployees,projectTimeTrackerEmployeeDepartments}
+import {projectTimeTrackerEmployees,renderTimeTrackerEmployees,projectTimeTrackerEmployeeDepartments,projectTimeTrackerDepartmentCatalog}
  from '../time-tracker-application.js';
 import {TimeTrackerNativeClient,TT_ROLES} from '../time-tracker-native.js';
 import {renderTimeTrackerNative} from '../time-tracker-ui.js';
@@ -129,13 +129,25 @@ test('Employees management uses signed department assignments and never invents 
   workspaceId:workspace,boardId:board,
   assignments:[{userId:colleague,department:'Engineering'}]};
  const assigned=projectTimeTrackerEmployeeDepartments(directory,snapshot);
+ const catalog=projectTimeTrackerDepartmentCatalog({
+  contract:'tt-department-catalog-1',actorId:actor,workspaceId:workspace,boardId:board,
+  revision:1,departments:[
+   {id:'70000000-0000-4000-8000-000000000001',name:'Engineering',assignedCount:1},
+   {id:'70000000-0000-4000-8000-000000000002',name:'OJT',assignedCount:0}
+  ]},scope);
  assert.equal(assigned.departmentsReady,true);
  assert.equal(assigned.members.find(x=>x.id===colleague).department,'Engineering');
  const html=renderTimeTrackerEmployees({directory:assigned,
-  access:{...scope,moduleRole:'IT Administrator'}});
+  access:{...scope,moduleRole:'IT Administrator',departmentCatalog:catalog}});
  assert.match(html,/Engineering/);
  assert.match(html,/data-action="tt-employees-department-edit"/);
  assert.match(html,/data-action="tt-employees-attendance"/);
+ assert.match(html,/Department Management/);
+ assert.match(html,/data-action="tt-departments-add"/);
+ assert.match(html,/data-action="tt-departments-rename"/);
+ assert.match(html,/data-action="tt-departments-delete"/);
+ assert.match(html,/OJT/);
+ assert.match(html,/1 employee assigned/);
  assert.doesNotMatch(renderTimeTrackerEmployees({directory:assigned,
   access:{...scope,moduleRole:'Employee'}}),/tt-employees-department-edit/);
  const unavailable=projectTimeTrackerEmployeeDepartments(directory,null);
@@ -145,8 +157,71 @@ test('Employees management uses signed department assignments and never invents 
   access:{...scope,moduleRole:'System Admin'}}),/tt-employees-department-edit/);
  for(const bad of [
   {...snapshot,workspaceId:actor},
-  {...snapshot,assignments:[{userId:colleague,department:'Unknown'}]},
+  {...snapshot,assignments:[{userId:colleague,department:'X'}]},
   {...snapshot,assignments:[{userId:colleague,department:'Engineering'},
    {userId:colleague,department:'Engineering'}]}
  ])assert.throws(()=>projectTimeTrackerEmployeeDepartments(directory,bad));
+});
+
+test('department catalog rejects cross-workspace, duplicate names, forged counts and corrupt signatures',()=>{
+ const departmentId='70000000-0000-4000-8000-000000000002';
+ const signed={contract:'tt-department-catalog-1',
+  actorId:actor,workspaceId:workspace,boardId:board,revision:4,
+  departments:[{id:departmentId,name:'OJT',assignedCount:0}]};
+ const catalog=projectTimeTrackerDepartmentCatalog(signed,scope);
+ assert.equal(catalog.revision,4);
+ assert.equal(catalog.departments[0].name,'OJT');
+ assert.equal(Object.isFrozen(catalog.departments),true);
+ for(const bad of [
+  {...signed,workspaceId:actor},
+  {...signed,actorId:colleague},
+  {...signed,revision:-1},
+  {...signed,departments:[{id:departmentId,name:'OJT',assignedCount:-1}]},
+  {...signed,departments:[{id:departmentId,name:'OJT',assignedCount:0},
+    {id:'70000000-0000-4000-8000-000000000003',name:'ojt',assignedCount:0}]},
+  {...signed,departments:[{id:departmentId,name:'X',assignedCount:0}]}
+ ])assert.throws(()=>projectTimeTrackerDepartmentCatalog(bad,scope));
+});
+test('signed catalog client checks current assignment count and verifies actual deletion',async()=>{
+ const calls=[],id='70000000-0000-4000-8000-000000000002';
+ let revision=7,departments=[{id,name:'OJT',assignedCount:2}];
+ const api={
+  async context(){return {user_id:actor,workspace_id:workspace,profile:{status:'active'}};},
+  async nativeApplicationBoardContext(moduleId){return {moduleId,userId:actor,
+   workspaceId:workspace,role:'IT Administrator',board:{
+    id:board,name:'TimeTracker Attendance',workspace_id:workspace}};},
+  async rpc(name,args){
+   calls.push({name,args});
+   if(name==='has_module_access')return true;
+   if(name==='list_module_directory')return [
+    {id:actor,status:'active',display_name:'Admin',module_role:'IT Administrator'},
+    {id:colleague,status:'active',display_name:'Worker',module_role:'Employee'}
+   ];
+   if(name==='timetracker_department_catalog_snapshot')return {
+    contract:'tt-department-catalog-1',actorId:actor,workspaceId:workspace,
+    boardId:board,revision,departments
+   };
+   if(name==='timetracker_department_catalog_mutate'){
+    revision++;
+    departments=[];
+    return {contract:'tt-department-catalog-mutate-1',
+     actorId:actor,workspaceId:workspace,boardId:board,
+     action:'delete',departmentId:id,revision,affectedEmployees:2};
+   }
+   throw Error('Unexpected RPC '+name);
+  }
+ };
+ const client=new TimeTrackerNativeClient({auth:{
+  userId:actor,getVerifiedUser:async()=>({id:actor})
+ },api});
+ await assert.rejects(()=>client.mutateDepartmentCatalog(board,{
+  action:'delete',departmentId:id,expectedRevision:7,expectedCount:1
+ }),/count changed/);
+ assert.equal(calls.filter(x=>x.name==='timetracker_department_catalog_mutate').length,0);
+ const result=await client.mutateDepartmentCatalog(board,{
+  action:'delete',departmentId:id,expectedRevision:7,expectedCount:2
+ });
+ assert.equal(result.revision,8);
+ assert.equal(result.departments.length,0);
+ assert.equal(calls.find(x=>x.name==='timetracker_department_catalog_mutate').args.p_expected_count,2);
 });
