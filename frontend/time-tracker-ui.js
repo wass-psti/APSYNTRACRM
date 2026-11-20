@@ -148,7 +148,7 @@ function head(access,busy=false,view='clock'){
    '<button type="button" class="tt-header-link" data-action="tt-tab" data-target="hours"'+
     (busy?' disabled':'')+'>▦ &nbsp; My Hours <span aria-hidden="true">›</span></button>'+
    '<span class="tt-role-pill" title="Existing centralized TimeTracker role">'+
-    esc(access?.moduleRole||'Signed access required')+'</span>'+
+    esc(access?.moduleRole||(busy?'Checking signed access…':'Signed access required'))+'</span>'+
   '</div></header>';
 }
 function applicationHeading(view,busy){
@@ -163,10 +163,11 @@ function applicationFooter(){
  return '<footer class="fm1-app-footer tt-application-footer"><span>APSYNTRA CRM · TimeTracker Attendance</span>'+
   '<span>Asia/Manila (UTC+8) · Existing attendance records</span></footer>';
 }
-function notifications(verified,writeReady=false){
+function notifications(verified,writeReady=false,busy=false){
  return '<div class="tt-notices" role="status">'+
   (writeReady?'<span class="tt-notice tt-notice-neutral">✓ &nbsp; Signed Clock writes active</span>':
-  '<span class="tt-notice tt-notice-warning">⚠ &nbsp; Clock actions pending backend acceptance</span>')+
+  '<span class="tt-notice '+(busy?'tt-notice-neutral':'tt-notice-warning')+'">'+
+  (busy?'◷ &nbsp; Verifying Clock access…':'⚠ &nbsp; Clock actions pending backend acceptance')+'</span>')+
   (verified?'<span class="tt-notice tt-notice-neutral">ⓘ &nbsp; Signed workspace verified</span>':'')+
   '</div>';
 }
@@ -174,7 +175,9 @@ function heading(title,desc){
  return '<div class="tt-subview-head"><div><h3>'+esc(title)+'</h3><p>'+
   esc(desc)+'</p></div></div>';
 }
-function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-out',locationPreference=''){
+function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-out',locationPreference='',{
+ success='',geoPermission='unknown',geoChecking=false,geoMessage='',clockStage='idle'
+}={}){
  const {access,records,active}=result;
  const writeReady=TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&access?.attendanceWritesAccepted===true;
  const t=timeTrackerClockParts(now);
@@ -183,6 +186,18 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
  const credited=todayRows.reduce((sum,r)=>sum+(r.creditedMs===null?
   creditedAttendanceMs(r.clockIn,now):r.creditedMs||0),0);
  const status=active?'Active':'Idle';
+ const locationEnabled=geoPermission==='granted';
+ const geoWarning=geoPermission==='denied'||geoPermission==='unavailable';
+ const geoTitle=locationEnabled?'Location access enabled':
+  geoPermission==='denied'?'Location permission blocked':
+  geoPermission==='unavailable'?'GPS unavailable':'Location required for attendance';
+ const geoDescription=geoMessage||(locationEnabled?
+  'Your site has location permission. A new GPS fix is captured for every Clock In and Clock Out.':
+  geoPermission==='denied'?
+  'In your browser site settings, allow Location for this site. Also turn on your phone or computer Location Services.':
+  geoPermission==='unavailable'?
+  'Enable Location Services on your device and check your GPS signal. Then recheck location.':
+  'Use Enable location to allow browser access. Your location will be requested again when you clock in or out.');
  const employeeDepartment=access?.employeeDepartment||null;
  const location=TT_LOCATIONS.includes(locationPreference)?locationPreference:'';
  const offsite=location==='Offsite (Home)'&&access?.moduleRole!=='System Admin';
@@ -232,6 +247,10 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
     '<p class="tt-dashboard-source">Attendance totals use your authorized TimeTracker records.</p>'+
    '</section>'+
    '<section class="tt-clock-card tt-attendance-console" aria-label="Attendance clock form">'+
+    (success?'<div class="tt-clock-confirmed" role="status" aria-live="polite">'+
+     '<span class="tt-clock-confirmed-icon" aria-hidden="true">✓</span>'+
+     '<div><strong>'+(success.startsWith('Clock Out')?'Clock Out successful':'Clock In successful')+
+     '</strong><p>'+esc(success)+'</p></div></div>':'')+
     '<div class="tt-console-kicker"><span class="tt-console-kicker-mark" aria-hidden="true"></span> ATTENDANCE CONTROL</div>'+
     '<div class="tt-clock-card-head"><h4>'+ (active?'Active Session':'Clock In')+
      '</h4><span class="tt-idle-badge '+(active?'tt-badge-active':'')+'">'+
@@ -275,6 +294,16 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
      '<label for="tt-note" class="tt-note-field" id="tt-note-wrap"'+
       (((active&&active.location==='Offsite (Home)')||(!active&&offsite))?'':' hidden')+'>'+
       'Offsite Work Note<textarea id="tt-note"'+((!active&&offsite)?' required':'')+' maxlength="500" rows="3" placeholder="Describe your offsite work"></textarea></label>'+
+     '<div class="tt-location-readiness '+(locationEnabled?'is-ready':geoWarning?'needs-action':'needs-permission')+
+      '" role="status" aria-live="polite">'+
+      '<span class="tt-location-indicator" aria-hidden="true">'+(locationEnabled?'✓':'⌖')+'</span>'+
+      '<div class="tt-location-content"><strong>'+esc(geoTitle)+'</strong>'+
+      '<p>'+esc(geoDescription)+'</p></div>'+
+      (!locationEnabled?'<button type="button" data-action="tt-location-check"'+
+       (geoChecking||busy?' disabled':'')+'>'+
+       (geoChecking?'Checking GPS…':geoPermission==='prompt'||geoPermission==='unknown'?
+        'Enable location':'Recheck location')+'</button>':'')+
+     '</div>'+
      (clockPending?
       '<p class="tt-clock-hint" role="status">'+(clockPendingAction==='clock-in'?'Clock-in':'Clock-out')+
       ' status needs verification. A second attendance write is blocked until a fresh signed read confirms the result.</p>'+
@@ -283,7 +312,10 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
       '<button class="tt-start-button" type="submit" name="tt-action" value="'+
        (active?'clock-out':'clock-in')+'"'+
        (busy||!writeReady||(!active&&!employeeDepartment)?' disabled':'')+'>'+
-       (active?'End session':'Start session')+'</button>')+
+       (busy&&clockStage==='location'?'Getting GPS…':
+        busy&&clockStage==='saving'?'Saving securely…':
+        busy&&clockStage==='verifying'?'Verifying record…':
+        active?'End session':'Start session')+'</button>')+
      (!writeReady?
       '<p class="tt-write-restriction" role="status">Live writes remain disabled until server-side offsite work-note, dedicated-board authorization and audit logging are accepted.</p>':
       '<p class="tt-clock-hint">Your attendance uses signed PostgreSQL timestamps and current GPS permission.</p>')+
@@ -326,7 +358,7 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
+ result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',geoPermission='unknown',geoChecking=false,geoMessage='',clockStage='idle',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError='',
  adminEligible=false,adminFullAccess=adminEligible,adminDirectory=[],adminSelectedIds=[],adminEditor=null,adminDeleteConfirm=null,adminBusy=false,adminError='',adminSuccess=''
 }={}){
@@ -336,20 +368,26 @@ export function renderTimeTrackerNative({
  ['overview','clock','employees','log','reports','calendar','ot','hours','team','monitor','gps'].includes(view)?view:'clock';
  let html='<section class="tt-native" aria-label="TimeTracker attendance application"><div class="fm1-app tt-application" data-tt-view="'+selected+'" data-tt-application-root>'+
   head(verified?result.access:null,busy,selected)+navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true)+
-  applicationHeading(selected,busy)+notifications(verified,verified&&result.access?.attendanceWritesAccepted===true);
+  applicationHeading(selected,busy)+notifications(verified,verified&&result.access?.attendanceWritesAccepted===true,busy);
  if(error)html+='<div class="tt-feedback tt-feedback-error" role="alert">'+esc(error)+'</div>';
- if(success)html+='<div class="tt-feedback tt-feedback-success" role="status">'+esc(success)+'</div>';
+ if(success&&selected!=='clock')html+='<div class="tt-feedback tt-feedback-success" role="status">'+esc(success)+'</div>';
  if(!verified){
-  html+='<div class="tt-unavailable"><p>'+(busy?
-   'Checking signed TimeTracker access and attendance records…':
-   'Attendance is unavailable until signed workspace, board and module data are available.')+
-   '</p></div>'+applicationFooter()+'</div></section>';
+  html+='<div class="tt-unavailable tt-signed-loading" role="status" aria-live="polite">'+
+   (busy?'<span class="tt-loading-indicator" aria-hidden="true"></span>'+
+    '<h3>Connecting to TimeTracker</h3>'+
+    '<p>Verifying your signed account and latest attendance record…</p>'+
+    '<small>Your Clock screen will appear automatically. No attendance action is being submitted.</small>':
+    '<h3>Attendance access needs verification</h3>'+
+    '<p>Signed workspace, board or module access is unavailable. Refresh or sign in again.</p>')+
+   '</div>'+applicationFooter()+'</div></section>';
   return html;
  }
  if(selected==='overview')html+=renderTimeTrackerOverview({
   overview:result.overview,access:result.access,now,filters:overviewFilters
  });
- if(selected==='clock')html+=clockPage(result,busy,new Date(now),clockPending,clockPendingAction,locationPreference);
+ if(selected==='clock')html+=clockPage(result,busy,new Date(now),clockPending,clockPendingAction,locationPreference,{
+  success,geoPermission,geoChecking,geoMessage,clockStage
+ });
  if(selected==='employees')html+=renderTimeTrackerEmployees({
   directory:result.access?.employees,access:result.access,search:employeesSearch,loading:busy
  });
