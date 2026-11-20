@@ -11,7 +11,7 @@ on:
       - "sql/tests/cp-tt-auto-clockout-02b-disposable-acceptance.sql"
       - "supabase/migrations/20261120100000_cp_tt_employee_departments_qol.sql"
       - "supabase/migrations/20261120140000_cp_tt_department_catalog_management.sql"
-      - "supabase/migrations/20261120150000_cp_tt_auto_clockout_02b_atomic_board_projection_restore.sql"
+      - "supabase/migrations/20261120170000_cp_tt_auto_clockout_02c_atomic_board_projection_restore.sql"
       - ".github/workflows/cp-tt-auto-clockout-02b.yml"
   push:
     branches: [main]
@@ -24,7 +24,7 @@ on:
       - "sql/tests/cp-tt-auto-clockout-02b-disposable-acceptance.sql"
       - "supabase/migrations/20261120100000_cp_tt_employee_departments_qol.sql"
       - "supabase/migrations/20261120140000_cp_tt_department_catalog_management.sql"
-      - "supabase/migrations/20261120150000_cp_tt_auto_clockout_02b_atomic_board_projection_restore.sql"
+      - "supabase/migrations/20261120170000_cp_tt_auto_clockout_02c_atomic_board_projection_restore.sql"
       - ".github/workflows/cp-tt-auto-clockout-02b.yml"
   workflow_dispatch:
 
@@ -101,5 +101,5 @@ jobs:
             -f supabase/migrations/20261120140000_cp_tt_department_catalog_management.sql
           psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT position('tt_board_projection_upsert' in pg_get_functiondef('public.timetracker_attendance_commit_v2(uuid,text,text,text,text,jsonb,text)'::regprocedure))=0" | grep -Fx t
           psql -X -v ON_ERROR_STOP=1 \
-            -f supabase/migrations/20261120150000_cp_tt_auto_clockout_02b_atomic_board_projection_restore.sql
+            -f supabase/migrations/20261120170000_cp_tt_auto_clockout_02c_atomic_board_projection_restore.sql
           psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tt-auto-clockout-02b-disposable-acceptance.sql

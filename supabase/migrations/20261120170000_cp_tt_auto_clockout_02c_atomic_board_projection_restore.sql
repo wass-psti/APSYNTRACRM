@@ -1,4 +1,4 @@
--- CP-TT-AUTO-CLOCKOUT-02B — STAGED; no production application without separate approval.
+-- CP-TT-AUTO-CLOCKOUT-02B — CP-TT-02C controlled production activation. Apply only after exact baseline validation.
 -- Restore the attendance/Board projection write removed by department/catalog RPC
 -- replacements. Preserve the current department catalog validation and grants.
 -- This migration does NOT backfill preexisting attendance or change permissions.

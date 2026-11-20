@@ -17,7 +17,7 @@
 
 ## Prepared corrective implementation
 
-The new 20261120150000 atomic projection restore migration is STAGED — NOT AUTHORIZED FOR PRODUCTION ACTIVATION. It restores precisely the existing projection write inside the signed attendance RPC while preserving the latest dynamic department catalog check, GPS validation, session behavior, audit and existing EXECUTE privileges. If projection fails, canonical attendance and audit must roll back in the same transaction.
+The new 20261120170000 atomic projection restore migration is STAGED — NOT AUTHORIZED FOR PRODUCTION ACTIVATION. It restores precisely the existing projection write inside the signed attendance RPC while preserving the latest dynamic department catalog check, GPS validation, session behavior, audit and existing EXECUTE privileges. If projection fails, canonical attendance and audit must roll back in the same transaction.
 
 The disposable SQL acceptance and workflow run synthetic employee signed Clock-In/Out, department catalog validation, Board projection, audit, typed columns and one-to-one lineage in disposable PostgreSQL 17. No live employee accounts or GPS fixes are simulated in production.
 
