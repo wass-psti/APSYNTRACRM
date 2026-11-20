@@ -235,6 +235,12 @@ const workspaceInvitationClient=new WorkspaceInvitationClient({auth,api:db});
 const workspaceInvitationManagementClient=new WorkspaceInvitationManagementClient({auth,api:db});
 const boardGroupAccessClient=new BoardGroupAccessClient({auth,api:db});
 const workspaceInvitationAcceptanceClient=new WorkspaceInvitationAcceptanceClient({auth,api:db});
+// Signed runtime activation: the trusted manager route must prove availability
+// before any invitation issue. Never infer readiness from a UI flag alone.
+const workspaceInvitationLiveClient=new WorkspaceInvitationClient({auth,api:db,enabled:true});
+const workspaceInvitationLiveManager=new WorkspaceInvitationManagementClient({auth,api:db,enabled:true});
+const checkWorkspaceInvitationAvailability=workspaceId=>workspaceInvitationLiveManager.list(workspaceId);
+const sendWorkspaceInvitation=request=>workspaceInvitationLiveClient.send(request);
 const platformSync=new PlatformSync({
  auth,api:db,url:SUPABASE_URL,publishableKey:SUPABASE_PUBLISHABLE_KEY,
  onStatus:updatePlatformSyncIndicator,onInvalidate:async event=>{
@@ -7106,8 +7112,9 @@ async function action(name,button){
      activeCrmRole:currentSignedCrmRole(state.crmRoleSnapshot,state.context),
      onOpenCurrent:()=>{location.hash='#/overview';},
      configurationEnabled:WS01_CONFIGURATION_ENABLED,
-     invitationEnabled:WS02D_INVITE_CLIENT_ENABLED,
-     sendInvitation:request=>workspaceInvitationClient.send(request),
+     invitationEnabled:true,
+     sendInvitation:sendWorkspaceInvitation,
+     checkInvitationAvailability:checkWorkspaceInvitationAvailability,
      managementEnabled:WS11_INVITATION_MANAGEMENT_ENABLED,
      listInvitations:workspaceId=>workspaceInvitationManagementClient.list(workspaceId),
      revokeInvitation:request=>workspaceInvitationManagementClient.revoke(request),
@@ -7137,8 +7144,9 @@ async function action(name,button){
    openWorkspaceInvitationDialog({
     id:state.context.workspace_id,name:workspaceName()
    },{
-     enabled:WS02D_INVITE_CLIENT_ENABLED,
-     sendInvitation:request=>workspaceInvitationClient.send(request),
+     enabled:true,
+     sendInvitation:sendWorkspaceInvitation,
+     checkInvitationAvailability:checkWorkspaceInvitationAvailability,
      managementEnabled:WS11_INVITATION_MANAGEMENT_ENABLED,
      listInvitations:workspaceId=>workspaceInvitationManagementClient.list(workspaceId),
      revokeInvitation:request=>workspaceInvitationManagementClient.revoke(request)
@@ -8220,8 +8228,9 @@ async function action(name,button){
     if(!auth.isSignedIn||auth.userId!==userId||
        state.context?.workspace_id!==workspaceId)return;
     openWorkspaceInvitationDialog({id:workspaceId,name:workspaceName()},{
-     enabled:WS02D_INVITE_CLIENT_ENABLED,
-     sendInvitation:request=>workspaceInvitationClient.send(request),
+     enabled:true,
+     sendInvitation:sendWorkspaceInvitation,
+     checkInvitationAvailability:checkWorkspaceInvitationAvailability,
      managementEnabled:WS11_INVITATION_MANAGEMENT_ENABLED,
      listInvitations:workspaceId=>workspaceInvitationManagementClient.list(workspaceId),
      revokeInvitation:request=>workspaceInvitationManagementClient.revoke(request)

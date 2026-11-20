@@ -369,7 +369,7 @@ test('direct email validation accepts one exact normalized recipient without use
  assert.equal(validateDirectEmailInvitation({email:'valid@example.com',message:'X'.repeat(501)}).valid,false);
 });
 
-test('invitation panel remains preview-only in production, with staged explicit-send branch',()=>{
+test('invitation panel offers signed server-checked send without client-side membership mutation',()=>{
  const module=readFileSync('frontend/workspace-ui.js','utf8');
  const app=readFileSync('frontend/app.js','utf8');
  const css=readFileSync('frontend/workspace-ui.css','utf8');
@@ -389,6 +389,11 @@ test('invitation panel remains preview-only in production, with staged explicit-
  assert.match(module,/validateDirectEmailInvitation/);
  assert.match(app,/case 'ws02-open-invites':/);
  assert.match(app,/openWorkspaceInvitationDialog\(\{/);
+ assert.match(app,/const workspaceInvitationLiveClient=new WorkspaceInvitationClient\(\{auth,api:db,enabled:true\}\)/);
+ assert.match(app,/const checkWorkspaceInvitationAvailability=workspaceId=>workspaceInvitationLiveManager\.list\(workspaceId\)/);
+ assert.match(module,/await options\.checkInvitationAvailability\(row\.id\)/);
+ assert.match(module,/availability\?\.status!=='SIGNED_MANAGER_LIST'/);
+ assert.match(module,/Send invitation/);
  assert.match(css,/\.ws02-invite-card/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 });
