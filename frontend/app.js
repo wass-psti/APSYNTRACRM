@@ -32,7 +32,7 @@ import {modalRecoveryKind,installModalRecoveryAction} from './modal-recovery.js'
 import {openBoardSharePreview,closeBoardSharePreview} from './board/collaboration/share.js';
 // Invite modal is loaded only after an authorized board invitation gesture.
 let closeBoardInviteDialog=()=>{};
-import {normalizeSignedBoardCandidates,normalizeAdminBoardCandidates,BoardGroupAccessClient,
+import {normalizeSignedBoardCandidates,normalizeAdminBoardCandidates,adminBoardChangeTarget,BoardGroupAccessClient,
  BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
 import {CreatorAccessClient,WS10_CREATOR_POLICY_ACTIVE} from './ws10-ownership.js';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
@@ -8280,15 +8280,12 @@ async function action(name,button){
       // stale, self, protected, foreign-board, or escalated-role assignments.
       const {directory,snapshot}=await readAdminDirectory();
       adminSnapshot=snapshot;peopleDirectory=directory;
-      const target=directory.members.find(p=>p.id===memberId&&!p.protected&&p.id!==userId);
-      if(!target)throw new ApiError('This workspace member cannot be modified.',403);
-      if(action==='grant'&&target.boardRole||
-         action==='revoke'&&!['viewer','editor'].includes(target.boardRole))
-        throw new ApiError('Board membership changed; refresh the list.',409);
-      const role=action==='grant'?'viewer':target.boardRole;
+      const approved=adminBoardChangeTarget(directory,{memberId,action,actorId:userId});
+      if(!approved)throw new ApiError('Board access target is protected or stale.',403);
       const result=await userRoleManager.mutate({
         workspaceId,userId:memberId,scope:'board',resourceId:boardId,
-        role,enabled:action==='grant',expectedUpdatedAt:target.updatedAt
+        role:approved.role,enabled:action==='grant',
+        expectedUpdatedAt:approved.expectedUpdatedAt
       });
       // The backend enforces administrator scope, active workspace membership,
       // board ownership protection and audit. Read back the signed board shell.
