@@ -16,7 +16,7 @@ export class TeamsController {
   this.addUsersOpen=false;this.addUsersSearch='';this.theme='dark';this.modal=null;
   this.onClick=this.onClick.bind(this);this.onInput=this.onInput.bind(this);
   this.onChange=this.onChange.bind(this);this.onKey=this.onKey.bind(this);
-  this.onOutside=this.onOutside.bind(this);
+  this.onOutside=this.onOutside.bind(this);this.globalBound=false;
  }
  mount(host){
   if(this.host!==host){
@@ -36,7 +36,7 @@ export class TeamsController {
   this.host?.removeEventListener('change',this.onChange,true);
   document.removeEventListener('keydown',this.onKey,true);
   document.removeEventListener('pointerdown',this.onOutside,true);
-  this.host=null;this.modal=null;this.snapshot=null;this.busy=false;this.loading=false;
+  this.globalBound=false;this.host=null;this.modal=null;this.snapshot=null;this.busy=false;this.loading=false;
  }
  current(){
   const ctx=this.getContext();return !!ctx&&this.auth.isSignedIn&&
@@ -223,7 +223,7 @@ export class TeamsController {
     choice('Destination team','destinationTeamId',targets.map(t=>[t.id,t.name])),
     action==='teams-member-copy'?'Add to team':'Move');
   }
-  if(action==='teams-admin-grant'&&sys&&member.systemAdminSource==='none')
+  if(action==='teams-admin-grant'&&sys&&!member.systemAdminExplicit)
    return this.ask('Grant System Admin',member.name+' will get full control of the entire app. Continue?',
     'grant_admin',{teamId:team.id,userId},'','Grant');
   if(action==='teams-admin-revoke'&&sys&&member.systemAdminExplicit)
@@ -244,6 +244,8 @@ export class TeamsController {
      contentId:button.dataset.contentId},'','Remove',true);
  }
  bindGlobal(){
+  if(this.globalBound)return;
+  this.globalBound=true;
   document.addEventListener('keydown',this.onKey,true);
   document.addEventListener('pointerdown',this.onOutside,true);
  }
