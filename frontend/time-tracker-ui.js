@@ -176,7 +176,7 @@ function heading(title,desc){
   esc(desc)+'</p></div></div>';
 }
 function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-out',locationPreference='',{
- success='',geoPermission='unknown',geoChecking=false,geoMessage='',clockStage='idle'
+ success='',clockCorrectionNotice='',geoPermission='unknown',geoChecking=false,geoMessage='',clockStage='idle'
 }={}){
  const {access,records,active}=result;
  const writeReady=TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&access?.attendanceWritesAccepted===true;
@@ -251,6 +251,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
      '<span class="tt-clock-confirmed-icon" aria-hidden="true">✓</span>'+
      '<div><strong>'+(success.startsWith('Clock Out')?'Successfully clocked out':'Successfully clocked in')+
      '</strong><p>'+esc(success)+'</p></div></div>':'')+
+    (clockCorrectionNotice?'<p class="tt-clock-sync-status" role="status" aria-live="polite">'+esc(clockCorrectionNotice)+'</p>':'')+
     '<div class="tt-console-kicker"><span class="tt-console-kicker-mark" aria-hidden="true"></span> ATTENDANCE CONTROL</div>'+
     '<div class="tt-clock-card-head"><h4>'+ (active?'Active Session':'Clock In')+
      '</h4><span class="tt-idle-badge '+(active?'tt-badge-active':'')+'">'+
@@ -358,7 +359,7 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',geoPermission='unknown',geoChecking=false,geoMessage='',clockStage='idle',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
+ result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',geoPermission='unknown',geoChecking=false,geoMessage='',clockStage='idle',clockCorrectionNotice='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError='',
  adminEligible=false,adminFullAccess=adminEligible,adminDirectory=[],adminSelectedIds=[],adminEditor=null,adminDeleteConfirm=null,adminBusy=false,adminError='',adminSuccess=''
 }={}){
@@ -388,7 +389,7 @@ export function renderTimeTrackerNative({
   overview:result.overview,access:result.access,now,filters:overviewFilters
  });
  if(selected==='clock')html+=clockPage(result,busy,new Date(now),clockPending,clockPendingAction,locationPreference,{
-  success,geoPermission,geoChecking,geoMessage,clockStage
+  success,clockCorrectionNotice,geoPermission,geoChecking,geoMessage,clockStage
  });
  if(selected==='employees')html+=renderTimeTrackerEmployees({
   directory:result.access?.employees,access:result.access,search:employeesSearch,loading:busy
