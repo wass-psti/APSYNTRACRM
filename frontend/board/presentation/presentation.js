@@ -37,7 +37,7 @@ export function normalizeLayout(raw,tabs,columns){
   [...new Set(raw.hidden.filter(k=>availableColumns.includes(k)&&
     !BOARD_REQUIRED_COLUMNS.includes(k)&&k!=='actions'))]:[];
  const widths=Object.create(null);
- for(const key of availableColumns)widths[key]=columnWidth(raw?.widths?.[key]);
+ for(const key of availableColumns)widths[key]=columnWidth(raw?.widths?.[key]??(key==='record'?290:BOARD_DEFAULT_WIDTH));
  return {tabs:ordered(availableTabs,tabsStored),
   columns:[...availableColumns.filter(k=>BOARD_REQUIRED_COLUMNS.includes(k)),
    ...ordered(availableColumns.filter(k=>!BOARD_REQUIRED_COLUMNS.includes(k)),colsStored)],hidden,widths};
@@ -73,11 +73,12 @@ export function boardTable({columns=[],rows=[],empty='No persisted records',layo
  const cells=visible.map(k=>lookup.get(k));
  const tableWidth=visible.reduce((total,k)=>total+pref.widths[k],0)+(addColumn?150:0);
  const renderRows=(batch,offset=0)=>batch.map((row,index)=>'<tr data-searchable="'+esc(row.search||'')+'"'+
+   (selection?.enabled&&row.itemId&&selection.selected?.has(row.itemId)?' class="board-row-selected" aria-selected="true"':'')+
    (selection?.enabled&&row.itemId?' data-bulk-row="'+esc(row.itemId)+'"':'')+
    ' aria-rowindex="'+(offset+index+2)+'">'+
    visible.map((k,i)=>'<td'+(i===0?' class="board-frozen-column"':row.statusKeys?.includes(k)?' class="board-status-click-cell"':'')+'>'+
     (i===0&&selection?.enabled&&row.itemId?'<input id="board-row-select-'+esc(row.itemId)+'" name="board-row-select-'+esc(row.itemId)+'" type="checkbox" class="board-row-select" data-board-select-item="'+esc(row.itemId)+'" aria-label="Select this record"'+(selection.selected?.has(row.itemId)?' checked':'')+' />':'')+
-    String(row.cells?.[k]??'—')+'</td>').join('')+(addColumn?'<td class="board-add-column-spacer"></td>':'')+'</tr>').join('');
+    String(row.cells?.[k]??'<span class="board-empty-cell" aria-label="Empty cell"></span>')+'</td>').join('')+(addColumn?'<td class="board-add-column-spacer"></td>':'')+'</tr>').join('');
  const windowed=virtualize?registerBoardWindow(groupId,rows,renderRows,visible.length+(addColumn?1:0)):null;
  return '<div class="panel board-group-panel"><div class="table-scroll board-group-scroll" '+
   'role="region" tabindex="0" aria-label="Horizontally scrollable board group">'+
