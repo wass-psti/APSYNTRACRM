@@ -271,7 +271,7 @@ function renderTimeTrackerLogDetailDialog({row,now,gpsEligible=false,gpsData=nul
  const details=safeSessionDetails(row,now,{gpsEligible,gpsData,gpsBusy,gpsError,
   gpsErrorRecordId,mapEnabled,mapTheme,adminEligible,adminFullAccess,adminBusy});
  return '<div class="tt-admin-editor-backdrop tt-log-details-backdrop" data-tt-log-detail-backdrop>'+
-  '<section class="tt-admin-editor tt-log-details-dialog" data-tt-log-detail-dialog role="dialog" aria-modal="true" aria-labelledby="tt-log-modal-title" tabindex="-1">'+
+  '<section class="tt-admin-editor tt-log-details-dialog" data-tt-log-detail-dialog data-record-id="'+esc(row.id)+'" role="dialog" aria-modal="true" aria-labelledby="tt-log-modal-title" tabindex="-1">'+
    '<header class="tt-admin-editor-head"><div class="tt-admin-editor-title-group">'+
     '<span class="tt-admin-eyebrow">SIGNED ATTENDANCE RECORD</span>'+
     '<h3 id="tt-log-modal-title">'+esc(row.name||'Attendance details')+'</h3>'+
