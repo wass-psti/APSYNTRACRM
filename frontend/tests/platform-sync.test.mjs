@@ -291,7 +291,7 @@ test('frontend integration preserves signed state, edits and background-independ
  const expired=app.split('auth.onExpired=()=>{')[1];
  assert.ok(expired,'Session-expiration cleanup must exist');
  assert.match(expired,/closeWorkspacePanels\(\);state\.context=null/);
- assert.match(app,/state\.userRoleData=null;state\.boards=\[\];platformSync\.stop\(\)/);
+ assert.match(app,/state\.userRoleData=null;state\.systemAdminData=null;state\.systemAdminError='';state\.boards=\[\];platformSync\.stop\(\)/);
  assert.match(index,/wss:\/\/jtlusodorfnyzgyuewkz.supabase.co/);
  assert.match(index,/frontend\/platform-sync.css/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
