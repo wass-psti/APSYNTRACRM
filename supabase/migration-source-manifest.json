@@ -1855,6 +1855,13 @@
       "file": "20261119204157_cp_tt_auto_clockout_01_grace_overtime_boundary.sql",
       "bytes": 11494,
       "sha256": "da8629f5bdb69cc33e279a968baab60608234e01c614f3ada23ecfc17ab56e6e"
+    },
+    {
+      "version": "20261120100000",
+      "name": "cp_tt_employee_departments_qol",
+      "file": "20261120100000_cp_tt_employee_departments_qol.sql",
+      "bytes": 11993,
+      "sha256": "8528f5fbdd935a737e1d778bdd28f02c1927acf0016bd0f35451c5da3e4d42ac"
     }
   ]
 }
