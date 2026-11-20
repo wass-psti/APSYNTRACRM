@@ -547,5 +547,5 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  }
  html+='</tbody></table></div></div><p class="muted user-role-boundary-note">'+roleConfigurationIcon('shield')+'<span>The existing backend still governs approval, export, finance and domain-specific operations separately. A board membership alone does not grant access to sensitive domain records.</span></p>';
  return html+'</section>'+renderSystemAdminSection({data:systemAdminData,
-   selectedUser:u,actorId:actorUserId,busy,hidden:section!=='system-admins'})+'</div>';
+   selectedUser:u,actorId:actorUserId,busy,hidden:section!=='system-admins',loading:systemAdminBusy,error:systemAdminError})+'</div>';
 }
