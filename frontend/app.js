@@ -8748,8 +8748,10 @@ async function action(name,button){
   if(!state.edit||!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
   const scope=talkBoxState.scope,issueId=talkBoxState.selected.id;
   const record=name==='tb-timer-start'?
-   await talkBoxClient().startTimerVerified(issueId):
-   await talkBoxClient().stopTimerVerified(issueId);
+   await talkBoxClient().startTimerVerified(issueId,new Date(),{
+    serverTimer:talkBoxState.features?.serverTimer===true}):
+   await talkBoxClient().stopTimerVerified(issueId,new Date(),{
+    serverTimer:talkBoxState.features?.serverTimer===true});
   if(talkBoxCurrent(scope)&&talkBoxState.selected?.id===issueId){
    talkBoxState.selected=record;render();
    toast(name==='tb-timer-start'?'Timer started.':'Tracked time saved.');
