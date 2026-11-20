@@ -354,17 +354,20 @@ export class TimeTrackerNativeClient{
   return after;
  }
  /** Administrator-only department mutation with a fresh signed read-back. */
- async assignEmployeeDepartment(boardId,userId,department){
-  const access=await this.access(boardId);
-  if(!['System Admin','IT Administrator'].includes(access.moduleRole))
+ /** Minimize post-save latency: reuse the signed actor/roster already on screen.
+  * The write RPC independently authorizes the actor; two readbacks verify the outcome.
+  */
+ async assignEmployeeDepartment(boardId,userId,department,{verifiedAccess=null}={}){
+  const access=verifiedAccess||await this.access(boardId);
+  if(access?.boardId!==boardId||!uuid.test(access?.userId||'')||
+     !uuid.test(access?.workspaceId||'')||
+     !['System Admin','IT Administrator'].includes(access.moduleRole))
    deny('TimeTracker administrator authorization required');
   if(!uuid.test(userId||'')||!validTimeTrackerDepartmentName(department)||
      !access.employees?.members?.some(member=>member.id===userId))
    deny('Active employee and valid department required');
-  const catalog=projectTimeTrackerDepartmentCatalog(
-   await this.api.rpc('timetracker_department_catalog_snapshot',{p_board_id:boardId}),access);
-  if(!catalog.departments.some(row=>row.name===department))
-   deny('Selected department no longer exists; refresh Employees');
+  // The signed catalog from the current page is used for presentation only.
+  // The backend validates current membership again in the same write transaction.
   await checkIdentity(this.auth,this.api,access,boardId);
   const receipt=await this.api.rpc('timetracker_employee_department_set',{
    p_board_id:boardId,p_target_user_id:userId,p_department:department
@@ -373,14 +376,18 @@ export class TimeTrackerNativeClient{
      receipt.actorId!==access.userId||receipt.workspaceId!==access.workspaceId||
      receipt.targetUserId!==userId||receipt.department!==department)
    deny('Department write receipt is unverified; refresh before retrying');
-  await checkIdentity(this.auth,this.api,access,boardId);
-  const snapshot=await this.api.rpc('timetracker_employee_department_directory_snapshot',{
-   p_board_id:boardId
-  });
-  const verified=projectTimeTrackerEmployeeDepartments(access.employees,snapshot);
-  if(verified.members.find(m=>m.id===userId)?.department!==department)
+  // Concurrent signed readbacks replace the previous full TimeTracker reload.
+  const [snapshot,catalogSnapshot]=await Promise.all([
+   this.api.rpc('timetracker_employee_department_directory_snapshot',{p_board_id:boardId}),
+   this.api.rpc('timetracker_department_catalog_snapshot',{p_board_id:boardId})
+  ]);
+  const employees=projectTimeTrackerEmployeeDepartments(access.employees,snapshot);
+  const catalog=projectTimeTrackerDepartmentCatalog(catalogSnapshot,access);
+  if(employees.members.find(m=>m.id===userId)?.department!==department||
+     !catalog.departments.some(row=>row.name===department))
    deny('Department update could not be verified; refresh before retrying');
-  return verified;
+  await checkIdentity(this.auth,this.api,access,boardId);
+  return Object.freeze({...employees,departmentCatalog:catalog});
  }
  /** Signed and audited catalog mutations. Never optimistically change roster state. */
  async mutateDepartmentCatalog(boardId,{action,departmentId=null,name=null,expectedRevision,expectedCount=null}={}){
