@@ -1,0 +1,63 @@
+name: CP-CRM-WORKSPACE-INVITE-01D Verified User Onboarding Contract
+on:
+  pull_request:
+    paths:
+      - 'sql/staging/cp-crm-workspace-invite-01d-*'
+      - 'sql/tests/cp-crm-workspace-invite-01d-*'
+      - 'server/tests/ws02d-01d-*.test.mjs'
+      - 'docs/CP-CRM-WORKSPACE-INVITE-01D.md'
+      - '.github/workflows/cp-crm-workspace-invite-01d-onboarding.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  disposable-verified-identity-onboarding:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: disposable_only
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGDATABASE: ws02d_onboarding_disposable
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify migration source integrity
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Create isolated disposable test database
+        run: psql -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE ws02d_onboarding_disposable'
+      - name: Initialize synthetic signed GoTrue-shaped fixture
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-crm-workspace-invite-01d-disposable-setup.sql
+      - name: Reject unconfirmed recipient before any profile or membership write
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -c "UPDATE auth.users SET email_confirmed_at=NULL WHERE email='recipient@staging.example.invalid'"
+          if psql -X -v ON_ERROR_STOP=1 -v inviter_email=owner@staging.example.invalid -v recipient_email=recipient@staging.example.invalid -f sql/staging/cp-crm-workspace-invite-01d-verified-user-onboarding.sql; then
+            echo 'FAILED: unverified recipient was provisioned'; exit 1
+          fi
+          test "$(psql -X -qAt -c 'SELECT count(*) FROM public.profiles')" = '0'
+          psql -X -v ON_ERROR_STOP=1 -c "UPDATE auth.users SET email_confirmed_at=now() WHERE email='recipient@staging.example.invalid'"
+      - name: Verify successful two-user onboarding and workspace isolation
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -v inviter_email=owner@staging.example.invalid -v recipient_email=recipient@staging.example.invalid -f sql/staging/cp-crm-workspace-invite-01d-verified-user-onboarding.sql
+          psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-crm-workspace-invite-01d-disposable-acceptance.sql
+      - name: Reject second onboarding and retain unchanged prior state
+        run: |
+          if psql -X -v ON_ERROR_STOP=1 -v inviter_email=owner@staging.example.invalid -v recipient_email=recipient@staging.example.invalid -f sql/staging/cp-crm-workspace-invite-01d-verified-user-onboarding.sql; then
+            echo 'FAILED: repeated onboarding bypassed empty-stage guard'; exit 1
+          fi
+          psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-crm-workspace-invite-01d-disposable-acceptance.sql
+      - name: Verify staging source boundaries
+        run: node --test server/tests/ws02d-01d-source.test.mjs server/tests/ws02d-staging-readiness.test.mjs
