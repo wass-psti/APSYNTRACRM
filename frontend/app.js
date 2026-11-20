@@ -32,7 +32,7 @@ import {modalRecoveryKind,installModalRecoveryAction} from './modal-recovery.js'
 import {openBoardSharePreview,closeBoardSharePreview} from './board/collaboration/share.js';
 // Invite modal is loaded only after an authorized board invitation gesture.
 let closeBoardInviteDialog=()=>{};
-import {normalizeSignedBoardCandidates,BoardGroupAccessClient,
+import {normalizeSignedBoardCandidates,normalizeAdminBoardCandidates,BoardGroupAccessClient,
  BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
 import {CreatorAccessClient,WS10_CREATOR_POLICY_ACTIVE} from './ws10-ownership.js';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
@@ -8207,103 +8207,145 @@ async function action(name,button){
   const workspaceId=state.context.workspace_id,boardId=state.boardId,userId=auth.userId;
   if(board.id!==boardId||board.workspace_id!==workspaceId)break;
   const manage=state.boardManage===true;
-  let rawDirectory={status:'LOCKED',users:[]};
-  if(manage){try{rawDirectory=await loadBoardInvitableDirectory(db,boardId);}
-   catch{rawDirectory={status:'ERROR',users:[]};}}
-  if(!auth.isSignedIn||auth.userId!==userId||state.boardId!==boardId||
-     state.context?.workspace_id!==workspaceId||state.view!=='board')break;
-  let peopleDirectory=normalizeSignedBoardCandidates({
-    ...rawDirectory,boardId,workspaceId,manage
-  },{boardId,workspaceId});
-  const people=normalizeBoardPeople(state.board,{boardId,workspaceId});
-  const {openBoardInviteDialog,closeBoardInviteDialog:closeInvite}=await import('./board/collaboration/invite.js');
-  if(!auth.isSignedIn||auth.userId!==userId||state.boardId!==boardId||
-    state.context?.workspace_id!==workspaceId||state.view!=='board')break;
-  closeBoardInviteDialog=closeInvite;
-  openBoardInviteDialog({
-   people,workspaceName:workspaceName(),currentUserId:userId,
-   onToast:message=>toast(message),
-   onMountAvatars:node=>{void mountAvatarImages(node,profileAvatarClient,null,null);},
-   onCountChange:count=>{
-    if(state.view==='board'&&state.boardId===boardId&&state.context?.workspace_id===workspaceId){
-     const target=root.querySelector('[data-board-invite-count]');
-     if(target)target.textContent=count===null?'—':String(count);
+  // The existing, deployed CRM User Role Management RPC provides a signed,
+  // workspace-scoped roster to authorized administrators. Other board managers
+  // use the separately authorized COL01 directory if that contract is installed.
+  // There is no browser-side permission grant or fallback to arbitrary profiles.
+  const currentBoard=()=>auth.isSignedIn&&auth.userId===userId&&
+    state.view==='board'&&state.boardId===boardId&&
+    state.context?.workspace_id===workspaceId&&
+    state.board?.board?.id===boardId;
+  const readAdminDirectory=async()=>{
+    if(!currentBoard()||!manage||await db.allowed(boardId,'manage')!==true)
+      throw new ApiError('Signed board management access is required.',403);
+    const snapshot=await db.rpc('apsyntra_role_user_management_snapshot',{
+      p_workspace_id:workspaceId
+    });
+    const directory=normalizeAdminBoardCandidates(snapshot,{workspaceId,boardId,actorId:userId});
+    if(directory.status!=='VERIFIED_SIGNED_CANDIDATES')
+      throw new ApiError('Administrator directory could not be verified.',403);
+    return {directory,snapshot};
+  };
+  let adminSnapshot=null,peopleDirectory={status:'UNAVAILABLE',members:[]},directoryMode='unavailable';
+  if(manage){
+    try{
+      const verified=await readAdminDirectory();
+      adminSnapshot=verified.snapshot;peopleDirectory=verified.directory;
+      directoryMode='admin';
+    }catch{
+      // Do not retry a denied administrator RPC or infer an admin role.
+      // A board-manager-only directory can be used if its separate signed
+      // COL01 endpoint has been deployed and independently authorized.
+      try{
+        const raw=await loadBoardInvitableDirectory(db,boardId,{enabled:true});
+        const directory=normalizeSignedBoardCandidates({
+          ...raw,boardId,workspaceId,manage
+        },{boardId,workspaceId});
+        if(directory.status==='VERIFIED_SIGNED_CANDIDATES'){
+          peopleDirectory=directory;directoryMode='board';
+        }
+      }catch{/* The server did not authorize this directory; stay fail-closed. */}
     }
-   },
-   onRefreshMembers:async()=>{
-    if(!auth.isSignedIn||auth.userId!==userId||state.boardId!==boardId||
-      state.context?.workspace_id!==workspaceId||state.view!=='board')
-     throw new ApiError('Board scope changed.',403);
-    const fresh=await db.board(boardId);
-    const verified=normalizeBoardPeople(fresh,{boardId,workspaceId});
-    if(verified.status!=='SIGNED_MEMBERSHIP')
-     throw new ApiError('Signed board membership unavailable.',409);
-    if(state.board?.board?.id===boardId)state.board.members=fresh.members;
-    return verified;
-   },
-   onSearchDirectory:async query=>{
-    if(!auth.isSignedIn||auth.userId!==userId||state.boardId!==boardId||
-      state.context?.workspace_id!==workspaceId||!manage)
-     throw new ApiError('Board scope changed.',403);
-    const fresh=await loadBoardInvitableDirectory(db,boardId,{query});
-    peopleDirectory=normalizeSignedBoardCandidates({...fresh,boardId,workspaceId,manage},
+  }
+  if(!currentBoard())break;
+  const people=normalizeBoardPeople(state.board,{boardId,workspaceId});
+  const {openBoardInviteDialog,closeBoardInviteDialog:closeInvite}=
+    await import('./board/collaboration/invite.js');
+  if(!currentBoard())break;
+  closeBoardInviteDialog=closeInvite;
+  const assertManager=async()=>{
+    if(!currentBoard()||!manage||await db.allowed(boardId,'manage')!==true)
+      throw new ApiError('Signed board management permission changed.',403);
+    const verified=await auth.getVerifiedUser();
+    if(verified?.id!==userId)throw new ApiError('Signed identity changed.',403);
+  };
+  const refreshDirectory=async(query='')=>{
+    await assertManager();
+    if(directoryMode==='admin'){
+      const verified=await readAdminDirectory();
+      adminSnapshot=verified.snapshot;
+      peopleDirectory=verified.directory;
+    }else if(directoryMode==='board'){
+      const raw=await loadBoardInvitableDirectory(db,boardId,{enabled:true,query});
+      peopleDirectory=normalizeSignedBoardCandidates({
+        ...raw,boardId,workspaceId,manage
+      },{boardId,workspaceId});
+    }
+    return peopleDirectory;
+  };
+  const changeAccess=async(memberId,action)=>{
+    await assertManager();
+    if(directoryMode==='admin'){
+      // Refresh the privileged source immediately before each write to stop
+      // stale, self, protected, foreign-board, or escalated-role assignments.
+      const {directory,snapshot}=await readAdminDirectory();
+      adminSnapshot=snapshot;peopleDirectory=directory;
+      const target=directory.members.find(p=>p.id===memberId&&!p.protected&&p.id!==userId);
+      if(!target)throw new ApiError('This workspace member cannot be modified.',403);
+      if(action==='grant'&&target.boardRole||
+         action==='revoke'&&!['viewer','editor'].includes(target.boardRole))
+        throw new ApiError('Board membership changed; refresh the list.',409);
+      const role=action==='grant'?'viewer':target.boardRole;
+      const result=await userRoleManager.mutate({
+        workspaceId,userId:memberId,scope:'board',resourceId:boardId,
+        role,enabled:action==='grant',expectedUpdatedAt:target.updatedAt
+      });
+      // The backend enforces administrator scope, active workspace membership,
+      // board ownership protection and audit. Read back the signed board shell.
+      db.invalidateBoardCache(boardId,{invalidateContext:false});
+      return result;
+    }
+    if(directoryMode!=='board'||!BOARD_GROUP_ACCESS_ENABLED)
+      throw new ApiError('Board access changes are not activated for this manager.',403);
+    const raw=await loadBoardInvitableDirectory(db,boardId,{enabled:true});
+    const directory=normalizeSignedBoardCandidates({...raw,boardId,workspaceId,manage},
       {boardId,workspaceId});
-    return peopleDirectory;
-   },
-   board,moduleKey:moduleByBoardName(board.name)?.key||null,
-   workspaceId,manage,peopleDirectory,
-   accessEnabled:BOARD_GROUP_ACCESS_ENABLED&&manage,
-   onRemoveBoard:async memberId=>{
-     if(!BOARD_GROUP_ACCESS_ENABLED||!manage||!auth.isSignedIn||
-        auth.userId!==userId||state.boardId!==boardId||
-        state.context?.workspace_id!==workspaceId||state.view!=='board')
-       throw new ApiError('Board scope changed.',403);
-     if(await db.allowed(boardId,'manage')!==true)
-       throw new ApiError('Board management permission changed.',403);
-     const fresh=await loadBoardInvitableDirectory(db,boardId);
-     if(fresh.status!=='VERIFIED_READ'||
-        !fresh.users.some(p=>p.id===memberId&&p.boardRole==='viewer'))
-       throw new ApiError('Viewer assignment not verified.',409);
-     return boardGroupAccessClient.changeBoardAccess({
-       workspaceId,boardId,subjectType:"member",subjectId:memberId,
-       requestId:globalThis.crypto.randomUUID(),
-       action:"revoke",role:"viewer"
-     });
-   },
-   onAssignBoard:async memberId=>{
-    if(!BOARD_GROUP_ACCESS_ENABLED||!manage||!auth.isSignedIn||
-       auth.userId!==userId||state.boardId!==boardId||
-       state.context?.workspace_id!==workspaceId)throw new ApiError('Board scope changed.',403);
-    if(await db.allowed(boardId,'manage')!==true)
-     throw new ApiError('Board management permission changed.',403);
-    const member=peopleDirectory.members.find(p=>p.id===memberId&&!p.boardRole);
-    if(!member)throw new ApiError('Select an unassigned verified workspace member.',403);
-    return boardGroupAccessClient.changeBoardAccess({
-     workspaceId,boardId,subjectType:'member',subjectId:memberId,
-     requestId:globalThis.crypto.randomUUID(),action:'grant',role:'viewer'
+    const target=directory.members.find(p=>p.id===memberId);
+    if(!target||(action==='grant'?!!target.boardRole:target.boardRole!=='viewer'))
+      throw new ApiError('Board membership changed; refresh the list.',409);
+    const result=await boardGroupAccessClient.changeBoardAccess({
+      workspaceId,boardId,subjectType:'member',subjectId:memberId,
+      requestId:globalThis.crypto.randomUUID(),action,role:'viewer'
     });
-   },
-   onRefreshDirectory:async()=>{
-    if(!auth.isSignedIn||auth.userId!==userId||
-       state.boardId!==boardId||state.context?.workspace_id!==workspaceId)
-     throw new ApiError('Board changed.',403);
-    const fresh=await loadBoardInvitableDirectory(db,boardId);
-    peopleDirectory=normalizeSignedBoardCandidates({...fresh,boardId,workspaceId,manage},
-     {boardId,workspaceId});
-    return peopleDirectory;
-   },
-   onInviteWorkspace:()=>{
-    if(!auth.isSignedIn||auth.userId!==userId||
-       state.context?.workspace_id!==workspaceId)return;
-    openWorkspaceInvitationDialog({id:workspaceId,name:workspaceName()},{
-     enabled:true,
-     sendInvitation:sendWorkspaceInvitation,
-     checkInvitationAvailability:checkWorkspaceInvitationAvailability,
-     managementEnabled:WS11_INVITATION_MANAGEMENT_ENABLED,
-     listInvitations:workspaceId=>workspaceInvitationManagementClient.list(workspaceId),
-     revokeInvitation:request=>workspaceInvitationManagementClient.revoke(request)
-    });
-   }
+    db.invalidateBoardCache(boardId,{invalidateContext:false});
+    return result;
+  };
+  openBoardInviteDialog({
+    board,workspaceId,manage,
+    people,peopleDirectory,workspaceName:workspaceName(),currentUserId:userId,
+    accessEnabled:directoryMode==='admin'||
+      directoryMode==='board'&&BOARD_GROUP_ACCESS_ENABLED,
+    onToast:message=>toast(message),
+    onMountAvatars:node=>{void mountAvatarImages(node,profileAvatarClient,null,null);},
+    onCountChange:count=>{
+      if(currentBoard()){
+        const target=root.querySelector('[data-board-invite-count]');
+        if(target)target.textContent=count===null?'—':String(count);
+      }
+    },
+    onRefreshMembers:async()=>{
+      if(!currentBoard())throw new ApiError('Board scope changed.',403);
+      const fresh=await db.board(boardId,{complete:false,includeItems:false});
+      const verified=normalizeBoardPeople(fresh,{boardId,workspaceId});
+      if(verified.status!=='SIGNED_MEMBERSHIP')
+        throw new ApiError('Signed board membership unavailable.',409);
+      if(currentBoard())state.board.members=fresh.members;
+      return verified;
+    },
+    onSearchDirectory:directoryMode==='board'?query=>refreshDirectory(query):null,
+    onRefreshDirectory:()=>refreshDirectory(),
+    onAssignBoard:memberId=>changeAccess(memberId,'grant'),
+    onRemoveBoard:memberId=>changeAccess(memberId,'revoke'),
+    onInviteWorkspace:()=>{
+      if(!currentBoard())return;
+      openWorkspaceInvitationDialog({id:workspaceId,name:workspaceName()},{
+        enabled:true,sendInvitation:sendWorkspaceInvitation,
+        checkInvitationAvailability:checkWorkspaceInvitationAvailability,
+        managementEnabled:WS11_INVITATION_MANAGEMENT_ENABLED,
+        listInvitations:workspaceId=>workspaceInvitationManagementClient.list(workspaceId),
+        revokeInvitation:request=>workspaceInvitationManagementClient.revoke(request)
+      });
+    }
   });
   break;
  }
