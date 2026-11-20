@@ -6381,6 +6381,10 @@ function boardQuickTypeTile(entry,{disabled=false}={}){
   '<span class="board-quick-type-info"><strong>'+e(label)+'</strong>'+
   (disabled?'<small>Not enabled</small>':'')+'</span></button>';
 }
+document.addEventListener('pointerdown',event=>{
+ if(boardQuickPicker?.isConnected&&!boardQuickPicker.contains(event.target)&&
+    !boardQuickPickerTrigger?.contains(event.target))closeBoardQuickColumnPicker();
+},true);
 function openBoardQuickColumnPicker(trigger){
  if(!trigger?.isConnected||!activeBoardLayout()||!state.boardManage||
     !BOARD_STRUCTURE_ADMIN_ENABLED||!canManuallyEditBoard(state.board?.board,true))return;
@@ -6406,7 +6410,7 @@ function openBoardQuickColumnPicker(trigger){
    tileGroup('Super useful',catalog.filter(x=>x.group==='Super useful'))+
    tileGroup('Additional types — planned',boardPlannedColumnTypes.map(([label,icon])=>({label,icon})),true)+
   '</div><button type="button" class="board-quick-picker-more" data-board-picker-more>More columns &amp; settings…</button>';
- root.append(picker);
+ (trigger.closest('.aps-board-shell')||root).append(picker);
  boardQuickPicker=picker;boardQuickPickerTrigger=trigger;
  trigger.classList.add('board-add-column-anchor');
  const search=picker.querySelector('[data-board-picker-search]');
