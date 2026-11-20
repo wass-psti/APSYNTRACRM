@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* Use installed Inter when available, otherwise system sans-serif. No external font requests. */
 :root{
  --ap-page:#F7F8FC;--ap-surface:#FFFFFF;--ap-text:#1B1F3B;--ap-secondary:#4A5068;
  --ap-muted:#5B6178;--ap-dash:#8A90A8;--ap-line:#E3E6F0;--ap-input:#C9CDE0;
