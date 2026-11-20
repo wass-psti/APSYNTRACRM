@@ -144,10 +144,11 @@ export function openBoardInviteDialog(options={}){
  const overlay=document.createElement('div');
  overlay.className='aps-invite-overlay';
  let directory=options.peopleDirectory,people=options.people,teamDirectory=options.teamDirectory;
- let query='',highlightId=null,working=false,searchToken=0,searchTimer=null;
+ let query='',viewTab='people',highlightId=null,working=false,searchToken=0,searchTimer=null;
  const manage=options.manage===true,accessEnabled=manage&&options.accessEnabled===true;
  overlay.innerHTML=renderBoardInviteDialog({people,directory,workspaceName:options.workspaceName,
-  manage,accessEnabled,teamDirectory,teamInviteEnabled:options.teamInviteEnabled,currentUserId:options.currentUserId});
+  manage,accessEnabled,teamDirectory,teamInviteEnabled:options.teamInviteEnabled,currentUserId:options.currentUserId,
+  tab:viewTab,isPublic:options.isPublic===true,roleChangeEnabled:typeof options.onChangeBoardRole==='function'});
  const status=(message,isError=false)=>{
   const el=overlay.querySelector('[data-aps-invite-status]');
   if(el){el.textContent=message;el.classList.toggle('is-error',isError);}
@@ -156,7 +157,8 @@ export function openBoardInviteDialog(options={}){
   const existing=overlay.querySelector('.aps-invite-dialog');
   if(!existing||!overlay.isConnected)return;
   existing.outerHTML=renderBoardInviteDialog({people,directory,workspaceName:options.workspaceName,
-   manage,accessEnabled,teamDirectory,teamInviteEnabled:options.teamInviteEnabled,query,highlightId,currentUserId:options.currentUserId});
+   manage,accessEnabled,teamDirectory,teamInviteEnabled:options.teamInviteEnabled,query,highlightId,currentUserId:options.currentUserId,
+   tab:viewTab,isPublic:options.isPublic===true,roleChangeEnabled:typeof options.onChangeBoardRole==='function'});
   options.onMountAvatars?.(overlay);
   if(focus){
    const field=overlay.querySelector('#aps-invite-search');
@@ -166,8 +168,8 @@ export function openBoardInviteDialog(options={}){
  const setCandidates=()=>{
   const host=overlay.querySelector('[data-aps-invite-suggestions]');
   if(host){
-   host.innerHTML=query.trim()?suggestions(directory,query,{enabled:accessEnabled})+
-     teamSuggestions(teamDirectory,query,{enabled:manage&&options.teamInviteEnabled===true}):'';
+   host.innerHTML=query.trim()?(viewTab==='people'?suggestions(directory,query,{enabled:accessEnabled}):
+     teamSuggestions(teamDirectory,query,{enabled:manage&&options.teamInviteEnabled===true})):'';
    overlay.querySelector('#aps-invite-search')?.setAttribute('aria-expanded',String(Boolean(query.trim())));
   }
  };
@@ -191,8 +193,8 @@ export function openBoardInviteDialog(options={}){
   searchTimer=setTimeout(async()=>{
    try{
     const updates=await Promise.all([
-      typeof options.onSearchDirectory==='function'?options.onSearchDirectory(query):null,
-      typeof options.onSearchTeams==='function'?options.onSearchTeams(query):null
+      viewTab==='people'&&typeof options.onSearchDirectory==='function'?options.onSearchDirectory(query):null,
+      viewTab==='teams'&&typeof options.onSearchTeams==='function'?options.onSearchTeams(query):null
      ]);
      if(active?.overlay!==overlay||token!==searchToken)return;
      if(updates[0]){
@@ -226,7 +228,37 @@ export function openBoardInviteDialog(options={}){
    event.preventDefault();
   }
  });
+ overlay.addEventListener('change',async event=>{
+  const roleSelect=event.target.closest?.('[data-aps-invite-role]');
+  if(!roleSelect||working||!options.onChangeBoardRole)return;
+  const userId=roleSelect.dataset.apsInviteRole;
+  const before=people?.people?.find(p=>p.id===userId);
+  const role=roleSelect.value;
+  if(!before||before.role==='owner'||!['viewer','editor'].includes(role)||role===before.role){
+   repaint();return;
+  }
+  working=true;roleSelect.disabled=true;
+  status('Saving board role…');
+  try{
+   await options.onChangeBoardRole(userId,role);
+   const after=await options.onRefreshMembers?.();
+   if(!verifiedMembers(after)||after.people.find(p=>p.id===userId)?.role!==role)
+    throw Error('Signed Viewer/Editor readback missing');
+   people=after;repaint();
+   options.onToast?.('Board role updated to '+role+'.');
+  }catch{
+   if(active?.overlay===overlay){repaint();status('Board role change could not be verified.',true);}
+  }finally{working=false;}
+ });
  overlay.addEventListener('click',async event=>{
+  const switcher=event.target.closest?.('[data-aps-invite-tab]');
+  if(switcher){
+   const next=switcher.dataset.apsInviteTab;
+   if(!['people','teams'].includes(next))return;
+   viewTab=next;query='';highlightId=null;
+   if(searchTimer!==null)clearTimeout(searchTimer);
+   searchToken++;repaint(true);return;
+  }
   if(event.target===overlay||event.target.closest?.('[data-aps-invite-close]')){
    closeBoardInviteDialog();return;
   }
