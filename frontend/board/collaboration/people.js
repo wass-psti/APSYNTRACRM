@@ -127,3 +127,20 @@ export function renderMentionOptions(people){
       'data-bs02-mention-id="'+p.id+'">@'+escapeHtml(p.name)+
       ' <small>('+escapeHtml(p.role)+')</small></button>').join('');
 }
+
+/** Shared initial-paint invite control; does not load the invitation dialog. */
+export function boardInviteCount(people){
+ return verifiedMembers(people)?people.people.length:null;
+}
+export function boardInviteControl(people){
+ const count=boardInviteCount(people);
+ return '<div class="aps-board-invite-control" role="group" aria-label="Board invitations and link">'+
+  '<button type="button" class="aps-board-invite-open" data-action="board-share-preview"'+
+  ' aria-label="Invite people to this board. '+(count===null?'Member count unavailable':count+' directly assigned members')+'">'+
+  'Invite <span aria-hidden="true">/</span> <span data-board-invite-count>'+ (count===null?'—':count)+'</span></button>'+
+  '<button type="button" class="aps-board-invite-link" data-action="board-copy-link"'+
+  ' aria-label="Copy current board link (does not grant access)" title="Copy board link — existing permissions still apply">'+
+  '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">'+
+  '<path d="M10 13a5 5 0 0 0 7 .5l2.5-2.5a5 5 0 0 0-7-7L11 5.5"/>'+
+  '<path d="M14 11a5 5 0 0 0-7-.5L4.5 13a5 5 0 0 0 7 7L13 18.5"/></svg></button></div>';
+}
