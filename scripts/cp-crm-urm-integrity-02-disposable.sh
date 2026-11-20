@@ -30,7 +30,7 @@ apply /source-sql/tests/cp-urm04b-disposable-setup.sql
 # The parity fixture intentionally uses a minimal module-only mock. Overlay
 # the checked-in canonical RC02 role RPC so tests exercise its real audit,
 # CAS, Board and revocation implementation, not the fixture stub.
-awk '''/^CREATE OR REPLACE FUNCTION public\.apsyntra_role_manage_user_access\(/ {emit=1} emit {print} emit && /^\$rpc\$;/ {exit}''' \
+awk -f /source-sql/tests/cp-crm-urm-integrity-02-extract.awk \
  /source-migrations/20261030080046_cp_rc02_bootstrap_user_role_management.sql > /tmp/role-rpc.sql
 test "$(wc -l < /tmp/role-rpc.sql)" -gt 140
 apply /tmp/role-rpc.sql

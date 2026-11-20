@@ -4,6 +4,7 @@ on:
     paths:
       - 'scripts/cp-crm-urm-integrity-02-disposable.sh'
       - 'sql/tests/cp-crm-urm-integrity-02-disposable-acceptance.sql'
+      - 'sql/tests/cp-crm-urm-integrity-02-extract.awk'
       - 'frontend/tests/cp-crm-urm-integrity-02.test.mjs'
       - '.github/workflows/cp-crm-urm-integrity-02-disposable.yml'
       - 'frontend/app.js'
