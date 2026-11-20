@@ -1,0 +1,31 @@
+name: CP-CRM-URM-INTEGRITY-02 Disposable Role Persistence
+on:
+  pull_request:
+    paths:
+      - 'scripts/cp-crm-urm-integrity-02-disposable.sh'
+      - 'sql/tests/cp-crm-urm-integrity-02-disposable-acceptance.sql'
+      - 'sql/tests/cp-crm-urm-integrity-02-extract.awk'
+      - 'frontend/tests/cp-crm-urm-integrity-02.test.mjs'
+      - '.github/workflows/cp-crm-urm-integrity-02-disposable.yml'
+      - 'frontend/app.js'
+      - 'frontend/data.js'
+      - 'frontend/user-role-management.js'
+      - 'frontend/role-configuration-client.js'
+      - 'supabase/migrations/*cp_urm*'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  disposable-role-readback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify source integrity
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Verify actual disposable database role mutations and denials
+        run: bash scripts/cp-crm-urm-integrity-02-disposable.sh
+      - name: Verify signed-scope acceptance contracts
+        run: node --test frontend/tests/cp-crm-urm-integrity-02.test.mjs frontend/tests/role-configuration-client.test.mjs frontend/tests/user-role-batch.test.mjs
