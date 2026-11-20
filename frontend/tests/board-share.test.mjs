@@ -84,7 +84,7 @@ test('share preview escapes untrusted board names and creates no link',()=>{
 test('integration preserves existing Work Management backend, auth and invite flags',()=>{
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(source,/import \{openBoardSharePreview,closeBoardSharePreview\} from '\.\/board\/collaboration\/share\.js'/);
- assert.match(readFileSync(new URL("../board/collaboration/invite.js",import.meta.url),"utf8"),
+ assert.match(readFileSync(new URL("../board/collaboration/people.js",import.meta.url),"utf8"),
   /data-action="board-share-preview"/);
  assert.match(source,/case 'board-share-preview':/);
  assert.match(source,/state\.boardManage===true/);
