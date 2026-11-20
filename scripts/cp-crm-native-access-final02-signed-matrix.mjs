@@ -48,7 +48,7 @@ export const APPS = [
     label: "TradeLink",
     boardId: "264ca40d-6e4a-4e4f-97e6-3bd77c97cd88",
     selector: ".aps-tradelink-app.tl-reference-portal",
-    domain: ["tl03_assigned_documents"],
+    domain: ["tl03_assigned_documents", "tl03_documents_page", "tl03_documents_list"],
   },
 ];
 export const isSignedText = (body) =>
