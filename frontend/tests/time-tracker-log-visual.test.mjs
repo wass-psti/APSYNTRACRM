@@ -104,18 +104,21 @@ test('Log GPS loading uses dedicated signed RPC, maintains authorization and no 
 test('GPS load retains expanded audit details and scopes errors to selected record',()=>{
  const pending=renderTimeTrackerLog({records,now,gpsEligible:true,gpsBusy:true,
   expandedRecordIds:['today']});
- assert.match(pending,/class="tt-log-detail" data-record-id="today" open/);
+ assert.match(pending,/data-tt-log-detail-dialog/);
+ assert.match(pending,/aria-modal="true"/);
+ assert.match(pending,/data-action="tt-log-detail-close"/);
+ assert.doesNotMatch(pending,/class="tt-log-detail" data-record-id="today" open/);
  assert.match(pending,/class="tt-log-detail" data-record-id="older"/);
  assert.doesNotMatch(pending,/data-record-id="older" open/);
  assert.match(pending,/Loading signed GPS evidence/);
  const failed=renderTimeTrackerLog({records,now,gpsEligible:true,
   expandedRecordIds:['today'],gpsError:'Signed GPS request failed validation.',
   gpsErrorRecordId:'today'});
- assert.match(failed,/class="tt-log-detail" data-record-id="today" open/);
+ assert.match(failed,/data-tt-log-detail-dialog/);
  assert.equal((failed.match(/Signed GPS request failed validation\./g)||[]).length,1);
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/function preserveTimeTrackerLogExpansion/);
- assert.match(app,/querySelectorAll\('\.tt-log-detail\[open\]\[data-record-id\]'\)/);
+ assert.match(app,/state\.ttLogExpandedIds=state\.ttLogExpandedIds\.filter/);
  assert.match(app,/preserveTimeTrackerLogExpansion\(\);/);
  assert.match(app,/state\.ttLogGpsErrorRecordId=record\?\.id/);
  assert.doesNotMatch(app,/state\.ttLogGpsData=null;\s*state\.ttLogGpsError='Signed GPS evidence could not be verified/);
@@ -129,7 +132,7 @@ test('authorized Log maps are automatically visible, dark theme switches and ord
   expandedRecordIds:['today'],mapEnabled:true,mapTheme:'dark'});
  assert.match(admin,/data-map-scope="log"/);
  assert.match(admin,/data-action="tt-map-style" data-theme="dark" aria-pressed="true"/);
- assert.match(admin,/class="tt-log-detail" data-record-id="today" open/);
+ assert.match(admin,/data-tt-log-detail-dialog/);
  assert.doesNotMatch(admin,/Enable street map/);
  const employee=renderTimeTrackerLog({records,now,gpsEligible:false,
   gpsData:data,mapEnabled:false});
