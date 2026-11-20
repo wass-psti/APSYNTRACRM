@@ -260,18 +260,44 @@ function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=fals
    (adminFullAccess?'<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-delete" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'><span aria-hidden="true">⌫</span> Delete record</button>':'')+'</div>':'')+
   '</div>';
 }
+/** One authorized attendance detail at a time. Reuse the existing dialog shell and
+ * the same signed, GPS-redacted details projection as the previous inline view.
+ */
+function renderTimeTrackerLogDetailDialog({row,now,gpsEligible=false,gpsData=null,
+ gpsBusy=false,gpsError='',gpsErrorRecordId='',mapEnabled=false,mapTheme='map',
+ adminEligible=false,adminFullAccess=false,adminBusy=false,selectedIds=[]}={}){
+ if(!row)return '';
+ const selected=selectedIds.includes(row.id);
+ const details=safeSessionDetails(row,now,{gpsEligible,gpsData,gpsBusy,gpsError,
+  gpsErrorRecordId,mapEnabled,mapTheme,adminEligible,adminFullAccess,adminBusy});
+ return '<div class="tt-admin-editor-backdrop tt-log-details-backdrop" data-tt-log-detail-backdrop>'+
+  '<section class="tt-admin-editor tt-log-details-dialog" data-tt-log-detail-dialog data-record-id="'+esc(row.id)+'" role="dialog" aria-modal="true" aria-labelledby="tt-log-modal-title" tabindex="-1">'+
+   '<header class="tt-admin-editor-head"><div class="tt-admin-editor-title-group">'+
+    '<span class="tt-admin-eyebrow">SIGNED ATTENDANCE RECORD</span>'+
+    '<h3 id="tt-log-modal-title">'+esc(row.name||'Attendance details')+'</h3>'+
+    '<p>'+esc(dateTime(row.clockIn))+' · '+esc(row.status||'Attendance record')+
+     (selected?' · Selected':'')+'</p></div>'+
+    '<button type="button" class="tt-admin-close" data-action="tt-log-detail-close" aria-label="Close attendance details">×</button>'+
+   '</header>'+
+   '<div class="tt-admin-editor-body">'+details+'</div>'+
+   '<footer class="tt-admin-editor-actions"><span class="tt-admin-editor-footnote">Signed attendance details · '+esc(row.department||'Unassigned')+'</span>'+
+    '<div>'+(adminFullAccess?'<button type="button" class="secondary" data-action="tt-log-detail-toggle-select" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+' aria-pressed="'+selected+'">'+(selected?'Remove selection':'Select record')+'</button>':'')+
+    '<button type="button" class="primary" data-action="tt-log-detail-close">Close details</button></div></footer>'+
+  '</section></div>';
+}
 const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
  const hidden=query&&!searchText(r).includes(query.toLocaleLowerCase().trim());
- const selected=gpsOptions.selectedIds?.includes(r.id)===true;
+ const selected=gpsOptions.selectedIds?.includes(r.id)===true||
+  gpsOptions.expandedRecordIds?.includes(r.id)===true;
  const done=r.status==='Completed';
  const state=r.classification==='Administrative closure'?
   'Administrative closure':done?'Completed':r.status==='Active'?'Active':'Unknown';
- return '<tr class="tt-log-filterable'+(selected?' is-selected':'')+'" aria-selected="'+selected+'" data-log-search="'+esc(searchText(r))+'"'+
-  (hidden?' hidden':'')+'>'+(gpsOptions.adminFullAccess?'<td class="tt-log-select-cell"><input type="checkbox" id="tt-log-select-'+esc(r.id)+'" data-tt-log-select value="'+esc(r.id)+'"'+
-   (gpsOptions.selectedIds?.includes(r.id)?' checked':'')+(gpsOptions.adminBusy?' disabled':'')+' aria-label="Select attendance record for '+esc(r.name||'employee')+'"></td>':'')+
-  '<td colspan="9"><details class="tt-log-detail" data-record-id="'+esc(r.id)+'"'+
-   (gpsOptions.expandedRecordIds?.includes(r.id)?' open':'')+
-   '><summary class="tt-log-row-summary">'+
+ return '<tr class="tt-log-filterable aps-record-selectable'+(selected?' is-selected board-row-selected':'')+
+  '" aria-selected="'+selected+'" data-record-id="'+esc(r.id)+'" data-log-search="'+esc(searchText(r))+'"'+
+  (hidden?' hidden':'')+'>'+
+  '<td colspan="9"><details class="tt-log-detail" data-record-id="'+esc(r.id)+'">'+
+   '<summary class="tt-log-row-summary" data-action="tt-log-open-detail" data-record-id="'+esc(r.id)+
+    '" aria-haspopup="dialog" aria-label="Open attendance details for '+esc(r.name||'employee')+'">'+
    '<span class="tt-log-row-person"><strong>'+esc(r.name||'Signed member')+
     '</strong><small>'+esc(r.department||'Unassigned')+'</small></span>'+
    '<span title="'+esc(phtDate(r.clockIn))+'">'+esc(dateTime(r.clockIn))+'</span>'+
@@ -282,8 +308,8 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
    '<span class="tt-log-badge '+(done?'tt-log-badge-done':
     state==='Active'?'tt-log-badge-active':'tt-log-badge-unknown')+'">'+esc(state)+'</span>'+
    '<span class="tt-log-hours">'+esc(creditedHours(r.creditedMs))+'</span>'+
-   '<span class="tt-log-disclosure" aria-label="Expand session evidence">⌄</span>'+
-  '</summary>'+safeSessionDetails(r,now,gpsOptions)+'</details></td></tr>';
+   '<span class="tt-log-disclosure" aria-hidden="true">↗</span>'+
+  '</summary>'+(gpsOptions.expandedRecordIds?.includes(r.id)?'':safeSessionDetails(r,now,gpsOptions))+'</details></td></tr>';
 };
 export function renderTimeTrackerLog({
  records=[],scope='OWN_ATTENDANCE_ONLY',filters={},now=new Date(),busy=false,
@@ -351,20 +377,19 @@ export function renderTimeTrackerLog({
     ' authorized employee'+(summary.people===1?'':'s')+'</p></div>'+
     '<span class="tt-log-readonly">'+summary.historical+
     ' earlier · '+summary.today+' today</span></div>'+
-   (adminEligible?'<p class="tt-log-footnote">Expand an active or completed attendance record, then select Correct time. Clock-Out corrections are available for completed sessions only. An explanation is required and changes are audited.</p>':'')+
+   (adminEligible?'<p class="tt-log-footnote">Click any record to view its details in a popup and highlight it for editing. Use Ctrl/⌘ or Shift when selecting more records. Correction notes are optional; edits are audited.</p>':'')+
    (adminFullAccess?'<div class="tt-log-admin-toolbar" role="region" aria-label="System Admin attendance record management">'+
-    '<div class="tt-log-admin-toolbar-copy"><div class="tt-log-admin-toolbar-heading"><span class="tt-log-admin-toolbar-icon" aria-hidden="true">✦</span><div><strong>Manage attendance records</strong><span>Select one or more rows to edit or remove records</span></div></div>'+
+    '<div class="tt-log-admin-toolbar-copy"><div class="tt-log-admin-toolbar-heading"><span class="tt-log-admin-toolbar-icon" aria-hidden="true">✦</span><div><strong>Manage attendance records</strong><span>Click a record to highlight it; no checkboxes required</span></div></div>'+
     '<div class="tt-log-admin-selection-status"><strong class="tt-log-admin-selected">'+selectedIds.length+'</strong><span>selected <i>·</i> up to '+TT_ADMIN_RECORD_LIMIT+'</span></div></div>'+
     '<div class="tt-log-admin-toolbar-actions">'+
+    '<button type="button" data-action="tt-log-admin-select-visible"'+(!visible.length||adminBusy?' disabled':'')+'>Select visible</button>'+
     '<button type="button" data-action="tt-log-admin-bulk-edit"'+(selectedIds.length&&!adminBusy?'':' disabled')+'><span aria-hidden="true">✎</span> Edit selected</button>'+
     '<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-bulk-delete"'+(selectedIds.length&&!adminBusy?'':' disabled')+'><span aria-hidden="true">⌫</span> Delete selected</button>'+
-    '<button type="button" class="tt-log-admin-clear" data-action="tt-log-admin-clear-selection"'+(selectedIds.length&&!adminBusy?'':' disabled')+'>Clear selection</button></div></div>':'')+
+    '<button type="button" class="tt-log-admin-reset" data-action="tt-log-admin-clear-selection"'+(selectedIds.length&&!adminBusy?'':' disabled')+'>Clear selection</button></div></div>':'')+
    (adminError&&!adminEditor?'<p class="tt-log-admin-feedback is-error" role="alert">'+esc(adminError)+'</p>':'')+
    (adminSuccess?'<p class="tt-log-admin-feedback is-success" role="status">'+esc(adminSuccess)+'</p>':'')+
    (rows.length?'<div class="tt-log-day"><div class="tt-log-table-scroll">'+
      '<table class="board-table tt-log-table"><thead><tr>'+
-     (adminFullAccess?'<th class="tt-log-select-column"><input type="checkbox" id="tt-log-select-all" data-tt-log-select-all aria-label="Select all visible attendance records"'+
-      (visible.length&&visible.every(r=>selectedIds.includes(r.id))?' checked':'')+(adminBusy?' disabled':'')+'></th>':'')+
      '<th>Employee</th><th>Clock In</th><th>Clock Out</th>'+
      '<th>Location</th><th>Department</th><th>Arrival</th>'+
      '<th>Status</th><th>Hours</th><th>Details</th></tr></thead>'+
@@ -377,7 +402,11 @@ export function renderTimeTrackerLog({
     (visible.length?' hidden':'')+'>No sessions match the current search.</p>':'')+
    '<p class="tt-log-footnote">Daily operations are based on the current Philippine date. Location and shift summaries reflect the selected date, status and location. Search narrows records and CSV only.</p>'+
    '<p class="tt-log-footnote">Exact GPS positions are shown only after a bootstrap administrator or assigned Supervisor receives a valid signed server GPS snapshot. Audit scores, satellite imagery, device fingerprints and manual-edit evidence are not inferred.</p>'+
-  '</section>'+renderTimeTrackerAdminEditor({editor:adminEditor,directory:adminDirectory,busy:adminBusy,error:adminEditor?adminError:'',timeOnly:adminEditor?.timeOnly===true})+renderTimeTrackerAdminDeleteDialog({confirmation:adminDeleteConfirm,busy:adminBusy})+'</section>';
+  '</section>'+(adminEditor||adminDeleteConfirm?'':renderTimeTrackerLogDetailDialog({row:rows.find(r=>expandedRecordIds.includes(r.id))||null,now,
+    gpsEligible,gpsData,gpsBusy,gpsError,gpsErrorRecordId,mapEnabled,mapTheme,
+    adminEligible,adminFullAccess,adminBusy,selectedIds}))+
+   renderTimeTrackerAdminEditor({editor:adminEditor,directory:adminDirectory,busy:adminBusy,error:adminEditor?adminError:'',timeOnly:adminEditor?.timeOnly===true})+
+   renderTimeTrackerAdminDeleteDialog({confirmation:adminDeleteConfirm,busy:adminBusy})+'</section>';
 }
 
 const logCsvCell=value=>{

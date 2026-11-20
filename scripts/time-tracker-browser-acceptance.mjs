@@ -444,8 +444,9 @@ try {
     { result: adminResult, directory: adminDirectory },
   );
   await page.getByText("Manage attendance records", { exact: true }).waitFor();
-  await page.locator("#tt-log-select-all").waitFor();
-  await page.locator("#tt-log-select-" + adminRecordId).waitFor();
+  await page.getByRole("button", { name: "Select visible" }).waitFor();
+  await page.locator(".tt-log-row-summary").waitFor();
+  assert.equal(await page.locator('input[type="checkbox"]').count(), 0);
   await page.getByRole("button", { name: "Edit selected" }).waitFor();
   await page.getByRole("button", { name: "Delete selected" }).waitFor();
   const managementSurface = await page
@@ -486,16 +487,31 @@ try {
   assert.ok(managementSurface.actionBackground.includes("linear-gradient"));
   assert.equal(managementSurface.actionBorderRadius, "9px");
   assert.equal(managementSurface.selectionBorderRadius, "10px");
-  await page.locator(".tt-log-row-summary").click();
+  await page.evaluate(
+    ({ result, directory, recordId }) =>
+      window.__timeTrackerRender({
+        view: "log",
+        result,
+        adminEligible: true,
+        adminDirectory: directory,
+        adminSelectedIds: [recordId],
+        logExpandedRecordIds: [recordId],
+      }),
+    { result: adminResult, directory: adminDirectory, recordId: adminRecordId },
+  );
+  await page.getByRole("dialog", { name: "Test Employee" }).waitFor();
+  await page.getByRole("button", { name: "Close details" }).waitFor();
   await page.getByRole("button", { name: "Edit record" }).waitFor();
   await page.getByRole("button", { name: "Delete record" }).waitFor();
+  const selectedRow = page.locator(".tt-log-filterable.is-selected");
+  assert.match(await selectedRow.getAttribute("class"), /board-row-selected/);
   await checkAccessibilityWithin(
     ".tt-log-admin-toolbar",
     "System Admin attendance toolbar",
   );
   await checkAccessibilityWithin(
-    ".tt-log-admin-row-actions",
-    "System Admin row actions",
+    ".tt-log-details-dialog",
+    "System Admin attendance details popup",
   );
 
   await page.evaluate(

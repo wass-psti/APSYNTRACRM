@@ -558,3 +558,17 @@
  #app .aps-board-shell .tt-native .tt-admin-field :is(input,select,textarea){border-color:#52627a}
  #app .aps-board-shell .tt-native .tt-admin-delete-actions .tt-admin-delete-confirm{border:2px solid #6f1d28}
 }
+
+/* Attendance detail dialog: the legacy inline audit panel used pale metadata
+   colors. Scope WCAG AA text contrast to the popup without changing attendance
+   evidence, status or permissions. */
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-details-dialog
+ .tt-log-expanded :is(h6,p,small,span,strong,em){
+ color:#394960;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-details-dialog
+ .tt-log-expanded .tt-log-audit-green > strong{color:#146e41}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-details-dialog
+ .tt-log-expanded .tt-log-audit-red > strong{color:#983c36}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-details-dialog
+ .tt-log-expanded .tt-log-audit-amber > strong{color:#8b4b18}

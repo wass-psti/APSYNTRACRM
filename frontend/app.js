@@ -1507,8 +1507,9 @@ function preserveTimeTrackerLogExpansion(){
  const section=root.querySelector('.tt-log');
  if(!section)return;
  const allowed=new Set((state.ttAttendance.log?.rows||state.ttAttendance.records||[]).map(r=>r.id));
- state.ttLogExpandedIds=[...section.querySelectorAll('.tt-log-detail[open][data-record-id]')]
-  .map(el=>el.dataset.recordId).filter(id=>allowed.has(id)).slice(0,30);
+ // One modal at a time. Preserve it across authorized re-renders and GPS reads,
+ // not by inspecting expanded inline <details> elements.
+ state.ttLogExpandedIds=state.ttLogExpandedIds.filter(id=>allowed.has(id)).slice(-1);
 }
 function render(){
  // Protected Material Sourcing item details cannot survive a session, board,
@@ -3949,8 +3950,6 @@ async function saveTimeTrackerAdminEditor(form){
   if(editor.timeOnly&&(
      editor.mode!=='single'||Object.keys(plan.patch).some(k=>!['clockInAt','clockOutAt'].includes(k))))
    throw Error('IT Administrators can only correct recorded times.');
-  if((plan.patch.clockInAt||plan.patch.clockOutAt)&&plan.reason.trim().length<10)
-   throw Error('Explain the time correction in at least 10 characters.');
  }catch(err){state.ttLogAdminError=errorMessage(err);render();return;}
  const seq=routeSerial,boardId=state.boardId;
  state.ttLogAdminBusy=true;state.ttLogAdminError='';render();
@@ -8343,6 +8342,72 @@ async function action(name,button){
   state.ttMapConsentIdentity=timeTrackerMapConsentKey();
   void mountSignedTimeTrackerMaps();break;
  }
+ case 'tt-log-open-detail':{
+  if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='log'||
+     state.ttAttendance?.status!=='VERIFIED_READ'||state.ttLogAdminEditor)return;
+  const rows=state.ttAttendance.log?.rows||state.ttAttendance.records||[];
+  const id=button.dataset.recordId;
+  if(!rows.some(r=>r.id===id))return;
+  if(timeTrackerAdminLogReady()&&state.ttAttendance.access?.moduleRole==='System Admin'&&!state.ttLogAdminBusy){
+   let selected=new Set(state.ttLogSelectedIds);
+   if(button.dataset.shiftSelect==='true'){
+    const order=[...root.querySelectorAll('.tt-log-filterable:not([hidden])')].map(row=>row.dataset.recordId);
+    const last=state.ttLogSelectedIds.at(-1),start=order.indexOf(last),end=order.indexOf(id);
+    if(start>=0&&end>=0){
+     for(const candidate of order.slice(Math.min(start,end),Math.max(start,end)+1)){
+      if(selected.size>=TT_ADMIN_RECORD_LIMIT)break;
+      selected.add(candidate);
+     }
+    }else selected=new Set([id]);
+   }else if(button.dataset.multiSelect==='true'){
+    if(selected.has(id))selected.delete(id);
+    else if(selected.size<TT_ADMIN_RECORD_LIMIT)selected.add(id);
+    else toast('Select at most '+TT_ADMIN_RECORD_LIMIT+' attendance records.',true);
+   }else selected=new Set([id]);
+   state.ttLogSelectedIds=[...selected];
+   // Modified clicks extend/toggle the selection without obstructing bulk selection.
+   // An ordinary click still opens the signed record details popup.
+   if(button.dataset.multiSelect==='true'){
+    render();
+    [...root.querySelectorAll('[data-action="tt-log-open-detail"]')]
+     .find(row=>row.dataset.recordId===id)?.focus();
+    break;
+   }
+  }
+  state.ttLogExpandedIds=[id];render();
+  root.querySelector('[data-tt-log-detail-dialog] [data-action="tt-log-detail-close"]')?.focus();
+  void mountSignedTimeTrackerMaps();break;
+ }
+ case 'tt-log-detail-close':{
+  if(state.ttView!=='log'||!state.ttLogExpandedIds.length)return;
+  const id=state.ttLogExpandedIds[0];state.ttLogExpandedIds=[];render();
+  [...root.querySelectorAll('[data-action="tt-log-open-detail"]')]
+   .find(row=>row.dataset.recordId===id)?.focus();
+  break;
+ }
+ case 'tt-log-detail-toggle-select':{
+  if(!timeTrackerAdminLogReady()||state.ttAttendance.access.moduleRole!=='System Admin'||state.ttLogAdminBusy)return;
+  const id=button.dataset.recordId;
+  if(!state.ttLogExpandedIds.includes(id))return;
+  const selected=new Set(state.ttLogSelectedIds);
+  if(selected.has(id))selected.delete(id);
+  else if(selected.size<TT_ADMIN_RECORD_LIMIT)selected.add(id);
+  else {toast('Select at most '+TT_ADMIN_RECORD_LIMIT+' attendance records.',true);return;}
+  state.ttLogSelectedIds=[...selected];render();
+  root.querySelector('[data-action="tt-log-detail-toggle-select"]')?.focus();break;
+ }
+ case 'tt-log-admin-select-visible':{
+  if(!timeTrackerAdminLogReady()||state.ttAttendance.access.moduleRole!=='System Admin'||state.ttLogAdminBusy)return;
+  const selected=new Set(state.ttLogSelectedIds);
+  const ids=[...root.querySelectorAll('.tt-log-filterable:not([hidden])')]
+   .map(row=>row.dataset.recordId).filter(Boolean);
+  for(const id of ids){
+   if(selected.size>=TT_ADMIN_RECORD_LIMIT&&!selected.has(id))break;
+   selected.add(id);
+  }
+  if(ids.some(id=>!selected.has(id)))toast('Selection limited to '+TT_ADMIN_RECORD_LIMIT+' attendance records.',true);
+  state.ttLogSelectedIds=[...selected];render();break;
+ }
  case 'tt-log-gps-load':{
   if(state.ttView!=='log'||state.ttBusy||state.ttLogGpsBusy||
      state.ttAttendance?.status!=='VERIFIED_READ'||!auth.isSignedIn||
@@ -8386,7 +8451,10 @@ async function action(name,button){
  case 'tt-log-admin-cancel':{
   if(!timeTrackerAdminLogReady()||state.ttLogAdminBusy)return;
   {const editor=state.ttLogAdminEditor;state.ttLogAdminEditor=null;state.ttLogAdminError='';render();
-   const target=editor?.mode==='bulk'?root.querySelector('[data-action=\"tt-log-admin-bulk-edit\"]'):root.querySelector('[data-action=\"tt-log-admin-edit\"][data-record-id=\"'+editor?.recordIds?.[0]+'\"]');target?.focus();}
+   const target=editor?.mode==='bulk'?root.querySelector('[data-action=\"tt-log-admin-bulk-edit\"]'):
+    root.querySelector('[data-tt-log-detail-dialog] [data-action=\"tt-log-detail-close\"]')||
+    root.querySelector('[data-action=\"tt-log-open-detail\"][data-record-id=\"'+editor?.recordIds?.[0]+'\"]');
+   target?.focus();}
   break;
  }
  case 'tt-location-shortcut':{
@@ -10672,17 +10740,21 @@ document.addEventListener('keydown',event=>{
 window.addEventListener('scroll',()=>closeBoardColumnContext(),true);
 window.addEventListener('resize',()=>closeBoardColumnContext());
 root.addEventListener('keydown',event=>{
- const dialog=root.querySelector('[data-tt-admin-dialog]');
+ const dialog=root.querySelector('[data-tt-admin-dialog]')||
+  root.querySelector('[data-tt-log-detail-dialog]');
  if(!dialog)return;
  if(event.key==='Escape'){
   event.preventDefault();
+  if(dialog.matches('[data-tt-log-detail-dialog]')){
+   dialog.querySelector('[data-action="tt-log-detail-close"]')?.click();return;
+  }
   if(state.ttLogAdminBusy)return;
   if(state.ttLogAdminDeleteConfirm)cancelTimeTrackerAdminDeletion();
   else dialog.querySelector('[data-action="tt-log-admin-cancel"]')?.click();
   return;
  }
  if(event.key!=='Tab')return;
- const focusable=[...dialog.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+ const focusable=[...dialog.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])')]
   .filter(node=>!node.hidden);
  if(!focusable.length)return;
  const first=focusable[0],last=focusable[focusable.length-1];
@@ -10726,8 +10798,16 @@ root.addEventListener('click',event=>{
  }
  const checkbox=event.target.closest('[data-board-select-item]');
  if(checkbox)checkbox.dataset.shiftSelect=event.shiftKey?'true':'false';
+ if(event.target.matches?.('[data-tt-log-detail-backdrop]')){
+  event.preventDefault();Promise.resolve(action('tt-log-detail-close',event.target)).catch(notice);
+  return;
+ }
  const target=event.target.closest('[data-action]');
  if(!target)return;
+ if(target.dataset.action==='tt-log-open-detail'){
+  target.dataset.multiSelect=event.ctrlKey||event.metaKey||event.shiftKey?'true':'false';
+  target.dataset.shiftSelect=event.shiftKey?'true':'false';
+ }
  event.preventDefault();
  Promise.resolve(action(target.dataset.action,target)).catch(notice);
 });
@@ -10830,30 +10910,7 @@ function syncTradeLinkFinanceInput(event){
 }
 root.addEventListener('change',event=>{
  if(syncTradeLinkFinanceInput(event))return;
- const attendanceSelect=event.target.closest?.('[data-tt-log-select]');
- if(attendanceSelect){
-  if(!timeTrackerAdminLogReady()||state.ttLogAdminBusy){attendanceSelect.checked=false;return;}
-  const id=attendanceSelect.value,selected=new Set(state.ttLogSelectedIds);
-  if(attendanceSelect.checked){
-   if(selected.size>=TT_ADMIN_RECORD_LIMIT){attendanceSelect.checked=false;toast('Select at most '+TT_ADMIN_RECORD_LIMIT+' attendance records.',true);return;}
-   selected.add(id);
-  }else selected.delete(id);
-  state.ttLogSelectedIds=[...selected];render();return;
- }
- const attendanceSelectAll=event.target.closest?.('[data-tt-log-select-all]');
- if(attendanceSelectAll){
-  if(!timeTrackerAdminLogReady()||state.ttLogAdminBusy){attendanceSelectAll.checked=false;return;}
-  const visible=[...root.querySelectorAll('.tt-log-filterable:not([hidden]) [data-tt-log-select]')].map(input=>input.value);
-  const selected=new Set(state.ttLogSelectedIds);
-  if(attendanceSelectAll.checked){
-   for(const id of visible){
-    if(selected.size>=TT_ADMIN_RECORD_LIMIT&&!selected.has(id))break;
-    selected.add(id);
-   }
-   if(visible.some(id=>!selected.has(id)))toast('Selection limited to '+TT_ADMIN_RECORD_LIMIT+' attendance records.',true);
-  }else for(const id of visible)selected.delete(id);
-  state.ttLogSelectedIds=[...selected];render();return;
- }
+ // TimeTracker uses row highlighting and a details popup; no checkbox selection.
  const trashCheckbox=event.target.closest?.('[data-trash-board-select]');
  if(trashCheckbox){
   if(!state.showTrash||state.boardLifecycleBusy)return;

@@ -104,18 +104,21 @@ test('Log GPS loading uses dedicated signed RPC, maintains authorization and no 
 test('GPS load retains expanded audit details and scopes errors to selected record',()=>{
  const pending=renderTimeTrackerLog({records,now,gpsEligible:true,gpsBusy:true,
   expandedRecordIds:['today']});
- assert.match(pending,/class="tt-log-detail" data-record-id="today" open/);
+ assert.match(pending,/data-tt-log-detail-dialog/);
+ assert.match(pending,/aria-modal="true"/);
+ assert.match(pending,/data-action="tt-log-detail-close"/);
+ assert.doesNotMatch(pending,/class="tt-log-detail" data-record-id="today" open/);
  assert.match(pending,/class="tt-log-detail" data-record-id="older"/);
  assert.doesNotMatch(pending,/data-record-id="older" open/);
  assert.match(pending,/Loading signed GPS evidence/);
  const failed=renderTimeTrackerLog({records,now,gpsEligible:true,
   expandedRecordIds:['today'],gpsError:'Signed GPS request failed validation.',
   gpsErrorRecordId:'today'});
- assert.match(failed,/class="tt-log-detail" data-record-id="today" open/);
+ assert.match(failed,/data-tt-log-detail-dialog/);
  assert.equal((failed.match(/Signed GPS request failed validation\./g)||[]).length,1);
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/function preserveTimeTrackerLogExpansion/);
- assert.match(app,/querySelectorAll\('\.tt-log-detail\[open\]\[data-record-id\]'\)/);
+ assert.match(app,/state\.ttLogExpandedIds=state\.ttLogExpandedIds\.filter/);
  assert.match(app,/preserveTimeTrackerLogExpansion\(\);/);
  assert.match(app,/state\.ttLogGpsErrorRecordId=record\?\.id/);
  assert.doesNotMatch(app,/state\.ttLogGpsData=null;\s*state\.ttLogGpsError='Signed GPS evidence could not be verified/);
@@ -129,9 +132,60 @@ test('authorized Log maps are automatically visible, dark theme switches and ord
   expandedRecordIds:['today'],mapEnabled:true,mapTheme:'dark'});
  assert.match(admin,/data-map-scope="log"/);
  assert.match(admin,/data-action="tt-map-style" data-theme="dark" aria-pressed="true"/);
- assert.match(admin,/class="tt-log-detail" data-record-id="today" open/);
+ assert.match(admin,/data-tt-log-detail-dialog/);
  assert.doesNotMatch(admin,/Enable street map/);
  const employee=renderTimeTrackerLog({records,now,gpsEligible:false,
   gpsData:data,mapEnabled:false});
  assert.doesNotMatch(employee,/123\.987654|data-map-scope="log"|data-action="tt-map-style"/);
+});
+
+test('record click opens an accessible popup and highlights rows using the shared board selection convention',()=>{
+ const html=renderTimeTrackerLog({records,now,expandedRecordIds:['today'],adminEligible:true,
+  adminFullAccess:true,selectedIds:['today']});
+ assert.match(html,/data-action="tt-log-open-detail" data-record-id="today"/);
+ assert.match(html,/tt-log-filterable aps-record-selectable is-selected board-row-selected/);
+ assert.match(html,/data-tt-log-detail-dialog data-record-id="today" role="dialog" aria-modal="true"/);
+ assert.match(html,/aria-labelledby="tt-log-modal-title"/);
+ assert.match(html,/data-action="tt-log-detail-close"/);
+ assert.match(html,/data-action="tt-log-admin-select-visible"/);
+ assert.doesNotMatch(html,/type="checkbox"|data-tt-log-select-all/);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/case 'tt-log-open-detail'/);
+ assert.match(app,/case 'tt-log-detail-close'/);
+ assert.match(app,/case 'tt-log-admin-select-visible'/);
+ assert.match(app,/event\.ctrlKey\|\|event\.metaKey\|\|event\.shiftKey/);
+ const viewOnly=renderTimeTrackerLog({records,now,expandedRecordIds:['today'],
+  adminEligible:false,adminFullAccess:false});
+ assert.match(viewOnly,/tt-log-filterable aps-record-selectable is-selected board-row-selected/);
+ assert.doesNotMatch(viewOnly,/data-action="tt-log-admin-edit"/);
+});
+
+test('modified clicks allow contiguous or toggled Log selection without opening details',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const start=app.indexOf("case 'tt-log-open-detail':{");
+ const end=app.indexOf("case 'tt-log-detail-close':{",start);
+ assert.ok(start>=0&&end>start,'attendance detail handler exists');
+ const handler=app.slice(start,end);
+ assert.match(handler,/state\.ttLogSelectedIds=\[\.\.\.selected\];/);
+ assert.match(handler,/if\(button\.dataset\.multiSelect==='true'\)\{\s*render\(\);/);
+ assert.match(handler,/\.find\(row=>row\.dataset\.recordId===id\)\?\.focus\(\);\s*break;/);
+ assert.match(handler,/state\.ttLogExpandedIds=\[id\];render\(\);/);
+});
+
+test('admin edit or delete dialog temporarily replaces attendance details modal',()=>{
+ const input={records,now,expandedRecordIds:['today'],adminEligible:true,adminFullAccess:true};
+ const deleteDialog=renderTimeTrackerLog({...input,adminDeleteConfirm:{
+  recordIds:['today'],records:[{name:'Employee One'}]
+ }});
+ assert.match(deleteDialog,/data-tt-admin-delete-backdrop/);
+ assert.doesNotMatch(deleteDialog,/data-tt-log-detail-dialog/);
+ const editDialog=renderTimeTrackerLog({...input,adminEditor:{
+  mode:'single',timeOnly:true,recordIds:['today'],records:[{
+   ownerName:'Employee One',clockIn:{timestamp:'2026-11-02T01:00:00Z'},clockOut:null
+  }]
+ }});
+ assert.match(editDialog,/data-tt-admin-dialog/);
+ assert.doesNotMatch(editDialog,/data-tt-log-detail-dialog/);
+ const detail=renderTimeTrackerLog(input);
+ assert.match(detail,/data-tt-log-detail-dialog/);
 });

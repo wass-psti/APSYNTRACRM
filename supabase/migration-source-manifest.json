@@ -1897,6 +1897,13 @@
       "file": "20261120170000_cp_tt_auto_clockout_02c_atomic_board_projection_restore.sql",
       "bytes": 7813,
       "sha256": "a1d648b53c14b46f48c6a2119d759c2e5bba473a3c1169fda8c5f226bef77ea5"
+    },
+    {
+      "version": "20261120183000",
+      "name": "cp_tt_optional_attendance_correction_note",
+      "file": "20261120183000_cp_tt_optional_attendance_correction_note.sql",
+      "bytes": 10273,
+      "sha256": "ee65b4c40766dc3911eca08ff0fa7080570204f86b4aa26a725daa658216a14c"
     }
   ]
 }

@@ -88,3 +88,18 @@ test('forward migration grants only IT time editing, requires reason, and retain
  assert.match(forward,/public\.timetracker_employee_department_directory_snapshot/);
  assert.match(forward,/public\.timetracker_ot_require_scope\(p_board_id\)/);
 });
+
+test('new forward migration makes the correction note optional while preserving audit and scope',()=>{
+ const forward=readFileSync(
+  'supabase/migrations/20261120183000_cp_tt_optional_attendance_correction_note.sql','utf8'
+ );
+ assert.match(forward,/CREATE OR REPLACE FUNCTION public\.timetracker_attendance_admin_mutate/);
+ assert.match(forward,/v_role='IT Administrator'/);
+ assert.match(forward,/k NOT IN \('clockInAt','clockOutAt'\)/);
+ assert.match(forward,/v_current_revision<>p_expected_revision/);
+ assert.match(forward,/FOR UPDATE;/);
+ assert.match(forward,/INSERT INTO private\.tt_attendance_admin_audit/);
+ assert.match(forward,/before_records,after_records,reason,committed_at/);
+ assert.match(forward,/Attendance correction reason exceeds 500 characters/);
+ assert.doesNotMatch(forward,/Time correction requires a reason of at least 10 characters/);
+});

@@ -106,6 +106,18 @@ test('invalid record IDs and excessive selection sizes are rejected before RPC',
  assert.equal(calls.some(x=>x.name==='timetracker_attendance_admin_snapshot'),false);
 });
 
+test('IT Administrator may omit the optional correction note without weakening RPC scope',async()=>{
+ const {client,calls}=setup({role:'IT Administrator'});
+ const receipt=await client.mutateAttendanceRecords(board,{
+  action:'edit',recordIds:[recordId],patch:{clockInAt:'2026-11-16T00:21:00.000Z'},
+  reason:'',expectedRevision:4
+ });
+ assert.equal(receipt.changedCount,1);
+ const rpc=calls.find(x=>x.name==='timetracker_attendance_admin_mutate');
+ assert.equal(rpc.args.p_reason,'');
+ assert.equal(rpc.options.retryUnauthorized,false);
+});
+
 test('IT Administrator may correct one session’s timestamps but never delete, bulk edit, GPS or ownership',async()=>{
  const {client,calls}=setup({role:'IT Administrator'});
  assert.equal((await client.attendanceAdminRecords(board,[recordId])).records.length,1);
@@ -120,8 +132,7 @@ test('IT Administrator may correct one session’s timestamps but never delete, 
   {action:'delete',recordIds:[recordId],patch:{}},
   {action:'bulk-edit',recordIds:[recordId],patch:{clockInAt:'2026-11-16T00:20:00.000Z'}},
   {action:'edit',recordIds:[recordId],patch:{employeeId:employee}},
-  {action:'edit',recordIds:[recordId],patch:{clockInGeo:{latitude:10,longitude:123}}},
-  {action:'edit',recordIds:[recordId],patch:{clockInAt:'2026-11-16T00:20:00.000Z'},reason:'short'}
+  {action:'edit',recordIds:[recordId],patch:{clockInGeo:{latitude:10,longitude:123}}}
  ]){
   await assert.rejects(()=>client.mutateAttendanceRecords(board,{
    ...attempt,reason:attempt.reason||'Verified employee correction',expectedRevision:4

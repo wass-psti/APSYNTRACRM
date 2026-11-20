@@ -502,8 +502,8 @@ export class TimeTrackerNativeClient{
   if(access.moduleRole==='IT Administrator'&&(
      action!=='edit'||recordIds?.length!==1||
      !isRecord(patch)||Object.keys(patch).some(k=>!['clockInAt','clockOutAt'].includes(k))||
-     !Object.keys(patch).length||typeof reason!=='string'||reason.trim().length<10))
-   deny('IT Administrator may correct one session’s times only with a reason');
+     !Object.keys(patch).length))
+   deny('IT Administrator may only correct one session’s recorded times');
   if(!['edit','bulk-edit','delete','bulk-delete'].includes(action)||
      !Array.isArray(recordIds)||recordIds.length<1||recordIds.length>100||
      recordIds.some(id=>!uuid.test(id))||new Set(recordIds).size!==recordIds.length||
