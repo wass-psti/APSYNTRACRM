@@ -33,7 +33,7 @@ try{
  for(const spec of specs){
   const errors=[];
   page.on('pageerror',err=>errors.push(err.message));
-  await page.goto(host+'/?screen='+spec.screen,{waitUntil:'networkidle'});
+  await page.goto(host+'/?screen='+spec.screen,{waitUntil:'domcontentloaded'});
   await page.locator(spec.select).waitFor({state:'visible'});
   const h1=await page.locator('h1').first().innerText();
   assert.equal(h1,spec.title,spec.screen+' heading');
@@ -66,17 +66,17 @@ try{
   await page.screenshot({path:'artifacts/access-v2/'+spec.screen+'-desktop.png',fullPage:true});
   console.log('ACCESS_V2_'+spec.screen.toUpperCase()+'_DESKTOP_PASS');
  }
- await page.goto(host+'/?screen=board',{waitUntil:'networkidle'});
+ await page.goto(host+'/?screen=board',{waitUntil:'domcontentloaded'});
  await page.locator('.ap-invite-search input').press('Enter');
  assert.match(await page.locator('.ap-split-invite').innerText(),/Invite \/ 4/);
- await page.goto(host+'/?screen=app',{waitUntil:'networkidle'});
+ await page.goto(host+'/?screen=app',{waitUntil:'domcontentloaded'});
  await page.locator('.ap-capability-table input[type=checkbox]').first().click();
  await page.locator('.ap-save-footer').waitFor();
  await page.locator('.ap-save-footer button').last().click();
  assert.equal(await page.locator('.ap-save-footer').count(),0);
  await page.setViewportSize({width:390,height:844});
  for(const spec of specs){
-  await page.goto(host+'/?screen='+spec.screen,{waitUntil:'networkidle'});
+  await page.goto(host+'/?screen='+spec.screen,{waitUntil:'domcontentloaded'});
   await page.locator(spec.select).waitFor({state:'visible'});
   const side=await page.locator('.ap-sidebar').boundingBox();
   assert.ok(side.width<=390,'mobile sidebar fits');
