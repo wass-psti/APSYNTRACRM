@@ -1,0 +1,47 @@
+name: CP-CRM-URM-INTEGRITY-03E Disposable Owner Integration
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cp-crm-urm-integrity-03e-owner-integration.yml'
+      - 'sql/cp-crm-urm-integrity-03e-owner-native-integration-candidate.sql'
+      - 'sql/tests/cp-crm-urm-integrity-03e-owner-integration.sql'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  disposable-owner-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify tracked migration sources
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Execute synthetic owner native access and negative cases
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-urm-scoped02b-setup.sql \
+            -f sql/tests/cp-urm-scoped02b-live-role-baseline.sql \
+            -f supabase/migrations/20261118062000_cp_urm_scoped02b_six_modules.sql \
+            -f supabase/migrations/20261113031952_main_workspace_owner_crm_admin_20261113.sql \
+            -f sql/cp-crm-urm-integrity-03d-owner-native-role-candidate.sql \
+            -f sql/cp-crm-urm-integrity-03e-owner-native-integration-candidate.sql \
+            -f sql/tests/cp-crm-urm-integrity-03e-owner-integration.sql
