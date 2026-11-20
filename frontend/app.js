@@ -551,6 +551,8 @@ function stopAuthVisuals(){
 }
 function renderLogin(message='',{mode=authViewFromHash(),notice='',emailValue=''}={}){
  stopTimeTrackerClock();
+ ttClockSyncScope='';ttClockLastCheckAt=0;
+ state.ttClockCorrectionNotice='';
  stopTimeTrackerPixi();
  // Clear detached protected item values on every signed-out transition.
  hideModal();
