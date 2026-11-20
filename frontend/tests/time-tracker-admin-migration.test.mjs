@@ -77,7 +77,8 @@ test('forward migration grants only IT time editing, requires reason, and retain
  assert.match(forward,/v_role NOT IN \('System Admin','IT Administrator'\)/);
  assert.match(forward,/v_role='IT Administrator'/);
  assert.match(forward,/IT Administrators correct recorded times, not location evidence/);
- assert.match(forward,/INTO v_records[\\s\\S]*?FROM pg_catalog\\.jsonb_array_elements\\(v_records\\)/);
+ assert.match(forward,/INTO v_records/);
+ assert.match(forward,/FROM pg_catalog\.jsonb_array_elements\(v_records\)/);
 
  assert.match(forward,/p_action IS DISTINCT FROM 'edit'/);
  assert.match(forward,/k NOT IN \('clockInAt','clockOutAt'\)/);
