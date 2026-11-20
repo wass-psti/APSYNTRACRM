@@ -90,7 +90,8 @@ test('column menus stay contextual, are keyboard reachable and never call Manage
  assert.match(handler,/case 'board-column-hide'/);
  assert.doesNotMatch(handler,/openBoardStructure\(/);
  assert.doesNotMatch(app,/data-action="board-structure">Manage columns/);
- assert.match(app,/data-action="board-add-column">＋ Add column/);
+ assert.match(app,/openBoardQuickColumnPicker\(button\)/);
+ assert.match(readFileSync("frontend/board/presentation/presentation.js","utf8"),/data-action="board-add-column"/);
  assert.match(app,/function contextualColumnCreate\(/);
  assert.match(app,/function contextualColumnDelete\(/);
  assert.match(app,/function contextualColumnEditor\(/);
