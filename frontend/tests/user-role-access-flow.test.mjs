@@ -14,18 +14,19 @@ const data={
  workspaceScopedMrhAvailable:true,crmPlatformUnavailable:false
 };
 test('a single per-user screen switches between separate applications and boards without losing the selected target',()=>{
- for(const accessSection of ['applications','boards']){
+ for(const accessSection of ['applications','boards','system-admins']){
   const html=renderUserRoleManagement({verified:true,data,selectedUserId:target,accessSection});
-  assert.equal((html.match(/data-action="user-role-section"/g)||[]).length,2);
+  assert.equal((html.match(/data-action="user-role-section"/g)||[]).length,3);
   assert.equal((html.match(/data-action="user-role-section"[^>]*aria-pressed="true"/g)||[]).length,1);
   assert.match(html,/data-role-access-section="applications"/);
   assert.match(html,/data-role-access-section="boards"/);
+  assert.match(html,/data-role-access-section="system-admins"/);
   assert.match(html,/data-action="user-role-edit-crm-platform"/);
   assert.match(html,/data-action="user-role-edit-module"/);
   assert.match(html,/data-action="user-role-edit-board"/);
   assert.match(html,new RegExp('data-role-access-section="'+accessSection+'" aria-label="[^"]+"(?! hidden)'));
-  const hidden=accessSection==='boards'?'applications':'boards';
-  assert.match(html,new RegExp('data-role-access-section="'+hidden+'" aria-label="[^"]+" hidden'));
+  for(const hidden of ['applications','boards','system-admins'].filter(x=>x!==accessSection))
+   assert.match(html,new RegExp('data-role-access-section="'+hidden+'" aria-label="[^"]+" hidden'));
  }
  assert.match(app,/case 'user-role-section':/);
  assert.match(app,/state\.userRoleSection=section;/);
