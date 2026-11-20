@@ -425,6 +425,29 @@
 #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-attendance-console .tt-quick-location > span {
   color: #665c53;
 }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employee-department {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 14px;
+  padding: 12px 14px;
+  border: 1px solid #e6dfd9;
+  border-radius: 8px;
+  background: #faf8f6;
+  color: #665c53;
+  font-size: 12px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employee-department strong {
+  color: #191817;
+  font-weight: 700;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employee-department small {
+  flex-basis: 100%;
+  color: #9d401c;
+  font-size: 11px;
+  line-height: 1.5;
+}
 #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-attendance-console form {
   gap: 14px;
   margin: 0;
