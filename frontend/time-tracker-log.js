@@ -402,9 +402,9 @@ export function renderTimeTrackerLog({
     (visible.length?' hidden':'')+'>No sessions match the current search.</p>':'')+
    '<p class="tt-log-footnote">Daily operations are based on the current Philippine date. Location and shift summaries reflect the selected date, status and location. Search narrows records and CSV only.</p>'+
    '<p class="tt-log-footnote">Exact GPS positions are shown only after a bootstrap administrator or assigned Supervisor receives a valid signed server GPS snapshot. Audit scores, satellite imagery, device fingerprints and manual-edit evidence are not inferred.</p>'+
-  '</section>'+renderTimeTrackerLogDetailDialog({row:rows.find(r=>expandedRecordIds.includes(r.id))||null,now,
+  '</section>'+(adminEditor||adminDeleteConfirm?'':renderTimeTrackerLogDetailDialog({row:rows.find(r=>expandedRecordIds.includes(r.id))||null,now,
     gpsEligible,gpsData,gpsBusy,gpsError,gpsErrorRecordId,mapEnabled,mapTheme,
-    adminEligible,adminFullAccess,adminBusy,selectedIds})+
+    adminEligible,adminFullAccess,adminBusy,selectedIds}))+
    renderTimeTrackerAdminEditor({editor:adminEditor,directory:adminDirectory,busy:adminBusy,error:adminEditor?adminError:'',timeOnly:adminEditor?.timeOnly===true})+
    renderTimeTrackerAdminDeleteDialog({confirmation:adminDeleteConfirm,busy:adminBusy})+'</section>';
 }
