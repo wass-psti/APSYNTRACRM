@@ -369,6 +369,8 @@ export function renderTimeTrackerNative({
  let html='<section class="tt-native" aria-label="TimeTracker attendance application"><div class="fm1-app tt-application" data-tt-view="'+selected+'" data-tt-application-root>'+
   head(verified?result.access:null,busy,selected)+navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true)+
   applicationHeading(selected,busy)+notifications(verified,verified&&result.access?.attendanceWritesAccepted===true,busy);
+ if(busy&&verified&&selected==='clock')html+='<div class="tt-clock-sync-status" role="status" aria-live="polite">'+
+  '<span class="tt-inline-spinner" aria-hidden="true"></span>Synchronizing signed attendance…</div>';
  if(error)html+='<div class="tt-feedback tt-feedback-error" role="alert">'+esc(error)+'</div>';
  if(success&&selected!=='clock')html+='<div class="tt-feedback tt-feedback-success" role="status">'+esc(success)+'</div>';
  if(!verified){
