@@ -20,7 +20,7 @@ small{display:block;color:inherit;opacity:.8}h1{font-size:1.5rem}h2{font-size:1.
 <main>
 <header>
 <h1>APSYNTRA · Staging-only invitation acceptance</h1>
-<p>This tool uses <strong>only</strong> the isolated staging Supabase project. It is not the production CRM sign-in. Credentials and signed tokens remain in this browser tab's memory only; close the tab to clear them. Use a private window on a trusted computer.</p>
+<p>This tool uses <strong>only</strong> the isolated staging Supabase project. It is not the production CRM sign-in. Each account holder can use their own device; do not share credentials or session tokens. Credentials and signed tokens remain in the current browser tab's memory only; close the tab to clear them. Use a private window on a trusted computer.</p>
 </header>
 <section>
 <h2>1. Sign in as inviter</h2>
@@ -44,7 +44,7 @@ small{display:block;color:inherit;opacity:.8}h1{font-size:1.5rem}h2{font-size:1.
 </section>
 <section>
 <h2>3. Signed pairing and invitation</h2>
-<button type="button" id="pair">Verify both genuine signed users</button>
+<button type="button" id="pair">Verify both signed users in this tab (optional)</button>
 <label for="workspace">Inviter's isolated staging workspace ID (available after onboarding)</label>
 <input id="workspace" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
 <button type="button" id="send">Send one staging invitation</button>
@@ -52,7 +52,7 @@ small{display:block;color:inherit;opacity:.8}h1{font-size:1.5rem}h2{font-size:1.
 <label for="invitation-token">One-time token from the recipient's invitation email</label>
 <input id="invitation-token" type="password" autocomplete="off">
 <button type="button" id="accept">Accept as recipient</button>
-<output id="result" role="status">Two genuine sign-ins are required before staging onboarding. Email delivery and workspace permissions are not altered by signing in.</output>
+<output id="result" role="status">Two independent live staging sessions are required for server-side onboarding, but can be established on separate devices. Email delivery and workspace permissions are not altered by signing in.</output>
 <small>Never paste passwords, verification codes, access tokens, or invitation tokens into chat. No production endpoint is used. Email submission does not prove inbox receipt.</small>
 </section>
 </main>
@@ -117,7 +117,7 @@ async function edge(route,body,which){
  return api('/functions/v1/ws02d-'+route,body,token);
 }
 $('send').addEventListener('click',async()=>{
- try{await pair();const result=await edge('invite',{workspaceId:workspace(),requestId:crypto.randomUUID(),email:$('recipient-email').value,role:'member',message:''},'inviter');
+ try{await identity('inviter');const result=await edge('invite',{workspaceId:workspace(),requestId:crypto.randomUUID(),email:$('recipient-email').value,role:'member',message:''},'inviter');
   status('result','Invitation provider response: '+String(result.state||'unknown')+'. Check recipient inbox and server delivery ledger. Do not retry uncertain sends.')}
  catch(e){showError('result',e)}
 });
@@ -129,7 +129,7 @@ $('list').addEventListener('click',async()=>{
 });
 $('accept').addEventListener('click',async()=>{
  const input=$('invitation-token'),token=input.value.trim();input.value='';
- try{await pair();if(!INVITE_TOKEN.test(token))throw Error('Valid one-time inbox invitation token required');
+ try{await identity('recipient');if(!INVITE_TOKEN.test(token))throw Error('Valid one-time inbox invitation token required');
   const result=await edge('accept',{token},'recipient');
   status('result',result.state==='accepted'?'Signed recipient acceptance confirmed; check membership via server readback':'Unexpected acceptance state')}
  catch(e){showError('result',e)}
