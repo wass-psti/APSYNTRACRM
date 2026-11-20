@@ -12,7 +12,7 @@ test('FuelTrack displayed heading and inline edit use the same persisted group t
  assert.match(heading,/const title=e\(group\.title\|\|'Group'\)/);
  assert.match(heading,/const displayTitle=title;/);
  assert.match(heading,/if\(editing\)return[\s\S]*?value="'\+title\+'/);
- assert.match(heading,/return '<div class="group-heading"[\s\S]*?<h3>'\+displayTitle\+'/);
+ assert.match(heading,/return '<div class="group-heading'[\s\S]*?<h3>'\+displayTitle\+'/);
  assert.match(source,/groupHeading\(g,groupedItems\.get\(g\.id\)\?\.length\|\|0\)/);
  assert.doesNotMatch(source,/groupHeading\(fuelTrackGroupDisplay\(b,g\)/);
 });

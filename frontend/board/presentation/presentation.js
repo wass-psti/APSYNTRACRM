@@ -37,7 +37,7 @@ export function normalizeLayout(raw,tabs,columns){
   [...new Set(raw.hidden.filter(k=>availableColumns.includes(k)&&
     !BOARD_REQUIRED_COLUMNS.includes(k)&&k!=='actions'))]:[];
  const widths=Object.create(null);
- for(const key of availableColumns)widths[key]=columnWidth(raw?.widths?.[key]);
+ for(const key of availableColumns)widths[key]=columnWidth(raw?.widths?.[key]??(key==='record'?290:BOARD_DEFAULT_WIDTH));
  return {tabs:ordered(availableTabs,tabsStored),
   columns:[...availableColumns.filter(k=>BOARD_REQUIRED_COLUMNS.includes(k)),
    ...ordered(availableColumns.filter(k=>!BOARD_REQUIRED_COLUMNS.includes(k)),colsStored)],hidden,widths};
@@ -71,20 +71,21 @@ export function boardTable({columns=[],rows=[],empty='No persisted records',layo
  const visible=pref.columns.filter(k=>!pref.hidden.includes(k));
  const lookup=new Map(columns.map(c=>[c.key,c]));
  const cells=visible.map(k=>lookup.get(k));
- const tableWidth=visible.reduce((total,k)=>total+pref.widths[k],0)+(addColumn?150:0);
+ const tableWidth=visible.reduce((total,k)=>total+pref.widths[k],0)+(addColumn?56:0);
  const renderRows=(batch,offset=0)=>batch.map((row,index)=>'<tr data-searchable="'+esc(row.search||'')+'"'+
+   (selection?.enabled&&row.itemId&&selection.selected?.has(row.itemId)?' class="board-row-selected" aria-selected="true"':'')+
    (selection?.enabled&&row.itemId?' data-bulk-row="'+esc(row.itemId)+'"':'')+
    ' aria-rowindex="'+(offset+index+2)+'">'+
    visible.map((k,i)=>'<td'+(i===0?' class="board-frozen-column"':row.statusKeys?.includes(k)?' class="board-status-click-cell"':'')+'>'+
     (i===0&&selection?.enabled&&row.itemId?'<input id="board-row-select-'+esc(row.itemId)+'" name="board-row-select-'+esc(row.itemId)+'" type="checkbox" class="board-row-select" data-board-select-item="'+esc(row.itemId)+'" aria-label="Select this record"'+(selection.selected?.has(row.itemId)?' checked':'')+' />':'')+
-    String(row.cells?.[k]??'—')+'</td>').join('')+(addColumn?'<td class="board-add-column-spacer"></td>':'')+'</tr>').join('');
+    String(row.cells?.[k]??'<span class="board-empty-cell" aria-label="Empty cell"></span>')+'</td>').join('')+(addColumn?'<td class="board-add-column-spacer"></td>':'')+'</tr>').join('');
  const windowed=virtualize?registerBoardWindow(groupId,rows,renderRows,visible.length+(addColumn?1:0)):null;
  return '<div class="panel board-group-panel"><div class="table-scroll board-group-scroll" '+
   'role="region" tabindex="0" aria-label="Horizontally scrollable board group">'+
   '<table class="board-table board-table-custom" data-group-id="'+esc(groupId)+'"'+
   (windowed!==null?' data-board-virtual="true" aria-rowcount="'+(rows.length+1)+'"':'')+
   ' width="'+tableWidth+'">'+
-  '<colgroup>'+visible.map(k=>'<col data-column-key="'+esc(k)+'" width="'+pref.widths[k]+'">').join('')+(addColumn?'<col width="150">':'')+'</colgroup>'+
+  '<colgroup>'+visible.map(k=>'<col data-column-key="'+esc(k)+'" width="'+pref.widths[k]+'">').join('')+(addColumn?'<col width="56">':'')+'</colgroup>'+
   '<thead><tr>'+cells.map((c,i)=>'<th scope="col" data-column-key="'+esc(c.key)+'" draggable="'+(i>1||(minimal&&i>0))+'"'+
     (i===0?' class="board-frozen-column"':'')+
     (i>1||(minimal&&i>0)?' tabindex="0" aria-keyshortcuts="Alt+Shift+ArrowLeft Alt+Shift+ArrowRight" title="Drag column to reorder; Alt+Shift+Left/Right to move"':'')+'>'+
@@ -95,7 +96,7 @@ export function boardTable({columns=[],rows=[],empty='No persisted records',layo
     'aria-haspopup="menu" aria-expanded="false" title="Column options">⋮</button>'+
    '<button type="button" class="board-column-resize" data-column-key="'+esc(c.key)+'" '+
     'aria-label="Resize '+esc(c.title)+' column" title="Drag to resize">↔</button>'+
-   '</th>').join('')+(addColumn?'<th scope="col" class="board-add-column-header"><button type="button" data-action="board-add-column" aria-label="Add a new board column">＋ Add Column</button></th>':'')+'</tr></thead>'+
+   '</th>').join('')+(addColumn?'<th scope="col" class="board-add-column-header"><button type="button" data-action="board-add-column" aria-label="Add a new board column" title="Add column">＋</button></th>':'')+'</tr></thead>'+
   '<tbody>'+(rows.length?(windowed??renderRows(rows)):
    '<tr><td colspan="'+(visible.length+(addColumn?1:0))+'" class="board-empty-row">'+esc(empty)+'</td></tr>')+
   '</tbody>'+

@@ -175,7 +175,7 @@ test('the deployed board creation and manager add-column actions use the signed 
  assert.match(app,/createItemOnlyBoard\(/);
  assert.match(app,/case 'board-add-column'/);
  assert.match(app,/data-structure-enable-item-only/);
- assert.match(app,/addColumn:minimal&&state\.boardManage/);
+ assert.match(app,/addColumn:writable&&state\.boardManage&&BOARD_STRUCTURE_ADMIN_ENABLED/);
  assert.match(app,/persistItemOnlyColumnOrder\(/);
  assert.match(app,/parseChoiceConfig\(/);
  assert.match(app,/genericBoardColumns\(state\.board,\{primaryTitle,columnLabels,minimal,/);

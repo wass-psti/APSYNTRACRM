@@ -112,7 +112,7 @@ import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient
 import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board/services/card-lifecycle.js';
 import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board/selection.js';
 import {boardCatalogResultLabel} from './board/presentation/catalog-results.js';
-import {resolveColumnTypeSelection,renderColumnTypeOptions} from './board/columns/column-catalog.js';
+import {resolveColumnTypeSelection,renderColumnTypeOptions,BOARD_STANDARD_COLUMN_CATALOG} from './board/columns/column-catalog.js';
 import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
  projectConfirmedColumnRename,
  confirmInlineColumnDelete} from './board/inline/inline-context.js';
@@ -994,6 +994,54 @@ function boardsPage(){
      state.boardSearch?'Try another search term or clear the search.':state.showTrash?'Moved boards can be restored here.':state.showArchived?'You have no archived boards in this workspace.':'Only boards allowed by your organization appear here.','')+'</div>'))+`
  </div>`;
 }
+/** Presentation-only typed cells. Original signed values and mutation contracts are unchanged. */
+function boardFriendlyDate(value){
+ const raw=String(value??'');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(raw))return null;
+ const day=new Date(raw+'T00:00:00Z');
+ if(!Number.isFinite(day.getTime())||day.toISOString().slice(0,10)!==raw)return null;
+ const label=new Intl.DateTimeFormat('en-US',{timeZone:'UTC',year:'numeric',month:'short',day:'numeric'}).format(day);
+ const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+ const part=key=>parts.find(p=>p.type===key)?.value||'';
+ const today=part('year')+'-'+part('month')+'-'+part('day');
+ const delta=(Date.parse(raw+'T00:00:00Z')-Date.parse(today+'T00:00:00Z'))/86400000;
+ return '<time datetime="'+e(raw)+'" class="board-friendly-date '+
+  (delta<0?'is-expired':delta<=7?'is-soon':'is-upcoming')+'">'+e(label)+'</time>';
+}
+function boardMemberCell(id,detail){
+ const member=(detail?.members||[]).find(m=>String(m.user_id||m.id||'')===String(id||''));
+ const label=String(member?.display_name||member?.name||member?.email||'Assigned member');
+ const letters=label.split(/[\s@]+/).filter(Boolean).slice(0,2).map(s=>s[0]).join('').toUpperCase();
+ return '<span class="board-member-cell" title="'+e(label)+'"><span class="board-member-initials" aria-hidden="true">'+
+  e(letters||'•')+'</span><span class="board-member-name">'+e(label)+'</span></span>';
+}
+function boardReadableCell(value,definition,detail){
+ if(value===null||value===undefined||value==='')return '<span class="board-empty-cell" aria-label="Empty cell"></span>';
+ const type=definition?.data_type||'text',plain=visibleValue(value,type,definition?.config);
+ if(type==='people')return boardMemberCell(value,detail);
+ if(type==='date')return boardFriendlyDate(value)||'<span class="board-wrap-cell">'+e(plain)+'</span>';
+ if(type==='number'&&typeof value==='number'&&Number.isFinite(value))
+  return '<span class="board-number-cell">'+e(value.toLocaleString('en-US',{maximumFractionDigits:12}))+'</span>';
+ if(type==='checkbox')
+  return '<span class="board-checkbox-cell'+(value===true?' is-checked':'')+'" role="img" aria-label="'+
+   (value===true?'Checked':'Unchecked')+'">'+(value===true?'✓':'')+'</span>';
+ if(type==='dropdown')return '<span class="board-dropdown-tag">'+e(plain)+'</span>';
+ if(type==='rating'&&Number.isInteger(Number(value))&&Number(value)>=0&&Number(value)<=10)
+  return '<span class="board-rating-cell" aria-label="'+e(value)+' stars">'+
+   '★'.repeat(Number(value))+'</span>';
+ if(type==='timeline'&&value&&typeof value==='object')
+  return '<span class="board-timeline-cell"><span class="board-timeline-track" aria-hidden="true"></span><span>'+
+   e(value.start||'')+' → '+e(value.end||'')+'</span></span>';
+ if(type==='url'&&typeof value==='string'&&/^https?:\/\//i.test(value)){
+  let label='Link';
+  try{const url=new URL(value);label=decodeURIComponent(url.pathname.split('/').filter(Boolean).pop()||url.hostname)}catch{}
+  return '<span class="board-file-chip" title="'+e(value)+'"><span aria-hidden="true">↗</span> '+
+   e(label.slice(0,60))+'</span>';
+ }
+ if(type==='text'||type==='long_text'||type==='email')
+  return '<span class="board-wrap-cell" title="'+e(plain)+'">'+e(plain)+'</span>';
+ return '<span class="board-readable-cell">'+e(plain)+'</span>';
+}
 function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle='Record',detail=state.board,columnLabels={},primaryEditable=false){
  const minimal=isItemOnlyBoard(detail,state.boardUi);
  const columns=genericBoardColumns(detail,{primaryTitle,columnLabels,minimal,
@@ -1009,10 +1057,10 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
     cellContent:content});
   };
   cell.record='<button class="board-item-open" type="button" data-action="board-item-detail" data-id="'+e(item.id)+'" aria-label="Open '+e(item.title||'Untitled')+' details">▥</button> '+
-   display('record',e(item.title||'Untitled'));
+   display('record','<span class="board-wrap-cell" title="'+e(item.title||'Untitled')+'">'+e(item.title||'Untitled')+'</span>');
   cell.status=display('status','<span class="status '+statusClass(item.status)+'">'+e(item.status||'Planned')+'</span>');
-  cell.owner=display('owner',item.assignee_id?e(String(item.assignee_id).slice(0,8))+'…':'Unassigned');
-  cell.due=display('due',e(displayDate(item.due_date)));
+  cell.owner=display('owner',boardReadableCell(item.assignee_id,{data_type:'people'},detail));
+  cell.due=display('due',boardReadableCell(item.due_date,{data_type:'date'},detail));
   for(const column of columns.filter(c=>c.key.startsWith('col:'))){
    const def=cellColumn(detail,column.key);
    const value=expectedCellValue(detail,item,column.key);
@@ -1020,7 +1068,7 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
    const formatted=status?
     '<span class="board-configured-status '+statusColorClass(status.color)+'">'+
      e(status.label)+'</span>':
-    e(visibleValue(value,def?.data_type,def?.config));
+    boardReadableCell(value,def,detail);
    cell[column.key]=display(column.key,formatted);
   }
   cell.actions=editable?'<button class="icon-button" data-action="edit-item" data-id="'+
@@ -1036,7 +1084,7 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
   empty:'No items in this group yet',selection:{enabled:true,selected:itemSelection.ids},
   footer:renderGroupAddRow({groupId,enabled:writable,busy:state.inlineAddBusy}),
   summaries:detail?.pagination?.loaded!==true||detail?.pagination?.has_more===true?null:groupColumnSummaries({items,columns,detail}),
-  addColumn:minimal&&state.boardManage,minimal,
+  addColumn:writable&&state.boardManage&&BOARD_STRUCTURE_ADMIN_ENABLED,minimal,
   virtualize:true,primaryEditable});
 }
 
@@ -1097,7 +1145,19 @@ function canRequestBulk(board){
  return auth.isSignedIn&&state.edit&&canBulkEditBoard(board)&&
   !state.bulk02Busy&&itemSelection.size>0&&itemSelection.size<=50;
 }
+/** Collapse affects only presentation; signed records stay mounted and unchanged. */
+const boardGroupCollapsedByScope=new Map();
+function boardGroupCollapseKey(groupId){
+ return [state.context?.user_id,state.context?.workspace_id,state.boardId,groupId].join('|');
+}
+function boardGroupCollapsed(groupId,count){
+ const key=boardGroupCollapseKey(groupId);
+ if(boardGroupCollapsedByScope.has(key))return boardGroupCollapsedByScope.get(key);
+ return count===0&&state.board?.pagination?.loaded===true&&
+  state.board?.pagination?.has_more!==true;
+}
 function groupHeading(group,count){
+ const collapsed=boardGroupCollapsed(group.id,count);
  const id=e(group.id),editing=state.groupEditId===group.id;
  const managedEmpty=state.board?.pagination?.loaded===true&&state.board?.pagination?.has_more!==true&&canSafelyHideEmptyTimeTrackerGroup(state.board?.board,group,
   state.board?.groups||[],state.board?.items||[]);
@@ -1112,9 +1172,9 @@ function groupHeading(group,count){
  const archivedCount=Number.isSafeInteger(group.archived_item_count)?group.archived_item_count:null;
  const archiveSuffix=boardGroupArchiveSuffix(activeCount,archivedCount);
  const groupCountLabel=persistedCount===null?
-  count+(state.board?.pagination?.has_more===true?' loaded':' items'):
+  count+' item'+(count===1?'':'s')+(state.board?.pagination?.has_more===true?' shown':''):
   count===persistedCount?persistedCount+' items'+archiveSuffix:
-   count+' loaded / '+persistedCount+' total'+archiveSuffix;
+   'Showing '+count+' of '+persistedCount+' items'+archiveSuffix;
  const fuelTrackEditable=state.edit&&state.board?.board?.id==='7af78b3f-67bf-4600-9aa1-9006d19d486e'&&
   state.board?.board?.name==='FuelTrack+ v3'&&
   String(state.board.board.description||'').startsWith('[APSYNTRA:MODULE:fueltrack:v1]');
@@ -1125,7 +1185,8 @@ function groupHeading(group,count){
   '<button type="submit" class="primary"'+(state.groupEditBusy?' disabled':'')+'>Save</button>'+
   '<button type="button" class="secondary" data-action="group-inline-cancel"'+(state.groupEditBusy?' disabled':'')+'>Cancel</button>'+
   '</form></div>';
- return '<div class="group-heading" data-group-id="'+id+'"><h3>'+displayTitle+'</h3>'+
+ return '<div class="group-heading'+(collapsed?' is-collapsed':'')+'" data-group-id="'+id+'" data-group-collapsed="'+collapsed+'">'+
+  '<button type="button" class="board-group-toggle" data-action="board-group-toggle" data-id="'+id+'" aria-expanded="'+(!collapsed)+'" aria-label="'+(collapsed?'Expand ':'Collapse ')+displayTitle+' group">'+(collapsed?'▸':'▾')+'</button><h3>'+displayTitle+'</h3>'+
   (fuelTrackEditable?'<button type="button" class="board-group-rename-trigger" data-action="group-inline-edit" data-id="'+id+'" aria-label="Edit name inline for '+displayTitle+'" title="Edit name inline">✎ <span>Edit name</span></button>':'')+
   (state.board?.pagination?.loaded===true?'<small>'+groupCountLabel+'</small>':'')+
   (state.edit?'<details class="board-group-actions"><summary aria-label="Actions for '+displayTitle+
@@ -1333,7 +1394,7 @@ function boardPage(){
  const tabSpecs=[
   ...(isMaterialTrackerBoard(state.board)?[{key:'sourcing',href:'#/boards/'+b.id+'/sourcing',label:'◇ Material Tracker'}]:[]),
   {key:'items',href:'#/boards/'+b.id+(moduleKey==='fueltrans'?'/items':moduleKey==='timetracker'?'/items':''),
-    label:'▤ Board items'+(state.board.pagination?.loaded===true?' <span class="csp-u060">('+boardItemCountLabel+')</span>':'')},
+    label:'▤ Main table'},
   ...(moduleKey==='toolbox'?[{key:'talkbox',href:TALKBOX_APPLICATION_ROUTE,label:'TalkBox application'}]:[]),
   {key:'issues',href:'#/boards/'+b.id+'/issues',
     label:'◇ APSYNTRA Issues <span class="csp-u060">('+state.issues.length+')</span>'},
@@ -1355,9 +1416,9 @@ function boardPage(){
 
  return `<div class="page-head"><div><span class="label-top">Workspace / ${e(workspaceName())} / Board</span>
  <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
- <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><button type="button" class="secondary" data-action="board-share-preview">↗ Share &amp; access</button><button type="button" class="secondary" data-action="board-members">♙ People</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button>${engineeringUi?'<button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button>':''}<button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
+ <div class="head-actions"><details class="board-actions-menu"><summary aria-label="Board options">⋯ Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-activity">Activity history</button><button type="button" data-action="board-share-preview">Share &amp; access</button><button type="button" data-action="board-members">People &amp; members</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button>${engineeringUi?'<button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button>':''}<button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details>
  ${isMaterialSourcingBoard(b)&&state.edit&&['items','sourcing'].includes(state.tab)?'<button class="primary" data-action="mrh-new-part">＋ New part number</button>':''}
- ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ Add item</button>':''}
+ ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ New item</button>':''}
  </div></div>
  <div class="tabs board-draggable-tabs" role="tablist" aria-label="Board views">
  ${tabOrder.map(t=>'<div class="board-tab-slot" data-board-tab-slot="'+e(t.key)+'">'+
@@ -1371,7 +1432,7 @@ function boardPage(){
 ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFundTrackerApplication():state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,otExpandedRequestIds:state.ttOtExpandedRequestIds,clockPendingAction:state.ttClockPending?.action||'clock-out',error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,employeesSearch:state.ttEmployeesSearch,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,adminEligible:state.ttAttendance?.access?.moduleRole==='System Admin',adminDirectory:state.ttLogAdminEditor?.directory||state.ttAttendance?.access?.overviewDirectory||[],adminSelectedIds:state.ttLogSelectedIds,adminEditor:state.ttLogAdminEditor,adminBusy:state.ttLogAdminBusy,adminError:state.ttLogAdminError,adminSuccess:state.ttLogAdminSuccess,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,canCreate:state.boardManage||state.tradeLinkModuleRole==='User',actorId:state.context?.user_id||'',actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='talkbox'&&moduleKey==='toolbox'?renderTalkBoxApplication({page:talkBoxState.page,selected:talkBoxState.selected,busy:talkBoxState.busy,error:talkBoxState.error,canEdit:state.edit}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter loaded items…" value="${e(state.boardItemSearch)}" /></div>
- ${boardColumnMenu(columns,layout)}${state.boardManage&&canManuallyEditBoard(b,true)?'<button type="button" class="secondary" data-action="board-add-column">＋ Add column</button>':''}
+ ${boardColumnMenu(columns,layout)}
  ${moduleKey==='tradelink'&&state.boardManage&&!tradeLinkSetupStatus(state.board).ready?'<button type="button" class="secondary" data-action="tradelink-configure" '+(state.tradeLinkSetupBusy?'disabled':'')+'>'+(state.tradeLinkSetupBusy?'Configuring TradeLink…':'Configure TradeLink columns')+'</button>':''}
   ${moduleKey==='timetracker'&&TT_BOARD_GPS_PROJECTION_ENABLED&&(state.roleVerified===true||state.ttBoardGpsEligible===true)?'<button type="button" class="secondary" data-action="tt-board-gps">Restricted attendance GPS</button>':''}
  ${state.edit&&canManuallyEditBoard(b,true)?'<button type="button" class="secondary" data-action="board-import">⇧ Import CSV/XLSX</button>':''}
@@ -6295,6 +6356,174 @@ async function contextualColumnDelete(key){
    await loadBoard(snapshot.boardId,'items');
   },{submitLabel:plan.submitLabel});
 }
+
+/** Header-adjacent picker: no speculative writes or new server schema. */
+let boardQuickPicker=null,boardQuickPickerTrigger=null;
+const boardRecentColumnTypes=[];
+const boardPlannedColumnTypes=[
+ ['Files','▣'],['Doc','▤'],['Connect boards','⇄'],['Formula','ƒx'],
+ ['Accounts','▣'],['Contacts','♧'],['Time tracking','◷']
+];
+function closeBoardQuickColumnPicker({restoreFocus=false}={}){
+ const previous=boardQuickPickerTrigger;
+ boardQuickPicker?.remove();
+ boardQuickPicker=null;boardQuickPickerTrigger=null;
+ previous?.classList.remove('board-add-column-anchor');
+ if(restoreFocus&&previous?.isConnected)previous.focus();
+}
+function boardQuickTypeTile(entry,{disabled=false}={}){
+ const type=entry.type||'',label=entry.label||'';
+ return '<button class="board-quick-type-choice" type="button"'+
+  (disabled?' disabled title="Requires a separately activated storage and UI contract"':' data-board-quick-type="'+e(type)+'"')+
+  ' data-board-type-search="'+e((label+' '+(entry.keywords||'')+' '+(entry.description||'')).toLowerCase())+'"'+
+  ' data-type="'+e(type||label.toLowerCase().replaceAll(' ','-'))+'">'+
+  '<span class="board-quick-type-icon" aria-hidden="true">'+e(entry.icon||'▤')+'</span>'+
+  '<span class="board-quick-type-info"><strong>'+e(label)+'</strong>'+
+  (disabled?'<small>Not enabled</small>':'')+'</span></button>';
+}
+document.addEventListener('pointerdown',event=>{
+ if(boardQuickPicker?.isConnected&&!boardQuickPicker.contains(event.target)&&
+    !boardQuickPickerTrigger?.contains(event.target))closeBoardQuickColumnPicker();
+},true);
+function openBoardQuickColumnPicker(trigger){
+ if(!trigger?.isConnected||!activeBoardLayout()||!state.boardManage||
+    !BOARD_STRUCTURE_ADMIN_ENABLED||!canManuallyEditBoard(state.board?.board,true))return;
+ if(boardQuickPicker?.isConnected&&boardQuickPickerTrigger===trigger){
+  closeBoardQuickColumnPicker({restoreFocus:true});return;
+ }
+ closeBoardQuickColumnPicker();
+ const catalog=BOARD_STANDARD_COLUMN_CATALOG;
+ const recent=boardRecentColumnTypes.map(type=>catalog.find(entry=>entry.type===type)).filter(Boolean);
+ const tileGroup=(title,entries,disabled=false)=>entries.length?
+  '<section class="board-quick-type-section" data-board-quick-group><h4>'+e(title)+'</h4>'+
+  '<div class="board-quick-type-grid">'+entries.map(entry=>boardQuickTypeTile(entry,{disabled})).join('')+'</div></section>':'';
+ const picker=document.createElement('section');
+ picker.className='board-quick-column-picker';picker.setAttribute('role','dialog');
+ picker.setAttribute('aria-label','Add a board column');
+ picker.innerHTML='<div class="board-quick-picker-heading"><div><strong>Add a column</strong>'+
+  '<p>Choose a supported field type</p></div>'+
+  '<button type="button" data-board-picker-close aria-label="Close column picker">×</button></div>'+
+  '<input type="search" id="board-quick-column-search" data-board-picker-search aria-label="Search column types" placeholder="Search or describe your column" autocomplete="off">'+
+  '<div class="board-quick-picker-list">'+
+   tileGroup('Recently used',recent)+
+   tileGroup('Essentials',catalog.filter(x=>x.group==='Essentials'))+
+   tileGroup('Super useful',catalog.filter(x=>x.group==='Super useful'))+
+   tileGroup('Additional types — planned',boardPlannedColumnTypes.map(([label,icon])=>({label,icon})),true)+
+  '</div><button type="button" class="board-quick-picker-more" data-board-picker-more>More columns &amp; settings…</button>';
+ (trigger.closest('.aps-board-shell')||root).append(picker);
+ boardQuickPicker=picker;boardQuickPickerTrigger=trigger;
+ trigger.classList.add('board-add-column-anchor');
+ const search=picker.querySelector('[data-board-picker-search]');
+ search.addEventListener('input',()=>{
+  const terms=search.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  for(const group of picker.querySelectorAll('[data-board-quick-group]')){
+   let visible=0;
+   for(const tile of group.querySelectorAll('.board-quick-type-choice')){
+    tile.hidden=!terms.every(word=>(tile.dataset.boardTypeSearch||'').includes(word));
+    if(!tile.hidden)visible++;
+   }
+   group.hidden=visible===0;
+  }
+ });
+ picker.addEventListener('keydown',event=>{
+  if(event.key==='Escape'){event.preventDefault();closeBoardQuickColumnPicker({restoreFocus:true});return;}
+  if(!['ArrowRight','ArrowLeft','ArrowDown','ArrowUp'].includes(event.key)||
+     !event.target.matches('.board-quick-type-choice'))return;
+  const tiles=[...picker.querySelectorAll('.board-quick-type-choice:not([hidden]):not(:disabled)')]
+   .filter(tile=>!tile.closest('[hidden]'));
+  const current=tiles.indexOf(event.target);
+  if(current<0||tiles.length<2)return;
+  const step=event.key==='ArrowRight'?1:event.key==='ArrowLeft'?-1:
+   event.key==='ArrowDown'?2:-2;
+  event.preventDefault();tiles[(current+step+tiles.length)%tiles.length].focus();
+ });
+ picker.addEventListener('click',event=>{
+  event.stopPropagation();
+  if(event.target.closest('[data-board-picker-close]')){
+   closeBoardQuickColumnPicker({restoreFocus:true});return;
+  }
+  if(event.target.closest('[data-board-picker-more]')){
+   closeBoardQuickColumnPicker();void openBoardStructure();return;
+  }
+  const tile=event.target.closest('[data-board-quick-type]');
+  if(!tile)return;
+  const type=tile.dataset.boardQuickType;
+  closeBoardQuickColumnPicker();
+  void createBoardQuickColumn(type).catch(notice);
+ });
+ search.focus({preventScroll:true});
+}
+async function createBoardQuickColumn(type){
+ if(!BOARD_STANDARD_COLUMN_CATALOG.some(x=>x.type===type))return;
+ const snapshot=inlineColumnSnapshot();
+ if(!snapshot||!state.boardManage||!BOARD_STRUCTURE_ADMIN_ENABLED||
+    !canManuallyEditBoard(state.board?.board,true))return;
+ const detail=await verifyInlineColumnBoard(snapshot);
+ const label=BOARD_STANDARD_COLUMN_CATALOG.find(x=>x.type===type).label;
+ const base=(type==='long_text'?'Long text':label).slice(0,70);
+ const used=new Set((detail.columns||[]).map(x=>String(x.name||'').trim().toLowerCase()));
+ let name=base,index=2;
+ while(used.has(name.toLowerCase()))name=base+' '+index++;
+ const defaults=type==='status'?'Not started\nWorking on it\nStuck\nDone':
+  type==='dropdown'?'Option 1\nOption 2':'';
+ const selection=resolveColumnTypeSelection(type,defaults);
+ const receipt=await boardStructureClient.mutate(detail,{
+  action:'create',name,type:selection.type,
+  config:parseChoiceConfig(selection.type,selection.options)
+ },{verifiedManagerPreflight:true});
+ if(state.boardId!==snapshot.boardId||state.context?.user_id!==snapshot.userId||
+    state.context?.workspace_id!==snapshot.workspaceId)return;
+ boardRecentColumnTypes.unshift(type);
+ boardRecentColumnTypes.splice(5);
+ await loadBoard(snapshot.boardId,'items');
+ if(state.boardId===snapshot.boardId&&state.context?.user_id===snapshot.userId){
+  toast(name+' column added. Rename it in place.');
+  beginBoardQuickColumnRename('col:'+receipt.column_id);
+ }
+}
+function beginBoardQuickColumnRename(key){
+ if(!state.boardManage||!key?.startsWith('col:')||state.tab!=='items')return;
+ const header=[...root.querySelectorAll('th[data-column-key]')]
+  .find(th=>th.dataset.columnKey===key);
+ const label=header?.querySelector('.board-heading-label');
+ if(!label||label.querySelector('input'))return;
+ const column=resolveInlineColumn(state.board,key,{canManage:true});
+ if(column.kind!=='custom')return;
+ const oldName=column.name,field=document.createElement('input');
+ field.type='text';field.className='board-quick-column-rename';
+ field.maxLength=80;field.value=oldName;field.setAttribute('aria-label','Rename new column');
+ label.textContent='';label.append(field);
+ let cancelled=false,busy=false;
+ const restore=()=>{if(label.isConnected)label.textContent=oldName;};
+ const commit=async()=>{
+  if(cancelled||busy||!field.isConnected)return;
+  const name=field.value.trim();
+  if(name===oldName){restore();return;}
+  if(!name||name.length>80){field.setCustomValidity('Name must contain 1–80 characters');field.reportValidity();return;}
+  busy=true;field.disabled=true;
+  try{
+   const snapshot=inlineColumnSnapshot();
+   const fresh=await verifyInlineColumnBoard(snapshot);
+   const target=resolveInlineColumn(fresh,key,{canManage:true});
+   if(target.name!==oldName)throw new ApiError('Column name changed elsewhere. Refresh.',409);
+   await boardStructureClient.mutate(fresh,{action:'update',columnId:target.id,
+    name,type:target.type,config:target.config,visible:target.visible},
+    {verifiedManagerPreflight:true});
+   await loadBoard(snapshot.boardId,'items');
+   toast('Column renamed.');
+  }catch(error){
+   if(field.isConnected){field.disabled=false;field.focus();field.select();}
+   notice(error);
+  }finally{busy=false;}
+ };
+ field.addEventListener('keydown',event=>{
+  if(event.key==='Enter'){event.preventDefault();void commit();}
+  else if(event.key==='Escape'){event.preventDefault();cancelled=true;restore();}
+ });
+ field.addEventListener('blur',()=>{if(!cancelled&&!busy)void commit();});
+ field.focus({preventScroll:true});field.select();
+}
+
 function contextualColumnCreate(){
  const snapshot=inlineColumnSnapshot();
  if(!snapshot||!state.boardManage||!activeBoardLayout()||
@@ -7866,9 +8095,21 @@ async function action(name,button){
   finally{state.tradeLinkSetupBusy=false;if(state.context?.user_id===userId)render();}
   break;
  }
+ case 'board-group-toggle':{
+  if(state.view!=='board'||state.tab!=='items'||state.board?.board?.id!==state.boardId)return;
+  const id=button.dataset.id;
+  if(!(state.board.groups||[]).some(g=>g.id===id))return;
+  const key=boardGroupCollapseKey(id);
+  const collapsed=button.getAttribute('aria-expanded')==='true';
+  boardGroupCollapsedByScope.set(key,collapsed);
+  render();
+  [...root.querySelectorAll('[data-action="board-group-toggle"]')]
+   .find(el=>el.dataset.id===id)?.focus({preventScroll:true});
+  break;
+ }
  case 'board-add-column':{
   if(!activeBoardLayout()||!state.boardManage)return;
-  contextualColumnCreate();break;
+  openBoardQuickColumnPicker(button);break;
  }
  case 'tt-board-gps':{try{await openTimeTrackerBoardProjectedGps();}catch(err){notice(err);}break;}
  case 'mrh-export-csv':{

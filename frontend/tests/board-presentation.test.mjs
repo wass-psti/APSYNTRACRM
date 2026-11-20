@@ -100,3 +100,27 @@ test('UI only persists presentation layout and uses existing signed audit API',(
  assert.match(css,/\.board-frozen-column/);
  assert.doesNotMatch(app,/Build with Vibe|monday\.com/);
 });
+
+test('redesigned shared table preserves selection, readable empties and the single compact column control',()=>{
+ const html=boardTable({
+  groupId:c,columns:[{key:'record',title:'Item'},{key:'status',title:'Status'}],
+  rows:[{itemId:a,search:'sample',cells:{record:'A sample board item'}}],
+  selection:{enabled:true,selected:new Set([a])},addColumn:true,
+  layout:normalizeLayout({},[],['record','status'])
+ });
+ assert.match(html,/class="board-row-selected" aria-selected="true"/);
+ assert.match(html,/data-board-select-item=/,'existing bulk checkbox contract is preserved');
+ assert.match(html,/data-action="board-add-column" aria-label="Add a new board column"/);
+ assert.match(html,/<col width="56">/);
+ assert.match(html,/class="board-empty-cell"/);
+ assert.equal(normalizeLayout({},[],['record','status']).widths.record,290);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/function openBoardQuickColumnPicker\(trigger\)/);
+ assert.match(app,/BOARD_STANDARD_COLUMN_CATALOG/);
+ assert.match(app,/function createBoardQuickColumn\(type\)/);
+ assert.match(app,/await verifyInlineColumnBoard\(snapshot\)/);
+ assert.match(app,/beginBoardQuickColumnRename\('col:'\+receipt\.column_id\)/);
+ const css=readFileSync('frontend/monday-inspired-ui.css','utf8');
+ assert.match(css,/APSYNTRA Board Readability 2026/);
+ assert.match(css,/html\[data-aps-monday-theme="dark"\] #app \.aps-board-shell/);
+});

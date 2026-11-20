@@ -28,7 +28,7 @@ test('mentions remain a local text draft: no posts, notifications or network cal
  assert.match(app,/mountAvatarImages\(view,profileAvatarClient,null,null\)/);
  assert.match(app,/mentionCandidates\(people,editor\.value,editor\.selectionStart\)/);
  assert.match(app,/case 'board-members'/);
- assert.match(app,/data-action="board-members">♙ People/);
+ assert.match(app,/data-action="board-members">People &amp; members/);
  assert.doesNotMatch(readFileSync('frontend/board/collaboration/people.js','utf8'),
   /wm_add_board_member|fetch\(|\.rpc\(|\.authorized\(|localStorage|sessionStorage/);
 });
