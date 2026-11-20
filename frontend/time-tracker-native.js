@@ -18,7 +18,7 @@ const stateKey='timetracker.attendance.v1';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const TT_DEPARTMENTS=Object.freeze([
  'HR','Materials and Logistics','Engineering','Finance and Accounting',
- 'Sales and Marketing','Information Technology'
+ 'Sales and Marketing','Information Technology','General Administration'
 ]);
 export const TT_ROLES=Object.freeze([
  'System Admin','IT Administrator','HR','Supervisor','Finance','OJT','Employee'
@@ -169,6 +169,11 @@ export class TimeTrackerNativeClient{
   const autoClockoutRead=this.api.rpc('timetracker_auto_clockout_snapshot',{p_board_id:boardId})
    .then(response=>({response}),error=>({error}));
   const clockRead=this.attendanceCapability(boardId,access);
+  // Department is a signed, workspace-scoped employee record, not a browser field.
+  // A missing deployment leaves Clock In unavailable rather than guessing.
+  const departmentRead=this.api.rpc('timetracker_employee_department_for_clock',{
+   p_board_id:boardId
+  }).then(response=>({response}),error=>({error}));
   const raw=await this.api.rpc('list_module_state',{p_module_id:moduleId});
   if(!Array.isArray(raw))deny('TimeTracker state API contract invalid');
   const row=raw.find(x=>x?.state_key===stateKey&&x.scope==='shared');
@@ -251,8 +256,23 @@ export class TimeTrackerNativeClient{
    autoClockoutUnavailable=true;
   }
   const attendanceWritesAccepted=await clockRead;
+  const departmentReply=await departmentRead;
+  let employeeDepartment=null;
+  if(!departmentReply.error){
+   const response=departmentReply.response;
+   if(!isRecord(response)||response.contract!=='tt-department-1'||
+      response.actorId!==access.userId||response.workspaceId!==access.workspaceId||
+      response.boardId!==boardId||
+      (response.department!==null&&!TT_DEPARTMENTS.includes(response.department)))
+    deny('Signed employee department contract invalid');
+   employeeDepartment=response.department;
+  }else if(!/PGRST202|Could not find the function|Unexpected RPC timetracker_employee_department_for_clock/
+    .test(String(departmentReply.error?.message||departmentReply.error))){
+   // No stale/fabricated department after a failed authenticated read.
+   deny('Signed employee department lookup unavailable');
+  }
   await checkIdentity(this.auth,this.api,access,boardId);
-  return {status:'VERIFIED_READ',access:{...access,...otAccess,attendanceWritesAccepted},records,otRequests,autoClockout,autoClockoutUnavailable,overview,log,revision:row?Number(row.revision):0,
+  return {status:'VERIFIED_READ',access:{...access,...otAccess,attendanceWritesAccepted,employeeDepartment},records,otRequests,autoClockout,autoClockoutUnavailable,overview,log,revision:row?Number(row.revision):0,
    active:records.find(x=>x.status==='Active')||null};
  }
  /** A fresh independently guarded bootstrap read; no Team information for normal users. */
@@ -410,9 +430,12 @@ export class TimeTrackerNativeClient{
   if(action==='clock-out'&&!before.active)deny('No active clock-in session');
   // Clock Out inherits the signed server-recorded context, never mutable form fields.
   const committedLocation=action==='clock-out'?before.active.location:location;
-  const committedDepartment=action==='clock-out'?before.active.department:department;
+  const committedDepartment=action==='clock-out'?before.active.department:
+   before.access.employeeDepartment;
   if(!TT_LOCATIONS.includes(committedLocation)||!TT_DEPARTMENTS.includes(committedDepartment))
-   deny('Attendance location and department require an authorized session');
+   deny('A verified employee department and valid location are required');
+  // The caller's department field (if supplied by an old client) is NEVER
+  // authoritative. The SQL write endpoint independently enforces the mapping.
   const note=String(workNote||'').trim();
   if(note.length>500)deny('Work note exceeds 500 characters');
   if(committedLocation==='Offsite (Home)'&&before.access.moduleRole!=='System Admin'&&!note)
