@@ -25,7 +25,7 @@ The adapter sends a single message addressed only to the normalized recipient, w
 ## Verified / pending
 
 - Local unit and integration/source tests verify SMTP 465/TLS, SMTP 587/STARTTLS, outbound envelope, supported sender, no unsafe header/body injection, missing credentials, ambiguous results, one send only, no secret/token response, stable SMTP ledger message ID, and unchanged Resend path.
-- Deployment of updated trusted Edge route may be made only in the **existing isolated staging branch** with current invitation feature gates **OFF**. Do not deploy to production without the separate production-role/config/data impact approval.
+- **Executed staging-only deployment:** trusted `ws02d-invite` upgraded to **v4** in existing isolated branch `jeqwjlxubntsddeauvqa` using the pinned optional SMTP module; `verify_jwt=true`. Live HTTPS unsigned POST to invite, accept and manage all returned HTTP **401**. SQL invitation issuance flag remains **OFF** with zero Auth users, memberships, invites or delivery receipts. Staging SMTP secrets were not installed and no message was sent. Do not deploy to production without a separate production configuration/data impact approval.
 - Real signed staging invite/accept remains **BLOCKED** while there are zero test users, no approved staged sender credentials, and an inactive SQL invitation feature gate. After both users verify via GoTrue, a controlled staging-only provider/inbox acceptance can proceed, including registration for new users, existing-user matching, refresh/logout/relogin and workspace selection/URM readback.
 
 ## Next acceptance milestone
