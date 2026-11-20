@@ -92,7 +92,7 @@ test('review SQL carries ID-backed protected team, last-admin, audit and revisio
  for(const code of ['is_system boolean','PRIMARY KEY(team_id,user_id)',
   'private.apsyntra_system_admin_grants','private.apsyntra_teams_audit_log',
   'apsyntra_team_is_system_admin','apsyntra_team_effective_board_role',
-  'Last System Admin cannot be removed','apsyntra_teams_snapshot',
+  'last System Admin cannot be removed','apsyntra_teams_snapshot',
   'apsyntra_teams_change','p_expected_revision','FORCE ROW LEVEL SECURITY',
   'approved_seed_admin','General administration cannot be deleted']){
   assert.ok(sql.includes(code),'missing '+code);
