@@ -3,6 +3,7 @@
  */
 import {ROLE_MODULE_OPTIONS} from './role-configuration-ui.js';
 import {roleConfigurationIcon} from './role-configuration-visuals.js';
+
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const APSYNTRA_CRM_PLATFORM_ROLES=Object.freeze(['admin','supervisor','employee','viewer']);
@@ -362,7 +363,55 @@ function accountRoleLabel(data,user){
  return 'CRM '+crm.effectiveRole+' ('+crmRoleSourceLabel(crm)+')'+
   ' · Identity '+user.platformRole;
 }
-export function renderUserRoleManagement({verified=false,data=null,selectedUserId=null,actorUserId=null,busy=false,error='',accessSection='applications',boardSearch='',batchMode=false,batchSelected=[],batchScope='module',batchResource='',batchRole='viewer',batchAction='assign',batchMemberSearch=''}={}){
+export function renderSystemAdminSection({data=null,selectedUser=null,actorId=null,busy=false,hidden=false,loading=false,error=''}={}){
+ const verified=data?.status==='VERIFIED_SYSTEM_ADMIN';
+ const member=verified&&selectedUser?data.roles.find(p=>p.userId===selectedUser.id):null;
+ const count=verified?data.roles.filter(p=>p.active).length:null;
+ const isSelf=selectedUser?.id===actorId;
+ const canEdit=verified&&data.canManage===true&&!busy&&!isSelf&&!!member;
+ const protectedIdentity=selectedUser?.protected===true;
+ const canRevoke=canEdit&&member.active&&!protectedIdentity&&count>1;
+ const canGrant=canEdit&&!member.active;
+ const description=member?.designation==='trusted_it'?'Trusted IT administrator':
+   member?.designation==='general_manager'?'General Manager / CEO':'No System Admin assignment';
+ return '<section class="user-role-access-section" data-role-access-section="system-admins"'+
+  ' aria-label="System Admin management"'+(hidden?' hidden':'')+'>'+
+  '<div class="section-header user-role-section-header"><strong>System Admin</strong>'+
+   '<span class="status '+(verified?'done':'todo')+'">'+
+    (verified?'Verified global-role directory':loading?'Checking authorization':'Pending backend activation')+'</span></div>'+
+  '<div class="note security-note user-role-ceiling-note">System Admin is an explicitly appointed, global APSYNTRA authority for the trusted IT administration team and General Manager / CEO. Assigning the Information Technology department or the TimeTracker System Admin application role does not confer this role. Operational powers remain subject to each server-side domain policy and signed authorization.</div>'+
+  (verified?
+   '<div class="panel user-role-platform-panel"><div class="panel-body">'+
+    '<div class="settings-detail"><label>Selected account</label><strong>'+
+     esc(selectedUser?.name||selectedUser?.email||'None')+'</strong></div>'+
+    '<div class="settings-detail"><label>System Admin assignment</label><strong>'+
+     (member?.active?'Active — '+esc(description):'Not assigned')+'</strong></div>'+
+    '<div class="settings-detail"><label>Verified active members in this workspace</label><strong>'+
+     String(count)+'</strong></div>'+
+    '<div class="settings-detail"><label>Assignment governance</label><strong>'+
+     (data.canManage?'System Admin / bootstrap authorized':'View only — System Admin approval required')+
+    '</strong></div>'+
+    '<div class="user-role-system-admin-actions">'+
+     (!member?.active?
+      '<button type="button" class="secondary" data-action="user-role-grant-system-admin" data-user-id="'+
+       esc(selectedUser?.id)+'"'+(canGrant?'':' disabled')+'>Assign System Admin</button>':
+      '<button type="button" class="secondary" data-action="user-role-revoke-system-admin" data-user-id="'+
+       esc(selectedUser?.id)+'"'+(canRevoke?'':' disabled')+'>Revoke System Admin</button>')+
+    '</div></div></div>'+
+    '<p class="muted user-role-boundary-note">'+
+     (isSelf?'Self-assignment and self-revocation are prohibited.':
+      protectedIdentity&&member?.active?'Protected bootstrap accounts cannot be demoted from System Admin.':
+      count<=1&&member?.active?'The last active System Admin cannot be revoked.':
+      'All changes require a recorded justification, server authorization and signed readback.')+
+    '</p>':
+   '<div class="panel user-role-platform-panel"><div class="panel-body">'+
+    '<div class="note" role="status">'+(loading?'Checking signed System Admin authorization…':
+     error?esc(error):'The System Admin management backend is not activated. No global administrator accounts have been inferred or changed. A reviewed SQL activation and signed multi-account acceptance are required before assignments can be made.')+'</div>'+
+   '</div></div>')+
+  '</section>';
+}
+
+export function renderUserRoleManagement({verified=false,data=null,selectedUserId=null,actorUserId=null,busy=false,error='',accessSection='applications',systemAdminData=null,systemAdminBusy=false,systemAdminError='',boardSearch='',batchMode=false,batchSelected=[],batchScope='module',batchResource='',batchRole='viewer',batchAction='assign',batchMemberSearch=''}={}){
  if(!verified)return '<div class="access-denied">Role management unavailable</div>';
  let html='<div class="aps-user-role-management"><section class="page-head user-role-hero user-role-entrance" aria-labelledby="user-role-title"><div class="user-role-hero-copy"><span class="label-top"><span class="user-role-hero-dot" aria-hidden="true"></span>Administration / CRM Admin</span>'+
  '<h1 id="user-role-title">User Role Management<span class="user-role-heading-stop">.</span></h1><p>Manage APSYNTRA CRM platform, application and board roles from the central backend.</p></div>'+
@@ -454,10 +503,11 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  (!data.fueltransWorkspaceAvailable?'<div class="note user-role-fueltrans-scope-unavailable">FuelTrans role changes require its authoritative workspace membership integration. The legacy global role action is disabled to prevent assigning a role in another workspace.</div>':'')+
  (!data.workspaceScopedMrhAvailable?'<div class="note security-note user-role-mrh-scope-unavailable">Workspace-scoped Material Request Hub role management is not yet confirmed by the backend. Its role changes remain disabled until the CP-RC03 migration is installed.</div>':'')+
  '</div></section>';
- const section=accessSection==='boards'?'boards':'applications';
+ const section=['applications','boards','system-admins'].includes(accessSection)?accessSection:'applications';
  html+='<nav class="user-role-access-nav" aria-label="Access configuration sections" role="group">'+
   '<button type="button" data-action="user-role-section" data-section="applications" aria-pressed="'+(section==='applications')+'">Application access</button>'+
-  '<button type="button" data-action="user-role-section" data-section="boards" aria-pressed="'+(section==='boards')+'">Board access ('+data.boards.length.toLocaleString('en-US')+')</button></nav>'+
+  '<button type="button" data-action="user-role-section" data-section="boards" aria-pressed="'+(section==='boards')+'">Board access ('+data.boards.length.toLocaleString('en-US')+')</button>'+
+  '<button type="button" data-action="user-role-section" data-section="system-admins" aria-pressed="'+(section==='system-admins')+'">System Admin</button></nav>'+
   '<section class="user-role-access-section" data-role-access-section="applications" aria-label="Application access settings"'+(section==='applications'?'':' hidden')+'>';
  const locked=!!u.protected||isSelf||busy;
  const crm=data.crmPlatformRoles?.find(r=>r.userId===u.id)||null;
@@ -544,5 +594,6 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   '</td></tr>';
  }
  html+='</tbody></table></div></div><p class="muted user-role-boundary-note">'+roleConfigurationIcon('shield')+'<span>The existing backend still governs approval, export, finance and domain-specific operations separately. A board membership alone does not grant access to sensitive domain records.</span></p>';
- return html+'</section></div>';
+ return html+'</section>'+renderSystemAdminSection({data:systemAdminData,
+   selectedUser:u,actorId:actorUserId,busy,hidden:section!=='system-admins',loading:systemAdminBusy,error:systemAdminError})+'</div>';
 }

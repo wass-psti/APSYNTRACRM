@@ -67,7 +67,7 @@ export function renderBoardInviteDialog({people,directory,workspaceName='',manag
    '<div class="aps-invite-heading-actions"><button class="aps-invite-feedback" type="button" disabled title="Feedback is not configured" aria-label="Feedback unavailable">◉</button>'+
    '<button type="button" class="aps-invite-close" data-aps-invite-close aria-label="Close invitation dialog">×</button></div></header>'+
   '<div class="aps-invite-search-region"><label class="aps-invite-sr" for="aps-invite-search">Search workspace members</label>'+
-   '<input type="search" id="aps-invite-search" role="combobox" aria-expanded="'+Boolean(query.trim()&&searchEnabled)+
+   '<input type="text" inputmode="search" id="aps-invite-search" role="combobox" aria-expanded="'+Boolean(query.trim()&&searchEnabled)+
    '" aria-controls="aps-invite-matches" aria-autocomplete="list" placeholder="Search workspace people by name or email"'+
    ' maxlength="120" autocomplete="off" value="'+esc(query)+'"'+(!searchEnabled?' disabled':'')+' />'+
    '<div class="aps-invite-search-results" data-aps-invite-suggestions>'+

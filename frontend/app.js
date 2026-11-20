@@ -403,10 +403,18 @@ const timeTracker=new TimeTrackerNativeClient({auth,api:db});
 const fundTracker=new FundTrackerNativeClient({auth,api:db});
 const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
+let systemAdminClient=null;
+async function getSystemAdminClient(){
+ if(!systemAdminClient){
+  const {SystemAdminClient}=await import('./system-admin-access.js');
+  systemAdminClient=new SystemAdminClient(db);
+ }
+ return systemAdminClient;
+}
 let performanceProfileAbort=null;
 const startupCriticalPath=createStartupCriticalPath();
 const state={performanceBusy:false,performanceReport:null,context:null,boardCatalogError:'',crmRoleSnapshot:null,workspaceRelationSnapshot:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',boardItemSearch:'',mrhTrackerFilters:{...MATERIAL_TRACKER_DEFAULT_FILTERS},mrhTrackerScope:'',mrhAddView:false,mrhAddBusy:false,groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,boardPageBusy:false,boardPageError:'',issues:[],edit:false,boardManage:false,
-  view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceView:'tracker',frtStatusFilter:'all',ttStandalone:false,frtStandalone:false,tlStandalone:false,fuelTrackStandalone:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttClockCorrectionNotice:'',ttClockStage:'idle',ttGeoPromptVisible:false,ttGeoPermission:'unknown',ttGeoMessage:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtExpandedRequestIds:[],ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttLogSelectedIds:[],ttLogAdminEditor:null,ttLogAdminDeleteConfirm:null,ttLogAdminBusy:false,ttLogAdminError:'',ttLogAdminSuccess:'',ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttEmployeesSearch:'',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkModuleRole:'',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkAnalytics:null,tradeLinkAnalyticsBusy:false,tradeLinkAnalyticsRunId:0,tradeLinkAnalyticsError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,adminVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleSection:'applications',userRoleBoardSearch:'',userRoleBatchMode:false,userRoleBatchSelected:[],userRoleBatchMemberSearch:'',userRoleBatchIdentity:'',userRoleBatchScope:'module',userRoleBatchResource:'',userRoleBatchRole:'',userRoleBatchAction:'assign',userRoleBusy:false,userRoleError:''};
+  view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceView:'tracker',frtStatusFilter:'all',ttStandalone:false,frtStandalone:false,tlStandalone:false,fuelTrackStandalone:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttClockCorrectionNotice:'',ttClockStage:'idle',ttGeoPromptVisible:false,ttGeoPermission:'unknown',ttGeoMessage:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtExpandedRequestIds:[],ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttLogSelectedIds:[],ttLogAdminEditor:null,ttLogAdminDeleteConfirm:null,ttLogAdminBusy:false,ttLogAdminError:'',ttLogAdminSuccess:'',ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttEmployeesSearch:'',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkModuleRole:'',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkAnalytics:null,tradeLinkAnalyticsBusy:false,tradeLinkAnalyticsRunId:0,tradeLinkAnalyticsError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,adminVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleSection:'applications',userRoleBoardSearch:'',userRoleBatchMode:false,userRoleBatchSelected:[],userRoleBatchMemberSearch:'',userRoleBatchIdentity:'',userRoleBatchScope:'module',userRoleBatchResource:'',userRoleBatchRole:'',userRoleBatchAction:'assign',userRoleBusy:false,userRoleError:'',systemAdminData:null,systemAdminBusy:false,systemAdminError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -1778,7 +1786,7 @@ function render(){
  }));
  else if(state.view==='security')shell(renderSecurityAcceptance({context:state.context,report:state.securityResult,busy:state.securityBusy,progress:state.securityProgress,writeResult:state.securityWriteResult,writeBusy:state.securityWriteBusy,frtResult:state.frtSecurityResult,frtBusy:state.frtSecurityBusy,ci07Result:state.ci07Result,ci07Busy:state.ci07Busy,sec14Result:state.sec14Result,sec14Busy:state.sec14Busy,sec14DenialResult:state.sec14DenialResult,sec14DenialBusy:state.sec14DenialBusy,sec07Result:state.sec07Result,sec07Busy:state.sec07Busy,sec09Result:state.sec09Result,sec09Busy:state.sec09Busy,sec10Result:state.sec10Result,sec10Busy:state.sec10Busy,sec10Boards:state.boards,sec10IsBootstrap:state.roleVerified===true,effectiveAccessResult:state.effectiveAccessResult,effectiveAccessBusy:state.effectiveAccessBusy,sec10BoardsError:state.securityBoardsError})+renderTradeLinkStageAAcceptance({busy:state.tl03ReadBusy,report:state.tl03ReadResult})+renderTradeLinkSessionRevocation({armed:state.tl03RevokeArmed,report:state.tl03RevokedReport})+renderWs01B2SignedAcceptance({busy:state.ws01B2Busy,report:state.ws01B2Result})+renderWs02dB3SignedPreflight({busy:state.ws02dB3Busy,report:state.ws02dB3Report})+renderWs02dB3DeployedHttpsAcceptance({busy:state.ws02dB3HttpsBusy,result:state.ws02dB3HttpsReport})+renderWs02dB3ForeignRlsDenial({busy:state.ws02dB3RlsBusy,result:state.ws02dB3RlsReport,hasFixture:hasWs02dB3ForeignRlsFixture()})+renderWs02dB3LocalRevocation({armed:state.ws02dB3RevokeArmed,report:state.ws02dB3RevokedReport})+renderB2SignedQaFixture({busy:state.b2QaBusy,result:state.b2QaReport})+renderB4SignedRecoveryPreflight({busy:state.b4QaBusy,report:state.b4QaReport})+renderPhaseBSignedDenial({busy:state.phaseBDenialBusy,report:state.phaseBDenialReport}));
  else if(state.view==='role-configuration')shell(renderRoleConfiguration({verified:state.adminVerified,loading:state.roleBusy,data:state.roleData,tab:state.roleTab,error:state.roleError}));
- else if(state.view==='user-role-management')shell(renderUserRoleManagement({verified:state.adminVerified,data:state.userRoleData,selectedUserId:state.userRoleSelected,actorUserId:state.context?.user_id,accessSection:state.userRoleSection,boardSearch:state.userRoleBoardSearch,batchMode:state.userRoleBatchMode,batchSelected:state.userRoleBatchSelected,batchMemberSearch:state.userRoleBatchMemberSearch,batchScope:state.userRoleBatchScope,batchResource:state.userRoleBatchResource,batchRole:state.userRoleBatchRole,batchAction:state.userRoleBatchAction,busy:state.userRoleBusy,error:state.userRoleError}));
+ else if(state.view==='user-role-management')shell(renderUserRoleManagement({verified:state.adminVerified,data:state.userRoleData,selectedUserId:state.userRoleSelected,actorUserId:state.context?.user_id,accessSection:state.userRoleSection,systemAdminData:state.systemAdminData?.workspaceId===state.context?.workspace_id&&state.systemAdminData?.actorId===state.context?.user_id?state.systemAdminData:null,systemAdminBusy:state.systemAdminBusy,systemAdminError:state.systemAdminError,boardSearch:state.userRoleBoardSearch,batchMode:state.userRoleBatchMode,batchSelected:state.userRoleBatchSelected,batchMemberSearch:state.userRoleBatchMemberSearch,batchScope:state.userRoleBatchScope,batchResource:state.userRoleBatchResource,batchRole:state.userRoleBatchRole,batchAction:state.userRoleBatchAction,busy:state.userRoleBusy,error:state.userRoleError}));
  else if(state.view==='invitation')shell(renderInvitationAcceptance({
   pending:pendingInvitation,enabled:true,
   busy:invitationAcceptanceBusy,status:invitationAcceptanceStatus
@@ -2111,7 +2119,7 @@ function invalidateSignedSyncView(){
  workspaceRelationReadGeneration++;state.workspaceRelationSnapshot=null;
  state.board=null;state.boardUi=null;state.boards=[];state.tradeLinkDraft=initialTradeLinkDraftView();
  state.ttAttendance=null;state.ttBoardAttendance=null;state.ttBoardGpsEligible=false;state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';
- state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;
+ state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';
  boardCacheChannel.stop();db.invalidateBoardCache();state.context=null;auth.clear();
  renderLogin('Your signed workspace access changed. Sign in again to continue.');
 }
@@ -2478,13 +2486,15 @@ async function refreshWorkspace(){
  state.adminVerified=await roleConfig.adminVerified().catch(()=>false);
  void refreshSignedCrmRole({force:true}).catch(()=>{});
  void refreshSignedWorkspaceRelation().catch(()=>{});
- if(!state.roleVerified){state.roleData=null;state.roleError='';state.userRoleData=null;state.ttTeam=null;state.ttTeamRunId++;state.ttTeamError='';}
+ if(!state.roleVerified){state.roleData=null;state.roleError='';state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.ttTeam=null;state.ttTeamRunId++;state.ttTeamError='';}
 }
 async function loadUserRoleManagement(){
  if(state.adminVerified!==true || !(await roleConfig.adminVerified()))throw new ApiError('CRM administrator role management access denied.',403);
  const ctx=await db.context();
  if(ctx.user_id!==state.context?.user_id||ctx.workspace_id!==state.context?.workspace_id)throw new ApiError('Authoritative workspace changed.',403);
  state.userRoleData=await userRoleManager.snapshot(ctx.workspace_id,{includeFuelTrans:true,includeFundTracker:true,includeScopedSix:true,includeCharter:true});
+ if(state.systemAdminData?.workspaceId!==ctx.workspace_id||state.systemAdminData?.actorId!==ctx.user_id)
+  state.systemAdminData=null;
  const batchIdentity=ctx.workspace_id+':'+ctx.user_id;
  if(state.userRoleBatchIdentity!==batchIdentity){
   state.userRoleBatchSelected=[];
@@ -2499,6 +2509,25 @@ async function loadUserRoleManagement(){
   !user.protected&&user.id!==state.context?.user_id).map(user=>user.id));
  state.userRoleBatchSelected=state.userRoleBatchSelected.filter(id=>validTargets.has(id));
 
+}
+async function loadSystemAdminManagement(){
+ if(state.adminVerified!==true||!state.userRoleData||
+    !(await roleConfig.adminVerified()))
+   throw new ApiError('CRM administrator verification required.',403);
+ const identity=await auth.getVerifiedUser(),ctx=await db.context();
+ if(identity?.id!==ctx.user_id||ctx.user_id!==state.context?.user_id||
+    ctx.workspace_id!==state.context?.workspace_id)
+   throw new ApiError('System Admin workspace scope changed.',403);
+ const snapshot=await (await getSystemAdminClient()).snapshot({
+  workspaceId:ctx.workspace_id,actorId:ctx.user_id,users:state.userRoleData.users
+ });
+ if(!auth.isSignedIn||auth.userId!==identity.id||
+    state.context?.user_id!==ctx.user_id||state.context?.workspace_id!==ctx.workspace_id)
+   throw new ApiError('System Admin session changed during the read.',403);
+ state.systemAdminData=snapshot.status==='VERIFIED_SYSTEM_ADMIN'?snapshot:
+  {status:'UNAVAILABLE',roles:[],canManage:false,workspaceId:ctx.workspace_id,actorId:ctx.user_id};
+ state.systemAdminError='';
+ return state.systemAdminData;
 }
 async function applyUserRoleChange({userId,scope,resourceId,role,enabled,expectedUpdatedAt}){
  if(state.adminVerified!==true||!(await roleConfig.adminVerified()))throw new ApiError('CRM Administrator required.',403);
@@ -7118,7 +7147,7 @@ async function action(name,button){
       state.ws02dB3HandoffPending=true;
       await auth.signOut({scope:'local'});
     }
-    state.row01Busy=false;state.row01Result=null;state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;if(!isB3LocalRevoke&&!isTl03LocalRevoke&&!isB3RlsHandoff)await auth.signOut();timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtExpandedRequestIds=[];state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};boardCacheChannel.stop();db.invalidateBoardCache();state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;state.tl03ReadRunId++;state.tl03ReadBusy=false;state.tl03ReadResult=null;state.context=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.ws02dB3RevokeArmed=false;state.ws02dB3RevokedReport=revoked;state.b2QaRunId++;state.b2QaBusy=false;state.b2QaReport=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';state.tl03RevokeArmed=false;state.tl03RevokedReport=isTl03LocalRevoke?state.tl03RevokedReport:null;renderLogin();toast(isB3RlsHandoff?'Local sign-out complete. Sign in as another existing user in another workspace; then click B3 Step 2 without refreshing.':
+    state.row01Busy=false;state.row01Result=null;state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;if(!isB3LocalRevoke&&!isTl03LocalRevoke&&!isB3RlsHandoff)await auth.signOut();timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtExpandedRequestIds=[];state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};boardCacheChannel.stop();db.invalidateBoardCache();state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;state.tl03ReadRunId++;state.tl03ReadBusy=false;state.tl03ReadResult=null;state.context=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.ws02dB3RevokeArmed=false;state.ws02dB3RevokedReport=revoked;state.b2QaRunId++;state.b2QaBusy=false;state.b2QaReport=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';state.tl03RevokeArmed=false;state.tl03RevokedReport=isTl03LocalRevoke?state.tl03RevokedReport:null;renderLogin();toast(isB3RlsHandoff?'Local sign-out complete. Sign in as another existing user in another workspace; then click B3 Step 2 without refreshing.':
      isTl03LocalRevoke?'Signed out of this session only. TradeLink revocation: '+(state.tl03RevokedReport?.status||'BLOCKED')+'.':
      isB3LocalRevoke?'Signed out of this session only. B3 revocation: '+(revoked?.status||'BLOCKED')+'.':'Signed out successfully.');break;}
  case 'ws01-open':{
@@ -9592,16 +9621,97 @@ async function action(name,button){
  case 'user-role-section':{
    if(!state.adminVerified||state.view!=='user-role-management')break;
    const section=button.dataset.section;
-   if(!['applications','boards'].includes(section)||state.userRoleSection===section)break;
+   if(!['applications','boards','system-admins'].includes(section)||
+      state.userRoleSection===section)break;
    state.userRoleSection=section;
    render();
+   if(section==='system-admins'){
+    state.systemAdminBusy=true;render();
+    try{await loadSystemAdminManagement();}
+    catch(err){
+     state.systemAdminData=null;
+     state.systemAdminError='Unable to verify the System Admin backend. No role assignments were changed.';
+     notice(err);
+    }finally{state.systemAdminBusy=false;render();}
+   }
    break;
  }
  case 'user-role-refresh':{
    if(!state.adminVerified||state.userRoleBusy)return;
    state.userRoleBusy=true;render();
-   try{await loadUserRoleManagement();}catch(err){state.userRoleError=errorMessage(err);notice(err);}
+   try{
+    await loadUserRoleManagement();
+    if(state.userRoleSection==='system-admins')await loadSystemAdminManagement();
+   }catch(err){state.userRoleError=errorMessage(err);notice(err);}
    finally{state.userRoleBusy=false;render();}
+   break;
+ }
+ case 'user-role-grant-system-admin':
+ case 'user-role-revoke-system-admin':{
+   if(state.view!=='user-role-management'||state.adminVerified!==true||
+      state.userRoleBusy||state.systemAdminBusy||!state.userRoleData)return;
+   const snapshot=state.systemAdminData;
+   if(snapshot?.status!=='VERIFIED_SYSTEM_ADMIN'||snapshot.canManage!==true||
+      snapshot.workspaceId!==state.context?.workspace_id||
+      snapshot.actorId!==state.context?.user_id)
+    throw new ApiError('Signed System Admin authority is unavailable.',403);
+   const targetId=button.dataset.userId;
+   if(targetId!==state.userRoleSelected||targetId===state.context.user_id)
+    throw new ApiError('System Admin self-assignment or stale target denied.',403);
+   const target=state.userRoleData.users.find(u=>u.id===targetId);
+   const role=snapshot.roles.find(r=>r.userId===targetId);
+   const revoking=name==='user-role-revoke-system-admin';
+   const count=snapshot.roles.filter(r=>r.active).length;
+   if(!target||!role||revoking&&(!role.active||target.protected||count<=1)||
+      !revoking&&role.active)
+    throw new ApiError('Protected, last-admin or stale System Admin assignment.',403);
+   const designation=revoking?role.designation:null;
+   const fields='<div class="note">System Admin is a global designation reserved for trusted IT '+ 
+     'administrators and the General Manager / CEO. Employee departments never confer '+ 
+     'administrative authority. Changes are audited; self-promotion is prohibited.</div>'+
+     (revoking?'':select('Explicit designation','designation',[
+      ['trusted_it','Trusted IT administrator'],['general_manager','General Manager / CEO']
+     ],'trusted_it'))+
+     input('Reason for change (minimum 12 characters)','reason','','text',true);
+   openModal(revoking?'Revoke System Admin':'Assign System Admin',fields,async fd=>{
+    const requestedDesignation=revoking?designation:String(fd.get('designation')||'');
+    const reason=String(fd.get('reason')||'').trim();
+    if(!['trusted_it','general_manager'].includes(requestedDesignation)||
+       reason.length<12||reason.length>180)
+     throw new ApiError('Choose a valid designation and provide at least 12 characters of justification.',400);
+    state.userRoleBusy=true;
+    try{
+     const identity=await auth.getVerifiedUser(),ctx=await db.context();
+     if(identity?.id!==snapshot.actorId||ctx.user_id!==snapshot.actorId||
+        ctx.workspace_id!==snapshot.workspaceId||
+        state.context?.user_id!==ctx.user_id||
+        state.context?.workspace_id!==ctx.workspace_id)
+      throw new ApiError('Signed administrator identity or workspace changed.',403);
+     const fresh=await (await getSystemAdminClient()).snapshot({
+      workspaceId:ctx.workspace_id,actorId:ctx.user_id,users:state.userRoleData.users
+     });
+     const freshRole=fresh.roles?.find(r=>r.userId===targetId);
+     if(fresh.status!=='VERIFIED_SYSTEM_ADMIN'||!fresh.canManage||
+        freshRole?.revision!==role.revision||freshRole?.active!==role.active)
+      throw new ApiError('System Admin role changed. Refresh before retrying.',409);
+     state.systemAdminData=null; // do not show stale authority on ambiguous writes
+     await (await getSystemAdminClient()).change({
+      workspaceId:ctx.workspace_id,actorId:ctx.user_id,userId:targetId,
+      action:revoking?'revoke':'grant',designation:requestedDesignation,
+      reason,expectedRevision:role.revision
+     });
+     const verified=await (await getSystemAdminClient()).snapshot({
+      workspaceId:ctx.workspace_id,actorId:ctx.user_id,users:state.userRoleData.users
+     });
+     const finalRole=verified.roles.find(r=>r.userId===targetId);
+     if(verified.status!=='VERIFIED_SYSTEM_ADMIN'||
+        finalRole?.active===revoking||finalRole?.revision!==role.revision+1)
+      throw new ApiError('System Admin change could not be verified. Refresh before retrying.',409);
+     state.systemAdminData=verified;
+     toast(revoking?'System Admin revoked and verified.':'System Admin assigned and verified.');
+    }finally{state.userRoleBusy=false;render();}
+   },{submitLabel:revoking?'Confirm System Admin revocation':'Assign System Admin',
+     destructive:revoking,successMessage:''});
    break;
  }
  case 'user-role-edit-crm-platform':
@@ -12475,7 +12585,7 @@ window.addEventListener('keydown',event=>{
   if(state.groupEditId&&!state.groupEditBusy){state.groupEditId=null;render();}
   if(state.ttOtModalOpen){state.ttOtModalOpen=false;render();}
 }});
-auth.onExpired=()=>{boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;globalSearchController?.close({restoreFocus:false});pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;pendingInvitation=null;invitationAcceptanceStatus='';startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
+auth.onExpired=()=>{boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;globalSearchController?.close({restoreFocus:false});pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;pendingInvitation=null;invitationAcceptanceStatus='';startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
 async function boot(){
  if(startupBusy)return;
  startupBusy=true;
