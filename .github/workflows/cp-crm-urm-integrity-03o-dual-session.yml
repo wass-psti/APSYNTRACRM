@@ -1,0 +1,23 @@
+name: CP-CRM-URM-INTEGRITY-03O Dual-Session Read-Only Acceptance
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cp-crm-urm-integrity-03o-dual-session.yml'
+      - 'scripts/cp-crm-urm-integrity-03f-signed-preflight.mjs'
+      - 'frontend/tests/cp-crm-urm-integrity-03o.test.mjs'
+      - 'docs/CP-CRM-URM-INTEGRITY-03O.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signed-preflight-static-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check existing SQL source baseline
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Verify independent signed-session acceptance controls
+        run: node --test frontend/tests/cp-crm-urm-integrity-03f.test.mjs frontend/tests/cp-crm-urm-integrity-03g.test.mjs frontend/tests/cp-crm-urm-integrity-03o.test.mjs frontend/tests/cp-urm-sidebar-native-capability.test.mjs frontend/tests/platform-sync.test.mjs
