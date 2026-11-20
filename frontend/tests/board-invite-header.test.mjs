@@ -26,14 +26,16 @@ test('Invite / N is derived only from a verified direct-board membership snapsho
  assert.match(boardInviteControl(people),/Copy current board link \(does not grant access\)/);
  assert.match(boardInviteControl({status:'UNVERIFIED'}),/data-board-invite-count>—</);
 });
-test('modal renders named members, roles, owner crown and viewer-only revoke',()=>{
+test('modal renders named members, protected owner badge and viewer-only revoke',()=>{
  const html=renderBoardInviteDialog({people,directory,workspaceName:'WAO',manage:true,accessEnabled:true});
  assert.match(html,/Invite to this board/);
- assert.match(html,/Search workspace people by name or email/);
+ assert.match(html,/Search by name, team or email/);
  assert.match(html,/People invited to this board/);
  assert.match(html,/Alex Rivera/);
  assert.match(html,/Blair Santos/);
  assert.match(html,/Board owner/);
+ assert.match(html,/aps-invite-role-pill owner/);
+ assert.match(html,/data-aps-invite-tab="teams"/);
  assert.match(html,/data-aps-invite-revoke="22222222-/);
  assert.doesNotMatch(html,/data-aps-invite-revoke="11111111-/);
  assert.match(html,/Request to invite a new member by email/);
