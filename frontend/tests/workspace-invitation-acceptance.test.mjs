@@ -80,14 +80,18 @@ test('server denial, timeout and bad receipt do not report accepted membership',
   assert.equal(calls.length,1);
  }
 });
-test('SPA integrates sanitized route without backend activation or persistence',()=>{
+test('SPA integrates sanitized route and signed acceptance while backend retains persistence authority',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/captureInvitationLink\(location,history\)/);
  assert.match(app,/parts\[0\]==='invitations'&&parts\[1\]==='accept'/);
  assert.match(app,/state\.view='invitation'/);
  assert.match(app,/pendingInvitation=null;invitationAcceptanceStatus=''/);
- assert.match(app,/enabled:WS02D_ACCEPTANCE_ENABLED/);
- assert.match(app,/!WS02D_ACCEPTANCE_ENABLED\|\|invitationAcceptanceBusy/);
+ assert.match(app,/new WorkspaceInvitationAcceptanceClient\(\{auth,api:db,enabled:true\}\)/);
+ assert.match(app,/pending:pendingInvitation,enabled:true/);
+ assert.match(app,/if\(invitationAcceptanceBusy\|\|/);
+ assert.match(app,/await workspaceInvitationAcceptanceClient\.accept\(pendingInvitation\.token\)/);
+ assert.match(app,/invitationAcceptanceStatus='accepted'/);
+ assert.match(app,/try\{await refreshWorkspace\(\);\}catch/);
  assert.match(app,/pendingInvitation\?\.status==='ready'\?'#\/invitations\/accept':routeHome/);
  assert.doesNotMatch(readFileSync('frontend/workspace-invitation-acceptance.js','utf8'),/localStorage|sessionStorage|service_role/);
 });
