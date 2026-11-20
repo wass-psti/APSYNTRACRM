@@ -1,0 +1,27 @@
+name: APSYNTRA Teams Console Contract
+on:
+  pull_request:
+    paths:
+      - 'frontend/teams/**'
+      - 'frontend/app.js'
+      - 'frontend/tests/teams-console.test.mjs'
+      - 'index.html'
+      - 'sql/cp-teams-role-management-CANDIDATE-NOT-APPLIED.sql'
+      - '.github/workflows/apsyntra-teams-console.yml'
+  workflow_dispatch:
+jobs:
+  teams-frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --check frontend/teams/teams-ui.js && node --check frontend/teams/teams-client.js && node --check frontend/teams/teams-controller.js && node --check frontend/app.js
+      - run: node --test frontend/tests/teams-console.test.mjs frontend/tests/system-admin-role.test.mjs
+      - run: npm run build
