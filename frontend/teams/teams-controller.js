@@ -289,6 +289,20 @@ export class TeamsController {
     choice('Board','contentId',boards.map(b=>[b.id,b.name]))+
     choice('Access level','accessLevel',[['viewer','Viewer'],['editor','Editor']]),'Assign');
   }
+  if(action==='teams-content-role'&&manage){
+   const contentId=button.dataset.contentId;
+   const next=button.dataset.accessLevel;
+   if(!uuid.test(contentId||'')||!['viewer','editor'].includes(next))
+    throw Error('Invalid board role selection');
+   const current=s.content.find(c=>c.teamId===team.id&&c.contentType==='board'&&c.contentId===contentId);
+   if(!current||!['viewer','editor'].includes(current.accessLevel))
+    throw Error('Board role is not verified');
+   if(current.accessLevel===next)return;
+   return this.ask('Change team board access',
+    'Set '+team.name+' to '+next+' on '+current.name+'? This changes inherited access for every active team member.',
+    'set_content_role',{teamId:team.id,contentType:'board',contentId,accessLevel:next},
+    '','Save role');
+  }
   if(action==='teams-content-remove'&&manage)
    return this.ask('Remove content','Remove this team permission?',
     'remove_content',{teamId:team.id,contentType:button.dataset.contentType,
