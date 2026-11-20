@@ -102,13 +102,13 @@ export function boardGroupRollupCells({detail,items,columns,layout,complete=fals
  }
  return {keys,widths:pref.widths,summary,total:keys.reduce((n,k)=>n+pref.widths[k],0)};
 }
-export function renderBoardCollapsedRollup({detail,items,columns,layout,complete=false,groupId=''}={}){
+export function renderBoardCollapsedRollup({detail,items,columns,layout,complete=false,groupId='',groupTitle='',itemCount=0}={}){
  const {keys,widths,summary,total}=boardGroupRollupCells({detail,items,columns,layout,complete});
- return '<div class="board-collapsed-rollup-scroll" aria-label="Collapsed group rollups" data-rollup-group="'+escape(groupId)+'">'+
+ return '<div class="board-collapsed-rollup-scroll board-group-summary-trigger" role="button" tabindex="0" data-action="board-group-toggle" data-id="'+escape(groupId)+'" aria-label="Expand '+escape(groupTitle)+' group" data-rollup-group="'+escape(groupId)+'">'+
   '<table class="board-collapsed-rollup-table" data-group-id="'+escape(groupId)+'" width="'+total+'">'+
   '<colgroup>'+keys.map(k=>'<col data-column-key="'+escape(k)+'" width="'+widths[k]+'">').join('')+'</colgroup>'+
   '<tbody><tr>'+keys.map(k=>'<td data-rollup-column="'+escape(k)+'"'+
     (k==='record'?' class="board-frozen-column"':'')+'>'+
-    (complete?summary[k]:(k==='record'?'':'<span class="board-rollup-loading" title="Load remaining items for a complete summary"></span>'))+
+    (k==='record'?'<span class="board-collapsed-group-name"><strong>'+escape(groupTitle)+'</strong><small>'+escape(itemCount===0?'No Tasks':itemCount.toLocaleString('en-US')+' Tasks')+'</small></span>':complete?summary[k]:'<span class="board-rollup-loading" title="Load remaining items for a complete summary"></span>')+
     '</td>').join('')+'</tr></tbody></table></div>';
 }
