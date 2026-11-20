@@ -190,7 +190,7 @@ export function renderTimeTrackerAdminEditor({editor,directory=[],busy=false,err
       '<section class="tt-admin-field-section"><h4>Philippine Time (UTC+08:00)</h4><div class="tt-admin-grid tt-admin-grid-two">'+
        inputField('Clock-In date and time','clockInAt',timeTrackerAdminDateTimeLocal(record.clockIn?.timestamp),{type:'datetime-local'})+
        (active?'':inputField('Clock-Out date and time','clockOutAt',timeTrackerAdminDateTimeLocal(record.clockOut?.timestamp),{type:'datetime-local'}))+
-      '</div><p>Active sessions remain active. Existing GPS and employee ownership cannot be changed. Corrected times automatically recalculate credited hours.</p></section>'+
+      '</div><p>Active sessions remain active, and their Clock timer updates from the corrected start time after signed synchronization. Completed sessions recalculate credited hours. GPS and employee ownership remain unchanged.</p></section>'+
       '<section class="tt-admin-field-section"><h4>Correction reason</h4>'+
        '<label class="tt-admin-field"><span>Why is this correction necessary?</span>'+
        '<textarea name="reason" minlength="10" maxlength="500" required rows="3" placeholder="Describe the verified timekeeping discrepancy"></textarea></label></section>'+
