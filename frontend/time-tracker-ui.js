@@ -2,7 +2,7 @@
  * Existing CRM shell, central identity, module access, and PostgreSQL data remain authoritative.
  */
 import {
- TT_LOCATIONS,TT_DEPARTMENTS,creditedAttendanceMs,filterMyAttendancePeriod,
+ TT_LOCATIONS,creditedAttendanceMs,filterMyAttendancePeriod,
  TT_LIVE_ATTENDANCE_WRITES_ACCEPTED,TT_POLICY
 } from './time-tracker-native.js';
 import {timeTrackerManilaDay} from './time-tracker-policy.js';
@@ -41,10 +41,10 @@ const sectionMeta=Object.freeze({
  monitor:['Monitor','Inspect TimeTracker service and synchronization status.'],
  gps:['GPS','Review permitted attendance location activity.']
 });
-const select=(id,values,placeholder)=>
+const select=(id,values,placeholder,selected='')=>
  '<select id="'+id+'" name="'+id+'" required>'+
  '<option value="">'+esc(placeholder)+'</option>'+
- values.map(s=>'<option value="'+esc(s)+'">'+esc(s)+'</option>').join('')+
+ values.map(s=>'<option value="'+esc(s)+'"'+(s===selected?' selected':'')+'>'+esc(s)+'</option>').join('')+
  '</select>';
 
 export function timeTrackerClockParts(at=new Date()){
@@ -172,7 +172,7 @@ function heading(title,desc){
  return '<div class="tt-subview-head"><div><h3>'+esc(title)+'</h3><p>'+
   esc(desc)+'</p></div></div>';
 }
-function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-out'){
+function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-out',locationPreference=''){
  const {access,records,active}=result;
  const writeReady=TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&access?.attendanceWritesAccepted===true;
  const t=timeTrackerClockParts(now);
@@ -181,6 +181,9 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
  const credited=todayRows.reduce((sum,r)=>sum+(r.creditedMs===null?
   creditedAttendanceMs(r.clockIn,now):r.creditedMs||0),0);
  const status=active?'Active':'Idle';
+ const employeeDepartment=access?.employeeDepartment||null;
+ const location=TT_LOCATIONS.includes(locationPreference)?locationPreference:'';
+ const offsite=location==='Offsite (Home)'&&access?.moduleRole!=='System Admin';
  const session=active?timeTrackerSessionElapsed(active.clockIn,now):null;
  const autoClockout=active&&result.autoClockout?.recordId===active.id?result.autoClockout:null;
  const autoDeadline=autoClockout?.nextAt||autoClockout?.cutoffAt;
@@ -256,14 +259,20 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
        '<div><span>Recorded department</span><strong>'+esc(active.department)+'</strong></div>'+
        '<p>Clock Out uses the same signed attendance session and captures a new browser GPS fix.</p>'+
       '</div>':
-      '<label for="tt-location">Location'+select('tt-location',TT_LOCATIONS,'Select location…')+'</label>'+
+      '<label for="tt-location">Location'+select('tt-location',TT_LOCATIONS,'Select location…',location)+'</label>'+
       '<div class="tt-quick-location"><span>Quick select</span>'+
-       '<button type="button" data-action="tt-location-shortcut" data-location="Office-Base Duty">◴ &nbsp; Office</button>'+
-       '<button type="button" data-action="tt-location-shortcut" data-location="Offsite (Home)">⌖ &nbsp; Home</button>'+
+       '<button type="button" data-action="tt-location-shortcut" data-location="Office-Base Duty" aria-pressed="'+
+        (location==='Office-Base Duty')+'" class="'+(location==='Office-Base Duty'?'is-selected':'')+'">◴ &nbsp; Office</button>'+
+       '<button type="button" data-action="tt-location-shortcut" data-location="Offsite (Home)" aria-pressed="'+
+        (location==='Offsite (Home)')+'" class="'+(location==='Offsite (Home)'?'is-selected':'')+'">⌖ &nbsp; Home</button>'+
       '</div>'+
-      '<label for="tt-department">Department'+select('tt-department',TT_DEPARTMENTS,'Select department…')+'</label>')+
+      '<div class="tt-employee-department" aria-label="Assigned employee department">'+
+       '<span>Department</span><strong>'+esc(employeeDepartment||'Not assigned')+'</strong>'+
+       (employeeDepartment?'':'<small>Ask your TimeTracker administrator to assign your department before clocking in.</small>')+
+      '</div>')+
      '<label for="tt-note" class="tt-note-field" id="tt-note-wrap"'+
-      ((active&&active.location==='Offsite (Home)')?'':' hidden')+'>'+
+      (((active&&active.location==='Offsite (Home)')||(!active&&offsite))?'':' hidden')+
+      ((!active&&offsite)?' required':'')+'>'+
       'Offsite Work Note<textarea id="tt-note" maxlength="500" rows="3" placeholder="Describe your offsite work"></textarea></label>'+
      (clockPending?
       '<p class="tt-clock-hint" role="status">'+(clockPendingAction==='clock-in'?'Clock-in':'Clock-out')+
@@ -272,7 +281,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
        (busy?' disabled':'')+'>Verify session status</button>':
       '<button class="tt-start-button" type="submit" name="tt-action" value="'+
        (active?'clock-out':'clock-in')+'"'+
-       (busy||!writeReady?' disabled':'')+'>'+
+       (busy||!writeReady||(!active&&!employeeDepartment)?' disabled':'')+'>'+
        (active?'End session':'Start session')+'</button>')+
      (!writeReady?
       '<p class="tt-write-restriction" role="status">Live writes remain disabled until server-side offsite work-note, dedicated-board authorization and audit logging are accepted.</p>':
@@ -316,7 +325,7 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,clockPending=false,clockPendingAction='clock-out',error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
+ result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError='',
  adminEligible=false,adminDirectory=[],adminSelectedIds=[],adminEditor=null,adminDeleteConfirm=null,adminBusy=false,adminError='',adminSuccess=''
 }={}){
@@ -339,7 +348,7 @@ export function renderTimeTrackerNative({
  if(selected==='overview')html+=renderTimeTrackerOverview({
   overview:result.overview,access:result.access,now,filters:overviewFilters
  });
- if(selected==='clock')html+=clockPage(result,busy,new Date(now),clockPending,clockPendingAction);
+ if(selected==='clock')html+=clockPage(result,busy,new Date(now),clockPending,clockPendingAction,locationPreference);
  if(selected==='log')html+=renderTimeTrackerLog({
   records:result.log?.rows||result.records,
   scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
