@@ -14,6 +14,11 @@ BEGIN
  END IF;
  SELECT pg_get_functiondef('public.timetracker_attendance_commit_v2(uuid,text,text,text,text,jsonb,text)'::regprocedure)
  INTO v_definition;
+ -- Protect other ongoing TimeTracker changes from an unexpected RPC overwrite.
+ IF md5(v_definition) IS DISTINCT FROM '4894b2319d8f75efa9c70e0ff3d2da27' THEN
+  RAISE EXCEPTION 'CP-TT-02B current signed attendance RPC differs from verified baseline'
+   USING ERRCODE='42501';
+ END IF;
  IF position('v_authoritative_department' in v_definition)=0
  OR position('tt_department_catalog' in v_definition)=0
  OR position('timetracker_commit_attendance_raw_gps03' in v_definition)=0
