@@ -130,7 +130,7 @@ export function renderMentionOptions(people){
 
 /** Shared initial-paint invite control; does not load the invitation dialog. */
 export function boardInviteCount(people){
- return verifiedMembers(people)?people.people.length:null;
+ return people?.status==='SIGNED_MEMBERSHIP'&&Array.isArray(people.people)?people.people.length:null;
 }
 export function boardInviteControl(people){
  const count=boardInviteCount(people);
