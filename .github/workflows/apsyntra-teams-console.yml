@@ -5,6 +5,7 @@ on:
       - 'frontend/teams/**'
       - 'frontend/app.js'
       - 'frontend/tests/teams-console.test.mjs'
+      - 'scripts/teams-browser-acceptance.mjs'
       - 'index.html'
       - 'sql/cp-teams-role-management-CANDIDATE-NOT-APPLIED.sql'
       - '.github/workflows/apsyntra-teams-console.yml'
@@ -25,3 +26,14 @@ jobs:
       - run: node --check frontend/teams/teams-ui.js && node --check frontend/teams/teams-client.js && node --check frontend/teams/teams-controller.js && node --check frontend/app.js
       - run: node --test frontend/tests/teams-console.test.mjs frontend/tests/system-admin-role.test.mjs
       - run: npm run build
+      - name: Verify layout in real Chromium
+        run: |
+          export CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN" || { echo 'Chromium not installed'; exit 1; }
+          node scripts/teams-browser-acceptance.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: apsyntra-teams-layout-preview
+          path: artifacts/teams-console/*.png
+          if-no-files-found: ignore
