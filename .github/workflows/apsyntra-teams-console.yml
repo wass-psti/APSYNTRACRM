@@ -5,6 +5,10 @@ on:
       - 'frontend/teams/**'
       - 'frontend/app.js'
       - 'frontend/tests/teams-console.test.mjs'
+      - 'frontend/tests/team-board-invite.test.mjs'
+      - 'frontend/board/collaboration/invite.js'
+      - 'frontend/teams/team-board-invite.js'
+      - 'sql/cp-teams-board-invite-CANDIDATE-NOT-APPLIED.sql'
       - 'scripts/teams-browser-acceptance.mjs'
       - 'index.html'
       - 'sql/cp-teams-role-management-CANDIDATE-NOT-APPLIED.sql'
@@ -24,7 +28,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node --check frontend/teams/teams-ui.js && node --check frontend/teams/teams-client.js && node --check frontend/teams/teams-controller.js && node --check frontend/app.js
-      - run: node --test frontend/tests/teams-console.test.mjs frontend/tests/system-admin-role.test.mjs
+      - run: node --test frontend/tests/teams-console.test.mjs frontend/tests/system-admin-role.test.mjs frontend/tests/team-board-invite.test.mjs frontend/tests/board-invite-header.test.mjs
       - run: npm run build
       - name: Verify layout in real Chromium
         run: |
