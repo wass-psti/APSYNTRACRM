@@ -3949,8 +3949,6 @@ async function saveTimeTrackerAdminEditor(form){
   if(editor.timeOnly&&(
      editor.mode!=='single'||Object.keys(plan.patch).some(k=>!['clockInAt','clockOutAt'].includes(k))))
    throw Error('IT Administrators can only correct recorded times.');
-  if((plan.patch.clockInAt||plan.patch.clockOutAt)&&plan.reason.trim().length<10)
-   throw Error('Explain the time correction in at least 10 characters.');
  }catch(err){state.ttLogAdminError=errorMessage(err);render();return;}
  const seq=routeSerial,boardId=state.boardId;
  state.ttLogAdminBusy=true;state.ttLogAdminError='';render();
