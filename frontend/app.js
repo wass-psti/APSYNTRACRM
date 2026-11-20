@@ -8223,6 +8223,19 @@ async function action(name,button){
   break;
  }
  case 'board-item-detail':{await openBoardItemDetails(button.dataset.id);break;}
+ case 'board-columns-hide-all':
+ case 'board-columns-show-all':{
+  const current=activeBoardLayout();
+  if(!current||state.tab!=='items')return;
+  const all=name==='board-columns-show-all';
+  persistBoardLayout(pref=>({...pref,hidden:all?[]:
+   [...new Set([...pref.hidden,...current.columns.filter(key=>
+    !BOARD_REQUIRED_COLUMNS.includes(key)&&key!=='actions')])]}));
+  render();
+  root.querySelector('.board-hide-columns')?.setAttribute('open','');
+  root.querySelector('#board-hide-search')?.focus({preventScroll:true});
+  break;
+ }
  case 'board-layout-reset':{
   const current=activeBoardLayout();if(!current)return;
   resetBoardLayout(state.context,state.boardId,boardPreferences);render();break;
@@ -11324,7 +11337,7 @@ root.addEventListener('change',event=>{
   if(!c||!c.columns.includes(key)||BOARD_REQUIRED_COLUMNS.includes(key))return;
   persistBoardLayout(p=>({...p,hidden:event.target.checked?
    p.hidden.filter(x=>x!==key):[...p.hidden,key]}));
-  render();root.querySelector('.board-column-menu')?.setAttribute('open','');return;
+  render();root.querySelector('.board-hide-columns')?.setAttribute('open','');return;
  }
 
  if(['tt-overview-location','tt-overview-department','tt-overview-status','tt-overview-sort'].includes(event.target.id)&&
@@ -11673,6 +11686,12 @@ root.addEventListener('drop',event=>{
 root.addEventListener('dragend',()=>{tradeLinkDraggedLine=null;});
 root.addEventListener('input',event=>{
  if(syncTradeLinkFinanceInput(event))return;
+ if(event.target.matches('[data-board-hide-search]')){
+  const query=String(event.target.value||'').trim().toLocaleLowerCase();
+  for(const row of root.querySelectorAll('[data-board-hide-option]'))
+   row.hidden=!row.dataset.boardHideOption.includes(query);
+  return;
+ }
  if(event.target.id==='user-role-batch-member-search'&&state.view==='user-role-management'&&
     state.adminVerified&&state.userRoleBatchMode){
   const query=String(event.target.value).slice(0,120);
