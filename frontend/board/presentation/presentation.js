@@ -5,8 +5,8 @@ import {registerBoardWindow} from './window.js';
  */
 const ID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PREFIX='apsyntra.board-layout.v1';
-export const BOARD_COLUMN_MIN=110;
-export const BOARD_COLUMN_MAX=520;
+export const BOARD_COLUMN_MIN=84;
+export const BOARD_COLUMN_MAX=600;
 export const BOARD_DEFAULT_WIDTH=185;
 export const BOARD_REQUIRED_COLUMNS=Object.freeze(['record','status']);
 export function preferenceKey(context,boardId){
