@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {projectTimeTrackerEmployees,renderTimeTrackerEmployees}
- from '../apps/TimeTracker/time-tracker-employees.js';
+ from '../time-tracker-application.js';
 import {TimeTrackerNativeClient,TT_ROLES} from '../time-tracker-native.js';
 import {renderTimeTrackerNative} from '../time-tracker-ui.js';
 
