@@ -12024,8 +12024,26 @@ root.addEventListener('input',event=>{
  }
  if(event.target.id==='search-board-items'&&state.view==='board'&&state.tab==='items'){
   state.boardItemSearch=String(event.target.value).slice(0,160);
-  applyBoardItemFilter(state.boardItemSearch);
-  syncBoardSelectionUi();
+  // Matching groups may open temporarily; this never changes the saved preference.
+  // Only reconstruct the board when a collapsed/expanded boundary actually changes.
+  const requiresGroupUpdate=[...root.querySelectorAll('.board-collapsed-group,.group-heading[data-group-collapsed]')]
+   .some(node=>{
+    const id=node.dataset.groupId;
+    if(!id||!(state.board.groups||[]).some(g=>g.id===id))return false;
+    const count=(state.board.items||[]).filter(item=>item.group_id===id).length;
+    const currentlyClosed=node.dataset.groupCollapsed==='true';
+    return boardGroupCollapsed(id,count)!==currentlyClosed;
+   });
+  if(requiresGroupUpdate){
+   const caret=event.target.selectionStart;
+   render();
+   const search=root.querySelector('#search-board-items');
+   search?.focus({preventScroll:true});
+   if(search&&Number.isSafeInteger(caret))search.setSelectionRange(caret,caret);
+  }else{
+   applyBoardItemFilter(state.boardItemSearch);
+   syncBoardSelectionUi();
+  }
   return;
  }
  if(!event.target.matches('.search-input'))return;
