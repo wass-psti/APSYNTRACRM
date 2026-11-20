@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {TIMETRACKER_MAIN_GROUP_HEADINGS,renderTimeTrackerMainGroup} from '../time-tracker-main-group.js';
+import {formatTimeTrackerDateTime} from '../time-tracker-time-format.js';
 
 const actor='20000000-0000-4000-8000-000000000001';
 const workspace='10000000-0000-4000-8000-000000000001';
@@ -38,10 +39,8 @@ test('exact seven operational columns in contract order; no database column head
 
 test('signed private projection maps identity, Philippine time, two independent GPS fixes and server-credited duration',()=>{
  const html=renderTimeTrackerMainGroup({...opts,projection:verified});
- const fmt=new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',
-  dateStyle:'medium',timeStyle:'short'});
- assert.match(html,new RegExp(fmt.format(new Date(row.clockInAt)).replace(/[.*+?^$\{\}()|[\]\\]/g,'\\$&')));
- assert.match(html,new RegExp(fmt.format(new Date(row.clockOutAt)).replace(/[.*+?^$\{\}()|[\]\\]/g,'\\$&')));
+ assert.match(html,new RegExp(formatTimeTrackerDateTime(row.clockInAt).replace(/[.*+?^$\{\}()|[\]\\]/g,'\\$&')));
+ assert.match(html,new RegExp(formatTimeTrackerDateTime(row.clockOutAt).replace(/[.*+?^$\{\}()|[\]\\]/g,'\\$&')));
  assert.match(html,/Employee &lt;Sample&gt;/);
  assert.doesNotMatch(html,/<Sample>/);
  assert.match(html,/10\.12346, 123\.98765/);
@@ -68,10 +67,8 @@ test('overnight shifts use Philippine calendar dates and authoritative credited 
   creditedMs:14400000
  };
  const html=renderTimeTrackerMainGroup({...opts,projection:{...verified,rows:[shift]}});
- const fmt=new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',
-  dateStyle:'medium',timeStyle:'short'});
- assert.ok(html.includes(fmt.format(new Date(shift.clockInAt))));
- assert.ok(html.includes(fmt.format(new Date(shift.clockOutAt))));
+ assert.ok(html.includes(formatTimeTrackerDateTime(shift.clockInAt)));
+ assert.ok(html.includes(formatTimeTrackerDateTime(shift.clockOutAt)));
  assert.match(html,/4\.00 h/);
  assert.doesNotMatch(html,/11\.00 h/);
 });

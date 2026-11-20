@@ -1,3 +1,4 @@
+import {formatTimeTrackerClock,formatTimeTrackerDateTime} from './time-tracker-time-format.js';
 /** Native TimeTracker Overview — strictly scoped to current signed workspace/module.
  * No GPS, email, company-wide user registry, or standalone backend is used.
  */
@@ -27,12 +28,8 @@ const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({
 }[c]));
 const isObject=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
 const isTime=v=>typeof v==='string'&&Number.isFinite(Date.parse(v));
-const clockTime=v=>new Intl.DateTimeFormat('en-PH',{
- timeZone:'Asia/Manila',hour:'2-digit',minute:'2-digit',hour12:true
-}).format(new Date(v));
-const shortTime=v=>new Intl.DateTimeFormat('en-PH',{
- timeZone:'Asia/Manila',hour:'numeric',hour12:true
-}).format(new Date(v));
+const clockTime=v=>formatTimeTrackerClock(v);
+const shortTime=v=>formatTimeTrackerClock(v);
 const timeParts=v=>new Intl.DateTimeFormat('en-GB',{
  timeZone:'Asia/Manila',year:'numeric',month:'2-digit',
  day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'
@@ -162,8 +159,8 @@ export function timeTrackerOverviewCsv(rows=[]){
  return '\uFEFF'+[
   ['Name','Department','Location','Clock In','Clock Out',
    'Status','Late Minutes','Credited Hours'],
-  ...rows.map(r=>[r.name,r.department,r.location,r.clockIn,
-   r.clockOut||'',r.status,r.lateMinutes,hours(r.creditedMs)])
+  ...rows.map(r=>[r.name,r.department,r.location,formatTimeTrackerDateTime(r.clockIn),
+   r.clockOut?formatTimeTrackerDateTime(r.clockOut):'',r.status,r.lateMinutes,hours(r.creditedMs)])
  ].map(row=>row.map(csvValue).join(',')).join('\r\n')+'\r\n';
 }
 const toMin=ms=>{

@@ -1,3 +1,4 @@
+import {formatTimeTrackerClock} from '../../time-tracker-time-format.js';
 /** Nine-hour credited-work clock-out policy and approved-overtime extension logic.
  * All timestamps are absolute instants; calendar intervals are interpreted in Asia/Manila.
  */
@@ -211,11 +212,5 @@ export function evaluateTimeTrackerAutoClockout({
 }
 
 export function formatTimeTrackerAutoClockoutTime(value) {
-  if (!validInstant(value)) return "—";
-  return new Intl.DateTimeFormat("en-PH", {
-    timeZone: "Asia/Manila",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).format(new Date(value));
+  return formatTimeTrackerClock(value);
 }

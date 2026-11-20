@@ -1,3 +1,4 @@
+import {formatTimeTrackerClock,formatTimeTrackerShortDateTime,formatTimeTrackerDateTime} from './time-tracker-time-format.js';
 /** Native signed TimeTracker Log. System Admin mutations use the dedicated signed RPC; other roles remain read-only. */
 import {TT_LOCATIONS} from './time-tracker-policy.js';
 import {filterMyAttendancePeriod} from './time-tracker-native.js';
@@ -10,9 +11,7 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({
 }[c]));
 const validTime=value=>typeof value==='string'&&Number.isFinite(Date.parse(value));
 const safeRows=rows=>Array.isArray(rows)?rows.filter(r=>r&&validTime(r.clockIn)):[];
-const phtTime=value=>validTime(value)?new Intl.DateTimeFormat('en-PH',{
- timeZone:'Asia/Manila',hour:'2-digit',minute:'2-digit',hour12:true
-}).format(new Date(value)):'—';
+const phtTime=value=>validTime(value)?formatTimeTrackerClock(value):'—';
 const phtDate=value=>new Intl.DateTimeFormat('en-PH',{
  timeZone:'Asia/Manila',weekday:'long',year:'numeric',month:'long',day:'numeric'
 }).format(new Date(value));
@@ -71,10 +70,7 @@ export function timeTrackerLogSummary(rows=[],now=new Date()){
 }
 
 
-const dateTime=value=>validTime(value)?new Intl.DateTimeFormat('en-PH',{
- timeZone:'Asia/Manila',month:'short',day:'numeric',
- hour:'numeric',minute:'2-digit',hour12:true
-}).format(new Date(value)):'—';
+const dateTime=value=>validTime(value)?formatTimeTrackerShortDateTime(value):'—';
 const durationLabel=ms=>{
  if(!Number.isFinite(ms)||ms<0)return '—';
  const minutes=Math.floor(ms/60000);
@@ -420,8 +416,8 @@ export function timeTrackerLogCsv(rows=[]){
  return '\uFEFF'+[
   ['Employee','Department','Location','Clock In','Clock Out','Status','Arrival','Credited Hours'],
   ...safeRows(rows).map(row=>[
-   row.name||'Signed member',row.department||'',row.location||'',row.clockIn,
-   row.clockOut||'',row.status||'',row.classification||'',creditedHours(row.creditedMs)
+   row.name||'Signed member',row.department||'',row.location||'',formatTimeTrackerDateTime(row.clockIn),
+   row.clockOut?formatTimeTrackerDateTime(row.clockOut):'',row.status||'',row.classification||'',creditedHours(row.creditedMs)
   ])
  ].map(row=>row.map(logCsvCell).join(',')).join('\r\n')+'\r\n';
 }

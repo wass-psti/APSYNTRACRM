@@ -1,3 +1,4 @@
+import {formatTimeTrackerShortDateTime} from './time-tracker-time-format.js';
 /**
  * Restricted TimeTracker recorded-location display.
  * Leaflet 1.9.4 renders authorized signed GPS fixes; tiles are an external,
@@ -42,8 +43,7 @@ export function mapGeoJSON(points){
   type:'Feature',geometry:{type:'Point',coordinates:[p.longitude,p.latitude]},
   properties:{kind:p.kind,recordId:p.recordId,
    label:(p.kind==='in'?'Clock In':'Clock Out')+' · '+
-    new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',
-     month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(p.timestamp)),
+    formatTimeTrackerShortDateTime(p.timestamp),
    accuracyM:Math.round(p.accuracyM)}
  }))};
 }

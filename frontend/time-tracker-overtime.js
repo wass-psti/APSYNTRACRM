@@ -1,3 +1,4 @@
+import {formatTimeTrackerWallClock} from './time-tracker-time-format.js';
 /** Production RPCs and authenticated EXECUTE contracts verified; per-session OT access is still server signed. */
 export const TT_OT_WRITES_ACCEPTED=true;
 export const TT_OT_DEFAULT_FILTERS=Object.freeze({weekOffset:0,status:'Submitted',search:'',sort:'newest'});
@@ -89,8 +90,8 @@ const row=(r,bootstrap=false,query='',expandedRequestIds=[],otContractActive=fal
  '<strong>'+esc(minutesLabel(r.durationMinutes))+'</strong>'+
  '<span class="tt-ot-pill tt-ot-'+r.status.toLowerCase()+'">'+
  esc(r.status==='Submitted'?'Pending':r.status)+'</span><span>⌄</span></summary>'+
- '<div class="tt-ot-detail"><span><b>Start:</b> '+esc(r.start)+'</span>'+
- '<span><b>End:</b> '+esc(r.end)+'</span>'+
+ '<div class="tt-ot-detail"><span><b>Start:</b> '+esc(formatTimeTrackerWallClock(r.start))+'</span>'+
+ '<span><b>End:</b> '+esc(formatTimeTrackerWallClock(r.end))+'</span>'+
  '<p><b>Reason:</b> '+esc(r.task||'Not supplied')+'</p>'+
  '<p>Approval/rejection is restricted to server-verified bootstrap administrators.</p>'+ 
  (bootstrap&&r.status==='Submitted'?'<div class="tt-ot-review-actions">'+
@@ -111,8 +112,12 @@ function requestForm({date,start='18:00',end='20:00',reason=''}={},now=new Date(
  '<label>DATE<input id="tt-ot-date" type="date" required value="'+esc(date||phtDay(now))+'"></label>'+
  '<div class="tt-ot-duration"><small>DURATION · 6 h maximum</small><strong>'+
  esc(amount===null?'Invalid interval':minutesLabel(amount))+'</strong></div>'+
- '<label>START<input id="tt-ot-start" type="time" required value="'+esc(start)+'"></label>'+
- '<label>END<input id="tt-ot-end" type="time" required value="'+esc(end)+'"></label>'+
+ '<label>START (12-hour)<input id="tt-ot-start" type="text" required inputmode="text"'+
+ ' placeholder="07:00 PM" aria-label="Overtime start, 12-hour AM or PM"'+
+ ' value="'+esc(formatTimeTrackerWallClock(start))+'"></label>'+
+ '<label>END (12-hour)<input id="tt-ot-end" type="text" required inputmode="text"'+
+ ' placeholder="09:00 PM" aria-label="Overtime end, 12-hour AM or PM"'+
+ ' value="'+esc(formatTimeTrackerWallClock(end))+'"></label>'+
  '<label class="tt-ot-reason">REASON<textarea id="tt-ot-reason" maxlength="500" rows="4"'+
  ' required placeholder="Explain why overtime was necessary…">'+esc(reason)+'</textarea>'+
  '<small>'+String(reason).length+'/500</small></label></div>'+

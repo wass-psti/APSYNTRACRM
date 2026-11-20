@@ -1,3 +1,4 @@
+import {formatTimeTrackerClock} from './time-tracker-time-format.js';
 /** TimeTracker My Hours — read-only signed self-only history.
  * Input must be TimeTrackerNativeClient.snapshot().records (projectOwnAttendance),
  * NEVER module-wide result.log.rows or the team's Overview.
@@ -22,9 +23,7 @@ const shortDate=d=>new Intl.DateTimeFormat('en-US',{
 const longDate=d=>new Intl.DateTimeFormat('en-US',{
  timeZone:'UTC',weekday:'short',month:'short',day:'numeric'
 }).format(new Date(dateMs(d)));
-const timePHT=v=>validTime(v)?new Intl.DateTimeFormat('en-PH',{
- timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'
-}).format(new Date(v)):'—';
+const timePHT=v=>validTime(v)?formatTimeTrackerClock(v):'—';
 const hours=ms=>(ms/3600000).toFixed(1);
 const safeRows=(records,at,userId)=>{
  if(!Array.isArray(records)||records.length>25000)throw Error('Invalid self attendance source');

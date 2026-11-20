@@ -1,3 +1,4 @@
+import {formatTimeTrackerDateTime} from './time-tracker-time-format.js';
 /** APSYNTRA TimeTracker operational monitor.
  * Real, on-demand, in-memory measurements only. No telemetry upload,
  * recurring polling, raw URLs, employee data, credentials or security bypass.
@@ -5,9 +6,7 @@
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ms=v=>Number.isFinite(v)&&v>=0?Math.round(v):null;
 const realUuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const pht=at=>new Intl.DateTimeFormat('en-PH',{
- timeZone:'Asia/Manila',dateStyle:'medium',timeStyle:'medium'
-}).format(new Date(at));
+const pht=at=>formatTimeTrackerDateTime(at,{seconds:true});
 const status=ok=>ok?'PASS':'FAIL';
 const round=v=>Number.isFinite(v)?Math.round(v*10)/10:null;
 export function collectTimeTrackerClientMetrics(perf=globalThis.performance){

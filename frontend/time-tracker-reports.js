@@ -1,3 +1,4 @@
+import {formatTimeTrackerShortDateTime} from './time-tracker-time-format.js';
 /** Read-only attendance Reports derived from centrally authorized TimeTracker Log rows.
  * No other personnel directory or GPS/audit state is accessed by this module.
  */
@@ -15,10 +16,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({
 const isTime=v=>typeof v==='string'&&Number.isFinite(Date.parse(v));
 const safeNumber=n=>Number.isFinite(n)&&n>=0?n:0;
 const fmtHours=ms=>(ms/3600000).toFixed(1);
-const fmtTime=value=>isTime(value)?new Intl.DateTimeFormat('en-PH',{
- timeZone:'Asia/Manila',month:'short',day:'numeric',
- hour:'numeric',minute:'2-digit',hour12:true
-}).format(new Date(value)):'—';
+const fmtTime=value=>isTime(value)?formatTimeTrackerShortDateTime(value):'—';
 const fmtDay=day=>new Intl.DateTimeFormat('en-PH',{
  timeZone:'Asia/Manila',month:'short',day:'numeric',year:'numeric'
 }).format(new Date(day+'T00:00:00+08:00'));

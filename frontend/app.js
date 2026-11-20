@@ -194,6 +194,7 @@ import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,TT_
 import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAULT_FILTERS} from './time-tracker-reports.js';
 import {timeTrackerCalendarMonth,shiftTimeTrackerCalendarMonth} from './time-tracker-calendar.js';
 import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED,timeTrackerOtWeek} from './time-tracker-overtime.js';
+import {parseTimeTrackerClockInput} from './time-tracker-time-format.js';
 import {timeTrackerMyHoursWeek} from './time-tracker-my-hours.js';
 import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
 import {probeTimeTrackerMonitor} from './time-tracker-monitor.js';
@@ -12306,6 +12307,10 @@ root.addEventListener('submit',event=>{
    end:root.querySelector('#tt-ot-end')?.value||'',
    reason:root.querySelector('#tt-ot-reason')?.value||''
   };
+  try{
+   draft.start=parseTimeTrackerClockInput(draft.start);
+   draft.end=parseTimeTrackerClockInput(draft.end);
+  }catch(error){toast(error.message,true);return;}
   state.ttBusy=true;
   Promise.resolve(timeTracker.submitOvertime(state.boardId,draft))
    .then(async()=>{state.ttOtModalOpen=false;state.ttOtDraft={};

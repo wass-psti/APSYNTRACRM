@@ -1,3 +1,4 @@
+import {formatTimeTrackerShortDateTime} from './time-tracker-time-format.js';
 /** Restricted attendance GPS fixes; never read raw shared state. */
 import {manilaDay} from './time-tracker-overview.js';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -55,9 +56,7 @@ export function summarizeGps(data,options={}){
   poor:points.filter(p=>p.accuracyM>200).length};
 }
 import {mapFrame} from './time-tracker-map.js';
-const human=p=>new Intl.DateTimeFormat('en-PH',{
- timeZone:'Asia/Manila',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'
-}).format(new Date(p.timestamp));
+const human=p=>formatTimeTrackerShortDateTime(p.timestamp);
 const metric=(name,value)=>'<div class="tt-gps-kpi"><span>'+esc(name)+'</span><strong>'+esc(value)+'</strong></div>';
 const list=points=>{
  if(!points.length)return '<p class="tt-gps-empty-list">No signed attendance locations match these filters.</p>';
