@@ -17,7 +17,8 @@ test('CRM Admin and designated bootstrap identity are independent verified check
 test('CRM role management uses Admin tier; bootstrap-only diagnostics retain identity check',()=>{
  assert.match(app,/state\.adminVerified===true\?'<div class="side-section sidebar-nav-section">Administration/);
  assert.match(app,/roleConfig\.adminVerified\(\)/);
- assert.match(app,/renderUserRoleManagement\(\{verified:state\.adminVerified/);
+ assert.match(app,/teamsController\?\.mount\(root\.querySelector\('#teams-route-host'\)\)/);
+ assert.match(app,/if\(state\.view==='user-role-management'\)/);
  assert.match(app,/renderRoleConfiguration\(\{verified:state\.adminVerified/);
  assert.match(app,/state\.roleVerified=bootstrapVerified/);
  assert.match(app,/showEngineeringDiagnostics\(location\.search,state\.roleVerified===true\)/);

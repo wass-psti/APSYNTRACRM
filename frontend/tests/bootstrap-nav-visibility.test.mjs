@@ -40,8 +40,10 @@ test('Foundation and Pages Acceptance links require server-verified bootstrap st
 test('direct routes use the authoritative bootstrap verification RPC before rendering',()=>{
  const route=app.slice(app.indexOf('async function onRoute(){'),
   app.indexOf('function validateAndSubmitAccessRequest('));
- assert.match(route,/\['role-configuration','user-role-management','foundation','acceptance'\]\.includes\(state\.view\)/);
+ assert.match(route,/\['role-configuration','foundation','acceptance'\]\.includes\(state\.view\)/);
  assert.match(route,/await roleConfig\.bootstrapVerified\(\)/);
+ assert.match(route,/if\(state\.view==='user-role-management'\)/);
+ assert.match(route,/ensureTeamsController\(\);controller\.bindGlobal\(\);render\(\);await controller\.load\(\)/);
  assert.match(route,/location\.hash=routeHome;return onRoute\(\)/);
  const renderSource=app.slice(app.indexOf('function render(){'),app.indexOf('function findBoardCard('));
  assert.match(renderSource,/state\.view==='foundation'&&state\.roleVerified===true/);
