@@ -1,0 +1,36 @@
+#app .ap-v2-help-shell{
+ --accent:#4F46E5;--line:#E3E6F0;--muted:#5B6178;
+ position:fixed;inset:0;z-index:4510;background:#F7F8FC;color:#1B1F3B;
+ font:14px/1.5 Inter,-apple-system,"Segoe UI",sans-serif;
+ display:grid;grid-template-columns:240px minmax(0,1fr);overflow:auto;color-scheme:light
+}
+#app .ap-v2-help-shell *{box-sizing:border-box}
+#app .ap-v2-help-sidebar{background:#fff;border-right:1px solid var(--line);padding:20px 12px}
+#app .ap-v2-help-brand{display:flex;align-items:center;gap:10px;white-space:nowrap;margin:0 8px 30px;font-weight:700}
+#app .ap-v2-help-brand span{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:var(--accent);color:#fff}
+#app .ap-v2-help-sidebar nav{display:grid;gap:4px}
+#app .ap-v2-help-sidebar a{color:#4A5068;text-decoration:none;padding:9px;border-radius:8px}
+#app .ap-v2-help-sidebar a[aria-current="page"]{background:#E8E7FD;color:#312E81;font-weight:600}
+#app .ap-v2-help-main{padding:28px 32px;max-width:1480px;width:100%}
+#app .ap-v2-help-back{color:var(--accent);font-size:13px;font-weight:600;text-decoration:none}
+#app .ap-v2-help-eyebrow{margin:23px 0 10px;color:var(--accent);letter-spacing:.09em;font-size:12px;font-weight:700}
+#app .ap-v2-help-main h1{font-size:34px;font-weight:700;letter-spacing:-.8px;line-height:1.25;max-width:850px;margin:0 0 10px}
+#app .ap-v2-help-subtitle{color:#4A5068;margin:0 0 27px;max-width:880px}
+#app .ap-v2-help-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+#app .ap-v2-help-card{padding:22px;min-height:375px;background:#fff;border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column}
+#app .ap-v2-help-card.highlight{border:2px solid var(--accent);padding:21px}
+#app .ap-v2-help-icon{width:40px;height:40px;border-radius:9px;display:grid;place-items:center;background:#E8E7FD;color:var(--accent);font-size:22px;margin-bottom:24px}
+#app .ap-v2-help-layer{font-size:11px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.07em}
+#app .ap-v2-help-card h2{font-size:22px;margin:7px 0 9px}
+#app .ap-v2-help-card p{color:#4A5068;margin:0 0 22px;font-size:14px;line-height:1.55}
+#app .ap-v2-help-tags{display:flex;flex-wrap:wrap;gap:7px}
+#app .ap-v2-help-tags span{font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;background:#EEF0F6;color:#2F3550}
+#app .ap-v2-help-tags .editor{background:#E8E7FD;color:#3730A3}
+#app .ap-v2-help-tags .admin{background:#FDE9D7;color:#8A3B00}
+#app .ap-v2-help-card footer{margin-top:auto;border-top:1px solid var(--line);padding-top:12px;color:var(--muted);font-size:12px}
+#app .ap-v2-help-card footer strong{display:block;color:#1B1F3B;font-size:13px;margin-top:4px}
+#app .ap-v2-help-combine{margin-top:20px;padding:22px 26px;border:1px solid var(--line);background:#fff;border-radius:12px}
+#app .ap-v2-help-combine h2{font-size:12px;letter-spacing:.07em;color:var(--accent);margin:0 0 7px}
+#app .ap-v2-help-combine p{font-size:14px;color:#4A5068;margin:0;line-height:1.6}
+@media(max-width:830px){#app .ap-v2-help-shell{grid-template-columns:180px 1fr}#app .ap-v2-help-main{padding:18px}#app .ap-v2-help-grid{grid-template-columns:1fr}#app .ap-v2-help-card{min-height:250px}}
+@media(max-width:530px){#app .ap-v2-help-shell{grid-template-columns:1fr}#app .ap-v2-help-sidebar{padding:8px 14px}#app .ap-v2-help-brand{margin:0}#app .ap-v2-help-sidebar nav{display:none}#app .ap-v2-help-main h1{font-size:27px}}
