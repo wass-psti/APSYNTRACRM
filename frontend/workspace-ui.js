@@ -579,6 +579,7 @@ function openMenu(catalog,options={}){
   if(command==='create')openCreate(read(),options);
   if(command==='invite')openInvites(read().rows.find(row=>row.active),{
    enabled:options.invitationEnabled,sendInvitation:options.sendInvitation,
+   checkInvitationAvailability:options.checkInvitationAvailability,
    managementEnabled:options.managementEnabled,
    listInvitations:options.listInvitations,
    revokeInvitation:options.revokeInvitation
@@ -820,7 +821,7 @@ function inviteContent(current,{enabled=false}={}){
   '<button type="button" data-ws02-context="team">Collaborate with your team</button>'+
   '<button type="button" data-ws02-context="project">Coordinate a project</button></div></div>'+
   '<p class="ws02-invite-safety">'+(enabled?
-   'Invitation sending is restricted to the Member role and independently authorized by the signed server.':
+   'Invitation sending requires a successful signed server readiness check. No email is sent until the server confirms delivery.':
    'Invitation sending is not activated yet. Only authorized workspace owners '+
    'or delegated workspace administrators will be able to send invitations after '+
    'the signed server-side invitation and role contracts pass acceptance.')+'</p>'+
@@ -830,7 +831,7 @@ function inviteContent(current,{enabled=false}={}){
   '<button type="submit" class="ws02-secondary">Review invitation</button>'+
   '<button type="button" class="ws02-send" data-ws02-action="send" '+
   (enabled?'':'disabled ')+ 'aria-describedby="ws02-invite-description">'+
-  (enabled?'Send Member invitation':'Send invites — pending activation')+
+  (enabled?'Send invitation':'Send invites — pending activation')+
   '</button></footer></form>'+
   '<section class="ws11-manage" aria-label="Workspace invitation history">'+
   '<div class="ws11-manage-heading"><h3>Invited members</h3>'+
@@ -841,7 +842,8 @@ function inviteContent(current,{enabled=false}={}){
 function openInvites(current,options={}){
  const row=workspaceFromSignedContext(current);
  if(!row)return;
- const enabled=options.enabled===true&&typeof options.sendInvitation==='function';
+ const enabled=options.enabled===true&&typeof options.sendInvitation==='function'&&
+  typeof options.checkInvitationAvailability==='function';
  const layer=panel(inviteContent(row,{enabled}),'invite');
  const form=layer.querySelector('#ws02-invite-preview');
  const canManage=options.managementEnabled===true&&
@@ -951,8 +953,17 @@ function openInvites(current,options={}){
   if(!validUuid(requestId)){feedback.textContent='Secure request ID unavailable. No invitation was submitted.';return;}
   busy=true;
   const button=form.querySelector('[data-ws02-action="send"]');
-  button.disabled=true;feedback.textContent='Requesting signed invitation authorization…';
+  button.disabled=true;feedback.textContent='Verifying the signed invitation service…';
+  let serviceReady=false;
   try{
+   // A read-only, workspace-scoped manager lookup confirms the trusted Edge
+   // route is active before ANY invitation issuance or provider operation.
+   const availability=await options.checkInvitationAvailability(row.id);
+   if(availability?.status!=='SIGNED_MANAGER_LIST'||availability.workspaceId!==row.id)
+    throw new Error('Readiness not verified');
+   serviceReady=true;
+   if(activeOverlay!==layer||!layer.isConnected)return;
+   feedback.textContent='Requesting signed invitation delivery…';
    const receipt=await options.sendInvitation({workspaceId:row.id,
     requestId,email:result.email,role:'member',message:result.message});
    if(activeOverlay!==layer||!layer.isConnected)return;
@@ -964,7 +975,9 @@ function openInvites(current,options={}){
     'This request was already issued; no new email was sent. Contact an administrator for delivery reconciliation.';
   }catch{
    if(activeOverlay!==layer||!layer.isConnected)return;
-   feedback.textContent='Invitation delivery was not confirmed. Do not start another request until an administrator reconciles this attempt.';
+   feedback.textContent=serviceReady?
+    'Delivery outcome is unconfirmed. Do not resubmit; ask an administrator to reconcile this request.':
+    'Invitation sending is not yet active on the trusted server. No email was submitted. Contact your workspace administrator to activate delivery.';
   }finally{
    busy=false;
    if(activeOverlay===layer&&layer.isConnected)button.disabled=completed;
@@ -978,7 +991,7 @@ function openInvites(current,options={}){
   });
   form.querySelector('.ws02-invite-feedback').textContent=!result.valid?result.reason:
    'Exact email address validated for workspace Member access. No invitation was sent. '+
-   (enabled?'Select Send Member invitation to request signed delivery.':
+   (enabled?'Select Send invitation to verify the server and request delivery.':
    'Secure invitation delivery remains pending activation.');
  });
  form.querySelector('#ws02-invite-email').focus();

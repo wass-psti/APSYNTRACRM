@@ -1,0 +1,27 @@
+name: CP-CRM-WORKSPACE-INVITE — Signed Send Button Activation
+on:
+  pull_request:
+    paths:
+      - 'frontend/workspace-ui.js'
+      - 'frontend/app.js'
+      - 'frontend/tests/workspace-ui.test.mjs'
+      - 'frontend/tests/cp-crm-workspace-invite-ui-activation.test.mjs'
+      - 'docs/CP-CRM-WORKSPACE-INVITE-UI-ACTIVATION.md'
+      - '.github/workflows/cp-crm-workspace-invite-ui-activation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signed-send-activation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install pinned dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify invitation contracts, UI wiring and readiness denial
+        run: node --test frontend/tests/cp-crm-workspace-invite-ui-activation.test.mjs frontend/tests/cp-crm-workspace-invite-preflight.test.mjs frontend/tests/workspace-ui.test.mjs frontend/tests/workspace-invitation-client.test.mjs frontend/tests/ws11-invitation-management.test.mjs
+      - name: Verify production bundle and syntax
+        run: npm run build && node --check frontend/app.js && node --check frontend/workspace-ui.js
