@@ -10,7 +10,7 @@
  * Endpoint outline: see docs/ACCESS-MODEL-V2-API.md
  */
 type Body=Record<string,unknown>;
-const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const uuid=(x:unknown):x is string=>typeof x==='string'&&UUID.test(x);
 const dataObject=(x:unknown):x is Body=>!!x&&typeof x==='object'&&!Array.isArray(x);
 const safeText=(x:unknown,max=120)=>typeof x==='string'&&x.trim().length>0&&x.length<=max?x.trim():null;
@@ -33,7 +33,7 @@ function cors(req:Request):Headers{
  return headers;
 }
 function response(req:Request,status:number,payload:unknown){
- return new Response(JSON.stringify(payload),{status,headers:cors(req)});
+ return new Response(status===204?null:JSON.stringify(payload),{status,headers:cors(req)});
 }
 function config(){
  const url=Deno.env.get('SUPABASE_URL');
