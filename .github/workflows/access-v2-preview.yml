@@ -35,7 +35,7 @@ jobs:
           node --check frontend/access-v2/workspace-ui.js
           node --check frontend/access-v2/app-roles-ui.js
           node --check frontend/access-v2/app-roles-controller.js
-          node --test frontend/tests/access-model-v2.test.mjs frontend/tests/board-invite-header.test.mjs
+          node --test frontend/tests/access-model-v2.test.mjs frontend/tests/board-invite-header.test.mjs frontend/tests/role-configuration-ui.test.mjs frontend/tests/role-configuration-qol.test.mjs frontend/tests/role-configuration-experience.test.mjs frontend/tests/cp-role-ui01.test.mjs
       - run: npm install --no-audit --no-fund
         working-directory: access-preview
       - run: npm run build
