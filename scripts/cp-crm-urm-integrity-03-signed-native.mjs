@@ -77,9 +77,18 @@ export function assessAdminEmployeePair(records, expectedKeys) {
   };
 }
 
+/** Probe each existing signed browser profile separately, without copying sessions. */
+export function parseNativeEndpoints(cdp, cdp2) {
+  const urls=[cdp,cdp2].filter(x=>x!==undefined);
+  if(!urls.length || urls.some(x=>typeof x!=="string" || !/^http:\/\/127\.0\.0\.1:\d+$/.test(x)) ||
+     new Set(urls).size!==urls.length)
+    throw Error("One or two distinct loopback CDP endpoints required");
+  return urls;
+}
 const arg = (k) =>
   process.argv.find((x) => x.startsWith(k + "="))?.slice(k.length + 1);
 const cdp = arg("--cdp-url"),
+  cdp2 = arg("--cdp-url-2"),
   keys = arg("--expected-user-keys")?.split(",");
 if (import.meta.url === pathToFileURL(process.argv[1] || "/dev/null").href) {
   const report = {
@@ -90,8 +99,10 @@ if (import.meta.url === pathToFileURL(process.argv[1] || "/dev/null").href) {
     businessWrites: 0,
     permissionWrites: 0,
   };
+  let endpoints;
+  try { endpoints=parseNativeEndpoints(cdp,cdp2); } catch { endpoints=null; }
   if (
-    !/^http:\/\/127\.0\.0\.1:\d+$/.test(cdp || "") ||
+    !endpoints ||
     !keys ||
     keys.length !== 2 ||
     keys.some((x) => !/^[a-f0-9]{16}$/.test(x))
@@ -101,14 +112,15 @@ if (import.meta.url === pathToFileURL(process.argv[1] || "/dev/null").href) {
     );
     process.exitCode = 2;
   } else {
-    let browser;
+    const browsers=[];
     try {
       const { chromium } = await import("playwright");
-      browser = await chromium.connectOverCDP(cdp);
-      const pages = browser
-        .contexts()
-        .flatMap((c) => c.pages())
-        .filter((p) => p.url().startsWith(BASE));
+      for (const endpoint of endpoints)
+        browsers.push(await chromium.connectOverCDP(endpoint));
+      const pages = browsers
+        .flatMap((browser) => browser.contexts())
+        .flatMap((context) => context.pages())
+        .filter((page) => page.url().startsWith(BASE));
       const inventory = [];
       for (const page of pages) {
         const original = page.url();
@@ -150,10 +162,10 @@ if (import.meta.url === pathToFileURL(process.argv[1] || "/dev/null").href) {
           );
           for (
             let i = 0;
-            i < 15 &&
-            (!records.some((r) => r.name === "wm_auth_access_context") ||
+            i < 24 &&
+            (!records.some((r) => r.name === "wm_auth_access_context" && r.status === 200) ||
               !records.some(
-                (r) => r.name === "apsyntra_crm_my_effective_access",
+                (r) => r.name === "apsyntra_crm_my_effective_access" && r.status === 200,
               ));
             i++
           )
@@ -352,7 +364,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] || "/dev/null").href) {
       report.blocker = e.message.slice(0, 220);
       process.exitCode = 1;
     } finally {
-      await browser?.close().catch(() => {});
+      await Promise.all(browsers.map((browser) => browser.close().catch(() => {})));
       console.log("CP_URM03_SIGNED_READONLY", JSON.stringify(report));
     }
   }
