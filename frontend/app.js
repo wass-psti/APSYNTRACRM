@@ -1797,9 +1797,9 @@ function render(){
   applyBoardItemFilter(state.boardItemSearch);
   syncBoardSelectionUi();
   mountBoardPaginationUi();
-  void ensureBoardToolbarPopoverBehavior();
  }
  mountBoardHorizontalRail(root);
+ if(state.view==='board'&&state.tab==='items')void ensureBoardToolbarPopoverBehavior();
  if(state.context&&auth.isSignedIn)platformSync.start({
   userId:state.context.user_id,workspaceId:state.context.workspace_id,
   priorityBoardId:state.view==='board'?state.boardId:null,
