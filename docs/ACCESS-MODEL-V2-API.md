@@ -74,7 +74,7 @@ Expected after activation: `{"ok":true,"data":{"contract":"apsyntra-board-team-i
 | PATCH `/apps/:appKey/roles` | Same | Edit name/description/capabilities and assign/revoke people |
 | DELETE `/apps/:appKey/roles` | Same | Delete only after reassignment or explicitly audited removal |
 
-These paths refer to proposed `apsyntra_access_app_roles_snapshot_v2` and `apsyntra_access_app_roles_change_v2` signed RPCs. They are **not yet present**; the router therefore returns 503 on activation until implemented and authorized. App keys, feature keys and historic role keys are preserved through an approved mapping.
+These paths refer to proposed `apsyntra_access_app_roles_snapshot_v2` and `apsyntra_access_app_roles_change_v2` signed RPCs. Review-only SQL definitions now exist in `sql/ACCESS_MODEL_V2_APP_ROLES_RPC_REVIEW_ONLY.sql`; they are **not applied**, and the router remains disabled until independently tested and authorized. App keys, feature keys and historic role keys are preserved through an approved mapping.
 
 Example proposed batch patch:
 
