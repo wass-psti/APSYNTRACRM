@@ -31,7 +31,11 @@ BEGIN
         WHERE id=v_change_id AND status='applied')
      OR NOT EXISTS(SELECT 1 FROM public.apsyntra_role_change_audit
         WHERE change_id=v_change_id AND event='applied')
-  THEN RAISE EXCEPTION 'Module receipt did not persist with audit'; END IF;
+  THEN RAISE EXCEPTION 'Module receipt mismatch: receipt=%, stored=%, request=%, audit=%',
+   receipt,
+   (SELECT count(*) FROM public.module_role_assignments WHERE user_id=target AND module_id='order-intake' AND role='User' AND enabled),
+   (SELECT count(*) FROM public.apsyntra_role_change_requests WHERE id=v_change_id AND status='applied'),
+   (SELECT count(*) FROM public.apsyntra_role_change_audit WHERE change_id=v_change_id AND event='applied'); END IF;
   SELECT updated_at INTO revision FROM public.module_role_assignments
     WHERE user_id=target AND module_id='order-intake';
   IF revision IS NULL THEN RAISE EXCEPTION 'Missing persisted role revision'; END IF;
