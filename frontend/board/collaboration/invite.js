@@ -120,6 +120,8 @@ export function renderBoardInviteDialog({people,directory,teamDirectory=null,wor
    teamDirectory.teams.some(t=>t.hasAccess)?teamDirectory.teams.filter(t=>t.hasAccess).map(teamLine).join(''):
    '<p class="aps-invite-help">Invite a team to give every member Viewer access.</p>')+'</div>'+
   '<div class="aps-invite-footer">'+
+   '<div class="aps-invite-legend"><p><strong>Viewer</strong> can see every item but cannot change anything.</p>'+
+   '<p><strong>Editor</strong> can add and edit items, columns and groups.</p></div>'+
    (!manage?'<p class="aps-invite-help">Only an authorized board manager can invite people.</p>':
     !verifiedCandidates(directory)?'<p class="aps-invite-help">The authorized workspace member directory is unavailable for your account. The search field cannot return other members until access is granted.</p>':
     !canWrite?'<p class="aps-invite-help">Board access updates are currently disabled. Search is read-only.</p>':'')+
@@ -140,6 +142,12 @@ export function closeBoardInviteDialog(){
 export function openBoardInviteDialog(options={}){
  if(typeof document==='undefined'||!document.body)return null;
  closeBoardInviteDialog();
+ // The V2 light appearance is route-scoped and loaded only when Invite opens.
+ if(!document.head.querySelector('link[data-apsyntra-board-v2-css]')){
+  const style=document.createElement('link');
+  style.rel='stylesheet';style.href='./frontend/access-v2/board-invite.css';
+  style.dataset.apsyntraBoardV2Css='true';document.head.append(style);
+ }
  const previous=document.activeElement;
  const overlay=document.createElement('div');
  overlay.className='aps-invite-overlay';
