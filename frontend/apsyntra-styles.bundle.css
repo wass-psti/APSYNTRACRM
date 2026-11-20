@@ -28697,8 +28697,11 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell{
 }
 #app .aps-board-shell .board-add-group-bottom:hover{background:var(--br-hover)}
 #app .aps-board-shell .board-column-resize-guide{
- position:fixed;top:0;left:0;z-index:9999;width:2px;height:100vh;
- background:var(--bc-blue);pointer-events:none;box-shadow:0 0 0 1px #2d8cf02a
+ position:fixed;inset:0;z-index:9999;width:100vw;height:100vh;
+ background:transparent;pointer-events:none;overflow:visible
+}
+#app .aps-board-shell .board-column-resize-guide line{
+ stroke:var(--bc-blue);stroke-width:2;vector-effect:non-scaling-stroke
 }
 @keyframes board-group-compact-in{
  from{opacity:.7;transform:translateY(-2px)}
