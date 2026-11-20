@@ -144,9 +144,14 @@ export class TimeTrackerNativeClient{
       display_name:String(u.display_name||'Workforce member').slice(0,100)}));
   // Reuse this EXISTING authenticated Supabase module directory read.
   // Only name + TimeTracker role are carried into the read-only employee tab.
-  const employees=projectTimeTrackerEmployees(users,{
+  // A corrupt optional roster must never interrupt Clock In/Out or My Hours.
+  // Render Employees unavailable rather than exposing or guessing directory rows.
+  let employees=null;
+  try{
+   employees=projectTimeTrackerEmployees(users,{
     userId:who.id,workspaceId:ctx.workspace_id,boardId,validRoles:TT_ROLES
-  });
+   });
+  }catch{/* Fail closed for the optional read-only Employees view. */}
   return Object.freeze({userId:who.id,workspaceId:ctx.workspace_id,boardId,
     platformRole:ctx.profile?.platform_role||'Unassigned',
     moduleRole:self.module_role,name:String(self.display_name||'Signed user').slice(0,100),
