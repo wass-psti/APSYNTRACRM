@@ -61,7 +61,7 @@ test('admin roles find Correct time in existing Log, without a new board',()=>{
  });
  assert.match(html,/data-action="tt-log-admin-correct-time"/);
  assert.match(html,/data-action="tt-log-admin-edit"/);
- assert.match(html,/select Correct time/);
+ assert.match(html,/Click any record to view its details in a popup/);
 });
 
 test('System Admin time correction opens the restricted editor, not the full record editor',()=>{
