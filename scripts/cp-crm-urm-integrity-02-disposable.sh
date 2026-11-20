@@ -34,6 +34,13 @@ awk -f /source-sql/tests/cp-crm-urm-integrity-02-extract.awk \
  /source-migrations/20261030080046_cp_rc02_bootstrap_user_role_management.sql > /tmp/role-rpc.sql
 test "$(wc -l < /tmp/role-rpc.sql)" -gt 140
 apply /tmp/role-rpc.sql
+# Replace the minimal CRM setter mock as well: its lack of updatedAt CAS and
+# audited transaction would conceal the very failures under acceptance.
+awk -v function_name=apsyntra_crm_platform_role_set \
+ -f /source-sql/tests/cp-crm-urm-integrity-02-extract.awk \
+ /source-migrations/20261031012212_cp_frt_sec08_crm_platform_role_activation.sql > /tmp/crm-setter.sql
+test "$(wc -l < /tmp/crm-setter.sql)" -gt 50
+apply /tmp/crm-setter.sql
 apply /source-migrations/20261112121235_cp_urm04b_crm_admin_capability_parity_20261112.sql
 # The existing disposable admin-parity fixture does not contain the full
 # effective module-role resolver. Install the *unmodified* canonical SQL
