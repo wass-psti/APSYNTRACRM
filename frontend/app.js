@@ -11133,6 +11133,44 @@ window.addEventListener('pointerup',event=>{
  }
 });
 window.addEventListener('pointercancel',()=>{cancelBoardResize();boardTouch=null;});
+
+/** Synchronized horizontal scroll keeps collapsed rollups on the same tracks. */
+let boardGroupScrollSyncing=false;
+root.addEventListener('scroll',event=>{
+ const source=event.target;
+ if(boardGroupScrollSyncing||!source?.matches?.('.board-group-scroll,.board-collapsed-rollup-scroll'))return;
+ boardGroupScrollSyncing=true;
+ for(const other of root.querySelectorAll('.board-group-scroll,.board-collapsed-rollup-scroll'))
+  if(other!==source&&other.scrollLeft!==source.scrollLeft)other.scrollLeft=source.scrollLeft;
+ boardGroupScrollSyncing=false;
+},true);
+/** Double-click the right-edge handle to fit currently loaded, authorized text. */
+root.addEventListener('dblclick',event=>{
+ const resize=event.target.closest?.('.board-column-resize[data-column-key]');
+ if(!resize||!activeBoardLayout())return;
+ const key=resize.dataset.columnKey,table=resize.closest('table.board-table-custom');
+ const header=resize.closest('th[data-column-key]');
+ if(!table||!header)return;
+ event.preventDefault();
+ const position=[...header.parentElement.children].indexOf(header);
+ if(position<0)return;
+ const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
+ if(!ctx)return;
+ ctx.font=getComputedStyle(header).font||'13px sans-serif';
+ let max=ctx.measureText(header.querySelector('.board-heading-label')?.textContent||'').width+48;
+ for(const table of root.querySelectorAll('table.board-table-custom')){
+  for(const row of [...table.tBodies[0]?.rows||[]].slice(0,150)){
+   const cell=row.cells[position];
+   if(!cell||row.classList.contains('board-virtual-spacer'))continue;
+   const text=String(cell.textContent||'').trim().slice(0,150);
+   max=Math.max(max,ctx.measureText(text).width+32);
+  }
+ }
+ const width=boundBoardColumnWidth(key,Math.ceil(max));
+ persistBoardLayout(pref=>({...pref,widths:{...pref.widths,[key]:width}}));
+ render();
+});
+
 document.addEventListener('pointerdown',event=>{
  if(boardColumnMenuNode?.isConnected&&
     !boardColumnMenuNode.contains(event.target)&&
