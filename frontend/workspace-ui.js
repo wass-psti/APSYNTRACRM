@@ -956,11 +956,17 @@ function openInvites(current,options={}){
   button.disabled=true;feedback.textContent='Verifying the signed invitation service…';
   let serviceReady=false;
   try{
-   // A read-only, workspace-scoped manager lookup confirms the trusted Edge
-   // route is active before ANY invitation issuance or provider operation.
+   // Read-only, workspace-scoped readiness verifies SQL issuance and SMTP/Edge
+   // configuration, not just that manager listing happens to be available.
    const availability=await options.checkInvitationAvailability(row.id);
-   if(availability?.status!=='SIGNED_MANAGER_LIST'||availability.workspaceId!==row.id)
+   if(availability?.status!=='SIGNED_INVITATION_READINESS'||availability.workspaceId!==row.id)
     throw new Error('Readiness not verified');
+   if(availability.ready!==true){
+    feedback.textContent=availability.reason==='delivery_configuration_missing'?
+     'Invitation email service is not configured. No email was submitted. Contact your workspace administrator.':
+     'Invitation sending is not yet activated on the trusted server. No email was submitted.';
+    return;
+   }
    serviceReady=true;
    if(activeOverlay!==layer||!layer.isConnected)return;
    feedback.textContent='Requesting signed invitation delivery…';
@@ -973,11 +979,13 @@ function openInvites(current,options={}){
    feedback.textContent=receipt.state==='delivery-submitted'?
     'The trusted delivery service accepted this invitation. Membership starts only after recipient acceptance.':
     'This request was already issued; no new email was sent. Contact an administrator for delivery reconciliation.';
-  }catch{
+  }catch(error){
    if(activeOverlay!==layer||!layer.isConnected)return;
    feedback.textContent=serviceReady?
     'Delivery outcome is unconfirmed. Do not resubmit; ask an administrator to reconcile this request.':
-    'Invitation sending is not yet active on the trusted server. No email was submitted. Contact your workspace administrator to activate delivery.';
+    error?.status===401?'Your session must be verified again before sending invitations. No email was submitted.':
+    error?.status===403?'Invitation sending was denied for this workspace. No email was submitted.':
+    'The trusted invitation service is unavailable or not activated. No email was submitted. Contact your workspace administrator.';
   }finally{
    busy=false;
    if(activeOverlay===layer&&layer.isConnected)button.disabled=completed;

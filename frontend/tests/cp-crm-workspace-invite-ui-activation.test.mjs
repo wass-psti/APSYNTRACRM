@@ -11,8 +11,8 @@ test('signed server availability can be checked before any Send operation',async
  let mutations=0,checks=0;
  const signed={...auth,async authorized(path,{body}){
   if(path.endsWith('ws02d-manage')){
-   checks++;assert.equal(body.operation,'list');assert.equal(body.workspaceId,workspaceId);
-   return {schemaVersion:1,workspaceId,authorized:true,invitations:[]};
+   checks++;assert.equal(body.operation,'readiness');assert.equal(body.workspaceId,workspaceId);
+   return {schemaVersion:1,workspaceId,authorized:true,ready:true,reason:'ready'};
   }
   if(path.endsWith('ws02d-invite')){mutations++;throw Error('Synthetic write not permitted')}
   throw Error('Unexpected route');
@@ -20,8 +20,9 @@ test('signed server availability can be checked before any Send operation',async
  const api={context:async()=>session};
  const manager=new WorkspaceInvitationManagementClient({auth:signed,api,enabled:true});
  const client=new WorkspaceInvitationClient({auth:signed,api,enabled:true});
- const listing=await manager.list(workspaceId);
- assert.equal(listing.status,'SIGNED_MANAGER_LIST');assert.equal(listing.workspaceId,workspaceId);
+ const readiness=await manager.readiness(workspaceId);
+ assert.equal(readiness.status,'SIGNED_INVITATION_READINESS');assert.equal(readiness.workspaceId,workspaceId);
+ assert.equal(readiness.ready,true);
  assert.equal(checks,1);assert.equal(mutations,0);
  assert.equal(client.enabled,true);
 });
@@ -32,7 +33,7 @@ test('dormant manager denies and does not imply readiness or send a message',asy
   sends++;throw Error('Unexpected call');
  }};
  const manager=new WorkspaceInvitationManagementClient({auth:signed,api:{context:async()=>session},enabled:true});
- await assert.rejects(manager.list(workspaceId),{status:409});
+ await assert.rejects(manager.readiness(workspaceId),{status:503});
  assert.equal(sends,0);
 });
 test('all invite launch points use a live list gate before provider submission, without an optimistic member insertion',()=>{
@@ -41,6 +42,7 @@ test('all invite launch points use a live list gate before provider submission, 
  assert.equal((app.match(/checkInvitationAvailability:checkWorkspaceInvitationAvailability/g)||[]).length,3);
  assert.match(ui,/checkInvitationAvailability:options\.checkInvitationAvailability/);
  assert.match(ui,/const availability=await options\.checkInvitationAvailability\(row\.id\)/);
+ assert.match(app,/workspaceInvitationLiveManager\.readiness\(workspaceId\)/);
  assert.ok(ui.indexOf('const availability=await options.checkInvitationAvailability(row.id)') <
   ui.indexOf('const receipt=await options.sendInvitation({workspaceId:row.id'));
  assert.match(ui,/No email was submitted/);

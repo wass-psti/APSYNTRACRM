@@ -11,7 +11,8 @@ for(const [name,mode] of [['ws02d-invite','invite'],['ws02d-accept','accept']]){
   assert.doesNotMatch(source,/--no-verify-jwt|service_role/);
   const transport=readFileSync('supabase/functions/_shared/ws02d-trusted.ts','utf8');
   assert.match(transport,/APSYNTRA_INVITES_EDGE_ENABLED/);
-  assert.match(transport,/!== 'true'/);
+  assert.match(transport,/const deliveryEnabled = Deno\.env\.get\('APSYNTRA_INVITES_EDGE_ENABLED'\) === 'true'/);
+  assert.match(transport,/if \(\!deliveryEnabled && \!isReadiness\)/);
   assert.match(transport,/private\.ws01_signed_actor_session\(\)/);
  });
 }

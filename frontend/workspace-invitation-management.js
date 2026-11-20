@@ -36,6 +36,19 @@ export function normalizeInvitationListing(raw,{workspaceId}={}){
   return Object.freeze({status:'SIGNED_MANAGER_LIST',workspaceId,
     invitations:Object.freeze(invitations)});
 }
+// Separate from listing: a manager list may work while SMTP, SQL issuance
+// or the Edge delivery gate is still disabled. Never infer send readiness.
+const READINESS_REASONS=new Set(['ready','invitation_feature_disabled',
+ 'delivery_configuration_missing']);
+export function normalizeInvitationReadiness(raw,{workspaceId}={}){
+ if(!validUuid(workspaceId)||raw?.schemaVersion!==1||
+   raw?.workspaceId!==workspaceId||raw?.authorized!==true||
+   typeof raw.ready!=='boolean'||!READINESS_REASONS.has(raw.reason)||
+   raw.ready!==(raw.reason==='ready'))
+   deny('Invitation readiness response cannot be verified.',409);
+ return Object.freeze({status:'SIGNED_INVITATION_READINESS',workspaceId,
+   ready:raw.ready,reason:raw.reason});
+}
 export function normalizeInvitationRevocation(raw,{workspaceId,invitationId}={}){
   if(!validUuid(workspaceId)||!validUuid(invitationId)||
       raw?.schemaVersion!==1||raw?.workspaceId!==workspaceId||
@@ -61,6 +74,25 @@ export class WorkspaceInvitationManagementClient{
           ctx?.user_id!==user.id||ctx?.workspace_id!==workspaceId||
           ctx?.profile?.status!=='active')deny('Signed workspace changed.',403);
     return user.id;
+  }
+  async readiness(workspaceId){
+    const actor=await this.#signed(workspaceId);
+    let result;
+    try{
+      result=await this.auth.authorized('/functions/v1/ws02d-manage',{
+        method:'POST',retryUnauthorized:false,
+        body:{operation:'readiness',workspaceId}
+      });
+    }catch(error){
+      if(error?.status===401)deny('Reauthenticate before sending invitations.',401);
+      if(error?.status===403)deny('This workspace cannot issue invitations.',403);
+      if(error?.status===404)deny('The trusted invitation service is not deployed.',503);
+      deny('The invitation service is not active or available.',503);
+    }
+    const ready=normalizeInvitationReadiness(result,{workspaceId});
+    if(await this.#signed(workspaceId)!==actor)
+      deny('Invitation readiness expired after session or workspace change.',409);
+    return ready;
   }
   async list(workspaceId){
     const actor=await this.#signed(workspaceId);

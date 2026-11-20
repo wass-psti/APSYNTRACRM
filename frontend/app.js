@@ -236,11 +236,11 @@ const workspaceInvitationClient=new WorkspaceInvitationClient({auth,api:db});
 const workspaceInvitationManagementClient=new WorkspaceInvitationManagementClient({auth,api:db});
 const boardGroupAccessClient=new BoardGroupAccessClient({auth,api:db});
 const workspaceInvitationAcceptanceClient=new WorkspaceInvitationAcceptanceClient({auth,api:db});
-// Signed runtime activation: the trusted manager route must prove availability
+// Signed runtime activation: a dedicated non-mutating manager readiness route must verify delivery
 // before any invitation issue. Never infer readiness from a UI flag alone.
 const workspaceInvitationLiveClient=new WorkspaceInvitationClient({auth,api:db,enabled:true});
 const workspaceInvitationLiveManager=new WorkspaceInvitationManagementClient({auth,api:db,enabled:true});
-const checkWorkspaceInvitationAvailability=workspaceId=>workspaceInvitationLiveManager.list(workspaceId);
+const checkWorkspaceInvitationAvailability=workspaceId=>workspaceInvitationLiveManager.readiness(workspaceId);
 const sendWorkspaceInvitation=request=>workspaceInvitationLiveClient.send(request);
 const platformSync=new PlatformSync({
  auth,api:db,url:SUPABASE_URL,publishableKey:SUPABASE_PUBLISHABLE_KEY,
