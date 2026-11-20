@@ -8,6 +8,7 @@
  * Do not deploy/activate without staging negative tests and delivery review.
  */
 import postgres from 'npm:postgres@3.4.5';
+import {sendWorkspaceSmtp,validWorkspaceSmtpConfig} from './ws02d-smtp.mjs';
 
 type Route = 'invite' | 'accept' | 'manage' | 'board';
 type ObjectMap = Record<string, unknown>;
@@ -225,11 +226,13 @@ async function recordDelivery(
 async function deliver(
   actor: VerifiedActor, request: ObjectMap, receipt: ObjectMap,
 ): Promise<ObjectMap> {
+  const transport = Deno.env.get('APSYNTRA_INVITE_TRANSPORT') === 'smtp' ? 'smtp' : 'resend';
   const apiKey = Deno.env.get('RESEND_API_KEY');
   const from = Deno.env.get('APSYNTRA_INVITE_FROM');
   const appUrl = Deno.env.get('APSYNTRA_INVITE_APP_URL') ||
     'https://wass-psti.github.io/APSYNTRACRM/';
-  if (!apiKey || !from || !appUrl.startsWith('https://'))
+  if (!from || !appUrl.startsWith('https://') ||
+      (transport === 'resend' && !apiKey))
     return fail(503, 'Mail delivery not configured');
   if (!userId(receipt.invitationId)) return fail(503, 'Invalid invitation reference');
 
@@ -246,6 +249,32 @@ async function deliver(
     '#/invitations/accept/' + receipt.token;
   const msg = typeof request.message === 'string' && request.message ?
     '\nMessage from inviter: ' + request.message + '\n' : '';
+  if (transport === 'smtp') {
+    const config = {
+      host:Deno.env.get('APSYNTRA_INVITE_SMTP_HOST'),
+      port:Deno.env.get('APSYNTRA_INVITE_SMTP_PORT'),
+      user:Deno.env.get('APSYNTRA_INVITE_SMTP_USER'),
+      password:Deno.env.get('APSYNTRA_INVITE_SMTP_PASSWORD'),from
+    };
+    if (!validWorkspaceSmtpConfig(config))
+      return fail(503, 'Mail delivery not configured');
+    // Nodemailer is loaded only when SMTP is explicitly selected. No SMTP
+    // credentials ever go to Supabase Auth, the client or a response body.
+    const {default:nodemailer} = await import('npm:nodemailer@10.6.0');
+    const result = await sendWorkspaceSmtp({config,
+      envelope:{to:request.email, invitationId:receipt.invitationId,
+        subject:'APSYNTRA CRM workspace invitation',
+        text:'You have been invited to join a workspace in APSYNTRA CRM.\n' +
+         'Sign in with this exact email address, then accept within 24 hours.\n' +
+          msg + '\nInvitation: ' + href +
+         '\n\nIf unexpected, ignore this message.'},
+      createTransport:nodemailer.createTransport.bind(nodemailer)});
+    await recordDelivery(actor,request.workspaceId,receipt.invitationId,
+      result.state,result.providerId);
+    if(result.state==='submitted')
+      return {invitationId:receipt.invitationId,state:'delivery-submitted'};
+    return fail(409, 'Invitation delivery requires reconciliation; do not retry');
+  }
   let response: Response | null = null;
   try {
     response = await fetch('https://api.resend.com/emails', {
@@ -319,9 +348,17 @@ export function serveInvitationRoute(route: Route) {
       let input: unknown;
       try { input = JSON.parse(raw); } catch { return fail(400, 'Invalid JSON'); }
       const body = validate(route, input);
-      if (route === 'invite' && (!Deno.env.get('RESEND_API_KEY') ||
-          !Deno.env.get('APSYNTRA_INVITE_FROM')))
-        return fail(503, 'Mail delivery not configured');
+      if (route === 'invite') {
+        const smtp = Deno.env.get('APSYNTRA_INVITE_TRANSPORT') === 'smtp';
+        const config = {host:Deno.env.get('APSYNTRA_INVITE_SMTP_HOST'),
+          port:Deno.env.get('APSYNTRA_INVITE_SMTP_PORT'),
+          user:Deno.env.get('APSYNTRA_INVITE_SMTP_USER'),
+          password:Deno.env.get('APSYNTRA_INVITE_SMTP_PASSWORD'),
+          from:Deno.env.get('APSYNTRA_INVITE_FROM')};
+        if (smtp ? !validWorkspaceSmtpConfig(config) :
+            (!Deno.env.get('RESEND_API_KEY') || !config.from))
+          return fail(503, 'Mail delivery not configured');
+      }
       const actor = await verifyUser(req);
       const receipt = await trustedSql(actor, route, body);
       if (route === 'invite') return respond(req, 200, await deliver(actor, body, receipt));
