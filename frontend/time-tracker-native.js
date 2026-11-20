@@ -119,15 +119,16 @@ export class TimeTrackerNativeClient{
  constructor({auth,api}){this.auth=auth;this.api=api;}
  async access(boardId){
   const {auth,api}=this;
-  const who=await auth.getVerifiedUser();
-  const ctx=await api.context();
+  const [who,ctx]=await Promise.all([auth.getVerifiedUser(),api.context()]);
   verifiedContext(auth,ctx,boardId);
   if(who?.id!==ctx.user_id)deny('Signed identity mismatch');
-  const native=await api.nativeApplicationBoardContext(moduleId);
+  const [native,granted]=await Promise.all([
+   api.nativeApplicationBoardContext(moduleId),
+   api.rpc('has_module_access',{p_module_id:moduleId,p_user_id:who.id})
+  ]);
   if(native?.userId!==who.id||native?.workspaceId!==ctx.workspace_id||
      native?.board?.id!==boardId||native.board.name!=='TimeTracker Attendance')
    deny('TimeTracker native application identity or workspace mismatch');
-  const granted=await api.rpc('has_module_access',{p_module_id:moduleId,p_user_id:who.id});
   if(granted!==true)deny('TimeTracker application grant required');
   const users=await api.rpc('list_module_directory',{p_module_id:moduleId});
   if(!Array.isArray(users))deny('TimeTracker central directory unavailable');
@@ -168,21 +169,22 @@ export class TimeTrackerNativeClient{
    return false;
   }
  }
- async snapshot(boardId){
+ async snapshot(boardId,{clockOnly=false}={}){
   const access=await this.access(boardId);
   // Issue independent, read-only RPCs together AFTER signed access verification.
   // Backend scope checks remain authoritative; identity is checked again below.
-  const otRead=this.api.rpc('timetracker_ot_snapshot',{p_board_id:boardId})
-   .then(response=>({response}),error=>({error}));
+  const otRead=clockOnly?Promise.resolve(null):
+   this.api.rpc('timetracker_ot_snapshot',{p_board_id:boardId})
+    .then(response=>({response}),error=>({error}));
   const autoClockoutRead=this.api.rpc('timetracker_auto_clockout_snapshot',{p_board_id:boardId})
    .then(response=>({response}),error=>({error}));
   const clockRead=this.attendanceCapability(boardId,access);
   // Department is a signed, workspace-scoped employee record, not a browser field.
   // A missing deployment leaves Clock In unavailable rather than guessing.
-  const catalogRead=['System Admin','IT Administrator'].includes(access.moduleRole)?
+  const catalogRead=!clockOnly&&['System Admin','IT Administrator'].includes(access.moduleRole)?
    this.api.rpc('timetracker_department_catalog_snapshot',{p_board_id:boardId})
     .then(response=>({response}),error=>({error})):Promise.resolve(null);
-  const employeeDepartmentsRead=['System Admin','IT Administrator'].includes(access.moduleRole)?
+  const employeeDepartmentsRead=!clockOnly&&['System Admin','IT Administrator'].includes(access.moduleRole)?
    this.api.rpc('timetracker_employee_department_directory_snapshot',{p_board_id:boardId})
     .then(response=>({response}),error=>({error})):Promise.resolve(null);
   const departmentRead=this.api.rpc('timetracker_employee_department_for_clock',{
@@ -212,6 +214,7 @@ export class TimeTrackerNativeClient{
   // Optional dedicated OT read endpoint. Before activation, degrade to owner-only
   // legacy rows; never infer team permissions from frontend platform role.
   try{
+   if(!clockOnly){
    const {response,error}=await otRead;
    if(error)throw error;
    if(!isRecord(response)||response.mode!=='ACTIVE'||
@@ -229,6 +232,7 @@ export class TimeTrackerNativeClient{
    otRequests=projected;
    otAccess=Object.freeze({scope:response.scope,
     bootstrapApprover:response.bootstrapApprover,otContractActive:true});
+   }
   }catch(error){
    // Only missing RPC is an expected predeployment state. All other errors
    // reject instead of silently substituting potentially stale authority.
@@ -298,7 +302,7 @@ export class TimeTrackerNativeClient{
    catch{/* Optional directory corruption cannot block an employee's Clock. */}
   }
   await checkIdentity(this.auth,this.api,access,boardId);
-  return {status:'VERIFIED_READ',access:{...access,...otAccess,attendanceWritesAccepted,employeeDepartment,employees,departmentCatalog},records,otRequests,autoClockout,autoClockoutUnavailable,overview,log,revision:row?Number(row.revision):0,
+  return {status:'VERIFIED_READ',clockOnly:clockOnly===true,access:{...access,...otAccess,attendanceWritesAccepted,employeeDepartment,employees,departmentCatalog},records,otRequests,autoClockout,autoClockoutUnavailable,overview,log,revision:row?Number(row.revision):0,
    active:records.find(x=>x.status==='Active')||null};
  }
  /** A fresh independently guarded bootstrap read; no Team information for normal users. */
@@ -350,17 +354,20 @@ export class TimeTrackerNativeClient{
   return after;
  }
  /** Administrator-only department mutation with a fresh signed read-back. */
- async assignEmployeeDepartment(boardId,userId,department){
-  const access=await this.access(boardId);
-  if(!['System Admin','IT Administrator'].includes(access.moduleRole))
+ /** Minimize post-save latency: reuse the signed actor/roster already on screen.
+  * The write RPC independently authorizes the actor; two readbacks verify the outcome.
+  */
+ async assignEmployeeDepartment(boardId,userId,department,{verifiedAccess=null}={}){
+  const access=verifiedAccess||await this.access(boardId);
+  if(access?.boardId!==boardId||!uuid.test(access?.userId||'')||
+     !uuid.test(access?.workspaceId||'')||
+     !['System Admin','IT Administrator'].includes(access.moduleRole))
    deny('TimeTracker administrator authorization required');
   if(!uuid.test(userId||'')||!validTimeTrackerDepartmentName(department)||
      !access.employees?.members?.some(member=>member.id===userId))
    deny('Active employee and valid department required');
-  const catalog=projectTimeTrackerDepartmentCatalog(
-   await this.api.rpc('timetracker_department_catalog_snapshot',{p_board_id:boardId}),access);
-  if(!catalog.departments.some(row=>row.name===department))
-   deny('Selected department no longer exists; refresh Employees');
+  // The signed catalog from the current page is used for presentation only.
+  // The backend validates current membership again in the same write transaction.
   await checkIdentity(this.auth,this.api,access,boardId);
   const receipt=await this.api.rpc('timetracker_employee_department_set',{
    p_board_id:boardId,p_target_user_id:userId,p_department:department
@@ -369,14 +376,18 @@ export class TimeTrackerNativeClient{
      receipt.actorId!==access.userId||receipt.workspaceId!==access.workspaceId||
      receipt.targetUserId!==userId||receipt.department!==department)
    deny('Department write receipt is unverified; refresh before retrying');
-  await checkIdentity(this.auth,this.api,access,boardId);
-  const snapshot=await this.api.rpc('timetracker_employee_department_directory_snapshot',{
-   p_board_id:boardId
-  });
-  const verified=projectTimeTrackerEmployeeDepartments(access.employees,snapshot);
-  if(verified.members.find(m=>m.id===userId)?.department!==department)
+  // Concurrent signed readbacks replace the previous full TimeTracker reload.
+  const [snapshot,catalogSnapshot]=await Promise.all([
+   this.api.rpc('timetracker_employee_department_directory_snapshot',{p_board_id:boardId}),
+   this.api.rpc('timetracker_department_catalog_snapshot',{p_board_id:boardId})
+  ]);
+  const employees=projectTimeTrackerEmployeeDepartments(access.employees,snapshot);
+  const catalog=projectTimeTrackerDepartmentCatalog(catalogSnapshot,access);
+  if(employees.members.find(m=>m.id===userId)?.department!==department||
+     !catalog.departments.some(row=>row.name===department))
    deny('Department update could not be verified; refresh before retrying');
-  return verified;
+  await checkIdentity(this.auth,this.api,access,boardId);
+  return Object.freeze({...employees,departmentCatalog:catalog});
  }
  /** Signed and audited catalog mutations. Never optimistically change roster state. */
  async mutateDepartmentCatalog(boardId,{action,departmentId=null,name=null,expectedRevision,expectedCount=null}={}){
@@ -561,7 +572,7 @@ export class TimeTrackerNativeClient{
  }
  async commit(boardId,{action,location,department,workNote='',geo}={}){
   if(!['clock-in','clock-out'].includes(action))deny('Unsupported attendance action');
-  const before=await this.snapshot(boardId);
+  const before=await this.snapshot(boardId,{clockOnly:true});
   if(before.access.attendanceWritesAccepted!==true)
    deny('Server-verified TimeTracker Clock activation required');
   if(action==='clock-in'&&before.active)deny('Already clocked in');

@@ -93,7 +93,7 @@ test('Monitor semantics preserve existing signed access checks and no raw privat
   view:'monitor',result:{status:'UNVERIFIED',access:{},records:[]}
  });
  assert.doesNotMatch(denied,/tt-monitor-command-hero|tt-pixi-backdrop" data-pixi="fallback"><\/div><span class="tt-monitor-orbit"/);
- assert.match(denied,/Attendance is unavailable until signed workspace/);
+ assert.match(denied,/Signed workspace, board or module access is unavailable/);
  assert.match(monitorSource,/probeTimeTrackerMonitor/);
  assert.match(monitorSource,/validateTimeTrackerServerHealth/);
 });

@@ -144,7 +144,7 @@ test('app makes one write attempt and reconciles ambiguous clock-out without aut
  assert.match(app,/case 'tt-clock-verify'/);
  assert.match(app,/attendanceSnapshotOutcome\(snapshot,pending\)/);
  assert.match(app,/state\.ttClockPending=null/);
- assert.match(app,/state\.ttBusy=true;state\.ttError='';state\.ttSuccess='';render\(\)/);
+ assert.match(app,/state\.ttBusy=true;state\.ttClockStage='location';state\.ttError='';state\.ttSuccess='';render\(\)/);
 });
 
 
