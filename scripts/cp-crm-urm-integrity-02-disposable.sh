@@ -35,6 +35,15 @@ awk -f /source-sql/tests/cp-crm-urm-integrity-02-extract.awk \
 test "$(wc -l < /tmp/role-rpc.sql)" -gt 140
 apply /tmp/role-rpc.sql
 apply /source-migrations/20261112121235_cp_urm04b_crm_admin_capability_parity_20261112.sql
+# The existing disposable admin-parity fixture does not contain the full
+# effective module-role resolver. Install the *unmodified* canonical SQL
+# functions from their checked-in source, not a reconstructed test stub.
+for fn in apsyntra_crm_role_rank apsyntra_crm_module_role_rank apsyntra_crm_explicit_role module_role_for has_module_access; do
+ awk -v function_name="$fn" -f /source-sql/tests/cp-crm-urm-integrity-02-extract.awk \
+  /source-migrations/20261031012212_cp_frt_sec08_crm_platform_role_activation.sql > "/tmp/$fn.sql"
+ test "$(wc -l < "/tmp/$fn.sql")" -gt 5
+ apply "/tmp/$fn.sql"
+done
 apply /source-sql/tests/cp-crm-urm-integrity-02-disposable-acceptance.sql
 '
 echo CP_CRM_URM_INTEGRITY_02_DISPOSABLE_PASS
