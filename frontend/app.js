@@ -1190,11 +1190,15 @@ function renderTradeLinkRouteUnavailable(message='The existing TradeLink board w
 }
 
 function renderTimeTrackerRouteUnavailable(){
+ const message=state.ttError||'The existing TimeTracker Attendance board was not found in this workspace. No board was created.';
+ const isAssignmentFailure=/native application assignment is not active|native application role is unavailable|native application access is unavailable/i.test(message);
+ const title=isAssignmentFailure?'TimeTracker access unavailable':'Existing attendance board unavailable';
  return '<section class="fm1-app tt-application-unavailable" aria-label="TimeTracker application">'+
   '<header class="fm1-app-header"><div><span class="fm1-eyebrow">APSYNTRA CRM · ATTENDANCE OPERATIONS</span>'+
   '<h1>TimeTracker <span>Attendance</span></h1><p>Timekeeping and attendance workspace</p></div></header>'+
-  '<section class="fm1-panel"><h2>Existing attendance board unavailable</h2>'+
-  '<p>The existing TimeTracker Attendance board was not found in this workspace. No board was created.</p>'+
+  '<section class="fm1-panel"><h2>'+e(title)+'</h2>'+
+  '<p>'+e(message)+'</p>'+
+  '<p>No application board or attendance records were changed or recreated.</p>'+
   '<a class="fm1-quiet-button" href="#/boards">Return to My Boards</a></section></section>';
 }
 
