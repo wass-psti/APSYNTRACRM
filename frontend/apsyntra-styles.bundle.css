@@ -29084,6 +29084,9 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .board-horizontal-rail:
 
 .tb-reply{margin:10px 0 0 18px;border-left:2px solid var(--border,#e2e8f0);padding:10px;background:var(--surface-2,#f8fafc);border-radius:0 8px 8px 0}
 
+.tb-pending-cleanup{display:grid;gap:8px;border:1px solid var(--border,#e2e8f0);padding:12px;border-radius:10px}
+.tb-pending-cleanup div{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
 /* frontend/board-invite.css */
 /* Scoped board-header Invite / N and signed access dialog. Separate from the
  * generated bundle to keep unrelated board/app CSS deterministic. */

@@ -53,21 +53,27 @@ test('thread reply with false mutation receipt is never accepted',async()=>{
  await assert.rejects(()=>c.replyVerified('301','11','Reply'),/not verified/);
 });
 
-function attachmentTransport({rpcResponse=null,deleteOk=true,missingReadback=false}={}){
+function attachmentTransport({rpcResponse=null,deleteOk=true,deleteFailures=0,missingReadback=false}={}){
+ let failedDeletes=0;
  const calls=[];
  const signed={userId,isSignedIn:true,token:async()=> 'fake-token'};
  const api={rpc:async(name,args)=>{
   calls.push({name,args});
-  if(name==='toolbox_issues_get_issue')return {
-   ...base,assets:missingReadback?[]:calls.some(x=>x.name==='toolbox_issues_unregister_attachment')?[]:[asset]};
-  if(name==='toolbox_issues_unregister_attachment')
+  if(name==='toolbox_issues_get_issue'){
+   const hidden=calls.some(x=>x.name==='toolbox_issues_unregister_attachment');
+   const purged=calls.some(x=>x.name==='toolbox_issues_confirm_attachment_purged');
+   return {...base,assets:missingReadback||hidden?[]:[asset],
+    pendingAttachmentCleanup:hidden&&!purged?[asset]:[]};
+  }
+  if(name==='toolbox_issues_unregister_attachment'||name==='toolbox_issues_confirm_attachment_purged')
    return rpcResponse||{success:true,id:'77',storagePath:filePath,issueId:'301'};
   throw Error(name);
  }};
  const fetchImpl=async(url,init)=>{
   calls.push({url,init});
   if(init.method==='GET')return {ok:false,status:404};
-  return {ok:deleteOk,status:deleteOk?200:500};
+  const fail=!deleteOk||failedDeletes++<deleteFailures;
+  return {ok:!fail,status:fail?500:200};
  };
  const client=new TalkBoxAttachmentClient({workspaceId,api,auth:signed,fetchImpl});
  return {client,calls};
@@ -83,7 +89,8 @@ test('native deletion hides DB record before deleting exact private object',asyn
  assert.equal(storage.init.credentials,'omit');
  const readback=calls.find(row=>row.url&&row.init.method==='GET');
  assert.match(readback.url,/\/object\/authenticated\/toolbox-issues-attachments\//);
- assert.equal(calls.filter(x=>x.name==='toolbox_issues_get_issue').length,2);
+ assert.equal(calls.filter(x=>x.name==='toolbox_issues_get_issue').length,3);
+ assert.equal(calls.filter(x=>x.name==='toolbox_issues_confirm_attachment_purged').length,1);
 });
 
 test('native removal does not delete Storage if backend acknowledgement is mismatched',async()=>{
@@ -96,6 +103,15 @@ test('native removal does not delete Storage if backend acknowledgement is misma
 test('native removal reports uncertain Storage deletion instead of claiming success',async()=>{
  const {client}=attachmentTransport({deleteOk:false});
  await assert.rejects(()=>client.removeVerified('301',asset),/binary deletion unconfirmed/);
+});
+
+test('private file cleanup survives a failed deletion and resumes from pending metadata',async()=>{
+ const {client,calls}=attachmentTransport({deleteFailures:1});
+ await assert.rejects(()=>client.removeVerified('301',asset),/use Retry cleanup/);
+ const result=await client.removeVerified('301',asset);
+ assert.equal(result.pendingAttachmentCleanup.length,0);
+ assert.equal(calls.filter(x=>x.url&&x.init.method==='DELETE').length,2);
+ assert.equal(calls.filter(x=>x.name==='toolbox_issues_confirm_attachment_purged').length,1);
 });
 
 test('native private GET and DELETE routes differ by documented authenticated path',()=>{
@@ -117,6 +133,8 @@ test('native pending backend migration remains candidate, not deployable migrati
  assert.match(sql,/reply_to_update_id/);
  assert.match(sql,/public\.toolbox_issues_reply_update/);
  assert.match(sql,/public\.toolbox_issues_unregister_attachment/);
+ assert.match(sql,/public\.toolbox_issues_confirm_attachment_purged/);
+ assert.match(sql,/storage_purged_at/);
  assert.match(sql,/private\.toolbox_issues_has_access/);
  assert.doesNotMatch(sql,/service_role|grant .* to anon/i);
 });

@@ -61,6 +61,13 @@ export function renderTalkBoxApplication({page,selected,busy=false,error='',canE
  (canEdit?'<div class="tb-file-input"><label for="tb-upload-file">Attach file (up to 50 MiB)</label>'+
  '<input id="tb-upload-file" type="file" aria-label="Select TalkBox attachment">'+
  '<button class="secondary" type="button" data-action="tb-file-upload">Upload attachment</button></div>':'')+
+ (features.attachmentRemoval&&selected.pendingAttachmentCleanup?.length?
+ '<div class="tb-pending-cleanup" role="group" aria-label="Unfinished private attachment cleanup">'+
+ '<h5>Attachment cleanup pending</h5>'+
+ selected.pendingAttachmentCleanup.map(asset=>
+ '<div><span>'+e(asset.name)+'</span> '+
+ '<button type="button" class="secondary" data-action="tb-file-cleanup" data-id="'+e(asset.id)+'">Retry cleanup</button></div>').join('')+
+ '</div>':'')+
  '<h4>Subtasks</h4>'+(canEdit?'<button class="secondary" data-action="tb-subtask-new">＋ Add subtask</button>':'')+(selected.subitems.length?'<ul>'+selected.subitems.map(x=>'<li>'+e(x.name)+' — '+e(x.status)+(canEdit? ' <button type="button" class="secondary" data-action="tb-subtask-status" data-id="'+e(x.id)+'">Edit subtask</button>'+
  ' <button type="button" class="secondary" data-action="tb-subtask-delete" data-id="'+e(x.id)+'">Delete subtask</button>':'')+'</li>').join('')+'</ul>':'<p>No subtasks yet.</p>')+
  '</div></aside></div>':'')+'</section>';

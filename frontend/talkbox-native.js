@@ -21,6 +21,7 @@ export function projectTalkBoxIssue(x){
  return {id:String(x.id),name:String(x.name||''),status:String(x.status||'Working on it'),
   date:x.date||null,version:Number(x.version),person:Array.isArray(x.person)?x.person:[],
   timeTracking:x.timeTracking||{hours:0,minutes:0},assets:Array.isArray(x.assets)?x.assets:[],
+  pendingAttachmentCleanup:Array.isArray(x.pendingAttachmentCleanup)?x.pendingAttachmentCleanup:[],
   creator:x.creator||null,updatedAt:x.updatedAt||null,
   updates:Array.isArray(x.updates)?x.updates:[],subitems:Array.isArray(x.subitems)?x.subitems:[]};
 }

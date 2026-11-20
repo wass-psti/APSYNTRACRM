@@ -9,6 +9,8 @@ create index if not exists toolbox_issue_updates_parent_idx
   where reply_to_update_id is not null;
 alter table public.toolbox_issue_attachments
   add column if not exists deleted_at timestamptz;
+alter table public.toolbox_issue_attachments
+  add column if not exists storage_purged_at timestamptz;
 
 create or replace function private.toolbox_issue_update_json(u public.toolbox_issue_updates)
 returns jsonb language sql stable security definer set search_path='' as $$
@@ -37,7 +39,11 @@ returns jsonb language sql stable security definer set search_path='' as $$
      from public.toolbox_issue_updates u where u.workspace_id=i.workspace_id and u.issue_id=i.id),'[]'::jsonb),
    'assets',coalesce((select jsonb_agg(private.toolbox_issue_asset_json(a) order by a.created_at)
      from public.toolbox_issue_attachments a where a.workspace_id=i.workspace_id
-       and a.issue_id=i.id and a.update_id is null and a.deleted_at is null),'[]'::jsonb))
+       and a.issue_id=i.id and a.update_id is null and a.deleted_at is null),'[]'::jsonb),
+   'pendingAttachmentCleanup',coalesce((select jsonb_agg(private.toolbox_issue_asset_json(a) order by a.created_at)
+     from public.toolbox_issue_attachments a where a.workspace_id=i.workspace_id
+       and a.issue_id=i.id and a.deleted_at is not null
+       and a.storage_purged_at is null),'[]'::jsonb))
 $$;
 
 create or replace function public.toolbox_issues_native_v2_capabilities(p_workspace_id uuid)
@@ -64,9 +70,11 @@ begin
    and i.id=p_issue_id::bigint and i.archived_at is null) then
    raise exception 'Issue not found' using errcode='P0002';
  end if;
- if not exists(select 1 from public.toolbox_issue_updates u
-   where u.workspace_id=p_workspace_id and u.issue_id=p_issue_id::bigint
-     and u.id=p_parent_update_id::bigint and u.reply_to_update_id is null) then
+ if not exists(select 1 from public.toolbox_issue_updates parent_update
+   where parent_update.workspace_id=p_workspace_id
+     and parent_update.issue_id=p_issue_id::bigint
+     and parent_update.id=p_parent_update_id::bigint
+     and parent_update.reply_to_update_id is null) then
    raise exception 'Parent update not found in issue' using errcode='P0002';
  end if;
  insert into public.toolbox_issue_updates(
@@ -113,12 +121,39 @@ begin
    'storagePath',a.storage_path,'issueId',p_issue_id);
 end $$;
 
+-- The server verifies that Storage has no object before acknowledging purge.
+create or replace function public.toolbox_issues_confirm_attachment_purged(
+ p_workspace_id uuid,p_issue_id text,p_attachment_id text)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare a public.toolbox_issue_attachments%rowtype;
+begin
+ if not private.toolbox_issues_has_access(p_workspace_id) then
+   raise exception 'access denied' using errcode='42501';
+ end if;
+ select * into a from public.toolbox_issue_attachments
+ where workspace_id=p_workspace_id and issue_id=p_issue_id::bigint
+   and id=p_attachment_id::bigint for update;
+ if not found or a.deleted_at is null then
+   raise exception 'No pending attachment removal' using errcode='P0002';
+ end if;
+ if exists(select 1 from storage.objects obj
+   where obj.bucket_id='toolbox-issues-attachments' and obj.name=a.storage_path) then
+   raise exception 'Attachment binary is still registered in Storage' using errcode='22023';
+ end if;
+ update public.toolbox_issue_attachments set storage_purged_at=coalesce(storage_purged_at,now())
+ where id=a.id and workspace_id=p_workspace_id and storage_purged_at is null;
+ return jsonb_build_object('success',true,'id',a.id::text,
+   'storagePath',a.storage_path,'issueId',p_issue_id);
+end $$;
+
 revoke execute on function public.toolbox_issues_native_v2_capabilities(uuid),
  public.toolbox_issues_reply_update(uuid,text,text,text),
- public.toolbox_issues_unregister_attachment(uuid,text,text)
+ public.toolbox_issues_unregister_attachment(uuid,text,text),
+ public.toolbox_issues_confirm_attachment_purged(uuid,text,text)
  from public,anon;
 grant execute on function public.toolbox_issues_native_v2_capabilities(uuid),
  public.toolbox_issues_reply_update(uuid,text,text,text),
- public.toolbox_issues_unregister_attachment(uuid,text,text)
+ public.toolbox_issues_unregister_attachment(uuid,text,text),
+ public.toolbox_issues_confirm_attachment_purged(uuid,text,text)
  to authenticated;
 commit;
