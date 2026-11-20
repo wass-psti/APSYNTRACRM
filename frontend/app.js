@@ -431,7 +431,7 @@ let modal=null;
 let globalSearchController=null;
 let pendingGlobalSearchItem=null;
 let pendingNativeSearchSelection=null;
-let talkBoxState={page:null,selected:null,busy:false,error:'',scope:'',filter:{name:'',status:'All'}};
+let talkBoxState={page:null,selected:null,busy:false,error:'',scope:'',filter:{name:'',status:'All'},features:null};
 const talkBoxClient=()=>new TalkBoxNativeClient({api:db,workspaceId:state.context.workspace_id});
 async function talkBoxAttachments(){
  // Private upload/download code must not inflate the ordinary CRM startup graph.
@@ -445,11 +445,12 @@ async function loadTalkBox({more=false,selectedId=null}={}){
  if(!talkBoxCurrent(scope)||talkBoxState.busy)return;
  // Never carry a previously selected issue or list page into a new workspace.
  if(talkBoxState.scope!==scope)talkBoxState={
-  page:null,selected:null,busy:false,error:'',scope,filter:{name:'',status:'All'}
+  page:null,selected:null,busy:false,error:'',scope,filter:{name:'',status:'All'},features:null
  };
  talkBoxState={...talkBoxState,busy:true,error:'',scope};render();
  try{
   const client=talkBoxClient();
+  const features=talkBoxState.features??await client.nativeV2Capabilities();
   const page=await client.list(more?talkBoxState.page?.cursor:null,talkBoxState.filter);
   if(!talkBoxCurrent(scope))return;
   const existing=more?(talkBoxState.page?.items||[]):[];
@@ -458,7 +459,7 @@ async function loadTalkBox({more=false,selectedId=null}={}){
   const openId=selectedId||talkBoxState.selected?.id;
   const selected=openId?await client.get(openId):null;
   if(!talkBoxCurrent(scope))return;
-  talkBoxState={page:{...page,items},selected,busy:false,error:'',scope};
+  talkBoxState={page:{...page,items},selected,busy:false,error:'',scope,filter:talkBoxState.filter,features};
  }catch(err){if(talkBoxCurrent(scope))talkBoxState={...talkBoxState,busy:false,error:errorMessage(err)};}
  finally{if(talkBoxCurrent(scope)){talkBoxState.busy=false;render();}}
 }
@@ -1599,7 +1600,7 @@ function boardPage(){
 
 <div data-board-live-content>
 ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFundTrackerApplication():state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,otExpandedRequestIds:state.ttOtExpandedRequestIds,clockPendingAction:state.ttClockPending?.action||'clock-out',error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,employeesSearch:state.ttEmployeesSearch,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,adminEligible:state.ttAttendance?.access?.moduleRole==='System Admin',adminDirectory:state.ttLogAdminEditor?.directory||state.ttAttendance?.access?.overviewDirectory||[],adminSelectedIds:state.ttLogSelectedIds,adminEditor:state.ttLogAdminEditor,adminBusy:state.ttLogAdminBusy,adminError:state.ttLogAdminError,adminSuccess:state.ttLogAdminSuccess,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
- gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,canCreate:state.boardManage||state.tradeLinkModuleRole==='User',actorId:state.context?.user_id||'',actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='talkbox'&&moduleKey==='toolbox'?renderTalkBoxApplication({page:talkBoxState.page,selected:talkBoxState.selected,busy:talkBoxState.busy,error:talkBoxState.error,canEdit:state.edit,filter:talkBoxState.filter}):state.tab==='issues'?issuesPage():`
+ gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,canCreate:state.boardManage||state.tradeLinkModuleRole==='User',actorId:state.context?.user_id||'',actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='talkbox'&&moduleKey==='toolbox'?renderTalkBoxApplication({page:talkBoxState.page,selected:talkBoxState.selected,busy:talkBoxState.busy,error:talkBoxState.error,canEdit:state.edit,filter:talkBoxState.filter,features:talkBoxState.features||{}}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar">
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ New item</button>':''}
  <div class="search-wrap board-toolbar-search"><svg class="board-toolbar-search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 5 5"></path></svg><input id="search-board-items" class="search-input" aria-label="Search board items" placeholder="Search" value="${e(state.boardItemSearch)}" /></div>
@@ -8654,14 +8655,60 @@ async function action(name,button){
     talkBoxState.selected=updated;await loadTalkBox({selectedId:current.id});
   });break;
  }
+ case 'tb-assignees':{
+  if(!state.edit||!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
+  const scope=talkBoxState.scope,current=talkBoxState.selected,users=await talkBoxClient().users();
+  if(!talkBoxCurrent(scope)||talkBoxState.selected?.id!==current.id)break;
+  const assigned=new Set(current.person.map(p=>String(p.id).toLowerCase()));
+  const checkboxes=users.map(u=>
+   '<label class="tb-member-choice"><input type="checkbox" name="person" value="'+e(u.id)+'"'+
+   (assigned.has(u.id)?' checked':'')+'> '+e(u.name)+'</label>').join('');
+  openModal('Assign TalkBox workspace members',
+   '<p class="note">Select existing members of this APSYNTRA CRM workspace.</p>'+
+   '<div class="tb-member-directory">'+(checkboxes||'<p>No workspace members available.</p>')+'</div>',
+   async fd=>{
+    if(!talkBoxCurrent(scope))throw Error('TalkBox workspace changed');
+    const ids=fd.getAll('person');
+    const members=users.filter(u=>ids.includes(u.id));
+    const record=await talkBoxClient().saveAssignees(current.id,members,current.version);
+    if(talkBoxCurrent(scope)){talkBoxState.selected=record;await loadTalkBox({selectedId:current.id});}
+   },{submitLabel:'Save assignees'});
+  break;
+ }
+ case 'tb-timer-start':
+ case 'tb-timer-stop':{
+  if(!state.edit||!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
+  const scope=talkBoxState.scope,issueId=talkBoxState.selected.id;
+  const record=name==='tb-timer-start'?
+   await talkBoxClient().startTimerVerified(issueId):
+   await talkBoxClient().stopTimerVerified(issueId);
+  if(talkBoxCurrent(scope)&&talkBoxState.selected?.id===issueId){
+   talkBoxState.selected=record;render();
+   toast(name==='tb-timer-start'?'Timer started.':'Tracked time saved.');
+  }
+  break;
+ }
+ case 'tb-subtask-delete':{
+  if(!state.edit||!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
+  const scope=talkBoxState.scope,issueId=talkBoxState.selected.id,subId=button.dataset.id;
+  if(!talkBoxState.selected.subitems.some(row=>String(row.id)===subId))break;
+  if(!confirm('Delete this subtask? This action cannot be undone.'))break;
+  const record=await talkBoxClient().deleteSubitemVerified(issueId,subId);
+  if(talkBoxCurrent(scope)&&talkBoxState.selected?.id===issueId){
+   talkBoxState.selected=record;render();toast('Subtask deleted.');
+  }
+  break;
+ }
  case 'tb-time-edit':{
   if(!state.edit||!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
   const current=talkBoxState.selected;
+  if(current.timeTracking?.running)throw new Error('Stop the running TalkBox timer before correcting tracked time.');
   openModal('Correct TalkBox tracked time',
    input('Tracked hours','hours',current.timeTracking?.hours??0,'number')+
    input('Tracked minutes (0–59)','minutes',current.timeTracking?.minutes??0,'number'),async fd=>{
+    const hours=Number(fd.get('hours')),minutes=Number(fd.get('minutes'));
     const timeTracking={...current.timeTracking,
-     hours:Number(fd.get('hours')),minutes:Number(fd.get('minutes'))};
+     hours,minutes,totalSeconds:hours*3600+minutes*60};
     const updated=await talkBoxClient().updateVerified(current.id,{timeTracking},current.version);
     talkBoxState.selected=updated;await loadTalkBox({selectedId:current.id});
    });break;
@@ -8708,6 +8755,33 @@ async function action(name,button){
    const link=document.createElement('a');link.href=url;link.download=fileName;
    document.body.appendChild(link);link.click();link.remove();
   }finally{setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  break;
+ }
+ case 'tb-reply':{
+  if(!state.edit||!talkBoxState.features?.threadedReplies||
+     !talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
+  const scope=talkBoxState.scope,issueId=talkBoxState.selected.id,parentId=button.dataset.id;
+  if(!talkBoxState.selected.updates.some(row=>String(row.id)===parentId))break;
+  openModal('Reply in TalkBox discussion',input('Reply','reply','', 'text'),async fd=>{
+   const record=await talkBoxClient().replyVerified(issueId,parentId,fd.get('reply'));
+   if(talkBoxCurrent(scope)&&talkBoxState.selected?.id===issueId){
+    talkBoxState.selected=record;render();
+   }
+  },{submitLabel:'Post reply'});
+  break;
+ }
+ case 'tb-file-remove':{
+  if(!state.edit||!talkBoxState.features?.attachmentRemoval||
+     !talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
+  const scope=talkBoxState.scope,issueId=talkBoxState.selected.id;
+  const asset=talkBoxState.selected.assets?.find(x=>String(x.id)===button.dataset.id);
+  if(!asset)break;
+  if(!confirm('Permanently remove this native TalkBox attachment? This cannot be undone.'))break;
+  const detail=await (await talkBoxAttachments()).removeVerified(issueId,asset);
+  if(talkBoxCurrent(scope)&&talkBoxState.selected?.id===issueId){
+   talkBoxState.selected=await talkBoxClient().get(issueId);
+   render();toast('Private attachment removed.');
+  }
   break;
  }
  case 'tb-subtask-new':{

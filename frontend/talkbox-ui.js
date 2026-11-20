@@ -1,6 +1,6 @@
 import {talkBoxMetrics} from './talkbox-native.js';
 const e=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export function renderTalkBoxApplication({page,selected,busy=false,error='',canEdit=false,filter={}}={}){
+export function renderTalkBoxApplication({page,selected,busy=false,error='',canEdit=false,filter={},features={}}={}){
  const rows=page?.items||[],metrics=talkBoxMetrics(rows);
  return '<section class="tb-app" aria-label="TalkBox">'+
  '<header class="tb-header"><div><span class="tb-eyebrow">APSYNTRA · TOOLBOX OPERATIONS</span><h2>TalkBox</h2><p>Meeting &amp; Issue Tracker</p></div>'+
@@ -32,21 +32,36 @@ export function renderTalkBoxApplication({page,selected,busy=false,error='',canE
  '<div class="tb-body"><p>Status: <strong>'+e(selected.status)+'</strong></p><p>Target: '+e(selected.date||'—')+'</p>'+
  '<p>Tracked time: '+e(Number(selected.timeTracking?.hours)||0)+'h '+e(Number(selected.timeTracking?.minutes)||0)+'m</p>'+
  '<p>Assigned: '+e(selected.person.map(p=>p.name||p.id).join(', ')||'Unassigned')+'</p>'+
+ (selected.timeTracking?.running?.startedAt?
+ '<p class="tb-running-time" role="status">Timer running since '+e(selected.timeTracking.running.startedAt)+'</p>':'')+
  (canEdit?'<div class="tb-actions"><button class="secondary" data-action="tb-edit">Edit issue</button> '+
+ '<button class="secondary" data-action="tb-assignees">Assign members</button> '+
  '<button class="secondary" data-action="tb-time-edit">Correct tracked time</button> '+
+ (selected.timeTracking?.running?.startedAt?
+ '<button class="secondary" data-action="tb-timer-stop">Stop timer</button> ':
+ '<button class="secondary" data-action="tb-timer-start">Start timer</button> ')+
  '<button class="secondary" data-action="tb-archive">Archive issue</button></div>':'')+
- '<h4>Updates</h4>'+(selected.updates.length?selected.updates.map(u=>'<article class="tb-update"><b>'+e(u.creator?.name||'Team member')+
- '</b><small> · '+e(u.created_at?new Date(u.created_at).toLocaleString():'')+'</small><p>'+e(u.text_body)+'</p></article>').join(''):'<p>No updates yet.</p>')+
+ '<h4>Updates</h4>'+(selected.updates.length?selected.updates.filter(u=>!u.replyTo).map(u=>
+ '<article class="tb-update"><b>'+e(u.creator?.name||'Team member')+
+ '</b><small> · '+e(u.created_at?new Date(u.created_at).toLocaleString():'')+'</small><p>'+e(u.text_body)+'</p>'+
+ (canEdit&&features.threadedReplies?'<button type="button" class="secondary" data-action="tb-reply" data-id="'+e(u.id)+'">Reply</button>':'')+
+ (features.threadedReplies?selected.updates.filter(reply=>String(reply.replyTo||'')===String(u.id)).map(reply=>
+ '<div class="tb-reply"><b>'+e(reply.creator?.name||'Team member')+'</b><small> · '+
+ e(reply.created_at?new Date(reply.created_at).toLocaleString():'')+'</small><p>'+e(reply.text_body)+'</p></div>').join(''):'')+
+ '</article>').join(''):'<p>No updates yet.</p>')+
  (canEdit?'<label for="tb-message">Add update</label><textarea id="tb-message" rows="3" maxlength="20000"></textarea>'+
  '<button class="primary" data-action="tb-post">Post update</button>':'')+
  '<h4>Attachments</h4>'+
  (selected.assets?.length?'<ul class="tb-files">'+selected.assets.map(asset=>'<li><span>'+e(asset.name)+
  ' ('+e(Math.ceil((Number(asset.size)||0)/1024))+' KiB)</span> '+
- '<button type="button" class="secondary" data-action="tb-file-download" data-id="'+e(asset.id)+'">Download</button></li>').join('')+'</ul>':
+ '<button type="button" class="secondary" data-action="tb-file-download" data-id="'+e(asset.id)+'">Download</button>'+
+ (canEdit&&features.attachmentRemoval?' <button type="button" class="secondary" data-action="tb-file-remove" data-id="'+e(asset.id)+'">Remove</button>':'')+
+ '</li>').join('')+'</ul>':
  '<p>No issue attachments yet.</p>')+
  (canEdit?'<div class="tb-file-input"><label for="tb-upload-file">Attach file (up to 50 MiB)</label>'+
  '<input id="tb-upload-file" type="file" aria-label="Select TalkBox attachment">'+
  '<button class="secondary" type="button" data-action="tb-file-upload">Upload attachment</button></div>':'')+
- '<h4>Subtasks</h4>'+(canEdit?'<button class="secondary" data-action="tb-subtask-new">＋ Add subtask</button>':'')+(selected.subitems.length?'<ul>'+selected.subitems.map(x=>'<li>'+e(x.name)+' — '+e(x.status)+(canEdit? ' <button type="button" class="secondary" data-action="tb-subtask-status" data-id="'+e(x.id)+'">Edit subtask</button>':'')+'</li>').join('')+'</ul>':'<p>No subtasks yet.</p>')+
+ '<h4>Subtasks</h4>'+(canEdit?'<button class="secondary" data-action="tb-subtask-new">＋ Add subtask</button>':'')+(selected.subitems.length?'<ul>'+selected.subitems.map(x=>'<li>'+e(x.name)+' — '+e(x.status)+(canEdit? ' <button type="button" class="secondary" data-action="tb-subtask-status" data-id="'+e(x.id)+'">Edit subtask</button>'+
+ ' <button type="button" class="secondary" data-action="tb-subtask-delete" data-id="'+e(x.id)+'">Delete subtask</button>':'')+'</li>').join('')+'</ul>':'<p>No subtasks yet.</p>')+
  '</div></aside></div>':'')+'</section>';
 }

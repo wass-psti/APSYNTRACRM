@@ -21,7 +21,8 @@ export function validateTalkBoxAttachment(file){
   !/[\x00-\x1f\x7f]/.test(file.type)?file.type:'application/octet-stream';
  return {name,size:file.size,contentType};
 }
-const urlFor=path=>SUPABASE_URL+'/storage/v1/object/'+BUCKET+'/'+
+const urlFor=(path,method)=>SUPABASE_URL+'/storage/v1/object/'+
+ (method==='GET'?'authenticated/':'')+BUCKET+'/'+
  path.split('/').map(encodeURIComponent).join('/');
 async function sha(buffer){
  if(!globalThis.crypto?.subtle)throw new ApiError('Secure attachment hashing is unavailable',503);
@@ -43,7 +44,7 @@ export class TalkBoxAttachmentClient{
  }
  async signedFetch(path,method,body,contentType){
   const {actor,token}=await this.context();
-  const response=await this.fetch(urlFor(path),{
+  const response=await this.fetch(urlFor(path,method),{
    method,mode:'cors',redirect:'error',cache:'no-store',credentials:'omit',
    headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+token,
     ...(contentType?{'Content-Type':contentType,'x-upsert':'false'}:{})},
@@ -89,6 +90,40 @@ export class TalkBoxAttachmentClient{
   if(bytes.byteLength!==input.size||await sha(bytes)!==originalHash)
    throw new ApiError('Uploaded attachment byte verification failed',409);
   return {attachment,detail};
+ }
+ async removeVerified(issueIdValue,asset){
+  const issue=String(issueIdValue||'');
+  if(!issueId(issue)||!asset||typeof asset!=='object')
+   throw new TypeError('Invalid native attachment removal request');
+  const detail=await this.api.rpc('toolbox_issues_get_issue',{
+   p_workspace_id:this.workspaceId,p_issue_id:issue});
+  const current=detail?.assets?.find(x=>String(x.id)===String(asset.id));
+  if(!current)throw new ApiError('Selected attachment is no longer active',404);
+  const path=current.storagePath;
+  if(typeof path!=='string'||!path.startsWith(this.workspaceId+'/'+issue+'/')||
+     path.split('/').length!==4||path.split('/').some(x=>!x||x==='..'||x==='.'))
+   throw new ApiError('Native attachment path is inconsistent',409);
+  const acknowledged=await this.api.rpc('toolbox_issues_unregister_attachment',{
+   p_workspace_id:this.workspaceId,p_issue_id:issue,p_attachment_id:String(current.id)});
+  if(acknowledged?.success!==true||String(acknowledged?.id)!==String(current.id)||
+     acknowledged?.storagePath!==path||String(acknowledged?.issueId)!==issue)
+   throw new ApiError('Attachment removal registration was not confirmed',409);
+  const refreshed=await this.api.rpc('toolbox_issues_get_issue',{
+   p_workspace_id:this.workspaceId,p_issue_id:issue});
+  if(refreshed?.assets?.some(x=>String(x.id)===String(current.id)))
+   throw new ApiError('Attachment still appears in signed native issue readback',409);
+  try{
+   await this.signedFetch(path,'DELETE');
+  }catch{
+   throw new ApiError('Attachment hidden but private binary deletion unconfirmed; retry cleanup with the original attachment ID',409);
+  }
+  try{
+   await this.signedFetch(path,'GET');
+  }catch(error){
+   if(error?.status===404)return refreshed;
+   throw new ApiError('Attachment removed from issue, but private binary absence could not be verified',409);
+  }
+  throw new ApiError('Attachment remains downloadable after removal; cleanup is incomplete',409);
  }
  async download(issueIdValue,asset){
   const issue=String(issueIdValue||'');

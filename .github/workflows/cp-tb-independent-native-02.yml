@@ -1,0 +1,44 @@
+name: CP-TB Independent Native 02
+on:
+  pull_request:
+    paths:
+      - "frontend/talkbox-*"
+      - "frontend/app.js"
+      - "frontend/data.js"
+      - "frontend/apsyntra-styles.bundle.css"
+      - "frontend/tests/talkbox-native-02*.test.mjs"
+      - "frontend/tests/board-cache-channel.test.mjs"
+      - "supabase/migration-candidates/cp_tb_independent_native_02_thread_and_media.sql"
+      - ".github/workflows/cp-tb-independent-native-02.yml"
+  push:
+    branches: [main]
+    paths:
+      - "frontend/talkbox-*"
+      - "frontend/app.js"
+      - "frontend/data.js"
+      - "frontend/apsyntra-styles.bundle.css"
+      - "frontend/tests/talkbox-native-02*.test.mjs"
+      - "frontend/tests/board-cache-channel.test.mjs"
+      - "supabase/migration-candidates/cp_tb_independent_native_02_thread_and_media.sql"
+      - ".github/workflows/cp-tb-independent-native-02.yml"
+permissions:
+  contents: read
+jobs:
+  native-workflow-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Native assignees, timers, threaded reply and private media contracts
+        run: node --test frontend/tests/talkbox-native-*.test.mjs frontend/tests/board-cache-channel.test.mjs
+      - name: Exact stylesheet artifact
+        run: node scripts/build-priority5-styles.mjs --check
+      - name: Complete frontend regression and production build
+        run: |
+          npm test
+          npm run build
