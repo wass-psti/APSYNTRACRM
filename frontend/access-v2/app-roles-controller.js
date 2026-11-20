@@ -8,7 +8,9 @@ export class AppRolesController{
   this.api=api;this.auth=auth;this.getContext=getContext;this.onToast=onToast;
   this.appKey='fueltrans';this.host=null;this.snapshot=null;this.selectedRoleId=null;
   this.loading=false;this.error='';this.pending=[];this.busy=false;this.seq=0;
-  this.click=this.click.bind(this);this.change=this.change.bind(this);
+  this.click=event=>this.handleClick(event).catch(error=>
+   this.onToast?.(error?.message||'Application role operation failed.',true));
+  this.change=this.change.bind(this);
  }
  setApp(appKey){
   if(!keys.has(appKey))throw Error('Unrecognized app');
@@ -139,7 +141,7 @@ export class AppRolesController{
   if(value!==original)this.pending.push({roleId:role.id,featureKey,capability,allowed:value});
   this.render();
  }
- async click(event){
+ async handleClick(event){
   const button=event.target.closest('[data-app-role-action]');
   if(!button||!this.host?.contains(button))return;
   event.preventDefault();event.stopImmediatePropagation();
