@@ -170,7 +170,7 @@ import {renderFRTArchive} from './frt-archive-ui.js';
 import {renderFRTVoucherDocument} from './frt-voucher-document.js';
 import {renderFRTCompanyProfileEditor,hydrateFRTCompanyProfileForm} from './frt-company-profile.js';
 import {FRT_BOARD_ID,isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
-import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
+import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED,TT_DEPARTMENTS} from './time-tracker-native.js';
 import {FundTrackerNativeClient} from './fund-tracker-native.js';
 import {renderFundTrackerNative} from './fund-tracker-ui.js';
 import {findFundTrackerBoard,FUND_TRACKER_APPLICATION_ROUTE,parseFundTrackerRecordRoute,fundTrackerRecordHref} from './fund-tracker-application.js';
@@ -8303,6 +8303,33 @@ async function action(name,button){
   if(state.ttView!=='monitor'||state.ttAttendance?.status!=='VERIFIED_READ')return;
   state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
   state.ttMonitorBusy=false;render();break;
+ }
+ case 'tt-team-department-edit':{
+   if(state.ttBusy||state.ttTeamBusy||state.ttView!=='team'||state.roleVerified!==true||
+      state.ttAttendance?.status!=='VERIFIED_READ'||state.ttTeam?.departmentsReady!==true)return;
+   const member=state.ttTeam.members.find(m=>m.id===button.dataset.userId);
+   if(!member||member.status!=='Active'||member.role==='Unassigned')return;
+   const boardId=state.boardId,actorId=state.context?.user_id,
+    workspaceId=state.context?.workspace_id,seq=routeSerial;
+   openModal('Assign department · '+member.name,
+    '<p class="note">Employee: '+e(member.email)+'. Department changes apply to new clock-ins only; existing attendance records are preserved.</p>'+
+    select('Department','department',[
+     ['', 'Select a department'],...TT_DEPARTMENTS.map(d=>[d,d])
+    ],member.department||''),
+    async fd=>{
+     if(seq!==routeSerial||state.view!=='board'||state.tab!=='attendance'||
+        state.ttView!=='team'||state.context?.user_id!==actorId||
+        state.context?.workspace_id!==workspaceId||state.boardId!==boardId||
+        state.roleVerified!==true)
+      throw Error('TimeTracker identity or workspace changed; refresh and retry');
+     const department=String(fd.get('department')||'');
+     if(!TT_DEPARTMENTS.includes(department))throw Error('Choose a valid department');
+     const updated=await timeTracker.assignTeamDepartment(boardId,member.id,department);
+     if(seq!==routeSerial||state.context?.user_id!==actorId||
+        state.context?.workspace_id!==workspaceId||state.boardId!==boardId)return;
+     state.ttTeam=updated;render();
+    },{submitLabel:'Save department',successMessage:'Employee department saved.'});
+   break;
  }
  case 'tt-team-refresh':{
   if(state.ttBusy||state.ttTeamBusy||state.ttView!=='team'||state.roleVerified!==true||
