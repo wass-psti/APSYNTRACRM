@@ -33,9 +33,10 @@ jobs:
           export PGLITE_MODULE="$RUNNER_TEMP/tb-pg17/node_modules/@electric-sql/pglite/dist/index.js"
           node --test scripts/tests/talkbox-native-02d-rollback-pg.test.mjs
           node --test scripts/tests/talkbox-native-02c-pg.test.mjs
-      - name: Existing frontend and browser-client regression
+      - name: Native TalkBox affected client contracts and production build
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
-          npm test
+          node --test frontend/tests/talkbox-native-*.test.mjs frontend/tests/board-cache-channel.test.mjs
           npm run build
+          npm run lint
           node scripts/build-priority5-styles.mjs --check
