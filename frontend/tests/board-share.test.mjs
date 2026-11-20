@@ -84,8 +84,11 @@ test('share preview escapes untrusted board names and creates no link',()=>{
 test('integration preserves existing Work Management backend, auth and invite flags',()=>{
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(source,/import \{openBoardSharePreview,closeBoardSharePreview\} from '\.\/board\/collaboration\/share\.js'/);
+ // The board invite overlay was consolidated into the signed workspace-member
+ // picker. Its handoff control is now data-aps-invite-workspace; the launch
+ // action stays in app.js, not inside the dialog rendering module.
  assert.match(readFileSync(new URL("../board/collaboration/invite.js",import.meta.url),"utf8"),
-  /data-action="board-share-preview"/);
+  /data-aps-invite-workspace/);
  assert.match(source,/case 'board-share-preview':/);
  assert.match(source,/state\.boardManage===true/);
  assert.match(source,/case 'ws02-open-invites':/);
