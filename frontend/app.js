@@ -994,6 +994,54 @@ function boardsPage(){
      state.boardSearch?'Try another search term or clear the search.':state.showTrash?'Moved boards can be restored here.':state.showArchived?'You have no archived boards in this workspace.':'Only boards allowed by your organization appear here.','')+'</div>'))+`
  </div>`;
 }
+/** Presentation-only typed cells. Original signed values and mutation contracts are unchanged. */
+function boardFriendlyDate(value){
+ const raw=String(value??'');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(raw))return null;
+ const day=new Date(raw+'T00:00:00Z');
+ if(!Number.isFinite(day.getTime())||day.toISOString().slice(0,10)!==raw)return null;
+ const label=new Intl.DateTimeFormat('en-US',{timeZone:'UTC',year:'numeric',month:'short',day:'numeric'}).format(day);
+ const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+ const part=key=>parts.find(p=>p.type===key)?.value||'';
+ const today=part('year')+'-'+part('month')+'-'+part('day');
+ const delta=(Date.parse(raw+'T00:00:00Z')-Date.parse(today+'T00:00:00Z'))/86400000;
+ return '<time datetime="'+e(raw)+'" class="board-friendly-date '+
+  (delta<0?'is-expired':delta<=7?'is-soon':'is-upcoming')+'">'+e(label)+'</time>';
+}
+function boardMemberCell(id,detail){
+ const member=(detail?.members||[]).find(m=>String(m.user_id||m.id||'')===String(id||''));
+ const label=String(member?.display_name||member?.name||member?.email||'Assigned member');
+ const letters=label.split(/[\s@]+/).filter(Boolean).slice(0,2).map(s=>s[0]).join('').toUpperCase();
+ return '<span class="board-member-cell" title="'+e(label)+'"><span class="board-member-initials" aria-hidden="true">'+
+  e(letters||'•')+'</span><span class="board-member-name">'+e(label)+'</span></span>';
+}
+function boardReadableCell(value,definition,detail){
+ if(value===null||value===undefined||value==='')return '<span class="board-empty-cell" aria-label="Empty cell"></span>';
+ const type=definition?.data_type||'text',plain=visibleValue(value,type,definition?.config);
+ if(type==='people')return boardMemberCell(value,detail);
+ if(type==='date')return boardFriendlyDate(value)||'<span class="board-wrap-cell">'+e(plain)+'</span>';
+ if(type==='number'&&typeof value==='number'&&Number.isFinite(value))
+  return '<span class="board-number-cell">'+e(value.toLocaleString('en-US',{maximumFractionDigits:12}))+'</span>';
+ if(type==='checkbox')
+  return '<span class="board-checkbox-cell'+(value===true?' is-checked':'')+'" role="img" aria-label="'+
+   (value===true?'Checked':'Unchecked')+'">'+(value===true?'✓':'')+'</span>';
+ if(type==='dropdown')return '<span class="board-dropdown-tag">'+e(plain)+'</span>';
+ if(type==='rating'&&Number.isInteger(Number(value))&&Number(value)>=0&&Number(value)<=10)
+  return '<span class="board-rating-cell" aria-label="'+e(value)+' stars">'+
+   '★'.repeat(Number(value))+'</span>';
+ if(type==='timeline'&&value&&typeof value==='object')
+  return '<span class="board-timeline-cell"><span class="board-timeline-track" aria-hidden="true"></span><span>'+
+   e(value.start||'')+' → '+e(value.end||'')+'</span></span>';
+ if(type==='url'&&typeof value==='string'&&/^https?:\/\//i.test(value)){
+  let label='Link';
+  try{const url=new URL(value);label=decodeURIComponent(url.pathname.split('/').filter(Boolean).pop()||url.hostname)}catch{}
+  return '<span class="board-file-chip" title="'+e(value)+'"><span aria-hidden="true">↗</span> '+
+   e(label.slice(0,60))+'</span>';
+ }
+ if(type==='text'||type==='long_text'||type==='email')
+  return '<span class="board-wrap-cell" title="'+e(plain)+'">'+e(plain)+'</span>';
+ return '<span class="board-readable-cell">'+e(plain)+'</span>';
+}
 function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle='Record',detail=state.board,columnLabels={},primaryEditable=false){
  const minimal=isItemOnlyBoard(detail,state.boardUi);
  const columns=genericBoardColumns(detail,{primaryTitle,columnLabels,minimal,
@@ -1009,10 +1057,10 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
     cellContent:content});
   };
   cell.record='<button class="board-item-open" type="button" data-action="board-item-detail" data-id="'+e(item.id)+'" aria-label="Open '+e(item.title||'Untitled')+' details">▥</button> '+
-   display('record',e(item.title||'Untitled'));
+   display('record','<span class="board-wrap-cell" title="'+e(item.title||'Untitled')+'">'+e(item.title||'Untitled')+'</span>');
   cell.status=display('status','<span class="status '+statusClass(item.status)+'">'+e(item.status||'Planned')+'</span>');
-  cell.owner=display('owner',item.assignee_id?e(String(item.assignee_id).slice(0,8))+'…':'Unassigned');
-  cell.due=display('due',e(displayDate(item.due_date)));
+  cell.owner=display('owner',boardReadableCell(item.assignee_id,{data_type:'people'},detail));
+  cell.due=display('due',boardReadableCell(item.due_date,{data_type:'date'},detail));
   for(const column of columns.filter(c=>c.key.startsWith('col:'))){
    const def=cellColumn(detail,column.key);
    const value=expectedCellValue(detail,item,column.key);
@@ -1020,7 +1068,7 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
    const formatted=status?
     '<span class="board-configured-status '+statusColorClass(status.color)+'">'+
      e(status.label)+'</span>':
-    e(visibleValue(value,def?.data_type,def?.config));
+    boardReadableCell(value,def,detail);
    cell[column.key]=display(column.key,formatted);
   }
   cell.actions=editable?'<button class="icon-button" data-action="edit-item" data-id="'+
@@ -1036,7 +1084,7 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
   empty:'No items in this group yet',selection:{enabled:true,selected:itemSelection.ids},
   footer:renderGroupAddRow({groupId,enabled:writable,busy:state.inlineAddBusy}),
   summaries:detail?.pagination?.loaded!==true||detail?.pagination?.has_more===true?null:groupColumnSummaries({items,columns,detail}),
-  addColumn:minimal&&state.boardManage,minimal,
+  addColumn:writable&&state.boardManage,minimal,
   virtualize:true,primaryEditable});
 }
 
@@ -1333,7 +1381,7 @@ function boardPage(){
  const tabSpecs=[
   ...(isMaterialTrackerBoard(state.board)?[{key:'sourcing',href:'#/boards/'+b.id+'/sourcing',label:'◇ Material Tracker'}]:[]),
   {key:'items',href:'#/boards/'+b.id+(moduleKey==='fueltrans'?'/items':moduleKey==='timetracker'?'/items':''),
-    label:'▤ Board items'+(state.board.pagination?.loaded===true?' <span class="csp-u060">('+boardItemCountLabel+')</span>':'')},
+    label:'▤ Main table'},
   ...(moduleKey==='toolbox'?[{key:'talkbox',href:TALKBOX_APPLICATION_ROUTE,label:'TalkBox application'}]:[]),
   {key:'issues',href:'#/boards/'+b.id+'/issues',
     label:'◇ APSYNTRA Issues <span class="csp-u060">('+state.issues.length+')</span>'},
@@ -1355,9 +1403,9 @@ function boardPage(){
 
  return `<div class="page-head"><div><span class="label-top">Workspace / ${e(workspaceName())} / Board</span>
  <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
- <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><button type="button" class="secondary" data-action="board-share-preview">↗ Share &amp; access</button><button type="button" class="secondary" data-action="board-members">♙ People</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button>${engineeringUi?'<button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button>':''}<button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
+ <div class="head-actions"><details class="board-actions-menu"><summary aria-label="Board options">⋯ Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-activity">Activity history</button><button type="button" data-action="board-share-preview">Share &amp; access</button><button type="button" data-action="board-members">People &amp; members</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button>${engineeringUi?'<button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button>':''}<button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details>
  ${isMaterialSourcingBoard(b)&&state.edit&&['items','sourcing'].includes(state.tab)?'<button class="primary" data-action="mrh-new-part">＋ New part number</button>':''}
- ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ Add item</button>':''}
+ ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ New item</button>':''}
  </div></div>
  <div class="tabs board-draggable-tabs" role="tablist" aria-label="Board views">
  ${tabOrder.map(t=>'<div class="board-tab-slot" data-board-tab-slot="'+e(t.key)+'">'+
@@ -1371,7 +1419,7 @@ function boardPage(){
 ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFundTrackerApplication():state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,otExpandedRequestIds:state.ttOtExpandedRequestIds,clockPendingAction:state.ttClockPending?.action||'clock-out',error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,employeesSearch:state.ttEmployeesSearch,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,adminEligible:state.ttAttendance?.access?.moduleRole==='System Admin',adminDirectory:state.ttLogAdminEditor?.directory||state.ttAttendance?.access?.overviewDirectory||[],adminSelectedIds:state.ttLogSelectedIds,adminEditor:state.ttLogAdminEditor,adminBusy:state.ttLogAdminBusy,adminError:state.ttLogAdminError,adminSuccess:state.ttLogAdminSuccess,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,canCreate:state.boardManage||state.tradeLinkModuleRole==='User',actorId:state.context?.user_id||'',actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='talkbox'&&moduleKey==='toolbox'?renderTalkBoxApplication({page:talkBoxState.page,selected:talkBoxState.selected,busy:talkBoxState.busy,error:talkBoxState.error,canEdit:state.edit}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter loaded items…" value="${e(state.boardItemSearch)}" /></div>
- ${boardColumnMenu(columns,layout)}${state.boardManage&&canManuallyEditBoard(b,true)?'<button type="button" class="secondary" data-action="board-add-column">＋ Add column</button>':''}
+ ${boardColumnMenu(columns,layout)}
  ${moduleKey==='tradelink'&&state.boardManage&&!tradeLinkSetupStatus(state.board).ready?'<button type="button" class="secondary" data-action="tradelink-configure" '+(state.tradeLinkSetupBusy?'disabled':'')+'>'+(state.tradeLinkSetupBusy?'Configuring TradeLink…':'Configure TradeLink columns')+'</button>':''}
   ${moduleKey==='timetracker'&&TT_BOARD_GPS_PROJECTION_ENABLED&&(state.roleVerified===true||state.ttBoardGpsEligible===true)?'<button type="button" class="secondary" data-action="tt-board-gps">Restricted attendance GPS</button>':''}
  ${state.edit&&canManuallyEditBoard(b,true)?'<button type="button" class="secondary" data-action="board-import">⇧ Import CSV/XLSX</button>':''}
