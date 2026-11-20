@@ -26476,6 +26476,199 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   }
 }
 
+/* Read-only Employees internal board. Scoped to the TimeTracker application. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board {
+  width: 100%;
+  max-width: 1120px;
+  min-height: 450px;
+  margin: 0 auto;
+  padding: clamp(18px, 3vw, 34px);
+  background: #faf8f6;
+  color: #191817;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-eyebrow {
+  margin: 0 0 7px;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .09em;
+  color: #9c431f;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-heading h3 {
+  margin: 0;
+  font: 700 clamp(24px, 3vw, 31px)/1.2 Georgia, 'Times New Roman', serif;
+  letter-spacing: -.035em;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-heading p:not(.tt-employees-eyebrow) {
+  margin: 8px 0 0;
+  color: #665c53;
+  font-size: 12px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-heading button {
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid #e6dfd9;
+  border-radius: 7px;
+  background: #fff;
+  color: #a8411d;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-heading button:hover:not(:disabled) {
+  background: #fff0e7;
+  border-color: #e9b7a3;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 19px 22px;
+  margin-bottom: 22px;
+  border: 1px solid #e6dfd9;
+  border-radius: 9px;
+  background: #fff;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-summary div {
+  display: flex;
+  align-items: baseline;
+  gap: 13px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-summary strong {
+  font: 700 35px/1 Georgia, 'Times New Roman', serif;
+  font-variant-numeric: tabular-nums;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-summary span,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-summary p {
+  margin: 0;
+  font-size: 11px;
+  color: #665c53;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 13px;
+  margin-bottom: 12px;
+  color: #665c53;
+  font-size: 12px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-toolbar label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: min(100%, 360px);
+  font-weight: 650;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native #tt-employees-search {
+  min-height: 40px;
+  width: 100%;
+  border: 1px solid #d8d0c8;
+  border-radius: 7px;
+  padding: 9px 12px;
+  background: #fff;
+  color: #191817;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e6dfd9;
+  border-radius: 9px;
+  background: #fff;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-table {
+  width: 100%;
+  min-width: 480px;
+  border-collapse: collapse;
+  text-align: left;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-table th,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-table td {
+  padding: 13px 18px;
+  border-bottom: 1px solid #ede8e3;
+  color: #413a35;
+  font-size: 12px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-table th {
+  background: #fdfbf9;
+  color: #665c53;
+  font-weight: 700;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-table .tt-employee-row[hidden] {
+  display: none;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-table td:first-child {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-table td strong {
+  font-weight: 700;
+  color: #191817;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employee-avatar {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #fff0e7;
+  color: #9e3c18;
+  font-size: 10px;
+  font-weight: 750;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employee-active {
+  display: inline-block;
+  padding: 4px 9px;
+  border: 1px solid #bee6cc;
+  border-radius: 999px;
+  background: #f2fbf4;
+  color: #166b36;
+  font-size: 10px;
+  font-weight: 700;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native [data-tt-employees-empty] {
+  margin: 0;
+  padding: 22px;
+  text-align: center;
+  color: #665c53;
+  font-size: 12px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native [data-tt-employees-empty][hidden] {
+  display: none;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-footnote,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-unavailable {
+  margin: 16px 0 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #665c53;
+}
+@media (max-width: 620px) {
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board {
+    padding: 16px 12px 22px;
+  }
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-summary {
+    padding: 15px;
+  }
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-toolbar label {
+    width: 100%;
+  }
+}
+
 /* frontend/monday-inspired-ui.css */
 /* APSYNTRA CRM / Monday-inspired UI — isolated presentation pass.
  * Boards and the workspace chrome only. No domain, auth, or RPC overrides.
