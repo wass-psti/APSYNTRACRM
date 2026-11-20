@@ -1034,7 +1034,7 @@
   border: 2px solid #c7def3;
   border-top-color: #3a82c0;
   border-radius: 50%;
-  animation: tt-readiness-spin .85s linear infinite;
+  animation: tt-readiness-spin .85s linear 3;
 }
 #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-loading-indicator {
   width: 28px;

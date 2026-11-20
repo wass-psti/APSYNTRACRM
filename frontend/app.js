@@ -4194,7 +4194,7 @@ function reconcileTimeTrackerClock(snapshot,{allowRetry=false}={}){
  if(outcome==='CONFIRMED'){
   clearTimeTrackerClockPending();
   state.ttSuccess=(action==='clock-in'?'Clock In':'Clock Out')+
-   ' successfully recorded and verified in your signed attendance history.';
+   ' confirmed — successfully recorded in your signed attendance history.';
   state.ttError='';
  }else if(allowRetry&&!pending.receiptVerified&&
    ((action==='clock-out'&&outcome==='STILL_ACTIVE')||

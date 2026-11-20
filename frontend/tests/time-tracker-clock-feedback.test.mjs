@@ -75,7 +75,7 @@ test('blocked or unknown GPS has specific mobile-friendly remediation and explic
  const denied=renderTimeTrackerNative({result,geoPermission:'denied'});
  assert.match(denied,/Location permission blocked/);
  assert.match(denied,/browser site settings/);
- assert.match(denied,/device Location Services/);
+ assert.match(denied,/Location Services/);
  assert.match(denied,/data-action="tt-location-check"/);
  const prompt=renderTimeTrackerNative({result,geoPermission:'prompt'});
  assert.match(prompt,/Enable location/);

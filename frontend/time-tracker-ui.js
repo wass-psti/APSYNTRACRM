@@ -374,14 +374,14 @@ export function renderTimeTrackerNative({
  if(error)html+='<div class="tt-feedback tt-feedback-error" role="alert">'+esc(error)+'</div>';
  if(success&&selected!=='clock')html+='<div class="tt-feedback tt-feedback-success" role="status">'+esc(success)+'</div>';
  if(!verified){
-  html+='<div class="tt-unavailable tt-signed-loading" role="status" aria-live="polite">'+
+  html+='<div class="tt-unavailable"><div class="tt-signed-loading" role="status" aria-live="polite">'+
    (busy?'<span class="tt-loading-indicator" aria-hidden="true"></span>'+
     '<h3>Connecting to TimeTracker</h3>'+
     '<p>Verifying your signed account and latest attendance record…</p>'+
     '<small>Your Clock screen will appear automatically. No attendance action is being submitted.</small>':
     '<h3>Attendance access needs verification</h3>'+
     '<p>Signed workspace, board or module access is unavailable. Refresh or sign in again.</p>')+
-   '</div>'+applicationFooter()+'</div></section>';
+   '</div></div>'+applicationFooter()+'</div></section>';
   return html;
  }
  if(selected==='overview')html+=renderTimeTrackerOverview({

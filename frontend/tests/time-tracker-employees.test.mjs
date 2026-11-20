@@ -114,7 +114,8 @@ test('native reader reuses one existing Supabase directory RPC under signed boar
 test('the menu refreshes on open and search never fetches raw Supabase Auth accounts',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const css=readFileSync('frontend/apps/TimeTracker/time-tracker-refined.css','utf8');
- assert.match(app,/if\(next==='employees'\)await loadTimeTracker\(\)/);
+ assert.match(app,/if\(next==='employees'&&!requiresDetail\)await loadTimeTracker\(\)/);
+ assert.match(app,/requiresDetail=next!=='clock'&&state\.ttAttendance\?\.clockOnly===true/);
  assert.match(app,/case 'tt-employees-refresh'/);
  assert.match(app,/ttEmployeesSearch/);
  assert.match(app,/id==='tt-employees-search'/);
