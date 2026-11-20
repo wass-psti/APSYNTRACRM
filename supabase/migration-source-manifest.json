@@ -1864,6 +1864,20 @@
       "sha256": "8528f5fbdd935a737e1d778bdd28f02c1927acf0016bd0f35451c5da3e4d42ac"
     },
     {
+      "version": "20261120101751",
+      "name": "cp_tb_native_02d_thread_media_activation",
+      "file": "20261120101751_cp_tb_native_02d_thread_media_activation.sql",
+      "bytes": 9796,
+      "sha256": "4f8a635fdc4e47de3bbad98dd4deafd1d744861e94a889b69beae32850c8e19e"
+    },
+    {
+      "version": "20261120101929",
+      "name": "cp_tb_native_02d_server_timer_activation",
+      "file": "20261120101929_cp_tb_native_02d_server_timer_activation.sql",
+      "bytes": 5972,
+      "sha256": "21578daf9a1875f5779b9411e1d26c89da48ea2618bf9336485b469a7503c694"
+    },
+    {
       "version": "20261120111000",
       "name": "cp_tt_department_team_directory_read",
       "file": "20261120111000_cp_tt_department_team_directory_read.sql",

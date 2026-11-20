@@ -20,7 +20,7 @@ test('signed sidebar preserves the required route vocabulary and active semantic
  assert.match(sidebar,/sidebarNav\('#\/settings','Settings','settings'/);
  assert.match(sidebar,/sidebarNav\('#\/acceptance','Pages acceptance','acceptance'/);
  assert.match(sidebar,/sidebarNav\('#\/role-configuration','Role Configuration','roles'/);
- assert.match(sidebar,/sidebarNav\('#\/user-role-management','User Role Management','users'/);
+ assert.match(sidebar,/sidebarNav\('#\/user-role-management','Teams','users'/);
  assert.match(sidebar,/state\.roleVerified===true/);
  assert.match(sidebar,/\(state\.adminVerified===true\?'/);
  assert.match(sidebar,/aria-label="Primary"/);

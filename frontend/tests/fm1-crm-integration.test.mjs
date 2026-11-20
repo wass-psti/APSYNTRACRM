@@ -114,7 +114,7 @@ test("FM1 browser UI does not introduce a new role or permission gate", () => {
   );
   assert.match(
     app,
-    /if\(\['role-configuration','user-role-management','foundation','acceptance'\]\.includes\(state\.view\)\)/,
+    /if\(\['role-configuration','foundation','acceptance'\]\.includes\(state\.view\)\)/,
   );
 });
 
