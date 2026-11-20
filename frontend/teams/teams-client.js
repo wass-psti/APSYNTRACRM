@@ -2,7 +2,7 @@
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const actions=new Set(['create','rename','duplicate','delete','add_member','remove_member',
  'move_member','add_other_team','make_owner','remove_owner','grant_admin','revoke_admin',
- 'assign_content','remove_content','set_avatar','set_cover']);
+ 'assign_content','remove_content','set_content_role','set_avatar','set_cover']);
 const levels=new Set(['viewer','editor','manager']);
 const kinds=new Set(['board','folder','app']);
 const validUrl=value=>value===null||(typeof value==='string'&&value.length<=500&&
