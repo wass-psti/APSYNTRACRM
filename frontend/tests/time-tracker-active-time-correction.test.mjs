@@ -64,6 +64,25 @@ test('admin roles find Correct time in existing Log, without a new board',()=>{
  assert.match(html,/select Correct time/);
 });
 
+test('System Admin time correction opens the restricted editor, not the full record editor',()=>{
+ const row={
+  id:recordId,ownerId:'cloud:'+employeeId,name:'Test Employee',
+  department:'Engineering',location:'Office-Base Duty',
+  clockIn:'2026-11-20T00:30:00.000Z',clockOut:null,
+  status:'Active',classification:'On time',creditedMs:null
+ };
+ const html=renderTimeTrackerLog({
+  records:[row],scope:'AUTHORIZED_WORKSPACE_TEAM',
+  adminEligible:true,adminFullAccess:true,
+  adminEditor:{mode:'single',timeOnly:true,recordIds:[recordId],
+   records:[active()]},now:new Date('2026-11-20T02:30:00Z')
+ });
+ assert.match(html,/Save time correction/);
+ assert.match(html,/name="clockInAt"/);
+ assert.doesNotMatch(html,/name="employeeId"/);
+ assert.doesNotMatch(html,/name="clockOutAt"/);
+});
+
 test('corrected signed Clock-In timestamp rebases displayed active timer',()=>{
  const now=new Date('2026-11-20T02:30:00.000Z');
  const original=timeTrackerSessionElapsed('2026-11-20T00:30:00.000Z',now);
