@@ -110,7 +110,7 @@ can_act(user, board, app, feature, capability):
 ## Activation blockers and current scope
 
 - The original Teams SQL and board-team invite SQL are still **review candidates**, not production migrations. New Access V2 SQL depends on them.
-- The Edge router is disabled by default and several proposed V2 role RPCs do not exist. Direct Viewer/Editor mutation and app-role mutations must return unavailable rather than success until implemented and signed-tested.
+- The Edge router is disabled by default. App-role snapshot/mutation RPCs are staged as SQL review candidates but **not deployed**, and board snapshot/audit and direct board role-change RPCs are still incomplete. Direct Viewer/Editor mutation and app-role mutations must return unavailable rather than success until implemented and signed-tested.
 - The standalone React preview is **not** connected to Supabase and changing its checkboxes does not change real roles; production remains vanilla JS for compatibility.
 - The production workspace page uses signed Teams snapshots and fails closed if missing.
 - Review in PostgreSQL 17 with verified schema ownership, RLS, session revocation, privilege boundaries and negative two-account tests before enabling.
