@@ -1566,6 +1566,13 @@
       "file": "20261115132051_cp_board_import_sync_01_authoritative_counts.sql",
       "bytes": 4568,
       "sha256": "4ac73bd08175d7075132f8fe0ca3bdf9990d1329b825a0453f6f8ade9c6aaf5d"
+    },
+    {
+      "version": "20261120183000",
+      "name": "cp_tt_optional_attendance_correction_note",
+      "file": "20261120183000_cp_tt_optional_attendance_correction_note.sql",
+      "bytes": 10273,
+      "sha256": "ee65b4c40766dc3911eca08ff0fa7080570204f86b4aa26a725daa658216a14c"
     }
   ],
   "forward_migrations": [
