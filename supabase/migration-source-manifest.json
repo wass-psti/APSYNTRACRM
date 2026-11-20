@@ -1862,6 +1862,13 @@
       "file": "20261120100000_cp_tt_employee_departments_qol.sql",
       "bytes": 11993,
       "sha256": "8528f5fbdd935a737e1d778bdd28f02c1927acf0016bd0f35451c5da3e4d42ac"
+    },
+    {
+      "version": "20261120111000",
+      "name": "cp_tt_department_team_directory_read",
+      "file": "20261120111000_cp_tt_department_team_directory_read.sql",
+      "bytes": 1470,
+      "sha256": "b3e27cc02de03e7e8a81d1b7ed46b53b971545e91b922981158f247fd6d7c79d"
     }
   ]
 }
