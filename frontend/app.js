@@ -6403,7 +6403,7 @@ function openBoardQuickColumnPicker(trigger){
  picker.innerHTML='<div class="board-quick-picker-heading"><div><strong>Add a column</strong>'+
   '<p>Choose a supported field type</p></div>'+
   '<button type="button" data-board-picker-close aria-label="Close column picker">×</button></div>'+
-  '<input type="search" data-board-picker-search aria-label="Search column types" placeholder="Search or describe your column" autocomplete="off">'+
+  '<input type="search" id="board-quick-column-search" data-board-picker-search aria-label="Search column types" placeholder="Search or describe your column" autocomplete="off">'+
   '<div class="board-quick-picker-list">'+
    tileGroup('Recently used',recent)+
    tileGroup('Essentials',catalog.filter(x=>x.group==='Essentials'))+
