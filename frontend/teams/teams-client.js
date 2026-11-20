@@ -32,7 +32,8 @@ export function validateTeamsSnapshot(raw,{workspaceId,actorId}={}){
    return failure;
   teamIds.add(t.id);teams.push(Object.freeze(t));
  }
- if(teams.filter(t=>t.isSystem).length!==1)return failure;
+ if(teams.filter(t=>t.isSystem).length>1||
+    (raw.canManageSystemAdmins&&teams.filter(t=>t.isSystem).length!==1))return failure;
  const directory=[];
  for(const p of raw.directory){
   if(!uuid.test(p?.userId||'')||peopleIds.has(p.userId)||
@@ -43,15 +44,13 @@ export function validateTeamsSnapshot(raw,{workspaceId,actorId}={}){
  const members=[];
  for(const m of raw.members){
   if(!uuid.test(m?.teamId||'')||!teamIds.has(m.teamId)||
-   !uuid.test(m.userId||'')||!peopleIds.has(m.userId)||
+   !uuid.test(m.userId||'')||
    memberPairs.has(m.teamId+':'+m.userId)||
    typeof m.isOwner!=='boolean'||typeof m.name!=='string'||
    typeof m.email!=='string'||typeof m.title!=='string'||
    !['none','inherited','explicit'].includes(m.systemAdminSource)||
    typeof m.systemAdminExplicit!=='boolean'||
-   (m.systemAdminSource==='explicit'&&!m.systemAdminExplicit)||
-   (m.systemAdminSource==='inherited'&&!teams.find(t=>t.id===m.teamId)?.isSystem&&
-     !raw.teams.some(t=>t.isSystem&&raw.members.some(x=>x.teamId===t.id&&x.userId===m.userId))))
+   (m.systemAdminSource==='explicit'&&!m.systemAdminExplicit))
    return failure;
   memberPairs.add(m.teamId+':'+m.userId);members.push(Object.freeze(m));
  }
