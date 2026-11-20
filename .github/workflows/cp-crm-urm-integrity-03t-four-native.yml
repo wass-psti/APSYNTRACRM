@@ -1,0 +1,42 @@
+name: CP-CRM-URM-INTEGRITY-03T Four-Native Role Mutation and Restoration
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cp-crm-urm-integrity-03t-four-native.yml'
+      - 'scripts/cp-crm-urm-integrity-03t-four-native.sh'
+      - 'sql/tests/cp-crm-urm-integrity-03t-*'
+      - 'docs/CP-CRM-URM-INTEGRITY-03T.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  four-native-role-mutation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify migrations
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Verify four-app mutation, independent actor role readback, revocation and restoration
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: bash scripts/cp-crm-urm-integrity-03t-four-native.sh
+      - name: Verify native role-management and TradeLink regressions
+        run: node --test frontend/tests/cp-crm-urm-integrity-03s.test.mjs frontend/tests/user-role-scoped-six.test.mjs frontend/tests/user-role-frt-scoped.test.mjs
