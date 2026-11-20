@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { assessSignedPair } from "../../scripts/cp-crm-urm-integrity-03-signed-native.mjs";
+import {
+  assessSignedPair,
+  assessAdminEmployeePair,
+} from "../../scripts/cp-crm-urm-integrity-03-signed-native.mjs";
 const a = "1111111111111111",
   b = "2222222222222222";
 const ws = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -113,5 +116,41 @@ test("TimeTracker unavailable view distinguishes denied native assignment from m
   assert.match(
     runner,
     /native_application_board_context["']\s*&&\s*r\.status\s*===\s*403/,
+  );
+});
+
+test("two signed employees in one workspace do not qualify as administrator-to-employee mutation acceptance", () => {
+  const first = { ...primary, access: { effectivePlatformRole: "employee" } };
+  const second = { ...peer, access: { effectivePlatformRole: "employee" } };
+  assert.equal(assessSignedPair([first, second], [a, b]).status, "ELIGIBLE");
+  assert.deepEqual(assessAdminEmployeePair([first, second], [a, b]), {
+    status: "BLOCKED",
+    reason:
+      "Same-workspace pair has no signed administrator and non-admin target",
+  });
+});
+test("admin-to-employee pair is only eligible when role and workspace are independently verified", () => {
+  const first = { ...primary, access: { effectivePlatformRole: "admin" } };
+  const second = { ...peer, access: { effectivePlatformRole: "employee" } };
+  assert.equal(
+    assessAdminEmployeePair([first, second], [a, b]).status,
+    "ELIGIBLE",
+  );
+  assert.equal(
+    assessAdminEmployeePair([first, { ...second, workspaceId: other }], [a, b])
+      .status,
+    "BLOCKED",
+  );
+  assert.equal(
+    assessAdminEmployeePair(
+      [first, { ...second, access: { effectivePlatformRole: "admin" } }],
+      [a, b],
+    ).status,
+    "BLOCKED",
+  );
+  assert.equal(
+    assessAdminEmployeePair([{ ...first, active: false }, second], [a, b])
+      .status,
+    "BLOCKED",
   );
 });
