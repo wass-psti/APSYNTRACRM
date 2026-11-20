@@ -19,7 +19,7 @@ const example=(ownerId=user)=>({
  clockOut:null
 });
 function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=workspace,
- records=[],malformed=false,writeReady=false,foreignCapability=false,autoClockoutSnapshot=null}={}){
+ records=[],malformed=false,writeReady=false,foreignCapability=false,autoClockoutSnapshot=null,departmentValue='HR'}={}){
  let commitCount=0, lastWrite=null;
  const auth={userId:activeUser,getVerifiedUser:async()=>({id:activeUser})};
  let currentRecords=records;
@@ -44,6 +44,9 @@ function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=works
     case 'timetracker_auto_clockout_snapshot':
      if(autoClockoutSnapshot===null)throw Error('PGRST202: function not deployed');
      return autoClockoutSnapshot;
+    case 'timetracker_employee_department_for_clock':
+     return {contract:'tt-department-1',actorId:activeUser,
+      workspaceId:ctxWs,boardId:board,department:departmentValue};
     case 'timetracker_attendance_capabilities':
      if(!writeReady)throw Error('PGRST202: function not deployed');
      return {mode:'ACTIVE',contract:'tt-attendance-1',canClock:true,
