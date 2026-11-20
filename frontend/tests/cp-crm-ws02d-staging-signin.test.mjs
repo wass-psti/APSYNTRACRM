@@ -33,4 +33,48 @@ test('staging script parses as JavaScript in an ES module',async()=>{
  const {spawnSync}=await import('node:child_process');
  const result=spawnSync(process.execPath,['--check','--input-type=module'],{input:script,encoding:'utf8'});
  assert.equal(result.status,0,result.stderr);
+});test('OTP request is staging-scoped, does not register users, and names the exact staging redirect',async()=>{
+ const buttons=new Map(),elements=new Map(),calls=[];
+ const make=(id,value='')=>{const x={value,textContent:'',addEventListener(){}};elements.set(id,x);return x};
+ make('inviter-email','lmsenagan@watchdogautomation.com.ph');make('recipient-email','jspagsuguiron@watchdogautomation.com.ph');
+ make('inviter-status');make('recipient-status');
+ const document={
+  getElementById:id=>elements.get(id)??make(id),
+  querySelectorAll:selector=>['inviter','recipient'].map(which=>({
+   dataset:{[selector.slice(6,-1)]:which},
+   addEventListener:(_name,callback)=>buttons.set(selector+'-'+which,callback)
+  }))
+ };
+ const wrapper={document,fetch:async(url,options)=>{
+  calls.push({url,options});
+  return {ok:true,status:200,json:async()=>({})};
+ },encodeURIComponent,crypto:{randomUUID:()=> '00000000-0000-4000-8000-000000000000'}};
+ runInNewContext(script,wrapper);
+ await buttons.get('[data-otp]-inviter')();
+ assert.equal(calls.length,1);
+ const target=calls[0];
+ assert.equal(target.url,'https://jeqwjlxubntsddeauvqa.supabase.co/auth/v1/otp?redirect_to='+encodeURIComponent('https://wass-psti.github.io/APSYNTRACRM/frontend/ws02d-staging-signin.html'));
+ assert.deepEqual(JSON.parse(target.options.body),{email:'lmsenagan@watchdogautomation.com.ph',create_user:false});
+ assert.match(elements.get('inviter-status').textContent,/Magic Link email template/);
+});
+test('numeric verification uses email OTP and rejects malformed codes before network calls',async()=>{
+ const handlers=new Map(),elements=new Map(),calls=[];
+ const input=(id,value='')=>{const x={value,textContent:'',addEventListener(){}};elements.set(id,x);return x};
+ input('inviter-email','lmsenagan@watchdogautomation.com.ph');
+ input('recipient-email','jspagsuguiron@watchdogautomation.com.ph');
+ input('inviter-code','not-a-code');input('recipient-code','');
+ input('inviter-status');input('recipient-status');
+ const document={getElementById:id=>elements.get(id)??input(id),
+ querySelectorAll:selector=>['inviter','recipient'].map(which=>({dataset:{[selector.slice(6,-1)]:which},
+ addEventListener:(_event,fn)=>handlers.set(selector+'-'+which,fn)}))};
+ runInNewContext(script,{document,fetch:async(url,opts)=>{calls.push({url,opts});return {ok:false,status:403,json:async()=>({message:'invalid code'})}},encodeURIComponent,crypto:{randomUUID:()=>''}});
+ await handlers.get('[data-verify]-inviter')();
+ assert.equal(calls.length,0);
+ assert.equal(elements.get('inviter-code').value,'');
+ elements.get('inviter-code').value='123456';
+ await handlers.get('[data-verify]-inviter')();
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].url,'https://jeqwjlxubntsddeauvqa.supabase.co/auth/v1/verify');
+ assert.deepEqual(JSON.parse(calls[0].opts.body),{email:'lmsenagan@watchdogautomation.com.ph',token:'123456',type:'email'});
+ assert.match(elements.get('inviter-status').textContent,/Invalid, expired, or already-used email code/);
 });

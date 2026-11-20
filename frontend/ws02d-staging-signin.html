@@ -27,8 +27,8 @@ small{display:block;color:inherit;opacity:.8}h1{font-size:1.5rem}h2{font-size:1.
 <label for="inviter-email">Verified inviter</label><input id="inviter-email" type="email" autocomplete="username" readonly value="lmsenagan@watchdogautomation.com.ph">
 <label for="inviter-password">Staging account password</label><input id="inviter-password" type="password" autocomplete="off">
 <button type="button" data-login="inviter">Sign in inviter</button>
-<button type="button" data-otp="inviter">Email sign-in code</button>
-<label for="inviter-code">Email OTP code (if your email template provides one)</label><input id="inviter-code" type="text" inputmode="numeric" autocomplete="one-time-code">
+<button type="button" data-otp="inviter">Request numeric email code</button>
+<label for="inviter-code">Numeric email OTP code</label><input id="inviter-code" type="text" inputmode="numeric" autocomplete="one-time-code">
 <button type="button" data-verify="inviter">Verify inviter code</button>
 <output id="inviter-status" role="status">Not signed in</output>
 </section>
@@ -37,8 +37,8 @@ small{display:block;color:inherit;opacity:.8}h1{font-size:1.5rem}h2{font-size:1.
 <label for="recipient-email">Verified recipient</label><input id="recipient-email" type="email" autocomplete="username" readonly value="jspagsuguiron@watchdogautomation.com.ph">
 <label for="recipient-password">Staging account password</label><input id="recipient-password" type="password" autocomplete="off">
 <button type="button" data-login="recipient">Sign in recipient</button>
-<button type="button" data-otp="recipient">Email sign-in code</button>
-<label for="recipient-code">Email OTP code (if your email template provides one)</label><input id="recipient-code" type="text" inputmode="numeric" autocomplete="one-time-code">
+<button type="button" data-otp="recipient">Request numeric email code</button>
+<label for="recipient-code">Numeric email OTP code</label><input id="recipient-code" type="text" inputmode="numeric" autocomplete="one-time-code">
 <button type="button" data-verify="recipient">Verify recipient code</button>
 <output id="recipient-status" role="status">Not signed in</output>
 </section>
@@ -53,11 +53,13 @@ small{display:block;color:inherit;opacity:.8}h1{font-size:1.5rem}h2{font-size:1.
 <input id="invitation-token" type="password" autocomplete="off">
 <button type="button" id="accept">Accept as recipient</button>
 <output id="result" role="status">Two independent live staging sessions are required for server-side onboarding, but can be established on separate devices. Email delivery and workspace permissions are not altered by signing in.</output>
-<small>Never paste passwords, verification codes, access tokens, or invitation tokens into chat. No production endpoint is used. Email submission does not prove inbox receipt.</small>
+<small>Numeric OTP requires the staging Supabase Authentication → Email Templates → Magic Link template to include {{ .Token }} instead of {{ .ConfirmationURL }}. Never paste passwords, verification codes, access tokens, or invitation tokens into chat. No production endpoint is used. Email submission does not prove inbox receipt.</small>
 </section>
 </main>
 <script type="module">
 const BASE='https://jeqwjlxubntsddeauvqa.supabase.co';
+// Explicit staging redirect fallback; GoTrue still formats the email from its Magic Link template.
+const OTP_REDIRECT='https://wass-psti.github.io/APSYNTRACRM/frontend/ws02d-staging-signin.html';
 const KEY='sb_publishable_i7UQfD8eqxNadP8mhmxy3g_w4gbyWco';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const INVITE_TOKEN=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[0-9a-f]{64}$/;
@@ -67,7 +69,15 @@ const status=(id,message)=>{$(id).textContent=message};
 async function api(path,body,token){
  const r=await fetch(BASE+path,{method:'POST',headers:{apikey:KEY,'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{})},body:JSON.stringify(body),cache:'no-store',referrerPolicy:'no-referrer'});
  const payload=await r.json().catch(()=>({}));
- if(!r.ok)throw Error('Request denied ('+r.status+')'+(typeof payload?.error_description==='string'?': '+payload.error_description:''));
+ if(!r.ok){
+  const message=typeof payload?.error_description==='string'?payload.error_description:
+   typeof payload?.msg==='string'?payload.msg:typeof payload?.message==='string'?payload.message:'Request failed';
+  if(r.status===429)throw Error('Too many requests. Wait until the provider permits another request.');
+  if(path.startsWith('/auth/v1/verify')&&[400,401,403,422].includes(r.status))
+   throw Error('Invalid, expired, or already-used email code. Request a fresh code after the provider cooldown.');
+  if(r.status===422||r.status===400)throw Error('Verification rejected: '+message);
+  throw Error('Request denied ('+r.status+'): '+message);
+ }
  return payload;
 }
 async function identity(which){
@@ -101,12 +111,12 @@ document.querySelectorAll('[data-login]').forEach(b=>b.addEventListener('click',
 }));
 document.querySelectorAll('[data-otp]').forEach(b=>b.addEventListener('click',async()=>{
  const which=b.dataset.otp;
- try{await api('/auth/v1/otp',{email:$(which+'-email').value,create_user:false});status(which+'-status','Sign-in email requested. Use a code only if your email template includes one. Never forward the link into production.')}
+ try{await api('/auth/v1/otp?redirect_to='+encodeURIComponent(OTP_REDIRECT),{email:$(which+'-email').value,create_user:false});status(which+'-status','Email request accepted by GoTrue. Check inbox for a numeric code. If it still contains a Sign in link, the staging Magic Link email template must be changed to {{ .Token }}; requesting another email will not fix the template.')}
  catch(e){showError(which+'-status',e)}
 }));
 document.querySelectorAll('[data-verify]').forEach(b=>b.addEventListener('click',async()=>{
  const which=b.dataset.verify,field=$(which+'-code'),token=field.value.trim();field.value='';
- if(!/^\d{6,8}$/.test(token)){status(which+'-status','Enter the one-time email code');return}
+ if(!/^\d{6,8}$/.test(token)){status(which+'-status','Enter the 6–8 digit one-time email code, not a link.');return}
  try{await save(which,await api('/auth/v1/verify',{email:$(which+'-email').value,token,type:'email'}))}
  catch(e){slots[which]=null;showError(which+'-status',e)}
 }));
