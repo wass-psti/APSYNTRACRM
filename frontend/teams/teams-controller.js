@@ -1,5 +1,5 @@
 import {TeamsClient} from './teams-client.js';
-import {renderTeamsConsole} from './teams-ui.js';
+import {renderWorkspaceRoles} from '../access-v2/workspace-ui.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const field=(label,name,value='',type='text')=>'<label class="teams-dialog-field">'+esc(label)+
@@ -27,6 +27,13 @@ export class TeamsController {
    sheet.href='./frontend/teams/teams.css';
    sheet.dataset.apsyntraTeamsCss='true';
    document.head.append(sheet);
+  }
+  if(host&&!document.head.querySelector('link[data-apsyntra-access-v2-css]')){
+   const pageCss=document.createElement('link');
+   pageCss.rel='stylesheet';
+   pageCss.href='./frontend/access-v2/workspace.css';
+   pageCss.dataset.apsyntraAccessV2Css='true';
+   document.head.append(pageCss);
   }
   if(this.host!==host){
    this.host?.removeEventListener('click',this.onClick,true);
@@ -77,7 +84,7 @@ export class TeamsController {
  }
  render(){
   if(!this.host)return;
-  this.host.innerHTML=renderTeamsConsole({
+  this.host.innerHTML=renderWorkspaceRoles({
    snapshot:this.snapshot,loading:this.loading,error:this.error,selectedTeamId:this.selectedTeamId,
    teamSearch:this.teamSearch,teamFilter:this.teamFilter,filterOpen:this.filterOpen,tab:this.tab,userSearch:this.userSearch,
    contentSearch:this.contentSearch,systemAdminsOnly:this.systemAdminsOnly,
@@ -128,13 +135,14 @@ export class TeamsController {
  onKey(event){
   if(!this.host)return;
   if(event.key==='Escape'){
+   if(!this.modal)return;
    event.preventDefault();event.stopImmediatePropagation();
-   if(this.modal)this.closeDialog();else this.onClose?.();
+   this.closeDialog();
    return;
   }
   if(event.key!=='Tab')return;
   const panel=this.modal?this.host.querySelector('.teams-subdialog'):
-   this.host.querySelector('.teams-dialog');
+   this.host.querySelector('.ap-v2-workspace-page');
   if(!panel)return;
   const eligible=[...panel.querySelectorAll(
    'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),summary,[tabindex]:not([tabindex="-1"])'
@@ -149,7 +157,7 @@ export class TeamsController {
  }
  onOutside(event){
   if(!this.host)return;
-  for(const menu of this.host.querySelectorAll('.teams-menu[open]')){
+  for(const menu of this.host.querySelectorAll('.teams-menu[open],.ap-v2-menu[open],.ap-v2-role-switch[open]')){
    if(!menu.contains(event.target))menu.open=false;
   }
  }
