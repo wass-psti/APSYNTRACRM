@@ -1,0 +1,50 @@
+name: CP-CRM-URM-INTEGRITY-03 Scoped Role Matrix
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cp-crm-urm-integrity-03-scoped-matrix.yml'
+      - 'scripts/cp-crm-urm-integrity-03-*'
+      - 'frontend/tests/cp-crm-urm-integrity-03*'
+      - 'docs/CP-CRM-URM-INTEGRITY-03.md'
+      - 'supabase/migrations/*cp_urm*'
+      - 'frontend/user-role-management.js'
+      - 'frontend/data.js'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  disposable-scoped-role-matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        domain: [fund-tracker, six-apps, charter, fueltrans, tooltrace]
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify migration-source integrity
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Exercise canonical scoped role RPC, source readback, CAS, revoke and denied calls
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGDATABASE: postgres
+          DOMAIN: ${{ matrix.domain }}
+        run: bash scripts/cp-crm-urm-integrity-03-scoped-matrix.sh
+      - name: Run signed workspace and role UI regressions
+        run: node --test frontend/tests/user-role-scoped-six.test.mjs frontend/tests/user-role-charter-scoped.test.mjs frontend/tests/user-role-frt-scoped.test.mjs frontend/tests/user-role-workspace-fueltrans.test.mjs frontend/tests/user-role-tooltrace-workspace.test.mjs frontend/tests/cp-crm-urm-integrity-03.test.mjs
