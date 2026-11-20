@@ -70,7 +70,8 @@ export function normalizeAdminBoardCandidates(snapshot,{workspaceId,boardId,acto
  const seen=new Set(),members=[];
  for(const user of snapshot.users){
   if(!validUuid(user?.id)||seen.has(user.id)||
-     !Number.isInteger(user.activeWorkspaceCount)||user.activeWorkspaceCount<1||
+     (user.activeWorkspaceCount!==undefined&&
+      (!Number.isInteger(user.activeWorkspaceCount)||user.activeWorkspaceCount<1))||
      typeof user.email!=='string'||user.email.length>254||
      !/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/u.test(user.email))return unavailable;
   seen.add(user.id);
