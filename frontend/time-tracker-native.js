@@ -4,6 +4,7 @@ import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-
 import {projectTimeTrackerLog} from './time-tracker-history.js';
 import {projectTimeTrackerOtRows,validateOvertimeDraft,TT_OT_WRITES_ACCEPTED} from './time-tracker-overtime.js';
 import {projectTimeTrackerTeamDirectory} from './time-tracker-team.js';
+import {projectTimeTrackerEmployees} from './apps/TimeTracker/time-tracker-employees.js';
 import {validateTimeTrackerGps} from './time-tracker-gps.js';
 /**
  * TimeTracker native APSYNTRA adapter. Source reference: TimeTracker v2.0.14.
@@ -141,10 +142,15 @@ export class TimeTrackerNativeClient{
     typeof u.id==='string'&&(u.id===who.id||TT_TEAM_OVERVIEW_ROLES.includes(self.module_role)))
     .map(u=>Object.freeze({id:u.id,status:'active',
       display_name:String(u.display_name||'Workforce member').slice(0,100)}));
+  // Reuse this EXISTING authenticated Supabase module directory read.
+  // Only name + TimeTracker role are carried into the read-only employee tab.
+  const employees=projectTimeTrackerEmployees(users,{
+    userId:who.id,workspaceId:ctx.workspace_id,boardId,validRoles:TT_ROLES
+  });
   return Object.freeze({userId:who.id,workspaceId:ctx.workspace_id,boardId,
     platformRole:ctx.profile?.platform_role||'Unassigned',
     moduleRole:self.module_role,name:String(self.display_name||'Signed user').slice(0,100),
-    overviewDirectory:Object.freeze(overviewDirectory)});
+    overviewDirectory:Object.freeze(overviewDirectory),employees});
 
  }
  /** Only a current signed, board-scoped server v2 capability can unlock Clock. */
