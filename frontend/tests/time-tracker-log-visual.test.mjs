@@ -138,3 +138,24 @@ test('authorized Log maps are automatically visible, dark theme switches and ord
   gpsData:data,mapEnabled:false});
  assert.doesNotMatch(employee,/123\.987654|data-map-scope="log"|data-action="tt-map-style"/);
 });
+
+test('record click opens an accessible popup and highlights rows using the shared board selection convention',()=>{
+ const html=renderTimeTrackerLog({records,now,expandedRecordIds:['today'],adminEligible:true,
+  adminFullAccess:true,selectedIds:['today']});
+ assert.match(html,/data-action="tt-log-open-detail" data-record-id="today"/);
+ assert.match(html,/tt-log-filterable aps-record-selectable is-selected board-row-selected/);
+ assert.match(html,/data-tt-log-detail-dialog role="dialog" aria-modal="true"/);
+ assert.match(html,/aria-labelledby="tt-log-modal-title"/);
+ assert.match(html,/data-action="tt-log-detail-close"/);
+ assert.match(html,/data-action="tt-log-admin-select-visible"/);
+ assert.doesNotMatch(html,/type="checkbox"|data-tt-log-select-all/);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/case 'tt-log-open-detail'/);
+ assert.match(app,/case 'tt-log-detail-close'/);
+ assert.match(app,/case 'tt-log-admin-select-visible'/);
+ assert.match(app,/event\.ctrlKey\|\|event\.metaKey\|\|event\.shiftKey/);
+ const viewOnly=renderTimeTrackerLog({records,now,expandedRecordIds:['today'],
+  adminEligible:false,adminFullAccess:false});
+ assert.match(viewOnly,/tt-log-filterable aps-record-selectable is-selected board-row-selected/);
+ assert.doesNotMatch(viewOnly,/data-action="tt-log-admin-edit"/);
+});
