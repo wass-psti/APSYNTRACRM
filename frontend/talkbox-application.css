@@ -8,3 +8,14 @@
 .tb-drawer{position:relative;width:min(560px,100%);height:100%;overflow-y:auto;background:var(--panel,#fff);box-shadow:-10px 0 40px #0002}
 .tb-drawer header{display:flex;justify-content:space-between;gap:12px;align-items:start;border-bottom:1px solid var(--border,#e2e8f0);padding:22px}.tb-drawer h3{margin:0}.tb-body{padding:22px;display:grid;gap:12px}.tb-body textarea{width:100%;box-sizing:border-box}.tb-update{border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:12px}.tb-update p{white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:640px){.tb-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.tb-filter{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin:12px 0 18px}
+.tb-filter label{font-size:.85rem;font-weight:600}
+.tb-filter input,.tb-filter select{background:var(--panel,#fff);color:var(--text,#172337);border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:9px;min-height:38px}
+.tb-filter input{flex:1 1 200px;min-width:120px}
+.tb-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+.tb-files{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.tb-files li{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:10px;overflow-wrap:anywhere}
+.tb-file-input{display:grid;gap:8px}
+.tb-file-input input{max-width:100%}

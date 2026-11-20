@@ -43,6 +43,7 @@ import {mountPagesAcceptanceMotion,stopPagesAcceptanceMotion} from './pages-acce
 import {runNativeQa} from './native-qa.js';
 import {NativeIssueClient} from './native-client.js';
 import {TalkBoxNativeClient} from './talkbox-native.js';
+import {TalkBoxAttachmentClient} from './talkbox-attachments.js';
 import {renderTalkBoxApplication} from './talkbox-ui.js';
 import {findTalkBoxBoard,TALKBOX_APPLICATION_ROUTE,talkBoxIssueHref} from './talkbox-application.js';
 import {BOARD_MODULES,moduleByBoardName} from './board/services/manifest.js';
@@ -427,19 +428,30 @@ let modal=null;
 let globalSearchController=null;
 let pendingGlobalSearchItem=null;
 let pendingNativeSearchSelection=null;
-let talkBoxState={page:null,selected:null,busy:false,error:'',scope:''};
+let talkBoxState={page:null,selected:null,busy:false,error:'',scope:'',filter:{name:'',status:'All'}};
 const talkBoxClient=()=>new TalkBoxNativeClient({api:db,workspaceId:state.context.workspace_id});
+const talkBoxAttachments=()=>new TalkBoxAttachmentClient({
+ api:db,auth,workspaceId:state.context.workspace_id
+});
 function talkBoxCurrent(scope){return auth.isSignedIn&&state.view==='board'&&state.tab==='talkbox'&&state.context?.user_id===auth.userId&&
  [auth.userId,state.context.workspace_id,state.boardId].join('|')===scope;}
 async function loadTalkBox({more=false,selectedId=null}={}){
  const scope=[auth.userId,state.context?.workspace_id,state.boardId].join('|');
  if(!talkBoxCurrent(scope)||talkBoxState.busy)return;
+ // Never carry a previously selected issue or list page into a new workspace.
+ if(talkBoxState.scope!==scope)talkBoxState={
+  page:null,selected:null,busy:false,error:'',scope,filter:{name:'',status:'All'}
+ };
  talkBoxState={...talkBoxState,busy:true,error:'',scope};render();
  try{
-  const client=talkBoxClient();const page=await client.list(more?talkBoxState.page?.cursor:null);
+  const client=talkBoxClient();
+  const page=await client.list(more?talkBoxState.page?.cursor:null,talkBoxState.filter);
   if(!talkBoxCurrent(scope))return;
-  const items=more?[...(talkBoxState.page?.items||[]),...page.items]:page.items;
-  const selected=selectedId?await client.get(selectedId):talkBoxState.selected;
+  const existing=more?(talkBoxState.page?.items||[]):[];
+  const known=new Set(existing.map(item=>item.id));
+  const items=[...existing,...page.items.filter(item=>!known.has(item.id))];
+  const openId=selectedId||talkBoxState.selected?.id;
+  const selected=openId?await client.get(openId):null;
   if(!talkBoxCurrent(scope))return;
   talkBoxState={page:{...page,items},selected,busy:false,error:'',scope};
  }catch(err){if(talkBoxCurrent(scope))talkBoxState={...talkBoxState,busy:false,error:errorMessage(err)};}
@@ -1580,7 +1592,7 @@ function boardPage(){
 
 <div data-board-live-content>
 ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFundTrackerApplication():state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,otExpandedRequestIds:state.ttOtExpandedRequestIds,clockPendingAction:state.ttClockPending?.action||'clock-out',error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,employeesSearch:state.ttEmployeesSearch,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,adminEligible:state.ttAttendance?.access?.moduleRole==='System Admin',adminDirectory:state.ttLogAdminEditor?.directory||state.ttAttendance?.access?.overviewDirectory||[],adminSelectedIds:state.ttLogSelectedIds,adminEditor:state.ttLogAdminEditor,adminBusy:state.ttLogAdminBusy,adminError:state.ttLogAdminError,adminSuccess:state.ttLogAdminSuccess,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
- gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,canCreate:state.boardManage||state.tradeLinkModuleRole==='User',actorId:state.context?.user_id||'',actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='talkbox'&&moduleKey==='toolbox'?renderTalkBoxApplication({page:talkBoxState.page,selected:talkBoxState.selected,busy:talkBoxState.busy,error:talkBoxState.error,canEdit:state.edit}):state.tab==='issues'?issuesPage():`
+ gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,canCreate:state.boardManage||state.tradeLinkModuleRole==='User',actorId:state.context?.user_id||'',actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='talkbox'&&moduleKey==='toolbox'?renderTalkBoxApplication({page:talkBoxState.page,selected:talkBoxState.selected,busy:talkBoxState.busy,error:talkBoxState.error,canEdit:state.edit,filter:talkBoxState.filter}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar">
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ New item</button>':''}
  <div class="search-wrap board-toolbar-search"><svg class="board-toolbar-search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 5 5"></path></svg><input id="search-board-items" class="search-input" aria-label="Search board items" placeholder="Search" value="${e(state.boardItemSearch)}" /></div>
@@ -8547,6 +8559,18 @@ async function action(name,button){
    break;
   }
   case 'board-load-more':{await loadMoreBoardItems();break;}
+ case 'tb-filter':{
+  if(!talkBoxCurrent(talkBoxState.scope))break;
+  const name=String(root.querySelector('#tb-search-text')?.value||'').trim();
+  const status=String(root.querySelector('#tb-search-status')?.value||'All');
+  talkBoxState.filter={name,status};talkBoxState.page=null;
+  await loadTalkBox();break;
+ }
+ case 'tb-clear-filter':{
+  if(!talkBoxCurrent(talkBoxState.scope))break;
+  talkBoxState.filter={name:'',status:'All'};talkBoxState.page=null;
+  await loadTalkBox();break;
+ }
  case 'tb-refresh':{await loadTalkBox();break;}
  case 'tb-more':{if(talkBoxState.page?.cursor)await loadTalkBox({more:true});break;}
  case 'tb-open':{location.hash=talkBoxIssueHref(button.dataset.id);break;}
@@ -8562,10 +8586,25 @@ async function action(name,button){
   if(!state.edit||!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
   const current=talkBoxState.selected;
   openModal('Edit TalkBox issue',input('Issue name','name',current.name)+
-   select('Status','status',[['Working on it','Working on it'],['Stuck','Stuck'],['Done','Done']],current.status),async fd=>{
-    const updated=await talkBoxClient().updateVerified(current.id,{name:fd.get('name'),status:fd.get('status')},current.version);
+   select('Status','status',[['Working on it','Working on it'],['Stuck','Stuck'],['Done','Done']],current.status)+
+   input('Target date (optional)','date',current.date||'','date',false),async fd=>{
+    const updated=await talkBoxClient().updateVerified(current.id,{
+     name:fd.get('name'),status:fd.get('status'),date:fd.get('date')||null
+    },current.version);
     talkBoxState.selected=updated;await loadTalkBox({selectedId:current.id});
   });break;
+ }
+ case 'tb-time-edit':{
+  if(!state.edit||!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
+  const current=talkBoxState.selected;
+  openModal('Correct TalkBox tracked time',
+   input('Tracked hours','hours',current.timeTracking?.hours??0,'number')+
+   input('Tracked minutes (0–59)','minutes',current.timeTracking?.minutes??0,'number'),async fd=>{
+    const timeTracking={...current.timeTracking,
+     hours:Number(fd.get('hours')),minutes:Number(fd.get('minutes'))};
+    const updated=await talkBoxClient().updateVerified(current.id,{timeTracking},current.version);
+    talkBoxState.selected=updated;await loadTalkBox({selectedId:current.id});
+   });break;
  }
  case 'tb-post':{
   if(!state.edit||!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
@@ -8573,6 +8612,42 @@ async function action(name,button){
   const issueId=talkBoxState.selected.id;
   const result=await talkBoxClient().postVerified(issueId,message);
   if(talkBoxCurrent(talkBoxState.scope)){talkBoxState.selected=result.record;render();}
+  break;
+ }
+ case 'tb-archive':{
+  if(!state.edit||!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
+  const issueId=talkBoxState.selected.id;
+  if(!confirm('Archive this TalkBox issue? It will disappear from the active list.'))break;
+  await talkBoxClient().archiveVerified(issueId);
+  if(talkBoxCurrent(talkBoxState.scope)){
+   talkBoxState.selected=null;
+   location.hash=TALKBOX_APPLICATION_ROUTE;
+   await loadTalkBox();
+  }
+  break;
+ }
+ case 'tb-file-upload':{
+  if(!state.edit||!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
+  const file=root.querySelector('#tb-upload-file')?.files?.[0];
+  if(!file)throw new Error('Choose a TalkBox file before uploading.');
+  const scope=talkBoxState.scope,issueId=talkBoxState.selected.id;
+  const saved=await talkBoxAttachments().uploadVerified(issueId,file);
+  if(talkBoxCurrent(scope)&&talkBoxState.selected?.id===issueId){
+   talkBoxState.selected=(await talkBoxClient().get(issueId));
+   render();toast('Native attachment uploaded and verified.');
+  }
+  break;
+ }
+ case 'tb-file-download':{
+  if(!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
+  const asset=talkBoxState.selected.assets?.find(x=>String(x.id)===button.dataset.id);
+  if(!asset)break;
+  const {blob,fileName}=await talkBoxAttachments().download(talkBoxState.selected.id,asset);
+  const url=URL.createObjectURL(blob);
+  try{
+   const link=document.createElement('a');link.href=url;link.download=fileName;
+   document.body.appendChild(link);link.click();link.remove();
+  }finally{setTimeout(()=>URL.revokeObjectURL(url),1000);}
   break;
  }
  case 'tb-subtask-new':{
@@ -8588,9 +8663,12 @@ async function action(name,button){
   const issueId=talkBoxState.selected.id,subId=button.dataset.id;
   const sub=talkBoxState.selected.subitems.find(row=>String(row.id)===subId);
   if(!sub)break;
-  openModal('Update subtask status',select('Status','status',[
-   ['Working on it','Working on it'],['Stuck','Stuck'],['Done','Done']],sub.status),async fd=>{
-    const record=await talkBoxClient().updateSubitem(issueId,subId,String(fd.get('status')));
+  openModal('Edit TalkBox subtask',input('Subtask name','name',sub.name)+
+   select('Status','status',[
+    ['Working on it','Working on it'],['Stuck','Stuck'],['Done','Done']],sub.status),async fd=>{
+    const record=await talkBoxClient().updateSubitem(issueId,subId,{
+     name:fd.get('name'),status:String(fd.get('status'))
+    });
     if(talkBoxCurrent(talkBoxState.scope)){talkBoxState.selected=record;render();}
   });break;
  }
