@@ -158,6 +158,14 @@ BEGIN
 END
 $registration$;
 
+-- Capture only the synthetic threshold outputs in a session-local fixture table.
+-- The signed OT RPC caller does not need direct access to the private scheduler.
+UPDATE tt_auto_clockout_expected e
+SET threshold_at=s.threshold_at
+FROM private.tt_auto_clockout_sessions s
+WHERE s.record_id=e.record_id;
+GRANT SELECT ON tt_auto_clockout_expected TO authenticated;
+
 -- Seed historically approved intervals for worker boundary tests. The employee
 -- approval RPC path is exercised independently below for Employee A.
 DO $overtime_seed$
@@ -220,7 +228,7 @@ DECLARE
  v_end time;
  v_receipt jsonb;
 BEGIN
- SELECT threshold_at INTO v_threshold FROM private.tt_auto_clockout_sessions
+ SELECT threshold_at INTO v_threshold FROM tt_auto_clockout_expected
  WHERE record_id='23000000-0000-4000-8000-000000000001';
  v_date:=(v_threshold at time zone 'Asia/Manila')::date;
  v_start:=(v_threshold at time zone 'Asia/Manila')::time;
