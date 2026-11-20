@@ -46,6 +46,45 @@ export function normalizeSignedBoardCandidates(raw,{boardId,workspaceId}={}){
     canManage:true,source:'SIGNED_MANAGER_BOARD_DIRECTORY'});
 }
 
+
+/**
+ * Existing production User Role Management reader: a CRM Administrator can
+ * search members already in the selected workspace and manage their board
+ * assignments. This is not permission inferred from a browser roster:
+ * the authoritative RPC must attest adminVerified and the exact workspace.
+ */
+export function normalizeAdminBoardCandidates(snapshot,{workspaceId,boardId,actorId}={}){
+ if(!validUuid(workspaceId)||!validUuid(boardId)||!validUuid(actorId)||
+    snapshot?.adminVerified!==true||snapshot.workspaceId!==workspaceId||
+    !Array.isArray(snapshot.users)||snapshot.users.length>400||
+    !Array.isArray(snapshot.boards)||!snapshot.boards.some(b=>b?.id===boardId)||
+    !Array.isArray(snapshot.boardAssignments)||snapshot.boardAssignments.length>10000)
+   return unavailable;
+ const assigned=new Map();
+ for(const row of snapshot.boardAssignments){
+  if(row?.boardId!==boardId)continue;
+  if(!validUuid(row.userId)||assigned.has(row.userId)||
+     !['owner','editor','viewer'].includes(row.role))return unavailable;
+  assigned.set(row.userId,row.role);
+ }
+ const seen=new Set(),members=[];
+ for(const user of snapshot.users){
+  if(!validUuid(user?.id)||seen.has(user.id)||
+     !Number.isInteger(user.activeWorkspaceCount)||user.activeWorkspaceCount<1||
+     typeof user.email!=='string'||user.email.length>254||
+     !/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/u.test(user.email))return unavailable;
+  seen.add(user.id);
+  const name=safeName(user.name)||safeName(user.displayName)||user.email;
+  members.push(Object.freeze({id:user.id,name,email:user.email,
+    boardRole:assigned.get(user.id)||null,
+    protected:user.protected===true||user.id===actorId,
+    updatedAt:snapshot.boardAssignments.find(r=>r.boardId===boardId&&r.userId===user.id)?.updatedAt||null}));
+ }
+ return Object.freeze({status:'VERIFIED_SIGNED_CANDIDATES',workspaceId,boardId,
+  members:Object.freeze(members),groups:Object.freeze([]),
+  canManage:true,source:'SIGNED_ADMIN_BOARD_DIRECTORY'});
+}
+
 /** Groups must come from a *separate* authenticated workspace RPC.
  * Never trust localStorage, arbitrary user lists or the board data itself.
  */
