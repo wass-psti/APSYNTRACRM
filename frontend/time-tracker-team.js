@@ -8,8 +8,12 @@ export const TT_TEAM_ROLES=Object.freeze([
 ]);
 export const TT_TEAM_DEPARTMENTS=Object.freeze([
  'HR','Materials and Logistics','Engineering','Finance and Accounting',
- 'Sales and Marketing','Information Technology','General Administration'
+ 'Sales and Marketing','Information Technology','General Administration','OJT'
 ]);
+export function validTimeTrackerDepartmentName(name){
+ return typeof name==='string'&&name===name.trim()&&
+  name.length>=2&&name.length<=60&&!/[\u0000-\u001f\u007f]/.test(name);
+}
 const adminRoles=new Set(['System Admin','IT Administrator','HR']);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -71,7 +75,7 @@ export function projectTimeTrackerTeamDepartments(directory,snapshot,{boardId}={
  const roster=new Set(directory.members.map(m=>m.id)),map=new Map();
  for(const row of snapshot.assignments){
   if(!uuid.test(row?.userId||'')||!roster.has(row.userId)||
-     map.has(row.userId)||!TT_TEAM_DEPARTMENTS.includes(row.department))
+     map.has(row.userId)||!validTimeTrackerDepartmentName(row.department))
    throw Error('Signed Team department assignment invalid');
   map.set(row.userId,row.department);
  }

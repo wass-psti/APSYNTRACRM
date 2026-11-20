@@ -74,7 +74,7 @@ test('fresh bootstrap RPC is necessary even when module role is administrative',
  const saved=await setup(true).assignTeamDepartment(board,teamActor,'Finance and Accounting');
  assert.equal(saved.members[0].department,'Finance and Accounting');
  await assert.rejects(()=>setup(false).assignTeamDepartment(board,teamActor,'Engineering'),/Bootstrap Team Directory/);
- await assert.rejects(()=>setup(true).assignTeamDepartment(board,teamActor,'Unlisted'),/Valid employee and department/);
+ await assert.rejects(()=>setup(true).assignTeamDepartment(board,teamActor,'X'),/Valid employee and department/);
 });
 
 
@@ -111,7 +111,7 @@ test('signed department projection renders editable assignments but fails closed
  assert.match(renderTimeTrackerTeam({directory:pending,access}),/Department assignments unavailable/);
  assert.throws(()=>projectTimeTrackerTeamDepartments(roster,{...snapshot,workspaceId:teamActor},{boardId:board}),/contract/);
  assert.throws(()=>projectTimeTrackerTeamDepartments(roster,{...snapshot,assignments:[
-  {userId:teamActor,department:'Unlisted'}]},{boardId:board}),/assignment invalid/);
+  {userId:teamActor,department:'X'}]},{boardId:board}),/assignment invalid/);
  assert.throws(()=>projectTimeTrackerTeamDepartments(roster,{...snapshot,assignments:[
   {userId:teamActor,department:'Engineering'},{userId:teamActor,department:'Engineering'}]},{boardId:board}),/contract|assignment invalid/);
 });

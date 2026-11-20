@@ -8088,21 +8088,23 @@ async function action(name,button){
  case 'tt-employees-department-edit':{
    if(state.ttBusy||state.ttView!=='employees'||state.ttAttendance?.status!=='VERIFIED_READ'||
       !['System Admin','IT Administrator'].includes(state.ttAttendance.access.moduleRole)||
-      state.ttAttendance.access.employees?.departmentsReady!==true)return;
+      state.ttAttendance.access.employees?.departmentsReady!==true||
+      !state.ttAttendance.access.departmentCatalog)return;
    const member=state.ttAttendance.access.employees.members.find(m=>m.id===button.dataset.userId);
    if(!member)return;
    const seq=routeSerial,boardId=state.boardId,actorId=state.context?.user_id,
     workspaceId=state.context?.workspace_id;
+   const available=state.ttAttendance.access.departmentCatalog.departments.map(d=>d.name);
    openModal('Assign department · '+member.name,
     '<p class="note">Employee: '+e(member.name)+'. Department changes affect new clock-ins; historical records remain unchanged.</p>'+
-    select('Department','department',[['','Select a department'],...TT_DEPARTMENTS.map(d=>[d,d])],member.department||''),
+    select('Department','department',[['','Select a department'],...available.map(d=>[d,d])],member.department||''),
     async fd=>{
      if(seq!==routeSerial||state.view!=='board'||state.tab!=='attendance'||
         state.ttView!=='employees'||state.context?.user_id!==actorId||
         state.context?.workspace_id!==workspaceId||state.boardId!==boardId)
       throw Error('Signed TimeTracker workspace changed; refresh and try again');
      const department=String(fd.get('department')||'');
-     if(!TT_DEPARTMENTS.includes(department))throw Error('Select a valid department');
+     if(!available.includes(department))throw Error('Select a current department');
      await timeTracker.assignEmployeeDepartment(boardId,member.id,department);
      if(seq!==routeSerial||state.context?.user_id!==actorId||
         state.context?.workspace_id!==workspaceId||state.boardId!==boardId)
@@ -8113,6 +8115,77 @@ async function action(name,button){
     },{submitLabel:'Save department',successMessage:'Department assignment saved.'});
    break;
   }
+ case 'tt-departments-add':
+ case 'tt-departments-rename':{
+   if(state.ttBusy||state.ttView!=='employees'||state.view!=='board'||
+      state.tab!=='attendance'||state.ttAttendance?.status!=='VERIFIED_READ'||
+      !['System Admin','IT Administrator'].includes(state.ttAttendance.access.moduleRole))return;
+   const catalog=state.ttAttendance.access.departmentCatalog;
+   if(catalog?.scope!=='SIGNED_TIMETRACKER_DEPARTMENT_CATALOG')return;
+   const rename=name==='tt-departments-rename';
+   const dept=rename?catalog.departments.find(d=>d.id===button.dataset.departmentId):null;
+   if(rename&&!dept)return;
+   const seq=routeSerial,boardId=state.boardId,actorId=state.context?.user_id,
+    workspaceId=state.context?.workspace_id;
+   openModal(rename?'Rename '+dept.name:'Add department',
+    '<p class="note">Changes to department names and current assignments are saved to this workspace in Supabase.</p>'+
+    '<label>Department name<input type="text" name="departmentName" minlength="2" maxlength="60" required value="'+e(dept?.name||'')+'"></label>',
+    async fd=>{
+     if(seq!==routeSerial||state.view!=='board'||state.tab!=='attendance'||
+        state.ttView!=='employees'||state.context?.user_id!==actorId||
+        state.context?.workspace_id!==workspaceId||state.boardId!==boardId)
+      throw Error('TimeTracker workspace changed; reopen Department Management');
+     const nextName=String(fd.get('departmentName')||'').trim();
+     if(nextName.length<2||nextName.length>60)
+      throw Error('Department name must have 2 to 60 characters');
+     const after=await timeTracker.mutateDepartmentCatalog(boardId,{
+      action:rename?'rename':'add',departmentId:dept?.id||null,
+      name:nextName,expectedRevision:catalog.revision
+     });
+     if(seq!==routeSerial||state.boardId!==boardId||state.context?.user_id!==actorId||
+        state.context?.workspace_id!==workspaceId)
+      throw Error('Department saved but the workspace changed; refresh Employees');
+     if(!after.departments.some(d=>d.name===nextName))throw Error('Department could not be verified');
+     await loadTimeTracker(seq);
+    },{submitLabel:rename?'Save department name':'Add department',
+       successMessage:rename?'Department renamed.':'Department added.'});
+   break;
+ }
+ case 'tt-departments-delete':{
+   if(state.ttBusy||state.ttView!=='employees'||state.view!=='board'||
+      state.tab!=='attendance'||state.ttAttendance?.status!=='VERIFIED_READ'||
+      !['System Admin','IT Administrator'].includes(state.ttAttendance.access.moduleRole))return;
+   const catalog=state.ttAttendance.access.departmentCatalog;
+   if(catalog?.scope!=='SIGNED_TIMETRACKER_DEPARTMENT_CATALOG')return;
+   const dept=catalog.departments.find(d=>d.id===button.dataset.departmentId);
+   if(!dept)return;
+   const seq=routeSerial,boardId=state.boardId,actorId=state.context?.user_id,
+    workspaceId=state.context?.workspace_id;
+   openModal('Delete department · '+dept.name,
+    '<p class="note" role="alert"><strong>'+dept.assignedCount+' employee'+(dept.assignedCount===1?' is':'s are')+
+    ' assigned to this '+e(dept.name)+' department.</strong></p>'+
+    '<p class="note">Deleting this department will unassign these employees. They cannot start a new Clock-In until an administrator assigns another department. Previously recorded attendance remains unchanged.</p>'+
+    '<label class="tt-department-delete-ack"><input type="checkbox" name="acknowledge" value="yes" required> I understand this deletion will remove the department and any current employee assignments.</label>',
+    async fd=>{
+     if(fd.get('acknowledge')!=='yes')throw Error('Acknowledge the assignment impact before deleting');
+     if(seq!==routeSerial||state.view!=='board'||state.tab!=='attendance'||
+        state.ttView!=='employees'||state.context?.user_id!==actorId||
+        state.context?.workspace_id!==workspaceId||state.boardId!==boardId)
+      throw Error('TimeTracker workspace changed; reopen the department warning');
+     const after=await timeTracker.mutateDepartmentCatalog(boardId,{
+      action:'delete',departmentId:dept.id,
+      expectedRevision:catalog.revision,expectedCount:dept.assignedCount
+     });
+     if(seq!==routeSerial||state.boardId!==boardId||state.context?.user_id!==actorId||
+        state.context?.workspace_id!==workspaceId)
+      throw Error('Department deleted but the session changed; refresh Employees');
+     if(after.departments.some(d=>d.id===dept.id))
+      throw Error('Department deletion could not be verified');
+     await loadTimeTracker(seq);
+    },{submitLabel:'Delete department',destructive:true,
+       successMessage:'Department deleted; affected employees are unassigned.'});
+   break;
+ }
  case 'tt-employees-attendance':{
    if(state.ttBusy||state.ttView!=='employees'||state.ttAttendance?.status!=='VERIFIED_READ'||
       !['System Admin','IT Administrator'].includes(state.ttAttendance.access.moduleRole))return;

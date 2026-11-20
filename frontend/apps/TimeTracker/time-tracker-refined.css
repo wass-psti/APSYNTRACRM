@@ -801,3 +801,89 @@
   background: #fff4eb;
   border-color: #d45b2b;
 }
+
+/* Workspace department catalog, editable only via signed admin RPCs. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-departments-management {
+  margin: 24px 0 12px;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #e8dfd9;
+  border-radius: 11px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-departments-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 14px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-departments-head h4 {
+  font: 700 19px/1.3 Georgia, 'Times New Roman', serif;
+  color: #241f1c;
+  margin: 0 0 3px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-departments-head p {
+  margin: 0;
+  color: #75665f;
+  font-size: 12px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-departments-head button,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-department-actions button {
+  border: 1px solid #eabfa7;
+  border-radius: 7px;
+  background: #fff;
+  padding: 8px 11px;
+  color: #ae481f;
+  font: 650 12px Inter, system-ui, sans-serif;
+  cursor: pointer;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-departments-head button {
+  background: #ed5b23;
+  color: #fff;
+  border-color: #ed5b23;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-department-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 13px 0;
+  border-top: 1px solid #eee6e0;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-department-item > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-department-item strong {
+  color: #282320;
+  font-size: 13px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-department-item span {
+  color: #7d6f66;
+  font-size: 11px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-department-actions {
+  display: flex;
+  gap: 7px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-department-actions button.tt-department-danger {
+  border-color: #ecd1cd;
+  color: #a73535;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-department-actions button:hover,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-department-actions button:focus-visible {
+  background: #fff3ec;
+  border-color: #d75125;
+}
+@media (max-width: 640px) {
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-departments-management {
+    padding: 14px;
+  }
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-department-item {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+}

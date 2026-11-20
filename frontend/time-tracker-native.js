@@ -3,8 +3,8 @@ export {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
 import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-overview.js';
 import {projectTimeTrackerLog} from './time-tracker-history.js';
 import {projectTimeTrackerOtRows,validateOvertimeDraft,TT_OT_WRITES_ACCEPTED} from './time-tracker-overtime.js';
-import {projectTimeTrackerTeamDirectory,projectTimeTrackerTeamDepartments,TT_TEAM_DEPARTMENTS} from './time-tracker-team.js';
-import {projectTimeTrackerEmployees,projectTimeTrackerEmployeeDepartments} from './time-tracker-application.js';
+import {projectTimeTrackerTeamDirectory,projectTimeTrackerTeamDepartments,TT_TEAM_DEPARTMENTS,validTimeTrackerDepartmentName} from './time-tracker-team.js';
+import {projectTimeTrackerEmployees,projectTimeTrackerEmployeeDepartments,projectTimeTrackerDepartmentCatalog} from './time-tracker-application.js';
 import {validateTimeTrackerGps} from './time-tracker-gps.js';
 /**
  * TimeTracker native APSYNTRA adapter. Source reference: TimeTracker v2.0.14.
@@ -179,6 +179,9 @@ export class TimeTrackerNativeClient{
   const clockRead=this.attendanceCapability(boardId,access);
   // Department is a signed, workspace-scoped employee record, not a browser field.
   // A missing deployment leaves Clock In unavailable rather than guessing.
+  const catalogRead=['System Admin','IT Administrator'].includes(access.moduleRole)?
+   this.api.rpc('timetracker_department_catalog_snapshot',{p_board_id:boardId})
+    .then(response=>({response}),error=>({error})):Promise.resolve(null);
   const employeeDepartmentsRead=['System Admin','IT Administrator'].includes(access.moduleRole)?
    this.api.rpc('timetracker_employee_department_directory_snapshot',{p_board_id:boardId})
     .then(response=>({response}),error=>({error})):Promise.resolve(null);
@@ -274,13 +277,19 @@ export class TimeTrackerNativeClient{
    if(!isRecord(response)||response.contract!=='tt-department-1'||
       response.actorId!==access.userId||response.workspaceId!==access.workspaceId||
       response.boardId!==boardId||
-      (response.department!==null&&!TT_DEPARTMENTS.includes(response.department)))
+      (response.department!==null&&!validTimeTrackerDepartmentName(response.department)))
     deny('Signed employee department contract invalid');
    employeeDepartment=response.department;
   }else if(!/PGRST202|Could not find the function|Unexpected RPC timetracker_employee_department_for_clock/
     .test(String(departmentReply.error?.message||departmentReply.error))){
    // No stale/fabricated department after a failed authenticated read.
    deny('Signed employee department lookup unavailable');
+  }
+  let departmentCatalog=null;
+  const catalogReply=await catalogRead;
+  if(catalogReply&&!catalogReply.error){
+   try{departmentCatalog=projectTimeTrackerDepartmentCatalog(catalogReply.response,access);}
+   catch{/* Invalid optional catalog cannot affect Clock, but disables editing. */}
   }
   let employees=access.employees;
   const employeeDepartments=await employeeDepartmentsRead;
@@ -289,7 +298,7 @@ export class TimeTrackerNativeClient{
    catch{/* Optional directory corruption cannot block an employee's Clock. */}
   }
   await checkIdentity(this.auth,this.api,access,boardId);
-  return {status:'VERIFIED_READ',access:{...access,...otAccess,attendanceWritesAccepted,employeeDepartment,employees},records,otRequests,autoClockout,autoClockoutUnavailable,overview,log,revision:row?Number(row.revision):0,
+  return {status:'VERIFIED_READ',access:{...access,...otAccess,attendanceWritesAccepted,employeeDepartment,employees,departmentCatalog},records,otRequests,autoClockout,autoClockoutUnavailable,overview,log,revision:row?Number(row.revision):0,
    active:records.find(x=>x.status==='Active')||null};
  }
  /** A fresh independently guarded bootstrap read; no Team information for normal users. */
@@ -321,7 +330,7 @@ export class TimeTrackerNativeClient{
  }
  /** One admin-controlled department change; no optimistic update. */
  async assignTeamDepartment(boardId,userId,department){
-  if(!uuid.test(userId||'')||!TT_DEPARTMENTS.includes(department))
+  if(!uuid.test(userId||'')||!validTimeTrackerDepartmentName(department))
    deny('Valid employee and department required');
   const before=await this.teamDirectory(boardId);
   if(!before.departmentsReady)deny('Department management is not deployed');
@@ -345,9 +354,13 @@ export class TimeTrackerNativeClient{
   const access=await this.access(boardId);
   if(!['System Admin','IT Administrator'].includes(access.moduleRole))
    deny('TimeTracker administrator authorization required');
-  if(!uuid.test(userId||'')||!TT_DEPARTMENTS.includes(department)||
+  if(!uuid.test(userId||'')||!validTimeTrackerDepartmentName(department)||
      !access.employees?.members?.some(member=>member.id===userId))
    deny('Active employee and valid department required');
+  const catalog=projectTimeTrackerDepartmentCatalog(
+   await this.api.rpc('timetracker_department_catalog_snapshot',{p_board_id:boardId}),access);
+  if(!catalog.departments.some(row=>row.name===department))
+   deny('Selected department no longer exists; refresh Employees');
   await checkIdentity(this.auth,this.api,access,boardId);
   const receipt=await this.api.rpc('timetracker_employee_department_set',{
    p_board_id:boardId,p_target_user_id:userId,p_department:department
@@ -364,6 +377,51 @@ export class TimeTrackerNativeClient{
   if(verified.members.find(m=>m.id===userId)?.department!==department)
    deny('Department update could not be verified; refresh before retrying');
   return verified;
+ }
+ /** Signed and audited catalog mutations. Never optimistically change roster state. */
+ async mutateDepartmentCatalog(boardId,{action,departmentId=null,name=null,expectedRevision,expectedCount=null}={}){
+  const access=await this.access(boardId);
+  if(!['System Admin','IT Administrator'].includes(access.moduleRole))
+   deny('TimeTracker administrator department management required');
+  if(!['add','rename','delete'].includes(action)||
+     !Number.isSafeInteger(expectedRevision)||expectedRevision<1||
+     (action==='add'&&departmentId!==null)||
+     (action!=='add'&&!uuid.test(departmentId||''))||
+     (action!=='delete'&&!validTimeTrackerDepartmentName(name))||
+     (action==='delete'&&(!Number.isSafeInteger(expectedCount)||expectedCount<0)))
+   deny('Invalid department management request');
+  await checkIdentity(this.auth,this.api,access,boardId);
+  const before=projectTimeTrackerDepartmentCatalog(
+   await this.api.rpc('timetracker_department_catalog_snapshot',{p_board_id:boardId}),access);
+  if(before.revision!==expectedRevision)
+   deny('Department list changed; refresh Employees');
+  const current=action==='add'?null:before.departments.find(d=>d.id===departmentId);
+  if(action!=='add'&&!current)deny('Department no longer exists');
+  if(action==='delete'&&current.assignedCount!==expectedCount)
+   deny('Assigned employee count changed; refresh and reconfirm deletion');
+  if(action==='add'&&before.departments.some(d=>d.name.toLocaleLowerCase()===name.toLocaleLowerCase()))
+   deny('Department already exists');
+  const result=await this.api.rpc('timetracker_department_catalog_mutate',{
+   p_board_id:boardId,p_action:action,p_department_id:departmentId,
+   p_name:action==='delete'?null:name,p_expected_revision:expectedRevision,
+   p_expected_count:action==='delete'?expectedCount:null
+  },{retryUnauthorized:false});
+  if(!isRecord(result)||result.contract!=='tt-department-catalog-mutate-1'||
+     result.actorId!==access.userId||result.workspaceId!==access.workspaceId||
+     result.boardId!==boardId||result.action!==action||!uuid.test(result.departmentId||'')||
+     Number(result.revision)!==expectedRevision+1||
+     !Number.isSafeInteger(Number(result.affectedEmployees))||
+     (action!=='add'&&result.departmentId!==departmentId)||
+     (action==='delete'&&Number(result.affectedEmployees)!==expectedCount))
+   deny('Department write receipt unverified; refresh before retrying');
+  await checkIdentity(this.auth,this.api,access,boardId);
+  const after=projectTimeTrackerDepartmentCatalog(
+   await this.api.rpc('timetracker_department_catalog_snapshot',{p_board_id:boardId}),access);
+  const row=after.departments.find(d=>d.id===result.departmentId);
+  if(after.revision!==Number(result.revision)||
+     (action==='delete'?row!==undefined:row?.name!==name))
+   deny('Catalog change not verified after saving; refresh Employees');
+  return after;
  }
  /** Read privileged signed attendance coordinates without exposing raw module state. */
  async gpsEvidence(boardId,{from,to,userId=null}={}){
@@ -512,7 +570,7 @@ export class TimeTrackerNativeClient{
   const committedLocation=action==='clock-out'?before.active.location:location;
   const committedDepartment=action==='clock-out'?before.active.department:
    before.access.employeeDepartment;
-  if(!TT_LOCATIONS.includes(committedLocation)||!TT_DEPARTMENTS.includes(committedDepartment))
+  if(!TT_LOCATIONS.includes(committedLocation)||!validTimeTrackerDepartmentName(committedDepartment))
    deny('A verified employee department and valid location are required');
   // The caller's department field (if supplied by an old client) is NEVER
   // authoritative. The SQL write endpoint independently enforces the mapping.

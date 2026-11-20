@@ -1,5 +1,5 @@
 /** CRM-native TimeTracker application route and existing-board discovery. */
-import {TT_TEAM_DEPARTMENTS} from '../../time-tracker-team.js';
+import {validTimeTrackerDepartmentName} from '../../time-tracker-team.js';
 export const TIMETRACKER_APPLICATION_ROUTE = "#/time-tracker";
 export const TIMETRACKER_ATTENDANCE_BOARD_ID =
   "46bf4ee7-368a-4c35-842c-8593ea1f6ac3";
@@ -68,7 +68,7 @@ export function projectTimeTrackerEmployeeDepartments(directory,snapshot){
  const known=new Set(directory.members.map(m=>m.id)),departments=new Map();
  for(const row of snapshot.assignments){
   if(!uuid.test(row?.userId||'')||departments.has(row.userId)||
-     !TT_TEAM_DEPARTMENTS.includes(row.department))
+     !validTimeTrackerDepartmentName(row.department))
    throw Error('Employee department snapshot has an invalid assignment');
   if(known.has(row.userId))departments.set(row.userId,row.department);
  }
@@ -77,13 +77,37 @@ export function projectTimeTrackerEmployeeDepartments(directory,snapshot){
    ...m,department:departments.get(m.id)||null
   })))});
 }
+/** Catalog records are trusted only after signed workspace and actor verification. */
+export function projectTimeTrackerDepartmentCatalog(snapshot,{userId,workspaceId,boardId}={}){
+ if(snapshot?.contract!=='tt-department-catalog-1'||snapshot.actorId!==userId||
+    snapshot.workspaceId!==workspaceId||snapshot.boardId!==boardId||
+    !Number.isSafeInteger(Number(snapshot.revision))||Number(snapshot.revision)<1||
+    !Array.isArray(snapshot.departments)||snapshot.departments.length>500)
+  throw Error('Signed department catalog scope is invalid');
+ const ids=new Set(),names=new Set();
+ const departments=snapshot.departments.map(row=>{
+  if(!uuid.test(row?.id||'')||!validTimeTrackerDepartmentName(row.name)||
+     !Number.isSafeInteger(Number(row.assignedCount))||Number(row.assignedCount)<0||
+     ids.has(row.id)||names.has(row.name.toLocaleLowerCase()))
+   throw Error('Signed department catalog contains invalid entry');
+  ids.add(row.id);names.add(row.name.toLocaleLowerCase());
+  return Object.freeze({id:row.id,name:row.name,assignedCount:Number(row.assignedCount)});
+ });
+ return Object.freeze({scope:'SIGNED_TIMETRACKER_DEPARTMENT_CATALOG',
+  userId,workspaceId,boardId,revision:Number(snapshot.revision),
+  departments:Object.freeze(departments)});
+}
 export function renderTimeTrackerEmployees({directory=null,access={},search='',loading=false}={}){
  const verified=directory?.scope==='SIGNED_TIMETRACKER_EMPLOYEES'&&
   directory.userId===access.userId&&
   directory.workspaceId===access.workspaceId&&
   directory.boardId===access.boardId&&Array.isArray(directory.members);
  const manager=['System Admin','IT Administrator'].includes(access.moduleRole);
- const canEdit=verified&&manager&&directory.departmentsReady===true;
+ const catalog=access?.departmentCatalog;
+ const catalogReady=manager&&catalog?.scope==='SIGNED_TIMETRACKER_DEPARTMENT_CATALOG'&&
+  catalog.userId===access.userId&&catalog.workspaceId===access.workspaceId&&
+  catalog.boardId===access.boardId&&Array.isArray(catalog.departments);
+ const canEdit=verified&&manager&&directory.departmentsReady===true&&catalogReady;
  const q=String(search||'').trim().toLocaleLowerCase().slice(0,120);
  const members=verified?directory.members:[];
  const searchValue=member=>(member.name+' '+member.role+' '+(canEdit?member.department||'':'')).toLocaleLowerCase();
@@ -101,9 +125,24 @@ export function renderTimeTrackerEmployees({directory=null,access={},search='',l
     '<span>Registered active TimeTracker users</span></div>'+
     '<p>Synced from the current signed Supabase directory</p></div>'+
    (manager?'<p class="tt-employees-department-notice">'+
-    (canEdit?'Edit an employee’s department here, or open Attendance to correct recorded times.':
+    (canEdit?'Edit employee assignments here, manage department names below, or open Attendance to correct times.':
      'Department assignments unavailable until the signed Supabase read is deployed.')+
     '</p>':'')+
+    (manager?'<section class="tt-departments-management" aria-label="Department Management">'+
+     '<div class="tt-departments-head"><div><h4>Department Management</h4>'+
+     '<p>Workspace departments are stored and audited in Supabase.</p></div>'+
+     (catalogReady?'<button type="button" data-action="tt-departments-add">+ Add department</button>':'')+
+     '</div>'+
+     (catalogReady?'<div class="tt-departments-list">'+
+       catalog.departments.map(dep=>'<div class="tt-department-item">'+
+        '<div><strong>'+esc(dep.name)+'</strong><span>'+dep.assignedCount+
+        ' employee'+(dep.assignedCount===1?'':'s')+' assigned</span></div>'+
+        '<div class="tt-department-actions">'+
+        '<button type="button" data-action="tt-departments-rename" data-department-id="'+esc(dep.id)+'">Rename</button>'+
+        '<button type="button" class="tt-department-danger" data-action="tt-departments-delete" data-department-id="'+esc(dep.id)+'">Delete</button>'+
+        '</div></div>').join('')+'</div>':
+       '<p role="status" class="tt-employees-department-notice">Signed department catalog unavailable. Editing is disabled.</p>')+
+     '</section>':'')+
    '<div class="tt-employees-toolbar">'+
     '<label for="tt-employees-search">Find employee'+
      '<input type="search" id="tt-employees-search" maxlength="120" autocomplete="off" '+
