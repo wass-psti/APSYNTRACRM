@@ -183,3 +183,6 @@
 #app .teams-dialog-buttons button.danger{background:#9d3139;border-color:#9d3139;color:#fff}
 #app:has(.teams-subdialog-backdrop) .teams-body{pointer-events:none}
 #app .teams-subdialog-backdrop{pointer-events:auto}
+
+#app .teams-cover-image{overflow:hidden}
+#app .teams-cover-image img{width:100%;height:100%;object-fit:cover;display:block}
