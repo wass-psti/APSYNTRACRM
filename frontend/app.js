@@ -5102,6 +5102,7 @@ async function onRoute(){
   {const controller=await ensureTeamsController();controller.bindGlobal();render();await controller.load();}
  }
  if(state.view==='role-configuration'){
+   if(!['roles','workspace','audit'].includes(state.roleTab))state.roleTab='roles';
    state.roleBusy=true;render();
    try{await loadRoleConfiguration();}catch(err){state.roleError=errorMessage(err);}
    finally{state.roleBusy=false;}
@@ -9888,7 +9889,7 @@ async function action(name,button){
  case 'role-tab':{
    if(!state.adminVerified)return;
    const tab=button.dataset.tab;
-   if(['roles','users','matrix','workspace','audit'].includes(tab)&&tab!==state.roleTab){
+   if(['roles','workspace','audit'].includes(tab)&&tab!==state.roleTab){
     state.roleTab=tab;render();
     animateTabContent('.aps-role-configuration');
    }
@@ -9935,30 +9936,6 @@ async function action(name,button){
       select('Custom role','roleKey',roles.map(r=>[r.roleKey,r.displayName]))+
       select('Proposed change','operation',[['role.activate','Activate'],['role.deactivate','Deactivate']]),
       async fd=>stageRoleProposal(String(fd.get('operation')),{roleKey:String(fd.get('roleKey'))}));break;
- }
- case 'role-propose-assign':{
-   if(!state.adminVerified)return;
-   const id=button.dataset.userId;
-   const user=state.roleData?.users?.find(u=>u.id===id&&!u.bootstrapProtected);
-   if(!user)throw new ApiError('Protected or missing user cannot be assigned.',403);
-   openModal('Stage an application role change',
-      select('Application module','moduleId',ROLE_MODULE_OPTIONS)+
-      select('Proposed change','operation',[['assignment.assign','Assign'],['assignment.revoke','Revoke']])+
-      input('Existing application role','role','Employee'),
-      async fd=>stageRoleProposal(String(fd.get('operation')),
-        {userId:id,moduleId:String(fd.get('moduleId')),role:String(fd.get('role')).trim()}));break;
- }
- case 'role-propose-permission':{
-   if(!state.adminVerified)return;
-   const moduleId=button.dataset.moduleId,capability=button.dataset.capability;
-   if(!ROLE_MODULE_OPTIONS.some(x=>x[0]===moduleId)||
-      !['view','create','edit','delete','approve','export','administer'].includes(capability))
-     throw new ApiError('Unknown permission scope.');
-   openModal('Stage module capability',
-     input('Role key','roleKey','employee')+
-     select('Proposed access','enabled',[['false','Deny'],['true','Allow']]),
-     async fd=>stageRoleProposal('permission.configure',
-       {moduleId,capability,roleKey:String(fd.get('roleKey')).trim(),enabled:fd.get('enabled')==='true'}));break;
  }
  case 'role-propose-workspace':{
    if(!state.adminVerified)return;
