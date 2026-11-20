@@ -1,3 +1,4 @@
+import {formatTimeTrackerDateTime} from './time-tracker-time-format.js';
 /** Native TimeTracker UI. Screen language adapted from the supplied Clock-tab reference.
  * Existing CRM shell, central identity, module access, and PostgreSQL data remain authoritative.
  */
@@ -22,7 +23,7 @@ const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[c]));
 const date=v=>v&&Number.isFinite(Date.parse(v))?
- new Date(v).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'}):'—';
+ formatTimeTrackerDateTime(v):'—';
 const hrs=ms=>Number.isFinite(ms)?(ms/3600000).toFixed(2)+' h':'—';
 const sections=[
  ['overview','Overview',true],['clock','Clock',true],['employees','Employees',true],['log','Log',true],
@@ -117,7 +118,7 @@ export function ownAttendanceCsv(records){
  const rows=[['Clock In','Clock Out','Location','Department','Classification','Status','Credited Hours']];
  const safe=v=>'"'+String(v??'').replaceAll('"','""').replace(/^[=+@\-\t\r]/,"' $&")+'"';
  for(const r of records||[])rows.push([
-  r.clockIn,r.clockOut||'',r.location,r.department,r.classification,r.status,
+  formatTimeTrackerDateTime(r.clockIn),r.clockOut?formatTimeTrackerDateTime(r.clockOut):'',r.location,r.department,r.classification,r.status,
   r.creditedMs===null?'':(r.creditedMs/3600000).toFixed(2)
  ]);
  return '\uFEFF'+rows.map(row=>row.map(safe).join(',')) .join('\r\n')+'\r\n';

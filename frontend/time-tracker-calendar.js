@@ -1,3 +1,4 @@
+import {formatTimeTrackerShortDateTime} from './time-tracker-time-format.js';
 /** TimeTracker Calendar — authorized historical sessions and verified PH national holidays.
  * The signed Log snapshot supplies all rows. This module does not query a second registry,
  * access raw GPS, change permissions, create attendance, or claim holiday-pay eligibility.
@@ -48,9 +49,7 @@ export function timeTrackerCalendarHolidays(month){
  return PH_2026_HOLIDAYS.filter(item=>item.day.startsWith(month));
 }
 const weekdayLabels=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-const phtTime=value=>validTime(value)?new Intl.DateTimeFormat('en-PH',{
- timeZone:'Asia/Manila',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'
-}).format(new Date(value)):'—';
+const phtTime=value=>validTime(value)?formatTimeTrackerShortDateTime(value):'—';
 const safeRecords=(records,now)=>Array.isArray(records)?
  records.filter(row=>row&&validTime(row.clockIn)&&Date.parse(row.clockIn)<=now.getTime())
  :[];

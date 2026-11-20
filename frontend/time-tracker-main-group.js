@@ -1,3 +1,4 @@
+import {formatTimeTrackerDateTime} from './time-tracker-time-format.js';
 /** Signed TimeTracker Main Group presentation.
  * The seven operational fields come ONLY from the server-authorized private
  * attendance projection. Generic board values are never treated as employee
@@ -10,10 +11,7 @@ const headings=Object.freeze([
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[c]));
-const datetime=new Intl.DateTimeFormat('en-PH',{
- timeZone:'Asia/Manila',dateStyle:'medium',timeStyle:'short'
-});
-const when=value=>value?datetime.format(new Date(value)):'Not yet clocked out';
+const when=value=>value?formatTimeTrackerDateTime(value):'Not yet clocked out';
 const point=value=>value?
  '<span class="tt-main-fix"><span>'+esc(value.latitude.toFixed(5)+', '+value.longitude.toFixed(5))+
  '</span><small>±'+esc(Math.round(value.accuracyM))+' m</small></span>':

@@ -1,3 +1,4 @@
+import {formatTimeTrackerDateTime} from './time-tracker-time-format.js';
 /** CP-TT-GPS01 — restricted attendance board GPS overlay.
  * Source of truth: server-side TimeTracker atomic attendance commit.
  * Never merge these rows into broadly visible general board item-page values.
@@ -79,9 +80,7 @@ export async function loadTimeTrackerBoardGps({auth,api,boardId,workspaceId,enab
   userId:current.id,workspaceId,boardId
  });
 }
-const at=value=>value?new Intl.DateTimeFormat('en-PH',{
- timeZone:'Asia/Manila',dateStyle:'medium',timeStyle:'short'
-}).format(new Date(value)):'—';
+const at=value=>value?formatTimeTrackerDateTime(value):'—';
 const place=point=>point?
  '<span class="tt-projection-gps">'+point.latitude.toFixed(6)+', '+
  point.longitude.toFixed(6)+' <small>±'+

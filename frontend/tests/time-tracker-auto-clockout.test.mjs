@@ -272,7 +272,7 @@ test("invalid context never produces a clock-out deadline and display times use 
   );
   assert.equal(
     formatTimeTrackerAutoClockoutTime("2026-11-20T10:30:00.000Z"),
-    "6:30 PM",
+    "06:30 PM",
   );
   assert.equal(TT_AUTO_CLOCKOUT_POLICY.gracePeriodMs, 30 * 60 * 1000);
 });

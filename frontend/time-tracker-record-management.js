@@ -1,3 +1,4 @@
+import {formatTimeTrackerAdminWallDateTime,parseTimeTrackerAdminWallDateTime} from './time-tracker-time-format.js';
 /** System Admin attendance record editor. All mutations are delegated to the signed PostgreSQL RPC. */
 import {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
 
@@ -25,7 +26,8 @@ export function timeTrackerAdminDateTimeLocal(value){
 }
 
 export function parseTimeTrackerAdminDateTime(value){
-  const raw=String(value??'').trim();
+  const original=String(value??'').trim();
+  const raw=/^\d{4}-\d{2}-\d{2}T/.test(original)?original:parseTimeTrackerAdminWallDateTime(original);
   if(!/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/.test(raw))
     throw Error('Enter a valid Philippine date and time.');
   const parsed=new Date(`${raw}:00+08:00`);
@@ -93,7 +95,7 @@ export function buildTimeTrackerAdminPatch(formData,{mode='single',record=null,r
   const clockInAt=read('clockInAt');
   if(clockInAt){
     const iso=parseTimeTrackerAdminDateTime(clockInAt);
-    if(bulk||clockInAt!==timeTrackerAdminDateTimeLocal(timeValue(record,'in')))assign('clockInAt',iso);
+    if(bulk||timeTrackerAdminDateTimeLocal(iso)!==timeTrackerAdminDateTimeLocal(timeValue(record,'in')))assign('clockInAt',iso);
   }
   const clockInGeo=readGeo(formData,'clockInGeo',geoValue(record,'in'),{bulk});
   if(clockInGeo)assign('clockInGeo',clockInGeo);
@@ -102,7 +104,7 @@ export function buildTimeTrackerAdminPatch(formData,{mode='single',record=null,r
     const clockOutAt=read('clockOutAt');
     if(clockOutAt){
       const iso=parseTimeTrackerAdminDateTime(clockOutAt);
-      if(bulk||clockOutAt!==timeTrackerAdminDateTimeLocal(timeValue(record,'out')))assign('clockOutAt',iso);
+      if(bulk||timeTrackerAdminDateTimeLocal(iso)!==timeTrackerAdminDateTimeLocal(timeValue(record,'out')))assign('clockOutAt',iso);
     }
     const clockOutGeo=readGeo(formData,'clockOutGeo',geoValue(record,'out'),{bulk});
     if(clockOutGeo)assign('clockOutGeo',clockOutGeo);
@@ -188,8 +190,8 @@ export function renderTimeTrackerAdminEditor({editor,directory=[],busy=false,err
       '<div class="tt-admin-record-context"><div><strong>'+esc(record.ownerName||'Employee')+'</strong>'+
        '<small>'+esc(active?'Active clock-in session':'Completed attendance session')+'</small></div></div>'+
       '<section class="tt-admin-field-section"><h4>Philippine Time (UTC+08:00)</h4><div class="tt-admin-grid tt-admin-grid-two">'+
-       inputField('Clock-In date and time','clockInAt',timeTrackerAdminDateTimeLocal(record.clockIn?.timestamp),{type:'datetime-local'})+
-       (active?'':inputField('Clock-Out date and time','clockOutAt',timeTrackerAdminDateTimeLocal(record.clockOut?.timestamp),{type:'datetime-local'}))+
+       inputField('Clock-In date and time','clockInAt',formatTimeTrackerAdminWallDateTime(timeTrackerAdminDateTimeLocal(record.clockIn?.timestamp)),{type:'text',placeholder:'YYYY-MM-DD hh:mm AM/PM'})+
+       (active?'':inputField('Clock-Out date and time','clockOutAt',formatTimeTrackerAdminWallDateTime(timeTrackerAdminDateTimeLocal(record.clockOut?.timestamp)),{type:'text',placeholder:'YYYY-MM-DD hh:mm AM/PM'}))+
       '</div><p>Active sessions remain active, and their Clock timer updates from the corrected start time after signed synchronization. Completed sessions recalculate credited hours. GPS and employee ownership remain unchanged.</p></section>'+
       '<section class="tt-admin-field-section"><h4>Correction note (optional)</h4>'+
        '<label class="tt-admin-field"><span>Additional context, if needed</span>'+
@@ -238,10 +240,10 @@ export function renderTimeTrackerAdminEditor({editor,directory=[],busy=false,err
     ],bulk?'':status,{bulk})+
     '</div></section>'+
     '<section class="tt-admin-field-section"><h4>Clock-In correction</h4><div class="tt-admin-grid tt-admin-grid-two">'+
-    inputField('Clock-In date and time','clockInAt',bulk?'':timeTrackerAdminDateTimeLocal(record?.clockIn?.timestamp),{type:'datetime-local',placeholder:bulk?'Leave unchanged':''})+
+    inputField('Clock-In date and time','clockInAt',bulk?'':formatTimeTrackerAdminWallDateTime(timeTrackerAdminDateTimeLocal(record?.clockIn?.timestamp)),{type:'text',placeholder:bulk?'Leave unchanged':'YYYY-MM-DD hh:mm AM/PM'})+
     '</div>'+gpsFields(record,'in',{bulk})+'</section>'+
     '<section class="tt-admin-field-section"><h4>Clock-Out correction</h4><div class="tt-admin-grid tt-admin-grid-two">'+
-    inputField('Clock-Out date and time','clockOutAt',bulk?'':timeTrackerAdminDateTimeLocal(record?.clockOut?.timestamp),{type:'datetime-local',placeholder:bulk?'Leave unchanged':''})+
+    inputField('Clock-Out date and time','clockOutAt',bulk?'':formatTimeTrackerAdminWallDateTime(timeTrackerAdminDateTimeLocal(record?.clockOut?.timestamp)),{type:'text',placeholder:bulk?'Leave unchanged':'YYYY-MM-DD hh:mm AM/PM'})+
     '</div>'+gpsFields(record,'out',{bulk})+'</section>'+
     '<section class="tt-admin-field-section"><h4>Working duration</h4><div class="tt-admin-grid tt-admin-grid-two">'+
     selectField('Duration calculation','durationMode',[
