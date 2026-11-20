@@ -1,6 +1,10 @@
 /** Signed TalkBox facade over existing Toolbox Issues RPCs. No monday.com mirroring. */
 const statuses=['Working on it','Stuck','Done'];
 const isId=x=>/^[1-9][0-9]{0,18}$/.test(String(x||''));
+const isUuid=x=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(x||''));
+const activeTimer=x=>x?.timeTracking?.running||null;
+const isoTime=x=>{const d=new Date(x);if(!Number.isFinite(d.getTime())||d.toISOString()!==x)throw new TypeError('Invalid timer start');return d;};
+
 const id=x=>{if(!isId(x))throw new TypeError('Invalid issue ID');return String(x)};
 const date=x=>{
  const value=String(x??'');
@@ -90,9 +94,12 @@ export class TalkBoxNativeClient{
   const record=await this.get(issueId);
   if(record.version!==receipt.version||
      Object.entries(fields).some(([key,value])=>{
-      if(key==='timeTracking')return record.timeTracking?.hours!==receipt.timeTracking?.hours||
-       record.timeTracking?.minutes!==receipt.timeTracking?.minutes||
-       receipt.timeTracking?.hours!==value.hours||receipt.timeTracking?.minutes!==value.minutes;
+      if(key==='timeTracking'){
+       const exact=(left,right)=>left?.hours===right?.hours&&left?.minutes===right?.minutes&&
+        (left?.totalSeconds??null)===(right?.totalSeconds??null)&&
+        (left?.running?.startedAt??null)===(right?.running?.startedAt??null);
+       return !exact(record.timeTracking,receipt.timeTracking)||!exact(receipt.timeTracking,value);
+      }
       if(key==='name')return record.name!==receipt.name||record.name!==String(value).trim();
       if(key==='date')return record.date!==receipt.date||
        record.date!==(value||null);
@@ -158,18 +165,94 @@ export class TalkBoxNativeClient{
    seen.add(page.cursor);cursor=page.cursor;
   }while(true);
  }
+ async nativeV2Capabilities(){
+  // A missing migration is not a production feature. Keep UI controls hidden
+  // until the signed, workspace-scoped capability RPC is actually deployed.
+  try{
+   const result=await this.rpc('native_v2_capabilities');
+   return {threadedReplies:result?.threadedReplies===true,
+    attachmentRemoval:result?.attachmentRemoval===true};
+  }catch{
+   return {threadedReplies:false,attachmentRemoval:false};
+  }
+ }
+ async replyVerified(issueId,parentId,message){
+  const issue=id(issueId),parent=id(parentId);
+  const text=String(message||'').trim();
+  if(!text||text.length>20000)throw new TypeError('Reply must be 1–20,000 characters');
+  const before=await this.get(issue);
+  if(!before.updates.some(row=>String(row.id)===parent))
+   throw new Error('Parent discussion update unavailable in this issue');
+  const receipt=await this.rpc('reply_update',{
+   p_issue_id:issue,p_parent_update_id:parent,p_text:text});
+  const record=await this.get(issue);
+  if(!record.updates.some(row=>String(row.id)===String(receipt?.id)&&
+    row.text_body===text&&String(row.replyTo)===parent))
+   throw new Error('Threaded reply was not verified by signed readback');
+  return record;
+ }
+ async users(){
+  const rows=await this.rpc('users');
+  if(!Array.isArray(rows))throw new Error('Native workspace member directory unavailable');
+  const seen=new Set();
+  return rows.filter(p=>p?.enabled!==false&&isUuid(p?.id)).map(p=>{
+   const key=String(p.id).toLowerCase();
+   if(seen.has(key))throw new Error('Duplicate workspace user ID');
+   seen.add(key);
+   return {id:key,name:String(p.name||p.email||'Member').slice(0,160)};
+  });
+ }
  async saveAssignees(issueId,people,version){
   if(!Array.isArray(people)||people.length>100||
-    people.some(p=>!p||typeof p!=='object'||typeof p.id!=='string'||
-      !/^[1-9][0-9]{0,19}$/.test(p.id)))
-   throw new TypeError('An existing Toolbox person identity array is required');
+     people.some(p=>!p||typeof p!=='object'||!isUuid(p.id)))
+   throw new TypeError('Native assignees must be CRM user identities');
+  const directory=await this.users();
+  const known=new Map(directory.map(p=>[p.id,p]));
+  const normalized=people.map(p=>known.get(String(p.id).toLowerCase()));
+  if(normalized.some(p=>!p)||new Set(normalized.map(p=>p.id)).size!==normalized.length)
+   throw new TypeError('Assignee is not a current distinct workspace member');
   const receipt=await this.rpc('update_issue',{
-   p_issue_id:id(issueId),p_updates:{person:people},p_expected_version:version});
+   p_issue_id:id(issueId),p_updates:{person:normalized},p_expected_version:version});
   const record=await this.get(issueId);
   if(record.version!==Number(receipt.version)||
-   JSON.stringify(record.person)!==JSON.stringify(people))
+   JSON.stringify(record.person)!==JSON.stringify(normalized))
    throw new Error('Assignee change could not be verified by signed readback');
   return record;
  }
-
+ async deleteSubitemVerified(issueId,subitemId){
+  const issue=id(issueId),sub=id(subitemId);
+  const before=await this.get(issue);
+  if(!before.subitems.some(row=>row.id===sub))
+   throw new Error('Subtask does not belong to selected issue');
+  const receipt=await this.rpc('delete_subitem',{p_subitem_id:sub});
+  if(receipt?.success!==true)throw new Error('Subtask deletion acknowledgement missing');
+  const after=await this.get(issue);
+  if(after.subitems.some(row=>row.id===sub))
+   throw new Error('Subtask remains present after delete');
+  return after;
+ }
+ async startTimerVerified(issueId,now=new Date()){
+  const issue=id(issueId),current=await this.get(issue);
+  if(activeTimer(current))throw new Error('TalkBox timer already running');
+  const startedAt=new Date(now).toISOString();
+  const tracking={...current.timeTracking,running:{startedAt}};
+  return this.updateVerified(issue,{timeTracking:tracking},current.version);
+ }
+ async stopTimerVerified(issueId,now=new Date()){
+  const issue=id(issueId),current=await this.get(issue);
+  const running=activeTimer(current);
+  if(!running)throw new Error('No TalkBox timer is running');
+  const elapsed=Math.floor((new Date(now).getTime()-isoTime(running.startedAt).getTime())/1000);
+  if(!Number.isSafeInteger(elapsed)||elapsed<0||elapsed>366*24*3600)
+   throw new Error('Invalid elapsed TalkBox session duration');
+  const previous=Number.isSafeInteger(current.timeTracking.totalSeconds)?
+   current.timeTracking.totalSeconds:
+   Math.max(0,Number(current.timeTracking.hours)||0)*3600+
+    Math.max(0,Number(current.timeTracking.minutes)||0)*60;
+  const totalSeconds=previous+elapsed;
+  const tracking={...current.timeTracking,totalSeconds,
+   hours:Math.floor(totalSeconds/3600),minutes:Math.floor(totalSeconds%3600/60),
+   running:null};
+  return this.updateVerified(issue,{timeTracking:tracking},current.version);
+ }
 }

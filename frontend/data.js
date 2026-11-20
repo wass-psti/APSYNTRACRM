@@ -164,7 +164,8 @@ const BOARD_READ_RPC=new Set([
  'timetracker_gps_snapshot','timetracker_monitor_snapshot',
  // Existing read-only native application search and detail contracts.
  'tool_traceability_list_tools','tool_traceability_list_requests','tool_traceability_list_items',
- 'tool_traceability_get_item','toolbox_issues_list_issues','toolbox_issues_get_issue',
+ 'tool_traceability_get_item','toolbox_issues_list_issues','toolbox_issues_get_issue','toolbox_issues_users',
+ 'toolbox_issues_native_v2_capabilities',
  'material_request_hub_list_requests','material_request_hub_get_request',
  'employee_evaluation_management_snapshot','employee_evaluation_my_snapshot',
  'fm1_service_status_v1','fm1_list_tickets_v1','fm1_ticket_detail_v1',
@@ -188,6 +189,7 @@ const BOARD_MUTATION_RPC=new Set([
  'toolbox_issues_create_subitem','toolbox_issues_update_subitem',
  'toolbox_issues_delete_subitem','toolbox_issues_archive_issue',
  'toolbox_issues_register_attachment',
+ 'toolbox_issues_reply_update','toolbox_issues_unregister_attachment',
  'mrh_board_item_tasks_write','mrh_create_material_atomic','mrh_sourcing_sensitive_write',
  'fueltrack_v3_submit','fueltrack_v3_decide',
  'fueltrack_v3_mark_refueled','fueltrack_v3_complete','fueltrack_v3_attach_receipt',

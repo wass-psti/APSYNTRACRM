@@ -241,10 +241,11 @@ test('reviewed mutation and read RPC contracts remain disjoint',()=>{
  };
  const reads=new Set(names('BOARD_READ_RPC'));
  const writes=names('BOARD_MUTATION_RPC');
- assert.equal(writes.length,76); // Native TalkBox archive, subtask removal and attachment registration invalidate cached reads.
+ assert.equal(writes.length,78); // Native TalkBox archive, subtask removal and attachment registration invalidate cached reads.
  for(const name of ['toolbox_issues_create_issue','toolbox_issues_update_issue','toolbox_issues_add_update','toolbox_issues_create_subitem','toolbox_issues_update_subitem',
   'toolbox_issues_archive_issue','toolbox_issues_delete_subitem',
-  'toolbox_issues_register_attachment'])
+  'toolbox_issues_register_attachment',
+  'toolbox_issues_reply_update','toolbox_issues_unregister_attachment'])
   assert.ok(writes.includes(name),'TalkBox writes must invalidate only after commit');
  assert.equal(new Set(writes).size,writes.length);
  assert.deepEqual(writes.filter(name=>reads.has(name)),[]);
