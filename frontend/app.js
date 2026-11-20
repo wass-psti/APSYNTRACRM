@@ -1263,7 +1263,8 @@ async function persistAllBoardGroupsCollapsed(collapsed){
   render();toast('Expand/collapse all was not saved to your account.',true);
  }
 }
-function groupHeading(group,count,{columns=[],layout=null,items=[]}={}){
+function groupHeading(group,count){
+ const {columns=[],layout=null,items=[]}=arguments[2]||{};
  const collapsed=boardGroupCollapsed(group.id,count);
  const id=e(group.id),editing=state.groupEditId===group.id;
  const managedEmpty=state.board?.pagination?.loaded===true&&state.board?.pagination?.has_more!==true&&canSafelyHideEmptyTimeTrackerGroup(state.board?.board,group,
@@ -11085,9 +11086,14 @@ root.addEventListener('pointerdown',event=>{
     return col?{col,table,start:Number(col.getAttribute('width'))||start,
      tableWidth:Number(table.getAttribute('width'))||table.getBoundingClientRect().width}:null;
    }).filter(Boolean);
-  const guide=document.createElement('div');guide.className='board-column-resize-guide';
-  guide.setAttribute('aria-hidden','true');guide.style.left=event.clientX+'px';
-  root.append(guide);
+  const guide=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  guide.classList.add('board-column-resize-guide');
+  guide.setAttribute('aria-hidden','true');
+  guide.setAttribute('viewBox','0 0 '+window.innerWidth+' '+window.innerHeight);
+  const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.setAttribute('x1',String(event.clientX));line.setAttribute('x2',String(event.clientX));
+  line.setAttribute('y1','0');line.setAttribute('y2',String(window.innerHeight));
+  guide.append(line);root.append(guide);
   boardResize={pointerId:event.pointerId,x:event.clientX,key,start,current:start,targets,guide};
   event.preventDefault();return;
  }
@@ -11107,7 +11113,8 @@ root.addEventListener('pointerdown',event=>{
 });
 window.addEventListener('pointermove',event=>{
  if(boardResize&&event.pointerId===boardResize.pointerId){
-  boardResize.guide.style.left=event.clientX+'px';
+  const line=boardResize.guide.querySelector('line');
+   line?.setAttribute('x1',String(event.clientX));line?.setAttribute('x2',String(event.clientX));
    boardResizeFrames.schedule(boundBoardColumnWidth(boardResize.key,boardResize.start+event.clientX-boardResize.x));
   return;
  }
