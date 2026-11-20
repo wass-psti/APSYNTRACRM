@@ -1,4 +1,5 @@
 /** CRM-native TimeTracker application route and existing-board discovery. */
+import {TT_TEAM_DEPARTMENTS} from '../../time-tracker-team.js';
 export const TIMETRACKER_APPLICATION_ROUTE = "#/time-tracker";
 export const TIMETRACKER_ATTENDANCE_BOARD_ID =
   "46bf4ee7-368a-4c35-842c-8593ea1f6ac3";
@@ -54,14 +55,39 @@ export function projectTimeTrackerEmployees(users,{
  });
 }
 
+/** Signed, workspace-bound projection; absence of a department is not inferred. */
+export function projectTimeTrackerEmployeeDepartments(directory,snapshot){
+ if(directory?.scope!=='SIGNED_TIMETRACKER_EMPLOYEES'||!Array.isArray(directory.members))
+  throw Error('Signed TimeTracker employee directory required');
+ if(snapshot===null)return Object.freeze({...directory,departmentsReady:false,
+  members:Object.freeze(directory.members.map(m=>Object.freeze({...m,department:null})))});
+ if(snapshot?.contract!=='tt-department-directory-1'||snapshot.actorId!==directory.userId||
+    snapshot.workspaceId!==directory.workspaceId||snapshot.boardId!==directory.boardId||
+    !Array.isArray(snapshot.assignments)||snapshot.assignments.length>10000)
+  throw Error('Employee department read scope is invalid');
+ const known=new Set(directory.members.map(m=>m.id)),departments=new Map();
+ for(const row of snapshot.assignments){
+  if(!uuid.test(row?.userId||'')||departments.has(row.userId)||
+     !TT_TEAM_DEPARTMENTS.includes(row.department))
+   throw Error('Employee department snapshot has an invalid assignment');
+  if(known.has(row.userId))departments.set(row.userId,row.department);
+ }
+ return Object.freeze({...directory,departmentsReady:true,
+  members:Object.freeze(directory.members.map(m=>Object.freeze({
+   ...m,department:departments.get(m.id)||null
+  })))});
+}
 export function renderTimeTrackerEmployees({directory=null,access={},search='',loading=false}={}){
  const verified=directory?.scope==='SIGNED_TIMETRACKER_EMPLOYEES'&&
   directory.userId===access.userId&&
   directory.workspaceId===access.workspaceId&&
   directory.boardId===access.boardId&&Array.isArray(directory.members);
+ const manager=['System Admin','IT Administrator'].includes(access.moduleRole);
+ const canEdit=verified&&manager&&directory.departmentsReady===true;
  const q=String(search||'').trim().toLocaleLowerCase().slice(0,120);
  const members=verified?directory.members:[];
- const visible=members.filter(u=>(u.name+' '+u.role).toLocaleLowerCase().includes(q));
+ const searchValue=member=>(member.name+' '+member.role+' '+(canEdit?member.department||'':'')).toLocaleLowerCase();
+ const visible=members.filter(m=>searchValue(m).includes(q));
  return '<section class="tt-employees-board" aria-label="Registered TimeTracker employees">'+
   '<header class="tt-employees-heading">'+
    '<div><p class="tt-employees-eyebrow">TIME TRACKER / WORKSPACE DIRECTORY</p>'+
@@ -73,7 +99,11 @@ export function renderTimeTrackerEmployees({directory=null,access={},search='',l
   (verified?
    '<div class="tt-employees-summary"><div><strong>'+members.length+'</strong>'+
     '<span>Registered active TimeTracker users</span></div>'+
-    '<p>Read-only · Synced from the current signed Supabase directory</p></div>'+
+    '<p>Synced from the current signed Supabase directory</p></div>'+
+   (manager?'<p class="tt-employees-department-notice">'+
+    (canEdit?'Edit an employee’s department here, or open Attendance to correct recorded times.':
+     'Department assignments unavailable until the signed Supabase read is deployed.')+
+    '</p>':'')+
    '<div class="tt-employees-toolbar">'+
     '<label for="tt-employees-search">Find employee'+
      '<input type="search" id="tt-employees-search" maxlength="120" autocomplete="off" '+
@@ -83,22 +113,29 @@ export function renderTimeTrackerEmployees({directory=null,access={},search='',l
    '</div>'+
    '<div class="tt-employees-table-wrap"><table class="tt-employees-table">'+
     '<thead><tr><th scope="col">Employee</th><th scope="col">TimeTracker role</th>'+
-     '<th scope="col">Access</th></tr></thead><tbody>'+
+     (manager?'<th scope="col">Department</th>':'')+
+     '<th scope="col">Access</th>'+
+     (manager?'<th scope="col">Actions</th>':'')+'</tr></thead><tbody>'+
     members.map(member=>{
-     const searchText=(member.name+' '+member.role).toLocaleLowerCase();
+     const searchText=searchValue(member);
      return '<tr class="tt-employee-row" data-search-text="'+esc(searchText)+'"'+
       (q&&!searchText.includes(q)?' hidden':'')+'>'+
       '<td><span class="tt-employee-avatar" aria-hidden="true">'+
-        esc(member.name.split(/\s+/).slice(0,2).map(v=>v[0]||'').join('').toUpperCase())+
+        esc(member.name.split(/\\s+/).slice(0,2).map(v=>v[0]||'').join('').toUpperCase())+
        '</span><strong>'+esc(member.name)+'</strong></td>'+
       '<td>'+esc(member.role)+'</td>'+
-      '<td><span class="tt-employee-active">Active</span></td></tr>';
+      (manager?'<td>'+esc(canEdit?(member.department||'Not assigned'):'Unavailable')+'</td>':'')+
+      '<td><span class="tt-employee-active">Active</span></td>'+
+      (manager?'<td class="tt-employee-actions">'+
+       (canEdit?'<button type="button" data-action="tt-employees-department-edit" data-user-id="'+esc(member.id)+'">Edit department</button>':'')+
+       '<button type="button" data-action="tt-employees-attendance" data-user-id="'+esc(member.id)+'">Attendance</button>'+
+       '</td>':'')+'</tr>';
     }).join('')+'</tbody></table>'+
     '<p data-tt-employees-empty'+(visible.length?' hidden':'')+
      '>No employees match this search.</p></div>'+
    '<p class="tt-employees-footnote">Count includes active members with an assigned TimeTracker role. '+
     'Supabase accounts without TimeTracker access are not counted. '+
-    'Refresh to retrieve current registrations; no employee records are stored in this tab.</p>':
+    'Department changes use the audited server API, never a local personnel registry.</p>':
    '<p class="tt-employees-unavailable" role="status">'+
     (loading?'Loading current registered employees…':
      'The signed TimeTracker employee directory is unavailable.')+'</p>')+

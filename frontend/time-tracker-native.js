@@ -4,7 +4,7 @@ import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-
 import {projectTimeTrackerLog} from './time-tracker-history.js';
 import {projectTimeTrackerOtRows,validateOvertimeDraft,TT_OT_WRITES_ACCEPTED} from './time-tracker-overtime.js';
 import {projectTimeTrackerTeamDirectory,projectTimeTrackerTeamDepartments,TT_TEAM_DEPARTMENTS} from './time-tracker-team.js';
-import {projectTimeTrackerEmployees} from './time-tracker-application.js';
+import {projectTimeTrackerEmployees,projectTimeTrackerEmployeeDepartments} from './time-tracker-application.js';
 import {validateTimeTrackerGps} from './time-tracker-gps.js';
 /**
  * TimeTracker native APSYNTRA adapter. Source reference: TimeTracker v2.0.14.
@@ -179,6 +179,9 @@ export class TimeTrackerNativeClient{
   const clockRead=this.attendanceCapability(boardId,access);
   // Department is a signed, workspace-scoped employee record, not a browser field.
   // A missing deployment leaves Clock In unavailable rather than guessing.
+  const employeeDepartmentsRead=['System Admin','IT Administrator'].includes(access.moduleRole)?
+   this.api.rpc('timetracker_employee_department_directory_snapshot',{p_board_id:boardId})
+    .then(response=>({response}),error=>({error})):Promise.resolve(null);
   const departmentRead=this.api.rpc('timetracker_employee_department_for_clock',{
    p_board_id:boardId
   }).then(response=>({response}),error=>({error}));
@@ -279,8 +282,14 @@ export class TimeTrackerNativeClient{
    // No stale/fabricated department after a failed authenticated read.
    deny('Signed employee department lookup unavailable');
   }
+  let employees=access.employees;
+  const employeeDepartments=await employeeDepartmentsRead;
+  if(employees&&employeeDepartments&&!employeeDepartments.error){
+   try{employees=projectTimeTrackerEmployeeDepartments(employees,employeeDepartments.response);}
+   catch{/* Optional directory corruption cannot block an employee's Clock. */}
+  }
   await checkIdentity(this.auth,this.api,access,boardId);
-  return {status:'VERIFIED_READ',access:{...access,...otAccess,attendanceWritesAccepted,employeeDepartment},records,otRequests,autoClockout,autoClockoutUnavailable,overview,log,revision:row?Number(row.revision):0,
+  return {status:'VERIFIED_READ',access:{...access,...otAccess,attendanceWritesAccepted,employeeDepartment,employees},records,otRequests,autoClockout,autoClockoutUnavailable,overview,log,revision:row?Number(row.revision):0,
    active:records.find(x=>x.status==='Active')||null};
  }
  /** A fresh independently guarded bootstrap read; no Team information for normal users. */
@@ -330,6 +339,31 @@ export class TimeTrackerNativeClient{
   if(after.members.find(m=>m.id===userId)?.department!==department)
    deny('Department update could not be verified after saving');
   return after;
+ }
+ /** Administrator-only department mutation with a fresh signed read-back. */
+ async assignEmployeeDepartment(boardId,userId,department){
+  const access=await this.access(boardId);
+  if(!['System Admin','IT Administrator'].includes(access.moduleRole))
+   deny('TimeTracker administrator authorization required');
+  if(!uuid.test(userId||'')||!TT_DEPARTMENTS.includes(department)||
+     !access.employees?.members?.some(member=>member.id===userId))
+   deny('Active employee and valid department required');
+  await checkIdentity(this.auth,this.api,access,boardId);
+  const receipt=await this.api.rpc('timetracker_employee_department_set',{
+   p_board_id:boardId,p_target_user_id:userId,p_department:department
+  },{retryUnauthorized:false});
+  if(!isRecord(receipt)||receipt.contract!=='tt-department-set-1'||
+     receipt.actorId!==access.userId||receipt.workspaceId!==access.workspaceId||
+     receipt.targetUserId!==userId||receipt.department!==department)
+   deny('Department write receipt is unverified; refresh before retrying');
+  await checkIdentity(this.auth,this.api,access,boardId);
+  const snapshot=await this.api.rpc('timetracker_employee_department_directory_snapshot',{
+   p_board_id:boardId
+  });
+  const verified=projectTimeTrackerEmployeeDepartments(access.employees,snapshot);
+  if(verified.members.find(m=>m.id===userId)?.department!==department)
+   deny('Department update could not be verified; refresh before retrying');
+  return verified;
  }
  /** Read privileged signed attendance coordinates without exposing raw module state. */
  async gpsEvidence(boardId,{from,to,userId=null}={}){
