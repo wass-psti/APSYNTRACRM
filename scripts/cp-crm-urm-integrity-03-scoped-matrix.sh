@@ -32,9 +32,12 @@ case "$DOMAIN" in
   apply sql/tests/cp-urm-scoped02c-acceptance.sql
   ;;
  fueltrans)
-  apply sql/tests/cp-urm-app-toolbox-01-disposable-setup.sql
-  apply sql/tests/cp-urm-fueltrans-workspace-disposable.sql
-  apply sql/tests/cp-urm-fueltrans-nonbootstrap-admin-403.sql
+  # The original fixture establishes its synthetic admin via session-local
+  # set_config; all three source files must share a single psql connection.
+  psql -X -v ON_ERROR_STOP=1 \
+   -f sql/tests/cp-urm-app-toolbox-01-disposable-setup.sql \
+   -f sql/tests/cp-urm-fueltrans-workspace-disposable.sql \
+   -f sql/tests/cp-urm-fueltrans-nonbootstrap-admin-403.sql
   ;;
  tooltrace)
   apply sql/tests/cp-urm-effective01a-disposable-setup.sql
