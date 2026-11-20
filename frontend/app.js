@@ -43,7 +43,6 @@ import {mountPagesAcceptanceMotion,stopPagesAcceptanceMotion} from './pages-acce
 import {runNativeQa} from './native-qa.js';
 import {NativeIssueClient} from './native-client.js';
 import {TalkBoxNativeClient} from './talkbox-native.js';
-import {TalkBoxAttachmentClient} from './talkbox-attachments.js';
 import {renderTalkBoxApplication} from './talkbox-ui.js';
 import {findTalkBoxBoard,TALKBOX_APPLICATION_ROUTE,talkBoxIssueHref} from './talkbox-application.js';
 import {BOARD_MODULES,moduleByBoardName} from './board/services/manifest.js';
@@ -430,9 +429,11 @@ let pendingGlobalSearchItem=null;
 let pendingNativeSearchSelection=null;
 let talkBoxState={page:null,selected:null,busy:false,error:'',scope:'',filter:{name:'',status:'All'}};
 const talkBoxClient=()=>new TalkBoxNativeClient({api:db,workspaceId:state.context.workspace_id});
-const talkBoxAttachments=()=>new TalkBoxAttachmentClient({
- api:db,auth,workspaceId:state.context.workspace_id
-});
+async function talkBoxAttachments(){
+ // Private upload/download code must not inflate the ordinary CRM startup graph.
+ const {TalkBoxAttachmentClient}=await import('./talkbox-attachments.js');
+ return new TalkBoxAttachmentClient({api:db,auth,workspaceId:state.context.workspace_id});
+}
 function talkBoxCurrent(scope){return auth.isSignedIn&&state.view==='board'&&state.tab==='talkbox'&&state.context?.user_id===auth.userId&&
  [auth.userId,state.context.workspace_id,state.boardId].join('|')===scope;}
 async function loadTalkBox({more=false,selectedId=null}={}){
@@ -8631,7 +8632,7 @@ async function action(name,button){
   const file=root.querySelector('#tb-upload-file')?.files?.[0];
   if(!file)throw new Error('Choose a TalkBox file before uploading.');
   const scope=talkBoxState.scope,issueId=talkBoxState.selected.id;
-  const saved=await talkBoxAttachments().uploadVerified(issueId,file);
+  const saved=await (await talkBoxAttachments()).uploadVerified(issueId,file);
   if(talkBoxCurrent(scope)&&talkBoxState.selected?.id===issueId){
    talkBoxState.selected=(await talkBoxClient().get(issueId));
    render();toast('Native attachment uploaded and verified.');
@@ -8642,7 +8643,7 @@ async function action(name,button){
   if(!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
   const asset=talkBoxState.selected.assets?.find(x=>String(x.id)===button.dataset.id);
   if(!asset)break;
-  const {blob,fileName}=await talkBoxAttachments().download(talkBoxState.selected.id,asset);
+  const {blob,fileName}=await (await talkBoxAttachments()).download(talkBoxState.selected.id,asset);
   const url=URL.createObjectURL(blob);
   try{
    const link=document.createElement('a');link.href=url;link.download=fileName;
