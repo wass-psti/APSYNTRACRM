@@ -1,0 +1,23 @@
+name: CP-CRM-URM-INTEGRITY-03R Signed Two-Profile Native Readback
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cp-crm-urm-integrity-03r-native.yml'
+      - 'scripts/cp-crm-urm-integrity-03-signed-native.mjs'
+      - 'frontend/tests/cp-crm-urm-integrity-03r.test.mjs'
+      - 'docs/CP-CRM-URM-INTEGRITY-03R.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  two-profile-native-readback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify SQL source manifest
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Validate signed native readback without production credentials
+        run: node --test frontend/tests/cp-crm-urm-integrity-03.test.mjs frontend/tests/cp-crm-urm-integrity-03f.test.mjs frontend/tests/cp-crm-urm-integrity-03g.test.mjs frontend/tests/cp-crm-urm-integrity-03o.test.mjs frontend/tests/cp-crm-urm-integrity-03r.test.mjs
