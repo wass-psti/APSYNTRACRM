@@ -1,0 +1,49 @@
+name: CP-CRM-URM-INTEGRITY-03D Owner Native Role Candidate
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cp-crm-urm-integrity-03d-owner-policy.yml'
+      - 'sql/cp-crm-urm-integrity-03d-owner-native-role-candidate.sql'
+      - 'sql/tests/cp-crm-urm-integrity-03d-owner-native-policy.sql'
+      - 'frontend/tests/cp-crm-urm-integrity-03d-owner-policy.test.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  disposable-owner-native-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U postgres'
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify repository migration source integrity
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Exercise owner-only candidate and unrelated-workspace/inactive/override denials
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-urm-scoped02b-setup.sql \
+            -f sql/tests/cp-urm-scoped02b-live-role-baseline.sql \
+            -f supabase/migrations/20261118062000_cp_urm_scoped02b_six_modules.sql \
+            -f supabase/migrations/20261113031952_main_workspace_owner_crm_admin_20261113.sql \
+            -f sql/cp-crm-urm-integrity-03d-owner-native-role-candidate.sql \
+            -f sql/tests/cp-crm-urm-integrity-03d-owner-native-policy.sql
+      - name: Verify nondeployable proposal boundaries
+        run: node --test frontend/tests/cp-crm-urm-integrity-03d-owner-policy.test.mjs
