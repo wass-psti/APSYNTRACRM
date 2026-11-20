@@ -1,0 +1,24 @@
+name: CP-CRM-URM-INTEGRITY-03C Controlled Projection Source
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/*cp_crm_urm_integrity_03c_projection_parity.sql'
+      - 'supabase/migration-source-manifest.json'
+      - 'sql/cp-crm-urm-integrity-03c-projection-rollback.sql'
+      - 'frontend/tests/cp-crm-urm-integrity-03c.test.mjs'
+      - '.github/workflows/cp-crm-urm-integrity-03c-projection.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  activation-source-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify migration manifest and source
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Verify projection boundaries and prepared rollback
+        run: node --test frontend/tests/cp-crm-urm-integrity-03c.test.mjs
