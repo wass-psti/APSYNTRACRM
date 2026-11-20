@@ -1,0 +1,23 @@
+name: CP-CRM-URM-INTEGRITY-03S TradeLink Role-Aware Native Readback
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cp-crm-urm-integrity-03s-tradelink.yml'
+      - 'scripts/cp-crm-native-access-final02-signed-matrix.mjs'
+      - 'frontend/tests/cp-crm-urm-integrity-03s.test.mjs'
+      - 'docs/CP-CRM-URM-INTEGRITY-03S.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  role-aware-tradelink-native-readback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify migration source integrity
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Verify existing native acceptance and role-aware TradeLink contracts
+        run: node --test frontend/tests/cp-crm-native-access-final02.test.mjs frontend/tests/cp-crm-urm-integrity-03s.test.mjs frontend/tests/cp-crm-urm-integrity-03f.test.mjs frontend/tests/cp-crm-urm-integrity-03g.test.mjs frontend/tests/user-role-frt-scoped.test.mjs frontend/tests/user-role-scoped-six.test.mjs
