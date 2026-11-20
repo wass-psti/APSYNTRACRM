@@ -13,6 +13,9 @@ on:
       - 'supabase/functions/access-v2/**'
       - '.github/workflows/access-v2-preview.yml'
   workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   react-preview:
     runs-on: ubuntu-latest
