@@ -8,7 +8,7 @@ import {validUuid} from './data.js';
 export const WS11_INVITATION_MANAGEMENT_ENABLED=false;
 const STATES=new Set(['pending','accepted','revoked','expired','declined']);
 const EMAIL=/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/u;
-const deny=(message,status=403)=>{throw new ApiError(message,status);};
+const deny=(message,status=403,code='')=>{throw new ApiError(message,status,code);};
 function verifiedDate(value){
   if(typeof value!=='string'||value.length>40||!/^\d{4}-\d\d-\d\dT/.test(value)||
         !Number.isFinite(Date.parse(value)))deny('Invalid signed invitation timestamp.',409);
@@ -86,7 +86,7 @@ export class WorkspaceInvitationManagementClient{
     }catch(error){
       if(error?.status===401)deny('Reauthenticate before sending invitations.',401);
       if(error?.status===403)deny('This workspace cannot issue invitations.',403);
-      if(error?.status===404)deny('The trusted invitation service is not deployed.',503);
+      if(error?.status===404)deny('The trusted invitation service is not deployed.',503,'INVITATION_BACKEND_NOT_DEPLOYED');
       deny('The invitation service is not active or available.',503);
     }
     const ready=normalizeInvitationReadiness(result,{workspaceId});

@@ -1,0 +1,26 @@
+name: CP-CRM Bootstrap Invitation Error Classification
+on:
+  pull_request:
+    paths:
+      - 'frontend/workspace-invitation-management.js'
+      - 'frontend/workspace-ui.js'
+      - 'frontend/tests/cp-crm-bootstrap-invite-diagnostics.test.mjs'
+      - 'docs/CP-CRM-BOOTSTRAP-INVITATION-ROOT-CAUSE.md'
+      - '.github/workflows/cp-crm-bootstrap-invite-diagnostics.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signed-bootstrap-identity-and-service-errors:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install pinned dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify bootstrap identity, workspace relation and invitation denial classification
+        run: node --test frontend/tests/cp-crm-bootstrap-invite-diagnostics.test.mjs frontend/tests/cp-crm-workspace-invite-ui-activation.test.mjs frontend/tests/ws11-invitation-management.test.mjs frontend/tests/main-workspace-owner-admin.test.mjs
+      - name: Verify frontend build
+        run: npm run build

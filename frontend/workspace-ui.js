@@ -985,6 +985,8 @@ function openInvites(current,options={}){
     'Delivery outcome is unconfirmed. Do not resubmit; ask an administrator to reconcile this request.':
     error?.status===401?'Your session must be verified again before sending invitations. No email was submitted.':
     error?.status===403?'Invitation sending was denied for this workspace. No email was submitted.':
+    error?.code==='INVITATION_BACKEND_NOT_DEPLOYED'?
+     'Workspace Invitation backend is not deployed. Your account role has not changed. No email was submitted. Contact the system operator to activate the service.':
     'The trusted invitation service is unavailable or not activated. No email was submitted. Contact your workspace administrator.';
   }finally{
    busy=false;
