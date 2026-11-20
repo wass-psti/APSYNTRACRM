@@ -393,7 +393,7 @@ const userRoleManager=new UserRoleManagementClient(db);
 let performanceProfileAbort=null;
 const startupCriticalPath=createStartupCriticalPath();
 const state={performanceBusy:false,performanceReport:null,context:null,boardCatalogError:'',crmRoleSnapshot:null,workspaceRelationSnapshot:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',boardItemSearch:'',mrhTrackerFilters:{...MATERIAL_TRACKER_DEFAULT_FILTERS},mrhTrackerScope:'',mrhAddView:false,mrhAddBusy:false,groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,boardPageBusy:false,boardPageError:'',issues:[],edit:false,boardManage:false,
-  view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceView:'tracker',frtStatusFilter:'all',ttStandalone:false,frtStandalone:false,tlStandalone:false,fuelTrackStandalone:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttClockStage:'idle',ttGeoPermission:'unknown',ttGeoChecking:false,ttGeoMessage:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtExpandedRequestIds:[],ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttLogSelectedIds:[],ttLogAdminEditor:null,ttLogAdminDeleteConfirm:null,ttLogAdminBusy:false,ttLogAdminError:'',ttLogAdminSuccess:'',ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttEmployeesSearch:'',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkModuleRole:'',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkAnalytics:null,tradeLinkAnalyticsBusy:false,tradeLinkAnalyticsRunId:0,tradeLinkAnalyticsError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,adminVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleSection:'applications',userRoleBoardSearch:'',userRoleBatchMode:false,userRoleBatchSelected:[],userRoleBatchMemberSearch:'',userRoleBatchIdentity:'',userRoleBatchScope:'module',userRoleBatchResource:'',userRoleBatchRole:'',userRoleBatchAction:'assign',userRoleBusy:false,userRoleError:''};
+  view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceView:'tracker',frtStatusFilter:'all',ttStandalone:false,frtStandalone:false,tlStandalone:false,fuelTrackStandalone:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttClockCorrectionNotice:'',ttClockStage:'idle',ttGeoPermission:'unknown',ttGeoChecking:false,ttGeoMessage:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtExpandedRequestIds:[],ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttLogSelectedIds:[],ttLogAdminEditor:null,ttLogAdminDeleteConfirm:null,ttLogAdminBusy:false,ttLogAdminError:'',ttLogAdminSuccess:'',ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttEmployeesSearch:'',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkModuleRole:'',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkAnalytics:null,tradeLinkAnalyticsBusy:false,tradeLinkAnalyticsRunId:0,tradeLinkAnalyticsError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,adminVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleSection:'applications',userRoleBoardSearch:'',userRoleBatchMode:false,userRoleBatchSelected:[],userRoleBatchMemberSearch:'',userRoleBatchIdentity:'',userRoleBatchScope:'module',userRoleBatchResource:'',userRoleBatchRole:'',userRoleBatchAction:'assign',userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -450,6 +450,11 @@ const trashBoardSelection=new Set();
 let routeSerial=0;
 let avatarHydrationPromise=Promise.resolve({attempted:0,loaded:0,failed:0,stale:0});
 let ttClockTimer=null;
+let ttClockSyncInFlight=false;
+let ttClockLastCheckAt=0;
+let ttClockSyncScope='';
+const TT_CLOCK_CORRECTION_POLL_MS=45000;
+const TT_CLOCK_FOCUS_MIN_MS=10000;
 function stopTimeTrackerClock(){
  if(ttClockTimer!==null){clearInterval(ttClockTimer);ttClockTimer=null;}
 }
@@ -459,14 +464,69 @@ function maintainTimeTrackerClock(){
   (state.ttView==='clock'&&root.querySelector('#tt-clock-hours')||
    state.ttView==='overview'&&root.querySelector('#tt-overview-time'));
  if(!mounted){stopTimeTrackerClock();return;}
+ const scope=[state.context?.workspace_id,state.context?.user_id,state.boardId].join(':');
+ if(scope!==ttClockSyncScope){
+  ttClockSyncScope=scope;ttClockLastCheckAt=Date.now();
+ }
  const tick=()=>{
   if(state.ttView==='clock')syncTimeTrackerClock(root);
   else if(state.ttView==='overview')syncTimeTrackerOverviewClock(root);
  };
  tick();
  if(ttClockTimer===null)ttClockTimer=setInterval(()=>{
-  if(!document.hidden)tick();
+  if(!document.hidden){
+   tick();
+   if(state.ttView==='clock')void refreshCorrectedTimeTrackerClock();
+  }
  },1000);
+}
+/** A periodic signed read reconciles administrator corrections made in another browser.
+ * No local attendance mutation, automatic write, or trust in other tabs.
+ * Active Clock is the only polled screen; background/hidden views are not polled.
+ */
+async function refreshCorrectedTimeTrackerClock({onFocus=false}={}){
+ const before=state.ttAttendance;
+ if(ttClockSyncInFlight||document.hidden||!auth.isSignedIn||
+   state.view!=='board'||state.tab!=='attendance'||state.ttView!=='clock'||
+   before?.status!=='VERIFIED_READ'||!before.active||state.ttBusy||
+   state.ttClockPending||state.ttLogAdminBusy||navigator.onLine===false)return;
+ const now=Date.now();
+ if(now-ttClockLastCheckAt<(onFocus?TT_CLOCK_FOCUS_MIN_MS:TT_CLOCK_CORRECTION_POLL_MS))return;
+ ttClockLastCheckAt=now;
+ ttClockSyncInFlight=true;
+ const route=routeSerial,run=state.ttRunId,boardId=state.boardId,
+  actor=state.context?.user_id,workspace=state.context?.workspace_id;
+ try{
+  const fresh=await timeTracker.snapshot(boardId,{clockOnly:true});
+  if(route!==routeSerial||run!==state.ttRunId||document.hidden||!auth.isSignedIn||
+     state.view!=='board'||state.tab!=='attendance'||state.ttView!=='clock'||
+     state.ttBusy||state.ttClockPending||state.boardId!==boardId||
+     state.context?.user_id!==actor||state.context?.workspace_id!==workspace||
+     fresh?.status!=='VERIFIED_READ'||fresh.access?.userId!==actor||
+     fresh.access?.workspaceId!==workspace||fresh.access?.boardId!==boardId||
+     Number(fresh.revision)<=Number(state.ttAttendance?.revision))return;
+  const previous=state.ttAttendance;
+  const startChanged=previous.active?.id===fresh.active?.id&&
+   previous.active?.clockIn!==fresh.active?.clockIn;
+  const changed=previous.records.length!==fresh.records.length||
+   previous.records.some((record,index)=>{
+    const next=fresh.records[index];
+    return !next||record.id!==next.id||record.clockIn!==next.clockIn||
+      record.clockOut!==next.clockOut||record.status!==next.status||
+      record.creditedMs!==next.creditedMs;
+   })||previous.autoClockout?.nextAt!==fresh.autoClockout?.nextAt;
+  state.ttAttendance=fresh;
+  if(changed){
+   state.ttSuccess='';
+   state.ttClockCorrectionNotice=startChanged?
+    'Your recorded Clock-In time was corrected. The active session timer is now synchronized.':
+    'Your attendance record was updated. Clock is showing the latest verified session.';
+   render();
+  }
+ }catch{
+  // Keep the previous signed view on transient read failures. Never guess
+  // corrected attendance timestamps or replay a Clock mutation.
+ }finally{ttClockSyncInFlight=false;}
 }
 
 function toast(message,error=false){
@@ -1126,6 +1186,7 @@ function renderTimeTrackerApplication(){
   }),
   geoPermission:state.ttGeoPermission,geoChecking:state.ttGeoChecking,
   geoMessage:state.ttGeoMessage,clockStage:state.ttClockStage,
+  clockCorrectionNotice:state.ttClockCorrectionNotice,
   error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,
   view:state.ttView,employeesSearch:state.ttEmployeesSearch,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,
   reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,
@@ -3788,6 +3849,7 @@ async function loadTimeTracker(seq=routeSerial){
   if(run===state.ttRunId&&seq===routeSerial&&auth.isSignedIn&&
     state.context?.user_id===identity&&state.context?.workspace_id===ws)
    {state.ttAttendance=snapshot;
+    if(state.ttView==='clock')ttClockLastCheckAt=Date.now();
     // An earlier bootstrap/read error must not remain visible after a
     // verified signed attendance snapshot. Preserve uncertain-write warnings.
     if(snapshot?.status==='VERIFIED_READ'&&!state.ttClockPending)
@@ -3843,8 +3905,9 @@ function timeTrackerAdminLogReady(){
   state.board?.board?.workspace_id===state.context?.workspace_id&&
   moduleByBoardName(state.board?.board?.name)?.key==='timetracker';
 }
-async function openTimeTrackerAdminEditor(recordIds,mode='single'){
+async function openTimeTrackerAdminEditor(recordIds,mode='single',{timeOnly=false}={}){
  if(!timeTrackerAdminLogReady()||state.ttLogAdminBusy)return;
+ if(timeOnly&&mode!=='single')return;
  if(state.ttAttendance.access.moduleRole!=='System Admin'&&mode!=='single')return;
  const ids=[...new Set(recordIds||[])];
  if(!ids.length||ids.length>TT_ADMIN_RECORD_LIMIT||
@@ -3858,7 +3921,7 @@ async function openTimeTrackerAdminEditor(recordIds,mode='single'){
   const snapshot=await timeTracker.attendanceAdminRecords(boardId,ids);
   if(seq!==routeSerial||!timeTrackerAdminLogReady()||state.context?.user_id!==identity||
      state.context?.workspace_id!==workspace||state.boardId!==boardId)return;
-  state.ttLogAdminEditor={mode,timeOnly:state.ttAttendance.access.moduleRole==='IT Administrator',
+  state.ttLogAdminEditor={mode,timeOnly:timeOnly||state.ttAttendance.access.moduleRole==='IT Administrator',
    recordIds:ids,records:snapshot.records,
    directory:snapshot.directory,revision:snapshot.revision,
    actorId:snapshot.actorId,workspaceId:snapshot.workspaceId,boardId:snapshot.boardId};
@@ -4263,7 +4326,7 @@ async function submitTimeTrackerAction(form,actionName){
   state.boardId===boardId&&state.context?.user_id===identity&&
   state.context?.workspace_id===ws;
  let commitAttempted=false;
- state.ttBusy=true;state.ttClockStage='location';state.ttError='';state.ttSuccess='';render();
+ state.ttBusy=true;state.ttClockStage='location';state.ttClockCorrectionNotice='';state.ttError='';state.ttSuccess='';render();
  try{
   const geo=await captureAttendanceGeo(navigator.geolocation);
   if(sameSession()){
@@ -8331,6 +8394,10 @@ async function action(name,button){
   if(!record||typeof record.ownerId!=='string'||!record.ownerId.startsWith('cloud:'))return;
   await loadTimeTrackerLogGps(routeSerial,record,{force:button.textContent?.includes('Refresh')===true});break;
  }
+ case 'tt-log-admin-correct-time':{
+  if(!timeTrackerAdminLogReady())return;
+  await openTimeTrackerAdminEditor([button.dataset.recordId],'single',{timeOnly:true});break;
+ }
  case 'tt-log-admin-edit':{
   if(!timeTrackerAdminLogReady())return;
   await openTimeTrackerAdminEditor([button.dataset.recordId],'single');break;
@@ -11457,10 +11524,11 @@ root.addEventListener('input',event=>{
 document.addEventListener('visibilitychange',()=>{
  platformSync.visibilityChanged();
  setBoardLoadingVisibility(root,document.hidden);
+ if(!document.hidden)void refreshCorrectedTimeTrackerClock({onFocus:true});
 });
 // Window focus is distinct from document visibility: switching between two
 // visible application windows may not emit visibilitychange in either one.
-window.addEventListener('focus',()=>platformSync.focusChanged());
+window.addEventListener('focus',()=>{platformSync.focusChanged();void refreshCorrectedTimeTrackerClock({onFocus:true});});
 // An additional tab may begin a Clock action; surface its pending marker
 // immediately, without replaying writes or trusting browser data as attendance.
 window.addEventListener('storage',event=>{
