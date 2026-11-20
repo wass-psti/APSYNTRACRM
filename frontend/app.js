@@ -50,6 +50,7 @@ import {renderFoundation} from './board/presentation/foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
 import {boardGrid,boardGridColumns,prepareBoardGrid} from './board/presentation/grid.js';
 import {boardGroupArchiveSuffix} from './board/presentation/group-counts.js';
+import {renderBoardCollapsedRollup} from './board/presentation/group-rollups.js';
 import {FUELTRACK_V3_ID,findFuelTrackV3Board,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-ui.js';
 import {FUELTRACK_V3_APPLICATION_ROUTE,parseFuelTrackApplicationRoute} from './fueltrack-v3-application-route.js';
 import {verifyFuelTrackBackendSnapshot} from './fueltrack-v3-backend-projections.js';
@@ -1172,7 +1173,7 @@ function boardGroupCollapsed(groupId,count){
  return count===0&&state.board?.pagination?.loaded===true&&
   state.board?.pagination?.has_more!==true;
 }
-function groupHeading(group,count){
+function groupHeading(group,count,{columns=[],layout=null,items=[]}={}){
  const collapsed=boardGroupCollapsed(group.id,count);
  const id=e(group.id),editing=state.groupEditId===group.id;
  const managedEmpty=state.board?.pagination?.loaded===true&&state.board?.pagination?.has_more!==true&&canSafelyHideEmptyTimeTrackerGroup(state.board?.board,group,
@@ -1201,6 +1202,23 @@ function groupHeading(group,count){
   '<button type="submit" class="primary"'+(state.groupEditBusy?' disabled':'')+'>Save</button>'+
   '<button type="button" class="secondary" data-action="group-inline-cancel"'+(state.groupEditBusy?' disabled':'')+'>Cancel</button>'+
   '</form></div>';
+ const tone=Math.max(0,(state.board?.groups||[]).findIndex(g=>g.id===group.id))%6;
+ if(collapsed){
+  const complete=state.board?.pagination?.loaded===true&&
+   state.board?.pagination?.has_more!==true;
+  const totalCount=persistedCount??count;
+  return '<section class="board-collapsed-group board-group-tone-'+tone+'" data-group-id="'+id+'" data-group-collapsed="true">'+
+   renderBoardCollapsedRollup({detail:state.board,items,columns,layout,complete,
+    groupId:group.id,groupTitle:group.title||'Group',itemCount:totalCount})+
+   (state.edit?'<details class="board-group-actions board-collapsed-group-menu"><summary aria-label="Actions for '+displayTitle+'">⋯</summary>'+
+    '<div class="board-group-actions-list"><button type="button" data-action="group-inline-edit" data-id="'+id+'">Edit name inline</button>'+
+    '<button type="button" data-action="board-group-toggle" data-id="'+id+'">Expand group</button>'+
+    '<button type="button" data-action="group-select-visible" data-id="'+id+'">Select visible records</button>'+
+    (ordinaryDelete?'<button type="button" data-action="group-delete-empty" data-id="'+id+'">Delete group</button>':
+     managedDelete?'<button type="button" data-action="managed-group-delete-empty" data-id="'+id+'">Delete empty group</button>':
+     managedEmpty?'<button type="button" data-action="group-hide-empty" data-id="'+id+'">Hide empty group (reversible)</button>':'')+
+    '</div></details>':'')+'</section>';
+ }
  return '<div class="group-heading'+(collapsed?' is-collapsed':'')+'" data-group-id="'+id+'" data-group-collapsed="'+collapsed+'">'+
   '<button type="button" class="board-group-toggle" data-action="board-group-toggle" data-id="'+id+'" aria-expanded="'+(!collapsed)+'" aria-label="'+(collapsed?'Expand ':'Collapse ')+displayTitle+' group">'+(collapsed?'▸':'▾')+'</button><h3>'+displayTitle+'</h3>'+
   (fuelTrackEditable?'<button type="button" class="board-group-rename-trigger" data-action="group-inline-edit" data-id="'+id+'" aria-label="Edit name inline for '+displayTitle+'" title="Edit name inline">✎ <span>Edit name</span></button>':'')+
@@ -1494,8 +1512,8 @@ ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSour
  <button type="button" class="secondary" data-action="bulk-actions" ${canRequestBulk(b)||bulkReadyFor(b)?'':'disabled title="Bulk changes require an authorized ordinary board and 1–50 records"'}>Bulk actions…</button>
  <button type="button" class="secondary board-delete-one" data-action="delete-selected-item" ${itemSelection.size>0&&state.edit&&canManuallyEditBoard(b,true)?'':'disabled title="Select an editable ordinary-board item"'}>${itemSelection.size>1?'Delete one of '+itemSelection.size+'…':'Delete item'}</button>
  <span class="muted">${!canBulkEditBoard(b)?'Protected application records: selection and export only; domain-specific bulk writes require separate server authorization.':bulkReadyFor(b)?'Max 50 records per atomic batch.':'Bulk actions verify this signed session before changes; unsupported field edits and multi-delete are unavailable.'}</span></div>
- ${shownGroups.length?shownGroups.map(g=>`${groupHeading(g,groupedItems.get(g.id)?.length||0)}
- ${moduleKey==='timetracker'&&String(g.title||'').trim().toLowerCase()==='main group'?
+ ${shownGroups.length?shownGroups.map(g=>`${groupHeading(g,groupedItems.get(g.id)?.length||0,{columns,layout,items:groupedItems.get(g.id)||[]})}
+ ${boardGroupCollapsed(g.id,groupedItems.get(g.id)?.length||0)?'':({moduleKey==='timetracker'&&String(g.title||'').trim().toLowerCase()==='main group'?
   renderTimeTrackerMainGroup({groupId:g.id,groupItems:groupedItems.get(g.id)||[],
    boardColumns:state.board.columns||[],boardValues:state.board.values||[],
    projection:state.ttBoardAttendance,userId:state.context?.user_id,
@@ -1505,7 +1523,7 @@ ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSour
   moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,groupItems:groupedItems.get(g.id)||[],layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},primaryEditable,footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:Number.isSafeInteger(g.total_item_count)?
     (groupedItems.get(g.id).length+' loaded / '+g.total_item_count+' total'+
      (g.archived_item_count>0?' · '+g.active_item_count+' active · '+g.archived_item_count+' archived':'')):
-    groupedItems.get(g.id).length+(state.board.pagination?.has_more?' loaded':' records')}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels,primaryEditable)}`).join(''):
+    groupedItems.get(g.id).length+(state.board.pagination?.has_more?' loaded':' records')}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels,primaryEditable))}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
  ${ungroupedItems.length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:ungroupedItems},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},primaryEditable}):groupRows(ungroupedItems,state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels,primaryEditable)}`:''}`}${state.tab==='items'&&state.edit?'<button type="button" class="secondary board-add-group-bottom" data-action="new-group">＋ Add new group</button>':''}
  ${state.tab==='items'?renderBoardPagination(state.board.pagination,{busy:state.boardPageBusy,error:state.boardPageError}):''}</div>`;
