@@ -159,3 +159,15 @@ test('record click opens an accessible popup and highlights rows using the share
  assert.match(viewOnly,/tt-log-filterable aps-record-selectable is-selected board-row-selected/);
  assert.doesNotMatch(viewOnly,/data-action="tt-log-admin-edit"/);
 });
+
+test('modified clicks allow contiguous or toggled Log selection without opening details',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const start=app.indexOf("case 'tt-log-open-detail':{");
+ const end=app.indexOf("case 'tt-log-detail-close':{",start);
+ assert.ok(start>=0&&end>start,'attendance detail handler exists');
+ const handler=app.slice(start,end);
+ assert.match(handler,/state\.ttLogSelectedIds=\[\.\.\.selected\];/);
+ assert.match(handler,/if\(button\.dataset\.multiSelect==='true'\)\{\s*render\(\);/);
+ assert.match(handler,/\.find\(row=>row\.dataset\.recordId===id\)\?\.focus\(\);\s*break;/);
+ assert.match(handler,/state\.ttLogExpandedIds=\[id\];render\(\);/);
+});
