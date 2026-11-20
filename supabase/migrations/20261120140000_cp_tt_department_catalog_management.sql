@@ -64,6 +64,7 @@ BEGIN
     ('Finance and Accounting'),('Sales and Marketing'),
     ('Information Technology'),('General Administration'),('OJT')
    ) AS v(name)
+   WHERE true
   ON CONFLICT DO NOTHING;
   -- Preserve any current legacy mapping even if it differs from defaults.
   INSERT INTO private.tt_department_catalog(workspace_id,name)
