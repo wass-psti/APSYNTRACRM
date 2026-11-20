@@ -1,0 +1,25 @@
+name: CP-TB-NATIVE-01Q Authenticated Playground Recovery
+on:
+  pull_request:
+    paths:
+      - "scripts/talkbox-authenticated-playground.py"
+      - "scripts/tests/test_talkbox_authenticated_playground.py"
+      - ".github/workflows/cp-tb-native-01q.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/talkbox-authenticated-playground.py"
+      - "scripts/tests/test_talkbox_authenticated_playground.py"
+      - ".github/workflows/cp-tb-native-01q.yml"
+permissions:
+  contents: read
+jobs:
+  signed-browser-recovery-synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax and read-only GraphQL tests
+        run: python3 -m py_compile scripts/talkbox-authenticated-playground.py
+      - name: Full TalkBox source and recovery regression
+        run: python3 -m unittest discover -s scripts/tests -p 'test_talkbox_*.py' -v
