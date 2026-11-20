@@ -104,6 +104,12 @@ RESET ROLE;
 DO $after_out$
 DECLARE v_record uuid;
 BEGIN
+ SELECT (record->>'id')::uuid INTO v_record
+ FROM public.tt_test_attendance_source
+ WHERE employee_id='21000000-0000-4000-8000-000000000001';
+ IF v_record IS NULL THEN
+   RAISE EXCEPTION 'Completed attendance record not found';
+ END IF;
  IF NOT EXISTS (SELECT 1 FROM private.tt_attendance_board_projection p
    JOIN public.work_board_items i ON i.id=p.board_item_id
    WHERE p.record_id=v_record AND p.clock_out_at IS NOT NULL
