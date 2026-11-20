@@ -19,6 +19,15 @@ export class TeamsController {
   this.onOutside=this.onOutside.bind(this);this.globalBound=false;
  }
  mount(host){
+  // Preserve APSYNTRA's single initial stylesheet and startup module budget.
+  // Load the Teams-only CSS on first authorized visit, not on every page.
+  if(host&&!document.head.querySelector('link[data-apsyntra-teams-css]')){
+   const sheet=document.createElement('link');
+   sheet.rel='stylesheet';
+   sheet.href='./frontend/teams/teams.css';
+   sheet.dataset.apsyntraTeamsCss='true';
+   document.head.append(sheet);
+  }
   if(this.host!==host){
    this.host?.removeEventListener('click',this.onClick,true);
    this.host?.removeEventListener('input',this.onInput,true);
