@@ -23,7 +23,7 @@ function teamSuggestions(data,query,{enabled=false}={}){
   (matches.length?matches.map(t=>
    '<button type="button" role="option" class="aps-invite-candidate" data-aps-invite-team="'+esc(t.teamId)+'"'+
     (!enabled||t.hasAccess?' disabled':'')+' aria-selected="false">'+
-   '<span class="aps-invite-team-avatar" aria-hidden="true">♧</span>'+
+   '<span class="aps-invite-avatar" aria-hidden="true">♧</span>'+
    '<span class="aps-invite-candidate-copy"><strong>'+highlight(t.name,q)+'</strong><small>'+t.memberCount+
     ' member'+(t.memberCount===1?'':'s')+' · Viewer access for the team</small></span>'+
    '<span class="aps-invite-candidate-state">'+(t.hasAccess?'Already invited':enabled?'Invite team':'Unavailable')+'</span></button>'
