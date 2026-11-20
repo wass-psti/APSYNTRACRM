@@ -8326,7 +8326,8 @@ async function action(name,button){
      if(!TT_DEPARTMENTS.includes(department))throw Error('Choose a valid department');
      const updated=await timeTracker.assignTeamDepartment(boardId,member.id,department);
      if(seq!==routeSerial||state.context?.user_id!==actorId||
-        state.context?.workspace_id!==workspaceId||state.boardId!==boardId)return;
+        state.context?.workspace_id!==workspaceId||state.boardId!==boardId)
+      throw Error('Department saved but session changed; refresh TimeTracker');
      state.ttTeam=updated;render();
     },{submitLabel:'Save department',successMessage:'Employee department saved.'});
    break;

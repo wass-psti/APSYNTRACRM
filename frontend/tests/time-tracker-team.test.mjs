@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {TT_TEAM_ROLES,filterTimeTrackerTeam} from '../time-tracker-team.js';
+import {TT_TEAM_ROLES,TT_TEAM_DEPARTMENTS,filterTimeTrackerTeam,projectTimeTrackerTeamDepartments} from '../time-tracker-team.js';
 test('TimeTracker team role list is restricted',()=>assert.equal(TT_TEAM_ROLES.length,7));
 import {projectTimeTrackerTeamDirectory} from '../time-tracker-team.js';
 test('Missing signed Team snapshot is denied',()=>assert.throws(()=>projectTimeTrackerTeamDirectory(null,{}),/bootstrap Team directory contract/));
@@ -32,6 +32,7 @@ test('directory UI renders counts only for matching signed bootstrap',()=>{
 });
 import {TimeTrackerNativeClient} from '../time-tracker-native.js';
 test('fresh bootstrap RPC is necessary even when module role is administrative',async()=>{
+ let assigned='Engineering';
  const setup=allowed=>new TimeTrackerNativeClient({
   auth:{userId:teamActor,getVerifiedUser:async()=>({id:teamActor})},
   api:{
@@ -46,12 +47,23 @@ test('fresh bootstrap RPC is necessary even when module role is administrative',
    board:async()=>({board:{id:'46bf4ee7-368a-4c35-842c-8593ea1f6ac3',
     workspace_id:teamWs,name:'TimeTracker Attendance'}}),
    allowed:async()=>true,
-   rpc:async name=>{
+   rpc:async (name,args)=>{
     if(name==='has_module_access')return true;
     if(name==='list_module_directory')return [
      {id:teamActor,status:'active',module_role:'System Admin',display_name:'Example'}];
     if(name==='apsyntra_role_is_bootstrap')return allowed;
     if(name==='timetracker_team_directory_snapshot')return teamFixture;
+    if(name==='timetracker_employee_department_directory_snapshot')return {
+     contract:'tt-department-directory-1',actorId:teamActor,workspaceId:teamWs,
+     boardId:'46bf4ee7-368a-4c35-842c-8593ea1f6ac3',
+     assignments:[{userId:teamActor,department:assigned}]
+    };
+    if(name==='timetracker_employee_department_set'){
+     assert.equal(args.p_target_user_id,teamActor);
+     assigned=args.p_department;
+     return {contract:'tt-department-set-1',actorId:teamActor,
+      workspaceId:teamWs,targetUserId:teamActor,department:assigned,changed:true};
+    }
     throw Error('Unsupported RPC');
    }
   }
@@ -59,6 +71,10 @@ test('fresh bootstrap RPC is necessary even when module role is administrative',
  const board='46bf4ee7-368a-4c35-842c-8593ea1f6ac3';
  await assert.rejects(()=>setup(false).teamDirectory(board),/Bootstrap Team Directory/);
  assert.equal((await setup(true).teamDirectory(board)).members.length,1);
+ const saved=await setup(true).assignTeamDepartment(board,teamActor,'Finance and Accounting');
+ assert.equal(saved.members[0].department,'Finance and Accounting');
+ await assert.rejects(()=>setup(false).assignTeamDepartment(board,teamActor,'Engineering'),/Bootstrap Team Directory/);
+ await assert.rejects(()=>setup(true).assignTeamDepartment(board,teamActor,'Unlisted'),/Valid employee and department/);
 });
 
 
@@ -75,4 +91,27 @@ test('retained Team result list preserves authorized role members across search 
  assert.match(html,/Other Worker/);
  assert.match(html,/data-search-text="other worker worker@example\.test unassigned unassigned"/);
  assert.match(html,/data-tt-team-empty hidden/);
+});
+
+test('signed department projection renders editable assignments but fails closed on invalid scopes',()=>{
+ const board='46bf4ee7-368a-4c35-842c-8593ea1f6ac3';
+ const roster=projectTimeTrackerTeamDirectory(teamFixture,{workspaceId:teamWs,actorId:teamActor});
+ const snapshot={contract:'tt-department-directory-1',actorId:teamActor,
+  workspaceId:teamWs,boardId:board,assignments:[{userId:teamActor,department:'Engineering'}]};
+ const assigned=projectTimeTrackerTeamDepartments(roster,snapshot,{boardId:board});
+ assert.ok(TT_TEAM_DEPARTMENTS.includes('Engineering'));
+ assert.equal(assigned.members[0].department,'Engineering');
+ const access={userId:teamActor,workspaceId:teamWs,bootstrapTeamEligible:true};
+ const html=renderTimeTrackerTeam({directory:assigned,access});
+ assert.match(html,/Department: Engineering/);
+ assert.match(html,/data-action="tt-team-department-edit"/);
+ assert.match(timeTrackerTeamCsv(assigned),/Engineering/);
+ const pending=projectTimeTrackerTeamDepartments(roster,null,{boardId:board});
+ assert.doesNotMatch(renderTimeTrackerTeam({directory:pending,access}),/data-action="tt-team-department-edit"/);
+ assert.match(renderTimeTrackerTeam({directory:pending,access}),/Department assignments unavailable/);
+ assert.throws(()=>projectTimeTrackerTeamDepartments(roster,{...snapshot,workspaceId:teamActor},{boardId:board}),/contract/);
+ assert.throws(()=>projectTimeTrackerTeamDepartments(roster,{...snapshot,assignments:[
+  {userId:teamActor,department:'Unlisted'}]},{boardId:board}),/assignment invalid/);
+ assert.throws(()=>projectTimeTrackerTeamDepartments(roster,{...snapshot,assignments:[
+  {userId:teamActor,department:'Engineering'},{userId:teamActor,department:'Engineering'}]},{boardId:board}),/contract|assignment invalid/);
 });
