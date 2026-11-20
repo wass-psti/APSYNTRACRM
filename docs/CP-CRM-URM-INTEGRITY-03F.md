@@ -16,7 +16,7 @@ The dedicated PostgreSQL 17 CI job exercises the *existing* `apsyntra_role_scope
 
 - VERIFIED: independent signed Admin and Employee sessions, respective signed workspaces and roles; no production changes.
 - IMPLEMENTED: reusable read-only signed eligibility preflight and focused tests.
-- PENDING: CI result for disposable role mutation and projection acceptance.
+- VERIFIED: PostgreSQL 17 disposable role mutation and projection acceptance passed in GitHub Actions run `44668047896`; the five existing scoped-role matrix CI jobs passed in run `44668047677`. These are isolated fixtures, not genuine signed production mutation.
 - BLOCKED: genuinely signed **same-workspace** administrator/employee pair, persisted real target mutation, independent target signed readback, actual native positive/denied actions, refresh/relogin and cross-user synchronization.
 - NOT ACTIVATED: the CP-CRM-URM-INTEGRITY-03E owner-native fallback remains a nonproduction candidate; no production permission policy has been altered.
 
