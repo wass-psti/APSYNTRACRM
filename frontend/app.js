@@ -8423,12 +8423,31 @@ async function action(name,button){
    db.invalidateBoardCache(boardId,{invalidateContext:false});
    return receipt;
   };
+  const updateDirectBoardRole=async(memberId,role)=>{
+   await assertManager();
+   if(directoryMode!=='admin'||!['viewer','editor'].includes(role))
+    throw new ApiError('Signed administrator role change is not available for this board.',403);
+   const first=await readAdminDirectory();
+   const previous=first.directory.members.find(p=>
+    p.id===memberId&&!p.protected&&['viewer','editor'].includes(p.boardRole));
+   if(!previous||previous.boardRole===role||!previous.updatedAt)
+    throw new ApiError('Board membership changed or is protected. Refresh before editing.',409);
+   await userRoleManager.mutate({workspaceId,userId:memberId,scope:'board',
+    resourceId:boardId,role,enabled:true,expectedUpdatedAt:previous.updatedAt});
+   db.invalidateBoardCache(boardId,{invalidateContext:false});
+   const second=await readAdminDirectory();
+   const actual=second.directory.members.find(p=>p.id===memberId);
+   if(!actual||actual.boardRole!==role)
+    throw new ApiError('Signed board role readback did not match the requested role.',409);
+   adminSnapshot=second.snapshot;peopleDirectory=second.directory;
+  };
   openBoardInviteDialog({
     board,workspaceId,manage,
     people,peopleDirectory,workspaceName:workspaceName(),currentUserId:userId,
     teamDirectory:verifiedTeamDirectory,teamInviteEnabled:!!boardTeamClient,
     onSearchTeams:boardTeamClient?searchBoardTeams:null,
     onInviteTeam:boardTeamClient?inviteBoardTeam:null,
+    onChangeBoardRole:directoryMode==='admin'?updateDirectBoardRole:null,
     accessEnabled:directoryMode==='admin'||
       directoryMode==='board'&&BOARD_GROUP_ACCESS_ENABLED,
     onToast:message=>toast(message),
