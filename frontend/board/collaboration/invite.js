@@ -30,7 +30,7 @@ function personLine(person,{canRemove=false,highlight=false,currentUserId=null}=
   '<span class="aps-invite-crown'+(role==='owner'?' is-owner':'')+'" aria-label="'+
   (role==='owner'?'Board owner':'Member')+'" title="'+
   (role==='owner'?'Board owner':'Owner promotion is not available')+'">♛</span>'+
-  (canRemove&&role==='viewer'?
+  (canRemove&&person.id!==currentUserId&&(role==='viewer'||role==='editor')?
    '<button type="button" class="aps-invite-remove" data-aps-invite-revoke="'+esc(person.id)+
    '" aria-label="Remove '+esc(person.name)+' from this board" title="'+
    (person.id===currentUserId?'Remove your own access':'Remove viewer access')+'">×</button>':
@@ -42,7 +42,7 @@ function highlight(value,q){
 }
 function suggestions(directory,query,{enabled=false}={}){
  if(!verifiedCandidates(directory))
-  return '<div class="aps-invite-help" role="status">The authorized workspace directory is not available. Invitations will remain disabled until the server access checks are activated.</div>';
+  return '<div class="aps-invite-help" role="status">Workspace member lookup is not available for this account. Ask an authorized CRM administrator to manage board access.</div>';
  const q=query.trim().toLocaleLowerCase();
  if(!q)return '';
  const matches=directory.members.filter(p=>p.name.toLocaleLowerCase().includes(q)||
@@ -51,9 +51,9 @@ function suggestions(directory,query,{enabled=false}={}){
   '<div class="aps-invite-suggestion-head">People</div>'+
   (matches.length?matches.map(p=>
    '<button type="button" role="option" class="aps-invite-candidate" data-aps-invite-assign="'+esc(p.id)+'"'+
-   (!enabled||p.boardRole?' disabled':'')+' aria-selected="false">'+
+   (!enabled||p.boardRole||p.protected?' disabled':'')+' aria-selected="false">'+
    avatar(p)+'<span class="aps-invite-candidate-copy"><strong>'+highlight(p.name,q)+'</strong><small>'+esc(p.email)+'</small></span>'+
-   '<span class="aps-invite-candidate-state">'+(p.boardRole?'Already invited':enabled?'Invite':'Unavailable')+'</span></button>'
+   '<span class="aps-invite-candidate-state">'+(p.boardRole?'Already invited':p.protected?'Protected':enabled?'Invite':'Unavailable')+'</span></button>'
   ).join(''):'<p class="aps-invite-none">No matching people</p>')+
   '</div>';
 }
@@ -61,32 +61,30 @@ export function renderBoardInviteDialog({people,directory,workspaceName='',manag
  const verified=verifiedMembers(people);
  const list=verified?people.people:[];
  const canWrite=manage&&accessEnabled===true&&verifiedCandidates(directory);
- const searchEnabled=manage&&verifiedCandidates(directory);
+ const searchEnabled=manage;
  return '<section class="aps-invite-dialog" role="dialog" aria-modal="true" aria-labelledby="aps-invite-title">'+
   '<header class="aps-invite-heading"><h2 id="aps-invite-title">Invite to this board</h2>'+
    '<div class="aps-invite-heading-actions"><button class="aps-invite-feedback" type="button" disabled title="Feedback is not configured" aria-label="Feedback unavailable">◉</button>'+
    '<button type="button" class="aps-invite-close" data-aps-invite-close aria-label="Close invitation dialog">×</button></div></header>'+
   '<div class="aps-invite-search-region"><label class="aps-invite-sr" for="aps-invite-search">Search workspace members</label>'+
    '<input type="search" id="aps-invite-search" role="combobox" aria-expanded="'+Boolean(query.trim()&&searchEnabled)+
-   '" aria-controls="aps-invite-matches" aria-autocomplete="list" placeholder="Search by name, team, or email address"'+
+   '" aria-controls="aps-invite-matches" aria-autocomplete="list" placeholder="Search workspace people by name or email"'+
    ' maxlength="120" autocomplete="off" value="'+esc(query)+'"'+(!searchEnabled?' disabled':'')+' />'+
    '<div class="aps-invite-search-results" data-aps-invite-suggestions>'+
     (query.trim()?suggestions(directory,query,{enabled:canWrite}):'')+
    '</div></div>'+
-  '<div class="aps-invite-tabs" role="tablist" aria-label="Invite category">'+
-   '<button role="tab" type="button" aria-selected="true">People</button>'+
-   '<button role="tab" type="button" aria-selected="false" disabled title="Connected agent invitations are not enabled">Agents</button></div>'+
+
   '<p class="aps-invite-policy"><span aria-hidden="true">▤</span> Board access is limited by '+esc(workspaceName||'workspace')+
    ' membership and the board’s own permissions.</p>'+
   '<div class="aps-invite-members-title"><strong>People invited to this board</strong>'+
    '<small>'+(verified?list.length+' assigned':'Unavailable')+'</small></div>'+
   '<div class="aps-invite-members" data-aps-invite-members>'+(
    !verified?'<p class="aps-invite-help" role="status">Unable to verify board members. Refresh the board and try again.</p>':
-   list.length?list.map(p=>personLine(p,{canRemove:canWrite,highlight:p.id===highlightId,currentUserId})).join(''):
+   list.length?list.map(p=>personLine(p,{canRemove:canWrite&&(p.role==='viewer'||directory?.source==='SIGNED_ADMIN_BOARD_DIRECTORY'),highlight:p.id===highlightId,currentUserId})).join(''):
    '<p class="aps-invite-help">Invite teammates to view this board.</p>')+'</div>'+
   '<div class="aps-invite-footer">'+
    (!manage?'<p class="aps-invite-help">Only an authorized board manager can invite people.</p>':
-    !searchEnabled?'<p class="aps-invite-help">Workspace member search is awaiting signed server activation.</p>':
+    !verifiedCandidates(directory)?'<p class="aps-invite-help">The authorized workspace member directory is unavailable for your account. The search field cannot return other members until access is granted.</p>':
     !canWrite?'<p class="aps-invite-help">Board access updates are currently disabled. Search is read-only.</p>':'')+
    '<button type="button" class="aps-invite-request" data-aps-invite-workspace>Request to invite a new member by email</button>'+
    '<p class="aps-invite-footnote">New workspace membership is separate from board access. Copying a board link does not grant permission.</p>'+
@@ -151,7 +149,7 @@ export function openBoardInviteDialog(options={}){
   highlightId=null;setCandidates();
   if(searchTimer!==null)clearTimeout(searchTimer);
   const token=++searchToken;
-  if(!query.trim()||!verifiedCandidates(directory)||typeof options.onSearchDirectory!=='function')return;
+  if(!query.trim()||typeof options.onSearchDirectory!=='function')return;
   searchTimer=setTimeout(async()=>{
    try{
     const updated=await options.onSearchDirectory(query);
@@ -191,9 +189,10 @@ export function openBoardInviteDialog(options={}){
   if(!target||working||!accessEnabled||!verifiedCandidates(directory)||!verifiedMembers(people))return;
   const removing=target.hasAttribute('data-aps-invite-revoke');
   const userId=removing?target.dataset.apsInviteRevoke:target.dataset.apsInviteAssign;
-  const person=removing?people.people.find(p=>p.id===userId&&p.role==='viewer'):
+  const person=removing?people.people.find(p=>p.id===userId&&
+     (p.role==='viewer'||directory.source==='SIGNED_ADMIN_BOARD_DIRECTORY'&&p.role==='editor')):
    directory.members.find(p=>p.id===userId&&!p.boardRole);
-  if(!person)return;
+  if(!person||directory.members.find(p=>p.id===userId)?.protected)return;
   if(removing&&userId===options.currentUserId&&!window.confirm('Remove your own access to this board?'))return;
   working=true;target.disabled=true;
   status(removing?'Removing viewer access…':'Adding viewer to this board…');
@@ -202,6 +201,9 @@ export function openBoardInviteDialog(options={}){
    if(active?.overlay!==overlay)return;
    await reconcile();
    if(active?.overlay!==overlay)return;
+   const current=people.people.find(p=>p.id===userId);
+   if((removing&&current)||( !removing&&current?.role!=='viewer'))
+     throw Error('Board membership did not reconcile after the signed write.');
    highlightId=removing?null:userId;
    query='';
    repaint();
