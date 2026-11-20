@@ -319,7 +319,7 @@ BEGIN
  THEN RAISE EXCEPTION 'Signed Teams actor required' USING ERRCODE='42501'; END IF;
  IF p_action NOT IN ('create','rename','duplicate','delete','add_member',
    'remove_member','move_member','add_other_team','make_owner','remove_owner',
-   'grant_admin','revoke_admin','assign_content','remove_content','set_avatar','set_cover')
+   'grant_admin','revoke_admin','assign_content','remove_content','set_content_role','set_avatar','set_cover')
    OR p_expected_revision IS NULL OR p_expected_revision<0
  THEN RAISE EXCEPTION 'Invalid Teams action or revision' USING ERRCODE='22023'; END IF;
  PERFORM pg_catalog.pg_advisory_xact_lock(hashtext('apsyntra-teams'),hashtext(p_workspace_id::text));
@@ -438,7 +438,7 @@ BEGIN
     NOT EXISTS(SELECT 1 FROM public.apsyntra_team_members m
      WHERE m.team_id=v_team.id AND m.is_owner)
   THEN RAISE EXCEPTION 'A nonempty team must retain at least one owner' USING ERRCODE='42501'; END IF;
- ELSIF p_action IN ('assign_content','remove_content') THEN
+ ELSIF p_action IN ('assign_content','remove_content','set_content_role') THEN
   IF p_content_type NOT IN ('board','folder','app') OR p_content_id IS NULL
   THEN RAISE EXCEPTION 'Valid content reference required' USING ERRCODE='22023'; END IF;
   IF p_action='assign_content' THEN
@@ -458,6 +458,24 @@ BEGIN
    THEN RAISE EXCEPTION 'Content target is not an authorized board' USING ERRCODE='42501'; END IF;
    INSERT INTO public.apsyntra_team_content(team_id,content_type,content_id,access_level,assigned_by)
    VALUES(v_team.id,p_content_type,p_content_id,p_access_level,v_actor);
+  ELSIF p_action='set_content_role' THEN
+   IF p_content_type<>'board' OR p_access_level NOT IN ('viewer','editor') OR
+     NOT EXISTS(SELECT 1 FROM public.work_boards b
+      WHERE b.id=p_content_id AND b.workspace_id=p_workspace_id
+       AND b.status='active' AND b.trashed_at IS NULL AND b.archived_at IS NULL)
+   THEN RAISE EXCEPTION 'A valid board and role are required'
+    USING ERRCODE='22023'; END IF;
+   IF NOT v_sys AND NOT EXISTS(
+    SELECT 1 FROM public.work_board_members bm
+     WHERE bm.board_id=p_content_id AND bm.user_id=v_actor AND bm.role='owner'
+   ) THEN RAISE EXCEPTION 'Board owner authority required for changing inherited access'
+    USING ERRCODE='42501'; END IF;
+   UPDATE public.apsyntra_team_content
+    SET access_level=p_access_level,assigned_by=v_actor,assigned_at=clock_timestamp()
+    WHERE team_id=v_team.id AND content_type='board' AND content_id=p_content_id
+     AND access_level IS DISTINCT FROM p_access_level;
+   IF NOT FOUND THEN RAISE EXCEPTION 'Board permission already changed; refresh and retry'
+    USING ERRCODE='PT409'; END IF;
   ELSE
    DELETE FROM public.apsyntra_team_content
    WHERE team_id=v_team.id AND content_type=p_content_type AND content_id=p_content_id;
