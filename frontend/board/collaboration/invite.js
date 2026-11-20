@@ -13,6 +13,22 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({
 const initials=name=>String(name||'?').trim().split(/\s+/).slice(0,2).map(p=>p[0]||'').join('').toUpperCase();
 const verifiedMembers=people=>people?.status==='SIGNED_MEMBERSHIP'&&Array.isArray(people.people);
 const verifiedCandidates=directory=>directory?.status==='VERIFIED_SIGNED_CANDIDATES'&&Array.isArray(directory.members);
+const verifiedTeams=data=>data?.status==='VERIFIED_BOARD_TEAM_CANDIDATES'&&Array.isArray(data.teams);
+function teamSuggestions(data,query,{enabled=false}={}){
+ if(!verifiedTeams(data)||!query.trim())return '';
+ const q=query.trim().toLocaleLowerCase();
+ const matches=data.teams.filter(t=>t.name.toLocaleLowerCase().includes(q)).slice(0,6);
+ return '<div class="aps-invite-suggestions aps-invite-team-suggestions" role="listbox" id="aps-invite-team-matches" aria-label="Workspace teams">'+
+  '<div class="aps-invite-suggestion-head">Teams</div>'+
+  (matches.length?matches.map(t=>
+   '<button type="button" role="option" class="aps-invite-candidate" data-aps-invite-team="'+esc(t.teamId)+'"'+
+    (!enabled||t.hasAccess?' disabled':'')+' aria-selected="false">'+
+   '<span class="aps-invite-team-avatar" aria-hidden="true">♧</span>'+
+   '<span class="aps-invite-candidate-copy"><strong>'+highlight(t.name,q)+'</strong><small>'+t.memberCount+
+    ' member'+(t.memberCount===1?'':'s')+' · Viewer access for the team</small></span>'+
+   '<span class="aps-invite-candidate-state">'+(t.hasAccess?'Already invited':enabled?'Invite team':'Unavailable')+'</span></button>'
+  ).join(''):'<p class="aps-invite-none">No matching teams</p>')+'</div>';
+}
 const cap=v=>v.charAt(0).toUpperCase()+v.slice(1);
 
 function avatar(person){
@@ -57,7 +73,7 @@ function suggestions(directory,query,{enabled=false}={}){
   ).join(''):'<p class="aps-invite-none">No matching people</p>')+
   '</div>';
 }
-export function renderBoardInviteDialog({people,directory,workspaceName='',manage=false,accessEnabled=false,query='',highlightId=null,currentUserId=null}={}){
+export function renderBoardInviteDialog({people,directory,teamDirectory=null,workspaceName='',manage=false,accessEnabled=false,teamInviteEnabled=false,query='',highlightId=null,currentUserId=null}={}){
  const verified=verifiedMembers(people);
  const list=verified?people.people:[];
  const canWrite=manage&&accessEnabled===true&&verifiedCandidates(directory);
@@ -68,10 +84,10 @@ export function renderBoardInviteDialog({people,directory,workspaceName='',manag
    '<button type="button" class="aps-invite-close" data-aps-invite-close aria-label="Close invitation dialog">×</button></div></header>'+
   '<div class="aps-invite-search-region"><label class="aps-invite-sr" for="aps-invite-search">Search workspace members</label>'+
    '<input type="text" inputmode="search" id="aps-invite-search" role="combobox" aria-expanded="'+Boolean(query.trim()&&searchEnabled)+
-   '" aria-controls="aps-invite-matches" aria-autocomplete="list" placeholder="Search workspace people by name or email"'+
+   '" aria-controls="aps-invite-matches" aria-autocomplete="list" placeholder="Search workspace people or teams"'+
    ' maxlength="120" autocomplete="off" value="'+esc(query)+'"'+(!searchEnabled?' disabled':'')+' />'+
    '<div class="aps-invite-search-results" data-aps-invite-suggestions>'+
-    (query.trim()?suggestions(directory,query,{enabled:canWrite}):'')+
+    (query.trim()?suggestions(directory,query,{enabled:canWrite})+teamSuggestions(teamDirectory,query,{enabled:manage&&teamInviteEnabled}):'')+
    '</div></div>'+
 
   '<p class="aps-invite-policy"><span aria-hidden="true">▤</span> Board access is limited by '+esc(workspaceName||'workspace')+
@@ -106,11 +122,11 @@ export function openBoardInviteDialog(options={}){
  const previous=document.activeElement;
  const overlay=document.createElement('div');
  overlay.className='aps-invite-overlay';
- let directory=options.peopleDirectory,people=options.people;
+ let directory=options.peopleDirectory,people=options.people,teamDirectory=options.teamDirectory;
  let query='',highlightId=null,working=false,searchToken=0,searchTimer=null;
  const manage=options.manage===true,accessEnabled=manage&&options.accessEnabled===true;
  overlay.innerHTML=renderBoardInviteDialog({people,directory,workspaceName:options.workspaceName,
-  manage,accessEnabled,currentUserId:options.currentUserId});
+  manage,accessEnabled,teamDirectory,teamInviteEnabled:options.teamInviteEnabled,currentUserId:options.currentUserId});
  const status=(message,isError=false)=>{
   const el=overlay.querySelector('[data-aps-invite-status]');
   if(el){el.textContent=message;el.classList.toggle('is-error',isError);}
@@ -119,7 +135,7 @@ export function openBoardInviteDialog(options={}){
   const existing=overlay.querySelector('.aps-invite-dialog');
   if(!existing||!overlay.isConnected)return;
   existing.outerHTML=renderBoardInviteDialog({people,directory,workspaceName:options.workspaceName,
-   manage,accessEnabled,query,highlightId,currentUserId:options.currentUserId});
+   manage,accessEnabled,teamDirectory,teamInviteEnabled:options.teamInviteEnabled,query,highlightId,currentUserId:options.currentUserId});
   options.onMountAvatars?.(overlay);
   if(focus){
    const field=overlay.querySelector('#aps-invite-search');
@@ -129,7 +145,8 @@ export function openBoardInviteDialog(options={}){
  const setCandidates=()=>{
   const host=overlay.querySelector('[data-aps-invite-suggestions]');
   if(host){
-   host.innerHTML=query.trim()?suggestions(directory,query,{enabled:accessEnabled}):'';
+   host.innerHTML=query.trim()?suggestions(directory,query,{enabled:accessEnabled})+
+     teamSuggestions(teamDirectory,query,{enabled:manage&&options.teamInviteEnabled===true}):'';
    overlay.querySelector('#aps-invite-search')?.setAttribute('aria-expanded',String(Boolean(query.trim())));
   }
  };
@@ -149,13 +166,23 @@ export function openBoardInviteDialog(options={}){
   highlightId=null;setCandidates();
   if(searchTimer!==null)clearTimeout(searchTimer);
   const token=++searchToken;
-  if(!query.trim()||typeof options.onSearchDirectory!=='function')return;
+  if(!query.trim()||typeof options.onSearchDirectory!=='function'&&typeof options.onSearchTeams!=='function')return;
   searchTimer=setTimeout(async()=>{
    try{
-    const updated=await options.onSearchDirectory(query);
-    if(active?.overlay!==overlay||token!==searchToken)return;
-    if(updated?.status!=='VERIFIED_SIGNED_CANDIDATES')throw Error('unverified search');
-    directory=updated;setCandidates();
+    const updates=await Promise.all([
+      typeof options.onSearchDirectory==='function'?options.onSearchDirectory(query):null,
+      typeof options.onSearchTeams==='function'?options.onSearchTeams(query):null
+     ]);
+     if(active?.overlay!==overlay||token!==searchToken)return;
+     if(updates[0]){
+      if(updates[0].status!=='VERIFIED_SIGNED_CANDIDATES')throw Error('unverified people search');
+      directory=updates[0];
+     }
+     if(updates[1]){
+      if(!verifiedTeams(updates[1]))throw Error('unverified team search');
+      teamDirectory=updates[1];
+     }
+     setCandidates();
    }catch{
     if(active?.overlay===overlay&&token===searchToken)
      status('Workspace search could not be verified. Retry typing your query.',true);
@@ -184,6 +211,30 @@ export function openBoardInviteDialog(options={}){
   }
   if(event.target.closest?.('[data-aps-invite-workspace]')){
    closeBoardInviteDialog();options.onInviteWorkspace?.();return;
+  }
+  const teamButton=event.target.closest?.('[data-aps-invite-team]');
+  if(teamButton){
+   if(working||options.teamInviteEnabled!==true||!verifiedTeams(teamDirectory))return;
+   const team=teamDirectory.teams.find(t=>t.teamId===teamButton.dataset.apsInviteTeam&&!t.hasAccess);
+   if(!team)return;
+   if(!window.confirm('Invite '+team.name+' as Viewer? Current and future members of this team will inherit Viewer access while the assignment remains active.'))return;
+   working=true;teamButton.disabled=true;status('Assigning Viewer access to the team…');
+   try{
+    if(typeof options.onInviteTeam!=='function')throw Error('Team invite not configured');
+    await options.onInviteTeam(team.teamId);
+    const updated=await options.onSearchTeams?.('');
+    if(active?.overlay!==overlay)return;
+    if(!verifiedTeams(updated)||!updated.teams.some(t=>t.teamId===team.teamId&&t.hasAccess))
+     throw Error('Team board permission readback failed');
+    teamDirectory=updated;query='';repaint();
+    options.onToast?.(team.name+' now has Viewer access to this board.');
+   }catch(error){
+    if(active?.overlay===overlay){
+     status('Team permission could not be verified. Refresh and retry.',true);
+     teamButton.disabled=false;
+    }
+   }finally{working=false;}
+   return;
   }
   const target=event.target.closest?.('[data-aps-invite-assign],[data-aps-invite-revoke]');
   if(!target||working||!accessEnabled||!verifiedCandidates(directory)||!verifiedMembers(people))return;
