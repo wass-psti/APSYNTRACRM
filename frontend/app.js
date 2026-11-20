@@ -1145,6 +1145,22 @@ function canRequestBulk(board){
  return auth.isSignedIn&&state.edit&&canBulkEditBoard(board)&&
   !state.bulk02Busy&&itemSelection.size>0&&itemSelection.size<=50;
 }
+/** Non-destructive loaded-row filters, isolated to the current signed board. */
+const boardViewFilter={person:'',status:'',sort:'board'};
+let boardViewFilterScope='';
+function applyBoardViewFilter(rows){
+ const filtered=rows.filter(item=>
+  (!boardViewFilter.person||String(item.assignee_id||'')===boardViewFilter.person)&&
+  (!boardViewFilter.status||String(item.status||'')===boardViewFilter.status));
+ if(boardViewFilter.sort==='title_asc'||boardViewFilter.sort==='title_desc'){
+  const factor=boardViewFilter.sort==='title_asc'?1:-1;
+  filtered.sort((a,b)=>factor*String(a.title||'').localeCompare(String(b.title||'')));
+ }else if(boardViewFilter.sort==='due_asc'||boardViewFilter.sort==='due_desc'){
+  const factor=boardViewFilter.sort==='due_asc'?1:-1;
+  filtered.sort((a,b)=>factor*String(a.due_date||'9999-12-31').localeCompare(String(b.due_date||'9999-12-31')));
+ }
+ return filtered;
+}
 /** Collapse affects only presentation; signed records stay mounted and unchanged. */
 const boardGroupCollapsedByScope=new Map();
 function boardGroupCollapseKey(groupId){
@@ -1354,6 +1370,11 @@ function boardPage(){
  if(moduleByBoardName(b.name)?.key==='timetracker')return renderTimeTrackerApplication();
   if(state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt')return renderFundTrackerApplication();
  if(state.boardItemSearchBoard!==b.id){state.boardItemSearch='';state.boardItemSearchBoard=b.id;}
+ const viewFilterScope=[state.context?.user_id,state.context?.workspace_id,b.id].join('|');
+ if(boardViewFilterScope!==viewFilterScope){
+  boardViewFilterScope=viewFilterScope;
+  boardViewFilter.person='';boardViewFilter.status='';boardViewFilter.sort='board';
+ }
  // TradeLink Draft archives retain signed Board/audit records, but are not
  // active Board items. Other boards keep their established archive presentation.
  const items=isTradeLinkBoard(b)?searchTradeLinkBoardItems(state.board):
@@ -1368,6 +1389,11 @@ function boardPage(){
   if(bucket)bucket.push(item);
   else ungroupedItems.push(item);
  }
+ if(state.tab==='items'){
+  for(const [id,rows] of groupedItems)groupedItems.set(id,applyBoardViewFilter(rows));
+  ungroupedItems.splice(0,ungroupedItems.length,...applyBoardViewFilter(ungroupedItems));
+ }
+ const boardStatusOptions=[...new Set(items.map(item=>item.status).filter(Boolean))];
  const hiddenIds=isManagedTimeTrackerBoard(b)?readHiddenEmptyGroups(state.context,b.id):new Set();
  // The exact, verified empty TimeTracker secondary group is omitted for all
  // signed viewers, without any DB mutation or browser-local preference.
@@ -1435,7 +1461,7 @@ ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSour
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ New item</button>':''}
  <div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="⌕ Search…" value="${e(state.boardItemSearch)}" /></div>
  <details class="board-tool-menu"><summary>♙ Person</summary><div class="board-tool-menu-panel"><label for="board-person-filter">Assigned person</label><select id="board-person-filter" name="board-person-filter"><option value="">All people</option>${(state.board.members||[]).filter(m=>m.user_id).map(m=>'<option value="'+e(m.user_id)+'"'+(boardViewFilter.person===m.user_id?' selected':'')+'>'+e(m.display_name||m.email||'Member')+'</option>').join('')}</select></div></details>
- <details class="board-tool-menu"><summary>▽ Filter</summary><div class="board-tool-menu-panel"><label for="board-status-filter">Status</label><select id="board-status-filter" name="board-status-filter"><option value="">All statuses</option>${['not_started','in_progress','blocked','done'].map(s=>'<option value="'+s+'"'+(boardViewFilter.status===s?' selected':'')+'>'+e(s.replaceAll('_',' '))+'</option>').join('')}</select></div></details>
+ <details class="board-tool-menu"><summary>▽ Filter</summary><div class="board-tool-menu-panel"><label for="board-status-filter">Status</label><select id="board-status-filter" name="board-status-filter"><option value="">All statuses</option>${boardStatusOptions.map(s=>'<option value="'+e(s)+'"'+(boardViewFilter.status===s?' selected':'')+'>'+e(s)+'</option>').join('')}</select></div></details>
  <details class="board-tool-menu"><summary>⇅ Sort</summary><div class="board-tool-menu-panel"><label for="board-sort-mode">Sort displayed rows</label><select id="board-sort-mode" name="board-sort-mode">${[['board','Board order'],['title_asc','Item A–Z'],['title_desc','Item Z–A'],['due_asc','Due date ↑'],['due_desc','Due date ↓']].map(([value,label])=>'<option value="'+value+'"'+(boardViewFilter.sort===value?' selected':'')+'>'+label+'</option>').join('')}</select></div></details>
  ${boardColumnMenu(columns,layout)}
  <details class="board-tool-menu"><summary>▣ Group by</summary><div class="board-tool-menu-panel" role="note"><strong>Saved board groups</strong><p>Items remain in their authorized group. Re-grouping will be enabled after a verified projection is available.</p></div></details>
@@ -11158,6 +11184,12 @@ function syncTradeLinkFinanceInput(event){
 }
 root.addEventListener('change',event=>{
  if(syncTradeLinkFinanceInput(event))return;
+ if(['board-person-filter','board-status-filter','board-sort-mode'].includes(event.target.id)&&
+    state.view==='board'&&state.tab==='items'&&activeBoardLayout()){
+  const key={'board-person-filter':'person','board-status-filter':'status','board-sort-mode':'sort'}[event.target.id];
+  boardViewFilter[key]=event.target.value;
+  render();return;
+ }
  // TimeTracker uses row highlighting and a details popup; no checkbox selection.
  const trashCheckbox=event.target.closest?.('[data-trash-board-select]');
  if(trashCheckbox){
