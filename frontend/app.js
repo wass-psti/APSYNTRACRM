@@ -1124,6 +1124,8 @@ function renderTimeTrackerApplication(){
   locationPreference:readTimeTrackerLocationPreference(typeof localStorage==='undefined'?null:localStorage,{
    userId:state.context?.user_id,workspaceId:state.context?.workspace_id
   }),
+  geoPermission:state.ttGeoPermission,geoChecking:state.ttGeoChecking,
+  geoMessage:state.ttGeoMessage,clockStage:state.ttClockStage,
   error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,
   view:state.ttView,employeesSearch:state.ttEmployeesSearch,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,
   reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,
