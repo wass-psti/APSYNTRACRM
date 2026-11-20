@@ -8809,6 +8809,19 @@ async function action(name,button){
   },{submitLabel:'Post reply'});
   break;
  }
+ case 'tb-file-cleanup':{
+  if(!state.edit||!talkBoxState.features?.attachmentRemoval||
+     !talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
+  const scope=talkBoxState.scope,issueId=talkBoxState.selected.id;
+  const asset=talkBoxState.selected.pendingAttachmentCleanup?.find(x=>String(x.id)===button.dataset.id);
+  if(!asset)break;
+  await (await talkBoxAttachments()).removeVerified(issueId,asset);
+  if(talkBoxCurrent(scope)&&talkBoxState.selected?.id===issueId){
+   talkBoxState.selected=await talkBoxClient().get(issueId);
+   render();toast('Private attachment cleanup confirmed.');
+  }
+  break;
+ }
  case 'tb-file-remove':{
   if(!state.edit||!talkBoxState.features?.attachmentRemoval||
      !talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;

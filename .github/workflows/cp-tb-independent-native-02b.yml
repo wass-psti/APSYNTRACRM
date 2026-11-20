@@ -1,0 +1,50 @@
+name: CP-TB Native 02B Isolated PostgreSQL 17 Acceptance
+on:
+  pull_request:
+    paths:
+      - "supabase/migration-candidates/cp_tb_independent_native_02_thread_and_media.sql"
+      - "scripts/tests/talkbox-native-02b-pg.test.mjs"
+      - "frontend/talkbox-*"
+      - "frontend/tests/talkbox-native-02-backend.test.mjs"
+      - "frontend/tests/board-cache-channel.test.mjs"
+      - "frontend/app.js"
+      - "frontend/data.js"
+      - ".github/workflows/cp-tb-independent-native-02b.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migration-candidates/cp_tb_independent_native_02_thread_and_media.sql"
+      - "scripts/tests/talkbox-native-02b-pg.test.mjs"
+      - "frontend/talkbox-*"
+      - "frontend/tests/talkbox-native-02-backend.test.mjs"
+      - "frontend/tests/board-cache-channel.test.mjs"
+      - "frontend/app.js"
+      - "frontend/data.js"
+      - ".github/workflows/cp-tb-independent-native-02b.yml"
+permissions:
+  contents: read
+jobs:
+  isolated-postgres17-and-native-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned PostgreSQL 17 WASM outside repository
+        run: npm install --prefix "$RUNNER_TEMP/tb-pg17" --no-save --ignore-scripts --no-audit --no-fund @electric-sql/pglite@0.3.16
+      - name: Execute source schema and migration candidate on isolated PostgreSQL 17
+        run: |
+          export PGLITE_MODULE="$RUNNER_TEMP/tb-pg17/node_modules/@electric-sql/pglite/dist/index.js"
+          node --test scripts/tests/talkbox-native-02b-pg.test.mjs
+      - name: Install existing app dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Native V2 client and cache contracts
+        run: node --test frontend/tests/talkbox-native-02-backend.test.mjs frontend/tests/talkbox-native-02.test.mjs frontend/tests/board-cache-channel.test.mjs
+      - name: Frontend regression, build and CSS delivery
+        run: |
+          npm test
+          npm run build
+          node scripts/build-priority5-styles.mjs --check

@@ -97,8 +97,9 @@ export class TalkBoxAttachmentClient{
    throw new TypeError('Invalid native attachment removal request');
   const detail=await this.api.rpc('toolbox_issues_get_issue',{
    p_workspace_id:this.workspaceId,p_issue_id:issue});
-  const current=detail?.assets?.find(x=>String(x.id)===String(asset.id));
-  if(!current)throw new ApiError('Selected attachment is no longer active',404);
+  const current=detail?.assets?.find(x=>String(x.id)===String(asset.id))||
+    detail?.pendingAttachmentCleanup?.find(x=>String(x.id)===String(asset.id));
+  if(!current)throw new ApiError('Selected attachment is no longer active or pending cleanup',404);
   const path=current.storagePath;
   if(typeof path!=='string'||!path.startsWith(this.workspaceId+'/'+issue+'/')||
      path.split('/').length!==4||path.split('/').some(x=>!x||x==='..'||x==='.'))
@@ -114,16 +115,36 @@ export class TalkBoxAttachmentClient{
    throw new ApiError('Attachment still appears in signed native issue readback',409);
   try{
    await this.signedFetch(path,'DELETE');
-  }catch{
-   throw new ApiError('Attachment hidden but private binary deletion unconfirmed; retry cleanup with the original attachment ID',409);
+  }catch(error){
+   if(error?.status!==404)
+    throw new ApiError('Attachment hidden but private binary deletion unconfirmed; use Retry cleanup',409);
   }
+  let missing=false;
   try{
    await this.signedFetch(path,'GET');
   }catch(error){
-   if(error?.status===404)return refreshed;
-   throw new ApiError('Attachment removed from issue, but private binary absence could not be verified',409);
+   if(error?.status===404)missing=true;
+   else throw new ApiError('Private attachment absence could not be verified; use Retry cleanup',409);
   }
-  throw new ApiError('Attachment remains downloadable after removal; cleanup is incomplete',409);
+  if(!missing)throw new ApiError('Attachment remains downloadable; use Retry cleanup',409);
+  let confirmation;
+  try{
+   confirmation=await this.api.rpc('toolbox_issues_confirm_attachment_purged',{
+    p_workspace_id:this.workspaceId,p_issue_id:issue,p_attachment_id:String(current.id)
+   });
+  }catch{
+   throw new ApiError('Storage was removed, but backend purge confirmation is pending; use Retry cleanup',409);
+  }
+  if(confirmation?.success!==true||String(confirmation.id)!==String(current.id)||
+     confirmation.storagePath!==path||String(confirmation.issueId)!==issue)
+   throw new ApiError('Private attachment purge receipt mismatch; use Retry cleanup',409);
+  const final=await this.api.rpc('toolbox_issues_get_issue',{
+   p_workspace_id:this.workspaceId,p_issue_id:issue
+  });
+  if(final?.assets?.some(x=>String(x.id)===String(current.id))||
+     final?.pendingAttachmentCleanup?.some(x=>String(x.id)===String(current.id)))
+   throw new ApiError('Attachment cleanup remains pending on signed readback',409);
+  return final;
  }
  async download(issueIdValue,asset){
   const issue=String(issueIdValue||'');
