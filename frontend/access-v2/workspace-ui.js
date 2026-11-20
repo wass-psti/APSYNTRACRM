@@ -73,7 +73,8 @@ export function renderWorkspaceRoles({
 }={}){
  const ready=snapshot?.status==='VERIFIED_TEAMS';
  const available=ready?snapshot.teams:[];
- const team=available.find(t=>t.id===selectedTeamId)||available[0]||null;
+ const team=available.find(t=>t.id===selectedTeamId)||
+  available.find(t=>t.name==='Information Technology (IT)')||available[0]||null;
  const selectedId=team?.id||'';
  const allMembers=ready&&team?snapshot.members.filter(p=>p.teamId===selectedId):[];
  const allBoards=ready&&team?snapshot.content.filter(c=>c.teamId===selectedId&&c.contentType==='board'):[];
@@ -83,8 +84,8 @@ export function renderWorkspaceRoles({
  const canManage=team?.canManage===true;
  const details=loading?'<div class="ap-v2-loading"><div class="ap-v2-skeleton title"></div>'+
   Array.from({length:5},()=>'<div class="ap-v2-skeleton"></div>').join('')+'</div>':
-  !ready?'<div class="ap-v2-unavailable" role="status"><h2>Team management is not available yet</h2>'+
-   '<p>'+esc(error||'The signed team-management service has not been activated. Existing users and permissions have not changed.')+'</p>'+
+  !ready||!team?'<div class="ap-v2-unavailable" role="status"><h2>'+(ready?'No teams assigned':'Team management is not available yet')+'</h2>'+
+   '<p>'+esc(error||(ready?'This account has no authorized team memberships.':'The signed team-management service has not been activated. Existing users and permissions have not changed.'))+'</p>'+
    '<button type="button" class="ap-v2-primary" data-action="teams-retry">Retry</button></div>':
   '<div class="ap-v2-cover"></div><div class="ap-v2-heading"><span class="ap-v2-team-avatar">'+esc(initials(displayName))+'</span>'+
    '<div class="ap-v2-team-title"><h2>'+esc(displayName)+'</h2><p>'+team.memberCount+
