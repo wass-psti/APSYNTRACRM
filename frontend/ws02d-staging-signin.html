@@ -28,7 +28,7 @@ small{display:block;color:inherit;opacity:.8}h1{font-size:1.5rem}h2{font-size:1.
 <label for="inviter-password">Staging account password</label><input id="inviter-password" type="password" autocomplete="off">
 <button type="button" data-login="inviter">Sign in inviter</button>
 <button type="button" data-otp="inviter">Request numeric email code</button>
-<label for="inviter-code">Numeric email OTP code</label><input id="inviter-code" type="text" inputmode="numeric" autocomplete="one-time-code">
+<label for="inviter-code">Numeric email OTP code</label><input id="inviter-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9]{8}">
 <button type="button" data-verify="inviter">Verify inviter code</button>
 <output id="inviter-status" role="status">Not signed in</output>
 </section>
@@ -38,7 +38,7 @@ small{display:block;color:inherit;opacity:.8}h1{font-size:1.5rem}h2{font-size:1.
 <label for="recipient-password">Staging account password</label><input id="recipient-password" type="password" autocomplete="off">
 <button type="button" data-login="recipient">Sign in recipient</button>
 <button type="button" data-otp="recipient">Request numeric email code</button>
-<label for="recipient-code">Numeric email OTP code</label><input id="recipient-code" type="text" inputmode="numeric" autocomplete="one-time-code">
+<label for="recipient-code">Numeric email OTP code</label><input id="recipient-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9]{8}">
 <button type="button" data-verify="recipient">Verify recipient code</button>
 <output id="recipient-status" role="status">Not signed in</output>
 </section>
@@ -116,7 +116,7 @@ document.querySelectorAll('[data-otp]').forEach(b=>b.addEventListener('click',as
 }));
 document.querySelectorAll('[data-verify]').forEach(b=>b.addEventListener('click',async()=>{
  const which=b.dataset.verify,field=$(which+'-code'),token=field.value.trim();field.value='';
- if(!/^\d{6,8}$/.test(token)){status(which+'-status','Enter the 6–8 digit one-time email code, not a link.');return}
+ if(!/^\d{8}$/.test(token)){status(which+'-status','Enter the eight-digit staging OTP code, not an authentication link.');return}
  try{await save(which,await api('/auth/v1/verify',{email:$(which+'-email').value,token,type:'email'}))}
  catch(e){slots[which]=null;showError(which+'-status',e)}
 }));
