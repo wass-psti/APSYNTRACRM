@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {projectTimeTrackerEmployees,renderTimeTrackerEmployees}
+import {projectTimeTrackerEmployees,renderTimeTrackerEmployees,projectTimeTrackerEmployeeDepartments}
  from '../time-tracker-application.js';
 import {TimeTrackerNativeClient,TT_ROLES} from '../time-tracker-native.js';
 import {renderTimeTrackerNative} from '../time-tracker-ui.js';
@@ -121,4 +121,32 @@ test('the menu refreshes on open and search never fetches raw Supabase Auth acco
  assert.match(css,/\.tt-employees-board/);
  assert.match(css,/@media \(max-width: 620px\)/);
  assert.doesNotMatch(app,/auth\.admin\.listUsers/);
+});
+
+test('Employees management uses signed department assignments and never invents unavailable values',()=>{
+ const directory=projectTimeTrackerEmployees(rows,scope);
+ const snapshot={contract:'tt-department-directory-1',actorId:actor,
+  workspaceId:workspace,boardId:board,
+  assignments:[{userId:colleague,department:'Engineering'}]};
+ const assigned=projectTimeTrackerEmployeeDepartments(directory,snapshot);
+ assert.equal(assigned.departmentsReady,true);
+ assert.equal(assigned.members.find(x=>x.id===colleague).department,'Engineering');
+ const html=renderTimeTrackerEmployees({directory:assigned,
+  access:{...scope,moduleRole:'IT Administrator'}});
+ assert.match(html,/Engineering/);
+ assert.match(html,/data-action="tt-employees-department-edit"/);
+ assert.match(html,/data-action="tt-employees-attendance"/);
+ assert.doesNotMatch(renderTimeTrackerEmployees({directory:assigned,
+  access:{...scope,moduleRole:'Employee'}}),/tt-employees-department-edit/);
+ const unavailable=projectTimeTrackerEmployeeDepartments(directory,null);
+ assert.match(renderTimeTrackerEmployees({directory:unavailable,
+  access:{...scope,moduleRole:'System Admin'}}),/Department assignments unavailable/);
+ assert.doesNotMatch(renderTimeTrackerEmployees({directory:unavailable,
+  access:{...scope,moduleRole:'System Admin'}}),/tt-employees-department-edit/);
+ for(const bad of [
+  {...snapshot,workspaceId:actor},
+  {...snapshot,assignments:[{userId:colleague,department:'Unknown'}]},
+  {...snapshot,assignments:[{userId:colleague,department:'Engineering'},
+   {userId:colleague,department:'Engineering'}]}
+ ])assert.throws(()=>projectTimeTrackerEmployeeDepartments(directory,bad));
 });

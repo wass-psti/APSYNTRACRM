@@ -64,7 +64,7 @@ test('System Admin can read only selected attendance records and active employee
 
 test('non-System Admin users cannot invoke the administrative attendance snapshot',async()=>{
  const {client,calls}=setup({role:'Employee'});
- await assert.rejects(()=>client.attendanceAdminRecords(board,[recordId]),/System Admin/);
+ await assert.rejects(()=>client.attendanceAdminRecords(board,[recordId]),/administrator/);
  assert.equal(calls.some(x=>x.name==='timetracker_attendance_admin_snapshot'),false);
 });
 
@@ -104,4 +104,28 @@ test('invalid record IDs and excessive selection sizes are rejected before RPC',
  await assert.rejects(()=>client.attendanceAdminRecords(board,['not-a-uuid']),/selection is invalid/);
  await assert.rejects(()=>client.attendanceAdminRecords(board,Array(101).fill(recordId)),/selection is invalid/);
  assert.equal(calls.some(x=>x.name==='timetracker_attendance_admin_snapshot'),false);
+});
+
+test('IT Administrator may correct one session’s timestamps but never delete, bulk edit, GPS or ownership',async()=>{
+ const {client,calls}=setup({role:'IT Administrator'});
+ assert.equal((await client.attendanceAdminRecords(board,[recordId])).records.length,1);
+ const receipt=await client.mutateAttendanceRecords(board,{
+  action:'edit',recordIds:[recordId],
+  patch:{clockInAt:'2026-11-16T00:20:00.000Z'},
+  reason:'Employee submitted verified discrepancy',expectedRevision:4
+ });
+ assert.equal(receipt.changedCount,1);
+ const before=calls.filter(x=>x.name==='timetracker_attendance_admin_mutate').length;
+ for(const attempt of [
+  {action:'delete',recordIds:[recordId],patch:{}},
+  {action:'bulk-edit',recordIds:[recordId],patch:{clockInAt:'2026-11-16T00:20:00.000Z'}},
+  {action:'edit',recordIds:[recordId],patch:{employeeId:employee}},
+  {action:'edit',recordIds:[recordId],patch:{clockInGeo:{latitude:10,longitude:123}}},
+  {action:'edit',recordIds:[recordId],patch:{clockInAt:'2026-11-16T00:20:00.000Z'},reason:'short'}
+ ]){
+  await assert.rejects(()=>client.mutateAttendanceRecords(board,{
+   ...attempt,reason:attempt.reason||'Verified employee correction',expectedRevision:4
+  }),/IT Administrator/);
+ }
+ assert.equal(calls.filter(x=>x.name==='timetracker_attendance_admin_mutate').length,before);
 });

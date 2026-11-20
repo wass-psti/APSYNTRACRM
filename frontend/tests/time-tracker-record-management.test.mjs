@@ -266,3 +266,22 @@ test('manual credited duration overrides the normal break calculation only on co
 });
 
 test('bulk management limit remains bounded',()=>assert.equal(TT_ADMIN_RECORD_LIMIT,100));
+
+test('IT Administrator time-only editor cannot expose delete, GPS, employee, status or department changes',()=>{
+ const completed=renderTimeTrackerAdminEditor({
+  editor:{mode:'single',records:[completedRecord()],recordIds:[recordId]},
+  timeOnly:true
+ });
+ for(const name of ['clockInAt','clockOutAt','reason'])
+  assert.match(completed,new RegExp('name="'+name+'"'));
+ assert.match(completed,/minlength="10"/);
+ for(const blocked of ['employeeId','clockInGeo','clockOutGeo','durationMode','name="status"'])
+  assert.doesNotMatch(completed,new RegExp(blocked));
+ const active=renderTimeTrackerAdminEditor({
+  editor:{mode:'single',records:[activeRecord()],recordIds:[recordId]},
+  timeOnly:true
+ });
+ assert.match(active,/Active clock-in session/);
+ assert.doesNotMatch(active,/name="clockOutAt"/);
+ assert.doesNotMatch(active,/Delete record/);
+});
