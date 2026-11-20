@@ -112,7 +112,7 @@ import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient
 import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board/services/card-lifecycle.js';
 import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board/selection.js';
 import {boardCatalogResultLabel} from './board/presentation/catalog-results.js';
-import {resolveColumnTypeSelection,renderColumnTypeOptions} from './board/columns/column-catalog.js';
+import {resolveColumnTypeSelection,renderColumnTypeOptions,BOARD_STANDARD_COLUMN_CATALOG} from './board/columns/column-catalog.js';
 import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
  projectConfirmedColumnRename,
  confirmInlineColumnDelete} from './board/inline/inline-context.js';
@@ -1084,7 +1084,7 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
   empty:'No items in this group yet',selection:{enabled:true,selected:itemSelection.ids},
   footer:renderGroupAddRow({groupId,enabled:writable,busy:state.inlineAddBusy}),
   summaries:detail?.pagination?.loaded!==true||detail?.pagination?.has_more===true?null:groupColumnSummaries({items,columns,detail}),
-  addColumn:writable&&state.boardManage,minimal,
+  addColumn:writable&&state.boardManage&&BOARD_STRUCTURE_ADMIN_ENABLED,minimal,
   virtualize:true,primaryEditable});
 }
 
@@ -6356,6 +6356,170 @@ async function contextualColumnDelete(key){
    await loadBoard(snapshot.boardId,'items');
   },{submitLabel:plan.submitLabel});
 }
+
+/** Header-adjacent picker: no speculative writes or new server schema. */
+let boardQuickPicker=null,boardQuickPickerTrigger=null;
+const boardRecentColumnTypes=[];
+const boardPlannedColumnTypes=[
+ ['Files','▣'],['Doc','▤'],['Connect boards','⇄'],['Formula','ƒx'],
+ ['Accounts','▣'],['Contacts','♧'],['Time tracking','◷']
+];
+function closeBoardQuickColumnPicker({restoreFocus=false}={}){
+ const previous=boardQuickPickerTrigger;
+ boardQuickPicker?.remove();
+ boardQuickPicker=null;boardQuickPickerTrigger=null;
+ previous?.classList.remove('board-add-column-anchor');
+ if(restoreFocus&&previous?.isConnected)previous.focus();
+}
+function boardQuickTypeTile(entry,{disabled=false}={}){
+ const type=entry.type||'',label=entry.label||'';
+ return '<button class="board-quick-type-choice" type="button"'+
+  (disabled?' disabled title="Requires a separately activated storage and UI contract"':' data-board-quick-type="'+e(type)+'"')+
+  ' data-board-type-search="'+e((label+' '+(entry.keywords||'')+' '+(entry.description||'')).toLowerCase())+'"'+
+  ' data-type="'+e(type||label.toLowerCase().replaceAll(' ','-'))+'">'+
+  '<span class="board-quick-type-icon" aria-hidden="true">'+e(entry.icon||'▤')+'</span>'+
+  '<span class="board-quick-type-info"><strong>'+e(label)+'</strong>'+
+  (disabled?'<small>Not enabled</small>':'')+'</span></button>';
+}
+function openBoardQuickColumnPicker(trigger){
+ if(!trigger?.isConnected||!activeBoardLayout()||!state.boardManage||
+    !BOARD_STRUCTURE_ADMIN_ENABLED||!canManuallyEditBoard(state.board?.board,true))return;
+ if(boardQuickPicker?.isConnected&&boardQuickPickerTrigger===trigger){
+  closeBoardQuickColumnPicker({restoreFocus:true});return;
+ }
+ closeBoardQuickColumnPicker();
+ const catalog=BOARD_STANDARD_COLUMN_CATALOG;
+ const recent=boardRecentColumnTypes.map(type=>catalog.find(entry=>entry.type===type)).filter(Boolean);
+ const tileGroup=(title,entries,disabled=false)=>entries.length?
+  '<section class="board-quick-type-section" data-board-quick-group><h4>'+e(title)+'</h4>'+
+  '<div class="board-quick-type-grid">'+entries.map(entry=>boardQuickTypeTile(entry,{disabled})).join('')+'</div></section>':'';
+ const picker=document.createElement('section');
+ picker.className='board-quick-column-picker';picker.setAttribute('role','dialog');
+ picker.setAttribute('aria-label','Add a board column');
+ picker.innerHTML='<div class="board-quick-picker-heading"><div><strong>Add a column</strong>'+
+  '<p>Choose a supported field type</p></div>'+
+  '<button type="button" data-board-picker-close aria-label="Close column picker">×</button></div>'+
+  '<input type="search" data-board-picker-search aria-label="Search column types" placeholder="Search or describe your column" autocomplete="off">'+
+  '<div class="board-quick-picker-list">'+
+   tileGroup('Recently used',recent)+
+   tileGroup('Essentials',catalog.filter(x=>x.group==='Essentials'))+
+   tileGroup('Super useful',catalog.filter(x=>x.group==='Super useful'))+
+   tileGroup('Additional types — planned',boardPlannedColumnTypes.map(([label,icon])=>({label,icon})),true)+
+  '</div><button type="button" class="board-quick-picker-more" data-board-picker-more>More columns &amp; settings…</button>';
+ root.append(picker);
+ boardQuickPicker=picker;boardQuickPickerTrigger=trigger;
+ trigger.classList.add('board-add-column-anchor');
+ const search=picker.querySelector('[data-board-picker-search]');
+ search.addEventListener('input',()=>{
+  const terms=search.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  for(const group of picker.querySelectorAll('[data-board-quick-group]')){
+   let visible=0;
+   for(const tile of group.querySelectorAll('.board-quick-type-choice')){
+    tile.hidden=!terms.every(word=>(tile.dataset.boardTypeSearch||'').includes(word));
+    if(!tile.hidden)visible++;
+   }
+   group.hidden=visible===0;
+  }
+ });
+ picker.addEventListener('keydown',event=>{
+  if(event.key==='Escape'){event.preventDefault();closeBoardQuickColumnPicker({restoreFocus:true});return;}
+  if(!['ArrowRight','ArrowLeft','ArrowDown','ArrowUp'].includes(event.key)||
+     !event.target.matches('.board-quick-type-choice'))return;
+  const tiles=[...picker.querySelectorAll('.board-quick-type-choice:not([hidden]):not(:disabled)')]
+   .filter(tile=>!tile.closest('[hidden]'));
+  const current=tiles.indexOf(event.target);
+  if(current<0||tiles.length<2)return;
+  const step=event.key==='ArrowRight'?1:event.key==='ArrowLeft'?-1:
+   event.key==='ArrowDown'?2:-2;
+  event.preventDefault();tiles[(current+step+tiles.length)%tiles.length].focus();
+ });
+ picker.addEventListener('click',event=>{
+  event.stopPropagation();
+  if(event.target.closest('[data-board-picker-close]')){
+   closeBoardQuickColumnPicker({restoreFocus:true});return;
+  }
+  if(event.target.closest('[data-board-picker-more]')){
+   closeBoardQuickColumnPicker();void openBoardStructure();return;
+  }
+  const tile=event.target.closest('[data-board-quick-type]');
+  if(!tile)return;
+  const type=tile.dataset.boardQuickType;
+  closeBoardQuickColumnPicker();
+  void createBoardQuickColumn(type).catch(notice);
+ });
+ search.focus({preventScroll:true});
+}
+async function createBoardQuickColumn(type){
+ if(!BOARD_STANDARD_COLUMN_CATALOG.some(x=>x.type===type))return;
+ const snapshot=inlineColumnSnapshot();
+ if(!snapshot||!state.boardManage||!BOARD_STRUCTURE_ADMIN_ENABLED||
+    !canManuallyEditBoard(state.board?.board,true))return;
+ const detail=await verifyInlineColumnBoard(snapshot);
+ const label=BOARD_STANDARD_COLUMN_CATALOG.find(x=>x.type===type).label;
+ const base=(type==='long_text'?'Long text':label).slice(0,70);
+ const used=new Set((detail.columns||[]).map(x=>String(x.name||'').trim().toLowerCase()));
+ let name=base,index=2;
+ while(used.has(name.toLowerCase()))name=base+' '+index++;
+ const defaults=type==='status'?'Not started\nWorking on it\nStuck\nDone':
+  type==='dropdown'?'Option 1\nOption 2':'';
+ const selection=resolveColumnTypeSelection(type,defaults);
+ const receipt=await boardStructureClient.mutate(detail,{
+  action:'create',name,type:selection.type,
+  config:parseChoiceConfig(selection.type,selection.options)
+ },{verifiedManagerPreflight:true});
+ if(state.boardId!==snapshot.boardId||state.context?.user_id!==snapshot.userId||
+    state.context?.workspace_id!==snapshot.workspaceId)return;
+ boardRecentColumnTypes.unshift(type);
+ boardRecentColumnTypes.splice(5);
+ await loadBoard(snapshot.boardId,'items');
+ if(state.boardId===snapshot.boardId&&state.context?.user_id===snapshot.userId){
+  toast(name+' column added. Rename it in place.');
+  beginBoardQuickColumnRename('col:'+receipt.column_id);
+ }
+}
+function beginBoardQuickColumnRename(key){
+ if(!state.boardManage||!key?.startsWith('col:')||state.tab!=='items')return;
+ const header=[...root.querySelectorAll('th[data-column-key]')]
+  .find(th=>th.dataset.columnKey===key);
+ const label=header?.querySelector('.board-heading-label');
+ if(!label||label.querySelector('input'))return;
+ const column=resolveInlineColumn(state.board,key,{canManage:true});
+ if(column.kind!=='custom')return;
+ const oldName=column.name,field=document.createElement('input');
+ field.type='text';field.className='board-quick-column-rename';
+ field.maxLength=80;field.value=oldName;field.setAttribute('aria-label','Rename new column');
+ label.textContent='';label.append(field);
+ let cancelled=false,busy=false;
+ const restore=()=>{if(label.isConnected)label.textContent=oldName;};
+ const commit=async()=>{
+  if(cancelled||busy||!field.isConnected)return;
+  const name=field.value.trim();
+  if(name===oldName){restore();return;}
+  if(!name||name.length>80){field.setCustomValidity('Name must contain 1–80 characters');field.reportValidity();return;}
+  busy=true;field.disabled=true;
+  try{
+   const snapshot=inlineColumnSnapshot();
+   const fresh=await verifyInlineColumnBoard(snapshot);
+   const target=resolveInlineColumn(fresh,key,{canManage:true});
+   if(target.name!==oldName)throw new ApiError('Column name changed elsewhere. Refresh.',409);
+   await boardStructureClient.mutate(fresh,{action:'update',columnId:target.id,
+    name,type:target.type,config:target.config,visible:target.visible},
+    {verifiedManagerPreflight:true});
+   await loadBoard(snapshot.boardId,'items');
+   toast('Column renamed.');
+  }catch(error){
+   if(field.isConnected){field.disabled=false;field.focus();field.select();}
+   notice(error);
+  }finally{busy=false;}
+ };
+ field.addEventListener('keydown',event=>{
+  if(event.key==='Enter'){event.preventDefault();void commit();}
+  else if(event.key==='Escape'){event.preventDefault();cancelled=true;restore();}
+ });
+ field.addEventListener('blur',()=>{if(!cancelled&&!busy)void commit();});
+ field.focus({preventScroll:true});field.select();
+}
+
 function contextualColumnCreate(){
  const snapshot=inlineColumnSnapshot();
  if(!snapshot||!state.boardManage||!activeBoardLayout()||
@@ -7941,7 +8105,7 @@ async function action(name,button){
  }
  case 'board-add-column':{
   if(!activeBoardLayout()||!state.boardManage)return;
-  contextualColumnCreate();break;
+  openBoardQuickColumnPicker(button);break;
  }
  case 'tt-board-gps':{try{await openTimeTrackerBoardProjectedGps();}catch(err){notice(err);}break;}
  case 'mrh-export-csv':{
