@@ -1425,3 +1425,292 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .board-quick-column-pic
  }
 }
 
+/* BOARD-COMPACT-36 — 2026-11-20 reference-aligned APSYNTRA Board refinement.
+   All component rules stay under the signed board shell. */
+#app .aps-board-shell{
+ --bc-row:36px;--bc-blue:#2d8cf0;--bc-line:#dfe4ee;
+ --bc-cell:#fff;--bc-cell-alt:#fbfcff;--bc-head:#f4f6fa;
+ --bc-popup:#fff;--bc-text:#253049;--bc-muted:#697790;
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell{
+ --bc-line:#414752;--bc-cell:#282c34;--bc-cell-alt:#292e37;
+ --bc-head:#31353f;--bc-popup:#282c34;
+ --bc-text:#f0f2f7;--bc-muted:#b4bfd2;
+}
+#app .aps-board-shell .board-customize-toolbar{
+ display:flex;align-items:center;flex-wrap:nowrap;gap:7px;
+ min-height:45px;padding:5px 0 11px;overflow:visible;
+}
+#app .aps-board-shell .board-customize-toolbar>.primary{
+ min-height:32px;height:32px;border-radius:6px;padding:5px 11px;
+ font-size:12px;white-space:nowrap;background:#2775d9;border-color:#2775d9;
+ color:#fff;box-shadow:none
+}
+#app .aps-board-shell .board-customize-toolbar .search-wrap{
+ flex:0 1 185px;min-width:135px
+}
+#app .aps-board-shell .board-customize-toolbar .search-wrap .search-input{
+ height:32px;min-height:32px;padding:6px 10px;border-color:transparent;
+ background:transparent;box-shadow:none
+}
+#app .aps-board-shell .board-customize-toolbar :is(.board-column-menu>summary,.board-tool-menu>summary,.board-actions-menu>summary){
+ display:flex;align-items:center;justify-content:center;gap:5px;
+ min-height:32px;height:32px;padding:5px 9px;border:1px solid transparent;
+ border-radius:6px;background:transparent;box-shadow:none;
+ font-size:12px;font-weight:600;color:var(--bc-text);white-space:nowrap;cursor:pointer
+}
+#app .aps-board-shell .board-customize-toolbar :is(.board-column-menu>summary,.board-tool-menu>summary,.board-actions-menu>summary):hover{
+ border-color:var(--bc-line);background:var(--br-hover);color:var(--br-accent)
+}
+#app .aps-board-shell .board-tool-menu,
+#app .aps-board-shell .board-hide-columns{position:relative}
+#app .aps-board-shell .board-tool-menu>summary,
+#app .aps-board-shell .board-hide-columns>summary{list-style:none}
+#app .aps-board-shell .board-tool-menu>summary::-webkit-details-marker,
+#app .aps-board-shell .board-hide-columns>summary::-webkit-details-marker{display:none}
+#app .aps-board-shell .board-tool-menu-panel,
+#app .aps-board-shell .board-hide-columns .board-column-menu-content{
+ position:absolute;top:calc(100% + 5px);left:0;right:auto;z-index:90;
+ min-width:230px;max-width:min(340px,90vw);padding:12px;
+ color:var(--bc-text);background:var(--bc-popup);border:1px solid var(--bc-line);
+ border-radius:9px;box-shadow:0 16px 40px #1317243e;
+}
+#app .aps-board-shell .board-tool-menu-panel label{display:block;font-size:11px;margin-bottom:8px;color:var(--bc-muted)}
+#app .aps-board-shell .board-tool-menu-panel select{
+ display:block;width:100%;min-height:33px;background:var(--bc-cell);
+ color:var(--bc-text);border:1px solid var(--bc-line);border-radius:6px;
+ padding:4px 8px;font-size:12px
+}
+#app .aps-board-shell .board-tool-menu-panel p{font-size:11px;line-height:1.5;white-space:normal}
+#app .aps-board-shell .board-hide-columns .board-column-menu-content{
+ width:270px;max-height:min(450px,75vh);overflow-y:auto
+}
+#app .aps-board-shell .board-hide-columns-title{
+ display:flex;flex-direction:column;gap:2px;margin:0 0 9px
+}
+#app .aps-board-shell .board-hide-columns-title strong{font-size:13px}
+#app .aps-board-shell .board-hide-columns-title span{font-size:10px;color:var(--bc-muted)}
+#app .aps-board-shell #board-hide-search{
+ width:100%;height:34px;padding:5px 9px;margin-bottom:9px;border:1px solid var(--bc-line);
+ border-radius:6px;background:var(--bc-cell-alt);color:var(--bc-text);font-size:12px
+}
+#app .aps-board-shell .board-hide-columns-list{max-height:310px;overflow-y:auto}
+#app .aps-board-shell .board-hide-columns-choice{
+ display:flex;flex-direction:row;justify-content:space-between;gap:8px;
+ align-items:center;padding:7px 6px;color:var(--bc-text);font-size:12px
+}
+#app .aps-board-shell .board-hide-columns-choice[hidden]{display:none!important}
+#app .aps-board-shell .board-hide-columns-choice input[type="checkbox"]{
+ width:27px;height:15px;accent-color:#298af0;flex:none
+}
+#app .aps-board-shell .board-hide-columns-actions{
+ display:flex;justify-content:space-between;gap:10px;margin-top:10px;
+ padding-top:9px;border-top:1px solid var(--bc-line)
+}
+#app .aps-board-shell .board-hide-columns-actions button{
+ flex:1;min-height:28px;padding:3px 7px;background:transparent;color:var(--br-accent);
+ font-size:11px;border:0;border-radius:6px;cursor:pointer
+}
+#app .aps-board-shell .board-hide-columns-actions button:hover{background:var(--br-hover)}
+#app .aps-board-shell .board-table-custom{
+ table-layout:fixed;border-collapse:separate;border-spacing:0;
+ width:max-content;min-width:100%;font-size:13px
+}
+#app .aps-board-shell .board-table-custom thead tr,
+#app .aps-board-shell .board-table-custom tbody tr:not(.board-virtual-spacer):not(.board-empty-row){
+ box-sizing:border-box;height:var(--bc-row)!important;min-height:var(--bc-row)!important;
+ max-height:var(--bc-row)!important
+}
+#app .aps-board-shell .board-table-custom thead th,
+#app .aps-board-shell .board-table-custom tbody tr:not(.board-virtual-spacer):not(.board-empty-row)>td{
+ box-sizing:border-box;height:var(--bc-row)!important;
+ min-height:var(--bc-row)!important;max-height:var(--bc-row)!important;
+ line-height:18px;padding:0 10px!important;white-space:nowrap!important;
+ overflow:hidden;text-overflow:ellipsis;vertical-align:middle;
+ border-bottom:1px solid var(--bc-line);font-size:13px
+}
+#app .aps-board-shell .board-table-custom thead th{
+ background:var(--bc-head)!important;color:var(--bc-muted);
+ position:sticky;top:0;z-index:5;font-size:12px
+}
+#app .aps-board-shell .board-table-custom :is(th,td)>:is(span,button,div){
+ min-width:0;max-width:100%;vertical-align:middle
+}
+#app .aps-board-shell .board-wrap-cell{
+ display:block!important;white-space:nowrap!important;
+ overflow:hidden!important;text-overflow:ellipsis!important;
+ -webkit-line-clamp:unset;line-clamp:unset;line-height:18px!important
+}
+#app .aps-board-shell .board-table-custom .board-inline-cell-trigger{
+ display:inline-flex;align-items:center;justify-content:flex-start;
+ height:33px;max-height:33px;max-width:100%;min-width:0;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap!important;
+ padding:0 4px!important;border:0;border-radius:2px
+}
+#app .aps-board-shell .board-table-custom .board-inline-cell-trigger>*{
+ min-width:0;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis
+}
+#app .aps-board-shell .board-table-custom .board-item-open{
+ min-width:23px;max-width:23px;margin-right:3px
+}
+#app .aps-board-shell .board-table-custom .board-member-initials{
+ width:24px;height:24px;font-size:10px;min-width:24px
+}
+#app .aps-board-shell .board-table-custom .board-member-name{
+ font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+#app .aps-board-shell .board-table-custom .board-configured-status,
+#app .aps-board-shell .board-table-custom .status{
+ display:flex;align-items:center;justify-content:center;width:100%;height:35px;
+ min-height:35px;max-height:35px;padding:0 5px!important;margin:0;
+ border:0;border-radius:0;font-size:12px;font-weight:650;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+#app .aps-board-shell .board-table-custom td.board-status-click-cell,
+#app .aps-board-shell .board-table-custom td:has(>.board-full-status-trigger){
+ padding:0!important;overflow:hidden
+}
+#app .aps-board-shell .board-table-custom .board-full-status-trigger{
+ display:flex!important;width:100%!important;max-width:100%!important;
+ height:35px!important;padding:0!important;margin:0!important
+}
+#app .aps-board-shell .board-table-custom .board-dropdown-tag,
+#app .aps-board-shell .board-table-custom .board-file-chip{
+ max-height:24px;min-height:22px;padding:2px 6px;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+#app .aps-board-shell .board-table-custom .board-rating-cell{font-size:12px;letter-spacing:1px}
+#app .aps-board-shell .board-table-custom .board-inline-add-form{
+ min-height:36px;height:36px;opacity:.55
+}
+#app .aps-board-shell .board-table-custom .board-add-item-row td{
+ height:36px!important;max-height:36px!important;padding:0 10px!important
+}
+#app .aps-board-shell .board-table-custom .board-inline-add-form input{
+ height:30px;min-height:30px
+}
+#app .aps-board-shell .board-group-scroll,
+#app .aps-board-shell .board-collapsed-rollup-scroll{
+ overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;
+ scrollbar-color:#aab5cb transparent;
+ box-shadow:inset -9px 0 9px -12px #526079
+}
+#app .aps-board-shell .board-table-custom th.board-frozen-column,
+#app .aps-board-shell .board-table-custom td.board-frozen-column{
+ position:sticky;left:0;z-index:6;
+ box-shadow:3px 0 8px -5px #52607962
+}
+#app .aps-board-shell .group-heading{
+ min-height:43px;max-height:43px;height:43px;
+ gap:7px;padding:6px 9px 5px;margin:17px 0 0;
+ color:var(--bc-text);background:transparent
+}
+#app .aps-board-shell .group-heading h3{color:inherit;font-size:15px}
+#app .aps-board-shell .board-group-tone-0{--bc-group:#9ccd32}
+#app .aps-board-shell .board-group-tone-1{--bc-group:#f3913f}
+#app .aps-board-shell .board-group-tone-2{--bc-group:#529df4}
+#app .aps-board-shell .board-group-tone-3{--bc-group:#ca80c8}
+#app .aps-board-shell .board-group-tone-4{--bc-group:#47bca6}
+#app .aps-board-shell .board-group-tone-5{--bc-group:#e4b851}
+#app .aps-board-shell .group-heading[class*="board-group-tone"] h3,
+#app .aps-board-shell .board-collapsed-group-name strong{color:var(--bc-group)}
+#app .aps-board-shell .group-heading[class*="board-group-tone"]::before{
+ background:var(--bc-group);width:5px;height:28px
+}
+#app .aps-board-shell .group-heading[class*="board-group-tone"]+.board-group-panel{
+ border-left-color:var(--bc-group)
+}
+#app .aps-board-shell .board-collapsed-group{
+ position:relative;margin:12px 0 7px;min-height:56px;max-height:56px;
+ border-radius:6px;border:1px solid var(--bc-line);border-left:5px solid var(--bc-group);
+ overflow:visible;background:var(--bc-cell);
+ animation:board-group-compact-in .18s ease-out both
+}
+#app .aps-board-shell .board-collapsed-rollup-scroll{
+ display:block;width:100%;height:55px;overflow-y:hidden;
+ border-radius:0 6px 6px 0;cursor:pointer
+}
+#app .aps-board-shell .board-collapsed-rollup-scroll:focus-visible{
+ outline:2px solid var(--bc-blue);outline-offset:2px
+}
+#app .aps-board-shell .board-collapsed-rollup-table{
+ width:max-content;min-width:100%;height:55px;table-layout:fixed;
+ border-collapse:separate;border-spacing:0;font-size:12px
+}
+#app .aps-board-shell .board-collapsed-rollup-table td{
+ box-sizing:border-box;height:55px;max-height:55px;
+ padding:4px 9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ border-right:1px solid var(--bc-line);background:var(--bc-cell);
+ text-align:center;vertical-align:middle;color:var(--bc-text)
+}
+#app .aps-board-shell .board-collapsed-rollup-table td.board-frozen-column{
+ position:sticky;left:0;z-index:2;text-align:left;
+ background:var(--bc-cell);box-shadow:3px 0 7px -5px #52607962
+}
+#app .aps-board-shell .board-collapsed-group-name{
+ display:grid;grid-template-rows:20px 18px;align-content:center;gap:1px;
+ padding-left:17px;position:relative
+}
+#app .aps-board-shell .board-collapsed-group-name::before{
+ content:"›";position:absolute;left:0;top:3px;color:var(--bc-group);
+ font-size:20px;line-height:18px
+}
+#app .aps-board-shell .board-collapsed-group-name strong{
+ font-size:14px;line-height:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+#app .aps-board-shell .board-collapsed-group-name small{
+ font-size:11px;line-height:17px;color:var(--bc-muted)
+}
+#app .aps-board-shell .board-collapsed-group-menu{
+ position:absolute;top:6px;right:6px;z-index:8;opacity:.3;
+ transition:opacity .15s ease
+}
+#app .aps-board-shell .board-collapsed-group:hover .board-collapsed-group-menu,
+#app .aps-board-shell .board-collapsed-group-menu:focus-within{opacity:1}
+#app .aps-board-shell .board-collapsed-group-menu summary{
+ color:var(--bc-muted);background:var(--bc-cell);border-radius:4px;
+ padding:4px 6px;cursor:pointer
+}
+#app .aps-board-shell .board-rollup-status{display:block;width:100%;height:9px}
+#app .aps-board-shell .board-rollup-status svg{
+ display:block;width:100%;height:9px;border-radius:2px;overflow:hidden
+}
+#app .aps-board-shell .board-rollup-people{display:flex;align-items:center;justify-content:center}
+#app .aps-board-shell .board-rollup-avatar,.board-rollup-more{
+ display:grid;place-items:center;width:22px;height:22px;min-width:22px;
+ border-radius:50%;border:2px solid var(--bc-cell);
+ background:#7062c6;color:#fff;font-size:9px;font-weight:750;margin-left:-5px
+}
+#app .aps-board-shell .board-rollup-number{font-size:12px;font-weight:700}
+#app .aps-board-shell .board-rollup-rating{font-size:12px}
+#app .aps-board-shell .board-rollup-range{font-size:11px;white-space:nowrap}
+#app .aps-board-shell .board-rollup-loading:after{
+ content:"…";font-size:11px;color:var(--bc-muted)
+}
+#app .aps-board-shell .board-add-group-bottom{
+ display:inline-flex;align-items:center;margin:10px 0 15px;
+ min-height:31px;border:1px solid var(--bc-line);border-radius:5px;
+ background:transparent;color:var(--bc-muted);font-size:12px;padding:6px 12px
+}
+#app .aps-board-shell .board-add-group-bottom:hover{background:var(--br-hover)}
+#app .aps-board-shell .board-column-resize-guide{
+ position:fixed;inset:0;z-index:9999;width:100vw;height:100vh;
+ background:transparent;pointer-events:none;overflow:visible
+}
+#app .aps-board-shell .board-column-resize-guide line{
+ stroke:var(--bc-blue);stroke-width:2;vector-effect:non-scaling-stroke
+}
+@keyframes board-group-compact-in{
+ from{opacity:.7;transform:translateY(-2px)}
+ to{opacity:1;transform:translateY(0)}
+}
+@media(max-width:900px){
+ #app .aps-board-shell .board-customize-toolbar{flex-wrap:wrap}
+ #app .aps-board-shell .board-customize-toolbar .search-wrap{min-width:160px}
+ #app .aps-board-shell .board-customize-toolbar :is(.board-tool-menu>summary,.board-hide-columns>summary){font-size:12px}
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-board-shell .board-collapsed-group{animation:none!important}
+ #app .aps-board-shell .board-collapsed-group-menu{transition:none!important}
+}
+

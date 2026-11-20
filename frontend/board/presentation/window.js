@@ -2,7 +2,7 @@
  * Only full, already-authorized board groups are eligible. No persistence.
  */
 export const BOARD_WINDOW_THRESHOLD=120;
-export const BOARD_WINDOW_ROW_HEIGHT=52;
+export const BOARD_WINDOW_ROW_HEIGHT=36;
 export const BOARD_WINDOW_SIZE=48;
 const OVERSCAN=12;
 let models=new Map();

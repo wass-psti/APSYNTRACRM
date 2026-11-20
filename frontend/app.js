@@ -50,6 +50,8 @@ import {renderFoundation} from './board/presentation/foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
 import {boardGrid,boardGridColumns,prepareBoardGrid} from './board/presentation/grid.js';
 import {boardGroupArchiveSuffix} from './board/presentation/group-counts.js';
+import {renderBoardCollapsedRollup} from './board/presentation/group-rollups.js';
+import {BoardGroupStateClient} from './board/preferences/group-state-client.js';
 import {FUELTRACK_V3_ID,findFuelTrackV3Board,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-ui.js';
 import {FUELTRACK_V3_APPLICATION_ROUTE,parseFuelTrackApplicationRoute} from './fueltrack-v3-application-route.js';
 import {verifyFuelTrackBackendSnapshot} from './fueltrack-v3-backend-projections.js';
@@ -1145,18 +1147,132 @@ function canRequestBulk(board){
  return auth.isSignedIn&&state.edit&&canBulkEditBoard(board)&&
   !state.bulk02Busy&&itemSelection.size>0&&itemSelection.size<=50;
 }
-/** Collapse affects only presentation; signed records stay mounted and unchanged. */
+/** Non-destructive loaded-row filters, isolated to the current signed board. */
+const boardViewFilter={person:'',status:'',sort:'board'};
+let boardViewFilterScope='';
+function applyBoardViewFilter(rows){
+ const filtered=rows.filter(item=>
+  (!boardViewFilter.person||String(item.assignee_id||'')===boardViewFilter.person)&&
+  (!boardViewFilter.status||String(item.status||'')===boardViewFilter.status));
+ if(boardViewFilter.sort==='title_asc'||boardViewFilter.sort==='title_desc'){
+  const factor=boardViewFilter.sort==='title_asc'?1:-1;
+  filtered.sort((a,b)=>factor*String(a.title||'').localeCompare(String(b.title||'')));
+ }else if(boardViewFilter.sort==='due_asc'||boardViewFilter.sort==='due_desc'){
+  const factor=boardViewFilter.sort==='due_asc'?1:-1;
+  filtered.sort((a,b)=>factor*String(a.due_date||'9999-12-31').localeCompare(String(b.due_date||'9999-12-31')));
+ }
+ return filtered;
+}
+/** Board-group presentation preferences never provide access to data.
+ * Signed Supabase is authoritative when its forward migration is deployed.
+ * A server outage leaves an explicitly temporary in-tab view.
+ */
 const boardGroupCollapsedByScope=new Map();
+const boardGroupTransientExpanded=new Set();
+const boardGroupRevisions=new Map();
+const boardGroupSaveBusy=new Set();
 function boardGroupCollapseKey(groupId){
  return [state.context?.user_id,state.context?.workspace_id,state.boardId,groupId].join('|');
 }
+function boardGroupScopeMatches(snapshot){
+ return auth.isSignedIn&&auth.userId===snapshot.userId&&
+  state.context?.user_id===snapshot.userId&&
+  state.context?.workspace_id===snapshot.workspaceId&&
+  state.boardId===snapshot.boardId&&state.view==='board'&&
+  state.board?.board?.id===snapshot.boardId;
+}
+async function readBoardGroupPreferences(snapshot){
+ if(!boardGroupScopeMatches(snapshot))return false;
+ try{
+  const result=await new BoardGroupStateClient(db).read(snapshot.boardId);
+  if(!boardGroupScopeMatches(snapshot))return false;
+  const allowed=new Set((state.board.groups||[]).map(g=>g.id));
+  let changed=false;
+  for(const group of result){
+   if(!allowed.has(group.group_id))continue;
+   const key=boardGroupCollapseKey(group.group_id);
+   if(boardGroupCollapsedByScope.get(key)!==group.collapsed)changed=true;
+   boardGroupCollapsedByScope.set(key,group.collapsed);
+   boardGroupRevisions.set(key,group.revision);
+  }
+  // Foreground focus must not discard an inline editor when preferences are unchanged.
+  if(changed)render();
+  return true;
+ }catch{
+  // RPC may be absent before controlled migration deployment.
+  // Never confuse local state with a confirmed cross-device save.
+  return false;
+ }
+}
 function boardGroupCollapsed(groupId,count){
+ const search=String(state.boardItemSearch||'').trim().toLowerCase();
+ const viewFiltered=!!(boardViewFilter.person||boardViewFilter.status);
+ if((search||viewFiltered)&&(state.board?.items||[]).some(i=>
+   i.group_id===groupId&&(!search||String(i.title||'').toLowerCase().includes(search))&&
+   (!boardViewFilter.person||i.assignee_id===boardViewFilter.person)&&
+   (!boardViewFilter.status||i.status===boardViewFilter.status)))return false;
  const key=boardGroupCollapseKey(groupId);
+ if(boardGroupTransientExpanded.has(key))return false;
  if(boardGroupCollapsedByScope.has(key))return boardGroupCollapsedByScope.get(key);
- return count===0&&state.board?.pagination?.loaded===true&&
-  state.board?.pagination?.has_more!==true;
+ const groups=state.board?.groups||[];
+ return groups.length>5&&groups[0]?.id!==groupId;
+}
+async function persistBoardGroupCollapsed(groupId,collapsed){
+ const snapshot={userId:state.context?.user_id,workspaceId:state.context?.workspace_id,
+  boardId:state.boardId};
+ if(!boardGroupScopeMatches(snapshot)||!(state.board.groups||[]).some(g=>g.id===groupId))return;
+ const key=boardGroupCollapseKey(groupId);
+ if(boardGroupSaveBusy.has(key))return;
+ const count=(state.board.items||[]).filter(i=>i.group_id===groupId).length;
+ const before=boardGroupCollapsed(groupId,count);
+ boardGroupTransientExpanded.delete(key);
+ boardGroupCollapsedByScope.set(key,collapsed);render();
+ const expected=boardGroupRevisions.get(key);
+ if(!Number.isSafeInteger(expected)){
+  toast('Group state is temporary until Board preference synchronization is deployed.',true);
+  return;
+ }
+ boardGroupSaveBusy.add(key);
+ try{
+  const receipt=await new BoardGroupStateClient(db).set(snapshot.boardId,groupId,collapsed,expected);
+  if(boardGroupScopeMatches(snapshot))boardGroupRevisions.set(key,receipt.revision);
+ }catch(error){
+  if(boardGroupScopeMatches(snapshot)){
+   boardGroupCollapsedByScope.set(key,before);render();
+   toast('Group preference was not saved. Refresh the board and retry.',true);
+  }
+ }finally{boardGroupSaveBusy.delete(key);}
+}
+async function persistAllBoardGroupsCollapsed(collapsed){
+ const snapshot={userId:state.context?.user_id,workspaceId:state.context?.workspace_id,
+  boardId:state.boardId};
+ if(!boardGroupScopeMatches(snapshot))return;
+ const ids=(state.board.groups||[]).map(g=>g.id);
+ const previous=new Map(ids.map(id=>[id,boardGroupCollapsedByScope.get(boardGroupCollapseKey(id))]));
+ boardGroupTransientExpanded.clear();
+ ids.forEach(id=>boardGroupCollapsedByScope.set(boardGroupCollapseKey(id),collapsed));
+ render();
+ try{
+  const result=await new BoardGroupStateClient(db).setAll(snapshot.boardId,collapsed);
+  if(!boardGroupScopeMatches(snapshot))return;
+  for(const group of result){
+   const key=boardGroupCollapseKey(group.group_id);
+   boardGroupCollapsedByScope.set(key,group.collapsed);
+   boardGroupRevisions.set(key,group.revision);
+  }
+  render();
+ }catch{
+  if(!boardGroupScopeMatches(snapshot))return;
+  for(const [id,prior] of previous){
+   const key=boardGroupCollapseKey(id);
+   if(prior===undefined)boardGroupCollapsedByScope.delete(key);
+   else boardGroupCollapsedByScope.set(key,prior);
+  }
+  render();toast('Expand/collapse all was not saved to your account.',true);
+ }
 }
 function groupHeading(group,count){
+ const {columns=[],layout=null,items=[]}=arguments[2]||{};
  const collapsed=boardGroupCollapsed(group.id,count);
  const id=e(group.id),editing=state.groupEditId===group.id;
  const managedEmpty=state.board?.pagination?.loaded===true&&state.board?.pagination?.has_more!==true&&canSafelyHideEmptyTimeTrackerGroup(state.board?.board,group,
@@ -1185,6 +1301,23 @@ function groupHeading(group,count){
   '<button type="submit" class="primary"'+(state.groupEditBusy?' disabled':'')+'>Save</button>'+
   '<button type="button" class="secondary" data-action="group-inline-cancel"'+(state.groupEditBusy?' disabled':'')+'>Cancel</button>'+
   '</form></div>';
+ const tone=Math.max(0,(state.board?.groups||[]).findIndex(g=>g.id===group.id))%6;
+ if(collapsed){
+  const complete=state.board?.pagination?.loaded===true&&
+   state.board?.pagination?.has_more!==true;
+  const totalCount=persistedCount??count;
+  return '<section class="board-collapsed-group board-group-tone-'+tone+'" data-group-id="'+id+'" data-group-collapsed="true">'+
+   renderBoardCollapsedRollup({detail:state.board,items,columns,layout,complete,
+    groupId:group.id,groupTitle:group.title||'Group',itemCount:totalCount})+
+   (state.edit?'<details class="board-group-actions board-collapsed-group-menu"><summary aria-label="Actions for '+displayTitle+'">⋯</summary>'+
+    '<div class="board-group-actions-list"><button type="button" data-action="group-inline-edit" data-id="'+id+'">Edit name inline</button>'+
+    '<button type="button" data-action="board-group-toggle" data-id="'+id+'">Expand group</button>'+
+    '<button type="button" data-action="group-select-visible" data-id="'+id+'">Select visible records</button>'+
+    (ordinaryDelete?'<button type="button" data-action="group-delete-empty" data-id="'+id+'">Delete group</button>':
+     managedDelete?'<button type="button" data-action="managed-group-delete-empty" data-id="'+id+'">Delete empty group</button>':
+     managedEmpty?'<button type="button" data-action="group-hide-empty" data-id="'+id+'">Hide empty group (reversible)</button>':'')+
+    '</div></details>':'')+'</section>';
+ }
  return '<div class="group-heading'+(collapsed?' is-collapsed':'')+'" data-group-id="'+id+'" data-group-collapsed="'+collapsed+'">'+
   '<button type="button" class="board-group-toggle" data-action="board-group-toggle" data-id="'+id+'" aria-expanded="'+(!collapsed)+'" aria-label="'+(collapsed?'Expand ':'Collapse ')+displayTitle+' group">'+(collapsed?'▸':'▾')+'</button><h3>'+displayTitle+'</h3>'+
   (fuelTrackEditable?'<button type="button" class="board-group-rename-trigger" data-action="group-inline-edit" data-id="'+id+'" aria-label="Edit name inline for '+displayTitle+'" title="Edit name inline">✎ <span>Edit name</span></button>':'')+
@@ -1354,6 +1487,11 @@ function boardPage(){
  if(moduleByBoardName(b.name)?.key==='timetracker')return renderTimeTrackerApplication();
   if(state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt')return renderFundTrackerApplication();
  if(state.boardItemSearchBoard!==b.id){state.boardItemSearch='';state.boardItemSearchBoard=b.id;}
+ const viewFilterScope=[state.context?.user_id,state.context?.workspace_id,b.id].join('|');
+ if(boardViewFilterScope!==viewFilterScope){
+  boardViewFilterScope=viewFilterScope;
+  boardViewFilter.person='';boardViewFilter.status='';boardViewFilter.sort='board';
+ }
  // TradeLink Draft archives retain signed Board/audit records, but are not
  // active Board items. Other boards keep their established archive presentation.
  const items=isTradeLinkBoard(b)?searchTradeLinkBoardItems(state.board):
@@ -1368,6 +1506,11 @@ function boardPage(){
   if(bucket)bucket.push(item);
   else ungroupedItems.push(item);
  }
+ if(state.tab==='items'){
+  for(const [id,rows] of groupedItems)groupedItems.set(id,applyBoardViewFilter(rows));
+  ungroupedItems.splice(0,ungroupedItems.length,...applyBoardViewFilter(ungroupedItems));
+ }
+ const boardStatusOptions=[...new Set(items.map(item=>item.status).filter(Boolean))];
  const hiddenIds=isManagedTimeTrackerBoard(b)?readHiddenEmptyGroups(state.context,b.id):new Set();
  // The exact, verified empty TimeTracker secondary group is omitted for all
  // signed viewers, without any DB mutation or browser-local preference.
@@ -1414,11 +1557,11 @@ function boardPage(){
  const preparedGrid=moduleKey&&state.tab==='items'?
   prepareBoardGrid(state.board,{primaryTitle,columnLabels,allowCustom}):null;
 
+ const boardToolbarMore = `<details class="board-actions-menu"><summary aria-label="More board actions" title="More board actions">⋯</summary><div class="board-actions-popover"><button type="button" data-action="board-activity">Activity history</button><button type="button" data-action="board-share-preview">Share &amp; access</button><button type="button" data-action="board-members">People &amp; members</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button>${engineeringUi?'<button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button>':''}<button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button>${state.tab==='items'?'<button type="button" data-action="board-groups-collapse-all">Collapse all groups</button><button type="button" data-action="board-groups-expand-all">Expand all groups</button>':''}${state.edit&&canManuallyEditBoard(b,true)?'<button type="button" data-action="board-import">Import CSV/XLSX</button>':''}</div></details>`;
  return `<div class="page-head"><div><span class="label-top">Workspace / ${e(workspaceName())} / Board</span>
  <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
- <div class="head-actions"><details class="board-actions-menu"><summary aria-label="Board options">⋯ Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-activity">Activity history</button><button type="button" data-action="board-share-preview">Share &amp; access</button><button type="button" data-action="board-members">People &amp; members</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button>${engineeringUi?'<button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button>':''}<button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details>
+ <div class="head-actions">
  ${isMaterialSourcingBoard(b)&&state.edit&&['items','sourcing'].includes(state.tab)?'<button class="primary" data-action="mrh-new-part">＋ New part number</button>':''}
- ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ New item</button>':''}
  </div></div>
  <div class="tabs board-draggable-tabs" role="tablist" aria-label="Board views">
  ${tabOrder.map(t=>'<div class="board-tab-slot" data-board-tab-slot="'+e(t.key)+'">'+
@@ -1431,12 +1574,18 @@ function boardPage(){
 <div data-board-live-content>
 ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFundTrackerApplication():state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,otExpandedRequestIds:state.ttOtExpandedRequestIds,clockPendingAction:state.ttClockPending?.action||'clock-out',error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,employeesSearch:state.ttEmployeesSearch,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,adminEligible:state.ttAttendance?.access?.moduleRole==='System Admin',adminDirectory:state.ttLogAdminEditor?.directory||state.ttAttendance?.access?.overviewDirectory||[],adminSelectedIds:state.ttLogSelectedIds,adminEditor:state.ttLogAdminEditor,adminBusy:state.ttLogAdminBusy,adminError:state.ttLogAdminError,adminSuccess:state.ttLogAdminSuccess,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,canCreate:state.boardManage||state.tradeLinkModuleRole==='User',actorId:state.context?.user_id||'',actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='talkbox'&&moduleKey==='toolbox'?renderTalkBoxApplication({page:talkBoxState.page,selected:talkBoxState.selected,busy:talkBoxState.busy,error:talkBoxState.error,canEdit:state.edit}):state.tab==='issues'?issuesPage():`
- <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter loaded items…" value="${e(state.boardItemSearch)}" /></div>
+ <div class="toolbar board-customize-toolbar">
+ ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ New item</button>':''}
+ <div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="⌕ Search…" value="${e(state.boardItemSearch)}" /></div>
+ <details class="board-tool-menu"><summary>♙ Person</summary><div class="board-tool-menu-panel"><label for="board-person-filter">Assigned person</label><select id="board-person-filter" name="board-person-filter"><option value="">All people</option>${(state.board.members||[]).filter(m=>m.user_id).map(m=>'<option value="'+e(m.user_id)+'"'+(boardViewFilter.person===m.user_id?' selected':'')+'>'+e(m.display_name||m.email||'Member')+'</option>').join('')}</select></div></details>
+ <details class="board-tool-menu"><summary>▽ Filter</summary><div class="board-tool-menu-panel"><label for="board-status-filter">Status</label><select id="board-status-filter" name="board-status-filter"><option value="">All statuses</option>${boardStatusOptions.map(s=>'<option value="'+e(s)+'"'+(boardViewFilter.status===s?' selected':'')+'>'+e(s)+'</option>').join('')}</select></div></details>
+ <details class="board-tool-menu"><summary>⇅ Sort</summary><div class="board-tool-menu-panel"><label for="board-sort-mode">Sort displayed rows</label><select id="board-sort-mode" name="board-sort-mode">${[['board','Board order'],['title_asc','Item A–Z'],['title_desc','Item Z–A'],['due_asc','Due date ↑'],['due_desc','Due date ↓']].map(([value,label])=>'<option value="'+value+'"'+(boardViewFilter.sort===value?' selected':'')+'>'+label+'</option>').join('')}</select></div></details>
  ${boardColumnMenu(columns,layout)}
+ <details class="board-tool-menu"><summary>▣ Group by</summary><div class="board-tool-menu-panel" role="note"><strong>Saved board groups</strong><p>Items remain in their authorized group. Re-grouping will be enabled after a verified projection is available.</p></div></details>
+ ${boardToolbarMore}
+
  ${moduleKey==='tradelink'&&state.boardManage&&!tradeLinkSetupStatus(state.board).ready?'<button type="button" class="secondary" data-action="tradelink-configure" '+(state.tradeLinkSetupBusy?'disabled':'')+'>'+(state.tradeLinkSetupBusy?'Configuring TradeLink…':'Configure TradeLink columns')+'</button>':''}
   ${moduleKey==='timetracker'&&TT_BOARD_GPS_PROJECTION_ENABLED&&(state.roleVerified===true||state.ttBoardGpsEligible===true)?'<button type="button" class="secondary" data-action="tt-board-gps">Restricted attendance GPS</button>':''}
- ${state.edit&&canManuallyEditBoard(b,true)?'<button type="button" class="secondary" data-action="board-import">⇧ Import CSV/XLSX</button>':''}
- ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}
   ${engineeringUi&&state.edit&&canBulkEditBoard(b)?'<button type="button" class="secondary" data-action="bulk02-verify" '+(state.bulk02Busy?'disabled':'')+'>'+(
    state.bulk02Busy?'Checking signed permissions…':bulkReadyFor(b)?'✓ Bulk access verified':'Verify signed bulk access')+'</button>':''}
   ${hiddenGroups.length?'<button type="button" class="secondary" data-action="group-show-hidden">Show '+hiddenGroups.length+' hidden empty group'+(hiddenGroups.length===1?'':'s')+' (this browser)</button>':''}</div>
@@ -1462,8 +1611,8 @@ ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSour
  <button type="button" class="secondary" data-action="bulk-actions" ${canRequestBulk(b)||bulkReadyFor(b)?'':'disabled title="Bulk changes require an authorized ordinary board and 1–50 records"'}>Bulk actions…</button>
  <button type="button" class="secondary board-delete-one" data-action="delete-selected-item" ${itemSelection.size>0&&state.edit&&canManuallyEditBoard(b,true)?'':'disabled title="Select an editable ordinary-board item"'}>${itemSelection.size>1?'Delete one of '+itemSelection.size+'…':'Delete item'}</button>
  <span class="muted">${!canBulkEditBoard(b)?'Protected application records: selection and export only; domain-specific bulk writes require separate server authorization.':bulkReadyFor(b)?'Max 50 records per atomic batch.':'Bulk actions verify this signed session before changes; unsupported field edits and multi-delete are unavailable.'}</span></div>
- ${shownGroups.length?shownGroups.map(g=>`${groupHeading(g,groupedItems.get(g.id)?.length||0)}
- ${moduleKey==='timetracker'&&String(g.title||'').trim().toLowerCase()==='main group'?
+ ${shownGroups.length?shownGroups.map(g=>`${groupHeading(g,groupedItems.get(g.id)?.length||0,{columns,layout,items:groupedItems.get(g.id)||[]})}
+ ${boardGroupCollapsed(g.id,groupedItems.get(g.id)?.length||0)?'':(moduleKey==='timetracker'&&String(g.title||'').trim().toLowerCase()==='main group'?
   renderTimeTrackerMainGroup({groupId:g.id,groupItems:groupedItems.get(g.id)||[],
    boardColumns:state.board.columns||[],boardValues:state.board.values||[],
    projection:state.ttBoardAttendance,userId:state.context?.user_id,
@@ -1473,9 +1622,10 @@ ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSour
   moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,groupItems:groupedItems.get(g.id)||[],layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},primaryEditable,footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:Number.isSafeInteger(g.total_item_count)?
     (groupedItems.get(g.id).length+' loaded / '+g.total_item_count+' total'+
      (g.archived_item_count>0?' · '+g.active_item_count+' active · '+g.archived_item_count+' archived':'')):
-    groupedItems.get(g.id).length+(state.board.pagination?.has_more?' loaded':' records')}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels,primaryEditable)}`).join(''):
+    groupedItems.get(g.id).length+(state.board.pagination?.has_more?' loaded':' records')}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels,primaryEditable))}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
- ${ungroupedItems.length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:ungroupedItems},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},primaryEditable}):groupRows(ungroupedItems,state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels,primaryEditable)}`:''}`}${state.tab==='items'?renderBoardPagination(state.board.pagination,{busy:state.boardPageBusy,error:state.boardPageError}):''}</div>`;
+ ${ungroupedItems.length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:ungroupedItems},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},primaryEditable}):groupRows(ungroupedItems,state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels,primaryEditable)}`:''}`}${state.tab==='items'&&state.edit?'<button type="button" class="secondary board-add-group-bottom" data-action="new-group">＋ Add new group</button>':''}
+ ${state.tab==='items'?renderBoardPagination(state.board.pagination,{busy:state.boardPageBusy,error:state.boardPageError}):''}</div>`;
 }
 function settingsPage(){
  const p=state.context.profile;
@@ -2702,6 +2852,9 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
    if(seq!==routeSerial||!auth.isSignedIn||auth.userId!==state.context?.user_id||
       detail.board.workspace_id!==state.context?.workspace_id)return;
    state.board=detail;state.edit=edit;state.boardManage=manage;state.boardUi=boardUi;
+   if(tab==='items'&&!nativeModuleId)
+    void readBoardGroupPreferences({userId:state.context.user_id,
+     workspaceId:state.context.workspace_id,boardId});
  }catch(err){if(seq!==routeSerial)return;state.error=errorMessage(err);}
  finally{if(seq===routeSerial){state.loading=false;render();}}
  if(seq!==routeSerial||!state.board)return;
@@ -8099,13 +8252,20 @@ async function action(name,button){
   if(state.view!=='board'||state.tab!=='items'||state.board?.board?.id!==state.boardId)return;
   const id=button.dataset.id;
   if(!(state.board.groups||[]).some(g=>g.id===id))return;
-  const key=boardGroupCollapseKey(id);
-  const collapsed=button.getAttribute('aria-expanded')==='true';
-  boardGroupCollapsedByScope.set(key,collapsed);
-  render();
+  const count=(state.board.items||[]).filter(row=>row.group_id===id).length;
+  const newState=!boardGroupCollapsed(id,count);
+  await persistBoardGroupCollapsed(id,newState);
   [...root.querySelectorAll('[data-action="board-group-toggle"]')]
    .find(el=>el.dataset.id===id)?.focus({preventScroll:true});
   break;
+ }
+ case 'board-groups-collapse-all':{
+  if(state.tab!=='items'||!activeBoardLayout())return;
+  await persistAllBoardGroupsCollapsed(true);break;
+ }
+ case 'board-groups-expand-all':{
+  if(state.tab!=='items'||!activeBoardLayout())return;
+  await persistAllBoardGroupsCollapsed(false);break;
  }
  case 'board-add-column':{
   if(!activeBoardLayout()||!state.boardManage)return;
@@ -8190,6 +8350,19 @@ async function action(name,button){
   break;
  }
  case 'board-item-detail':{await openBoardItemDetails(button.dataset.id);break;}
+ case 'board-columns-hide-all':
+ case 'board-columns-show-all':{
+  const current=activeBoardLayout();
+  if(!current||state.tab!=='items')return;
+  const all=name==='board-columns-show-all';
+  persistBoardLayout(pref=>({...pref,hidden:all?[]:
+   [...new Set([...pref.hidden,...current.columns.filter(key=>
+    !BOARD_REQUIRED_COLUMNS.includes(key)&&key!=='actions')])]}));
+  render();
+  root.querySelector('.board-hide-columns')?.setAttribute('open','');
+  root.querySelector('#board-hide-search')?.focus({preventScroll:true});
+  break;
+ }
  case 'board-layout-reset':{
   const current=activeBoardLayout();if(!current)return;
   resetBoardLayout(state.context,state.boardId,boardPreferences);render();break;
@@ -10568,7 +10741,15 @@ case 'new-group':{
  }
  case 'new-item':{
   if(!activeBoardLayout()||!canManuallyEditBoard(state.board?.board,state.edit))return;
-  const footer=root.querySelector('[data-inline-add-row] input');
+  let footer=root.querySelector('[data-inline-add-row] input');
+  if(!footer){
+   const first=(state.board?.groups||[])[0];
+   if(first){
+    // Reveal the creation context temporarily; saved collapse preferences stay intact.
+    boardGroupTransientExpanded.add(boardGroupCollapseKey(first.id));render();
+    footer=root.querySelector('[data-inline-add-row] input');
+   }
+  }
   if(!footer){toast('Create a group first.',true);return;}
   footer.focus();footer.scrollIntoView({block:'nearest',inline:'nearest'});break;
  }
@@ -10759,22 +10940,51 @@ function openBoardColumnContext(trigger){
  node.querySelector('[role="menuitem"]')?.focus();
 }
 let boardDrag=null,boardResize=null,boardTouch=null,boardSuppressedClick=false;
+function boardColumnWidthLimits(key){
+ if(key==='record')return {min:200,max:600,default:300};
+ if(key==='status')return {min:100,max:260,default:132};
+ if(key==='owner')return {min:100,max:280,default:140};
+ if(key==='due')return {min:108,max:240,default:136};
+ if(key==='actions')return {min:84,max:200,default:100};
+ const field=key?.startsWith('col:')?(state.board?.columns||[])
+  .find(col=>col.id===key.slice(4)):null;
+ const name=String(field?.name||'').trim().toLowerCase();
+ if(/^(work request id|record id|item id|reference id)$/.test(name))
+  return {min:84,max:200,default:116};
+ return ({
+  number:{min:88,max:280,default:120},rating:{min:88,max:220,default:120},
+  people:{min:100,max:280,default:140},date:{min:108,max:240,default:136},
+  status:{min:100,max:260,default:132},timeline:{min:128,max:400,default:180},
+  url:{min:110,max:360,default:160},text:{min:100,max:520,default:160},
+  long_text:{min:100,max:520,default:185}
+ })[field?.data_type]||{min:100,max:520,default:160};
+}
+function boundBoardColumnWidth(key,value){
+ const {min,max}=boardColumnWidthLimits(key);
+ return Math.min(max,Math.max(min,Math.round(Number(value)||min)));
+}
 const boardResizeFrames=createFrameCoalescer({
  requestFrame:callback=>requestAnimationFrame(callback),
  cancelFrame:handle=>cancelAnimationFrame(handle),
  apply:width=>{
   if(!boardResize)return;
-  const current=boardResize;
-  current.col.setAttribute('width',String(width));
-  current.table.setAttribute('width',String(current.tableWidth+width-current.start));
-  current.current=width;
+  const current=boardResize,fit=boundBoardColumnWidth(current.key,width);
+  for(const target of current.targets){
+   if(!target.col.isConnected||!target.table.isConnected)continue;
+   target.col.setAttribute('width',String(fit));
+   target.table.setAttribute('width',String(target.tableWidth+fit-target.start));
+  }
+  current.current=fit;
  }
 });
 function cancelBoardResize(){
  boardResizeFrames.cancel();
  if(boardResize){
-  boardResize.col.setAttribute('width',String(boardResize.start));
-  boardResize.table.setAttribute('width',String(boardResize.tableWidth));
+  for(const target of boardResize.targets){
+   target.col.setAttribute('width',String(target.start));
+   target.table.setAttribute('width',String(target.tableWidth));
+  }
+  boardResize.guide?.remove();
  }
  boardResize=null;
 }
@@ -10884,11 +11094,24 @@ root.addEventListener('pointerdown',event=>{
   const table=resize.closest('table.board-table-custom');
   const col=table?.querySelector('col[data-column-key="'+resize.dataset.columnKey+'"]');
   if(!col||!th)return;
+  const key=resize.dataset.columnKey;
   const start=Number(col.getAttribute('width'))||th.getBoundingClientRect().width;
-  const tableWidth=Number(table.getAttribute('width'))||table.getBoundingClientRect().width;
-  boardResize={pointerId:event.pointerId,x:event.clientX,key:resize.dataset.columnKey,
-   col,table,start,current:start,tableWidth};
-  resize.setPointerCapture?.(event.pointerId);event.preventDefault();return;
+  const targets=[...root.querySelectorAll('table.board-table-custom,table.board-collapsed-rollup-table')]
+   .map(table=>{
+    const col=[...table.querySelectorAll('col[data-column-key]')].find(c=>c.dataset.columnKey===key);
+    return col?{col,table,start:Number(col.getAttribute('width'))||start,
+     tableWidth:Number(table.getAttribute('width'))||table.getBoundingClientRect().width}:null;
+   }).filter(Boolean);
+  const guide=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  guide.classList.add('board-column-resize-guide');
+  guide.setAttribute('aria-hidden','true');
+  guide.setAttribute('viewBox','0 0 '+window.innerWidth+' '+window.innerHeight);
+  const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.setAttribute('x1',String(event.clientX));line.setAttribute('x2',String(event.clientX));
+  line.setAttribute('y1','0');line.setAttribute('y2',String(window.innerHeight));
+  guide.append(line);root.append(guide);
+  boardResize={pointerId:event.pointerId,x:event.clientX,key,start,current:start,targets,guide};
+  event.preventDefault();return;
  }
  // Native drag is for mouse/trackpad; pointer reorder supports touch and pen.
  if(event.pointerType==='mouse')return;
@@ -10906,7 +11129,9 @@ root.addEventListener('pointerdown',event=>{
 });
 window.addEventListener('pointermove',event=>{
  if(boardResize&&event.pointerId===boardResize.pointerId){
-  boardResizeFrames.schedule(columnWidth(boardResize.start+event.clientX-boardResize.x));
+  const line=boardResize.guide.querySelector('line');
+   line?.setAttribute('x1',String(event.clientX));line?.setAttribute('x2',String(event.clientX));
+   boardResizeFrames.schedule(boundBoardColumnWidth(boardResize.key,boardResize.start+event.clientX-boardResize.x));
   return;
  }
 });
@@ -10914,8 +11139,9 @@ window.addEventListener('pointerup',event=>{
  if(boardResize&&event.pointerId===boardResize.pointerId){
   const current=boardResize;
   boardResizeFrames.flush();
-  const width=columnWidth(current.current);
+  const width=boundBoardColumnWidth(current.key,current.current);
   persistBoardLayout(p=>({...p,widths:{...p.widths,[current.key]:width}}));
+  current.guide?.remove();
   boardResize=null;return;
  }
  if(boardTouch&&event.pointerId===boardTouch.pointerId){
@@ -10930,6 +11156,44 @@ window.addEventListener('pointerup',event=>{
  }
 });
 window.addEventListener('pointercancel',()=>{cancelBoardResize();boardTouch=null;});
+
+/** Synchronized horizontal scroll keeps collapsed rollups on the same tracks. */
+let boardGroupScrollSyncing=false;
+root.addEventListener('scroll',event=>{
+ const source=event.target;
+ if(boardGroupScrollSyncing||!source?.matches?.('.board-group-scroll,.board-collapsed-rollup-scroll'))return;
+ boardGroupScrollSyncing=true;
+ for(const other of root.querySelectorAll('.board-group-scroll,.board-collapsed-rollup-scroll'))
+  if(other!==source&&other.scrollLeft!==source.scrollLeft)other.scrollLeft=source.scrollLeft;
+ boardGroupScrollSyncing=false;
+},true);
+/** Double-click the right-edge handle to fit currently loaded, authorized text. */
+root.addEventListener('dblclick',event=>{
+ const resize=event.target.closest?.('.board-column-resize[data-column-key]');
+ if(!resize||!activeBoardLayout())return;
+ const key=resize.dataset.columnKey,table=resize.closest('table.board-table-custom');
+ const header=resize.closest('th[data-column-key]');
+ if(!table||!header)return;
+ event.preventDefault();
+ const position=[...header.parentElement.children].indexOf(header);
+ if(position<0)return;
+ const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
+ if(!ctx)return;
+ ctx.font=getComputedStyle(header).font||'13px sans-serif';
+ let max=ctx.measureText(header.querySelector('.board-heading-label')?.textContent||'').width+48;
+ for(const table of root.querySelectorAll('table.board-table-custom')){
+  for(const row of [...table.tBodies[0]?.rows||[]].slice(0,150)){
+   const cell=row.cells[position];
+   if(!cell||row.classList.contains('board-virtual-spacer'))continue;
+   const text=String(cell.textContent||'').trim().slice(0,150);
+   max=Math.max(max,ctx.measureText(text).width+32);
+  }
+ }
+ const width=boundBoardColumnWidth(key,Math.ceil(max));
+ persistBoardLayout(pref=>({...pref,widths:{...pref.widths,[key]:width}}));
+ render();
+});
+
 document.addEventListener('pointerdown',event=>{
  if(boardColumnMenuNode?.isConnected&&
     !boardColumnMenuNode.contains(event.target)&&
@@ -11032,6 +11296,12 @@ root.addEventListener('toggle',event=>{
  if(card)card.classList.toggle('board-card-menu-open',event.target.open);
  if(event.target.open)closeBoardCardMenus(event.target);
 },true);
+root.addEventListener('keydown',event=>{
+ const trigger=event.target.closest?.('.board-group-summary-trigger[role="button"]');
+ if(trigger&&['Enter',' '].includes(event.key)){
+  event.preventDefault();trigger.click();
+ }
+});
 root.addEventListener('click',event=>{
  const activeRefueling=root.querySelector('.ft3-refuel-dialog');
  if(activeRefueling&&!activeRefueling.contains(event.target)){
@@ -11151,6 +11421,12 @@ function syncTradeLinkFinanceInput(event){
 }
 root.addEventListener('change',event=>{
  if(syncTradeLinkFinanceInput(event))return;
+ if(['board-person-filter','board-status-filter','board-sort-mode'].includes(event.target.id)&&
+    state.view==='board'&&state.tab==='items'&&activeBoardLayout()){
+  const key={'board-person-filter':'person','board-status-filter':'status','board-sort-mode':'sort'}[event.target.id];
+  boardViewFilter[key]=event.target.value;
+  render();return;
+ }
  // TimeTracker uses row highlighting and a details popup; no checkbox selection.
  const trashCheckbox=event.target.closest?.('[data-trash-board-select]');
  if(trashCheckbox){
@@ -11285,7 +11561,7 @@ root.addEventListener('change',event=>{
   if(!c||!c.columns.includes(key)||BOARD_REQUIRED_COLUMNS.includes(key))return;
   persistBoardLayout(p=>({...p,hidden:event.target.checked?
    p.hidden.filter(x=>x!==key):[...p.hidden,key]}));
-  render();root.querySelector('.board-column-menu')?.setAttribute('open','');return;
+  render();root.querySelector('.board-hide-columns')?.setAttribute('open','');return;
  }
 
  if(['tt-overview-location','tt-overview-department','tt-overview-status','tt-overview-sort'].includes(event.target.id)&&
@@ -11634,6 +11910,12 @@ root.addEventListener('drop',event=>{
 root.addEventListener('dragend',()=>{tradeLinkDraggedLine=null;});
 root.addEventListener('input',event=>{
  if(syncTradeLinkFinanceInput(event))return;
+ if(event.target.matches('[data-board-hide-search]')){
+  const query=String(event.target.value||'').trim().toLocaleLowerCase();
+  for(const row of root.querySelectorAll('[data-board-hide-option]'))
+   row.hidden=!row.dataset.boardHideOption.includes(query);
+  return;
+ }
  if(event.target.id==='user-role-batch-member-search'&&state.view==='user-role-management'&&
     state.adminVerified&&state.userRoleBatchMode){
   const query=String(event.target.value).slice(0,120);
@@ -11758,8 +12040,26 @@ root.addEventListener('input',event=>{
  }
  if(event.target.id==='search-board-items'&&state.view==='board'&&state.tab==='items'){
   state.boardItemSearch=String(event.target.value).slice(0,160);
-  applyBoardItemFilter(state.boardItemSearch);
-  syncBoardSelectionUi();
+  // Matching groups may open temporarily; this never changes the saved preference.
+  // Only reconstruct the board when a collapsed/expanded boundary actually changes.
+  const requiresGroupUpdate=[...root.querySelectorAll('.board-collapsed-group,.group-heading[data-group-collapsed]')]
+   .some(node=>{
+    const id=node.dataset.groupId;
+    if(!id||!(state.board.groups||[]).some(g=>g.id===id))return false;
+    const count=(state.board.items||[]).filter(item=>item.group_id===id).length;
+    const currentlyClosed=node.dataset.groupCollapsed==='true';
+    return boardGroupCollapsed(id,count)!==currentlyClosed;
+   });
+  if(requiresGroupUpdate){
+   const caret=event.target.selectionStart;
+   render();
+   const search=root.querySelector('#search-board-items');
+   search?.focus({preventScroll:true});
+   if(search&&Number.isSafeInteger(caret))search.setSelectionRange(caret,caret);
+  }else{
+   applyBoardItemFilter(state.boardItemSearch);
+   syncBoardSelectionUi();
+  }
   return;
  }
  if(!event.target.matches('.search-input'))return;
@@ -11785,6 +12085,12 @@ document.addEventListener('visibilitychange',()=>{
 // Window focus is distinct from document visibility: switching between two
 // visible application windows may not emit visibilitychange in either one.
 window.addEventListener('focus',()=>platformSync.focusChanged());
+window.addEventListener('focus',()=>{
+ if(state.view==='board'&&state.tab==='items'&&state.board?.board?.id===state.boardId&&
+    state.context?.user_id===auth.userId)
+  void readBoardGroupPreferences({userId:state.context.user_id,
+   workspaceId:state.context.workspace_id,boardId:state.boardId});
+});
 window.addEventListener('focus',()=>void refreshCorrectedTimeTrackerClock({onFocus:true}));
 // An additional tab may begin a Clock action; surface its pending marker
 // immediately, without replaying writes or trusting browser data as attendance.

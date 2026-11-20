@@ -37,9 +37,9 @@ test('malformed storage, unknown columns, duplicates and required columns cannot
  assert.deepEqual(normalized.tabs,['issues','items','attendance']);
  assert.deepEqual(normalized.columns,['record','status','due','owner','actions']);
  assert.deepEqual(normalized.hidden,['owner']);
- assert.equal(normalized.widths.owner,520);
- assert.equal(normalized.widths.due,110);
- assert.equal(normalized.widths.record,110);
+ assert.equal(normalized.widths.owner,600);
+ assert.equal(normalized.widths.due,84);
+ assert.equal(normalized.widths.record,84);
  assert.equal(columnWidth('NaN'),185);
  s.setItem(key,'x'.repeat(8001));
  assert.deepEqual(loadBoardLayout(ctx,c,tabs,cols,s).columns,cols);
@@ -64,8 +64,10 @@ test('rendered board table preserves frozen record column and independent group 
  const menu=boardColumnMenu([{key:'record',title:'Record'},
   {key:'status',title:'Status'},{key:'owner',title:'Owner'}],{hidden:['owner']});
  assert.match(menu,/data-board-column-toggle="owner"/);
- assert.match(menu,/data-action="board-layout-reset"/);
- assert.match(menu,/data-action="board-column-move"/);
+ assert.match(menu,/data-action="board-columns-hide-all"/);
+ assert.match(menu,/data-action="board-columns-show-all"/);
+ assert.match(menu,/data-board-hide-search/);
+ assert.doesNotMatch(menu,/>Columns<\/summary>/);
 });
 test('typed board schema is still restricted to declared, visible, approved fields',()=>{
  const detail={board:{name:'No domain module'},columns:[{id:'a',name:'Public',system_key:null,visible:true},
