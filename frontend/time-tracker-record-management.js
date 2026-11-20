@@ -191,9 +191,9 @@ export function renderTimeTrackerAdminEditor({editor,directory=[],busy=false,err
        inputField('Clock-In date and time','clockInAt',timeTrackerAdminDateTimeLocal(record.clockIn?.timestamp),{type:'datetime-local'})+
        (active?'':inputField('Clock-Out date and time','clockOutAt',timeTrackerAdminDateTimeLocal(record.clockOut?.timestamp),{type:'datetime-local'}))+
       '</div><p>Active sessions remain active, and their Clock timer updates from the corrected start time after signed synchronization. Completed sessions recalculate credited hours. GPS and employee ownership remain unchanged.</p></section>'+
-      '<section class="tt-admin-field-section"><h4>Correction reason</h4>'+
-       '<label class="tt-admin-field"><span>Why is this correction necessary?</span>'+
-       '<textarea name="reason" minlength="10" maxlength="500" required rows="3" placeholder="Describe the verified timekeeping discrepancy"></textarea></label></section>'+
+      '<section class="tt-admin-field-section"><h4>Correction note (optional)</h4>'+
+       '<label class="tt-admin-field"><span>Additional context, if needed</span>'+
+       '<textarea name="reason" maxlength="500" rows="3" placeholder="Optional explanation for this time correction"></textarea></label></section>'+
       '</div></fieldset><footer class="tt-admin-editor-actions"><span class="tt-admin-editor-footnote">Original timestamps and corrected values remain in the audit trail.</span><div>'+
        '<button type="button" class="secondary" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+'>Cancel</button>'+
        '<button type="submit" class="primary"'+(busy?' disabled':'')+'>Save time correction</button>'+
