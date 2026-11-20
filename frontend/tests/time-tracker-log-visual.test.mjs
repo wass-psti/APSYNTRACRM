@@ -171,3 +171,21 @@ test('modified clicks allow contiguous or toggled Log selection without opening 
  assert.match(handler,/\.find\(row=>row\.dataset\.recordId===id\)\?\.focus\(\);\s*break;/);
  assert.match(handler,/state\.ttLogExpandedIds=\[id\];render\(\);/);
 });
+
+test('admin edit or delete dialog temporarily replaces attendance details modal',()=>{
+ const input={records,now,expandedRecordIds:['today'],adminEligible:true,adminFullAccess:true};
+ const deleteDialog=renderTimeTrackerLog({...input,adminDeleteConfirm:{
+  recordIds:['today'],records:[{name:'Employee One'}]
+ }});
+ assert.match(deleteDialog,/data-tt-admin-delete-backdrop/);
+ assert.doesNotMatch(deleteDialog,/data-tt-log-detail-dialog/);
+ const editDialog=renderTimeTrackerLog({...input,adminEditor:{
+  mode:'single',timeOnly:true,recordIds:['today'],records:[{
+   ownerName:'Employee One',clockIn:{timestamp:'2026-11-02T01:00:00Z'},clockOut:null
+  }]
+ }});
+ assert.match(editDialog,/data-tt-admin-dialog/);
+ assert.doesNotMatch(editDialog,/data-tt-log-detail-dialog/);
+ const detail=renderTimeTrackerLog(input);
+ assert.match(detail,/data-tt-log-detail-dialog/);
+});
