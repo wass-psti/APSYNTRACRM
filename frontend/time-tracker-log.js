@@ -255,7 +255,8 @@ function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=fals
    '</div></div>'+
   (adminEligible?'<div class="tt-log-admin-row-actions"><span>'+
     (adminFullAccess?'System Admin record management':'Authorized time correction')+'</span>'+
-   '<button type="button" data-action="tt-log-admin-edit" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'><span aria-hidden="true">✎</span> '+(adminFullAccess?'Edit record':'Correct time')+'</button>'+
+   '<button type="button" data-action="tt-log-admin-correct-time" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'><span aria-hidden="true">✎</span> Correct time</button>'+
+   (adminFullAccess?'<button type="button" data-action="tt-log-admin-edit" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'>Edit record</button>':'')+
    (adminFullAccess?'<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-delete" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'><span aria-hidden="true">⌫</span> Delete record</button>':'')+'</div>':'')+
   '</div>';
 }
@@ -350,6 +351,7 @@ export function renderTimeTrackerLog({
     ' authorized employee'+(summary.people===1?'':'s')+'</p></div>'+
     '<span class="tt-log-readonly">'+summary.historical+
     ' earlier · '+summary.today+' today</span></div>'+
+   (adminEligible?'<p class="tt-log-footnote">Expand an active or completed attendance record, then select Correct time. Clock-Out corrections are available for completed sessions only. An explanation is required and changes are audited.</p>':'')+
    (adminFullAccess?'<div class="tt-log-admin-toolbar" role="region" aria-label="System Admin attendance record management">'+
     '<div class="tt-log-admin-toolbar-copy"><div class="tt-log-admin-toolbar-heading"><span class="tt-log-admin-toolbar-icon" aria-hidden="true">✦</span><div><strong>Manage attendance records</strong><span>Select one or more rows to edit or remove records</span></div></div>'+
     '<div class="tt-log-admin-selection-status"><strong class="tt-log-admin-selected">'+selectedIds.length+'</strong><span>selected <i>·</i> up to '+TT_ADMIN_RECORD_LIMIT+'</span></div></div>'+
@@ -375,7 +377,7 @@ export function renderTimeTrackerLog({
     (visible.length?' hidden':'')+'>No sessions match the current search.</p>':'')+
    '<p class="tt-log-footnote">Daily operations are based on the current Philippine date. Location and shift summaries reflect the selected date, status and location. Search narrows records and CSV only.</p>'+
    '<p class="tt-log-footnote">Exact GPS positions are shown only after a bootstrap administrator or assigned Supervisor receives a valid signed server GPS snapshot. Audit scores, satellite imagery, device fingerprints and manual-edit evidence are not inferred.</p>'+
-  '</section>'+renderTimeTrackerAdminEditor({editor:adminEditor,directory:adminDirectory,busy:adminBusy,error:adminEditor?adminError:'',timeOnly:!adminFullAccess})+renderTimeTrackerAdminDeleteDialog({confirmation:adminDeleteConfirm,busy:adminBusy})+'</section>';
+  '</section>'+renderTimeTrackerAdminEditor({editor:adminEditor,directory:adminDirectory,busy:adminBusy,error:adminEditor?adminError:'',timeOnly:adminEditor?.timeOnly===true})+renderTimeTrackerAdminDeleteDialog({confirmation:adminDeleteConfirm,busy:adminBusy})+'</section>';
 }
 
 const logCsvCell=value=>{
