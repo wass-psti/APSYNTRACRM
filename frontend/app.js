@@ -13,7 +13,7 @@ import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelecto
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
 import {WorkspaceInvitationClient,WS02D_INVITE_CLIENT_ENABLED} from './workspace-invitation-client.js';
 import {WorkspaceInvitationManagementClient,WS11_INVITATION_MANAGEMENT_ENABLED} from './workspace-invitation-management.js';
-import {WorkspaceInvitationAcceptanceClient,WS02D_ACCEPTANCE_ENABLED,captureInvitationLink,renderInvitationAcceptance} from './workspace-invitation-acceptance.js';
+import {WorkspaceInvitationAcceptanceClient,captureInvitationLink,renderInvitationAcceptance} from './workspace-invitation-acceptance.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
 import {renderAuthMarkup} from './auth/markup.js';
 import {validateAccessRequest} from './request-access.js';
@@ -237,7 +237,9 @@ const workspaceLifecycleClient=new WorkspaceLifecycleClient({auth,api:db});
 const workspaceInvitationClient=new WorkspaceInvitationClient({auth,api:db});
 const workspaceInvitationManagementClient=new WorkspaceInvitationManagementClient({auth,api:db});
 const boardGroupAccessClient=new BoardGroupAccessClient({auth,api:db});
-const workspaceInvitationAcceptanceClient=new WorkspaceInvitationAcceptanceClient({auth,api:db});
+// The recipient confirmation UI is available after a valid one-time link;
+// the trusted Edge accept route and SQL are the only membership authority.
+const workspaceInvitationAcceptanceClient=new WorkspaceInvitationAcceptanceClient({auth,api:db,enabled:true});
 // Signed runtime activation: a dedicated non-mutating manager readiness route must verify delivery
 // before any invitation issue. Never infer readiness from a UI flag alone.
 const workspaceInvitationLiveClient=new WorkspaceInvitationClient({auth,api:db,enabled:true});
@@ -1777,7 +1779,7 @@ function render(){
  else if(state.view==='role-configuration')shell(renderRoleConfiguration({verified:state.adminVerified,loading:state.roleBusy,data:state.roleData,tab:state.roleTab,error:state.roleError}));
  else if(state.view==='user-role-management')shell(renderUserRoleManagement({verified:state.adminVerified,data:state.userRoleData,selectedUserId:state.userRoleSelected,actorUserId:state.context?.user_id,accessSection:state.userRoleSection,boardSearch:state.userRoleBoardSearch,batchMode:state.userRoleBatchMode,batchSelected:state.userRoleBatchSelected,batchMemberSearch:state.userRoleBatchMemberSearch,batchScope:state.userRoleBatchScope,batchResource:state.userRoleBatchResource,batchRole:state.userRoleBatchRole,batchAction:state.userRoleBatchAction,busy:state.userRoleBusy,error:state.userRoleError}));
  else if(state.view==='invitation')shell(renderInvitationAcceptance({
-  pending:pendingInvitation,enabled:WS02D_ACCEPTANCE_ENABLED,
+  pending:pendingInvitation,enabled:true,
   busy:invitationAcceptanceBusy,status:invitationAcceptanceStatus
  }));
  else if(state.view==='boards')shell(boardsPage());
@@ -7149,13 +7151,19 @@ async function action(name,button){
    break;
  }
  case 'ws02d-accept-invitation':{
-  if(!WS02D_ACCEPTANCE_ENABLED||invitationAcceptanceBusy||
+  if(invitationAcceptanceBusy||
      pendingInvitation?.status!=='ready'||!auth.isSignedIn||!state.context)return;
   invitationAcceptanceBusy=true;render();
   try{
    await workspaceInvitationAcceptanceClient.accept(pendingInvitation.token);
+   // The server already committed a single verified membership. Do not
+   // downgrade an accepted receipt if a subsequent UI refresh fails.
    pendingInvitation=null;invitationAcceptanceStatus='accepted';
+   try{await refreshWorkspace();}catch{
+    // A reload/sign-in will re-read the committed membership from the server.
+   }
   }catch{
+   // No automatic replay: a timeout may have committed the membership.
    pendingInvitation=null;invitationAcceptanceStatus='unconfirmed';
   }finally{invitationAcceptanceBusy=false;render();}
   break;
