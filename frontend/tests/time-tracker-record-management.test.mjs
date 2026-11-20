@@ -251,8 +251,10 @@ test('attendance Log management controls appear only when System Admin eligibili
  }],now:new Date('2026-11-16T10:00:00.000Z'),adminEligible:true,
   selectedIds:[recordId],adminDirectory:[{id:employeeId,display_name:'Test Employee'}]});
  assert.match(html,/tt-log-admin-toolbar/);
- assert.match(html,/data-tt-log-select-all/);
- assert.match(html,/data-tt-log-select value="00000000-0000-4000-8000-000000000020" checked/);
+ assert.match(html,/data-action="tt-log-admin-select-visible"/);
+ assert.match(html,/tt-log-filterable aps-record-selectable is-selected board-row-selected/);
+ assert.match(html,/data-action="tt-log-open-detail"/);
+ assert.doesNotMatch(html,/type="checkbox"/);
  assert.match(html,/data-action="tt-log-admin-edit"/);
  assert.match(html,/data-action="tt-log-admin-delete"/);
  assert.match(html,/data-action="tt-log-admin-bulk-edit"/);
@@ -274,7 +276,8 @@ test('IT Administrator time-only editor cannot expose delete, GPS, employee, sta
  });
  for(const name of ['clockInAt','clockOutAt','reason'])
   assert.match(completed,new RegExp('name="'+name+'"'));
- assert.match(completed,/minlength="10"/);
+ assert.match(completed,/Correction note \(optional\)/);
+ assert.doesNotMatch(completed,/minlength="10"|name="reason"[^>]*required/);
  for(const blocked of ['employeeId','clockInGeo','clockOutGeo','durationMode','name="status"'])
   assert.doesNotMatch(completed,new RegExp(blocked));
  const active=renderTimeTrackerAdminEditor({
