@@ -1805,6 +1805,7 @@ function render(){
   mountBoardPaginationUi();
  }
  mountBoardHorizontalRail(root);
+ if(state.view==='board'&&state.tab==='items')void ensureBoardToolbarPopoverBehavior();
  if(state.context&&auth.isSignedIn)platformSync.start({
   userId:state.context.user_id,workspaceId:state.context.workspace_id,
   priorityBoardId:state.view==='board'?state.boardId:null,
@@ -11312,6 +11313,19 @@ root.addEventListener('toggle',event=>{
  if(card)card.classList.toggle('board-card-menu-open',event.target.open);
  if(event.target.open)closeBoardCardMenus(event.target);
 },true);
+// Load Board-only menu behavior on demand, not in the anonymous startup graph.
+let boardToolbarPopoverPromise=null;
+function ensureBoardToolbarPopoverBehavior(){
+ if(boardToolbarPopoverPromise)return boardToolbarPopoverPromise;
+ boardToolbarPopoverPromise=import('./board/presentation/toolbar-popovers.js')
+  .then(({installBoardToolbarPopoverBehavior})=>
+   installBoardToolbarPopoverBehavior(root,document))
+  .catch(error=>{
+   boardToolbarPopoverPromise=null;
+   console.error('Board toolbar popovers unavailable:',error);
+  });
+ return boardToolbarPopoverPromise;
+}
 root.addEventListener('keydown',event=>{
  const trigger=event.target.closest?.('.board-group-summary-trigger[role="button"]');
  if(trigger&&['Enter',' '].includes(event.key)){
