@@ -1904,6 +1904,13 @@
       "file": "20261120183000_cp_tt_optional_attendance_correction_note.sql",
       "bytes": 10273,
       "sha256": "ee65b4c40766dc3911eca08ff0fa7080570204f86b4aa26a725daa658216a14c"
+    },
+    {
+      "version": "20261120190000",
+      "name": "cp_frt_native_role_source_parity",
+      "file": "20261120190000_cp_frt_native_role_source_parity.sql",
+      "bytes": 1803,
+      "sha256": "2a9e63992c3a9ae5da173bf2b10aaa9eaf57d28381f5a9be1d7c1e859bf04f75"
     }
   ]
 }
