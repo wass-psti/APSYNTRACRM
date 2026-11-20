@@ -25,6 +25,8 @@ test('invitation controls remain user-initiated and validate isolated workspace 
  assert.match(script,/INVITE_TOKEN\.test\(token\)/);
  assert.match(script,/UUID\.test\(id\)/);
  assert.match(script,/ws02d-\x27\+route/);
+ assert.match(script,/try\{await identity\('inviter'\);const result=await edge\('invite'/);
+ assert.match(script,/try\{await identity\('recipient'\);if\(!INVITE_TOKEN/);
  for(const id of ['pair','send','list','accept']) assert.match(script,new RegExp('\\$\\(\\x27'+id+'\\x27\\)\\.addEventListener'));
 });
 test('staging script parses as JavaScript in an ES module',async()=>{
