@@ -1168,6 +1168,7 @@ function applyBoardViewFilter(rows){
  * A server outage leaves an explicitly temporary in-tab view.
  */
 const boardGroupCollapsedByScope=new Map();
+const boardGroupTransientExpanded=new Set();
 const boardGroupRevisions=new Map();
 const boardGroupSaveBusy=new Set();
 function boardGroupCollapseKey(groupId){
@@ -1207,6 +1208,7 @@ function boardGroupCollapsed(groupId,count){
    (!boardViewFilter.person||i.assignee_id===boardViewFilter.person)&&
    (!boardViewFilter.status||i.status===boardViewFilter.status)))return false;
  const key=boardGroupCollapseKey(groupId);
+ if(boardGroupTransientExpanded.has(key))return false;
  if(boardGroupCollapsedByScope.has(key))return boardGroupCollapsedByScope.get(key);
  const groups=state.board?.groups||[];
  return groups.length>5&&groups[0]?.id!==groupId;
@@ -1219,6 +1221,7 @@ async function persistBoardGroupCollapsed(groupId,collapsed){
  if(boardGroupSaveBusy.has(key))return;
  const count=(state.board.items||[]).filter(i=>i.group_id===groupId).length;
  const before=boardGroupCollapsed(groupId,count);
+ boardGroupTransientExpanded.delete(key);
  boardGroupCollapsedByScope.set(key,collapsed);render();
  const expected=boardGroupRevisions.get(key);
  if(!Number.isSafeInteger(expected)){
@@ -1242,6 +1245,7 @@ async function persistAllBoardGroupsCollapsed(collapsed){
  if(!boardGroupScopeMatches(snapshot))return;
  const ids=(state.board.groups||[]).map(g=>g.id);
  const previous=new Map(ids.map(id=>[id,boardGroupCollapsedByScope.get(boardGroupCollapseKey(id))]));
+ boardGroupTransientExpanded.clear();
  ids.forEach(id=>boardGroupCollapsedByScope.set(boardGroupCollapseKey(id),collapsed));
  render();
  try{
@@ -10733,7 +10737,15 @@ case 'new-group':{
  }
  case 'new-item':{
   if(!activeBoardLayout()||!canManuallyEditBoard(state.board?.board,state.edit))return;
-  const footer=root.querySelector('[data-inline-add-row] input');
+  let footer=root.querySelector('[data-inline-add-row] input');
+  if(!footer){
+   const first=(state.board?.groups||[])[0];
+   if(first){
+    // Reveal the creation context temporarily; saved collapse preferences stay intact.
+    boardGroupTransientExpanded.add(boardGroupCollapseKey(first.id));render();
+    footer=root.querySelector('[data-inline-add-row] input');
+   }
+  }
   if(!footer){toast('Create a group first.',true);return;}
   footer.focus();footer.scrollIntoView({block:'nearest',inline:'nearest'});break;
  }
