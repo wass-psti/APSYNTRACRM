@@ -73,8 +73,11 @@ test('numeric verification uses email OTP and rejects malformed codes before net
  assert.equal(elements.get('inviter-code').value,'');
  elements.get('inviter-code').value='123456';
  await handlers.get('[data-verify]-inviter')();
+ assert.equal(calls.length,0,'six-digit values must not be submitted for staging configured with eight-digit OTP');
+ elements.get('inviter-code').value='12345678';
+ await handlers.get('[data-verify]-inviter')();
  assert.equal(calls.length,1);
  assert.equal(calls[0].url,'https://jeqwjlxubntsddeauvqa.supabase.co/auth/v1/verify');
- assert.deepEqual(JSON.parse(calls[0].opts.body),{email:'lmsenagan@watchdogautomation.com.ph',token:'123456',type:'email'});
+ assert.deepEqual(JSON.parse(calls[0].opts.body),{email:'lmsenagan@watchdogautomation.com.ph',token:'12345678',type:'email'});
  assert.match(elements.get('inviter-status').textContent,/Invalid, expired, or already-used email code/);
 });
