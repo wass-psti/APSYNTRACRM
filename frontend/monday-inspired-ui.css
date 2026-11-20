@@ -1032,7 +1032,8 @@ html[data-aps-monday-theme="dark"] #app .aps-overview .overview-essentials .acti
  min-height:38px;background:var(--br-surface);border:1px solid var(--br-line);
  border-radius:8px;color:var(--br-ink);font-size:12px
 }
-#app .aps-board-shell .board-customize-toolbar :is(>.secondary,.board-column-menu>summary){
+#app .aps-board-shell .board-customize-toolbar>.secondary,
+#app .aps-board-shell .board-customize-toolbar .board-column-menu>summary{
  background:transparent;border:1px solid transparent;border-radius:7px;
  box-shadow:none;color:var(--br-muted);font-size:12px;min-height:37px;padding:8px 11px
 }
