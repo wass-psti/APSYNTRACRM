@@ -98,7 +98,7 @@ test('production drops old global matrix and Stage module capability but preserv
 });
 test('SQL and REST are staged, auth-scoped and protect board owner and app roles',()=>{
  const sql=readFileSync('sql/ACCESS_MODEL_V2_REVIEW_ONLY.sql','utf8');
- for(const phrase of ['CREATE TYPE access_v2.board_role AS ENUM (\\'viewer\\',\\'editor\\')',
+ for(const phrase of ["CREATE TYPE access_v2.board_role AS ENUM ('viewer','editor')",
   'CREATE TABLE access_v2.app_roles','CREATE TABLE access_v2.app_role_capabilities',
   'CREATE TABLE access_v2.app_role_members','CREATE TABLE access_v2.board_team_access',
   'CREATE FUNCTION access_v2.effective_board_role','CREATE FUNCTION access_v2.has_app_capability',
