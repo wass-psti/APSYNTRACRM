@@ -9,6 +9,7 @@
  */
 import postgres from 'npm:postgres@3.4.5';
 import {sendWorkspaceSmtp,validWorkspaceSmtpConfig} from './ws02d-smtp.mjs';
+import {invitationDeliveryReadiness,summarizeInvitationReadiness} from './ws02d-readiness.mjs';
 
 type Route = 'invite' | 'accept' | 'manage' | 'board';
 type ObjectMap = Record<string, unknown>;
@@ -135,6 +136,15 @@ async function trustedSql(actor: VerifiedActor, route: Route, body: ObjectMap): 
         providerEmailId: preparation.providerEmailId };
     } else if (route === 'accept') {
       rows = await tx`SELECT private.ws02d_accept(${body.token}::text) AS receipt`;
+    } else if (route === 'manage' && body.operation === 'readiness') {
+      const authorized = await tx`SELECT private.ws02d_sender_authorized(
+        ${body.workspaceId}::uuid, ${actor.id}::uuid) AS allowed`;
+      if (authorized[0]?.allowed !== true)
+        return fail(403, 'Workspace invitation access denied');
+      const feature = await tx`SELECT enabled FROM private.ws02d_invitation_flags WHERE id IS TRUE`;
+      if (typeof feature[0]?.enabled !== 'boolean')
+        return fail(503, 'Invitation feature state unavailable');
+      return {authorized:true,sqlEnabled:feature[0].enabled};
     } else if (route === 'manage' && body.operation === 'list') {
       rows = await tx`SELECT private.ws11_list_invitations(
         ${body.workspaceId}::uuid) AS receipt`;
@@ -180,7 +190,7 @@ function validate(route: Route, input: unknown): ObjectMap {
     return { token: v.token };
   }
   if (route === 'manage') {
-    if (!userId(v.workspaceId) || !['list', 'revoke'].includes(String(v.operation)))
+    if (!userId(v.workspaceId) || !['list', 'revoke', 'readiness'].includes(String(v.operation)))
       return fail(400, 'Invalid management request');
     if (v.operation === 'revoke' && (!userId(v.invitationId) || !userId(v.requestId)))
       return fail(400, 'Invalid revocation request');
@@ -338,7 +348,10 @@ export function serveInvitationRoute(route: Route) {
       return respond(req, 415, { state: 'denied' });
     try {
       // Keep deployment fail-closed even if SQL flags are accidentally enabled.
-      if (Deno.env.get('APSYNTRA_INVITES_EDGE_ENABLED') !== 'true')
+      // Validate the exact read-only operation before evaluating the disabled
+      // delivery gate. All other operations remain fail-closed.
+      const deliveryEnabled = Deno.env.get('APSYNTRA_INVITES_EDGE_ENABLED') === 'true';
+      if (!deliveryEnabled && route !== 'manage')
         return respond(req, 503, { state: 'unavailable' });
       const declared = Number(req.headers.get('content-length') || 0);
       if (declared > MAX_BYTES) return fail(413, 'Payload too large');
@@ -348,6 +361,9 @@ export function serveInvitationRoute(route: Route) {
       let input: unknown;
       try { input = JSON.parse(raw); } catch { return fail(400, 'Invalid JSON'); }
       const body = validate(route, input);
+      const isReadiness=route==='manage' && body.operation==='readiness';
+      if (!deliveryEnabled && !isReadiness)
+        return respond(req, 503, { state: 'unavailable' });
       if (route === 'invite') {
         const smtp = Deno.env.get('APSYNTRA_INVITE_TRANSPORT') === 'smtp';
         const config = {host:Deno.env.get('APSYNTRA_INVITE_SMTP_HOST'),
@@ -361,6 +377,14 @@ export function serveInvitationRoute(route: Route) {
       }
       const actor = await verifyUser(req);
       const receipt = await trustedSql(actor, route, body);
+      if (isReadiness) {
+        const readiness=summarizeInvitationReadiness({
+          workspaceId:body.workspaceId,authorized:receipt.authorized,
+          sqlEnabled:receipt.sqlEnabled,
+          delivery:invitationDeliveryReadiness(Deno.env)
+        });
+        return respond(req, 200, readiness);
+      }
       if (route === 'invite') return respond(req, 200, await deliver(actor, body, receipt));
       // Never return bearer secrets or raw SQL error details.
       return respond(req, 200, receipt);

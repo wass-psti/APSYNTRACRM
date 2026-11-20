@@ -390,9 +390,9 @@ test('invitation panel offers signed server-checked send without client-side mem
  assert.match(app,/case 'ws02-open-invites':/);
  assert.match(app,/openWorkspaceInvitationDialog\(\{/);
  assert.match(app,/const workspaceInvitationLiveClient=new WorkspaceInvitationClient\(\{auth,api:db,enabled:true\}\)/);
- assert.match(app,/const checkWorkspaceInvitationAvailability=workspaceId=>workspaceInvitationLiveManager\.list\(workspaceId\)/);
+ assert.match(app,/const checkWorkspaceInvitationAvailability=workspaceId=>workspaceInvitationLiveManager\.readiness\(workspaceId\)/);
  assert.match(module,/await options\.checkInvitationAvailability\(row\.id\)/);
- assert.match(module,/availability\?\.status!=='SIGNED_MANAGER_LIST'/);
+ assert.match(module,/availability\?\.status!=='SIGNED_INVITATION_READINESS'/);
  assert.match(module,/Send invitation/);
  assert.match(css,/\.ws02-invite-card/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
