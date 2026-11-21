@@ -1,7 +1,10 @@
 import {talkBoxMetrics} from './talkbox-native.js';
 const e=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export function renderTalkBoxApplication({page,selected,busy=false,error='',canEdit=false,filter={},features={},meetingOpen=false,meetingDate=''}={}){
- const rows=page?.items||[],metrics=talkBoxMetrics(rows);
+export function renderTalkBoxApplication({page,selected,busy=false,error='',canEdit=false,filter={},features={},meetingOpen=false,meetingDate='',meetingHistory=[],meetingRecord=null,meetingRows=[],meetingError=''}={}){
+ const allRows=meetingOpen&&meetingRecord?meetingRows:(page?.items||[]);
+ const rows=meetingOpen&&meetingRecord?allRows.filter(row=>(!filter.name||row.name.toLowerCase().includes(String(filter.name).trim().toLowerCase()))&&
+  (!filter.status||filter.status==='All'||row.status===filter.status)):allRows;
+ const metrics=talkBoxMetrics(rows);
  const summary=(value,label,tone)=>'<article class="tb-metric tb-metric-'+tone+'"><span>'+label+'</span><strong>'+e(value)+'</strong><small>Loaded workspace records</small></article>';
  const stateLabel=status=>'<span class="tb-status tb-status-'+(status==='Done'?'done':status==='Stuck'?'stuck':'working')+'"><span aria-hidden="true"></span>'+e(status)+'</span>';
  const deadline=value=>value?e(value):'<span class="tb-muted">Not scheduled</span>';
@@ -19,15 +22,17 @@ export function renderTalkBoxApplication({page,selected,busy=false,error='',canE
  '<div class="tb-workspace-tools"><span>Native APSYNTRA CRM workspace records</span>'+
  '<button type="button" class="secondary" data-action="tb-refresh"'+(busy?' disabled':'')+'>↻ Refresh</button></div></div>'+
  (error?'<div class="tb-error" role="alert">'+e(error)+'</div>':'')+
+ (meetingError?'<div class="tb-error" role="alert">Meeting history is unavailable: '+e(meetingError)+'</div>':'')+
  '<div class="tb-metrics" aria-label="Issue overview">'+
- summary(page?.total??'—','Total issues','total')+
+ summary(meetingOpen&&meetingRecord?meetingRecord.issueIds.length:(page?.total??'—'),'Total issues','total')+
  summary(metrics.open,'Active issues','open')+
  summary(metrics.stuck,'Need attention','stuck')+
  summary(metrics.done,'Resolved','done')+'</div>'+
  '<section class="tb-panel" aria-label="'+e(meetingTitle)+'"><div class="tb-panel-heading"><div><span class="tb-section-overline">'+
  (meetingOpen?'MEETING SHEET':'ISSUE WORKSPACE')+'</span><h3>'+(meetingOpen?'Main issues log':'Issue overview')+'</h3>'+
- '<p>'+(meetingOpen?'Work through issues with your team. This meeting date is a view label, not a saved meeting record.':'Your workspace issues, discussions and follow-up actions in one place.')+'</p></div>'+
+ '<p>'+(meetingOpen?'Persisted meeting issues and carried-over actions, linked to live native records.':'Your workspace issues, discussions and follow-up actions in one place.')+'</p></div>'+
  '<div class="tb-panel-actions">'+(meetingOpen&&meetingDate?'<span class="tb-date-chip">'+e(meetingDate)+'</span>':'')+
+ (meetingOpen&&meetingRecord?'<button type="button" class="secondary" data-action="tb-meeting-report">Download report CSV</button>':'')+
  (canEdit?'<button class="primary" data-action="tb-new">＋ New issue</button>':'')+'</div></div>'+
  '<div class="tb-filter"><label for="tb-search-text">Search issues</label>'+
  '<input id="tb-search-text" type="search" maxlength="500" placeholder="Search by issue name…" value="'+e(filter.name||'')+'">'+
@@ -38,13 +43,29 @@ export function renderTalkBoxApplication({page,selected,busy=false,error='',canE
  '<button type="button" class="secondary" data-action="tb-clear-filter"'+(busy?' disabled':'')+'>Clear</button></div>'+
  (busy?'<p class="tb-loading" role="status">Loading signed issues…</p>':rows.length?
  '<div class="tb-scroll"><table><thead><tr><th scope="col">Issue</th><th scope="col">Status</th><th scope="col">Target date</th><th scope="col">Assigned to</th><th scope="col"><span class="tb-sr-only">Actions</span></th></tr></thead><tbody>'+
- rows.map(row=>'<tr><td><button class="tb-issue-link" type="button" data-action="tb-open" data-id="'+e(row.id)+'"><span class="tb-issue-glyph" aria-hidden="true">◈</span><span>'+e(row.name)+'</span></button></td><td>'+(meetingOpen&&canEdit?
+ rows.map(row=>'<tr><td>'+(row.unavailable?
+ '<span class="tb-issue-link tb-unavailable"><span class="tb-issue-glyph" aria-hidden="true">◈</span><span>'+e(row.name)+'</span></span>':
+ '<button class="tb-issue-link" type="button" data-action="tb-open" data-id="'+e(row.id)+'"><span class="tb-issue-glyph" aria-hidden="true">◈</span><span>'+e(row.name)+'</span></button>')+'</td><td>'+
+ (meetingOpen&&canEdit&&!row.unavailable?
  '<select id="tb-inline-status-'+e(row.id)+'" class="tb-inline-status" data-tb-inline-status="'+e(row.id)+'" aria-label="Update status for '+e(row.name)+'">'+
  ['Working on it','Stuck','Done'].map(status=>'<option value="'+e(status)+'"'+(row.status===status?' selected':'')+'>'+e(status)+'</option>').join('')+'</select>':
- stateLabel(row.status))+'</td><td>'+deadline(row.date)+'</td><td>'+e((row.person||[]).map(p=>p.name||p.id).join(', ')||'—')+'</td><td><button class="tb-row-action" type="button" data-action="tb-open" data-id="'+e(row.id)+'" aria-label="Open '+e(row.name)+'">View details →</button></td></tr>').join('')+
+ stateLabel(row.status))+'</td><td>'+deadline(row.date)+'</td><td>'+e((row.person||[]).map(p=>p.name||p.id).join(', ')||'—')+'</td><td>'+
+ (row.unavailable?'<span class="tb-muted">Archived / unavailable</span>':
+ '<button class="tb-row-action" type="button" data-action="tb-open" data-id="'+e(row.id)+'" aria-label="Open '+e(row.name)+'">View details →</button>')+'</td></tr>').join('')+
  '</tbody></table></div>':'<div class="tb-empty"><span aria-hidden="true">◈</span><strong>No issues found</strong><p>Adjust the filters or create an issue to begin.</p></div>')+
- '<div class="tb-panel-footer"><span>Showing '+e(rows.length)+' of '+e(page?.total??'—')+' signed issues</span>'+
+ '<div class="tb-panel-footer"><span>Showing '+e(rows.length)+' of '+e(meetingOpen&&meetingRecord?meetingRecord.issueIds.length:(page?.total??'—'))+' signed issues</span>'+
  (page?.cursor?'<button class="secondary" data-action="tb-more">Load more issues</button>':'')+'</div></section>'+
+ (meetingOpen&&meetingRecord?'<section class="tb-meeting-record" aria-label="Persisted meeting notes">'+
+ '<div class="tb-meeting-record-head"><div><span class="tb-section-overline">PERSISTED MEETING</span><h3>Meeting notes &amp; carry-over</h3><p>'+e(meetingRecord.carriedIssueIds?.length||0)+' issues carried over from '+e(meetingRecord.carriedFrom||'no previous meeting')+'.</p></div>'+
+ '<span class="tb-date-chip">'+e(meetingRecord.date)+'</span></div>'+
+ '<label for="tb-meeting-notes">Meeting summary, decisions and next actions</label>'+
+ '<textarea id="tb-meeting-notes" maxlength="10000" rows="5"'+(canEdit?'':' readonly')+'>'+e(meetingRecord.notes)+'</textarea>'+
+ (canEdit?'<button type="button" class="primary" data-action="tb-meeting-notes">Save meeting notes</button>':'')+
+ '</section>':'')+
+ (!meetingOpen?'<section class="tb-meeting-history" aria-label="Meeting history"><div class="tb-meeting-record-head"><div><span class="tb-section-overline">MEETING ARCHIVE</span><h3>Meeting history</h3><p>Reopen a saved meeting sheet to review its issues and notes.</p></div><span class="tb-date-chip">'+e(meetingHistory.length)+' saved</span></div>'+
+ (meetingHistory.length?'<div class="tb-history-list">'+meetingHistory.map(item=>
+ '<button type="button" data-action="tb-meeting-history" data-date="'+e(item.date)+'"><strong>'+e(item.date)+'</strong><span>'+e(item.issueIds.length)+' linked issues · '+e(item.carriedIssueIds?.length||0)+' carried over</span><span aria-hidden="true">View meeting →</span></button>').join('')+'</div>':
+ '<p class="tb-history-empty">No meetings saved yet. Choose a date and select Enter Meeting to create the first one.</p>')+'</section>':'')+
  (selected?'<div class="tb-overlay"><button type="button" class="tb-shade" data-action="tb-close" aria-label="Close issue"></button>'+
  '<aside class="tb-drawer" role="dialog" aria-modal="true" aria-label="Issue details"><header><div><h3>'+e(selected.name)+'</h3>'+
  '<small>Issue #'+e(selected.id)+'</small></div><button class="secondary" data-action="tb-close" aria-label="Close issue">✕</button></header>'+
