@@ -29414,3 +29414,221 @@ html[data-aps-monday-theme="dark"] #app .modal .modal-close {
     transition: none;
   }
 }
+
+/* frontend/application-ui-refinement.css */
+/* CP-CRM-UI-REFINEMENT-02 — native application and menu visual alignment.
+ * Uiverse-inspired control clarity, micro-states and depth without new JS,
+ * external CSS, changed workflow, fixed row size, or menu positioning.
+ * Loaded after CP01's shared visual layer for predictable override order.
+ */
+:root {
+  --crm-app-stroke: var(--crm-ui-edge, #dce3ed);
+  --crm-app-stroke-strong: var(--crm-ui-edge-hover, #b9c4d7);
+  --crm-app-focus: var(--crm-ui-focus, #6869b7);
+  --crm-app-halo: var(--crm-ui-focus-halo, #6869b738);
+  --crm-app-hover: var(--sm-surface-soft, #f1f3f7);
+  --crm-app-radius: 12px;
+}
+
+/* Real buttons, tabs and menus: no extra icon chrome or translated layout. */
+#app
+  :is(
+    .fm1-app .fm1-primary-button,
+    .fm1-app .fm1-quiet-button,
+    .ft3-app-tab,
+    .tt-native .tt-nav-tab,
+    .tl-reference-portal .tl-reference-document-toolbar button,
+    .frt-ref-nav-button,
+    .ws01-browser-tabs button
+  ) {
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+#app
+  :is(
+    .fm1-app .fm1-primary-button,
+    .fm1-app .fm1-quiet-button,
+    .ft3-app-tab,
+    .tt-native .tt-nav-tab,
+    .tl-reference-portal .tl-reference-document-toolbar button,
+    .frt-ref-nav-button,
+    .ws01-browser-tabs button
+  ):focus-visible {
+  outline: 2px solid var(--crm-app-focus);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px var(--crm-app-halo);
+}
+#app
+  :is(
+    .fm1-app .fm1-quiet-button,
+    .tl-reference-portal
+      .tl-reference-document-toolbar
+      button:not(.tl-reference-primary),
+    .ws01-browser-tabs button
+  ):hover:not(:disabled) {
+  border-color: var(--crm-app-stroke-strong);
+}
+#app
+  .tl-reference-portal
+  .tl-reference-document-toolbar
+  button:not(:disabled):active,
+#app
+  .fm1-app
+  :is(.fm1-primary-button, .fm1-quiet-button):not(:disabled):active {
+  box-shadow: inset 0 2px 5px #24324916;
+}
+
+/* Improve native FuelTrack tab text contrast without changing its theme. */
+#app .ft3-app-tabs .ft3-app-tab:not(.is-active) {
+  color: #435d66;
+}
+
+/* Dropdowns and context menus keep their original anchors and scroll height. */
+#app
+  :is(
+    .aps-action-popover,
+    .board-tool-menu-panel,
+    .board-column-menu-content,
+    .aps-select-listbox,
+    .ws01-menu-card
+  ) {
+  border-color: var(--crm-app-stroke);
+}
+#app .aps-action-popover > :is([role="menuitem"], button[data-action], a[href]),
+#app .board-tool-menu-panel :is(button, a[href]),
+#app .board-column-menu-content :is(button, a[href]) {
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
+}
+#app .aps-board-shell .aps-action-popover > [role="menuitem"]:focus-visible,
+#app
+  .aps-action-popover
+  > :is([role="menuitem"], button[data-action], a[href]):focus-visible,
+#app .board-tool-menu-panel :is(button, a[href]):focus-visible,
+#app .board-column-menu-content :is(button, a[href]):focus-visible,
+#app .aps-select-listbox [role="option"]:focus-visible {
+  outline: 2px solid var(--crm-app-focus);
+  outline-offset: -2px;
+}
+#app :is(.aps-action-popover, .aps-select-listbox, .board-tool-menu-panel) {
+  overscroll-behavior: contain;
+}
+
+/* Native application panels: preserve their brands, internal table metrics and tabs. */
+#app
+  :is(
+    .fm1-app .fm1-panel,
+    .fm1-app .fm1-metric-card,
+    .ft3-panel,
+    .tl-reference-portal .tl-draft-panel,
+    .tt-native .tt-attendance-console,
+    .tb-panel,
+    .frt-ref-table-card,
+    .ws01-browser-card
+  ) {
+  border-color: var(--crm-app-stroke);
+}
+#app
+  :is(
+    .fm1-app .fm1-panel,
+    .fm1-app .fm1-metric-card,
+    .ft3-panel,
+    .tl-reference-portal .tl-draft-panel,
+    .tb-panel,
+    .frt-ref-table-card
+  ):focus-within {
+  box-shadow:
+    0 0 0 2px var(--crm-app-halo),
+    var(--crm-ui-elevation, 0 3px 15px #2234510b);
+}
+#app
+  :is(.tl-reference-portal, .fm1-app, .tt-native, .ft3-app, .tb-panel)
+  :is(input, textarea, select):focus-visible {
+  outline-color: var(--crm-app-focus);
+  outline-offset: 2px;
+}
+
+/* Keyboard and row intent stay visible without changing row height or click targets. */
+#app
+  :is(
+    .tl-reference-portal .tl-records-table,
+    .fm1-app .fm1-table,
+    .ft3-recent-table,
+    .tb-panel table
+  )
+  tbody
+  tr:focus-within {
+  outline: 2px solid var(--crm-app-focus);
+  outline-offset: -2px;
+}
+#app
+  :is(
+    .tl-reference-portal .tl-records-table,
+    .fm1-app .fm1-table,
+    .ft3-recent-table,
+    .tb-panel table
+  )
+  :is(th, td) {
+  border-bottom-color: var(--crm-app-stroke);
+}
+#app .aps-board-shell .board-table-custom tbody tr:focus-within td {
+  border-bottom-color: var(--crm-app-stroke-strong);
+}
+
+/* Responsive menu and action groups: preserve existing inner scroll containers. */
+#app
+  :is(
+    .tl-reference-document-toolbar,
+    .fm1-app .fm1-page-heading,
+    .tt-native .tt-app-header,
+    .ws01-browser-top
+  ) {
+  min-width: 0;
+}
+@media (max-width: 720px) {
+  #app .tl-reference-portal .tl-reference-document-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  #app .tl-reference-portal .tl-reference-document-toolbar > button {
+    min-width: 0;
+  }
+  #app :is(.fm1-app .fm1-page-heading, .tt-native .tt-app-header) {
+    flex-wrap: wrap;
+  }
+}
+
+/* Dark mode: no light borders or pale option rings inside native modules. */
+html[data-aps-monday-theme="dark"] {
+  --crm-app-hover: #303238;
+}
+html[data-aps-monday-theme="dark"]
+  #app
+  :is(
+    .aps-action-popover,
+    .board-tool-menu-panel,
+    .board-column-menu-content,
+    .aps-select-listbox
+  ) {
+  border-color: #50545d;
+}
+@media (prefers-reduced-motion: reduce) {
+  #app
+    :is(
+      .fm1-app .fm1-primary-button,
+      .fm1-app .fm1-quiet-button,
+      .ft3-app-tab,
+      .tt-native .tt-nav-tab,
+      .tl-reference-portal .tl-reference-document-toolbar button,
+      .frt-ref-nav-button,
+      .ws01-browser-tabs button,
+      .aps-action-popover > [role="menuitem"]
+    ) {
+    transition: none;
+  }
+}

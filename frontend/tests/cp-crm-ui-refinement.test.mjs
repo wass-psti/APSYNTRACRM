@@ -9,8 +9,9 @@ import {
 
 const source = readFileSync("frontend/enterprise-ui-refinement.css", "utf8");
 
-test("refinement is the final CSS source in the deterministic bundle", () => {
-  assert.equal(STYLE_SOURCES.at(-1), "frontend/enterprise-ui-refinement.css");
+test("shared refinement precedes the application visual layer in deterministic CSS", () => {
+  assert.equal(STYLE_SOURCES.at(-2), "frontend/enterprise-ui-refinement.css");
+  assert.equal(STYLE_SOURCES.at(-1), "frontend/application-ui-refinement.css");
   assert.equal(readFileSync(STYLE_BUNDLE, "utf8"), generateStyleBundle());
 });
 test("shared UI coverage includes navigation, cards, inputs, boards and dialogs", () => {
