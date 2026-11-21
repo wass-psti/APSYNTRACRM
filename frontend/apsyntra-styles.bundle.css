@@ -29263,6 +29263,11 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .board-horizontal-rail:
 .tb-app .tb-history-empty{font-size:.84rem;color:var(--tb-muted)}
 .tb-app .tb-unavailable{opacity:.73;cursor:default}
 
+/* Native browser download keeps user activation intact; no asynchronous click proxy. */
+.tb-app .tb-report-download{display:inline-flex;align-items:center;justify-content:center;min-height:36px;box-sizing:border-box;padding:7px 13px;text-decoration:none;border:1px solid var(--tb-edge);border-radius:10px;background:var(--tb-panel);color:var(--tb-ink);font-size:.81rem;font-weight:650}
+.tb-app .tb-report-download:hover{border-color:#9db7d9;background:var(--surface-2,#f4f7fc)}
+.tb-app .tb-report-download:focus-visible{outline:3px solid #f0b969;outline-offset:3px}
+
 /* frontend/board-invite.css */
 /* Scoped board-header Invite / N and signed access dialog. Separate from the
  * generated bundle to keep unrelated board/app CSS deterministic. */
