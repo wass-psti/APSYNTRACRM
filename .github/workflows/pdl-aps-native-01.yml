@@ -12,6 +12,9 @@ on:
       - 'scripts/build-pdl-native.mjs'
       - 'scripts/pdl-aps-native-02-readiness.mjs'
       - 'frontend/tests/pdl-aps-native-02-readiness.test.mjs'
+      - 'frontend/tests/pdl-aps-native-04-sql-contract.test.mjs'
+      - 'supabase/pdl-booking/acceptance/**'
+      - 'docs/PDL-APS-NATIVE-04-ACCEPTANCE.md'
       - '.github/workflows/pdl-aps-native-01.yml'
   workflow_dispatch:
 permissions:

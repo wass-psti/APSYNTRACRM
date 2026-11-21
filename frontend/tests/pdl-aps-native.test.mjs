@@ -72,3 +72,12 @@ test('public admin demo routes are not used in the shipped Paseo portal',()=>{
  assert.match(router,/Navigate to="\/admin\/sign-in" replace/);
  assert.doesNotMatch(router,/AdminCustomersPage|AdminPaymentsPage|AdminOverviewPage/);
 });
+
+test('native readback ignores superseded refresh and signout responses',()=>{
+ const app=read('frontend/app.js');
+ assert.match(app,/const runId=\+\+paseoReadRunId/);
+ assert.match(app,/runId===paseoReadRunId/);
+ assert.match(app,/if\(!current\(\)\)return;/);
+ assert.match(app,/if\(parts\[0\]!==\'paseo\'\)paseoReadRunId\+\+/);
+ assert.match(app,/paseoReadRunId\+\+;state\.paseoManagement=null/);
+});
