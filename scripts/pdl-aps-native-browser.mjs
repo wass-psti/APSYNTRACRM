@@ -181,6 +181,50 @@ try{
  assert.deepEqual(stressErrors,[]);
  console.log('PASS failed cancellation and failed readback warn against blind retries; refresh recovers');
  await stress.close();
+ // All seven administration routes must mount their real modules, not redirect.
+ const modules=await browser.newPage({viewport:{width:900,height:950}});
+ const moduleErrors=[];
+ modules.on('pageerror',error=>moduleErrors.push(error.message));
+ await modules.addInitScript(()=>sessionStorage.setItem('pdl-booking-admin-access-token','SYNTHETIC_TEST_ONLY'));
+ await modules.route('**/functions/v1/pdl-guest-api/v1/admin/**',async route=>{
+   const path=new URL(route.request().url()).pathname;
+   const send=(json,status=200)=>route.fulfill({status,json});
+   if(path.endsWith('/v1/admin/session'))return send({authenticated:true});
+   if(path.endsWith('/v1/admin/courts'))return send({courts:[
+     {courtId:'court-1',name:'Court 1',enabled:false,openMinute:480,closeMinute:1320,rates:[]},
+   ]});
+   if(path.endsWith('/v1/admin/reservations/page'))return send({reservations:[],nextCursor:null});
+   if(path.endsWith('/v1/admin/calendar'))return send({weekdays:[],blocks:[]});
+   if(path.endsWith('/v1/admin/policies'))return send({reservationLeadHours:0,arrivalGraceMinutes:15,publicNotice:''});
+   return send({error:'missing_fixture'},404);
+ });
+ await modules.route('**/functions/v1/pdl-guest-api/v1/payment-methods',async route=>
+   route.fulfill({status:200,json:{methods:[]}}));
+ const routes=[
+   ['courts','Court schedule'],['calendar','Weekly operating hours'],
+   ['bookings','Booking queue'],['pricing','Server-authoritative booking rate'],
+   ['payments','Admin-managed QR payment settings'],['customers','Customer directory.'],
+   ['settings','Save operational policies'],
+ ];
+ for(const [route,label] of routes){
+   await modules.goto(base+'paseo/admin/'+route);
+   await modules.getByText(label,{exact:true}).first().waitFor({timeout:15000});
+   assert.equal(new URL(modules.url()).pathname,prefix+'paseo/admin/'+route);
+   await modules.reload();
+   await modules.getByText(label,{exact:true}).first().waitFor({timeout:15000});
+   assert.equal(new URL(modules.url()).pathname,prefix+'paseo/admin/'+route);
+ }
+ await modules.getByRole('link',{name:'Court settings'}).click();
+ await modules.getByText('Court schedule',{exact:true}).waitFor();
+ await modules.getByRole('link',{name:'Court calendar'}).click();
+ await modules.getByText('Weekly operating hours',{exact:true}).waitFor();
+ await modules.goBack();
+ await modules.getByText('Court schedule',{exact:true}).waitFor();
+ await modules.goForward();
+ await modules.getByText('Weekly operating hours',{exact:true}).waitFor();
+ assert.deepEqual(moduleErrors,[]);
+ console.log('PASS seven admin module routes: direct link, refresh, tab switching, back/forward without runtime errors');
+ await modules.close();
  const crm=await browser.newPage();
  await crm.goto(base+'#/paseo');
  await crm.locator('.aps-auth-v2').waitFor({timeout:16000});

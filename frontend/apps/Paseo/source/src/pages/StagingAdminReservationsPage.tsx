@@ -28,9 +28,19 @@ interface StageReservation {
   created_at: string;
 }
 
-export function StagingAdminReservationsPage() {
+type WorkspaceView = 'all' | 'courts' | 'bookings' | 'pricing' | 'payments' | 'customers';
+const workspaceTitles: Record<WorkspaceView, string> = {
+  all: 'Stored reservations.', courts: 'Court settings.', bookings: 'Booking management.',
+  pricing: 'Pricing and policies.', payments: 'Payment monitoring.', customers: 'Customer directory.',
+};
+
+export function StagingAdminReservationsPage({ view = 'all' }: { view?: WorkspaceView }) {
+  const showRecords = ['all','bookings','payments','customers'].includes(view);
+  const showConfig = ['all','courts','pricing'].includes(view);
+  const showQr = view === 'all' || view === 'payments';
   const navigate = useNavigate();
   const [records, setRecords] = useState<StageReservation[]>([]);
+  const customers = [...new Map(records.map(record => [record.email.toLowerCase(), record])).values()];
   const [search, setSearch] = useState('');
   const [reservationLoaded, setReservationLoaded] = useState(false);
   const [reservationLoading, setReservationLoading] = useState(false);
@@ -116,8 +126,9 @@ export function StagingAdminReservationsPage() {
     }
   }
   useEffect(() => {
-    void load(''); void loadMethods();
-    if (sharedSupabaseAdminEnabled) void loadCourtConfig();
+    if (showRecords) void load('');
+    if (showQr) void loadMethods();
+    if (showConfig && sharedSupabaseAdminEnabled) void loadCourtConfig();
     return () => { loadRequest.current += 1; };
   }, []);
   async function loadCourtConfig() {
@@ -249,24 +260,24 @@ export function StagingAdminReservationsPage() {
   }
 
   return (
-    <AdminShell title="Stored reservations." liveReservations>
+    <AdminShell title={workspaceTitles[view]} liveReservations>
       <div className="pdl-live-admin">
         <div className="pdl-live-intro">
           <div>
             <p className="pdl-live-kicker">OPERATIONS / BOOKING CONTROL</p>
-            <h2>Reservation workspace</h2>
+            <h2>{workspaceTitles[view]}</h2>
             <p>Review bookings, validate payment evidence and manage approved court availability in one place.</p>
           </div>
           <span className="pdl-live-source">{sharedSupabaseAdminEnabled ? 'Connected to Paseo records' : 'Local staging records'}</span>
         </div>
-        <div className="pdl-live-metrics" aria-label="Current reservation results">
+        {showRecords && <div className="pdl-live-metrics" aria-label="Current reservation results">
           <div><span>Reservations in results</span><strong>{reservationLoaded ? records.length : '—'}</strong><small>Current server response</small></div>
           <div><span>Awaiting review</span><strong>{reservationLoaded ? records.filter(item => item.payment_status === 'submitted').length : '—'}</strong><small>Payment proof submitted</small></div>
           <div><span>Payments verified</span><strong>{reservationLoaded ? records.filter(item => item.payment_status === 'verified').length : '—'}</strong><small>In current results</small></div>
-        </div>
-        <section className="pdl-live-section pdl-live-reservations" aria-labelledby="pdl-reservations-heading">
+        </div>}
+        {showRecords && <section className="pdl-live-section pdl-live-reservations" aria-labelledby="pdl-reservations-heading">
           <div className="pdl-live-section-heading">
-            <div><p className="pdl-live-kicker">01 / RESERVATIONS</p><h2 id="pdl-reservations-heading">Booking queue</h2></div>
+            <div><p className="pdl-live-kicker">01 / RESERVATIONS</p><h2 id="pdl-reservations-heading">{view === 'customers' ? 'Customers from stored reservations' : view === 'payments' ? 'Booking payments' : 'Booking queue'}</h2></div>
             <span className="pdl-live-section-description">Search, review and verify</span>
           </div>
       <div className="demo-banner" role="note"><strong>{sharedSupabaseAdminEnabled ? 'PASEO RECORDS / SHARED SUPABASE PROJECT' : 'LOCAL STAGING RECORDS ONLY'}</strong>
@@ -294,7 +305,16 @@ export function StagingAdminReservationsPage() {
           <h3>No matching reservations</h3>
           <p>New submissions will appear here. Adjust your search or refresh to check for updates.</p>
         </div>}
-        {records.map((item) => (
+        {view === 'customers' ? customers.map(item => (
+          <article key={item.email.toLowerCase()} className="booking-panel staging-reservation-card">
+            <h3>{item.full_name}</h3>
+            <dl className="pdl-reservation-details">
+              <div><dt>Email</dt><dd>{item.email}</dd></div>
+              <div><dt>Phone</dt><dd>{item.phone}</dd></div>
+              <div><dt>Latest loaded booking</dt><dd>{item.id}</dd></div>
+            </dl>
+          </article>
+        )) : records.map((item) => (
           <article key={item.id} className="booking-panel staging-reservation-card">
             <div className="pdl-reservation-top">
               <div>
@@ -331,8 +351,8 @@ export function StagingAdminReservationsPage() {
           {reservationLoading ? 'Loading more…' : 'Load more reservations'}
         </button>
       )}
-        </section>
-      {sharedSupabaseAdminEnabled && (
+        </section>}
+      {showConfig && sharedSupabaseAdminEnabled && (
         <section className="booking-panel pdl-live-section pdl-live-config" aria-labelledby="pdl-config-heading">
           <div className="pdl-live-section-heading">
             <div><p className="pdl-live-kicker">02 / VENUE SETTINGS</p><h2 id="pdl-config-heading">Court availability and venue rate configuration</h2></div>
@@ -344,7 +364,7 @@ export function StagingAdminReservationsPage() {
             {['court-1','court-2','court-3'].map(code => <option key={code} value={code}>{code}</option>)}
           </select>
           <div className="pdl-live-config-grid">
-          <form className="guest-proof-form" onSubmit={(event) => { void updateCourt(event); }}>
+          {(view === 'all' || view === 'courts') && <form className="guest-proof-form" onSubmit={(event) => { void updateCourt(event); }}>
             <h3>Court schedule</h3>
             <label htmlFor="pdl-open-minute">Opening minute after midnight</label>
             <input id="pdl-open-minute" type="number" min={0} max={1380} step={30} value={opening}
@@ -358,8 +378,8 @@ export function StagingAdminReservationsPage() {
               Enable this court after venue approval
             </label>
             <button type="submit" className="button button-secondary">Save court configuration</button>
-          </form>
-          <form className="guest-proof-form" onSubmit={(event) => { void updateRate(event); }}>
+          </form>}
+          {(view === 'all' || view === 'pricing') && <form className="guest-proof-form" onSubmit={(event) => { void updateRate(event); }}>
             <h3>Server-authoritative booking rate</h3>
             <label htmlFor="pdl-rate-duration">Duration</label>
             <select id="pdl-rate-duration" value={rateDuration}
@@ -379,12 +399,12 @@ export function StagingAdminReservationsPage() {
             <button className="button button-secondary" type="submit" disabled={!rateAmount}>
               Save server rate
             </button>
-          </form>
+          </form>}
           </div>
           <p role="status" className="pdl-live-status">{configMessage}</p>
         </section>
       )}
-      <section className="booking-panel managed-qr-settings pdl-live-section" aria-label="Admin-managed QR payment settings">
+      {showQr && <section className="booking-panel managed-qr-settings pdl-live-section" aria-label="Admin-managed QR payment settings">
         <div className="pdl-live-section-heading">
           <div><p className="pdl-live-kicker">03 / PAYMENT CHANNELS</p><h2>Admin-managed QR payment settings</h2></div>
           <span className="pdl-live-section-description">Three independent methods</span>
@@ -400,7 +420,7 @@ export function StagingAdminReservationsPage() {
               onSaved={loadMethods} />
           ))}
         </div>
-      </section>
+      </section>}
       {proof && (
         <dialog ref={proofDialog} className="booking-panel staging-proof-panel pdl-proof-dialog"
           aria-labelledby="pdl-proof-title" onClose={closeProof} onCancel={event => {
