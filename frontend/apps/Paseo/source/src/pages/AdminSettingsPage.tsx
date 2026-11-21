@@ -10,7 +10,7 @@ export function AdminSettingsPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
 
-  async function readback() {
+  async function readback(): Promise<Policy> {
     const response = await backendAdminFetch('/v1/admin/policies', { cache: 'no-store' });
     if (!response.ok) throw new Error('Operational policies could not be retrieved.');
     const value = await response.json() as Policy;
@@ -18,6 +18,7 @@ export function AdminSettingsPage() {
       typeof value.publicNotice !== 'string') throw new Error('Unexpected policy response.');
     setPolicy(value);
     setLoaded(true);
+    return value;
   }
   useEffect(() => {
     if (!sharedSupabaseAdminEnabled) return;
@@ -33,7 +34,15 @@ export function AdminSettingsPage() {
         const value = await response.json() as { error?: string };
         throw new Error(value.error ?? 'Policy update rejected.');
       }
-      await readback(); setMessage('Policy saved and verified by server readback.');
+      const acknowledged = await response.json() as { updated?: boolean };
+      if (!acknowledged.updated) throw new Error('Policy update was not acknowledged.');
+      const persisted = await readback();
+      if (persisted.reservationLeadHours !== policy.reservationLeadHours ||
+        persisted.arrivalGraceMinutes !== policy.arrivalGraceMinutes ||
+        persisted.publicNotice !== policy.publicNotice.trim()) {
+        throw new Error('Policy save returned, but the stored values did not match. Refresh before retrying.');
+      }
+      setMessage('Policy saved and verified by server readback.');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Policy update failed.'); }
     finally { setBusy(false); }
   }

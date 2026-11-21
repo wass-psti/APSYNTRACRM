@@ -127,17 +127,18 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
   }
   useEffect(() => {
     if (showRecords) void load('');
-    if (showQr) void loadMethods();
-    if (showConfig && sharedSupabaseAdminEnabled) void loadCourtConfig();
+    if (showQr) void loadMethods().catch(() => setQrMessage('Payment methods could not be retrieved.'));
+    if (showConfig && sharedSupabaseAdminEnabled) void loadCourtConfig().catch(reason =>
+      setConfigMessage(reason instanceof Error ? reason.message : 'Court configuration unavailable.'));
     return () => { loadRequest.current += 1; };
   }, []);
-  async function loadCourtConfig() {
-    try {
-      const response = await backendAdminFetch('/v1/admin/courts', { cache:'no-store' });
-      if (!response.ok) throw new Error('Court configuration could not be loaded.');
-      const result: {courts: typeof courtConfig} = await response.json();
-      setCourtConfig(result.courts);
-    } catch (reason) { setConfigMessage(reason instanceof Error ? reason.message : 'Could not load court settings.'); }
+  async function loadCourtConfig(): Promise<typeof courtConfig> {
+    const response = await backendAdminFetch('/v1/admin/courts', { cache:'no-store' });
+    if (!response.ok) throw new Error('Court configuration could not be loaded.');
+    const result: {courts: typeof courtConfig} = await response.json();
+    if (!Array.isArray(result.courts)) throw new Error('Invalid court configuration response.');
+    setCourtConfig(result.courts);
+    return result.courts;
   }
   async function updateCourt(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -148,8 +149,15 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
         body:JSON.stringify({enabled:courtEnabled,openMinute:opening,closeMinute:closing}),
       });
       if (!response.ok) throw new Error('Court update was not accepted.');
+      const acknowledged = await response.json() as { updated?: boolean };
+      if (!acknowledged.updated) throw new Error('Court update was not acknowledged.');
+      const readback = await loadCourtConfig();
+      const persisted = readback.find(item => item.courtId === selectedCourt);
+      if (!persisted || persisted.enabled !== courtEnabled || persisted.openMinute !== opening ||
+        persisted.closeMinute !== closing) {
+        throw new Error('Court save returned, but the stored configuration did not match. Refresh before retrying.');
+      }
       setConfigMessage('Court settings saved in the dedicated Paseo Supabase schema.');
-      await loadCourtConfig();
     } catch (reason) { setConfigMessage(reason instanceof Error ? reason.message : 'Court settings failed.'); }
   }
   async function updateRate(event: React.FormEvent<HTMLFormElement>) {
@@ -163,17 +171,24 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
         body:JSON.stringify({amountMinor,enabled:rateEnabled}),
       });
       if (!response.ok) throw new Error('Rate configuration was not accepted.');
+      const acknowledged = await response.json() as { updated?: boolean };
+      if (!acknowledged.updated) throw new Error('Rate update was not acknowledged.');
+      const readback = await loadCourtConfig();
+      const persisted = readback.find(item => item.courtId === selectedCourt)?.rates.find(
+        rate => rate.durationMinutes === rateDuration);
+      if (!persisted || persisted.amountMinor !== amountMinor || persisted.enabled !== rateEnabled) {
+        throw new Error('Rate save returned, but the stored rate did not match. Refresh before retrying.');
+      }
       setConfigMessage('Rate saved. Enable the court and rate only after venue approval.');
-      await loadCourtConfig();
     } catch (reason) { setConfigMessage(reason instanceof Error ? reason.message : 'Rate settings failed.'); }
   }
-  async function loadMethods() {
-    try {
-      const response = await fetch(`${configuredGuestApiBase}/v1/payment-methods`);
-      if (!response.ok) throw new Error('Payment methods not available.');
-      const value: {methods: ManagedMethod[]} = await response.json();
-      setPaymentMethods(value.methods);
-    } catch { setQrMessage('Payment methods could not be retrieved.'); }
+  async function loadMethods(): Promise<ManagedMethod[]> {
+    const response = await fetch(`${configuredGuestApiBase}/v1/payment-methods`, {cache:'no-store'});
+    if (!response.ok) throw new Error('Payment methods not available.');
+    const value: {methods: ManagedMethod[]} = await response.json();
+    if (!Array.isArray(value.methods)) throw new Error('Invalid payment methods response.');
+    setPaymentMethods(value.methods);
+    return value.methods;
   }
   useEffect(() => () => { if (proof) URL.revokeObjectURL(proof.url); }, [proof]);
   useEffect(() => () => { proofRequest.current += 1; }, []);
@@ -225,11 +240,15 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
         body: JSON.stringify({ decision, expectedVersion: item.version }),
       });
       if (!response.ok) throw new Error(response.status === 409 ? 'Reservation changed in another session. Refresh and retry.' : 'Verification could not be saved.');
-      await load();
+      const refreshed = await load();
+      if (!refreshed) {
+        setStatus('Verification accepted, but status readback failed. Do not retry until a successful refresh confirms the booking.');
+      }
     } catch (reason) {
       const message=reason instanceof Error ? reason.message : 'Verification outcome uncertain.';
-      await load();
-      setStatus(`${message} Review the refreshed booking status before another decision.`);
+      const refreshed = await load();
+      setStatus(refreshed ? `${message} Review the refreshed booking status before another decision.` :
+        `${message} Readback failed. Do not retry verification until a successful refresh confirms the booking status.`);
     } finally { setBusyId(''); }
   }
 

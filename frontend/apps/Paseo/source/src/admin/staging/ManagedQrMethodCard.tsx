@@ -40,7 +40,7 @@ export function ManagedQrMethodCard({
   method: ManagedPaymentMethod;
   label: string;
   configured: ManagedMethod | undefined;
-  onSaved: () => Promise<void>;
+  onSaved: () => Promise<ManagedMethod[]>;
 }) {
   const [recipient, setRecipient] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -102,11 +102,15 @@ export function ManagedQrMethodCard({
         method: 'PUT', body: payload,
       });
       if (!response.ok) throw new Error(`Could not save ${label} QR image. Existing saved images were not changed.`);
-      // A new URL forces the browser to show newly uploaded bytes at the method's stable endpoint.
+      const updated = await onSaved();
+      const saved = updated.find(item => item.method === method);
+      if (!saved || saved.recipient !== recipient.trim() || !saved.imageUrl) {
+        throw new Error(`${label} QR update was acknowledged but not confirmed by server readback. Review before retrying.`);
+      }
+      // New revision forces the actual stored asset URL to reload.
       setRevision(value => value + 1);
       setFile(null);
       if (fileInput.current) fileInput.current.value = '';
-      await onSaved();
       setMessage(`${label} QR image saved for this payment method.`);
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : 'QR image update failed.');

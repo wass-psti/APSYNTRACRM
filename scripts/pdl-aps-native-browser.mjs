@@ -202,6 +202,7 @@ try{
    {method:'maya',recipient:'Other Recipient',imageUrl:null},
    {method:'bpi',recipient:'Third Recipient',imageUrl:null}];
  const writeCalls=[];
+ let persistWrites=true;
  await modules.route('**/functions/v1/pdl-guest-api/v1/admin/**',async route=>{
    const request=route.request();
    const path=new URL(request.url()).pathname;
@@ -210,11 +211,12 @@ try{
    if(request.method()!=='GET')writeCalls.push(path);
    if(path.endsWith('/v1/admin/courts'))return send({courts:[courtState]});
    if(path.endsWith('/v1/admin/courts/court-1')&&request.method()==='PUT'){
-     Object.assign(courtState,request.postDataJSON());return send({updated:true});
+     if(persistWrites)Object.assign(courtState,request.postDataJSON());
+     return send({updated:true});
    }
    if(path.endsWith('/v1/admin/rates/court-1/60')&&request.method()==='PUT'){
      const rate=request.postDataJSON();
-     courtState.rates=[{durationMinutes:60,...rate}];
+     if(persistWrites)courtState.rates=[{durationMinutes:60,...rate}];
      return send({updated:true});
    }
    if(path.endsWith('/v1/admin/reservations/page'))return send({reservations:[bookingState],nextCursor:null});
@@ -228,25 +230,29 @@ try{
    if(path.endsWith('/v1/admin/calendar')&&request.method()==='GET')return send(calendarState);
    if(path.includes('/v1/admin/calendar/')&&path.includes('/weekdays/')&&request.method()==='PUT'){
      const data=request.postDataJSON();
-     calendarState.weekdays=[{courtId:'court-1',weekday:1,...data}];return send({updated:true});
+     if(persistWrites)calendarState.weekdays=[{courtId:'court-1',weekday:1,...data}];
+     return send({updated:true});
    }
    if(path.endsWith('/v1/admin/calendar/maintenance')&&request.method()==='POST'){
-     calendarState.blocks=[{id:'44444444-4444-4444-8444-444444444444',...request.postDataJSON()}];
-     return send({created:true});
+     if(persistWrites)calendarState.blocks=[{id:'44444444-4444-4444-8444-444444444444',...request.postDataJSON()}];
+     return send({created:true,id:'44444444-4444-4444-8444-444444444444'});
    }
    if(path.endsWith('/v1/admin/calendar/maintenance/44444444-4444-4444-8444-444444444444')&&request.method()==='DELETE'){
-     calendarState.blocks=[];return send({removed:true});
+     if(persistWrites)calendarState.blocks=[];
+     return send({removed:true});
    }
    if(path.endsWith('/v1/admin/policies')){
      if(request.method()==='PUT'){
-       Object.assign(policyState,request.postDataJSON());return send({updated:true});
+       if(persistWrites)Object.assign(policyState,request.postDataJSON());
+       return send({updated:true});
      }
      return send(policyState);
    }
    if(path.endsWith('/v1/admin/payment-methods/gcash')&&request.method()==='PUT'){
      const form=request.postData();
-     assert.ok(form?.includes('Acceptance Recipient'));
-     methods[0]={...methods[0],recipient:'Acceptance Recipient',imageUrl:null};
+     assert.ok(form?.includes('Acceptance Recipient') || form?.includes('Different Recipient'));
+     if(persistWrites)methods[0]={...methods[0],recipient:'Acceptance Recipient',
+       imageUrl:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9YseMZkAAAAASUVORK5CYII='};
      return send({updated:true});
    }
    return send({error:'missing_fixture'},404);
@@ -337,6 +343,39 @@ try{
  await modules.waitForFunction(() => document.querySelector('#admin-qr-recipient-gcash')?.value==='Acceptance Recipient');
  assert.ok(writeCalls.some(path=>path.endsWith('/v1/admin/payment-methods/gcash')));
  console.log('PASS synthetic QR payment configuration upload and readback after refresh');
+
+ // An HTTP 200 cannot certify a write if a subsequent GET retains old values.
+ persistWrites=false;
+ await modules.goto(base+'paseo/admin/courts');
+ await modules.locator('#pdl-open-minute').fill('570');
+ await modules.getByRole('button',{name:'Save court configuration'}).click();
+ await modules.getByText(/Court save returned, but the stored configuration did not match/).waitFor();
+ await modules.goto(base+'paseo/admin/pricing');
+ await modules.locator('#pdl-rate-amount').fill('550');
+ await modules.getByRole('button',{name:'Save server rate'}).click();
+ await modules.getByText(/Rate save returned, but the stored rate did not match/).waitFor();
+ await modules.goto(base+'paseo/admin/settings');
+ await modules.locator('.fe08-settings-form input').first().fill('4');
+ await modules.getByRole('button',{name:'Save operational policies'}).click();
+ await modules.getByText(/Policy save returned, but the stored values did not match/).waitFor();
+ await modules.goto(base+'paseo/admin/calendar');
+ await modules.waitForFunction(() => document.querySelector('[aria-label=\"Opening time\"]')?.value==='540');
+ await modules.getByRole('combobox',{name:'Opening time'}).selectOption('600');
+ await modules.getByRole('button',{name:'Save weekday schedule'}).click();
+ await modules.getByText(/Schedule save returned, but the stored weekday did not match/).waitFor();
+ await modules.getByRole('button',{name:'Add maintenance block'}).click();
+ await modules.getByText(/Maintenance save returned, but its stored block was not confirmed/).waitFor();
+ await modules.goto(base+'paseo/admin/payments');
+ await modules.locator('#admin-qr-recipient-gcash').fill('Different Recipient');
+ await modules.locator('#admin-qr-image-gcash').setInputFiles({
+   name:'second-qr.png',mimeType:'image/png',
+   buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9YseMZkAAAAASUVORK5CYII=','base64'),
+ });
+ await modules.getByRole('button',{name:'Save GCash QR configuration'}).click();
+ await modules.getByText(/GCash QR update was acknowledged but not confirmed by server readback/).waitFor();
+ persistWrites=true;
+ console.log('PASS six false-positive write acknowledgements rejected when persisted readback disagrees');
+
  const beforeReadbackWrites=writeCalls.length;
  await modules.goto(base+'paseo/admin/acceptance');
  await modules.getByText('7 of 7 read-only checks passed.').waitFor({timeout:15000});

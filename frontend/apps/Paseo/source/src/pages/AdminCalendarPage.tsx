@@ -29,7 +29,7 @@ export function AdminCalendarPage() {
   const court = courts.find(item => item.courtId === courtId);
   const matching = blocks.filter(block => block.courtId === courtId && block.date === date);
 
-  async function readback() {
+  async function readback(): Promise<{weekdays: WeekdayHours[]; blocks: MaintenanceBlock[]}> {
     const [calendarResponse, courtResponse] = await Promise.all([
       backendAdminFetch('/v1/admin/calendar', { cache: 'no-store' }),
       backendAdminFetch('/v1/admin/courts', { cache: 'no-store' }),
@@ -44,6 +44,7 @@ export function AdminCalendarPage() {
     setBlocks(calendar.blocks);
     setCourts(courtData.courts);
     setLoaded(true);
+    return calendar;
   }
 
   useEffect(() => {
@@ -63,9 +64,32 @@ export function AdminCalendarPage() {
       const options: RequestInit = { method };
       if (body) { options.headers = { 'content-type': 'application/json' }; options.body = JSON.stringify(body); }
       const response = await backendAdminFetch(path, options);
-      const result = await response.json() as { error?: string };
+      const result = await response.json() as { error?: string; updated?: boolean; created?: boolean; removed?: boolean; id?: string };
       if (!response.ok) throw new Error(result.error ?? 'Calendar update failed.');
-      await readback();
+      const stored = await readback();
+      if (method === 'PUT') {
+        const match = path.match(/\/calendar\/(court-[1-9][0-9]*)\/weekdays\/([0-6])$/);
+        const submitted = body as { enabled: boolean; openMinute: number; closeMinute: number };
+        const item = stored.weekdays.find(day => day.courtId === match?.[1] &&
+          day.weekday === Number(match?.[2]));
+        if (!result.updated || !item || item.enabled !== submitted.enabled ||
+          item.openMinute !== submitted.openMinute || item.closeMinute !== submitted.closeMinute) {
+          throw new Error('Schedule save returned, but the stored weekday did not match. Refresh before retrying.');
+        }
+      } else if (method === 'POST') {
+        const submitted = body as { courtId: string; date: string; startMinute: number; endMinute: number };
+        const item = stored.blocks.find(block => block.id === result.id);
+        if (!result.created || !result.id || !item || item.courtId !== submitted.courtId ||
+          item.date !== submitted.date || item.startMinute !== submitted.startMinute ||
+          item.endMinute !== submitted.endMinute) {
+          throw new Error('Maintenance save returned, but its stored block was not confirmed. Refresh before retrying.');
+        }
+      } else {
+        const id = path.split('/').at(-1);
+        if (!result.removed || stored.blocks.some(block => block.id === id)) {
+          throw new Error('Maintenance removal was not confirmed by server readback. Refresh before retrying.');
+        }
+      }
       setMessage('Saved and confirmed by a fresh server read.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Calendar update failed.');
