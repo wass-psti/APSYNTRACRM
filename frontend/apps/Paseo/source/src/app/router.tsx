@@ -1,4 +1,4 @@
-import { createBrowserRouter, Link, Navigate } from 'react-router-dom';
+import { createBrowserRouter, Link } from 'react-router-dom';
 import { SiteLayout } from '../components/layout/SiteLayout';
 import { RouteErrorPage } from '../components/layout/RouteErrorPage';
 
@@ -22,14 +22,14 @@ export const router = createBrowserRouter([
       { path: '/reservations', lazy: async () => ({ Component: (await import('../pages/ReservationsPage')).ReservationsPage }) },
       { path: '/admin/sign-in', lazy: async () => ({ Component: (await import('../pages/StagingAdminLoginPage')).StagingAdminLoginPage }) },
       { path: '/admin/live-reservations', lazy: async () => ({ Component: (await import('../pages/StagingAdminReservationsPage')).StagingAdminReservationsPage }) },
-      { path: '/admin' , Component: () => <Navigate to="/admin/sign-in" replace /> },
-      { path: '/admin/courts', Component: () => <Navigate to="/admin/sign-in" replace /> },
-      { path: '/admin/calendar', Component: () => <Navigate to="/admin/sign-in" replace /> },
-      { path: '/admin/bookings', Component: () => <Navigate to="/admin/sign-in" replace /> },
-      { path: '/admin/pricing', Component: () => <Navigate to="/admin/sign-in" replace /> },
-      { path: '/admin/payments', Component: () => <Navigate to="/admin/sign-in" replace /> },
-      { path: '/admin/customers', Component: () => <Navigate to="/admin/sign-in" replace /> },
-      { path: '/admin/settings', Component: () => <Navigate to="/admin/sign-in" replace /> },
+      { path: '/admin', lazy: async () => ({ Component: (await import('../pages/AdminOverviewPage')).AdminOverviewPage }) },
+      { path: '/admin/courts', lazy: async () => ({ Component: (await import('../pages/AdminCourtsPage')).AdminCourtsPage }) },
+      { path: '/admin/calendar', lazy: async () => ({ Component: (await import('../pages/AdminCalendarPage')).AdminCalendarPage }) },
+      { path: '/admin/bookings', lazy: async () => ({ Component: (await import('../pages/AdminBookingsPage')).AdminBookingsPage }) },
+      { path: '/admin/pricing', lazy: async () => ({ Component: (await import('../pages/AdminPricingPage')).AdminPricingPage }) },
+      { path: '/admin/payments', lazy: async () => ({ Component: (await import('../pages/AdminPaymentsPage')).AdminPaymentsPage }) },
+      { path: '/admin/customers', lazy: async () => ({ Component: (await import('../pages/AdminCustomersPage')).AdminCustomersPage }) },
+      { path: '/admin/settings', lazy: async () => ({ Component: (await import('../pages/AdminSettingsPage')).AdminSettingsPage }) },
       { path: '*', lazy: async () => ({
         Component: () => <div className="container section placeholder">
           <h1 className="page-title">Page not found.</h1>

@@ -66,11 +66,15 @@ test('signed and assigned administrator receives current read-only booking proje
  assert.equal(paths.length,3);
 });
 
-test('public admin demo routes are not used in the shipped Paseo portal',()=>{
+test('administration modules use the existing signed shell rather than public demo routes',()=>{
  const router=read('frontend/apps/Paseo/source/src/app/router.tsx');
+ const shell=read('frontend/apps/Paseo/source/src/components/admin/AdminShell.tsx');
  assert.match(router,/admin\/live-reservations/);
- assert.match(router,/Navigate to="\/admin\/sign-in" replace/);
- assert.doesNotMatch(router,/AdminCustomersPage|AdminPaymentsPage|AdminOverviewPage/);
+ for(const component of ['AdminCustomersPage','AdminPaymentsPage','AdminOverviewPage']){
+   assert.ok(router.includes(component),component);
+ }
+ assert.match(shell,/StagingAdminGate/);
+ assert.match(shell,/backendAdminEnabled/);
 });
 
 test('native readback ignores superseded refresh and signout responses',()=>{
