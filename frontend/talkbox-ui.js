@@ -56,7 +56,7 @@ export function renderTalkBoxApplication({page,selected,busy=false,error='',canE
  '<div class="tb-panel-footer"><span>Showing '+e(rows.length)+' of '+e(meetingOpen&&meetingRecord?meetingRecord.issueIds.length:(page?.total??'—'))+' signed issues</span>'+
  (page?.cursor?'<button class="secondary" data-action="tb-more">Load more issues</button>':'')+'</div></section>'+
  (meetingOpen&&meetingRecord?'<section class="tb-meeting-record" aria-label="Persisted meeting notes">'+
- '<div class="tb-meeting-record-head"><div><span class="tb-section-overline">PERSISTED MEETING</span><h3>Meeting notes &amp; carry-over</h3><p>'+e(meetingRecord.carriedIssueIds?.length||0)+' issues carried over from '+e(meetingRecord.carriedFrom||'no previous meeting')+'.</p></div>'+
+ '<div class="tb-meeting-record-head"><div><span class="tb-section-overline">PERSISTED MEETING</span><h3>Meeting notes &amp; carry-over</h3><p>'+e(meetingRecord.carriedIssueIds?.length||0)+' issues carried over · previous meeting: '+e(meetingRecord.carriedFrom||'none')+'.</p></div>'+
  '<span class="tb-date-chip">'+e(meetingRecord.date)+'</span></div>'+
  '<label for="tb-meeting-notes">Meeting summary, decisions and next actions</label>'+
  '<textarea id="tb-meeting-notes" maxlength="10000" rows="5"'+(canEdit?'':' readonly')+'>'+e(meetingRecord.notes)+'</textarea>'+
