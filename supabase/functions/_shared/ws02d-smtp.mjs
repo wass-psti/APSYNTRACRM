@@ -14,6 +14,30 @@ export function validWorkspaceSmtpConfig({host,port,user,password,from}={}){
   typeof password==='string'&&password.length>0&&
   typeof from==='string'&&from.length<=254&&EMAIL.test(from);
 }
+export async function verifyWorkspaceSmtp({config,createTransport}={}){
+ if(!validWorkspaceSmtpConfig(config)||typeof createTransport!=='function')
+  return {state:'unavailable'};
+ let transporter;
+ try{
+  const port=Number(config.port);
+  transporter=createTransport({host:config.host,port,
+   secure:port===465,requireTLS:port===587,
+   auth:{user:config.user,pass:config.password},
+   tls:{minVersion:'TLSv1.2'},
+   connectionTimeout:10000,greetingTimeout:10000,socketTimeout:15000,
+   pool:false});
+  if(typeof transporter?.verify!=='function')return {state:'unavailable'};
+  const verified=await transporter.verify();
+  if(verified!==true)return {state:'unavailable'};
+  return {state:'verified'};
+ }catch{
+  // Never expose SMTP errors; they can contain usernames or provider details.
+  return {state:'unavailable'};
+ }finally{
+  try{transporter?.close?.()}catch{}
+ }
+}
+
 export async function sendWorkspaceSmtp({config,envelope,createTransport}={}){
  if(!validWorkspaceSmtpConfig(config)||typeof createTransport!=='function')
   throw Error('SMTP provider is unavailable');

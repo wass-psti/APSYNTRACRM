@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {sendWorkspaceSmtp,validWorkspaceSmtpConfig} from '../../supabase/functions/_shared/ws02d-smtp.mjs';
+import {sendWorkspaceSmtp,verifyWorkspaceSmtp,validWorkspaceSmtpConfig} from '../../supabase/functions/_shared/ws02d-smtp.mjs';
 const config={host:'smtp.example.invalid',port:'465',user:'system@example.invalid',
  password:'synthetic-password-never-real',from:'invite@example.invalid'};
 const id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -17,6 +17,44 @@ function harness(response={accepted:[envelope.to],messageId:'<synthetic-msg@test
  };
  return {createTransport,calls,get closes(){return closes}};
 }
+test('SMTP connection and authentication are verified before an invitation can be issued',async()=>{
+ const calls=[];let closes=0;
+ const createTransport=opts=>{calls.push(opts);return{
+  async verify(){calls.push('verified');return true},close(){closes++}
+ }};
+ const result=await verifyWorkspaceSmtp({config,createTransport});
+ assert.deepEqual(result,{state:'verified'});
+ assert.equal(calls[0].host,config.host);
+ assert.equal(calls[0].secure,true);
+ assert.equal(calls[0].requireTLS,false);
+ assert.equal(calls[0].tls.minVersion,'TLSv1.2');
+ assert.deepEqual(calls[0].auth,{user:config.user,pass:config.password});
+ assert.equal(calls[1],'verified');
+ assert.equal(closes,1);
+});
+test('SMTP authentication failure is sanitized and closes the connection',async()=>{
+ let closes=0;
+ const result=await verifyWorkspaceSmtp({config,createTransport:()=>({
+  async verify(){throw Error('bad password '+config.password)},close(){closes++}
+ })});
+ assert.deepEqual(result,{state:'unavailable'});
+ assert.equal(closes,1);
+ assert.doesNotMatch(JSON.stringify(result),/synthetic-password/);
+});
+test('SMTP verification requires a positive provider response',async()=>{
+ const result=await verifyWorkspaceSmtp({config,createTransport:()=>({
+  async verify(){return false},close(){}
+ })});
+ assert.deepEqual(result,{state:'unavailable'});
+});
+test('SMTP verification rejects incomplete config without opening a connection',async()=>{
+ let connects=0;
+ const result=await verifyWorkspaceSmtp({config:{...config,password:''},
+  createTransport:()=>{connects++;return{async verify(){return true}}}});
+ assert.deepEqual(result,{state:'unavailable'});
+ assert.equal(connects,0);
+});
+
 test('SMTP 465 uses verified implicit TLS and authenticates from server-only config',async()=>{
  const h=harness();const r=await sendWorkspaceSmtp({config,envelope,createTransport:h.createTransport});
  assert.equal(r.state,'submitted');assert.match(r.providerId,/^smtp_[0-9a-f]{40}$/);
@@ -68,6 +106,9 @@ test('Edge trusted invitation maintains existing Resend fallback, default-off ga
  const edge=readFileSync('supabase/functions/_shared/ws02d-trusted.ts','utf8');
  assert.match(edge,/APSYNTRA_INVITE_TRANSPORT/);
  assert.match(edge,/validWorkspaceSmtpConfig\(config\)/);
+ assert.match(edge,/verifyWorkspaceSmtp\(/);
+ assert.ok(edge.indexOf('await verifyWorkspaceSmtp')<edge.indexOf('const receipt = await trustedSql'));
+ assert.match(edge,/SMTP authentication failed; no invitation was issued/);
  assert.match(edge,/sendWorkspaceSmtp\(/);
  assert.match(edge,/import\('npm:nodemailer@10\.6\.0'\)/);
  assert.match(edge,/https:\/\/api\.resend\.com\/emails/);
