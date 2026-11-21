@@ -34,11 +34,11 @@ export function AdminCalendarPage() {
       backendAdminFetch('/v1/admin/calendar', { cache: 'no-store' }),
       backendAdminFetch('/v1/admin/courts', { cache: 'no-store' }),
     ]);
-    if (!calendarResponse.ok || !courtResponse.ok) throw new Error('Could not retrieve persisted calendar.');
+    if (!calendarResponse.ok || !courtResponse.ok) throw new Error('Calendar could not be loaded. Please refresh.');
     const calendar = await calendarResponse.json() as { weekdays: WeekdayHours[]; blocks: MaintenanceBlock[] };
     const courtData = await courtResponse.json() as { courts: Court[] };
     if (!Array.isArray(calendar.weekdays) || !Array.isArray(calendar.blocks) || !Array.isArray(courtData.courts)) {
-      throw new Error('Unexpected calendar response.');
+      throw new Error('Calendar could not be displayed. Please refresh.');
     }
     setWeekdaysData(calendar.weekdays);
     setBlocks(calendar.blocks);
@@ -59,13 +59,13 @@ export function AdminCalendarPage() {
   }, [courtId, weekday, court?.openMinute, court?.closeMinute, weekdaysData]);
 
   async function save(path: string, method: 'POST' | 'PUT' | 'DELETE', body?: object) {
-    setBusy(true); setMessage('Saving to the reservation backend…');
+    setBusy(true); setMessage('Saving changes…');
     try {
       const options: RequestInit = { method };
       if (body) { options.headers = { 'content-type': 'application/json' }; options.body = JSON.stringify(body); }
       const response = await backendAdminFetch(path, options);
       const result = await response.json() as { error?: string; updated?: boolean; created?: boolean; removed?: boolean; id?: string };
-      if (!response.ok) throw new Error(result.error ?? 'Calendar update failed.');
+      if (!response.ok) throw new Error(response.status === 409 ? 'The calendar changed in another session. Refresh before retrying.' : 'Calendar changes could not be saved. Please try again.');
       const stored = await readback();
       if (method === 'PUT') {
         const match = path.match(/\/calendar\/(court-[1-9][0-9]*)\/weekdays\/([0-6])$/);
@@ -74,7 +74,7 @@ export function AdminCalendarPage() {
           day.weekday === Number(match?.[2]));
         if (!result.updated || !item || item.enabled !== submitted.enabled ||
           item.openMinute !== submitted.openMinute || item.closeMinute !== submitted.closeMinute) {
-          throw new Error('Schedule save returned, but the stored weekday did not match. Refresh before retrying.');
+          throw new Error('The schedule change could not be confirmed. Refresh before trying again.');
         }
       } else if (method === 'POST') {
         const submitted = body as { courtId: string; date: string; startMinute: number; endMinute: number };
@@ -82,15 +82,15 @@ export function AdminCalendarPage() {
         if (!result.created || !result.id || !item || item.courtId !== submitted.courtId ||
           item.date !== submitted.date || item.startMinute !== submitted.startMinute ||
           item.endMinute !== submitted.endMinute) {
-          throw new Error('Maintenance save returned, but its stored block was not confirmed. Refresh before retrying.');
+          throw new Error('The maintenance period could not be confirmed. Refresh before trying again.');
         }
       } else {
         const id = path.split('/').at(-1);
         if (!result.removed || stored.blocks.some(block => block.id === id)) {
-          throw new Error('Maintenance removal was not confirmed by server readback. Refresh before retrying.');
+          throw new Error('Maintenance removal could not be confirmed. Refresh before trying again.');
         }
       }
-      setMessage('Saved and confirmed by a fresh server read.');
+      setMessage('Changes saved.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Calendar update failed.');
     } finally { setBusy(false); }
@@ -105,11 +105,11 @@ export function AdminCalendarPage() {
   }
   return <AdminShell title="Court calendar.">
     {!sharedSupabaseAdminEnabled ? <section className="booking-panel" role="status">
-      <h2 className="review-heading">Persisted calendar backend unavailable</h2>
-      <p>Connect the existing Paseo Supabase service to manage court schedules. This page does not store temporary maintenance.</p>
+      <h2 className="review-heading">Court calendar unavailable</h2>
+      <p>Court schedules cannot be changed right now. Please try again later.</p>
     </section> : <>
-      <p className="page-lede">Set a weekday schedule or block a time for maintenance. Updates are saved to the reservation backend and verified by readback.</p>
-      <p role="status" className="admin-message" aria-live="polite">{message || (loaded ? 'Calendar loaded from server.' : 'Loading persisted calendar…')}</p>
+      <p className="page-lede">Set opening hours and schedule maintenance for each court.</p>
+      <p role="status" className="admin-message" aria-live="polite">{message || (loaded ? 'Calendar is up to date.' : 'Loading calendar…')}</p>
       <div className="booking-panel">
         <label className="form-field">Court
           <select aria-label="Calendar court" value={courtId} onChange={event => setCourtId(event.target.value)}>

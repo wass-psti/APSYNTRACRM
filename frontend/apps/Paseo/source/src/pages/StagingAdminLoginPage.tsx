@@ -25,11 +25,11 @@ export function StagingAdminLoginPage() {
           ? { email: username, password } : { username, password }),
       });
       if (!response.ok) throw new Error(response.status === 403
-        ? 'This Supabase account has not been assigned as a Paseo booking administrator.'
+        ? 'This account does not have Paseo administrator access.'
         : 'Administrator sign-in was not accepted.');
       if (sharedSupabaseAdminEnabled) {
         const session: { accessToken?: string } = await response.json();
-        if (!session.accessToken) throw new Error('No administrator session was issued.');
+        if (!session.accessToken) throw new Error('Could not start your session. Please sign in again.');
         storeAdminToken(session.accessToken);
       }
       setPassword('');
@@ -45,12 +45,12 @@ export function StagingAdminLoginPage() {
         <div className="pdl-admin-signin-intro">
           <div className="eyebrow eyebrow-dark pdl-admin-signin-eyebrow">
             <span className="pdl-admin-signin-eyebrow-dot" aria-hidden="true" />
-            {sharedSupabaseAdminEnabled ? 'PASEO ADMINISTRATOR / LIVE BACKEND' : 'ADMINISTRATOR / LOCAL STAGING'}
+            {sharedSupabaseAdminEnabled ? 'PASEO DE LOMBOY / ADMINISTRATION' : 'ADMINISTRATOR / TEST WORKSPACE'}
           </div>
           <h1 className="page-title">Administrator <span className="pdl-admin-signin-title-nowrap">sign-in.</span></h1>
           <p className="page-lede">{sharedSupabaseAdminEnabled
-            ? 'Sign in with your existing Supabase Auth account. Guests do not need accounts.'
-            : 'Local staging only. Guests do not need to sign in to request a reservation.'}</p>
+            ? 'Use your administrator account to manage Paseo bookings. Guests can book without signing in.'
+            : 'This is a test workspace. Guests can book without signing in.'}</p>
 
           <div className="pdl-admin-signin-art" aria-hidden="true">
             <div className="pdl-admin-signin-art-top">
@@ -73,8 +73,8 @@ export function StagingAdminLoginPage() {
           <div className="demo-banner pdl-admin-signin-notice" role="note">
             <span className="pdl-admin-signin-notice-icon" aria-hidden="true">i</span>
             <div>{sharedSupabaseAdminEnabled
-              ? 'Only accounts explicitly assigned in the Paseo administrator table can manage reservations.'
-              : 'This is a development-only administrator identity, not a production user account.'}</div>
+              ? 'Only authorized Paseo administrators can manage reservations.'
+              : 'This account is for testing only, not live venue management.'}</div>
           </div>
         </div>
 
@@ -130,7 +130,7 @@ export function StagingAdminLoginPage() {
             <button className="button button-primary pdl-admin-signin-submit"
               disabled={busy || !username || !password} type="submit">
               {busy && <span className="pdl-admin-signin-spinner" aria-hidden="true" />}
-              <span>{busy ? 'Signing in…' : sharedSupabaseAdminEnabled ? 'Sign in to administrator dashboard' : 'Sign in to administrator staging'}</span>
+              <span>{busy ? 'Signing in…' : sharedSupabaseAdminEnabled ? 'Sign in to administrator dashboard' : 'Sign in to test workspace'}</span>
               {!busy && <span aria-hidden="true">↗</span>}
             </button>
           </form>

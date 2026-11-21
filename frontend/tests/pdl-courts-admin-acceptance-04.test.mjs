@@ -9,7 +9,7 @@ const browser = readFileSync('scripts/pdl-aps-native-browser.mjs','utf8');
 
 test('readback reuses the same signed administrator shell and a same-tab route',()=>{
  assert.match(router,/path: '\/admin\/acceptance'/);
- assert.match(src,/<AdminShell title="Administration readback/);
+ assert.match(src,/<AdminShell title="Workspace status/);
  assert.match(overview,/to="\/admin\/acceptance"/);
  assert.match(src,/backendAdminFetch\(path, \{ cache: 'no-store', signal \}\)/);
 });
@@ -21,11 +21,11 @@ test('all seven modules are represented, with no mutation requests',()=>{
  for(const path of ['/v1/admin/courts','/v1/admin/calendar','/v1/admin/reservations/page',
    '/v1/payment-methods','/v1/admin/policies']) assert.ok(src.includes(path),path);
  assert.doesNotMatch(src,/method: ['"](POST|PUT|PATCH|DELETE)['"]/);
- assert.match(src,/A successful read is not certification of production writes/);
+ assert.match(src,/This checks section availability only/);
 });
 
 test('browser acceptance verifies repeat and zero write requests',()=>{
- assert.match(browser,/7 of 7 read-only checks passed/);
+ assert.match(browser,/7 of 7 sections available/);
  assert.match(browser,/readback must not change persisted data/);
  assert.match(browser,/seven-module same-tab server readback, manual retry/);
 });

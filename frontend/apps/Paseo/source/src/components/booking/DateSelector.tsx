@@ -14,7 +14,7 @@ interface DateSelectorProps {
 export function DateSelector({ dates, selectedDate, onSelect, serverBacked = false }: DateSelectorProps) {
   const reduced = useReducedMotion();
   return (
-    <div className="date-grid immersive-date-grid" role="group" aria-label={serverBacked ? 'Booking dates' : 'Demo booking dates'}>
+    <div className="date-grid immersive-date-grid" role="group" aria-label={serverBacked ? 'Booking dates' : 'Sample booking dates'}>
       {dates.map((date) => {
         const selected = selectedDate === date;
         return (

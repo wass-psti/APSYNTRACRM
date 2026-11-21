@@ -16,6 +16,6 @@ export function SiteLayout() {
     </div></header>
     <NavigationProgress />
     <main id="main" tabIndex={-1}><Outlet /></main><RouteAnnouncer />
-    <footer className="site-footer"><div className="container footer-inner"><div className="footer-brand"><BrandLogo variant="footer" /><span className="footer-brand-copy"><strong>PASEO DE LOMBOY</strong><small>Pickleball, your way.</small></span></div><div className="footer-admin-actions"><span className="footer-muted">Reservations and payments require server verification</span>{pathname === '/' && <NavLink className="footer-admin-link" to="/admin/sign-in" aria-label="Administrator sign-in">Administrator</NavLink>}</div></div></footer>
+    <footer className="site-footer"><div className="container footer-inner"><div className="footer-brand"><BrandLogo variant="footer" /><span className="footer-brand-copy"><strong>PASEO DE LOMBOY</strong><small>Pickleball, your way.</small></span></div><div className="footer-admin-actions"><span className="footer-muted">Bookings and payments are subject to confirmation</span>{pathname === '/' && <NavLink className="footer-admin-link" to="/admin/sign-in" aria-label="Administrator sign-in">Administrator</NavLink>}</div></div></footer>
   </div></BookingDraftProvider>;
 }

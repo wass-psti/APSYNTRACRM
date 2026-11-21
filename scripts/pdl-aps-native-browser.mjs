@@ -38,12 +38,12 @@ try{
     }});
   });
   await page.goto(base+'paseo/book?court=court-1');
-  await page.getByRole('button',{name:'11:00 PM, server available'}).waitFor({timeout:15000});
+  await page.getByRole('button',{name:'11:00 PM, available'}).waitFor({timeout:15000});
   assert.equal(new URL(page.url()).pathname,prefix+'paseo/book');
   assert.equal(await page.locator('.slot-button').count(),3);
   await page.reload();
-  await page.getByRole('button',{name:'6:00 AM, server available'}).waitFor();
-  await page.getByRole('button',{name:'11:00 PM, server available'}).click();
+  await page.getByRole('button',{name:'6:00 AM, available'}).waitFor();
+  await page.getByRole('button',{name:'11:00 PM, available'}).click();
   assert.match(await page.locator('.immersive-booking-summary').innerText(),/11:00 PM – 12:00 AM/);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth),true);
   assert.deepEqual(errors,[]);
@@ -173,7 +173,7 @@ try{
  assert.equal(await stress.getByRole('button',{name:'Load more reservations'}).count(),0);
  console.log('PASS five cursor pages show 125 distinct reservations without truncated results');
  await stress.getByRole('button',{name:'Cancel booking (no automatic refund)'}).first().click();
- await stress.getByText(/Readback failed\. Do not retry cancellation/).waitFor({timeout:15000});
+ await stress.getByText(/booking status could not be checked\. Refresh before trying again/).waitFor({timeout:15000});
  assert.equal(uncertain,true);
  assert.equal(await stress.locator('.staging-reservation-card').count(),125);
  failReadback=false;
@@ -266,7 +266,7 @@ try{
    route.fulfill({status:200,json:{methods}}));
  const routes=[
    ['courts','Court schedule'],['calendar','Weekly operating hours'],
-   ['bookings','Booking queue'],['pricing','Server-authoritative booking rate'],
+   ['bookings','Booking queue'],['pricing','Approved booking rate'],
    ['payments','Admin-managed QR payment settings'],['customers','Customer directory.'],
    ['settings','Save operational policies'],
  ];
@@ -290,7 +290,7 @@ try{
  await modules.goto(base+'paseo/admin/courts');
  await modules.locator('#pdl-open-minute').fill('540');
  await modules.getByRole('button',{name:'Save court configuration'}).click();
- await modules.getByText('Court settings saved in the dedicated Paseo Supabase schema.').waitFor();
+ await modules.getByText('Court settings saved.').waitFor();
  await modules.reload();
  await modules.waitForFunction(() => document.querySelector('#pdl-open-minute')?.value==='540');
  assert.equal(courtState.openMinute,540);
@@ -298,7 +298,7 @@ try{
 
  await modules.goto(base+'paseo/admin/pricing');
  await modules.locator('#pdl-rate-amount').fill('500');
- await modules.getByRole('button',{name:'Save server rate'}).click();
+ await modules.getByRole('button',{name:'Save rate'}).click();
  await modules.getByText('Rate saved. Enable the court and rate only after venue approval.').waitFor();
  await modules.reload();
  await modules.waitForFunction(() => document.querySelector('#pdl-rate-amount')?.value==='500.00');
@@ -307,7 +307,7 @@ try{
  await modules.goto(base+'paseo/admin/calendar');
  await modules.getByRole('combobox',{name:'Opening time'}).selectOption('540');
  await modules.getByRole('button',{name:'Save weekday schedule'}).click();
- await modules.getByText('Saved and confirmed by a fresh server read.').waitFor();
+ await modules.getByText('Changes saved.').waitFor();
  await modules.reload();
  await modules.waitForFunction(() => document.querySelector('[aria-label=\"Opening time\"]')?.value==='540');
  await modules.getByRole('button',{name:'Add maintenance block'}).click();
@@ -321,7 +321,7 @@ try{
  await modules.goto(base+'paseo/admin/settings');
  await modules.locator('.fe08-settings-form input').first().fill('3');
  await modules.getByRole('button',{name:'Save operational policies'}).click();
- await modules.getByText('Policy saved and verified by server readback.').waitFor();
+ await modules.getByText('Booking policies saved.').waitFor();
  await modules.reload();
  await modules.waitForFunction(() => document.querySelector('.fe08-settings-form input')?.value==='3');
  console.log('PASS operational policy write and persisted fixture readback after refresh');
@@ -397,22 +397,22 @@ try{
  await modules.waitForFunction(() => document.querySelector('#pdl-open-minute')?.value === '540');
  await modules.locator('#pdl-open-minute').fill('570');
  await modules.getByRole('button',{name:'Save court configuration'}).click();
- await modules.getByText(/Court save returned, but the stored configuration did not match/).waitFor();
+ await modules.getByText(/Court settings could not be confirmed after saving/).waitFor();
  await modules.goto(base+'paseo/admin/pricing');
  await modules.locator('#pdl-rate-amount').fill('550');
- await modules.getByRole('button',{name:'Save server rate'}).click();
- await modules.getByText(/Rate save returned, but the stored rate did not match/).waitFor();
+ await modules.getByRole('button',{name:'Save rate'}).click();
+ await modules.getByText(/Rate changes could not be confirmed after saving/).waitFor();
  await modules.goto(base+'paseo/admin/settings');
  await modules.locator('.fe08-settings-form input').first().fill('4');
  await modules.getByRole('button',{name:'Save operational policies'}).click();
- await modules.getByText(/Policy save returned, but the stored values did not match/).waitFor();
+ await modules.getByText(/Policy changes could not be confirmed after saving/).waitFor();
  await modules.goto(base+'paseo/admin/calendar');
  await modules.waitForFunction(() => document.querySelector('[aria-label=\"Opening time\"]')?.value==='540');
  await modules.getByRole('combobox',{name:'Opening time'}).selectOption('600');
  await modules.getByRole('button',{name:'Save weekday schedule'}).click();
- await modules.getByText(/Schedule save returned, but the stored weekday did not match/).waitFor();
+ await modules.getByText(/The schedule change could not be confirmed/).waitFor();
  await modules.getByRole('button',{name:'Add maintenance block'}).click();
- await modules.getByText(/Maintenance save returned, but its stored block was not confirmed/).waitFor();
+ await modules.getByText(/The maintenance period could not be confirmed/).waitFor();
  await modules.goto(base+'paseo/admin/payments');
  await modules.locator('#admin-qr-recipient-gcash').fill('Different Recipient');
  await modules.locator('#admin-qr-image-gcash').setInputFiles({
@@ -420,18 +420,18 @@ try{
    buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9YseMZkAAAAASUVORK5CYII=','base64'),
  });
  await modules.getByRole('button',{name:'Save GCash QR configuration'}).click();
- await modules.getByText(/GCash QR update was acknowledged but not confirmed by server readback/).waitFor();
+ await modules.getByText(/GCash QR image save could not be confirmed/).waitFor();
  persistWrites=true;
  console.log('PASS six false-positive write acknowledgements rejected when persisted readback disagrees');
 
  const beforeReadbackWrites=writeCalls.length;
  await modules.goto(base+'paseo/admin/acceptance');
- await modules.getByText('7 of 7 read-only checks passed.').waitFor({timeout:15000});
- await modules.getByRole('button',{name:'Run readback again'}).click();
- await modules.getByText('7 of 7 read-only checks passed.').waitFor({timeout:15000});
+ await modules.getByText('7 of 7 sections available.').waitFor({timeout:15000});
+ await modules.getByRole('button',{name:'Check again'}).click();
+ await modules.getByText('7 of 7 sections available.').waitFor({timeout:15000});
  assert.equal(writeCalls.length,beforeReadbackWrites,'readback must not change persisted data');
  await modules.getByRole('link',{name:'Back to overview'}).click();
- await modules.getByRole('link',{name:'Check seven-module readback'}).waitFor();
+ await modules.getByRole('link',{name:'Check workspace status'}).waitFor();
  console.log('PASS seven-module same-tab server readback, manual retry and zero write requests');
  assert.deepEqual(moduleErrors,[]);
  console.log('PASS seven admin module routes: direct link, refresh, tab switching, back/forward without runtime errors');

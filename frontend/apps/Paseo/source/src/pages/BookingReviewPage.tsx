@@ -12,7 +12,7 @@ export function BookingReviewPage() {
   const stagingReview = guestSubmissionConfigured;
   const localStaging = import.meta.env.DEV && import.meta.env.VITE_STAGING_ONLY === '1';
   const [serverAmount, setServerAmount] = useState<number | null>(null);
-  const [quoteMessage, setQuoteMessage] = useState('Verifying server-authoritative rate…');
+  const [quoteMessage, setQuoteMessage] = useState('Checking the booking amount…');
   useEffect(() => {
     if (!stagingReview || !schedule) return;
     const controller = new AbortController();
@@ -20,11 +20,11 @@ export function BookingReviewPage() {
       .then(quote => {
         if (!controller.signal.aborted) {
           setServerAmount(quote.amountMinor);
-          setQuoteMessage(localStaging ? 'Local test quote available; not an approved venue rate.' : 'Supabase quote received; payment remains unverified.');
+          setQuoteMessage(localStaging ? 'Sample amount only — do not send real money.' : 'Booking amount received. Payment still needs review.');
         }
       }).catch((reason: unknown) => {
         if (!controller.signal.aborted) {
-          setQuoteMessage(reason instanceof Error ? reason.message : 'Server price unavailable.');
+          setQuoteMessage(reason instanceof Error ? reason.message : 'Could not check the booking amount. Please try again.');
         }
       });
     return () => controller.abort();
@@ -35,17 +35,17 @@ export function BookingReviewPage() {
 
   return (
     <section className="container section booking-section">
-      <div className="eyebrow eyebrow-dark">BOOKING / FE-04 REVIEW</div>
+      <div className="eyebrow eyebrow-dark">BOOKING / REVIEW</div>
       <h1 className="page-title">Review your selection.</h1>
-      <p className="page-lede">Review the details before requesting a server-issued payment quote. No court is reserved until the backend accepts a submission.</p>
+      <p className="page-lede">Check your details before continuing to payment. Your court is not reserved yet.</p>
       <BookingProgress stage="review" />
-      <div className="demo-banner" role="note"><strong>Unconfirmed booking draft</strong><p>No booking reference has been issued. Pricing, availability and payment status require server confirmation.</p></div>
+      <div className="demo-banner" role="note"><strong>Unconfirmed booking draft</strong><p>This booking has not been submitted. Court availability, amount and payment must still be confirmed.</p></div>
       <BookingSummary schedule={schedule} />
       {stagingReview && (
         <div className="booking-panel" role="status">
-          <strong>Server-authoritative staging total:</strong> {serverAmount !== null ? formatPeso(serverAmount) : 'Not available'}
+          <strong>Booking amount:</strong> {serverAmount !== null ? formatPeso(serverAmount) : 'Not available'}
           <p className="booking-help">{quoteMessage}</p>
-          <p className="guest-qr-warning">{localStaging ? 'Local staging price is for software testing. Do not send real money for this quote.' : 'Only send payment after the venue approves court rates, confirms the recipient and issues a valid server quote.'}</p>
+          <p className="guest-qr-warning">{localStaging ? 'This is a test amount. Do not transfer real money.' : 'Only pay after the booking amount and payment recipient have been confirmed.'}</p>
         </div>
       )}
       <div className="booking-panel">
@@ -57,7 +57,7 @@ export function BookingReviewPage() {
           <Link className="button button-secondary" to="/book/details">Edit customer details</Link>
           <Link className="button button-secondary" to="/book">Edit schedule</Link>
         </div>
-        <p className="booking-help">Continue to the new guest QR-payment interface. The images are supplied, but actual amounts and availability must be confirmed by the reservation backend before paying.</p>
+        <p className="booking-help">Continue to QR payment after reviewing the booking details. Confirm the amount and recipient before paying.</p>
         <Link className="button button-primary" to="/book/qr-payment">Continue to guest QR payment</Link>
       </div>
     </section>

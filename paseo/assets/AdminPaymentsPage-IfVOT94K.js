@@ -1,0 +1,1 @@
+import{j as t}from"./index-F4C6lPms.js";import{StagingAdminReservationsPage as i}from"./StagingAdminReservationsPage-CIfA7IEO.js";import"./AdminShell-BP2wIsCQ.js";import"./StagingAdminGate-D_J4iTMl.js";import"./guestReservation-BABkyp7X.js";import"./schemas-noyL-ESB.js";function s(){return t.jsx(i,{view:"payments"})}export{s as AdminPaymentsPage};

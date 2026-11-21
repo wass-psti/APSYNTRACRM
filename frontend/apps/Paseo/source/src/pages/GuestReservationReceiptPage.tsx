@@ -19,8 +19,8 @@ function downloadTextReceipt(receipt: ServerReceipt) {
     `Amount: ${formatPeso(receipt.amountMinor)}`,
     `Method: ${receipt.paymentMethod.toUpperCase()}`,
     `Submitted: ${receipt.createdAt}`,
-    `Booking status: ${receipt.bookingStatus}`,
-    `Payment status: ${receipt.paymentStatus}`,
+    `Booking status: ${receipt.bookingStatus.replace(/_/g, ' ')}`,
+    `Payment status: ${receipt.paymentStatus.replace(/_/g, ' ')}`,
     'This document is not a tax invoice and does not prove payment verification.',
   ].join('\n');
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -59,17 +59,17 @@ export function GuestReservationReceiptPage() {
 
   return (
     <section className="container section booking-section guest-receipt-page">
-      <div className="eyebrow eyebrow-dark">GUEST BOOKING / SERVER RECEIPT</div>
+      <div className="eyebrow eyebrow-dark">GUEST BOOKING / RECEIPT</div>
       <h1 className="page-title">Reservation receipt.</h1>
       {!guestSubmissionConfigured ? (
         <div className="demo-banner" role="note">
-          <strong>No reservation server is connected</strong>
-          <p>No receipt has been issued. Uploading a preview file or clicking Payment Done cannot create a reservation.</p>
+          <strong>Receipts are unavailable</strong>
+          <p>No booking receipt is available. A payment action alone does not create a reservation.</p>
         </div>
       ) : error ? <p role="alert" className="form-error">{error}</p> :
       !receipt ? <p role="status">Retrieving your reservation receipt securely…</p> : (
         <div className="booking-panel guest-receipt-content">
-          <p className="guest-qr-warning"><strong>{receipt.paymentStatus === 'verified' ? 'Payment verified by the server' : 'Payment proof submitted — awaiting administrator verification'}</strong>
+          <p className="guest-qr-warning"><strong>{receipt.paymentStatus === 'verified' ? 'Payment verified' : 'Payment receipt submitted — awaiting review'}</strong>
             <span> A payment submission is not an approval or a verified reservation.</span></p>
           <h2>Reservation #{receipt.reservationId}</h2>
           <dl>
@@ -81,8 +81,8 @@ export function GuestReservationReceiptPage() {
             <div><dt>Total amount</dt><dd>{formatPeso(receipt.amountMinor)}</dd></div>
             <div><dt>Payment method</dt><dd>{receipt.paymentMethod.toUpperCase()}</dd></div>
             <div><dt>Submission time</dt><dd>{new Date(receipt.createdAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} (Philippine time)</dd></div>
-            <div><dt>Booking status</dt><dd>{receipt.bookingStatus}</dd></div>
-            <div><dt>Payment status</dt><dd>{receipt.paymentStatus}</dd></div>
+            <div><dt>Booking status</dt><dd>{receipt.bookingStatus.replace(/_/g, ' ')}</dd></div>
+            <div><dt>Payment status</dt><dd>{receipt.paymentStatus.replace(/_/g, ' ')}</dd></div>
           </dl>
           <p className="booking-help">This is a reservation submission receipt, not proof that funds arrived. Administrator verification must be checked separately.</p>
           <div className="booking-actions">

@@ -7,7 +7,7 @@ const navigation = [
 
 const headings: Record<string, string> = {
   '/admin': 'Operations overview.',
-  '/admin/acceptance': 'Administration readback.',
+  '/admin/acceptance': 'Workspace status.',
   '/admin/live-reservations': 'Stored reservations.',
   '/admin/courts': 'Court settings.',
   '/admin/calendar': 'Court calendar.',

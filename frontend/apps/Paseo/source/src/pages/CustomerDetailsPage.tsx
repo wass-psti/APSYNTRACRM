@@ -28,7 +28,7 @@ export function CustomerDetailsPage() {
     <section className="container section booking-section">
       <div className="eyebrow eyebrow-dark">BOOKING / FE-04 CUSTOMER DETAILS</div>
       <h1 className="page-title">Your details.</h1>
-      <p className="page-lede">Enter your contact information to review the booking. These details remain in temporary browser memory until a reservation is submitted to the backend.</p>
+      <p className="page-lede">Enter your contact information to review the booking. Your details are used to prepare the booking and are not submitted until you continue.</p>
       <BookingProgress stage="details" />
       <div className="demo-banner" role="note"><strong>Not a reservation</strong><p>No slot is held at this stage. The reservation service must validate and accept your submission before a receipt is issued.</p></div>
       <BookingSummary schedule={schedule} />

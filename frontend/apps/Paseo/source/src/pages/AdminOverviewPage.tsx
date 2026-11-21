@@ -9,7 +9,7 @@ interface OverviewResult { courts: OverviewCourt[]; reservations: OverviewReserv
 
 export function AdminOverviewPage() {
   const [overview, setOverview] = useState<OverviewResult | null>(null);
-  const [state, setState] = useState(backendAdminEnabled ? 'Loading persisted records…' : 'Reservation backend not configured.');
+  const [state, setState] = useState(backendAdminEnabled ? 'Loading reservations…' : 'Reservations are currently unavailable.');
   useEffect(() => {
     if (!backendAdminEnabled) return;
     const controller = new AbortController();
@@ -21,25 +21,25 @@ export function AdminOverviewPage() {
             ? backendAdminFetch('/v1/admin/courts', { cache: 'no-store', signal: controller.signal })
             : Promise.resolve(null),
         ]);
-        if (!reservations.ok || (courts && !courts.ok)) throw new Error('Operational records could not be loaded.');
+        if (!reservations.ok || (courts && !courts.ok)) throw new Error('Could not load your booking overview. Refresh to try again.');
         const reservationData = await reservations.json() as { reservations?: OverviewReservation[] };
         const courtData = courts ? await courts.json() as { courts?: OverviewCourt[] } : { courts: [] };
-        if (!Array.isArray(reservationData.reservations) || !Array.isArray(courtData.courts)) throw new Error('Unexpected operational data format.');
+        if (!Array.isArray(reservationData.reservations) || !Array.isArray(courtData.courts)) throw new Error('Booking overview is temporarily unavailable. Refresh to try again.');
         if (!controller.signal.aborted) {
           setOverview({ reservations: reservationData.reservations, courts: courtData.courts });
-          setState('Current server response');
+          setState('Up to date');
         }
       } catch (error) {
-        if (!controller.signal.aborted) setState(error instanceof Error ? error.message : 'Operational records could not be loaded.');
+        if (!controller.signal.aborted) setState(error instanceof Error ? error.message : 'Could not load your booking overview. Refresh to try again.');
       }
     }
     void load();
     return () => controller.abort();
   }, []);
   return <AdminShell title="Operations overview.">
-    <p className="page-lede">Live operational totals are read directly from the reservation backend, not generated from example data.</p>
+    <p className="page-lede">Review current bookings, payments awaiting review, and court availability.</p>
     <p role="status" className="booking-help">{state}</p>
-    {overview && <div className="admin-metrics" aria-label="Persisted operational totals">
+    {overview && <div className="admin-metrics" aria-label="Booking overview">
       <div><strong>{overview.reservations.length}</strong><span>Reservations returned</span></div>
       <div><strong>{overview.reservations.filter(item => item.payment_status === 'submitted').length}</strong><span>Payments awaiting review</span></div>
       <div><strong>{overview.reservations.filter(item => item.payment_status === 'verified').length}</strong><span>Payments verified</span></div>
@@ -47,10 +47,10 @@ export function AdminOverviewPage() {
     </div>}
     <section className="booking-panel">
       <h2 className="review-heading">Operational workspace</h2>
-      <p>Reservations and payment evidence are managed in the persisted queue. Court scheduling and approved rates are managed from the same server-backed workspace.</p>
+      <p>Manage reservations and payment receipts, and update court schedules and approved rates.</p>
       {backendAdminEnabled && <div className="booking-actions">
         <Link className="button button-primary" to="/admin/live-reservations">Open stored reservations</Link>
-        {sharedSupabaseAdminEnabled && <Link className="button button-secondary" to="/admin/acceptance">Check seven-module readback</Link>}
+        {sharedSupabaseAdminEnabled && <Link className="button button-secondary" to="/admin/acceptance">Check workspace status</Link>}
         {sharedSupabaseAdminEnabled && <Link className="button button-secondary" to="/admin/live-reservations#pdl-config-heading">Manage court settings and rates</Link>}
       </div>}
     </section>

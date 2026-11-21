@@ -17,9 +17,9 @@ export function TimeSlotSelector({ courtId, dayIndex, durationMinutes, selectedM
   const reduced = useReducedMotion();
 
   return (
-    <div className="slot-grid immersive-slot-grid" role="group" aria-label={serverStatuses !== undefined ? 'Server-checked start times' : 'Unverified start times'}>
+    <div className="slot-grid immersive-slot-grid" role="group" aria-label={serverStatuses !== undefined ? 'Available start times' : 'Unverified start times'}>
       {serverStatuses === null && (
-        <p className="booking-empty" role="status">Awaiting server-confirmed start times for this court.</p>
+        <p className="booking-empty" role="status">Checking available times for this court…</p>
       )}
       {serverStatuses !== undefined && serverStatuses !== null &&
         Object.keys(serverStatuses).length === 0 && (
@@ -33,7 +33,7 @@ export function TimeSlotSelector({ courtId, dayIndex, durationMinutes, selectedM
         : getDemoStartMinutes()).map((minute) => {
         const isServer = serverStatuses !== undefined;
         const status = isServer ? (serverStatuses?.[minute] ?? 'unavailable') : getStartStatus(courtId, dayIndex, minute, durationMinutes);
-        const labelPrefix = isServer ? 'server' : 'mock';
+        const samplePrefix = isServer ? '' : 'sample ';
         const available = status === 'available';
         const selected = available && selectedMinute === minute;
         return (
@@ -45,7 +45,7 @@ export function TimeSlotSelector({ courtId, dayIndex, durationMinutes, selectedM
             disabled={!available}
             aria-pressed={selected}
             onClick={() => onSelect(minute)}
-            aria-label={`${formatTime(minute)}, ${status === 'available' ? labelPrefix + ' available' : status === 'blocked' ? labelPrefix + ' maintenance' : labelPrefix + ' unavailable'}`}
+            aria-label={`${formatTime(minute)}, ${status === 'available' ? samplePrefix + 'available' : status === 'blocked' ? samplePrefix + 'maintenance' : samplePrefix + 'unavailable'}`}
             {...(reduced || !available ? {} : { whileTap: { scale: 0.96 } })}
             transition={motionSprings.interactive}
           >
@@ -56,7 +56,7 @@ export function TimeSlotSelector({ courtId, dayIndex, durationMinutes, selectedM
               transition={motionSprings.interactive}
             />}
             <strong>{formatTime(minute)},</strong>
-            <small>{status === 'available' ? (isServer ? 'Server available' : 'Mock available') : status === 'blocked' ? 'Mock maintenance' : (isServer ? 'Server unavailable' : 'Mock unavailable')}</small>
+            <small>{status === 'available' ? (isServer ? 'Available' : 'Sample available') : status === 'blocked' ? 'Sample maintenance' : (isServer ? 'Unavailable' : 'Sample unavailable')}</small>
           </m.button>
         );
       })}

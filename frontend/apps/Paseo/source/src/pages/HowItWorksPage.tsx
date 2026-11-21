@@ -5,10 +5,10 @@ import { motionPresets, motionSprings } from '../motion/presets';
 
 const bookingSteps = [
   { title: 'Explore courts', detail: 'Compare Courts 1, 2 and 3 and choose a preferred court.', milestone: 'AVAILABLE', phase: 'COURTS', state: 'available' },
-  { title: 'Choose a schedule', detail: 'Select a date and duration. Bookable times depend on approved server rates and actual court availability.', milestone: 'SERVER VALIDATION', phase: 'SCHEDULE', state: 'available' },
+  { title: 'Choose a schedule', detail: 'Select a date and duration. Bookable times depend on approved prices and actual court availability.', milestone: 'CHECK AVAILABILITY', phase: 'SCHEDULE', state: 'available' },
   { title: 'Enter details and review', detail: 'Provide guest contact details and review the proposed booking before submission.', milestone: 'AVAILABLE', phase: 'DETAILS', state: 'available' },
-  { title: 'Choose payment', detail: 'Select a configured QR-payment method and submit payment evidence only after receiving a valid backend quote.', milestone: 'SERVER REQUIRED', phase: 'PAYMENT', state: 'planned' },
-  { title: 'Receive confirmation', detail: 'Retrieve the server-issued receipt with your private code. Payment verification and final confirmation are managed by the reservation service.', milestone: 'SERVER REQUIRED', phase: 'RECEIPT', state: 'planned' },
+  { title: 'Choose payment', detail: 'Choose a payment QR and submit a payment receipt only after the amount and recipient are confirmed.', milestone: 'CONFIRMATION REQUIRED', phase: 'PAYMENT', state: 'planned' },
+  { title: 'Receive confirmation', detail: 'View your receipt using your private access code. The venue reviews payment before confirming a booking.', milestone: 'CONFIRMATION REQUIRED', phase: 'RECEIPT', state: 'planned' },
 ] as const;
 
 function StepIcon({ index }: { index: number }) {
@@ -65,7 +65,7 @@ export function HowItWorksPage() {
         <div className="how-hero-copy">
           <div className="eyebrow eyebrow-dark how-eyebrow">THE RESERVATION JOURNEY</div>
           <h1 className="page-title">How booking works.</h1>
-          <p className="page-lede">Explore the five-step booking journey. Final availability, charges and confirmation depend on server verification and approved venue settings.</p>
+          <p className="page-lede">Follow five steps to plan a game. Court availability, prices and booking confirmation require venue approval.</p>
           <div className="how-hero-actions">
             <ButtonLink to="/courts">Explore the three courts <span aria-hidden="true">↗</span></ButtonLink>
             <a className="how-inline-link" href="#how-booking-steps">See all five steps <span aria-hidden="true">↓</span></a>
@@ -84,10 +84,10 @@ export function HowItWorksPage() {
           <div className="how-overview-stats">
             <div><strong>05</strong><span>Journey stages</span></div>
             <span className="how-overview-divider" aria-hidden="true" />
-            <div><strong>05</strong><span>Interface stages</span></div>
+            <div><strong>05</strong><span>Booking steps</span></div>
           </div>
-          <div className="how-progress-caption"><span>Frontend journey coverage</span><strong>5 of 5 interfaces</strong></div>
-          <div className="how-progress-track" role="progressbar" aria-label="Frontend journey coverage" aria-valuemin={0} aria-valuemax={5} aria-valuenow={5} aria-valuetext="Five interface stages are present; final confirmation requires backend verification">
+          <div className="how-progress-caption"><span>Booking journey</span><strong>Five steps</strong></div>
+          <div className="how-progress-track" role="progressbar" aria-label="Booking journey" aria-valuemin={0} aria-valuemax={5} aria-valuenow={5} aria-valuetext="Five steps in the booking journey; final confirmation requires payment review">
             <span />
           </div>
         </aside>
@@ -99,7 +99,7 @@ export function HowItWorksPage() {
             <div className="eyebrow eyebrow-dark">YOUR FIVE-STEP JOURNEY</div>
             <h2 id="how-booking-steps-title">A clear path from court to confirmation.</h2>
           </div>
-          <p>Each stage has a defined place in the reservation flow. See the customer steps and where the backend must verify availability, price and payment.</p>
+          <p>Review each booking step, from selecting a court to receiving confirmation.</p>
         </div>
 
         <ol className="how-steps-grid" id="how-booking-steps">
@@ -136,9 +136,9 @@ export function HowItWorksPage() {
         <span className="how-note-mark" aria-hidden="true">i</span>
         <div>
           <strong>What is available right now?</strong>
-          <p>The interfaces exist, but courts and rates may be disabled until the venue approves them. No selection alone creates a reservation or verifies payment.</p>
+          <p>Some courts and prices may be unavailable until approved by the venue. Choosing a court does not reserve it or verify a payment.</p>
         </div>
-        <span className="how-note-status">SERVER VERIFICATION</span>
+        <span className="how-note-status">VENUE CONFIRMATION</span>
       </aside>
 
       <section className="how-next-step" aria-labelledby="how-next-step-title">

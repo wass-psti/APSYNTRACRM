@@ -14,14 +14,14 @@ export function BookingStatusPage() {
       <h1 className="page-title">Booking status.</h1>
       <div className="demo-banner" role="note">
         <strong>No confirmed reservation</strong>
-        <p>No booking has been submitted, stored, or verified. A reservation is confirmed only after server-issued receipt and payment review.</p>
+        <p>No reservation has been submitted yet. Confirmation requires a booking receipt and payment review.</p>
       </div>
       {hasValidDraft && schedule ? (
         <>
           <p className="page-lede">You have an unsaved booking selection in this browser tab. It does not have a genuine booking reference, receipt, or confirmed payment.</p>
           <BookingSummary schedule={schedule} />
           <div className="booking-panel">
-            <h2 className="review-heading">Current frontend status: Not submitted</h2>
+            <h2 className="review-heading">Booking not submitted</h2>
             <p><strong>Selected payment method:</strong> {getMethodName(paymentMethod)}</p>
             <p><strong>Payment verification:</strong> Not available</p>
             <p><strong>Booking reference:</strong> Not issued</p>
