@@ -12,6 +12,11 @@ on:
       - 'scripts/build-pdl-native.mjs'
       - 'scripts/pdl-aps-native-02-readiness.mjs'
       - 'frontend/tests/pdl-aps-native-02-readiness.test.mjs'
+      - 'frontend/tests/pdl-aps-native-05-contract.test.mjs'
+      - 'supabase/pdl-booking/source/functions/**'
+      - 'supabase/pdl-booking/source/migrations/*pdl_admin_paginated_lifecycle.sql'
+      - 'supabase/pdl-booking/acceptance/pdl_native05_rollback.sql'
+      - 'docs/PDL-APS-NATIVE-05-ACCEPTANCE.md'
       - 'frontend/tests/pdl-aps-native-04-sql-contract.test.mjs'
       - 'supabase/pdl-booking/acceptance/**'
       - 'docs/PDL-APS-NATIVE-04-ACCEPTANCE.md'
@@ -37,7 +42,7 @@ jobs:
         run: |
           npm run check
           node scripts/verify-pages-source.mjs
-          node --test frontend/tests/pdl-aps-native.test.mjs frontend/tests/pdl-aps-native-02-readiness.test.mjs
+          node --test frontend/tests/pdl-aps-native.test.mjs frontend/tests/pdl-aps-native-02-readiness.test.mjs frontend/tests/pdl-aps-native-05-contract.test.mjs
           npm test
           npm run build
       - name: Public/CRM browser isolation and direct-link acceptance

@@ -99,6 +99,17 @@ async function rpc(action: string, payload: Record<string, unknown>): Promise<Re
   return data as Record<string, unknown>;
 }
 
+async function adminLifecycle(action: string, payload: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const result = await fetch(`${supabaseUrl}/rest/v1/rpc/pdl_admin_lifecycle_v1`, {
+    method: 'POST', headers: serviceHeaders(),
+    body: JSON.stringify({p_action: action, p_payload: payload}),
+  });
+  if (!result.ok) throw new Error(`database_admin_rpc_${result.status}`);
+  const data: unknown = await result.json();
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('invalid_admin_response');
+  return data as Record<string, unknown>;
+}
+
 async function authenticate(req: Request): Promise<string | null> {
   const token = (req.headers.get('authorization') ?? '').replace(/^Bearer /i, '');
   if (!token || token === serviceKey || token.length > 4096) return null;
@@ -487,6 +498,31 @@ async function handle(req: Request): Promise<Response> {
             'vary': 'Origin', ...(origin ? { 'access-control-allow-origin': origin } : {}),
           },
         });
+      }
+      if (req.method === 'GET' && route === '/v1/admin/reservations/page') {
+        const limit = url.searchParams.get('limit') ?? '25';
+        const beforeCreatedAt = url.searchParams.get('beforeCreatedAt');
+        const beforeId = url.searchParams.get('beforeId');
+        if (!/^(?:[1-9]|[1-4][0-9]|50)$/.test(limit) ||
+          ((beforeCreatedAt===null)!==(beforeId===null)) ||
+          (beforeId!==null && !uuidPattern.test(beforeId)) ||
+          (beforeCreatedAt!==null && (!Number.isFinite(Date.parse(beforeCreatedAt)) || beforeCreatedAt.length>45))) {
+          return invalid('invalid_page', 422, origin);
+        }
+        const data = await adminLifecycle('page',{actorId,q:url.searchParams.get('q')??'',
+          limit:Number(limit),...(beforeCreatedAt?{beforeCreatedAt,beforeId}:{})});
+        return data.error ? invalid(String(data.error),422,origin) : response(data,200,origin);
+      }
+      const cancelRoute = route.match(/^\/v1\/admin\/reservations\/([0-9a-f-]{36})\/cancel$/i);
+      if (req.method==='POST' && cancelRoute) {
+        const body = await req.json() as {expectedVersion?:number};
+        if (!uuidPattern.test(cancelRoute[1]) || !Number.isSafeInteger(body.expectedVersion) ||
+          body.expectedVersion!<1) return invalid('invalid_cancellation',422,origin);
+        const data = await adminLifecycle('cancel',{actorId,reservationId:cancelRoute[1],
+          expectedVersion:body.expectedVersion});
+        return data.error ? invalid(String(data.error),
+          data.error==='reservation_not_found'?404:data.error==='cancellation_conflict'?409:422,origin)
+          : response(data,200,origin);
       }
       if (req.method === 'GET' && route === '/v1/admin/reservations') {
         const data = await rpc('list', { actorId, q: url.searchParams.get('q') ?? '' });

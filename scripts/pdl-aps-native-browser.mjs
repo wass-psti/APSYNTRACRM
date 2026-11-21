@@ -72,6 +72,54 @@ try{
  assert.equal(capturedToken,'Bearer '+fakeAccess);
  await receipt.close();
  console.log('PASS private receipt fragment preserved through Pages deep link without CRM session');
+ // Test-only signed admin HTTP fixtures. Never forward a synthetic cancellation
+ // to the live backend, change real rates, or claim a refund was issued.
+ const lifecycle=await browser.newPage({viewport:{width:390,height:900}});
+ const adminErrors=[]; const calls=[];
+ lifecycle.on('pageerror',error=>adminErrors.push(error.message));
+ await lifecycle.addInitScript(()=>sessionStorage.setItem('pdl-booking-admin-access-token','SYNTHETIC_TEST_ONLY'));
+ const idA='11111111-1111-4111-8111-111111111111';
+ const idB='22222222-2222-4222-8222-222222222222';
+ let cancelled=false;
+ const booking=(id,name,version=1)=>({
+   id,court_code:'court-1',reservation_date:'2026-11-23',start_minute:480,duration_minutes:60,
+   amount_minor:50000,full_name:name,email:'synthetic@example.test',phone:'09171234567',
+   payment_method:'gcash',booking_status:cancelled&&id===idA?'cancelled':'pending_verification',
+   payment_status:'submitted',version:cancelled&&id===idA?2:version,created_at:'2026-11-21T12:00:00Z',
+ });
+ await lifecycle.route('**/functions/v1/pdl-guest-api/v1/admin/**',async route=>{
+   const req=route.request();const url=new URL(req.url());const path=url.pathname;
+   calls.push({method:req.method(),path});
+   const send=(value,status=200)=>route.fulfill({status,json:value});
+   if(path.endsWith('/v1/admin/session'))return send({authenticated:true});
+   if(path.endsWith('/v1/admin/courts'))return send({courts:[
+    {courtId:'court-1',name:'Court 1',enabled:false,openMinute:480,closeMinute:1320,rates:[]},
+   ]});
+   if(path.endsWith('/v1/admin/reservations/page')){
+    if(url.searchParams.has('beforeId'))return send({reservations:[booking(idB,'Synthetic Second')],nextCursor:null});
+    return send({reservations:[booking(idA,'Synthetic First')],nextCursor:
+      {beforeCreatedAt:'2026-11-21T12:00:00Z',beforeId:idA}});
+   }
+   if(path.endsWith(`/v1/admin/reservations/${idA}/cancel`)){
+    cancelled=true;return send({updated:true,bookingStatus:'cancelled',paymentStatus:'submitted',version:2,refundStatus:'not_processed'});
+   }
+   return send({error:'fixture_missing_route'},404);
+ });
+ await lifecycle.route('**/functions/v1/pdl-guest-api/v1/payment-methods',async route=>
+   route.fulfill({status:200,json:{methods:[]}}));
+ lifecycle.on('dialog',dialog=>{void dialog.accept()});
+ await lifecycle.goto(base+'paseo/admin/live-reservations');
+ await lifecycle.getByText('Synthetic First').first().waitFor({timeout:15000});
+ await lifecycle.getByRole('button',{name:'Load more reservations'}).click();
+ await lifecycle.getByText('Synthetic Second').first().waitFor({timeout:15000});
+ assert.equal(await lifecycle.locator('.staging-reservation-card').count(),2);
+ await lifecycle.getByRole('button',{name:'Cancel booking (no automatic refund)'}).first().click();
+ await lifecycle.getByText(/Booking cancelled\. Payment status is unchanged/).waitFor({timeout:15000});
+ assert.equal(cancelled,true);
+ assert.ok(calls.some(item=>item.method==='POST'&&item.path.endsWith('/cancel')));
+ assert.deepEqual(adminErrors,[]);
+ console.log('PASS isolated admin cursor pages, cancellation confirmation, unchanged payment status and recovery');
+ await lifecycle.close();
  const crm=await browser.newPage();
  await crm.goto(base+'#/paseo');
  await crm.locator('.aps-auth-v2').waitFor({timeout:16000});

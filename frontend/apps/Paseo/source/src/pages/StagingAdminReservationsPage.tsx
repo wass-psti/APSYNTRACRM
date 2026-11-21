@@ -9,6 +9,8 @@ import {
   ManagedQrMethodCard, managedPaymentMethods, type ManagedMethod,
 } from '../admin/staging/ManagedQrMethodCard';
 
+interface ReservationCursor {beforeCreatedAt: string; beforeId: string}
+
 interface StageReservation {
   id: string;
   court_id: string;
@@ -33,6 +35,9 @@ export function StagingAdminReservationsPage() {
   const [reservationLoaded, setReservationLoaded] = useState(false);
   const [reservationLoading, setReservationLoading] = useState(false);
   const [status, setStatus] = useState('Loading reservations…');
+  const [nextCursor, setNextCursor] = useState<ReservationCursor | null>(null);
+  const loadRequest = useRef(0);
+  const activeSearch = useRef('');
   const [busyId, setBusyId] = useState('');
   const [proof, setProof] = useState<{url: string; type: string; id: string} | null>(null);
   const proofRequest = useRef(0);
@@ -66,31 +71,49 @@ export function StagingAdminReservationsPage() {
     setRateEnabled(rate?.enabled ?? false);
   }, [courtConfig, selectedCourt, rateDuration]);
 
-  async function load(query = search) {
+  async function load(query = search, cursor: ReservationCursor | null = null) {
+    if (!cursor) activeSearch.current = query;
+    const requestId = ++loadRequest.current;
     setReservationLoading(true);
     try {
-      const response = await backendAdminFetch(`/v1/admin/reservations?q=${encodeURIComponent(query)}`, {
-        cache: 'no-store',
-      });
-      if (response.status === 401) { navigate('/admin/sign-in', {replace: true}); return; }
-      if (!response.ok) throw new Error('Reservation retrieval failed.');
+      const params = new URLSearchParams({q:activeSearch.current});
+      if (sharedSupabaseAdminEnabled) {
+        params.set('limit','25');
+        if (cursor) {
+          params.set('beforeCreatedAt',cursor.beforeCreatedAt);
+          params.set('beforeId',cursor.beforeId);
+        }
+      }
+      const path = sharedSupabaseAdminEnabled ? '/v1/admin/reservations/page' : '/v1/admin/reservations';
+      const response = await backendAdminFetch(`${path}?${params}`, {cache:'no-store',signal:AbortSignal.timeout(12000)});
+      if (requestId !== loadRequest.current) return;
+      if (response.status === 401) { navigate('/admin/sign-in',{replace:true}); return; }
+      if (!response.ok) throw new Error('Reservation retrieval failed. Please refresh.');
       const data: {reservations: (StageReservation & {
-        court_code?: string; reservation_date?: string; duration_minutes?: number;
-      })[]} = await response.json();
-      const normalized = data.reservations.map((item) => ({
-        ...item,
-        court_id: item.court_id ?? item.court_code ?? '',
-        day: item.day ?? item.reservation_date ?? '',
-        duration: item.duration ?? item.duration_minutes ?? 0,
+        court_code?:string; reservation_date?:string; duration_minutes?:number;
+      })[]; nextCursor?:ReservationCursor|null} = await response.json();
+      if (!Array.isArray(data.reservations)) throw new Error('Invalid reservation response.');
+      const normalized = data.reservations.map(item=>({
+        ...item,court_id:item.court_id??item.court_code??'',
+        day:item.day??item.reservation_date??'',
+        duration:item.duration??item.duration_minutes??0,
       }));
-      setRecords(normalized);
+      if (requestId !== loadRequest.current) return;
+      setRecords(previous=>cursor?[...previous,...normalized]:normalized);
+      setNextCursor(data.nextCursor??null);
       setReservationLoaded(true);
-      setStatus(`${normalized.length} ${sharedSupabaseAdminEnabled ? 'Supabase' : 'locally'} stored reservations`);
-    } catch (reason) {
-      setStatus(reason instanceof Error ? reason.message : 'Reservation retrieval failed.');
-    } finally { setReservationLoading(false); }
+      setStatus(`${cursor ? 'More' : normalized.length} ${sharedSupabaseAdminEnabled ? 'Supabase' : 'locally'} stored reservations loaded`);
+    } catch(reason) {
+      if (requestId===loadRequest.current) setStatus(reason instanceof Error ? reason.message:'Reservation retrieval failed.');
+    } finally {
+      if (requestId===loadRequest.current) setReservationLoading(false);
+    }
   }
-  useEffect(() => { void load(''); void loadMethods(); if (sharedSupabaseAdminEnabled) void loadCourtConfig(); }, []);
+  useEffect(() => {
+    void load(''); void loadMethods();
+    if (sharedSupabaseAdminEnabled) void loadCourtConfig();
+    return () => { loadRequest.current += 1; };
+  }, []);
   async function loadCourtConfig() {
     try {
       const response = await backendAdminFetch('/v1/admin/courts', { cache:'no-store' });
@@ -180,14 +203,36 @@ export function StagingAdminReservationsPage() {
     setBusyId(item.id);
     try {
       const response = await backendAdminFetch(`/v1/admin/reservations/${item.id}/verification`, {
-        method: 'POST',
+        method: 'POST',signal:AbortSignal.timeout(12000),
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ decision, expectedVersion: item.version }),
       });
       if (!response.ok) throw new Error(response.status === 409 ? 'Reservation changed in another session. Refresh and retry.' : 'Verification could not be saved.');
       await load();
-    } catch (reason) { setStatus(reason instanceof Error ? reason.message : 'Verification failed.'); }
-    finally { setBusyId(''); }
+    } catch (reason) {
+      const message=reason instanceof Error ? reason.message : 'Verification outcome uncertain.';
+      await load();
+      setStatus(`${message} Review the refreshed booking status before another decision.`);
+    } finally { setBusyId(''); }
+  }
+
+  async function cancelReservation(item: StageReservation) {
+    if (!window.confirm('Cancel this pending booking? The court slot will be released, but any submitted payment must still be reconciled separately. No refund will be issued automatically.')) return;
+    setBusyId(item.id);
+    try {
+      const response = await backendAdminFetch(`/v1/admin/reservations/${item.id}/cancel`, {
+        method:'POST',signal:AbortSignal.timeout(12000),headers:{'content-type':'application/json'},
+        body:JSON.stringify({expectedVersion:item.version}),
+      });
+      if (!response.ok) throw new Error(response.status===409 ?
+        'Booking changed in another session. Refresh and review.' : 'Cancellation could not be saved.');
+      await load();
+      setStatus('Booking cancelled. Payment status is unchanged; reconcile any submitted funds separately.');
+    } catch(reason) {
+      const message=reason instanceof Error ? reason.message : 'Cancellation outcome uncertain.';
+      await load();
+      setStatus(`${message} Review the refreshed booking status before retrying.`);
+    } finally { setBusyId(''); }
   }
 
   async function logout() {
@@ -265,10 +310,19 @@ export function StagingAdminReservationsPage() {
                 onClick={() => { void decide(item,'verified'); }}>Mark payment verified</button>
               <button className="button button-secondary" type="button" disabled={busyId === item.id || item.payment_status !== 'submitted'}
                 onClick={() => { void decide(item,'rejected'); }}>Reject payment proof</button>
+              {sharedSupabaseAdminEnabled && <button className="button button-secondary" type="button"
+                disabled={busyId === item.id || item.booking_status !== 'pending_verification' || item.payment_status !== 'submitted'}
+                onClick={() => { void cancelReservation(item); }}>Cancel booking (no automatic refund)</button>}
             </div>
           </article>
         ))}
       </div>
+      {sharedSupabaseAdminEnabled && nextCursor && (
+        <button className="button button-secondary" type="button" disabled={reservationLoading}
+          onClick={() => { void load(search,nextCursor); }}>
+          {reservationLoading ? 'Loading more…' : 'Load more reservations'}
+        </button>
+      )}
         </section>
       {sharedSupabaseAdminEnabled && (
         <section className="booking-panel pdl-live-section pdl-live-config" aria-labelledby="pdl-config-heading">

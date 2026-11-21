@@ -661,22 +661,25 @@ function currentSidebarNavigation(){
 // Keep the latest manual/native readback authoritative. Older responses must not
 // replace a newer booking snapshot after refresh, navigation, or sign-out.
 let paseoReadRunId=0;
-async function loadPaseoManagement(){
+async function loadPaseoManagement(cursor=null){
  const actor=auth.userId;
  if(!actor||!state.context||state.view!=='paseo')return;
  const runId=++paseoReadRunId;
  const current=()=>runId===paseoReadRunId&&auth.userId===actor&&
    state.context?.user_id===actor&&state.view==='paseo';
- state.paseoManagement={status:'LOADING'};
+ if(!cursor)state.paseoManagement={status:'LOADING'};
+ else state.paseoManagement={...state.paseoManagement,loadingMore:true};
  render();
  try{
   const token=await auth.token();
   if(!current())return;
   const {readPaseoManagement}=await import('./apps/Paseo/native-admin.js');
   if(!current())return;
-  const result=await readPaseoManagement(token);
+  const result=await readPaseoManagement(token,{cursor});
   if(current()){
-   state.paseoManagement=result;
+   state.paseoManagement=cursor&&result.status==='VERIFIED'&&state.paseoManagement?.status==='VERIFIED'
+    ? {...result,reservations:[...state.paseoManagement.reservations,...result.reservations]}
+    : result;
    render();
   }
  }catch(error){
@@ -696,6 +699,8 @@ function renderPaseoNative(){
   ${current.reservations.length?`<ul>${current.reservations.map(record=>
     `<li>${e(record.id)} — ${e(record.name)} — ${e(record.bookingStatus)} / ${e(record.paymentStatus)}</li>`
    ).join('')}</ul>`:'<p>No reservation records returned.</p>'}
+  ${current.nextCursor?`<button type="button" data-action="pdl-more"
+   ${current.loadingMore?'disabled':''}>${current.loadingMore?'Loading more…':'Load more reservations'}</button>`:''}
  </section>`:current.status==='DENIED'?'<p role="status">Your current CRM account is not assigned as a Paseo booking administrator. Public booking remains accessible.</p>':
  current.status==='UNAVAILABLE'?'<p role="alert">The Paseo management service is unavailable. '+e(current.message||'')+'</p>':
  '<p role="status">Checking your current signed CRM session against the Paseo booking administrator directory…</p>';
@@ -7092,6 +7097,7 @@ async function openBoardStructure(){
 
 async function action(name,button){
  if(name==='pdl-refresh'){await loadPaseoManagement();return;}
+ if(name==='pdl-more'){if(state.paseoManagement?.nextCursor&&!state.paseoManagement?.loadingMore)await loadPaseoManagement(state.paseoManagement.nextCursor);return;}
  switch(name){
  case 'profile-name-edit':{
   if(state.view!=='settings'||!state.context||!auth.isSignedIn)return;

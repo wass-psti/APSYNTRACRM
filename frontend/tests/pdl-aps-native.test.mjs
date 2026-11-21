@@ -24,7 +24,7 @@ test('CRM signed workspace registers Paseo without granting anonymous CRM routes
  assert.match(app,/sidebarNav\('#\/paseo','Paseo de Lomboy'/);
  assert.equal(PASEO_APPLICATION.route,'#/paseo');
  assert.match(app,/if\(!state\.context\)return;/);
- assert.match(app,/readPaseoManagement\(token\)/);
+ assert.match(app,/readPaseoManagement\(token,\{cursor\}\)/);
  assert.equal(sidebarActiveRoute('#/paseo'),'paseo');
  assert.equal(sidebarActiveRoute('#/overview'),'overview');
 });
@@ -56,7 +56,7 @@ test('signed and assigned administrator receives current read-only booking proje
    assert.equal(options.headers.authorization,'Bearer TEST_SIGNED');
    if(url.endsWith('/v1/admin/session'))return Response.json({authenticated:true});
    if(url.endsWith('/v1/admin/courts'))return Response.json({courts:[{enabled:true},{enabled:false}]});
-   if(url.includes('/v1/admin/reservations?'))return Response.json({reservations:[{id:'r-1',full_name:'Test customer',booking_status:'confirmed',payment_status:'verified'}]});
+   if(url.includes('/v1/admin/reservations/page?'))return Response.json({reservations:[{id:'r-1',full_name:'Test customer',booking_status:'confirmed',payment_status:'verified'}],nextCursor:null});
    throw Error('Unexpected path');
  }});
  assert.equal(response.status,'VERIFIED');
@@ -80,4 +80,17 @@ test('native readback ignores superseded refresh and signout responses',()=>{
  assert.match(app,/if\(!current\(\)\)return;/);
  assert.match(app,/if\(parts\[0\]!==\'paseo\'\)paseoReadRunId\+\+/);
  assert.match(app,/paseoReadRunId\+\+;state\.paseoManagement=null/);
+});
+
+test('native Paseo list supports bounded cursor pagination without unrestricted read',async()=>{
+ const paths=[];
+ const result=await readPaseoManagement('TOKEN',{cursor:{beforeCreatedAt:'2026-11-21T00:00:00Z',beforeId:'11111111-1111-4111-8111-111111111111'},request:async(url)=>{
+  paths.push(url);
+  if(url.endsWith('/v1/admin/session'))return Response.json({authenticated:true});
+  if(url.endsWith('/v1/admin/courts'))return Response.json({courts:[{enabled:false}]});
+  if(url.includes('/v1/admin/reservations/page?'))return Response.json({reservations:[],nextCursor:null});
+  return new Response(null,{status:404});
+ }});
+ assert.equal(result.status,'VERIFIED');
+ assert.ok(paths.some(path=>path.includes('limit=25')&&path.includes('beforeId=11111111')));
 });
