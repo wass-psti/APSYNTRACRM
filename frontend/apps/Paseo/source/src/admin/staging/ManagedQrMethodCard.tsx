@@ -50,6 +50,7 @@ export function ManagedQrMethodCard({
   const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
   const [revision, setRevision] = useState(0);
+  const [imageState, setImageState] = useState<'loading' | 'ready' | 'error'>('loading');
   const fileInput = useRef<HTMLInputElement>(null);
   const sequence = useRef(0);
 
@@ -65,6 +66,8 @@ export function ManagedQrMethodCard({
   }, [file]);
 
   useEffect(() => () => { sequence.current += 1; }, []);
+
+  useEffect(() => { setImageState('loading'); }, [previewUrl, configured?.imageUrl, revision]);
 
   async function chooseImage(candidate: File | null) {
     const current = ++sequence.current;
@@ -121,11 +124,16 @@ export function ManagedQrMethodCard({
     ? `${configured.imageUrl}${configured.imageUrl.includes('?') ? '&' : '?'}revision=${revision}`
     : '';
 
+  const activeUrl = previewUrl || storedUrl;
+  const previewIsUnsaved = Boolean(previewUrl);
+
   return (
     <form className="managed-qr-method booking-panel" aria-label={`${label} QR configuration`}
       onSubmit={event => { void save(event); }}>
-      <h3>{label}</h3>
-      <p className="booking-help">{configured?.imageUrl ? 'Saved QR image available.' : 'No saved QR image yet.'}</p>
+      <div className="managed-qr-heading">
+        <div><span className="managed-qr-eyebrow">PAYMENT METHOD</span><h3>{label}</h3></div>
+        <span className="managed-qr-status">{previewUrl ? 'Unsaved preview' : storedUrl ? 'Saved configuration' : 'Not configured'}</span>
+      </div>
       <label htmlFor={`admin-qr-recipient-${method}`}>{label} recipient name</label>
       <input id={`admin-qr-recipient-${method}`} value={recipient} required minLength={2} maxLength={100}
         onChange={event => setRecipient(event.target.value)} placeholder={`Recipient for ${label}`} />
@@ -135,17 +143,40 @@ export function ManagedQrMethodCard({
         onChange={event => { void chooseImage(event.target.files?.[0] ?? null); }} />
       {checking && <p role="status">Checking {label} image format…</p>}
       {validation && <p role="alert" className="form-error">{validation}</p>}
-      {previewUrl ? (
-        <div className="managed-qr-preview">
-          <p>New {label} QR preview — not saved yet</p>
-          <img src={previewUrl} alt={`Selected ${label} QR image preview`} />
+      <div className="managed-qr-preview" aria-label={`${label} QR image preview`}>
+        <div className="managed-qr-preview-heading">
+          <span>{previewIsUnsaved ? 'New image preview' : 'Saved QR image'}</span>
+          <span>{previewIsUnsaved ? 'NOT YET SAVED' : storedUrl ? 'ON FILE' : 'NO IMAGE'}</span>
         </div>
-      ) : storedUrl ? (
-        <div className="managed-qr-preview">
-          <p>Saved {label} QR image</p>
-          <img src={storedUrl} alt={`Saved ${label} QR image`} />
+        <div className="managed-qr-media">
+          {activeUrl && imageState !== 'error' && (
+            <img key={activeUrl} src={activeUrl} alt={`${label} payment QR code`}
+              onLoad={() => setImageState('ready')}
+              onError={() => setImageState('error')}
+              className={imageState === 'ready' ? 'managed-qr-image-ready' : 'managed-qr-image-loading'} />
+          )}
+          {activeUrl && imageState === 'loading' && (
+            <div className="managed-qr-placeholder" role="status">
+              <span className="managed-qr-placeholder-icon" aria-hidden="true">▦</span>
+              <span>Loading QR image…</span>
+            </div>
+          )}
+          {(!activeUrl || imageState === 'error') && (
+            <div className="managed-qr-placeholder" role="status">
+              <span className="managed-qr-placeholder-icon" aria-hidden="true">▦</span>
+              <strong>{imageState === 'error' && activeUrl ? 'QR image unavailable' : 'No QR image uploaded'}</strong>
+              <span>{imageState === 'error' && activeUrl
+                ? 'The saved image could not be displayed. Select a replacement image below.'
+                : 'Choose a JPG or PNG image to configure this payment method.'}</span>
+            </div>
+          )}
         </div>
-      ) : null}
+        <p className="managed-qr-preview-note">{previewIsUnsaved
+          ? 'Preview only — save to update the stored image.'
+          : imageState === 'error' && activeUrl
+            ? 'The saved image reference exists, but the preview failed to load.'
+            : 'QR images are displayed without cropping.'}</p>
+      </div>
       <button type="submit" className="button button-primary"
         disabled={checking || saving || !file || recipient.trim().length < 2 || Boolean(validation)}>
         {saving ? 'Saving…' : `Save ${label} QR configuration`}

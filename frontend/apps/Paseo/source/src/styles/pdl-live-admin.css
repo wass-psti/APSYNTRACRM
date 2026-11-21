@@ -129,3 +129,23 @@
 .pdl-live-admin .pdl-proof-dialog img { width:auto; max-width:100%; max-height:60vh; object-fit:contain; }
 .pdl-live-admin .pdl-proof-dialog iframe { max-width:100%; height:min(58vh,540px); }
 @media(prefers-reduced-motion:reduce) { .pdl-live-admin .staging-admin-toolbar[aria-busy=true] .button-primary::before { animation:none; } .pdl-live-admin :where(input,select,.pdl-proof-dismiss) { transition:none; } }
+
+/* Payment QR cards: keep broken remote assets out of the browser's default image UI. */
+.pdl-live-admin .managed-qr-grid { align-items:stretch; }
+.pdl-live-admin .managed-qr-method { grid-template-rows:auto auto auto auto 1fr auto auto; background:#fff; border-color:#d8e5dc; border-radius:16px; padding:clamp(16px,2vw,22px); gap:12px; }
+.pdl-live-admin .managed-qr-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+.pdl-live-admin .managed-qr-eyebrow { display:block; color:#698575; font-size:10px; font-weight:800; letter-spacing:.12em; margin-bottom:5px; }
+.pdl-live-admin .managed-qr-heading h3 { font-size:21px; line-height:1.15; margin:0; }
+.pdl-live-admin .managed-qr-status { border:1px solid #d5e5d9; background:#f0f7f1; border-radius:99px; color:#36624a; padding:6px 10px; font-size:10px; font-weight:750; }
+.pdl-live-admin .managed-qr-preview { min-width:0; padding:12px; background:#f7faf8; border-color:#dbe7df; border-radius:12px; }
+.pdl-live-admin .managed-qr-preview-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; color:#385f49; font-size:12px; font-weight:750; }
+.pdl-live-admin .managed-qr-preview-heading span:last-child { color:#779080; font-size:10px; letter-spacing:.08em; white-space:nowrap; }
+.pdl-live-admin .managed-qr-media { display:grid; place-items:center; position:relative; min-height:200px; height:clamp(200px,21vw,270px); background:#fff; border:1px dashed #d5e4d9; border-radius:10px; overflow:hidden; padding:16px; }
+.pdl-live-admin .managed-qr-media img { display:block; max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; border-radius:3px; }
+.pdl-live-admin .managed-qr-media img.managed-qr-image-loading { position:absolute; opacity:0; width:1px; height:1px; pointer-events:none; }
+.pdl-live-admin .managed-qr-placeholder { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:8px; max-width:250px; text-align:center; color:#668274; font-size:12px; line-height:1.5; }
+.pdl-live-admin .managed-qr-placeholder strong { font-size:14px; color:#365a45; }
+.pdl-live-admin .managed-qr-placeholder-icon { display:grid; place-items:center; width:46px; height:46px; border:1px solid #dce9df; border-radius:12px; background:#eff6f1; color:#537761; font-size:26px; }
+.pdl-live-admin .managed-qr-preview .managed-qr-preview-note { margin:10px 0 0; font-size:11px; line-height:1.5; font-weight:450; color:#647e6c; }
+.pdl-live-admin .managed-qr-method .button { align-self:end; min-height:43px; }
+@media(max-width:680px) { .pdl-live-admin .managed-qr-media { height:230px; } }
