@@ -10,6 +10,7 @@ const script = resolve(
 );
 const outputPath = "/tmp/cp-crm-ui06-acceptance.json";
 const expected = [1200, 800, 390];
+const startedAt = Date.now();
 let output = "";
 let exception = null;
 try {
@@ -40,8 +41,11 @@ for (const line of output.split(/\r?\n|\r/g)) {
     const height = Number(fields[4]);
     const imagePath = `/tmp/cp-crm-ui06-existing-${requestedWidth}.png`;
     let screenshotBytes = 0;
+    let screenshotRecent = false;
     try {
-      screenshotBytes = statSync(imagePath).size;
+      const imageStats = statSync(imagePath);
+      screenshotBytes = imageStats.size;
+      screenshotRecent = imageStats.mtimeMs >= startedAt - 2000;
     } catch {
       /* Missing screenshot is a failed check. */
     }
@@ -50,9 +54,12 @@ for (const line of output.split(/\r?\n|\r/g)) {
       measuredWidth,
       height,
       screenshotBytes,
+      screenshotRecent,
     });
     if (screenshotBytes === 0)
       blockers.push(`${requestedWidth}px screenshot unavailable`);
+    else if (!screenshotRecent)
+      blockers.push(`${requestedWidth}px screenshot is stale`);
     if (Math.abs(measuredWidth - requestedWidth) > 24)
       blockers.push(
         `Requested ${requestedWidth}px but Chromium was ${measuredWidth}px wide`,

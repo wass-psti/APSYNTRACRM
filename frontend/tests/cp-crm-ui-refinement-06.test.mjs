@@ -48,3 +48,12 @@ test("test output never claims touch or role-specific certification", () => {
     /auth\.uid|sessionStorage|localStorage|password|fetch\(/i,
   );
 });
+
+test("CP07 evidence requires fresh screenshots rather than previous run artifacts", () => {
+  assert.match(script, /rm -f \/tmp\/cp-crm-ui06-existing-/);
+  assert.match(
+    runner,
+    /screenshotRecent = imageStats\.mtimeMs >= startedAt - 2000/,
+  );
+  assert.match(runner, /screenshot is stale/);
+});
