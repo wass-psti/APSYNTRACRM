@@ -31714,7 +31714,6 @@ html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(bu
 }
 }
 
-/* frontend/pdl-crm-native-refinement.css */
 /* PDL CRM-native launcher and navigation icon refinement.
    Scoped presentation only: preserve links, actions and signed data flow. */
 #app .pdl-crm-portal {
