@@ -82,6 +82,19 @@ test('Home note appears for both exempt accounts but is not required',()=>{
  }
 });
 
+test('verified mvasquez user ID keeps the Home note optional even when snapshot omits email',()=>{
+ const data=verified();
+ data.access.email='';
+ data.access.userId='5655922e-bb42-45e4-bf8b-348a0bf77f3a';
+ const html=renderTimeTrackerNative({result:data,view:'clock',locationPreference:'Offsite (Home)'});
+ assert.match(html,/id="tt-note-requirement"> \(optional\)<\/span>/);
+ assert.doesNotMatch(html,/textarea id="tt-note" required/);
+ const nonExempt=verified();
+ const mandatory=renderTimeTrackerNative({result:nonExempt,view:'clock',locationPreference:'Offsite (Home)'});
+ assert.match(mandatory,/id="tt-note-requirement"> \(required\)<\/span>/);
+ assert.match(mandatory,/textarea id="tt-note" required/);
+});
+
 test('System Admin is not implicitly exempt and an existing Home note is shown after refresh',()=>{
  const data=verified();data.access.moduleRole='System Admin';data.access.email='other@example.test';
  const html=renderTimeTrackerNative({result:data,view:'clock',locationPreference:'Offsite (Home)'});
