@@ -50,6 +50,13 @@ export class TalkBoxNativeClient{
   return {items:result.items.map(projectTalkBoxIssue),cursor:result.cursor||null,total:Number(result.total)||0};
  }
  async get(issueId){return projectTalkBoxIssue(await this.rpc('get_issue',{p_issue_id:id(issueId)}));}
+ /** A deleted/archived selection must not hide an otherwise valid issue list.
+  * Other failures (including access denial) still propagate to the caller.
+  */
+ async getIfAvailable(issueId){
+  try{return await this.get(issueId);}
+  catch(error){if(error?.status===404)return null;throw error;}
+ }
  async create(name){
   const title=String(name||'').trim();if(!title||title.length>500)throw new TypeError('Issue title must be 1–500 characters');
   return projectTalkBoxIssue(await this.rpc('create_issue',{p_fields:{name:title,status:'Working on it'}}));

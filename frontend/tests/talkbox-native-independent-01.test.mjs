@@ -160,3 +160,39 @@ test('manual time correction preserves existing backend timer metadata',async()=
  const record=await new TalkBoxNativeClient({api,workspaceId}).updateVerified('301',{timeTracking:value},1);
  assert.deepEqual(record.timeTracking.legacySegments,[{id:'native-log-1'}]);
 });
+
+
+test('refresh retains the valid issue list when an archived selection returns 404',async()=>{
+ const calls=[];
+ const client=new TalkBoxNativeClient({workspaceId,api:{rpc:async(name,args)=>{
+  calls.push(name);
+  if(name==='toolbox_issues_list_issues')return {items:[base],total:1,cursor:null};
+  if(name==='toolbox_issues_get_issue'){
+   assert.equal(args.p_issue_id,'302');
+   throw Object.assign(new Error('Issue no longer available'),{status:404});
+  }
+  throw Error(name);
+ }}});
+ const list=await client.list();
+ const selected=await client.getIfAvailable('302');
+ assert.equal(list.items.length,1);
+ assert.equal(selected,null);
+ assert.deepEqual(calls,['toolbox_issues_list_issues','toolbox_issues_get_issue']);
+});
+
+test('selected issue recovery does not conceal permission or transport failures',async()=>{
+ for(const status of [0,401,403,409,500]){
+  const error=Object.assign(new Error('Cannot read selected issue'),{status});
+  const client=new TalkBoxNativeClient({workspaceId,api:{rpc:async()=>{throw error;}}});
+  await assert.rejects(()=>client.getIfAvailable('301'),e=>e===error);
+ }
+ await assert.rejects(()=>new TalkBoxNativeClient({workspaceId,api:{rpc:async()=>base}})
+  .getIfAvailable('invalid'),/Invalid issue ID/);
+});
+
+test('TalkBox refresh uses missing-selection recovery without weakening signed reads',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/const selected=openId\?await client\.getIfAvailable\(openId\):null/);
+ assert.match(app,/const selected=await talkBoxClient\(\)\.getIfAvailable\(issueId\)/);
+ assert.match(app,/if\(!talkBoxCurrent\(scope\)\)return/);
+});
