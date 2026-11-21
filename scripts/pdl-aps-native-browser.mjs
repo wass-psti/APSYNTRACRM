@@ -343,6 +343,30 @@ try{
  await modules.waitForFunction(() => document.querySelector('#admin-qr-recipient-gcash')?.value==='Acceptance Recipient');
  assert.ok(writeCalls.some(path=>path.endsWith('/v1/admin/payment-methods/gcash')));
  console.log('PASS synthetic QR payment configuration upload and readback after refresh');
+ // Broken saved URLs must never leak the browser's broken-image icon/alt text.
+ await modules.locator('.managed-qr-preview').first().waitFor();
+ await modules.getByText('QR image unavailable',{exact:true}).first().waitFor({timeout:15000});
+ assert.equal(await modules.locator('.managed-qr-preview img').count(),0);
+ assert.equal(await modules.locator('.managed-qr-preview .managed-qr-placeholder').count(),3);
+ assert.equal(await modules.locator('.managed-qr-method').count(),3);
+ for (const [width, columns] of [[1440,3],[768,2],[390,1]]) {
+   await modules.setViewportSize({width,height:950});
+   const count=await modules.locator('.managed-qr-grid').evaluate(el =>
+     getComputedStyle(el).gridTemplateColumns.split(' ').length);
+   assert.equal(count,columns,`QR payment cards at ${width}px`);
+   assert.equal(await modules.evaluate(()=>document.documentElement.scrollWidth <= innerWidth + 1),true,
+     `No horizontal overflow at ${width}px`);
+ }
+ await modules.setViewportSize({width:900,height:950});
+ console.log('PASS QR payment cards responsive at 390, 768 and 1440 without horizontal overflow');
+ await modules.locator('#admin-qr-image-gcash').setInputFiles({
+   name:'replacement-qr.png',mimeType:'image/png',
+   buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9YseMZkAAAAASUVORK5CYII=','base64'),
+ });
+ await modules.getByText('New image preview',{exact:true}).first().waitFor();
+ await modules.getByText('Preview only — save to update the stored image.').first().waitFor();
+ console.log('PASS saved QR broken-image fallback and replacement preview without raw alt text');
+
 
  // An HTTP 200 cannot certify a write if a subsequent GET retains old values.
  persistWrites=false;
