@@ -55,9 +55,20 @@ export class TalkBoxAttachmentClient{
     ...(contentType?{'Content-Type':contentType,'x-upsert':'false'}:{})},
    ...(body?{body}:{})
   });
-  if(!response?.ok)throw new ApiError('Native TalkBox Storage request failed',response?.status||0);
   if(this.auth.userId!==actor||!this.auth.isSignedIn)
    throw new ApiError('Signed CRM user changed during file transfer',409);
+  if(!response?.ok){
+   if(verifyAbsent&&method==='GET'&&response?.status===400){
+    // Supabase Storage can wrap NoSuchKey in HTTP 400 while the underlying
+    // object-absence status is 404. Accept the exact code only during
+    // post-delete absence verification, before independent server proof.
+    let errorCode='';
+    try{errorCode=(await response.json())?.code||'';}catch{}
+    if(errorCode==='NoSuchKey')
+     throw new ApiError('Native TalkBox Storage object is absent',404);
+   }
+   throw new ApiError('Native TalkBox Storage request failed',response?.status||0);
+  }
   return response;
  }
  async uploadVerified(issueIdValue,file){
