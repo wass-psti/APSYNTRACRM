@@ -45,7 +45,6 @@ import {mountPagesAcceptanceMotion,stopPagesAcceptanceMotion} from './pages-acce
 import {runNativeQa} from './native-qa.js';
 import {NativeIssueClient} from './native-client.js';
 import {TalkBoxNativeClient} from './talkbox-native.js';
-import {TalkBoxMeetingsClient,meetingDay,meetingReportCsv} from './talkbox-meetings.js';
 import {renderTalkBoxApplication} from './talkbox-ui.js';
 import {findTalkBoxBoard,TALKBOX_APPLICATION_ROUTE,talkBoxIssueHref} from './talkbox-application.js';
 import {BOARD_MODULES,moduleByBoardName} from './board/services/manifest.js';
@@ -451,7 +450,11 @@ let pendingGlobalSearchItem=null;
 let pendingNativeSearchSelection=null;
 let talkBoxState={page:null,selected:null,busy:false,error:'',scope:'',filter:{name:'',status:'All'},features:null,meetingOpen:false,meetingDate:'',meetingHistory:[],meetingRecord:null,meetingRows:[]};
 const talkBoxClient=()=>new TalkBoxNativeClient({api:db,workspaceId:state.context.workspace_id});
-const talkBoxMeetings=()=>new TalkBoxMeetingsClient({api:db,workspaceId:state.context.workspace_id});
+async function talkBoxMeetings(){
+ // Meeting functionality is not part of the ordinary CRM startup module graph.
+ const {TalkBoxMeetingsClient}=await import('./talkbox-meetings.js');
+ return new TalkBoxMeetingsClient({api:db,workspaceId:state.context.workspace_id});
+}
 async function talkBoxAttachments(){
  // Private upload/download code must not inflate the ordinary CRM startup graph.
  const {TalkBoxAttachmentClient}=await import('./talkbox-attachments.js');
@@ -479,7 +482,7 @@ async function loadTalkBox({more=false,selectedId=null}={}){
   // meeting read must not hide otherwise valid native issues.
   let meetingHistory=[],meetingRecord=null,meetingRows=[],meetingError='';
   try{
-   const stored=await talkBoxMeetings().read();
+   const stored=await (await talkBoxMeetings()).read();
    meetingHistory=stored.meetings;
    if(talkBoxState.meetingOpen){
     meetingRecord=stored.meetings.find(x=>x.date===talkBoxState.meetingDate)||null;
@@ -8844,6 +8847,7 @@ async function action(name,button){
  case 'tb-meeting-enter':{
   const scope=talkBoxState.scope;
   if(!talkBoxCurrent(scope)||talkBoxState.busy)break;
+  const {meetingDay}=await import('./talkbox-meetings.js');
   const chosen=meetingDay(root.querySelector('#tb-meeting-date')?.value||new Date().toLocaleDateString('sv-SE'));
   // A meeting must never capture only the first page of active issues.
   const client=talkBoxClient(),issues=[],seen=new Set(),cursors=new Set();
@@ -8860,7 +8864,7 @@ async function action(name,button){
   if(!talkBoxCurrent(scope))break;
   if(!state.edit&&!talkBoxState.meetingHistory?.some(item=>item.date===chosen))
    throw Error('Editing access is required to create a new meeting sheet');
-  await talkBoxMeetings().openOrCreate(chosen,issues);
+  await (await talkBoxMeetings()).openOrCreate(chosen,issues);
   if(!talkBoxCurrent(scope))break;
   talkBoxState.meetingDate=chosen;talkBoxState.meetingOpen=true;
   talkBoxState.filter={name:'',status:'All'};
@@ -8868,6 +8872,7 @@ async function action(name,button){
  }
  case 'tb-meeting-history':{
   if(!talkBoxCurrent(talkBoxState.scope)||talkBoxState.busy)break;
+  const {meetingDay}=await import('./talkbox-meetings.js');
   const day=meetingDay(button.dataset.date);
   if(!talkBoxState.meetingHistory?.some(item=>item.date===day))break;
   talkBoxState.meetingDate=day;talkBoxState.meetingOpen=true;
@@ -8877,13 +8882,14 @@ async function action(name,button){
  case 'tb-meeting-notes':{
   if(!state.edit||!talkBoxCurrent(talkBoxState.scope)||!talkBoxState.meetingRecord)break;
   const scope=talkBoxState.scope,day=talkBoxState.meetingRecord.date;
-  await talkBoxMeetings().saveNotes(day,root.querySelector('#tb-meeting-notes')?.value||'');
+  await (await talkBoxMeetings()).saveNotes(day,root.querySelector('#tb-meeting-notes')?.value||'');
   if(talkBoxCurrent(scope)){await loadTalkBox();toast('Meeting notes saved.');}
   break;
  }
  case 'tb-meeting-report':{
   if(!talkBoxCurrent(talkBoxState.scope)||!talkBoxState.meetingRecord)break;
   const record=talkBoxState.meetingRecord;
+  const {meetingReportCsv}=await import('./talkbox-meetings.js');
   const csv=meetingReportCsv(record,talkBoxState.meetingRows);
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   try{const anchor=document.createElement('a');anchor.href=url;
@@ -8917,7 +8923,7 @@ async function action(name,button){
   openModal('Create TalkBox issue',input('Issue name','name'),async fd=>{
    const saved=await talkBoxClient().createVerified(fd.get('name'));
    if(talkBoxState.meetingOpen&&talkBoxState.meetingRecord)
-    await talkBoxMeetings().includeIssue(talkBoxState.meetingRecord.date,saved.id);
+    await (await talkBoxMeetings()).includeIssue(talkBoxState.meetingRecord.date,saved.id);
    talkBoxState.selected=saved;await loadTalkBox({selectedId:saved.id});
   });break;
  }
