@@ -449,6 +449,10 @@ let globalSearchController=null;
 let pendingGlobalSearchItem=null;
 let pendingNativeSearchSelection=null;
 let talkBoxState={page:null,selected:null,busy:false,error:'',scope:'',filter:{name:'',status:'All'},features:null,meetingOpen:false,meetingDate:'',meetingHistory:[],meetingRecord:null,meetingRows:[]};
+let talkBoxReportUrl=null;
+function clearTalkBoxReportUrl(){
+ if(talkBoxReportUrl){URL.revokeObjectURL(talkBoxReportUrl);talkBoxReportUrl=null;}
+}
 const talkBoxClient=()=>new TalkBoxNativeClient({api:db,workspaceId:state.context.workspace_id});
 async function talkBoxMeetings(){
  // Meeting functionality is not part of the ordinary CRM startup module graph.
@@ -469,7 +473,8 @@ async function loadTalkBox({more=false,selectedId=null}={}){
  if(talkBoxState.scope!==scope)talkBoxState={
   page:null,selected:null,busy:false,error:'',scope,filter:{name:'',status:'All'},features:null,meetingOpen:false,meetingDate:'',meetingHistory:[],meetingRecord:null,meetingRows:[]
  };
- talkBoxState={...talkBoxState,busy:true,error:'',scope};render();
+ clearTalkBoxReportUrl();
+ talkBoxState={...talkBoxState,busy:true,error:'',scope,reportUrl:''};render();
  try{
   const client=talkBoxClient();
   const features=talkBoxState.features??await client.nativeV2Capabilities();
@@ -511,12 +516,20 @@ async function loadTalkBox({more=false,selectedId=null}={}){
    }
   }catch(error){meetingError=errorMessage(error);}
   if(!talkBoxCurrent(scope))return;
+  let reportUrl='';
+  if(meetingRecord&&!meetingError){
+   const {meetingReportCsv}=await import('./talkbox-meetings.js');
+   if(!talkBoxCurrent(scope))return;
+   const csv=meetingReportCsv(meetingRecord,meetingRows);
+   reportUrl=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+   talkBoxReportUrl=reportUrl;
+  }
   const openId=selectedId||talkBoxState.selected?.id;
   const selected=openId?await client.getIfAvailable(openId):null;
   if(!talkBoxCurrent(scope))return;
   talkBoxState={page:{...page,items},selected,busy:false,error:'',scope,filter:talkBoxState.filter,features,
    meetingOpen:talkBoxState.meetingOpen===true,meetingDate:talkBoxState.meetingDate||'',
-   meetingHistory,meetingRecord,meetingRows,meetingError};
+   meetingHistory,meetingRecord,meetingRows,meetingError,reportUrl};
  }catch(err){if(talkBoxCurrent(scope))talkBoxState={...talkBoxState,busy:false,error:errorMessage(err)};}
  finally{if(talkBoxCurrent(scope)){talkBoxState.busy=false;render();}}
 }
@@ -1720,7 +1733,7 @@ function boardPage(){
 
 <div data-board-live-content>
 ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFundTrackerApplication():state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,otExpandedRequestIds:state.ttOtExpandedRequestIds,clockPendingAction:state.ttClockPending?.action||'clock-out',error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,employeesSearch:state.ttEmployeesSearch,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,adminEligible:state.ttAttendance?.access?.moduleRole==='System Admin',adminDirectory:state.ttLogAdminEditor?.directory||state.ttAttendance?.access?.overviewDirectory||[],adminSelectedIds:state.ttLogSelectedIds,adminEditor:state.ttLogAdminEditor,adminBusy:state.ttLogAdminBusy,adminError:state.ttLogAdminError,adminSuccess:state.ttLogAdminSuccess,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
- gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,canCreate:state.boardManage||state.tradeLinkModuleRole==='User',actorId:state.context?.user_id||'',actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='talkbox'&&moduleKey==='toolbox'?renderTalkBoxApplication({page:talkBoxState.page,selected:talkBoxState.selected,busy:talkBoxState.busy,error:talkBoxState.error,canEdit:state.edit,filter:talkBoxState.filter,features:talkBoxState.features||{},meetingOpen:talkBoxState.meetingOpen===true,meetingDate:talkBoxState.meetingDate||'',meetingHistory:talkBoxState.meetingHistory||[],meetingRecord:talkBoxState.meetingRecord||null,meetingRows:talkBoxState.meetingRows||[],meetingError:talkBoxState.meetingError||''}):state.tab==='issues'?issuesPage():`
+ gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,canCreate:state.boardManage||state.tradeLinkModuleRole==='User',actorId:state.context?.user_id||'',actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='talkbox'&&moduleKey==='toolbox'?renderTalkBoxApplication({page:talkBoxState.page,selected:talkBoxState.selected,busy:talkBoxState.busy,error:talkBoxState.error,canEdit:state.edit,filter:talkBoxState.filter,features:talkBoxState.features||{},meetingOpen:talkBoxState.meetingOpen===true,meetingDate:talkBoxState.meetingDate||'',meetingHistory:talkBoxState.meetingHistory||[],meetingRecord:talkBoxState.meetingRecord||null,meetingRows:talkBoxState.meetingRows||[],meetingError:talkBoxState.meetingError||'',reportUrl:talkBoxState.reportUrl||''}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar">
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ New item</button>':''}
  <div class="search-wrap board-toolbar-search"><svg class="board-toolbar-search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 5 5"></path></svg><input id="search-board-items" class="search-input" aria-label="Search board items" placeholder="Search" value="${e(state.boardItemSearch)}" /></div>
@@ -5091,8 +5104,11 @@ async function onRoute(){
    state.error='The existing Toolbox Issues board was not found in this workspace.';
    state.view='board';render();return;}
   const issueId=parts[1]==='issue'&&/^[1-9][0-9]{0,18}$/.test(parts[2]||'')?parts[2]:null;
-  if(state.boardId!==board.id||state.tab!=='talkbox')talkBoxState={page:null,selected:null,busy:false,error:'',scope:'',
+  if(state.boardId!==board.id||state.tab!=='talkbox'){
+   clearTalkBoxReportUrl();
+   talkBoxState={page:null,selected:null,busy:false,error:'',scope:'',
    filter:{name:'',status:'All'},features:null,meetingOpen:false,meetingDate:'',meetingHistory:[],meetingRecord:null,meetingRows:[]};
+  }
   if(!issueId)talkBoxState.selected=null;
   await loadBoard(board.id,'talkbox');
   if(issueId)await openTalkBoxIssue(issueId);
@@ -8919,21 +8935,10 @@ async function action(name,button){
   if(talkBoxCurrent(scope)){await loadTalkBox();toast('Meeting notes saved.');}
   break;
  }
- case 'tb-meeting-report':{
-  if(!talkBoxCurrent(talkBoxState.scope)||!talkBoxState.meetingRecord)break;
-  const record=talkBoxState.meetingRecord;
-  const {meetingReportCsv}=await import('./talkbox-meetings.js');
-  const csv=meetingReportCsv(record,talkBoxState.meetingRows);
-  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-  try{const anchor=document.createElement('a');anchor.href=url;
-   anchor.download='talkbox-meeting-'+record.date+'.csv';anchor.hidden=true;
-   document.body.append(anchor);anchor.click();anchor.remove();
-  }finally{setTimeout(()=>URL.revokeObjectURL(url),1000);}
-  break;
- }
  case 'tb-meeting-back':{
   if(!talkBoxCurrent(talkBoxState.scope))break;
-  talkBoxState.meetingOpen=false;render();break;
+  clearTalkBoxReportUrl();
+  talkBoxState.meetingOpen=false;talkBoxState.reportUrl='';render();break;
  }
  case 'tb-filter':{
   if(!talkBoxCurrent(talkBoxState.scope))break;

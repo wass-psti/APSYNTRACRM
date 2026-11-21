@@ -1,6 +1,6 @@
 import {talkBoxMetrics} from './talkbox-native.js';
 const e=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export function renderTalkBoxApplication({page,selected,busy=false,error='',canEdit=false,filter={},features={},meetingOpen=false,meetingDate='',meetingHistory=[],meetingRecord=null,meetingRows=[],meetingError=''}={}){
+export function renderTalkBoxApplication({page,selected,busy=false,error='',canEdit=false,filter={},features={},meetingOpen=false,meetingDate='',meetingHistory=[],meetingRecord=null,meetingRows=[],meetingError='',reportUrl=''}={}){
  const allRows=meetingOpen&&meetingRecord?meetingRows:(page?.items||[]);
  const rows=meetingOpen&&meetingRecord?allRows.filter(row=>(!filter.name||row.name.toLowerCase().includes(String(filter.name).trim().toLowerCase()))&&
   (!filter.status||filter.status==='All'||row.status===filter.status)):allRows;
@@ -32,7 +32,7 @@ export function renderTalkBoxApplication({page,selected,busy=false,error='',canE
  (meetingOpen?'MEETING SHEET':'ISSUE WORKSPACE')+'</span><h3>'+(meetingOpen?'Main issues log':'Issue overview')+'</h3>'+
  '<p>'+(meetingOpen?'Persisted meeting issues and carried-over actions, linked to live native records.':'Your workspace issues, discussions and follow-up actions in one place.')+'</p></div>'+
  '<div class="tb-panel-actions">'+(meetingOpen&&meetingDate?'<span class="tb-date-chip">'+e(meetingDate)+'</span>':'')+
- (meetingOpen&&meetingRecord?'<button type="button" class="secondary" data-action="tb-meeting-report">Download report CSV</button>':'')+
+ (meetingOpen&&meetingRecord&&reportUrl?'<a class="secondary tb-report-download" href="'+e(reportUrl)+'" download="talkbox-meeting-'+e(meetingRecord.date)+'.csv">Download report CSV</a>':'')+
  (canEdit?'<button class="primary" data-action="tb-new">＋ New issue</button>':'')+'</div></div>'+
  '<div class="tb-filter"><label for="tb-search-text">Search issues</label>'+
  '<input id="tb-search-text" type="search" maxlength="500" placeholder="Search by issue name…" value="'+e(filter.name||'')+'">'+

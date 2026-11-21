@@ -22,9 +22,9 @@ const browser=await chromium.launch({headless:true,
 try{
  for(const [name,width,height] of [['desktop',1440,900],['tablet',820,1000],['phone',390,844]]){
   const page=await browser.newPage({viewport:{width,height}});
-  const body=html({meetingOpen:true,meetingDate:record.date,meetingRecord:record,meetingRows:[issue,archived]});
+  const body=html({meetingOpen:true,meetingDate:record.date,meetingRecord:record,meetingRows:[issue,archived],reportUrl:'blob:https://example.test/fixture'});
   await page.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>*{box-sizing:border-box}body{margin:0;font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f6fa}</style><style>'+css+'</style></head><body>'+body+'</body></html>');
-  if(!await page.getByRole('button',{name:'Download report CSV'}).isVisible())throw Error('Report missing '+name);
+  if(!await page.getByRole('link',{name:'Download report CSV'}).isVisible())throw Error('Report missing '+name);
   if(!await page.locator('#tb-meeting-notes').isVisible())throw Error('Notes missing '+name);
   if(await page.locator('#tb-meeting-notes').inputValue()!=='Follow up on materials')throw Error('Saved notes missing '+name);
   if(!await page.getByText('Archived / unavailable').isVisible())throw Error('Archived history missing '+name);

@@ -104,14 +104,33 @@ test('history, notes, carry-over, report and unavailable historical records have
  assert.match(overview,/Meeting history/);
  assert.match(overview,/data-action="tb-meeting-history" data-date="2026-11-21"/);
  const sheet=renderTalkBoxApplication({...base,meetingOpen:true,meetingDate:meeting.date,
-  meetingRecord:meeting,meetingRows:[issue(5),{...issue(7),unavailable:true}]});
- for(const action of ['tb-meeting-notes','tb-meeting-report'])
-  assert.match(sheet,new RegExp('data-action="'+action+'"'));
+  meetingRecord:meeting,meetingRows:[issue(5),{...issue(7),unavailable:true}],reportUrl:'blob:https://example.test/fixture-report'});
+ assert.match(sheet,/data-action="tb-meeting-notes"/);
+ assert.match(sheet,/href="blob:https:\/\/example\.test\/fixture-report"/);
+ assert.match(sheet,/download="talkbox-meeting-2026-11-21\.csv"/);
+ assert.doesNotMatch(sheet,/data-action="tb-meeting-report"/);
  assert.match(sheet,/Archived \/ unavailable/);
  assert.match(sheet,/1 issues carried over/);
  assert.match(sheet,/Discuss delivery arrangements/);
  const app=readFileSync('frontend/app.js','utf8');
- for(const action of ['tb-meeting-enter','tb-meeting-history','tb-meeting-notes','tb-meeting-report'])
+ for(const action of ['tb-meeting-enter','tb-meeting-history','tb-meeting-notes'])
   assert.match(app,new RegExp("case '"+action+"':"));
  assert.match(app,/talkBoxState\.meetingRows:talkBoxState\.page\?\.items/);
+});
+
+
+test('CSV download needs a prepared signed meeting URL, not an async button handler',()=>{
+ const meeting={date:'2026-11-21',issueIds:['5'],issueSnapshots:[],carriedFrom:null,
+  carriedIssueIds:[],notes:'Meeting notes'};
+ const model={page:{items:[issue(5)],total:1},meetingOpen:true,meetingDate:meeting.date,
+  meetingRecord:meeting,meetingRows:[issue(5)]};
+ const absent=renderTalkBoxApplication(model);
+ assert.doesNotMatch(absent,/Download report CSV/);
+ const ready=renderTalkBoxApplication({...model,reportUrl:'blob:https://example.test/reports'});
+ assert.match(ready,/<a class="secondary tb-report-download"/);
+ assert.match(ready,/download="talkbox-meeting-2026-11-21.csv"/);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.doesNotMatch(app,/case 'tb-meeting-report':/);
+ assert.match(app,/const csv=meetingReportCsv\(meetingRecord,meetingRows\)/);
+ assert.match(app,/clearTalkBoxReportUrl\(\)/);
 });

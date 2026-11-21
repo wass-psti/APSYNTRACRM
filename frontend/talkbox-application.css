@@ -92,3 +92,8 @@
 .tb-app .tb-history-list button strong{font-size:.86rem}.tb-app .tb-history-list button span{font-size:.76rem;color:var(--tb-muted)}
 .tb-app .tb-history-empty{font-size:.84rem;color:var(--tb-muted)}
 .tb-app .tb-unavailable{opacity:.73;cursor:default}
+
+/* Native browser download keeps user activation intact; no asynchronous click proxy. */
+.tb-app .tb-report-download{display:inline-flex;align-items:center;justify-content:center;min-height:36px;box-sizing:border-box;padding:7px 13px;text-decoration:none;border:1px solid var(--tb-edge);border-radius:10px;background:var(--tb-panel);color:var(--tb-ink);font-size:.81rem;font-weight:650}
+.tb-app .tb-report-download:hover{border-color:#9db7d9;background:var(--surface-2,#f4f7fc)}
+.tb-app .tb-report-download:focus-visible{outline:3px solid #f0b969;outline-offset:3px}
