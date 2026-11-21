@@ -744,30 +744,63 @@ async function loadPaseoManagement(cursor=null){
 
 function renderPaseoNative(){
  const current=state.paseoManagement||{status:'LOADING'};
- const summary=current.status==='VERIFIED'?`<section class="card" aria-label="Signed booking administration">
-  <h2>Verified booking administration</h2>
-  <p>Enabled courts: ${current.enabledCourtCount} / ${current.courtCount}</p>
-  <p>Reservations returned: ${current.reservations.length} (latest results)</p>
-  ${current.reservations.length?`<ul>${current.reservations.map(record=>
-    `<li>${e(record.id)} — ${e(record.name)} — ${e(record.bookingStatus)} / ${e(record.paymentStatus)}</li>`
-   ).join('')}</ul>`:'<p>No reservation records returned.</p>'}
-  ${current.nextCursor?`<button type="button" data-action="pdl-more"
-   ${current.loadingMore?'disabled':''}>${current.loadingMore?'Loading more…':'Load more reservations'}</button>`:''}
- </section>`:current.status==='DENIED'?'<p role="status">Your current CRM account is not assigned as a Paseo booking administrator. Public booking remains accessible.</p>':
- current.status==='UNAVAILABLE'?'<p role="alert">The Paseo management service is unavailable. '+e(current.message||'')+'</p>':
- '<p role="status">Checking your current signed CRM session against the Paseo booking administrator directory…</p>';
- return `<section class="section" aria-labelledby="pdl-native-title">
-   <div class="page-header"><div><p class="muted">APSYNTRA CRM / Native applications</p>
-   <h1 id="pdl-native-title">Paseo de Lomboy</h1>
-   <p>Public court availability and booking run separately from private CRM workspaces.</p></div></div>
-   <div class="card"><h2>Pickleball booking</h2>
-   <p>Public visitors do not need APSYNTRA CRM accounts.</p>
-   <a class="primary" href="./paseo/">Open public booking</a></div>
-   <div class="card"><h2>Booking administration</h2>
-   <p>The booking API independently verifies your signed CRM account and existing Paseo administrator assignment.</p>
-   <button type="button" data-action="pdl-refresh">Refresh booking records</button>
-   <a href="./paseo/admin/sign-in">Open full booking administration</a></div>
-   ${summary}
+ const verified=current.status==='VERIFIED';
+ const heading=verified?'Booking overview':current.status==='DENIED'?'Administrator access unavailable':'Booking overview';
+ const summary=verified?`<section class="pdl-crm-summary" aria-label="Signed booking administration">
+   <div class="pdl-crm-summary-head">
+    <div><p class="pdl-crm-eyebrow">CURRENT ACTIVITY</p><h2>${heading}</h2></div>
+    <span class="pdl-crm-status"><span aria-hidden="true"></span>Up to date</span>
+   </div>
+   <div class="pdl-crm-metrics">
+    <div class="pdl-crm-metric"><span>Courts enabled</span>
+     <strong>${current.enabledCourtCount}<small> / ${current.courtCount}</small></strong></div>
+    <div class="pdl-crm-metric"><span>Recent reservations</span>
+     <strong>${current.reservations.length}</strong></div>
+   </div>
+   <div class="pdl-crm-records">
+    <h3>Latest reservations</h3>
+    ${current.reservations.length?`<ul>${current.reservations.map(record=>
+     `<li><span class="pdl-crm-record-name">${e(record.name)}</span>
+     <span class="pdl-crm-record-meta">${e(record.id)} · ${e(record.bookingStatus)} · ${e(record.paymentStatus)}</span></li>`
+    ).join('')}</ul>`:'<p class="pdl-crm-empty">No reservations to display yet.</p>'}
+    ${current.nextCursor?`<button type="button" class="pdl-crm-button pdl-crm-button-secondary" data-action="pdl-more"
+      ${current.loadingMore?'disabled':''}>${current.loadingMore?'Loading more…':'Load more reservations'}</button>`:''}
+   </div>
+  </section>`:current.status==='DENIED'?
+  '<section class="pdl-crm-summary pdl-crm-notice" role="status"><h2>Administrator access unavailable</h2><p>This CRM account is not assigned to manage Paseo bookings. Public booking remains available.</p></section>':
+  current.status==='UNAVAILABLE'?
+  '<section class="pdl-crm-summary pdl-crm-notice" role="alert"><h2>Bookings could not be loaded</h2><p>Try refreshing your booking overview. Existing records have not been changed.</p></section>':
+  '<section class="pdl-crm-summary pdl-crm-loading" role="status" aria-busy="true" aria-label="Loading booking overview"><div class="pdl-crm-skeleton pdl-crm-skeleton-heading"></div><div class="pdl-crm-metrics"><div class="pdl-crm-skeleton pdl-crm-skeleton-metric"></div><div class="pdl-crm-skeleton pdl-crm-skeleton-metric"></div></div></section>';
+ return `<section class="section pdl-crm-portal" aria-labelledby="pdl-native-title">
+  <header class="pdl-crm-hero">
+   <div><p class="pdl-crm-eyebrow">NATIVE APPLICATION / COURT MANAGEMENT</p>
+    <h1 id="pdl-native-title">Paseo de Lomboy</h1>
+    <p>Pickleball bookings, court availability and daily operations in one place.</p>
+   </div>
+   <span class="pdl-crm-hero-mark" aria-hidden="true">${sidebarIcon('paseo')}</span>
+  </header>
+  <div class="pdl-crm-actions" aria-label="Booking destinations">
+   <section class="pdl-crm-action">
+    <div class="pdl-crm-action-symbol" aria-hidden="true">${sidebarIcon('paseo')}</div>
+    <div class="pdl-crm-action-copy"><p class="pdl-crm-eyebrow">FOR PLAYERS</p>
+     <h2>Public booking</h2>
+     <p>Explore available courts and start a reservation. No CRM account is needed.</p></div>
+    <a class="pdl-crm-button pdl-crm-button-primary" href="./paseo/">Open public booking
+     <span aria-hidden="true">↗</span></a>
+   </section>
+   <section class="pdl-crm-action">
+    <div class="pdl-crm-action-symbol" aria-hidden="true">${sidebarIcon('settings')}</div>
+    <div class="pdl-crm-action-copy"><p class="pdl-crm-eyebrow">FOR STAFF</p>
+     <h2>Booking administration</h2>
+     <p>Manage court settings, reservations and payment reviews.</p></div>
+    <div class="pdl-crm-action-buttons">
+     <a class="pdl-crm-button pdl-crm-button-primary" href="./paseo/admin/sign-in">Open administration
+      <span aria-hidden="true">↗</span></a>
+     <button class="pdl-crm-button pdl-crm-button-secondary" type="button" data-action="pdl-refresh">Refresh booking records</button>
+    </div>
+   </section>
+  </div>
+  ${summary}
  </section>`;
 }
 
@@ -792,8 +825,8 @@ function sidebar(){
   sidebarNav('#/fund-tracker','Fund Tracker','finance',active('fund-tracker'))+
   sidebarNav(FUELTRACK_V3_APPLICATION_ROUTE,'FuelTrack+','fueltrack',active('fueltrack'))+
   sidebarNav(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',active('tradelink'))+
-  sidebarNav('#/paseo','Paseo de Lomboy','boards',active('paseo'))+
-  (state.boards.some(b=>moduleByBoardName(b.name)?.key==='toolbox')?sidebarNav(TALKBOX_APPLICATION_ROUTE,'TalkBox','boards',active('talkbox')):'')+
+  sidebarNav('#/paseo','Paseo de Lomboy','paseo',active('paseo'))+
+  (state.boards.some(b=>moduleByBoardName(b.name)?.key==='toolbox')?sidebarNav(TALKBOX_APPLICATION_ROUTE,'TalkBox','talkbox',active('talkbox')):'')+
   boardApplications+
   (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',active('foundation')):'')+
   (engineeringUi?sidebarNav('#/security','Access acceptance','security',active('security')):'')+
