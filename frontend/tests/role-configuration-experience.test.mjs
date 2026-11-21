@@ -1,12 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {renderRoleConfiguration,PERMISSION_ACTIONS} from '../role-configuration-ui.js';
+import {renderRoleConfiguration,PERMISSION_ACTIONS,ROLE_MODULE_OPTIONS} from '../role-configuration-ui.js';
 import {roleConfigurationIcon,mountRoleConfigurationMotion,stopRoleConfigurationMotion} from '../role-configuration-visuals.js';
+import {renderUserRoleManagement} from '../user-role-management.js';
 
 const app=readFileSync('frontend/app.js','utf8');
 const ui=readFileSync('frontend/role-configuration-ui.js','utf8');
 const css=readFileSync('frontend/role-configuration-experience.css','utf8');
+const userRoleCss=readFileSync('frontend/user-role-experience.css','utf8');
 const html=readFileSync('index.html','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 const data={
@@ -41,9 +43,8 @@ test('verified role configuration is route scoped and unavailable without CRM Ad
 test('staged-only banner and CRM permission ceiling remain intact',()=>{
  const result=renderRoleConfiguration({verified:true,data,tab:'roles'});
  assert.match(result,/Role proposals: STAGED ONLY/);
- assert.match(result,/Role proposals: STAGED ONLY/);
- assert.match(result,/Board Access section uses the existing server-authorized workspace board assignment workflow/);
- assert.match(result,/No bootstrap identity or board-owner assignment can be changed here/);
+ assert.match(result,/Native Application Access uses the existing application assignment services/);
+ assert.match(result,/Board Access remains in its existing Teams module/);
  assert.match(result,/The CRM role tier is separate from WatchdogWorkspace identity/);
  assert.match(result,/never grants an application membership, board ownership or unrelated application access/);
  for(const role of ['Admin','Supervisor','Employee','Viewer']){
@@ -75,7 +76,7 @@ test('summary metrics are derived strictly from provided server snapshot',()=>{
 });
 
 test('six tabs preserve server data and original action handlers, selection and search',()=>{
- const keys=['roles','users','matrix','board-access','workspace','audit'];
+ const keys=['roles','users','matrix','application-access','workspace','audit'];
  for(const key of keys){
   const result=renderRoleConfiguration({verified:true,data,tab:key});
   assert.equal((result.match(/data-action="role-tab"/g)||[]).length,6);
@@ -100,42 +101,74 @@ test('six tabs preserve server data and original action handlers, selection and 
  assert.match(assignments,/pending proposals do not grant access/);
  const workspace=renderRoleConfiguration({verified:true,data,tab:'workspace'});
  assert.match(workspace,/data-action="role-propose-workspace"/);
- const boardAccessData={
-  users:[
-   {id:'22222222-2222-4222-8222-222222222222',name:'Example user',email:'user@example.invalid',protected:false},
-   {id:'55555555-5555-4555-8555-555555555555',name:'Protected admin',email:'admin@example.invalid',protected:true}
-  ],
-  boards:[
-   {id:'33333333-3333-4333-8333-333333333333',name:'QA board'},
-   {id:'66666666-6666-4666-8666-666666666666',name:'Finance board'}
-  ],
-  boardAssignments:[
-   {userId:'22222222-2222-4222-8222-222222222222',boardId:'33333333-3333-4333-8333-333333333333',role:'editor'}
-  ]
- };
- const boardTab=renderRoleConfiguration({verified:true,data,tab:'board-access',
-  boardAccessData,selectedBoardUserId:boardAccessData.users[0].id,
-  actorUserId:'77777777-7777-4777-8777-777777777777'});
- assert.match(boardTab,/<h2 id="role-content-heading">Board Access<\/h2>/);
- assert.match(boardTab,/aria-label="Live board access mode">Live assignments/);
- assert.match(boardTab,/id="role-board-access-user"/);
- assert.match(boardTab,/id="role-board-access-search"/);
- assert.match(boardTab,/QA board<\/strong>/);
- assert.match(boardTab,/editor<\/span>/);
- assert.match(boardTab,/data-action="user-role-edit-board"/);
- assert.match(boardTab,/data-action="user-role-revoke-board"/);
- assert.match(boardTab,/Finance board/);
- assert.match(app,/await loadBoardAccessConfiguration\(\);[\s\S]*?roleConfig\.snapshot\(context\.workspace_id\)/);
- assert.match(app,/async function loadBoardAccessConfiguration\(\)[\s\S]*?userRoleManager\.snapshot\(context\.workspace_id\)/);
- assert.match(app,/role-board-access-user/);
- assert.match(app,/role-board-access-search/);
- assert.match(app,/case 'user-role-edit-board':/);
- assert.match(app,/case 'user-role-revoke-board':/);
+ const nativeTab=renderRoleConfiguration({verified:true,data,tab:'application-access',
+  nativeApplicationAccess:'<div class="aps-user-role-management">Native application workflow</div>'});
+ assert.match(nativeTab,/<h2 id="role-content-heading">Native Application Access<\/h2>/);
+ assert.match(nativeTab,/aria-label="Live application access mode">Live assignments/);
+ assert.match(nativeTab,/Native application workflow/);
+ assert.doesNotMatch(nativeTab,/data-tab="board-access"/);
+ assert.match(app,/renderUserRoleManagement\(\{[\s\S]*?applicationAccessOnly:true/);
+ assert.match(app,/await loadUserRoleManagement\(\);[\s\S]*?roleConfig\.snapshot\(context\.workspace_id\)/);
+ assert.match(app,/case 'user-role-native-batch-review':/);
+ assert.match(app,/planNativeApplicationBatch/);
+ assert.match(app,/userRoleManager\.snapshot\(ctx\.workspace_id,[\s\S]*?includeScopedSix:true/);
+ assert.match(app,/Saved & verified/);
+ assert.match(app,/data-user-role-batch-app/);
+ assert.match(app,/data-user-role-batch-app-role/);
+ assert.match(app,/case 'user-role-edit-module':/);
+ assert.match(app,/case 'user-role-revoke-module':/);
+ assert.match(userRoleCss,/CP-ROLE-NATIVE-APPLICATION-ACCESS-01/);
+ assert.match(userRoleCss,/user-role-native-app-picker/);
+ assert.match(userRoleCss,/user-role-native-results/);
  assert.match(app,/async function applyUserRoleChange\(/);
  const audit=renderRoleConfiguration({verified:true,data,tab:'audit'});
  assert.match(audit,/Every staged proposal produces a server-side append-only event/);
  for(const action of ['role-refresh','role-tab','role-propose-create','role-propose-edit','role-propose-activation','role-propose-permission','role-propose-assign','role-propose-workspace'])
   assert.ok(app.includes("case '"+action+"'"),action);
+});
+
+test('Native Application Access supports individual assignments and multi-app bulk configuration',()=>{
+ const userId='22222222-2222-4222-8222-222222222222';
+ const actorId='77777777-7777-4777-8777-777777777777';
+ const accessData={
+  users:[{id:userId,name:'Example user',email:'user@example.invalid',protected:false,activeWorkspaceCount:1}],
+  modules:[],boards:[],boardAssignments:[],
+  moduleAssignments:[{userId,moduleId:'time-tracker',role:'Employee',enabled:true,updatedAt:'2026-11-20T10:00:00Z'}],
+  fueltransWorkspaceAvailable:true,frtWorkspaceAvailable:true,scopedSixAvailable:true,
+  charterWorkspaceAvailable:true,toolTraceabilityWorkspaceAvailable:true,
+  workspaceScopedMrhAvailable:true,crmPlatformRoles:[],crmPlatformUnavailable:false
+ };
+ const individual=renderUserRoleManagement({verified:true,data:accessData,
+  selectedUserId:userId,actorUserId:actorId,applicationAccessOnly:true});
+ assert.match(individual,/Native Application Access/);
+ assert.match(individual,/id="managed-user"/);
+ assert.match(individual,/Native Application Assignments/);
+ assert.equal((individual.match(/data-action="user-role-edit-module"/g)||[]).length,ROLE_MODULE_OPTIONS.length);
+ assert.match(individual,/data-action="user-role-revoke-module"/);
+ assert.doesNotMatch(individual,/data-action="user-role-edit-board"|Board access \(/);
+ const bulk=renderUserRoleManagement({verified:true,data:accessData,actorUserId:actorId,
+  applicationAccessOnly:true,batchMode:true,batchSelected:[userId],
+  batchModulesSelected:['time-tracker','tradelink'],batchModuleRoles:{},batchAction:'assign',
+  nativeBatchResults:[{userId,email:'user@example.invalid',moduleId:'time-tracker',
+   status:'Saved & verified',detail:'Persisted application role confirmed by refreshed readback.'}]});
+ assert.match(bulk,/Configure multiple applications/);
+ assert.equal((bulk.match(/data-user-role-batch-app value=/g)||[]).length,ROLE_MODULE_OPTIONS.length);
+ assert.equal((bulk.match(/data-user-role-batch-app-role/g)||[]).length,ROLE_MODULE_OPTIONS.length);
+ assert.match(bulk,/data-action="user-role-native-batch-review"/);
+ assert.match(bulk,/2 selected/);
+ assert.match(bulk,/Latest bulk operation results/);
+ assert.match(bulk,/Saved &amp; verified|Saved & verified/);
+ assert.match(bulk,/Persisted application role confirmed by refreshed readback/);
+ assert.doesNotMatch(bulk,/user-role-batch-scope|Board access/);
+ const unavailable=renderUserRoleManagement({verified:true,data:{...accessData,
+  fueltransWorkspaceAvailable:false,frtWorkspaceAvailable:false,scopedSixAvailable:false,
+  charterWorkspaceAvailable:false,toolTraceabilityWorkspaceAvailable:false,
+  workspaceScopedMrhAvailable:false},actorUserId:actorId,applicationAccessOnly:true,batchMode:true});
+ for(const moduleId of ['fueltrans','fund-released-tracker','charter-navigator','tool-traceability','material-request-hub'])
+  assert.match(unavailable,new RegExp('id="user-role-batch-app-'+moduleId+'"[^>]*disabled'));
+ assert.match(app,/case 'user-role-native-batch-review':/);
+ assert.match(app,/planNativeApplicationBatch/);
+ assert.match(app,/Saved & verified/);
 });
 
 test('Assignments rows render four intact cells, including correct staged-only account actions',()=>{
@@ -174,7 +207,6 @@ test('responsive scoped CSS preserves keyboard focus, no infinite GPU loop and s
   '.role-refresh-button:focus-visible','.role-tab-button:focus-visible',
   '.role-proposal-button:focus-visible','.role-activation-button:focus-visible',
   '.role-search:focus-visible','.role-table-scroll',
-  '.role-board-access-toolbar','.role-board-access-table','.role-board-access-selected',
   '@media(max-width:1250px)','@media(max-width:820px)',
   '@media(max-width:650px)','@media(max-width:395px)',
   '@media(prefers-reduced-motion:reduce)','@media(prefers-contrast:more)'])

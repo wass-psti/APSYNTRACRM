@@ -12,7 +12,7 @@ test('bootstrap panel includes six sections and twelve module capability matrix'
  assert.equal(PERMISSION_ACTIONS.length,7);
  assert.equal(ROLE_MODULE_OPTIONS.length,12);
  assert.match(html,/STAGED ONLY/);
- assert.match(html,/data-tab="board-access"/);
+ assert.match(html,/data-tab="application-access"/);
 });
 test('server strings and profile display are escaped',()=>{
  const html=renderRoleConfiguration({verified:true,tab:'users',data:{

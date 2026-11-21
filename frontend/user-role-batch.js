@@ -60,6 +60,59 @@ export function planUserRoleBatch(data,{userIds=[],actorUserId=null,scope,resour
   selectedCount:users.length});
 }
 
+/**
+ * Plan a matrix of native application assignments for multiple members.
+ * Each user/application pair is planned independently so one unavailable
+ * legacy scope does not prevent other valid application changes from running.
+ */
+export function planNativeApplicationBatch(data,{
+ userIds=[],actorUserId=null,applications=[],enabled=true
+}={}){
+ if(!data||!Array.isArray(data.users)||!Array.isArray(data.boards)||
+  !Array.isArray(data.moduleAssignments)||!Array.isArray(data.boardAssignments)||
+  !Array.isArray(userIds)||!Array.isArray(applications)||typeof enabled!=='boolean')
+  throw Error('Invalid native application batch configuration');
+ const targets=[...new Set(userIds)];
+ if(!targets.length)throw Error('Select at least one workspace member');
+ if(!applications.length)throw Error('Select at least one native application');
+ const seen=new Set();
+ for(const application of applications){
+  const moduleId=application?.moduleId,role=application?.role;
+  if(!Object.hasOwn(MODULE_ROLE_OPTIONS,moduleId)||seen.has(moduleId))
+   throw Error('Select each supported native application only once');
+  seen.add(moduleId);
+  const roles=moduleId==='fueltrans'?
+   (data.fueltransWorkspaceAvailable===true?FUELTRANS_WORKSPACE_ROLES:[]):
+   MODULE_ROLE_OPTIONS[moduleId];
+  if(!roles.includes(role))throw Error('Select a supported role for '+moduleId);
+ }
+ const operations=[],unchanged=[],skipped=[];
+ for(const application of applications){
+  for(const userId of targets){
+   try{
+    const result=planUserRoleBatch(data,{
+     userIds:[userId],actorUserId,scope:'module',resourceId:application.moduleId,
+     role:application.role,enabled
+    });
+    operations.push(...result.operations);
+    unchanged.push(...result.unchanged.map(id=>({userId:id,moduleId:application.moduleId})));
+   }catch(error){
+    const user=data.users.find(item=>item.id===userId);
+    skipped.push({userId,moduleId:application.moduleId,
+     reason:String(error?.message||'Application assignment is unavailable').slice(0,240),
+     email:user?.email||''});
+   }
+  }
+ }
+ return Object.freeze({
+  operations:Object.freeze(operations),
+  unchanged:Object.freeze(unchanged),
+  skipped:Object.freeze(skipped),
+  selectedCount:targets.length,
+  applicationCount:applications.length
+ });
+}
+
 /** Post-write receipt reconciliation; checks only authoritative snapshot records.
  * It does not infer effective permissions from a successful RPC acknowledgement.
  */

@@ -116,3 +116,74 @@ test('partial batch reports verified persisted prefix, not raw RPC acknowledgeme
  assert.ok(!block.includes('changes applied. Stopped on failure'));
  assert.ok(block.includes('verified in authoritative assignment readback'));
 });
+
+test('native application batch plans multiple apps across multiple users and records per-pair outcomes',async()=>{
+ const {planNativeApplicationBatch}=await import('../user-role-batch.js');
+ const expanded={...data,
+  users:data.users.map(user=>user.id===owner?user:{...user,activeWorkspaceCount:1}),
+  moduleAssignments:[
+   ...data.moduleAssignments,
+   {userId:b,moduleId:'time-tracker',role:'Employee',enabled:true,updatedAt:'2026-11-13T02:00:00Z'}
+  ]};
+ const plan=planNativeApplicationBatch(expanded,{
+  userIds:[a,b],actorUserId:owner,enabled:true,
+  applications:[
+   {moduleId:'tradelink',role:'User'},
+   {moduleId:'time-tracker',role:'Supervisor'}
+  ]
+ });
+ assert.equal(plan.selectedCount,2);
+ assert.equal(plan.applicationCount,2);
+ assert.equal(plan.operations.length,3);
+ assert.deepEqual(plan.unchanged,[{userId:a,moduleId:'tradelink'}]);
+ assert.deepEqual(plan.skipped,[]);
+ assert.ok(plan.operations.some(op=>op.userId===b&&op.resourceId==='tradelink'));
+ assert.ok(plan.operations.some(op=>op.userId===a&&op.resourceId==='time-tracker'));
+ assert.ok(plan.operations.some(op=>op.userId===b&&op.resourceId==='time-tracker'&&op.role==='Supervisor'));
+});
+
+test('native application batch isolates unsupported workspace scopes and preserves valid app operations',async()=>{
+ const {planNativeApplicationBatch}=await import('../user-role-batch.js');
+ const expanded={...data,
+  users:data.users.map(user=>user.id===b?{...user,activeWorkspaceCount:2}:user),
+  moduleAssignments:[],
+  scopedSixAvailable:false,frtWorkspaceAvailable:false,
+  toolTraceabilityWorkspaceAvailable:false,charterWorkspaceAvailable:false,
+  workspaceScopedMrhAvailable:false
+ };
+ const plan=planNativeApplicationBatch(expanded,{
+  userIds:[a,b],actorUserId:owner,enabled:true,
+  applications:[
+   {moduleId:'tradelink',role:'User'},
+   {moduleId:'toolbox-issues',role:'employee'}
+  ]
+ });
+ assert.equal(plan.operations.length,3);
+ assert.equal(plan.skipped.length,1);
+ assert.equal(plan.skipped[0].userId,b);
+ assert.equal(plan.skipped[0].moduleId,'tradelink');
+ assert.match(plan.skipped[0].reason,/Workspace-scoped application role management is unavailable/);
+ assert.ok(plan.operations.some(op=>op.userId===b&&op.resourceId==='toolbox-issues'));
+});
+
+test('native application batch supports multi-app revocation and rejects duplicate or missing app selections',async()=>{
+ const {planNativeApplicationBatch}=await import('../user-role-batch.js');
+ const expanded={...data,moduleAssignments:[
+  ...data.moduleAssignments,
+  {userId:b,moduleId:'time-tracker',role:'Employee',enabled:true,updatedAt:null}
+ ]};
+ const plan=planNativeApplicationBatch(expanded,{
+  userIds:[a,b],actorUserId:owner,enabled:false,
+  applications:[
+   {moduleId:'tradelink',role:'User'},
+   {moduleId:'time-tracker',role:'Employee'}
+  ]
+ });
+ assert.equal(plan.operations.length,2);
+ assert.equal(plan.unchanged.length,2);
+ assert.ok(plan.operations.every(op=>op.enabled===false));
+ assert.throws(()=>planNativeApplicationBatch(expanded,{userIds:[a],applications:[]}),/Select at least one native application/);
+ assert.throws(()=>planNativeApplicationBatch(expanded,{userIds:[a],applications:[
+  {moduleId:'tradelink',role:'User'},{moduleId:'tradelink',role:'User'}
+ ]}),/only once/);
+});

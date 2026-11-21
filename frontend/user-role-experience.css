@@ -1104,3 +1104,29 @@
   border-color:var(--sm-border-strong)
  }
 }
+
+
+/* CP-ROLE-NATIVE-APPLICATION-ACCESS-01 — application access inside Role Configuration. */
+#app .aps-role-configuration .native-application-access{display:grid;gap:16px;min-width:0}
+#app .aps-role-configuration .native-application-access .user-role-hero{display:none}
+#app .aps-role-configuration .native-application-access .user-role-stat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+#app .aps-role-configuration .native-application-access .user-role-stat-card{min-height:108px}
+#app .aps-role-configuration .native-application-access .user-role-mode-nav{margin:0}
+#app .aps-role-configuration .native-application-access .user-role-batch-panel{margin-top:0}
+#app .aps-role-configuration .user-role-native-app-picker{display:grid;gap:12px;min-width:0;margin:0;padding:16px;border:1px solid var(--sm-border);border-radius:var(--sm-radius-card);background:var(--sm-surface)}
+#app .aps-role-configuration .user-role-native-app-picker legend{padding:0 5px;font-size:13px;font-weight:750;color:var(--sm-ink)}
+#app .aps-role-configuration .user-role-native-app-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#app .aps-role-configuration .user-role-native-app-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,.55fr);align-items:center;gap:12px;min-width:0;padding:12px;border:1px solid var(--sm-border);border-radius:var(--sm-radius-control);background:var(--sm-surface-raised)}
+#app .aps-role-configuration .user-role-native-app-choice{display:flex;align-items:flex-start;gap:9px;min-width:0;font-size:12px;color:var(--sm-ink)}
+#app .aps-role-configuration .user-role-native-app-choice input{flex:0 0 auto;margin-top:3px}
+#app .aps-role-configuration .user-role-native-app-choice span{display:grid;gap:3px;min-width:0}
+#app .aps-role-configuration .user-role-native-app-choice strong{overflow-wrap:anywhere;font-size:12px;font-weight:730}
+#app .aps-role-configuration .user-role-native-app-choice small{font-size:10px;color:var(--sm-sub)}
+#app .aps-role-configuration .user-role-native-app-role{display:grid;gap:5px;min-width:0;font-size:11px;font-weight:650;color:var(--sm-sub)}
+#app .aps-role-configuration .user-role-native-app-role select{width:100%;min-height:38px;padding:7px 9px;border:1px solid var(--sm-border);border-radius:8px;background:var(--sm-surface);color:var(--sm-ink);font:inherit}
+#app .aps-role-configuration .user-role-native-batch-action{display:grid;gap:6px;max-width:320px;font-size:12px;font-weight:650;color:var(--sm-sub)}
+#app .aps-role-configuration .user-role-native-batch-action select{min-height:42px;padding:8px 10px;border:1px solid var(--sm-border);border-radius:9px;background:var(--sm-surface);color:var(--sm-ink);font:inherit}
+#app .aps-role-configuration .user-role-native-results{min-width:0}
+#app .aps-role-configuration .user-role-native-app-picker :is(input,select):focus-visible,#app .aps-role-configuration .user-role-native-batch-action select:focus-visible{outline:2px solid var(--sm-accent);outline-offset:2px}
+@media(max-width:850px){#app .aps-role-configuration .user-role-native-app-list{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:650px){#app .aps-role-configuration .native-application-access .user-role-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#app .aps-role-configuration .user-role-native-app-row{grid-template-columns:minmax(0,1fr)}#app .aps-role-configuration .user-role-native-batch-action{max-width:none}}

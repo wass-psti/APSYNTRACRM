@@ -18,18 +18,18 @@ const data={
 };
 test('six role sections share Overview-aligned workspace hierarchy without new authority',()=>{
  const names={roles:'Role catalog',users:'Assignments',matrix:'Permission matrix',
- 'board-access':'Board Access',workspace:'Workspace access',audit:'Change history'};
+ 'application-access':'Native Application Access',workspace:'Workspace access',audit:'Change history'};
  for(const [tab,name] of Object.entries(names)){
   const markup=renderRoleConfiguration({verified:true,data,tab});
   assert.match(markup,/class="role-content-workspace" aria-labelledby="role-content-heading"/);
   assert.match(markup,new RegExp('<h2 id="role-content-heading">'+name+'</h2>'));
-  assert.match(markup,tab==='board-access'?/class="role-content-mode" aria-label="Live board access mode"/:/class="role-content-mode" aria-label="Proposal-only mode"/);
+  assert.match(markup,tab==='application-access'?/class="role-content-mode" aria-label="Live application access mode"/:/class="role-content-mode" aria-label="Proposal-only mode"/);
   assert.match(markup,/class="role-content-body"/);
   assert.equal((markup.match(/data-action="role-tab"/g)||[]).length,6);
   assert.equal((markup.match(/aria-pressed="true"/g)||[]).length,1);
   assert.match(markup,/Role proposals: STAGED ONLY/);
   assert.match(markup,/Role proposals: STAGED ONLY/);
-  assert.match(markup,/Board Access section uses the existing server-authorized workspace board assignment workflow/);
+  assert.match(markup,/Native Application Access uses the existing application assignment services/);
   assert.ok(markup.endsWith('</div></section></div></div>'));
  }
 });
