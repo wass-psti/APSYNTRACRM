@@ -112,8 +112,10 @@ test('WAI-ARIA button/menu/menuitem semantics and keyboard support are implement
 });
 
 test('native details open attribute synchronizes ARIA after coalesced toggle events',()=>{
- assert.match(source,/record\.type==='attributes'&&record\.attributeName==='open'/);
- assert.match(source,/attributeFilter:\['open'\]/);
+ assert.match(source,/record\.type==='attributes'/);
+ assert.match(source,/record\.attributeName==='open'/);
+ assert.match(source,/attributeFilter:\['open','aria-expanded'\]/);
+ assert.match(source,/summary\.getAttribute\('aria-expanded'\)!==expanded/);
  assert.match(source,/String\(details\.open\)/);
  assert.match(source,/controllers\.has\(details\)/);
 });

@@ -91,6 +91,19 @@ async function main(){
   const collapsed=await page.eval(`document.querySelectorAll('.board-card-actions')[${index}].querySelector('summary').getAttribute('aria-expanded')`);
   assert.equal(collapsed,'false',`board menu ${index} must report collapsed`);
  }
+ // CP04: a stale aria-expanded mutation after a real menu toggle must be
+ // reconciled from native details.open, not left misleading for screen readers.
+ await page.eval(`document.querySelectorAll('.board-card-actions')[2].open=true`);
+ await sleep(60);
+ await page.eval(`document.querySelectorAll('.board-card-actions')[2].querySelector('summary').setAttribute('aria-expanded','false')`);
+ const recovered=await page.eval(`document.querySelectorAll('.board-card-actions')[2].querySelector('summary').getAttribute('aria-expanded')`);
+ assert.equal(recovered,'true','stale ARIA override must be corrected from native open state');
+ await page.eval(`document.querySelectorAll('.board-card-actions')[2].open=false`);
+ await sleep(60);
+ await page.eval(`document.querySelectorAll('.board-card-actions')[2].querySelector('summary').setAttribute('aria-expanded','true')`);
+ const recoveredClose=await page.eval(`document.querySelectorAll('.board-card-actions')[2].querySelector('summary').getAttribute('aria-expanded')`);
+ assert.equal(recoveredClose,'false','stale closed-menu ARIA override must be corrected');
+ console.log('CP04_BOARD_MENU_ARIA_RECOVERY_PASS: mismatched ARIA attribute repaired in both states');
  console.log('CP03_BOARD_MENU_ARIA_PASS: sequential native details state mirrors ARIA');
  console.log('GROUP_MENU_BROWSER_PASS: real pointer selection, outside click, keyboard focus and Escape');
  }finally{page?.close();if(browser)browser.kill('SIGTERM');await new Promise(ok=>server.close(ok));await sleep(500);try{rmSync(profile,{recursive:true,force:true,maxRetries:10,retryDelay:150})}catch{}}}

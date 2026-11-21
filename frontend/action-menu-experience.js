@@ -364,18 +364,24 @@ export function startActionMenuExperience(root=globalThis.document?.body){
    if(record.type==='childList')record.addedNodes.forEach(scan);
    // Native <details> toggle events can be coalesced during rapid menu changes.
    // Keep the trigger state synchronized with the actual open attribute.
-   if(record.type==='attributes'&&record.attributeName==='open'){
-    const details=record.target;
-    if(controllers.has(details))
-     details.querySelector(':scope > summary')?.setAttribute(
-      'aria-expanded',String(details.open));
+   if(record.type==='attributes'){
+    const details=record.attributeName==='open'?
+     record.target:record.target.parentElement;
+    const summary=details?.querySelector(':scope > summary');
+    // The native open attribute is authoritative. Correct an externally stale
+    // ARIA mutation too, without changing a matching value or looping.
+    if(controllers.has(details)&&summary){
+     const expanded=String(details.open);
+     if(summary.getAttribute('aria-expanded')!==expanded)
+      summary.setAttribute('aria-expanded',expanded);
+    }
    }
   }
   for(const controller of controllers.values())
    if(!controller.details.isConnected)controller.destroy();
  });
  observer.observe(root,{subtree:true,childList:true,attributes:true,
-  attributeFilter:['open']});
+  attributeFilter:['open','aria-expanded']});
  const outside=event=>{
   for(const controller of controllers.values()){
    if(controller.details.open&&!controller.details.contains(event.target))
