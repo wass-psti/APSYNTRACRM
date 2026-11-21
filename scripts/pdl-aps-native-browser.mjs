@@ -120,6 +120,67 @@ try{
  assert.deepEqual(adminErrors,[]);
  console.log('PASS isolated admin cursor pages, cancellation confirmation, unchanged payment status and recovery');
  await lifecycle.close();
+ // Large-queue and uncertain-write recovery use only synthetic HTTP fixtures.
+ const stress=await browser.newPage({viewport:{width:768,height:900}});
+ const stressErrors=[];
+ stress.on('pageerror',error=>stressErrors.push(error.message));
+ await stress.addInitScript(()=>sessionStorage.setItem('pdl-booking-admin-access-token','SYNTHETIC_TEST_ONLY'));
+ const rows=Array.from({length:125},(_,i)=>({
+   id:`${String(i+1).padStart(8,'0')}-1111-4111-8111-111111111111`,
+   court_code:'court-1',reservation_date:'2026-11-23',start_minute:480,duration_minutes:60,
+   amount_minor:50000,full_name:`Queue Synthetic ${String(i).padStart(3,'0')}`,
+   email:'synthetic@example.test',phone:'09171234567',payment_method:'gcash',
+   booking_status:'pending_verification',payment_status:'submitted',version:1,
+   created_at:new Date(Date.UTC(2026,10,21,12,0,0)-i*1000).toISOString(),
+ }));
+ let uncertain=false;
+ let failReadback=false;
+ await stress.route('**/functions/v1/pdl-guest-api/v1/admin/**',async route=>{
+   const request=route.request();const url=new URL(request.url());const path=url.pathname;
+   const send=(json,status=200)=>route.fulfill({status,json});
+   if(path.endsWith('/v1/admin/session'))return send({authenticated:true});
+   if(path.endsWith('/v1/admin/courts'))return send({courts:[]});
+   if(path.endsWith('/v1/admin/reservations/page')){
+     if(failReadback)return send({error:'synthetic_unavailable'},503);
+     const before=url.searchParams.get('beforeId');
+     const index=before?rows.findIndex(item=>item.id===before)+1:0;
+     const page=rows.slice(index,index+25);
+     const last=page.at(-1);
+     // A concurrent page boundary may overlap with the already-rendered card.
+     if(index>0)page.unshift(rows[index-1]);
+     return send({reservations:page,nextCursor:index+25<rows.length?
+       {beforeCreatedAt:last.created_at,beforeId:last.id}:null});
+   }
+   if(path.endsWith(`/v1/admin/reservations/${rows[0].id}/cancel`)){
+     uncertain=true;
+     failReadback=true;
+     return send({error:'synthetic_gateway_timeout'},504);
+   }
+   return send({error:'synthetic_missing_route'},404);
+ });
+ await stress.route('**/functions/v1/pdl-guest-api/v1/payment-methods',async route=>
+   route.fulfill({status:200,json:{methods:[]}}));
+ stress.on('dialog',dialog=>{void dialog.accept()});
+ await stress.goto(base+'paseo/admin/live-reservations');
+ await stress.getByText('Queue Synthetic 000').first().waitFor({timeout:15000});
+ for(let i=1;i<5;i++){
+   await stress.getByRole('button',{name:'Load more reservations'}).click();
+   await stress.locator('.staging-reservation-card').nth(i*25).waitFor({timeout:15000});
+ }
+ assert.equal(await stress.locator('.staging-reservation-card').count(),125);
+ assert.equal(await stress.getByRole('button',{name:'Load more reservations'}).count(),0);
+ console.log('PASS five cursor pages show 125 distinct reservations without truncated results');
+ await stress.getByRole('button',{name:'Cancel booking (no automatic refund)'}).first().click();
+ await stress.getByText(/Readback failed\. Do not retry cancellation/).waitFor({timeout:15000});
+ assert.equal(uncertain,true);
+ assert.equal(await stress.locator('.staging-reservation-card').count(),125);
+ failReadback=false;
+ await stress.getByRole('button',{name:'Refresh',exact:true}).click();
+ await stress.getByText('Queue Synthetic 000').first().waitFor({timeout:15000});
+ assert.equal(await stress.locator('.staging-reservation-card').count(),25);
+ assert.deepEqual(stressErrors,[]);
+ console.log('PASS failed cancellation and failed readback warn against blind retries; refresh recovers');
+ await stress.close();
  const crm=await browser.newPage();
  await crm.goto(base+'#/paseo');
  await crm.locator('.aps-auth-v2').waitFor({timeout:16000});

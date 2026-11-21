@@ -71,7 +71,7 @@ export function StagingAdminReservationsPage() {
     setRateEnabled(rate?.enabled ?? false);
   }, [courtConfig, selectedCourt, rateDuration]);
 
-  async function load(query = search, cursor: ReservationCursor | null = null) {
+  async function load(query = search, cursor: ReservationCursor | null = null): Promise<boolean> {
     if (!cursor) activeSearch.current = query;
     const requestId = ++loadRequest.current;
     setReservationLoading(true);
@@ -86,8 +86,8 @@ export function StagingAdminReservationsPage() {
       }
       const path = sharedSupabaseAdminEnabled ? '/v1/admin/reservations/page' : '/v1/admin/reservations';
       const response = await backendAdminFetch(`${path}?${params}`, {cache:'no-store',signal:AbortSignal.timeout(12000)});
-      if (requestId !== loadRequest.current) return;
-      if (response.status === 401) { navigate('/admin/sign-in',{replace:true}); return; }
+      if (requestId !== loadRequest.current) return false;
+      if (response.status === 401) { navigate('/admin/sign-in',{replace:true}); return false; }
       if (!response.ok) throw new Error('Reservation retrieval failed. Please refresh.');
       const data: {reservations: (StageReservation & {
         court_code?:string; reservation_date?:string; duration_minutes?:number;
@@ -98,13 +98,19 @@ export function StagingAdminReservationsPage() {
         day:item.day??item.reservation_date??'',
         duration:item.duration??item.duration_minutes??0,
       }));
-      if (requestId !== loadRequest.current) return;
-      setRecords(previous=>cursor?[...previous,...normalized]:normalized);
+      if (requestId !== loadRequest.current) return false;
+      setRecords(previous => {
+        if (!cursor) return normalized;
+        const seen = new Set(previous.map(record => record.id));
+        return [...previous, ...normalized.filter(record => !seen.has(record.id))];
+      });
       setNextCursor(data.nextCursor??null);
       setReservationLoaded(true);
       setStatus(`${cursor ? 'More' : normalized.length} ${sharedSupabaseAdminEnabled ? 'Supabase' : 'locally'} stored reservations loaded`);
+      return true;
     } catch(reason) {
       if (requestId===loadRequest.current) setStatus(reason instanceof Error ? reason.message:'Reservation retrieval failed.');
+      return false;
     } finally {
       if (requestId===loadRequest.current) setReservationLoading(false);
     }
@@ -226,12 +232,14 @@ export function StagingAdminReservationsPage() {
       });
       if (!response.ok) throw new Error(response.status===409 ?
         'Booking changed in another session. Refresh and review.' : 'Cancellation could not be saved.');
-      await load();
-      setStatus('Booking cancelled. Payment status is unchanged; reconcile any submitted funds separately.');
+      const refreshed = await load();
+      setStatus(refreshed ? 'Booking cancelled. Payment status is unchanged; reconcile any submitted funds separately.' :
+        'Cancellation accepted, but updated records could not be retrieved. Refresh to confirm before any further action.');
     } catch(reason) {
       const message=reason instanceof Error ? reason.message : 'Cancellation outcome uncertain.';
-      await load();
-      setStatus(`${message} Review the refreshed booking status before retrying.`);
+      const refreshed = await load();
+      setStatus(refreshed ? `${message} Review the refreshed booking status before retrying.` :
+        `${message} Readback failed. Do not retry cancellation until a successful refresh confirms the booking status.`);
     } finally { setBusyId(''); }
   }
 
