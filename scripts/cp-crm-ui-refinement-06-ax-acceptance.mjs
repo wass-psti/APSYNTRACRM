@@ -31,10 +31,21 @@ for (const line of output.split(/\r?\n|\r/g)) {
   const fields = line.trim().split("|");
   if (fields[0] !== "CP06") continue;
   if (fields[1] === "ORIGINAL")
-    original = { width: Number(fields[2]), height: Number(fields[3]) };
+    original = {
+      width: Number(fields[2]),
+      height: Number(fields[3]),
+      x: Number(fields[4]),
+      y: Number(fields[5]),
+    };
   if (fields[1] === "RESTORED")
-    restored = { width: Number(fields[2]), height: Number(fields[3]) };
-  if (fields[1] === "ERROR") blockers.push(fields.slice(2).join("|"));
+    restored = {
+      width: Number(fields[2]),
+      height: Number(fields[3]),
+      x: Number(fields[4]),
+      y: Number(fields[5]),
+    };
+  if (["ERROR", "RESTORE_ERROR"].includes(fields[1]))
+    blockers.push(`${fields[1]}: ${fields.slice(2).join("|")}`);
   if (fields[1] === "MEASURED") {
     const requestedWidth = Number(fields[2]);
     const measuredWidth = Number(fields[3]);
@@ -68,8 +79,15 @@ for (const line of output.split(/\r?\n|\r/g)) {
 }
 if (!original || !restored)
   blockers.push("Original/restored window geometry could not be verified");
-if (original && restored && Math.abs(original.width - restored.width) > 2)
-  blockers.push("Original Chromium window width was not restored");
+if (original && restored) {
+  for (const key of ["width", "height", "x", "y"]) {
+    if (!Number.isFinite(original[key]) || !Number.isFinite(restored[key])) {
+      blockers.push(`Window ${key} measurement is invalid`);
+    } else if (Math.abs(original[key] - restored[key]) > 2) {
+      blockers.push(`Original Chromium window ${key} was not restored`);
+    }
+  }
+}
 if (
   measurements.length !== expected.length ||
   measurements.some((item, index) => item.requestedWidth !== expected[index])
