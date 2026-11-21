@@ -29,6 +29,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 import './styles/guest-reservations.css';
 import './styles/pdl-live-admin.css';
+import './styles/pdl-admin-session-skeleton.css';
 import './styles/pdl-courts-ui.css';
 import './styles/pdl-how-it-works.css';
 import './styles/pdl-reservations-ui.css';

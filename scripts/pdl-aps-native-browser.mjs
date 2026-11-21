@@ -436,6 +436,66 @@ try{
  assert.deepEqual(moduleErrors,[]);
  console.log('PASS seven admin module routes: direct link, refresh, tab switching, back/forward without runtime errors');
  await modules.close();
+ // Session checks must not leave a blank or text-only screen while pending.
+ for (const width of [390, 1440]) {
+   const pending=await browser.newPage({viewport:{width,height:900}});
+   const pendingErrors=[];
+   pending.on('pageerror',error=>pendingErrors.push(error.message));
+   await pending.addInitScript(()=>sessionStorage.setItem('pdl-booking-admin-access-token','SYNTHETIC_TEST_ONLY'));
+   let resolveCheck;
+   await pending.route('**/functions/v1/pdl-guest-api/v1/admin/**',async route=>{
+     const path=new URL(route.request().url()).pathname;
+     if(path.endsWith('/v1/admin/session')) {
+       await new Promise(resolve=>{resolveCheck=resolve;});
+       return route.fulfill({status:200,json:{authenticated:true}});
+     }
+     if(path.endsWith('/v1/admin/policies'))return route.fulfill({status:200,json:{
+       reservationLeadHours:0,arrivalGraceMinutes:15,publicNotice:'',
+     }});
+     return route.fulfill({status:404,json:{error:'missing_fixture'}});
+   });
+   await pending.goto(base+'paseo/admin/settings',{waitUntil:'domcontentloaded'});
+   const shell=pending.getByRole('status',{name:'Preparing administrator workspace'});
+   await shell.waitFor({timeout:15000});
+   assert.equal(await shell.getAttribute('aria-busy'),'true');
+   assert.equal(await pending.locator('.pdl-session-hero h1').textContent(),'Operational settings.');
+   assert.equal(await pending.locator('.pdl-session-nav-item').count(),9);
+   assert.equal(await pending.locator('.pdl-session-card').count(),0);
+   assert.equal(await pending.locator('.pdl-session-panel').count(),1);
+   assert.equal(await pending.getByText('Checking administrator session…').count(),0);
+   assert.equal(await pending.getByRole('button',{name:'Save operational policies'}).count(),0);
+   assert.equal(await pending.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+   const topBefore=await pending.locator('.immersive-admin-heading').boundingBox();
+   assert.ok(topBefore?.height>120);
+   assert.equal(typeof resolveCheck,'function');
+   resolveCheck();
+   await pending.getByRole('button',{name:'Save operational policies'}).waitFor({timeout:15000});
+   assert.equal(await shell.count(),0);
+   assert.equal(await pending.getByRole('heading',{name:'Operational settings.'}).count(),1);
+   const topAfter=await pending.locator('.immersive-admin-heading').boundingBox();
+   assert.ok(Math.abs(topBefore.y-topAfter.y)<16,`admin heading retains top position: before=${topBefore.y}, after=${topAfter.y}`);
+   assert.deepEqual(pendingErrors,[]);
+   await pending.close();
+   console.log(`PASS ${width}px session skeleton preserves admin hero/navigation/forms and transitions after verification`);
+ }
+ // An unauthenticated request receives the same visual scaffold but never any controls.
+ const deniedSkeleton=await browser.newPage({viewport:{width:768,height:900}});
+ let finishDenied;
+ await deniedSkeleton.route('**/functions/v1/pdl-guest-api/v1/admin/session',async route=>{
+   await new Promise(resolve=>{finishDenied=resolve;});
+   await route.fulfill({status:401,json:{error:'missing_session'}});
+ });
+ await deniedSkeleton.goto(base+'paseo/admin/payments',{waitUntil:'domcontentloaded'});
+ await deniedSkeleton.getByRole('status',{name:'Preparing administrator workspace'}).waitFor();
+ assert.equal(await deniedSkeleton.locator('.pdl-session-payment-card').count(),3);
+ assert.equal(await deniedSkeleton.getByRole('button',{name:'Save GCash QR configuration'}).count(),0);
+ assert.equal(await deniedSkeleton.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+ assert.equal(typeof finishDenied,'function');
+ finishDenied();
+ await deniedSkeleton.getByRole('heading',{name:/Administrator sign-in/i}).waitFor();
+ assert.equal(await deniedSkeleton.locator('.pdl-session-skeleton').count(),0);
+ console.log('PASS 768px payment skeleton shows three cards, denied session keeps existing sign-in behavior');
+ await deniedSkeleton.close();
  // A gateway outage is not evidence that a signed administrator lost access.
  const recovery=await browser.newPage();
  const recoveryErrors=[];
