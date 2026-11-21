@@ -93,7 +93,7 @@ test('authorized table shows independent GPS fixes without unsafe HTML',()=>{
   'Attendance Status','Working Duration'])assert.match(html,new RegExp(h));
  assert.match(html,/10\.123456, 123\.987654/);
  assert.match(html,/10\.765432, 123\.654321/);
- assert.match(html,/2\.00 h/);
+ assert.match(html,/02:00:00/);
  assert.match(html,/Employee &lt;b&gt;Sample&lt;\/b&gt;/);
  assert.doesNotMatch(html,/<b>Sample<\/b>/);
  assert.match(html,/role="region" tabindex="0"/);

@@ -1,3 +1,4 @@
+import {formatTimeTrackerDurationMs} from './time-tracker-duration-format.js';
 import {formatTimeTrackerDateTime} from './time-tracker-time-format.js';
 /** Signed TimeTracker Main Group presentation.
  * The seven operational fields come ONLY from the server-authorized private
@@ -18,7 +19,7 @@ const point=value=>value?
  '<span class="tt-main-unavailable">Not recorded</span>';
 const duration=value=>value===null?
  '<span class="tt-main-unavailable">In progress</span>':
- '<span class="tt-main-duration">'+esc((value/3600000).toFixed(2))+' h</span>';
+ '<span class="tt-main-duration">'+esc(formatTimeTrackerDurationMs(value))+'</span>';
 export const TIMETRACKER_MAIN_GROUP_HEADINGS=headings;
 
 /** Always restrict records to the board's currently visible group item IDs.

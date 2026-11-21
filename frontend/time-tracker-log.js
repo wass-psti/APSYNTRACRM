@@ -1,3 +1,4 @@
+import {formatTimeTrackerDurationMs} from './time-tracker-duration-format.js';
 import {formatTimeTrackerClock,formatTimeTrackerShortDateTime,formatTimeTrackerDateTime} from './time-tracker-time-format.js';
 /** Native signed TimeTracker Log. System Admin mutations use the dedicated signed RPC; other roles remain read-only. */
 import {TT_LOCATIONS} from './time-tracker-policy.js';
@@ -15,7 +16,7 @@ const phtTime=value=>validTime(value)?formatTimeTrackerClock(value):'—';
 const phtDate=value=>new Intl.DateTimeFormat('en-PH',{
  timeZone:'Asia/Manila',weekday:'long',year:'numeric',month:'long',day:'numeric'
 }).format(new Date(value));
-const creditedHours=ms=>Number.isFinite(ms)&&ms>=0?(ms/3600000).toFixed(2):'—';
+const creditedHours=formatTimeTrackerDurationMs;
 const choices=(id,values,selected)=>'<select id="'+id+'">'+
  values.map(([key,label])=>'<option value="'+esc(key)+'"'+
  (selected===key?' selected':'')+'>'+esc(label)+'</option>').join('')+
@@ -71,11 +72,7 @@ export function timeTrackerLogSummary(rows=[],now=new Date()){
 
 
 const dateTime=value=>validTime(value)?formatTimeTrackerShortDateTime(value):'—';
-const durationLabel=ms=>{
- if(!Number.isFinite(ms)||ms<0)return '—';
- const minutes=Math.floor(ms/60000);
- return Math.floor(minutes/60)+'h '+String(minutes%60).padStart(2,'0')+'m';
-};
+const durationLabel=formatTimeTrackerDurationMs;
 const ratio=(num,total)=>total?Math.round(100*num/total):0;
 const widthBucket=percent=>'tt-log-width-'+Math.max(0,Math.min(100,
  Math.round(percent/5)*5));

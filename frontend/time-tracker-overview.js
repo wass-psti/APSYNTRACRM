@@ -1,3 +1,4 @@
+import {formatTimeTrackerDurationMs} from './time-tracker-duration-format.js';
 import {formatTimeTrackerClock,formatTimeTrackerDateTime} from './time-tracker-time-format.js';
 /** Native TimeTracker Overview — strictly scoped to current signed workspace/module.
  * No GPS, email, company-wide user registry, or standalone backend is used.
@@ -45,7 +46,7 @@ const arrivalMinutes=v=>{
 const clockMs=(row,now)=>row.clockOut?
  creditedAttendanceRecordMs(row,row.clockIn,row.clockOut):
  creditedAttendanceMs(row.clockIn,now);
-const hours=ms=>(Math.max(0,ms)/3600000).toFixed(1);
+const hours=formatTimeTrackerDurationMs;
 const safeText=(v,n=120)=>String(v??'').slice(0,n);
 const allLocations=[...TT_LOCATIONS];
 const deny=text=>{throw new Error(text);};
@@ -192,7 +193,7 @@ const entry=row=>'<tr class="tt-overview-filterable" data-tt-search="'+
  '<td>'+escapeHtml(clockTime(row.clockIn))+'</td><td>'+
  escapeHtml(row.clockOut?clockTime(row.clockOut):'Active')+'</td>'+
  '<td>'+escapeHtml(row.lateMinutes?toMin(row.lateMinutes):'—')+'</td>'+
- '<td>'+escapeHtml(toMin(row.creditedMs))+'</td>'+
+ '<td>'+escapeHtml(hours(row.creditedMs))+'</td>'+
  '<td><span class="tt-status-dot '+(row.status==='Active'?'is-active':'')+'"></span>'+
  escapeHtml(row.status)+'</td></tr>';
 const initials=name=>String(name||'W').trim().split(/\s+/).slice(0,2)
@@ -346,7 +347,7 @@ export function renderTimeTrackerOverview({
       '<div class="tt-employee-identity"><span>'+escapeHtml(initials(r.name))+'</span>'+
        '<strong>'+escapeHtml(r.name)+'</strong></div>'+
       '<p>'+escapeHtml(r.department)+'</p><p>In: <b>'+escapeHtml(clockTime(r.clockIn))+
-      '</b></p><small>Active · '+escapeHtml(toMin(r.creditedMs))+'</small>'+
+      '</b></p><small>Active · '+escapeHtml(hours(r.creditedMs))+'</small>'+
      '</article>').join('')+'</div></div>'
    ).join('')||'<p class="tt-muted">No active workers in the authorized attendance scope.</p>')+
   '</section>'+

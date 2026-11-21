@@ -1,3 +1,4 @@
+import {formatTimeTrackerDurationMs} from './time-tracker-duration-format.js';
 import {formatTimeTrackerDateTime} from './time-tracker-time-format.js';
 /** CP-TT-GPS01 — restricted attendance board GPS overlay.
  * Source of truth: server-side TimeTracker atomic attendance commit.
@@ -85,7 +86,7 @@ const place=point=>point?
  '<span class="tt-projection-gps">'+point.latitude.toFixed(6)+', '+
  point.longitude.toFixed(6)+' <small>±'+
  Math.round(point.accuracyM)+' m</small></span>':'—';
-const hours=ms=>ms===null?'—':(ms/3600000).toFixed(2)+' h';
+const hours=formatTimeTrackerDurationMs;
 export function renderTimeTrackerBoardGps(data){
  if(data?.status!=='VERIFIED_READ')
   return '<p class="muted">Restricted attendance projection is not available.</p>';
