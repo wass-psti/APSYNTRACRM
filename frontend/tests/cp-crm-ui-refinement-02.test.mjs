@@ -9,8 +9,8 @@ import { generateStyleBundle } from "../../scripts/build-priority5-styles.mjs";
 
 const css = readFileSync("frontend/application-ui-refinement.css", "utf8");
 test("deep app layer is last and generated CSS stays deterministic", () => {
-  assert.equal(STYLE_SOURCES.at(-4), "frontend/enterprise-ui-refinement.css");
-  assert.equal(STYLE_SOURCES.at(-3), "frontend/application-ui-refinement.css");
+  assert.equal(STYLE_SOURCES.at(-5), "frontend/enterprise-ui-refinement.css");
+  assert.equal(STYLE_SOURCES.at(-4), "frontend/application-ui-refinement.css");
   assert.equal(readFileSync(STYLE_BUNDLE, "utf8"), generateStyleBundle());
   assert.match(
     readFileSync("index.html", "utf8"),
