@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 
 const application = 'https://wass-psti.github.io/APSYNTRACRM/paseo/';
-const routes = ['courts', 'calendar', 'bookings', 'pricing', 'payments', 'customers', 'settings'];
+const routes = ['courts', 'calendar', 'bookings', 'pricing', 'payments', 'customers', 'settings', 'acceptance'];
 const browser = await chromium.launch({headless: true});
 const page = await browser.newPage();
 const pageErrors = [];

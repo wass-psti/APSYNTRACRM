@@ -23,6 +23,7 @@ export const router = createBrowserRouter([
       { path: '/admin/sign-in', lazy: async () => ({ Component: (await import('../pages/StagingAdminLoginPage')).StagingAdminLoginPage }) },
       { path: '/admin/live-reservations', lazy: async () => ({ Component: (await import('../pages/StagingAdminReservationsPage')).StagingAdminReservationsPage }) },
       { path: '/admin', lazy: async () => ({ Component: (await import('../pages/AdminOverviewPage')).AdminOverviewPage }) },
+      { path: '/admin/acceptance', lazy: async () => ({ Component: (await import('../pages/AdminAcceptancePage')).AdminAcceptancePage }) },
       { path: '/admin/courts', lazy: async () => ({ Component: (await import('../pages/AdminCourtsPage')).AdminCourtsPage }) },
       { path: '/admin/calendar', lazy: async () => ({ Component: (await import('../pages/AdminCalendarPage')).AdminCalendarPage }) },
       { path: '/admin/bookings', lazy: async () => ({ Component: (await import('../pages/AdminBookingsPage')).AdminBookingsPage }) },

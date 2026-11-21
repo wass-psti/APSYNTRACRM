@@ -50,6 +50,7 @@ export function AdminOverviewPage() {
       <p>Reservations and payment evidence are managed in the persisted queue. Court scheduling and approved rates are managed from the same server-backed workspace.</p>
       {backendAdminEnabled && <div className="booking-actions">
         <Link className="button button-primary" to="/admin/live-reservations">Open stored reservations</Link>
+        {sharedSupabaseAdminEnabled && <Link className="button button-secondary" to="/admin/acceptance">Check seven-module readback</Link>}
         {sharedSupabaseAdminEnabled && <Link className="button button-secondary" to="/admin/live-reservations#pdl-config-heading">Manage court settings and rates</Link>}
       </div>}
     </section>
