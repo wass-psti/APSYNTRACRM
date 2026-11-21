@@ -25,9 +25,17 @@ test('invitation controls remain user-initiated and validate isolated workspace 
  assert.match(script,/INVITE_TOKEN\.test\(token\)/);
  assert.match(script,/UUID\.test\(id\)/);
  assert.match(script,/ws02d-\x27\+route/);
- assert.match(script,/try\{await identity\('inviter'\);const result=await edge\('invite'/);
- assert.match(script,/try\{await identity\('recipient'\);if\(!INVITE_TOKEN/);
- for(const id of ['pair','send','list','accept']) assert.match(script,new RegExp('\\$\\(\\x27'+id+'\\x27\\)\\.addEventListener'));
+ assert.match(script,/async function readiness\(\)/);
+ assert.match(script,/operation:'readiness'/);
+ assert.match(script,/new URLSearchParams\(location\.search\)\.get\('workspaceId'\)/);
+ assert.match(script,/const \{recipient\}=await pair\(\)/);
+ assert.match(script,/if\(!await readiness\(\)\)return/);
+ assert.match(script,/item\.id===invitationId&&item\.state==='accepted'/);
+ assert.match(script,/item\.deliveryState==='submitted'/);
+ assert.match(script,/manager\.delivery/);
+ assert.match(html,/Read invitation statuses/);
+ assert.match(script,/const manager=await edge\('manage'/);
+ for(const id of ['pair','readiness','send','list','accept']) assert.match(script,new RegExp('\\$\\(\\x27'+id+'\\x27\\)\\.addEventListener'));
 });
 test('staging script parses as JavaScript in an ES module',async()=>{
  const {spawnSync}=await import('node:child_process');
@@ -37,7 +45,7 @@ test('staging script parses as JavaScript in an ES module',async()=>{
  const buttons=new Map(),elements=new Map(),calls=[];
  const make=(id,value='')=>{const x={value,textContent:'',addEventListener(){}};elements.set(id,x);return x};
  make('inviter-email','lmsenagan@watchdogautomation.com.ph');make('recipient-email','jspagsuguiron@watchdogautomation.com.ph');
- make('inviter-status');make('recipient-status');
+ make('inviter-status');make('recipient-status');make('workspace');
  const document={
   getElementById:id=>elements.get(id)??make(id),
   querySelectorAll:selector=>['inviter','recipient'].map(which=>({
@@ -45,11 +53,13 @@ test('staging script parses as JavaScript in an ES module',async()=>{
    addEventListener:(_name,callback)=>buttons.set(selector+'-'+which,callback)
   }))
  };
- const wrapper={document,fetch:async(url,options)=>{
+ const workspaceId='6a051705-e141-44d2-bb87-cf8a124ab17e';
+ const wrapper={document,location:{search:'?workspaceId='+workspaceId},URLSearchParams,fetch:async(url,options)=>{
   calls.push({url,options});
   return {ok:true,status:200,json:async()=>({})};
  },encodeURIComponent,crypto:{randomUUID:()=> '00000000-0000-4000-8000-000000000000'}};
  runInNewContext(script,wrapper);
+ assert.equal(elements.get('workspace').value,workspaceId);
  await buttons.get('[data-otp]-inviter')();
  assert.equal(calls.length,1);
  const target=calls[0];
@@ -67,7 +77,7 @@ test('numeric verification uses email OTP and rejects malformed codes before net
  const document={getElementById:id=>elements.get(id)??input(id),
  querySelectorAll:selector=>['inviter','recipient'].map(which=>({dataset:{[selector.slice(6,-1)]:which},
  addEventListener:(_event,fn)=>handlers.set(selector+'-'+which,fn)}))};
- runInNewContext(script,{document,fetch:async(url,opts)=>{calls.push({url,opts});return {ok:false,status:403,json:async()=>({message:'invalid code'})}},encodeURIComponent,crypto:{randomUUID:()=>''}});
+ runInNewContext(script,{document,location:{search:''},URLSearchParams,fetch:async(url,opts)=>{calls.push({url,opts});return {ok:false,status:403,json:async()=>({message:'invalid code'})}},encodeURIComponent,crypto:{randomUUID:()=>''}});
  await handlers.get('[data-verify]-inviter')();
  assert.equal(calls.length,0);
  assert.equal(elements.get('inviter-code').value,'');
