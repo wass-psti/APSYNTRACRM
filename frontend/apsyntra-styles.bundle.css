@@ -30203,3 +30203,184 @@ html[data-aps-monday-theme="dark"] #app :is(
  .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-panel,
  .frt-ref-table-card, .ft3-app .ft3-panel, .tb-app .tb-panel
 ) { border-color: var(--uv-stroke); }
+
+/* frontend/dark-theme-foundation.css */
+/* CP-CRM-DARK-01 — dark-only semantic surfaces and workspace consistency.
+ * Deliberately presentation-only. This layer never changes light mode, layout,
+ * routing, signed session, API calls, business rules or permission behavior. */
+html[data-aps-monday-theme="dark"] {
+  --crm-dark-canvas: #15171c;
+  --crm-dark-sidebar: #191c23;
+  --crm-dark-surface: #242832;
+  --crm-dark-raised: #2c313d;
+  --crm-dark-hover: #363e4c;
+  --crm-dark-text: #edf0f7;
+  --crm-dark-muted: #bec8d9;
+  --crm-dark-border: #495365;
+  --crm-dark-focus: #a7a9f5;
+  --crm-dark-accent: #9ea8ff;
+  --crm-dark-accent-surface: #373d64;
+  --crm-dark-shadow: 0 14px 35px #0005;
+  color-scheme: dark;
+}
+
+/* Shared shell: existing dimensions, scroll behavior, and navigation remain. */
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar {
+  --side-ink: var(--crm-dark-text);
+  --side-muted: var(--crm-dark-muted);
+  --side-accent: var(--crm-dark-accent);
+  --side-line: var(--crm-dark-border);
+  --side-surface: var(--crm-dark-surface);
+  background: var(--crm-dark-sidebar);
+  border-color: var(--crm-dark-border);
+  color: var(--crm-dark-text);
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar
+  :is(.sidebar-brand-subtitle, .side-section, .workspace-sub,
+  .sidebar-profile-text .role, .sidebar-recent-count) {
+  color: var(--crm-dark-muted);
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar
+  :is(.brand, .brand-text, .workspace-name, .sidebar-profile-text .name) {
+  color: var(--crm-dark-text);
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .workspace-switcher {
+  background: var(--crm-dark-surface);
+  border-color: var(--crm-dark-border);
+  box-shadow: none;
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .ws01-switcher-button {
+  color: var(--crm-dark-text);
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .ws01-switcher-button:hover {
+  background: var(--crm-dark-hover);
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .nav-link:not(.active) {
+  color: var(--crm-dark-muted);
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .nav-link:hover:not(.active) {
+  color: var(--crm-dark-text);
+  background: var(--crm-dark-hover);
+  border-color: var(--crm-dark-border);
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .nav-link.active,
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .nav-link[aria-current="page"] {
+  background: var(--crm-dark-accent-surface);
+  color: var(--crm-dark-text);
+  border-color: #686db1;
+  box-shadow: inset 3px 0 0 var(--crm-dark-accent);
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar
+  :is(.nav-ico, .sidebar-board-initial, .nav-count, .sidebar-recent-count) {
+  background-color: var(--crm-dark-raised);
+  color: var(--crm-dark-muted);
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .nav-link.active .nav-ico {
+  background-color: #484b80;
+  color: #f2f2ff;
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar
+  :is(.sidebar-nav-section, .sidebar-recent-heading, .side-bottom, .sidebar-brand-wrap) {
+  border-color: var(--crm-dark-border);
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .side-bottom {
+  background: var(--crm-dark-sidebar);
+}
+
+/* Workspace selectors live outside the shell and need their own dark scope. */
+html[data-aps-monday-theme="dark"] :is(
+  .ws01-menu-card, .ws01-browser-card, .ws01-details-card, .ws01-create-card
+) {
+  background: var(--crm-dark-surface);
+  color: var(--crm-dark-text);
+  border-color: var(--crm-dark-border);
+  box-shadow: var(--crm-dark-shadow);
+}
+html[data-aps-monday-theme="dark"] :is(
+  .ws01-browser-top, .ws01-browser-tabs, .ws01-details-fields > div,
+  .ws01-menu-actions, .ws01-create-card .ws01-create-footer
+) {
+  border-color: var(--crm-dark-border);
+}
+html[data-aps-monday-theme="dark"] .ws01-browser-tabs {
+  background: var(--crm-dark-raised);
+}
+html[data-aps-monday-theme="dark"] :is(
+  .ws01-menu-heading, .ws01-browser-top h2, .ws01-browser-results h3,
+  .ws01-create-card h2, .ws01-details-heading h2,
+  .ws01-entry-copy strong, .ws01-details-fields dd
+) {
+  color: var(--crm-dark-text);
+}
+html[data-aps-monday-theme="dark"] :is(
+  .ws01-details-description, .ws01-details-fields dt,
+  .ws01-create-subtitle, .ws01-field-hint, .ws01-entry-copy small,
+  .ws01-create-card .ws01-create-state
+) {
+  color: var(--crm-dark-muted);
+}
+html[data-aps-monday-theme="dark"] :is(
+  .ws01-entry, .ws01-create-safety, .ws01-details-note,
+  .ws01-menu-card .ws01-note
+) {
+  background: var(--crm-dark-raised);
+  color: var(--crm-dark-text);
+  border-color: var(--crm-dark-border);
+}
+html[data-aps-monday-theme="dark"] :is(
+  .ws01-menu-actions button, .ws01-browser-tabs button,
+  .ws01-entry-button, .ws01-details-actions button,
+  .ws01-create-card footer button, .ws01-retry
+) {
+  color: var(--crm-dark-text);
+  background: var(--crm-dark-surface);
+  border-color: var(--crm-dark-border);
+}
+html[data-aps-monday-theme="dark"] :is(
+  .ws01-menu-actions button:hover, .ws01-browser-tabs button:hover,
+  .ws01-entry-button:hover, .ws01-details-actions button:hover
+) {
+  background: var(--crm-dark-hover);
+  color: var(--crm-dark-text);
+}
+html[data-aps-monday-theme="dark"] .ws01-browser-tabs button[aria-pressed="true"] {
+  background: var(--crm-dark-accent-surface);
+  color: #f2f2ff;
+}
+html[data-aps-monday-theme="dark"] :is(
+  .ws01-browser-tabs .ws01-add-button, .ws01-create-card footer .ws01-primary,
+  .ws01-details-actions .ws01-details-primary
+) {
+  background: #5b5cc5;
+  border-color: #7779e0;
+  color: #fff;
+}
+html[data-aps-monday-theme="dark"] :is(
+  .ws01-menu-card input, .ws01-browser-card input,
+  .ws01-details-card input, .ws01-create-card input[type="text"],
+  .ws01-create-card select, .ws01-create-card textarea
+) {
+  background: #1b2029;
+  border-color: var(--crm-dark-border);
+  color: var(--crm-dark-text);
+  caret-color: var(--crm-dark-text);
+}
+html[data-aps-monday-theme="dark"] :is(
+  .ws01-menu-card input, .ws01-browser-card input,
+  .ws01-details-card input, .ws01-create-card input
+)::placeholder {
+  color: var(--crm-dark-muted);
+}
+html[data-aps-monday-theme="dark"] :is(
+  .ws01-menu-card, .ws01-browser-card, .ws01-details-card, .ws01-create-card
+) :is(button, input, select, textarea, a[href], [role="button"]):focus-visible,
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar
+  :is(button, a[href], input, [role="button"]):focus-visible {
+  outline: 2px solid var(--crm-dark-focus);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-aps-monday-theme="dark"] :is(
+    .ws01-menu-card, .ws01-browser-card, .ws01-details-card, .ws01-create-card
+  ) :is(button, input, select, textarea) { transition: none; }
+}
