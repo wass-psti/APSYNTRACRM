@@ -70,6 +70,7 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/dark-workspace-invitations.css",
  "frontend/dark-board-sharing.css",
  "frontend/dark-search-settings.css",
- "frontend/dark-native-refinements.css"
+ "frontend/dark-native-refinements.css",
+ "frontend/dark-attendance-admin.css"
 ]);
 export const STYLE_BUNDLE="frontend/apsyntra-styles.bundle.css";

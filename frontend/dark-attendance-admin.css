@@ -1,0 +1,110 @@
+/* CP-CRM-DARK-08 — TimeTracker native attendance admin and monitor.
+ * Screen-only, dark-only. Do not change record handling or confirmation flow. */
+@media screen {
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log-command :is(
+ .tt-log-admin-toolbar,.tt-log-admin-selection-status,.tt-log-records .tt-log-empty
+) {background:#292929;background-image:none;color:#ededed;border-color:#565656;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log-command :is(
+ .tt-log-admin-toolbar strong,.tt-log-admin-toolbar-heading strong,
+ .tt-log-admin-selection-status strong
+) {color:#ededed}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log-command :is(
+ .tt-log-admin-toolbar span,.tt-log-admin-toolbar-heading span,
+ .tt-log-admin-selection-status span,.tt-log-admin-row-actions>span
+) {color:#c8c8c8}
+/* Existing selected-count rule uses !important; retain the count state with a
+ * readable foreground rather than introducing broad authority changes. */
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log-command .tt-log-admin-selected {
+ color:#b8d0ff!important}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log-command :is(
+ .tt-log-admin-toolbar-icon,.tt-log-admin-selection-status
+) {background:#333a4a;background-image:none;border-color:#5e739a;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log-command :is(
+ .tt-log-admin-toolbar-actions button,.tt-log-admin-row-actions button
+) {background:#343434;background-image:none;color:#ededed;border-color:#666;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log-command :is(
+ .tt-log-admin-toolbar-actions button,.tt-log-admin-row-actions button
+):hover:not(:disabled) {background:#424242;color:#fff;border-color:#888;transform:none;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log-command :is(
+ .tt-log-admin-toolbar-actions button,.tt-log-admin-row-actions button
+):disabled {background:#303030;background-image:none;color:#bdbdbd;border-color:#575757;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log-command :is(
+ .tt-log-admin-toolbar-actions .tt-log-admin-delete,.tt-log-admin-row-actions .tt-log-admin-delete
+) {background:#503137;background-image:none;color:#ffc6cc;border-color:#905a63}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log-command :is(
+ .tt-log-admin-toolbar-actions .tt-log-admin-delete,.tt-log-admin-row-actions .tt-log-admin-delete
+):disabled {background:#423036;background-image:none;color:#d7a9b0;border-color:#76565c}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log-command :is(
+ .tt-log-admin-feedback.is-error,.tt-log-admin-feedback.is-success
+) {background:#453032;color:#ffe5e4;border-color:#895b62}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log-command .tt-log-admin-feedback.is-success {
+ background:#263f36;color:#c7f5dd;border-color:#568571}
+/* Edit record: preserve its dark navy header and all form fields' enabled state. */
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor {
+ background:#252525;color:#ededed;border-color:#565656;box-shadow:0 20px 62px #000a;color-scheme:dark}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor-body,
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor-actions {
+ background:#292929;color:#ededed;border-color:#555}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native :is(
+ .tt-admin-record-context,.tt-admin-bulk-guidance,.tt-admin-field-section,.tt-admin-gps,
+ .tt-admin-delete-records
+) {background:#303030;background-image:none;color:#ededed;border-color:#585858;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native :is(
+ .tt-admin-field-section h4,.tt-admin-record-context>div strong,
+ .tt-admin-bulk-guidance strong,.tt-admin-delete-dialog h3
+) {color:#ededed}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native :is(
+ .tt-admin-field,.tt-admin-record-context>div small,.tt-admin-gps legend,
+ .tt-admin-gps p,.tt-admin-field-section>p,.tt-admin-editor-footnote,
+ .tt-admin-bulk-guidance p,.tt-admin-delete-dialog>p,
+ .tt-admin-delete-records>span,.tt-admin-delete-records ul
+) {color:#c8c8c8}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-field :is(input,select,textarea) {
+ background:#202020;background-image:none;color:#ededed;border-color:#686868;caret-color:#ededed;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-field :is(input,select,textarea):hover:not(:disabled) {
+ background:#282828;border-color:#898989}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-field :is(input,select,textarea):focus-visible {
+ background:#282828;border-color:#a9c6ff;outline:2px solid #a9c6ff;outline-offset:2px;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-field :is(input,select,textarea):disabled {
+ background:#303030;color:#bdbdbd;border-color:#555}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor-actions button:not(.primary) {
+ background:#343434;background-image:none;color:#ededed;border-color:#676767;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor-actions button:not(.primary):hover:not(:disabled) {
+ background:#454545;color:#fff;transform:none}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-error {
+ background:#4b3034;color:#ffe2df;border-color:#956166}
+/* Delete dialog retains destructive red styling and required confirmations. */
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-delete-dialog {
+ background:#292929;background-image:none;color:#ededed;border-color:#76585a;box-shadow:0 20px 62px #000a;color-scheme:dark}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-delete-icon {
+ background:#503137;background-image:none;color:#ffc6cc;border-color:#99636c;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-delete-audit-note {
+ background:#2d4237;background-image:none;border-color:#64816e}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-delete-audit-note :is(strong,span) {color:#c7f5dd}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-delete-actions {border-color:#585858}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-delete-actions button:not(.tt-admin-delete-confirm) {
+ background:#343434;color:#ededed;border-color:#686868;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-delete-actions button:not(.tt-admin-delete-confirm):hover:not(:disabled) {
+ background:#444;color:#fff;transform:none}
+/* Monitor cards remain genuine read-only metrics; no data/state changes. */
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-monitor-command :is(
+ .tt-monitor-empty,.tt-monitor-stat
+) {background:#292929;background-image:none;color:#ededed;border-color:#555;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-monitor-command :is(
+ .tt-monitor-empty strong,.tt-monitor-stat strong
+) {color:#ededed}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-monitor-command :is(
+ .tt-monitor-empty p,.tt-monitor-stat>span,.tt-monitor-subheading,.tt-monitor-section
+) {color:#c8c8c8}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-monitor-command .tt-monitor-empty>span {
+ background:#353d50;color:#c5d7ff;border-color:#667ca6}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native :is(
+ .tt-log-command,.tt-admin-editor,.tt-admin-delete-dialog,.tt-monitor-command
+) :is(button,input,select,textarea,[role="button"]):focus-visible {
+ outline:2px solid #a9c6ff;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){
+ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native :is(
+  .tt-log-command,.tt-admin-editor,.tt-admin-delete-dialog,.tt-monitor-command
+ ) :is(button,input,select,textarea) {animation:none;transition:none;transform:none}
+}
+}
