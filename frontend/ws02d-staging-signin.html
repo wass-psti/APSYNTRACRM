@@ -20,7 +20,7 @@ small{display:block;color:inherit;opacity:.8}h1{font-size:1.5rem}h2{font-size:1.
 <main>
 <header>
 <h1>APSYNTRA · Staging-only invitation acceptance</h1>
-<p>This tool uses <strong>only</strong> the isolated staging Supabase project. It is not the production CRM sign-in. Each account holder can use their own device; do not share credentials or session tokens. Credentials and signed tokens remain in the current browser tab's memory only; close the tab to clear them. Use a private window on a trusted computer.</p>
+<p>This tool uses <strong>only</strong> the isolated staging Supabase project. It is not the production CRM sign-in. The inviter signs in and sends from their own tab; the recipient signs in and accepts from their own tab. Never share credentials, OTPs or session tokens between accounts. Signed tokens remain only in the current tab's memory and are cleared when that tab closes.</p>
 </header>
 <section>
 <h2>1. Sign in as inviter</h2>
@@ -44,7 +44,7 @@ small{display:block;color:inherit;opacity:.8}h1{font-size:1.5rem}h2{font-size:1.
 </section>
 <section>
 <h2>3. Signed pairing and invitation</h2>
-<button type="button" id="pair">Verify both signed users in this tab (optional)</button>
+<button type="button" id="pair">Verify both signed users in this tab (optional diagnostic)</button>
 <label for="workspace">Inviter's isolated staging workspace ID (available after onboarding)</label>
 <input id="workspace" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
 <button type="button" id="readiness">Check signed invitation readiness</button>
@@ -53,7 +53,7 @@ small{display:block;color:inherit;opacity:.8}h1{font-size:1.5rem}h2{font-size:1.
 <label for="invitation-token">One-time token from the recipient's invitation email</label>
 <input id="invitation-token" type="password" autocomplete="off">
 <button type="button" id="accept">Accept as recipient</button>
-<output id="result" role="status">Two independent live staging sessions are required for server-side onboarding, but can be established on separate devices. Email delivery and workspace permissions are not altered by signing in.</output>
+<output id="result" role="status">Inviter: sign in here and check readiness before sending. Recipient: sign in on your own device and accept your invitation. Cross-account invitation status must be verified by the inviter separately. Signing in changes neither email delivery nor workspace permissions.</output>
 <small>Use password sign-in when the account holder has their staging password; it does not send email. OTP email requests are shared across both account slots and have a persistent client-side cooldown to prevent duplicate sends. A provider HTTP 429 increases the cooldown; the page never retries automatically and honors Retry-After when supplied. Numeric OTP requires the staging Supabase Authentication → Email Templates → Magic Link template to include {{ .Token }} instead of {{ .ConfirmationURL }}. Never paste passwords, verification codes, access tokens, or invitation tokens into chat. No production endpoint is used. Email submission does not prove inbox receipt.</small>
 </section>
 </main>
@@ -191,13 +191,15 @@ $('readiness').addEventListener('click',async()=>{try{await readiness()}catch(e)
 $('send').addEventListener('click',async()=>{
  let sendAttempted=false;
  try{
-  const {recipient}=await pair();
+  const inviter=await identity('inviter');
+  const recipientEmail=$('recipient-email').value.trim().toLowerCase();
+  if(!recipientEmail||recipientEmail===inviter.email)throw Error('A distinct recipient email is required');
   const workspaceId=workspace();
   if(!await readiness())return;
-  const scope=workspaceId+':'+recipient.email;
+  const scope=workspaceId+':'+recipientEmail;
   if(pendingRequestScope!==scope){pendingRequestScope=scope;pendingRequestId=crypto.randomUUID()}
   sendAttempted=true;
-  const result=await edge('invite',{workspaceId,requestId:pendingRequestId,email:recipient.email,role:'member',message:''},'inviter');
+  const result=await edge('invite',{workspaceId,requestId:pendingRequestId,email:recipientEmail,role:'member',message:''},'inviter');
   if(!UUID.test(result?.invitationId)||!['delivery-submitted','already-issued'].includes(result?.state))
    throw Error('Invitation delivery receipt was not confirmed');
   const manager=await edge('manage',{operation:'list',workspaceId},'inviter');
@@ -228,7 +230,7 @@ $('accept').addEventListener('click',async()=>{
  const input=$('invitation-token'),token=input.value.trim();input.value='';
  let acceptanceAttempted=false,acceptedReceipt=false;
  try{
-  await pair();
+  await identity('recipient');
   if(!INVITE_TOKEN.test(token))throw Error('Valid one-time inbox invitation token required');
   const invitationId=token.slice(0,token.indexOf('.'));
   const workspaceId=workspace();
@@ -237,13 +239,17 @@ $('accept').addEventListener('click',async()=>{
   if(result?.state!=='accepted'||result?.role!=='member'||result?.switched!==false||result?.workspaceId!==workspaceId)
    throw Error('Signed recipient acceptance receipt was invalid');
   acceptedReceipt=true;
+  if(!slots.inviter?.access_token){
+   status('result','Recipient signed acceptance receipt confirmed. Ask the inviter to use Read invitation statuses on their own device; persistence and cross-account visibility are not yet independently verified.');
+   return;
+  }
   const manager=await edge('manage',{operation:'list',workspaceId},'inviter');
   const accepted=manager?.invitations?.some(item=>item.id===invitationId&&item.state==='accepted');
   if(!accepted){
    status('result','Recipient acceptance receipt is confirmed, but inviter status readback is not yet accepted. Do not retry; reconcile the invitation record.');
    return;
   }
-  status('result','Recipient acceptance is committed. Independent inviter readback confirms the invitation is accepted. Verify the persisted workspace membership in the staging database.');
+  status('result','Recipient acceptance receipt and independent inviter status readback both confirm accepted. Verify persisted membership in the staging database.');
  }catch(e){
   if(acceptedReceipt)status('result','Recipient acceptance receipt is confirmed, but cross-account status readback failed. Do not retry; reconcile the invitation record.');
   else if(acceptanceAttempted)status('result','Invitation acceptance outcome is uncertain. Do not retry; reconcile the invitation record and membership before another attempt.');

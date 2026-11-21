@@ -33,7 +33,10 @@ test('invitation controls remain user-initiated and validate isolated workspace 
  assert.match(script,/async function readiness\(\)/);
  assert.match(script,/operation:'readiness'/);
  assert.match(script,/new URLSearchParams\(location\.search\)\.get\('workspaceId'\)/);
- assert.match(script,/const \{recipient\}=await pair\(\)/);
+ assert.match(script,/const inviter=await identity\('inviter'\)/);
+ assert.match(script,/await identity\('recipient'\)/);
+ assert.doesNotMatch(script,/const \{recipient\}=await pair\(\)/);
+ assert.match(script,/if\(!slots\.inviter\?\.access_token\)/);
  assert.match(script,/if\(!await readiness\(\)\)return/);
  assert.match(script,/item\.id===invitationId&&item\.state==='accepted'/);
  assert.match(script,/item\.deliveryState==='submitted'/);
@@ -125,4 +128,77 @@ test('numeric verification uses email OTP and rejects malformed codes before net
  assert.equal(calls[0].url,'https://jeqwjlxubntsddeauvqa.supabase.co/auth/v1/verify');
  assert.deepEqual(JSON.parse(calls[0].opts.body),{email:'lmsenagan@watchdogautomation.com.ph',token:'12345678',type:'email'});
  assert.match(elements.get('inviter-status').textContent,/Invalid, expired, or already-used email code/);
+});
+
+function independentDeviceFixture(which){
+ const handlers=new Map(),elements=new Map(),calls=[];
+ const make=(id,value='')=>{
+  const e={value,textContent:'',disabled:false,addEventListener(event,fn){handlers.set(id+':'+event,fn)}};
+  elements.set(id,e);return e;
+ };
+ for(const key of ['inviter','recipient']){
+  make(key+'-email',key==='inviter'?'lmsenagan@watchdogautomation.com.ph':'jspagsuguiron@watchdogautomation.com.ph');
+  make(key+'-password',key===which?'local-test-only':'');
+  make(key+'-code');make(key+'-status');
+ }
+ make('result');make('workspace');make('invitation-token');
+ const document={getElementById:id=>elements.get(id)??make(id),querySelectorAll:selector=>{
+  const attr=selector.match(/^\[data-(otp|login|verify)\]$/)?.[1];
+  if(!attr)return [];
+  return ['inviter','recipient'].map(key=>({dataset:{[attr]:key},textContent:'Request numeric email code',disabled:false,
+   addEventListener(event,fn){handlers.set(attr+':'+key+':'+event,fn)}}));
+ }};
+ const workspaceId='6a051705-e141-44d2-bb87-cf8a124ab17e';
+ const invitationId='00000000-0000-4000-8000-000000000011';
+ const userId=which==='inviter'?'00000000-0000-4000-8000-000000000021':'00000000-0000-4000-8000-000000000022';
+ const fetch=async(url,options={})=>{
+  const body=options.body?JSON.parse(options.body):null;
+  calls.push({url,body,authorization:!!options.headers?.authorization});
+  let payload={};
+  if(url.includes('/auth/v1/token?'))payload={access_token:'t'.repeat(100)};
+  else if(url.endsWith('/auth/v1/user'))payload={id:userId,email:elements.get(which+'-email').value,email_confirmed_at:'2026-11-21T00:00:00Z',is_anonymous:false};
+  else if(url.endsWith('/functions/v1/ws02d-manage')&&body.operation==='readiness')
+   payload={schemaVersion:1,authorized:true,ready:true,reason:'ready',workspaceId};
+  else if(url.endsWith('/functions/v1/ws02d-invite'))payload={state:'delivery-submitted',invitationId};
+  else if(url.endsWith('/functions/v1/ws02d-manage')&&body.operation==='list')
+   payload={authorized:true,workspaceId,invitations:[{id:invitationId,state:'pending'}],delivery:[{invitationId,deliveryState:'submitted'}]};
+  else if(url.endsWith('/functions/v1/ws02d-accept'))payload={state:'accepted',role:'member',switched:false,workspaceId};
+  else throw Error('Unexpected endpoint: '+url);
+  return {ok:true,status:200,json:async()=>payload};
+ };
+ runInNewContext(executableScript,{document,location:{search:'?workspaceId='+workspaceId},URLSearchParams,fetch,
+  encodeURIComponent,createOtpRequestControl,localStorage:createStorage(),setTimeout:()=>1,
+  crypto:{randomUUID:()=> '00000000-0000-4000-8000-000000000033'}});
+ return {handlers,elements,calls,workspaceId,invitationId};
+}
+
+test('inviter-only tab can check signed readiness and issue one invitation without a recipient session',async()=>{
+ const f=independentDeviceFixture('inviter');
+ await f.handlers.get('login:inviter:click')();
+ assert.match(f.elements.get('inviter-status').textContent,/Authenticated/);
+ assert.equal(f.elements.get('recipient-status').textContent,'');
+ await f.handlers.get('send:click')();
+ assert.match(f.elements.get('result').textContent,/pending invitation and submitted delivery ledger/);
+ const requests=f.calls.filter(c=>c.url.includes('/functions/v1/'));
+ assert.deepEqual(requests.map(c=>c.url.split('/').at(-1)),['ws02d-manage','ws02d-invite','ws02d-manage']);
+ assert.ok(requests.every(c=>c.authorization));
+ const issued=requests[1].body;
+ assert.equal(issued.email,'jspagsuguiron@watchdogautomation.com.ph');
+ assert.equal(issued.workspaceId,f.workspaceId);
+ assert.equal(issued.role,'member');
+});
+
+test('recipient-only tab accepts independently without needing inviter session or privileged manager read',async()=>{
+ const f=independentDeviceFixture('recipient');
+ await f.handlers.get('login:recipient:click')();
+ assert.match(f.elements.get('recipient-status').textContent,/Authenticated/);
+ f.elements.get('invitation-token').value=f.invitationId+'.'+'a'.repeat(64);
+ await f.handlers.get('accept:click')();
+ assert.equal(f.elements.get('invitation-token').value,'');
+ assert.match(f.elements.get('result').textContent,/Recipient signed acceptance receipt confirmed/);
+ assert.match(f.elements.get('result').textContent,/not yet independently verified/);
+ const endpoints=f.calls.filter(c=>c.url.includes('/functions/v1/'));
+ assert.equal(endpoints.length,1);
+ assert.ok(endpoints[0].url.endsWith('/ws02d-accept'));
+ assert.equal(endpoints[0].authorization,true);
 });
