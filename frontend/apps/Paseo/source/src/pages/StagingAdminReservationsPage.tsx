@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdminShell } from '../components/admin/AdminShell';
-import { configuredGuestApiBase, formatPeso } from '../guest/guestReservation';
+import { configuredGuestApiBase, formatPeso, resolveManagedQrImageUrl } from '../guest/guestReservation';
 import {
   backendAdminFetch, clearAdminToken, sharedSupabaseAdminEnabled,
 } from '../admin/staging/StagingAdminGate';
@@ -187,8 +187,11 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
     if (!response.ok) throw new Error('Payment methods not available.');
     const value: {methods: ManagedMethod[]} = await response.json();
     if (!Array.isArray(value.methods)) throw new Error('Invalid payment methods response.');
-    setPaymentMethods(value.methods);
-    return value.methods;
+    const methods = value.methods.map(item => ({
+      ...item, imageUrl: resolveManagedQrImageUrl(item.method, item.imageUrl),
+    }));
+    setPaymentMethods(methods);
+    return methods;
   }
   useEffect(() => () => { if (proof) URL.revokeObjectURL(proof.url); }, [proof]);
   useEffect(() => () => { proofRequest.current += 1; }, []);
