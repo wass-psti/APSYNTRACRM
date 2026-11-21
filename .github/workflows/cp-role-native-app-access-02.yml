@@ -1,0 +1,71 @@
+name: CP-ROLE-NATIVE-APP-ACCESS-02 Assignment Persistence Contract
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/cp-role-native-app-access-02.yml"
+      - "docs/CP-ROLE-NATIVE-APP-ACCESS-02.md"
+      - "frontend/app.js"
+      - "frontend/native-application-role-assignment.js"
+      - "frontend/tests/native-application-role-assignment.test.mjs"
+      - "frontend/tests/user-role-batch.test.mjs"
+      - "frontend/tests/user-role-tooltrace-workspace.test.mjs"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cp-role-native-app-access-02.yml"
+      - "docs/CP-ROLE-NATIVE-APP-ACCESS-02.md"
+      - "frontend/app.js"
+      - "frontend/native-application-role-assignment.js"
+      - "frontend/tests/native-application-role-assignment.test.mjs"
+      - "frontend/tests/user-role-batch.test.mjs"
+      - "frontend/tests/user-role-tooltrace-workspace.test.mjs"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  assignment-persistence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run full frontend regression
+        run: npm test
+      - name: Run focused assignment persistence contract
+        run: >-
+          node --test
+          frontend/tests/native-application-role-assignment.test.mjs
+          frontend/tests/user-role-batch.test.mjs
+          frontend/tests/user-role-tooltrace-workspace.test.mjs
+          frontend/tests/user-role-management.test.mjs
+          frontend/tests/user-role-scoped-six.test.mjs
+          frontend/tests/user-role-frt-scoped.test.mjs
+          frontend/tests/user-role-charter-scoped.test.mjs
+          frontend/tests/user-role-workspace-fueltrans.test.mjs
+      - name: Verify application and helper syntax
+        run: |
+          node --check frontend/app.js
+          node --check frontend/native-application-role-assignment.js
+      - name: Verify focused lint
+        run: >-
+          npx eslint frontend/app.js
+          frontend/native-application-role-assignment.js
+          frontend/tests/native-application-role-assignment.test.mjs
+          frontend/tests/user-role-batch.test.mjs
+          frontend/tests/user-role-tooltrace-workspace.test.mjs
+      - name: Verify repository lint and production build
+        run: |
+          npm run check
+          npm run lint
+          npm run build
+      - name: Verify formatting
+        run: |
+          npm run format:check
+          npx prettier --check frontend/native-application-role-assignment.js frontend/tests/native-application-role-assignment.test.mjs docs/CP-ROLE-NATIVE-APP-ACCESS-02.md .github/workflows/cp-role-native-app-access-02.yml
