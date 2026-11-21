@@ -433,6 +433,18 @@ test('active Clock Out reuses signed Clock In context and requires a fresh GPS f
 });
 
 
+test('mvasquez active Home clock-out hides the exempt work note and retains End Session',async()=>{
+ const id='5655922e-bb42-45e4-bf8b-348a0bf77f3a';
+ const prior={...example(id),clockIn:{...example(id).clockIn,
+  location:'Offsite (Home)',department:'Engineering',workNote:''}};
+ const s=setup({records:[prior],activeUser:id,email:'mvasquez@watchdogautomation.com.ph',
+  departmentValue:'Engineering',writeReady:true});
+ const html=renderTimeTrackerNative({result:await s.client.snapshot(board),view:'clock'});
+ assert.match(html,/id="tt-note-wrap" hidden/);
+ assert.match(html,/name="tt-action" value="clock-out"/);
+ assert.match(html,/Recorded work location/);
+});
+
 test('Home requires a trimmed note for ordinary accounts including System Admin',async()=>{
  const geo={status:'captured',latitude:10,longitude:123,accuracy:20};
  for(const role of ['Employee','System Admin']){

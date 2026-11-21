@@ -71,14 +71,18 @@ test('central catalog includes the separate General Administration department',(
 });
 
 
-test('Home note appears for both exempt accounts but is not required',()=>{
+test('Home note is hidden for both exempt accounts on clock-in and active clock-out',()=>{
  for(const email of ['asenagan@watchdogautomation.com.ph','mvasquez@watchdogautomation.com.ph']){
   const data=verified();data.access.email=email;
   const html=renderTimeTrackerNative({result:data,view:'clock',locationPreference:'Offsite (Home)'});
-  assert.match(html,/id="tt-note-wrap"/);
-  assert.doesNotMatch(html,/id="tt-note-wrap" hidden/);
-  assert.match(html,/textarea id="tt-note" maxlength/);
+  assert.match(html,/id="tt-note-wrap" hidden/);
   assert.doesNotMatch(html,/textarea id="tt-note" required/);
+  data.active={id:'exempt-active',clockIn:'2026-11-21T13:12:29.653Z',department:'Engineering',
+   location:'Offsite (Home)',workNote:''};
+  data.records=[data.active];
+  const active=renderTimeTrackerNative({result:data,view:'clock'});
+  assert.match(active,/id="tt-note-wrap" hidden/);
+  assert.match(active,/name="tt-action" value="clock-out"/);
  }
 });
 
@@ -87,7 +91,7 @@ test('verified mvasquez user ID keeps the Home note optional even when snapshot 
  data.access.email='';
  data.access.userId='5655922e-bb42-45e4-bf8b-348a0bf77f3a';
  const html=renderTimeTrackerNative({result:data,view:'clock',locationPreference:'Offsite (Home)'});
- assert.match(html,/id="tt-note-requirement"> \(optional\)<\/span>/);
+ assert.match(html,/id="tt-note-wrap" hidden/);
  assert.doesNotMatch(html,/textarea id="tt-note" required/);
  const nonExempt=verified();
  const mandatory=renderTimeTrackerNative({result:nonExempt,view:'clock',locationPreference:'Offsite (Home)'});

@@ -204,8 +204,11 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
   'Please press Start Session or End Session to request a fresh location fix.');
  const employeeDepartment=access?.employeeDepartment||null;
  const location=TT_LOCATIONS.includes(locationPreference)?locationPreference:'';
- const showHomeNote=location==='Offsite (Home)';
  const requireHomeNote=isTimeTrackerHomeNoteRequired(location,access?.email,access?.userId);
+ // Exempt employees have no Home note field, whether starting or ending a session.
+ const showHomeNote=location==='Offsite (Home)'&&requireHomeNote;
+ const showActiveHomeNote=active?.location==='Offsite (Home)'&&
+  isTimeTrackerHomeNoteRequired(active.location,access?.email,access?.userId);
  const session=active?timeTrackerSessionElapsed(active.clockIn,now):null;
  const autoClockout=active&&result.autoClockout?.recordId===active.id?result.autoClockout:null;
  const autoDeadline=autoClockout?.nextAt||autoClockout?.cutoffAt;
@@ -298,7 +301,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
        (employeeDepartment?'':'<small>Ask your TimeTracker administrator to assign your department before clocking in.</small>')+
       '</div>')+
      '<label for="tt-note" class="tt-note-field" id="tt-note-wrap"'+
-      (((active&&active.location==='Offsite (Home)')||(!active&&showHomeNote))?'':' hidden')+'>'+
+      ((active?showActiveHomeNote:showHomeNote)?'':' hidden')+'>'+
       'Offsite Work Note'+(!active?'<span id="tt-note-requirement">'+(requireHomeNote?' (required)':' (optional)')+'</span>':'')+'<textarea id="tt-note"'+((!active&&requireHomeNote)?' required':'')+
       (active?' readonly':'')+' maxlength="500" rows="3" placeholder="Describe your offsite work">'+
       (active?esc(active.workNote||''):'')+'</textarea></label>'+
