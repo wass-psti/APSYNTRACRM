@@ -29779,3 +29779,224 @@ html[data-aps-monday-theme="dark"]
     transition: none;
   }
 }
+
+/* frontend/uiverse-design-system.css */
+/* CP-CRM-UI-REDESIGN-01 — Uiverse-inspired shared control and surface system.
+ * Original adaptation, not copied third-party markup. Uiverse reference:
+ * https://uiverse.io/elements (community elements: MIT License).
+ * Presentation only: retain existing layout, keyboard events and server behavior.
+ */
+:root {
+  --uv-ink: var(--sm-ink, #253047);
+  --uv-secondary: var(--sm-text, #405068);
+  --uv-accent: var(--sm-accent, #6667ab);
+  --uv-accent-hover: var(--sm-accent-hover, #51528d);
+  --uv-accent-tint: var(--sm-accent-soft, #eeeef8);
+  --uv-surface: var(--sm-surface, #fff);
+  --uv-surface-hover: var(--sm-surface-raised, #fafbfd);
+  --uv-stroke: var(--sm-border, #e3e7ed);
+  --uv-stroke-strong: var(--sm-border-strong, #cfd6e1);
+  --uv-focus: var(--crm-ui-focus, #6869b7);
+  --uv-halo: var(--crm-ui-focus-halo, #6869b738);
+  --uv-radius-control: var(--sm-radius-control, 11px);
+  --uv-radius-panel: var(--sm-radius-card, 16px);
+  --uv-shadow: 0 1px 2px #192a4210, 0 7px 22px #192a4209;
+  --uv-shadow-hover: 0 2px 5px #192a4212, 0 12px 25px #192a4214;
+  --uv-speed: 160ms;
+}
+
+/* Consistent type without changing module-specific font metrics or row heights. */
+#app :is(.page-head h1, .aps-overview h1, .aps-boards h1, .aps-settings h1) {
+  color: var(--uv-ink);
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+#app :is(.page-head p, .panel-header p, .aps-sidebar .side-section) {
+  color: var(--sm-sub, #626c7d);
+}
+
+/* Native buttons retain their own sizing and click handlers. */
+#app :is(.primary, .secondary, .icon-button, .modal-close, .aps-select-trigger,
+  .aps-sidebar .workspace-switcher, .aps-sidebar .nav-link, .tabs .tab) {
+  transition: background-color var(--uv-speed) ease, border-color var(--uv-speed) ease,
+    color var(--uv-speed) ease, box-shadow var(--uv-speed) ease;
+}
+#app .primary:not(:disabled) {
+  border-color: var(--uv-accent);
+  background: var(--uv-accent);
+  color: #fff;
+  box-shadow: inset 0 1px 0 #ffffff29, 0 2px 5px #31328520;
+}
+#app .primary:hover:not(:disabled) {
+  border-color: var(--uv-accent-hover);
+  background: var(--uv-accent-hover);
+  box-shadow: inset 0 1px 0 #ffffff26, 0 5px 14px #31328526;
+  transform: none;
+}
+#app .secondary:not(:disabled) {
+  background: var(--uv-surface);
+  color: var(--uv-secondary);
+  border-color: var(--uv-stroke);
+}
+#app .secondary:hover:not(:disabled) {
+  border-color: var(--uv-stroke-strong);
+  background: var(--uv-surface-hover);
+  box-shadow: 0 2px 8px #263b5510;
+  transform: none;
+}
+#app :is(.primary, .secondary, .icon-button):not(:disabled):active {
+  box-shadow: inset 0 2px 5px #192a4220;
+  transform: none;
+}
+#app :is(button, input, select, textarea, a[href], summary, [role="button"],
+  [role="menuitem"], [role="option"]):focus-visible {
+  outline: 2px solid var(--uv-focus);
+  outline-offset: 3px;
+}
+#app :is(button, input, select, textarea, [role="button"]):disabled,
+#app :is(button, [role="button"])[aria-disabled="true"] {
+  box-shadow: none;
+  transform: none;
+}
+
+/* Shared forms; never disturb the custom floating select or search mechanics. */
+#app :is(.field input, .field textarea, .field select, .search-input) {
+  border-color: var(--uv-stroke);
+  background: var(--uv-surface);
+  color: var(--uv-ink);
+  border-radius: var(--uv-radius-control);
+  transition: border-color var(--uv-speed) ease, box-shadow var(--uv-speed) ease,
+    background-color var(--uv-speed) ease;
+}
+#app :is(.field input, .field textarea, .field select, .search-input):hover:not(:disabled) {
+  border-color: var(--uv-stroke-strong);
+}
+#app :is(.field input, .field textarea, .field select, .search-input):focus-visible {
+  border-color: var(--uv-focus);
+  box-shadow: 0 0 0 3px var(--uv-halo);
+}
+#app :is(input, select, textarea)[aria-invalid="true"]:focus-visible {
+  outline-color: var(--sm-danger, #b34755);
+  box-shadow: 0 0 0 3px #b347552c;
+}
+
+/* Shared navigation: active state never depends on hover-only affordances. */
+#app .aps-sidebar .nav-link:hover:not(.active) {
+  background: var(--sm-surface-soft, #f1f3f7);
+  color: var(--uv-ink);
+  border-color: var(--uv-stroke);
+}
+#app .aps-sidebar .nav-link.active,
+#app .aps-sidebar .nav-link[aria-current="page"] {
+  background: var(--uv-accent-tint);
+  color: var(--uv-accent-hover);
+  box-shadow: inset 3px 0 0 var(--uv-accent);
+}
+#app .aps-sidebar .workspace-switcher:hover {
+  border-color: var(--uv-stroke-strong);
+  box-shadow: var(--uv-shadow);
+}
+#app .topbar {
+  border-bottom-color: var(--uv-stroke);
+}
+
+/* Cards and panels share one quiet depth system. No scale or lift animation. */
+#app :is(.aps-overview, .aps-boards, .aps-settings)
+  :is(.stat-card, .board-card, .panel),
+#app .aps-board-shell .board-group-panel,
+#app :is(.ws01-browser-card, .fm1-app .fm1-panel, .tl-reference-portal .tl-draft-panel,
+  .tb-panel, .frt-ref-table-card) {
+  border-color: var(--uv-stroke);
+  border-radius: var(--uv-radius-panel);
+  box-shadow: var(--uv-shadow);
+}
+#app :is(.aps-overview, .aps-boards) :is(.stat-card, .board-card):hover {
+  box-shadow: var(--uv-shadow-hover);
+}
+#app :is(.aps-overview, .aps-boards) .board-card:focus-within {
+  box-shadow: 0 0 0 3px var(--uv-halo), var(--uv-shadow);
+}
+
+/* Floating layers keep the original positioning, anchoring and scroll behavior. */
+#app :is(.modal, .aps-action-popover, .board-tool-menu-panel,
+  .board-column-menu-content, .aps-select-listbox, .ws01-menu-card) {
+  border-color: var(--uv-stroke);
+  box-shadow: var(--uv-shadow-hover);
+}
+#app :is(.aps-action-popover, .board-tool-menu-panel, .board-column-menu-content)
+  :is(button, [role="menuitem"]):focus-visible {
+  outline-offset: -2px;
+  background: var(--uv-accent-tint);
+}
+#app .toast {
+  border-radius: var(--uv-radius-control);
+  box-shadow: var(--uv-shadow-hover);
+}
+#app :is(.spinner, [role="progressbar"]) {
+  accent-color: var(--uv-accent);
+}
+
+/* Respect OS preferences and preserve horizontally scrollable board groups. */
+@media (max-width: 720px) {
+  #app :is(.page-head, .head-actions, .aps-overview .panel-header,
+    .aps-boards .panel-header, .aps-settings .panel-header) {
+    min-width: 0;
+  }
+  #app .head-actions { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #app :is(.primary, .secondary, .icon-button, .modal-close,
+    .aps-select-trigger, .aps-sidebar .workspace-switcher,
+    .aps-sidebar .nav-link, .tabs .tab, .field input,
+    .field textarea, .field select, .search-input) { transition: none; }
+}
+html[data-aps-monday-theme="dark"] {
+  --uv-ink: #e9eaf1;
+  --uv-secondary: #d1d5e0;
+  --uv-accent: #8486d5;
+  --uv-accent-hover: #a4a6f0;
+  --uv-accent-tint: #35364e;
+  --uv-surface: #282a31;
+  --uv-surface-hover: #34363e;
+  --uv-stroke: #4c505a;
+  --uv-stroke-strong: #737783;
+  --uv-shadow: 0 2px 11px #00000030;
+  --uv-shadow-hover: 0 5px 20px #00000046;
+}
+html[data-aps-monday-theme="dark"] #app .primary:not(:disabled) {
+  color: #151626;
+}
+
+/* Workspace, role configuration and settings use the same panel language. */
+#app :is(.ws01-create-card, .ws01-details-card, .ws01-browser-card,
+  .aps-role-config-shell .panel, .aps-settings-shell .panel) {
+  border-color: var(--uv-stroke);
+  border-radius: var(--uv-radius-panel);
+  box-shadow: var(--uv-shadow);
+}
+#app :is(.ws01-browser-tabs, .role-config-tabs) button:focus-visible,
+#app :is(.ws01-entry-button, .role-activation-button):focus-visible {
+  outline: 2px solid var(--uv-focus);
+  outline-offset: 2px;
+}
+#app :is(.ws01-entry-button, .role-activation-button):not(:disabled):hover {
+  box-shadow: var(--uv-shadow);
+}
+
+/* Search and account feedback: maintain original aria roles and overlay geometry. */
+#app .aps-global-search-dialog {
+  border: 1px solid var(--uv-stroke);
+  border-radius: var(--uv-radius-panel);
+  box-shadow: var(--uv-shadow-hover);
+}
+#app .aps-global-search-input:focus-visible,
+#app .aps-global-search-option:focus-visible {
+  outline: 2px solid var(--uv-focus);
+  outline-offset: -2px;
+}
+#app .aps-global-search-option[aria-selected="true"] {
+  background: var(--uv-accent-tint);
+}
+#app .aps-auth-v2 :is(.auth-form-card, .auth-message) {
+  border-radius: var(--uv-radius-control);
+}
