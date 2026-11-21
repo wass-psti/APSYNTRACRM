@@ -3,12 +3,18 @@ on:
   pull_request:
     paths:
       - 'frontend/ws02d-staging-signin.html'
+      - 'docs/CP-CRM-WS02D-OTP-RATE-LIMIT-01.md'
+      - 'frontend/ws02d-otp-request-control.js'
+      - 'frontend/tests/ws02d-otp-request-control.test.mjs'
       - 'frontend/tests/cp-crm-ws02d-staging-signin.test.mjs'
       - '.github/workflows/cp-crm-ws02d-staging-signin.yml'
   push:
     branches: [main]
     paths:
       - 'frontend/ws02d-staging-signin.html'
+      - 'docs/CP-CRM-WS02D-OTP-RATE-LIMIT-01.md'
+      - 'frontend/ws02d-otp-request-control.js'
+      - 'frontend/tests/ws02d-otp-request-control.test.mjs'
       - 'frontend/tests/cp-crm-ws02d-staging-signin.test.mjs'
       - '.github/workflows/cp-crm-ws02d-staging-signin.yml'
   workflow_dispatch:
@@ -25,6 +31,6 @@ jobs:
         with:
           node-version: '22'
       - name: Verify isolated signed staging UI and invitation contracts
-        run: node --test frontend/tests/cp-crm-ws02d-staging-signin.test.mjs server/tests/ws02d-*.test.mjs frontend/tests/workspace-invitation*.test.mjs
+        run: node --test frontend/tests/cp-crm-ws02d-staging-signin.test.mjs frontend/tests/ws02d-otp-request-control.test.mjs server/tests/ws02d-*.test.mjs frontend/tests/workspace-invitation*.test.mjs
       - name: Verify recovered migration source integrity
         run: node scripts/verify-migration-source-manifest.mjs
