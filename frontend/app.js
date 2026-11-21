@@ -1897,7 +1897,7 @@ function render(){
    canProvision:state.roleVerified===true&&state.context?.profile?.platform_role==='admin_general_manager'
  }));
  else if(state.view==='security')shell(renderSecurityAcceptance({context:state.context,report:state.securityResult,busy:state.securityBusy,progress:state.securityProgress,writeResult:state.securityWriteResult,writeBusy:state.securityWriteBusy,frtResult:state.frtSecurityResult,frtBusy:state.frtSecurityBusy,ci07Result:state.ci07Result,ci07Busy:state.ci07Busy,sec14Result:state.sec14Result,sec14Busy:state.sec14Busy,sec14DenialResult:state.sec14DenialResult,sec14DenialBusy:state.sec14DenialBusy,sec07Result:state.sec07Result,sec07Busy:state.sec07Busy,sec09Result:state.sec09Result,sec09Busy:state.sec09Busy,sec10Result:state.sec10Result,sec10Busy:state.sec10Busy,sec10Boards:state.boards,sec10IsBootstrap:state.roleVerified===true,effectiveAccessResult:state.effectiveAccessResult,effectiveAccessBusy:state.effectiveAccessBusy,sec10BoardsError:state.securityBoardsError})+renderTradeLinkStageAAcceptance({busy:state.tl03ReadBusy,report:state.tl03ReadResult})+renderTradeLinkSessionRevocation({armed:state.tl03RevokeArmed,report:state.tl03RevokedReport})+renderWs01B2SignedAcceptance({busy:state.ws01B2Busy,report:state.ws01B2Result})+renderWs02dB3SignedPreflight({busy:state.ws02dB3Busy,report:state.ws02dB3Report})+renderWs02dB3DeployedHttpsAcceptance({busy:state.ws02dB3HttpsBusy,result:state.ws02dB3HttpsReport})+renderWs02dB3ForeignRlsDenial({busy:state.ws02dB3RlsBusy,result:state.ws02dB3RlsReport,hasFixture:hasWs02dB3ForeignRlsFixture()})+renderWs02dB3LocalRevocation({armed:state.ws02dB3RevokeArmed,report:state.ws02dB3RevokedReport})+renderB2SignedQaFixture({busy:state.b2QaBusy,result:state.b2QaReport})+renderB4SignedRecoveryPreflight({busy:state.b4QaBusy,report:state.b4QaReport})+renderPhaseBSignedDenial({busy:state.phaseBDenialBusy,report:state.phaseBDenialReport}));
- else if(state.view==='role-configuration')shell(renderRoleConfiguration({verified:state.adminVerified,loading:state.roleBusy,data:state.roleData,tab:state.roleTab,error:state.roleError}));
+ else if(state.view==='role-configuration')shell(renderRoleConfiguration({verified:state.adminVerified,loading:state.roleBusy,data:state.roleData,tab:state.roleTab,error:state.roleError,boardAccessData:state.userRoleData,selectedBoardUserId:state.userRoleSelected,actorUserId:state.context?.user_id,boardSearch:state.userRoleBoardSearch,boardBusy:state.userRoleBusy}));
  else if(state.view==='user-role-management'){shell('<div id="teams-route-host"></div>');teamsController?.mount(root.querySelector('#teams-route-host'));}
  else if(state.view==='invitation')shell(renderInvitationAcceptance({
   pending:pendingInvitation,enabled:true,
@@ -2641,6 +2641,25 @@ async function loadSystemAdminManagement(){
  state.systemAdminError='';
  return state.systemAdminData;
 }
+async function loadBoardAccessConfiguration(){
+ if(state.adminVerified!==true||!(await roleConfig.adminVerified()))
+  throw new ApiError('CRM administrator board access verification required.',403);
+ const context=await db.context();
+ if(context.user_id!==state.context?.user_id||
+    context.workspace_id!==state.context?.workspace_id)
+  throw new ApiError('Identity or active workspace changed.',403);
+ const data=await userRoleManager.snapshot(context.workspace_id);
+ const identity=await auth.getVerifiedUser(),current=await db.context();
+ if(identity?.id!==context.user_id||current.user_id!==context.user_id||
+    current.workspace_id!==context.workspace_id||
+    current.user_id!==state.context?.user_id||
+    current.workspace_id!==state.context?.workspace_id)
+  throw new ApiError('Identity or active workspace changed during board-access loading.',403);
+ state.userRoleData=data;
+ state.userRoleSelected=selectDefaultUserRoleTarget(
+  data.users,context.user_id,state.userRoleSelected);
+ state.userRoleError='';
+}
 async function applyUserRoleChange({userId,scope,resourceId,role,enabled,expectedUpdatedAt}){
  if(state.adminVerified!==true||!(await roleConfig.adminVerified()))throw new ApiError('CRM Administrator required.',403);
  const identity=await auth.getVerifiedUser(),ctx=await db.context();
@@ -2682,7 +2701,8 @@ async function applyUserRoleChange({userId,scope,resourceId,role,enabled,expecte
  }else{
   await userRoleManager.mutate({workspaceId:ctx.workspace_id,userId,scope,resourceId,role,enabled,expectedUpdatedAt});
  }
- await loadUserRoleManagement();
+ if(scope==='board')await loadBoardAccessConfiguration();
+ else await loadUserRoleManagement();
  const actual=scope==='module'?
    state.userRoleData?.moduleAssignments.find(r=>r.userId===userId&&r.moduleId===resourceId):
    state.userRoleData?.boardAssignments.find(r=>r.userId===userId&&r.boardId===resourceId);
@@ -2731,6 +2751,13 @@ async function loadRoleConfiguration(){
  const context=await db.context();
  if(context.user_id!==state.context?.user_id||context.workspace_id!==state.context?.workspace_id)
   throw new ApiError('Identity or active workspace changed.',403);
+ // Role Configuration now owns the board-access editor. Read the existing
+ // signed user/board assignment snapshot; do not create a parallel grant model.
+ await loadBoardAccessConfiguration();
+ const current=await db.context();
+ if(current.user_id!==context.user_id||current.workspace_id!==context.workspace_id||
+    current.user_id!==state.context?.user_id||current.workspace_id!==state.context?.workspace_id)
+  throw new ApiError('Identity or active workspace changed during board-access loading.',403);
  const data=await roleConfig.snapshot(context.workspace_id);
  state.roleData=data;state.roleError='';
 }
@@ -10062,7 +10089,7 @@ async function action(name,button){
  case 'role-tab':{
    if(!state.adminVerified)return;
    const tab=button.dataset.tab;
-   if(['roles','users','matrix','workspace','audit'].includes(tab)&&tab!==state.roleTab){
+   if(['roles','users','matrix','board-access','workspace','audit'].includes(tab)&&tab!==state.roleTab){
     state.roleTab=tab;render();
     animateTabContent('.aps-role-configuration');
    }
@@ -12052,6 +12079,14 @@ function syncTradeLinkFinanceInput(event){
 }
 root.addEventListener('change',event=>{
  if(syncTradeLinkFinanceInput(event))return;
+ if(event.target.id==='role-board-access-user'&&state.view==='role-configuration'&&
+    state.roleTab==='board-access'&&state.adminVerified&&!state.userRoleBusy){
+  const userId=String(event.target.value||'');
+  if(userId&&!state.userRoleData?.users.some(user=>user.id===userId))return;
+  state.userRoleSelected=userId||null;
+  state.userRoleBoardSearch='';
+  render();return;
+ }
  const inline=event.target?.closest?.('[data-tb-inline-status]');
  if(inline){
   const scope=talkBoxState.scope;
@@ -12589,6 +12624,21 @@ root.addEventListener('input',event=>{
   }
   const count=root.querySelector('#user-role-batch-search-count');
   if(count)count.textContent=matches+' matching';
+  return;
+ }
+ if(event.target.id==='role-board-access-search'&&state.view==='role-configuration'&&
+    state.roleTab==='board-access'&&state.adminVerified){
+  const query=String(event.target.value).slice(0,120);
+  state.userRoleBoardSearch=query;
+  const needle=query.trim().toLocaleLowerCase();
+  let matched=0;
+  for(const row of root.querySelectorAll('[data-role-board-access-row]')){
+   row.hidden=!row.dataset.boardName.includes(needle);
+   if(!row.hidden)matched++;
+  }
+  const count=root.querySelector('#role-board-access-count');
+  if(count)count.textContent=matched.toLocaleString('en-US')+' of '+
+   (state.userRoleData?.boards.length||0).toLocaleString('en-US')+' boards';
   return;
  }
  if(event.target.id==='user-role-board-filter'&&state.view==='user-role-management'&&state.adminVerified){

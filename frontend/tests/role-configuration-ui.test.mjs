@@ -6,12 +6,13 @@ test('bootstrap false never renders role data, users or navigation',()=>{
  assert.doesNotMatch(output,/sensitive@example.com|role-propose|Permission matrix/);
  assert.match(output,/Access unavailable/);
 });
-test('bootstrap panel includes five sections and twelve module capability matrix',()=>{
+test('bootstrap panel includes six sections and twelve module capability matrix',()=>{
  const html=renderRoleConfiguration({verified:true,data:{workspaceId:'ws',users:[],roles:[],assignments:[],boards:[],proposals:[],audit:[]},tab:'matrix'});
  assert.equal((html.match(/data-action="role-propose-permission"/g)||[]).length,12*7);
  assert.equal(PERMISSION_ACTIONS.length,7);
  assert.equal(ROLE_MODULE_OPTIONS.length,12);
  assert.match(html,/STAGED ONLY/);
+ assert.match(html,/data-tab="board-access"/);
 });
 test('server strings and profile display are escaped',()=>{
  const html=renderRoleConfiguration({verified:true,tab:'users',data:{

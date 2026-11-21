@@ -40,9 +40,10 @@ test('verified role configuration is route scoped and unavailable without CRM Ad
 
 test('staged-only banner and CRM permission ceiling remain intact',()=>{
  const result=renderRoleConfiguration({verified:true,data,tab:'roles'});
- assert.match(result,/Change control: STAGED ONLY/);
- assert.match(result,/production roles, permissions, board access and memberships cannot be altered/);
- assert.match(result,/No bootstrap identity can be assigned or revoked here/);
+ assert.match(result,/Role proposals: STAGED ONLY/);
+ assert.match(result,/Role proposals: STAGED ONLY/);
+ assert.match(result,/Board Access section uses the existing server-authorized workspace board assignment workflow/);
+ assert.match(result,/No bootstrap identity or board-owner assignment can be changed here/);
  assert.match(result,/The CRM role tier is separate from WatchdogWorkspace identity/);
  assert.match(result,/never grants an application membership, board ownership or unrelated application access/);
  for(const role of ['Admin','Supervisor','Employee','Viewer']){
@@ -73,13 +74,13 @@ test('summary metrics are derived strictly from provided server snapshot',()=>{
  assert.doesNotMatch(loading,/role-config-tabs/);
 });
 
-test('five tabs preserve server data and original action handlers, selection and search',()=>{
- const keys=['roles','users','matrix','workspace','audit'];
+test('six tabs preserve server data and original action handlers, selection and search',()=>{
+ const keys=['roles','users','matrix','board-access','workspace','audit'];
  for(const key of keys){
   const result=renderRoleConfiguration({verified:true,data,tab:key});
-  assert.equal((result.match(/data-action="role-tab"/g)||[]).length,5);
+  assert.equal((result.match(/data-action="role-tab"/g)||[]).length,6);
   assert.equal((result.match(/aria-pressed="true"/g)||[]).length,1);
-  assert.equal((result.match(/aria-pressed="false"/g)||[]).length,4);
+  assert.equal((result.match(/aria-pressed="false"/g)||[]).length,5);
   assert.match(result,new RegExp('data-tab="'+key+'" aria-pressed="true"'));
   assert.ok(result.endsWith('</div>'));
  }
@@ -99,6 +100,38 @@ test('five tabs preserve server data and original action handlers, selection and
  assert.match(assignments,/pending proposals do not grant access/);
  const workspace=renderRoleConfiguration({verified:true,data,tab:'workspace'});
  assert.match(workspace,/data-action="role-propose-workspace"/);
+ const boardAccessData={
+  users:[
+   {id:'22222222-2222-4222-8222-222222222222',name:'Example user',email:'user@example.invalid',protected:false},
+   {id:'55555555-5555-4555-8555-555555555555',name:'Protected admin',email:'admin@example.invalid',protected:true}
+  ],
+  boards:[
+   {id:'33333333-3333-4333-8333-333333333333',name:'QA board'},
+   {id:'66666666-6666-4666-8666-666666666666',name:'Finance board'}
+  ],
+  boardAssignments:[
+   {userId:'22222222-2222-4222-8222-222222222222',boardId:'33333333-3333-4333-8333-333333333333',role:'editor'}
+  ]
+ };
+ const boardTab=renderRoleConfiguration({verified:true,data,tab:'board-access',
+  boardAccessData,selectedBoardUserId:boardAccessData.users[0].id,
+  actorUserId:'77777777-7777-4777-8777-777777777777'});
+ assert.match(boardTab,/<h2 id="role-content-heading">Board Access<\/h2>/);
+ assert.match(boardTab,/aria-label="Live board access mode">Live assignments/);
+ assert.match(boardTab,/id="role-board-access-user"/);
+ assert.match(boardTab,/id="role-board-access-search"/);
+ assert.match(boardTab,/QA board<\/strong>/);
+ assert.match(boardTab,/editor<\/span>/);
+ assert.match(boardTab,/data-action="user-role-edit-board"/);
+ assert.match(boardTab,/data-action="user-role-revoke-board"/);
+ assert.match(boardTab,/Finance board/);
+ assert.match(app,/await loadBoardAccessConfiguration\(\);[\s\S]*?roleConfig\.snapshot\(context\.workspace_id\)/);
+ assert.match(app,/async function loadBoardAccessConfiguration\(\)[\s\S]*?userRoleManager\.snapshot\(context\.workspace_id\)/);
+ assert.match(app,/role-board-access-user/);
+ assert.match(app,/role-board-access-search/);
+ assert.match(app,/case 'user-role-edit-board':/);
+ assert.match(app,/case 'user-role-revoke-board':/);
+ assert.match(app,/async function applyUserRoleChange\(/);
  const audit=renderRoleConfiguration({verified:true,data,tab:'audit'});
  assert.match(audit,/Every staged proposal produces a server-side append-only event/);
  for(const action of ['role-refresh','role-tab','role-propose-create','role-propose-edit','role-propose-activation','role-propose-permission','role-propose-assign','role-propose-workspace'])
@@ -141,6 +174,7 @@ test('responsive scoped CSS preserves keyboard focus, no infinite GPU loop and s
   '.role-refresh-button:focus-visible','.role-tab-button:focus-visible',
   '.role-proposal-button:focus-visible','.role-activation-button:focus-visible',
   '.role-search:focus-visible','.role-table-scroll',
+  '.role-board-access-toolbar','.role-board-access-table','.role-board-access-selected',
   '@media(max-width:1250px)','@media(max-width:820px)',
   '@media(max-width:650px)','@media(max-width:395px)',
   '@media(prefers-reduced-motion:reduce)','@media(prefers-contrast:more)'])
