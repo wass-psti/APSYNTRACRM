@@ -14,7 +14,7 @@ test('Priority 5 preserves the exact-order consolidated CSS bundle',()=>{
  assert.ok(STYLE_SOURCES.includes("frontend/frt-voucher.css"));
  assert.equal(new Set(STYLE_SOURCES).size,STYLE_SOURCES.length);
  assert.equal((index.match(/<link rel="stylesheet"/g)||[]).length,1);
- assert.match(index,/href="\.\/frontend\/apsyntra-styles\.bundle\.css"/);
+ assert.match(index,/href="\.\/frontend\/apsyntra-styles\.bundle\.css(?:\?v=[a-z0-9-]+)?"/);
  for(let i=0;i<STYLE_SOURCES.length;i++){
   const path=STYLE_SOURCES[i];
   // Application-owned source folders may use the existing PascalCase app name.

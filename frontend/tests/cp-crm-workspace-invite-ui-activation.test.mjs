@@ -41,12 +41,12 @@ test('all invite launch points use a live list gate before provider submission, 
  const ui=readFileSync('frontend/workspace-ui.js','utf8');
  assert.equal((app.match(/checkInvitationAvailability:checkWorkspaceInvitationAvailability/g)||[]).length,3);
  assert.match(ui,/checkInvitationAvailability:options\.checkInvitationAvailability/);
- assert.match(ui,/const availability=await options\.checkInvitationAvailability\(row\.id\)/);
+ assert.match(ui,/const readiness=await options\.checkInvitationAvailability\(row\.id\)/);
  assert.match(app,/workspaceInvitationLiveManager\.readiness\(workspaceId\)/);
- assert.ok(ui.indexOf('const availability=await options.checkInvitationAvailability(row.id)') <
+ assert.ok(ui.indexOf('const readiness=await options.checkInvitationAvailability(row.id)') <
   ui.indexOf('const receipt=await options.sendInvitation({workspaceId:row.id'));
- assert.match(ui,/No email was submitted/);
- assert.match(ui,/Delivery outcome is unconfirmed/);
+ assert.match(ui,/No email was sent/);
+ assert.match(ui,/delivery result is unconfirmed/);
  assert.doesNotMatch(ui,/INSERT INTO public\.workspace_members/);
 });
 
@@ -56,7 +56,7 @@ test('production-facing invitation surfaces wire signed history and revocation, 
  assert.equal((app.match(/managementEnabled:true/g)||[]).length,3);
  assert.equal((app.match(/listInvitations:workspaceId=>workspaceInvitationLiveManager.list\(workspaceId\)/g)||[]).length,3);
  assert.equal((app.match(/revokeInvitation:request=>workspaceInvitationLiveManager.revoke\(request\)/g)||[]).length,3);
- assert.match(ui,/Invitation history is unavailable because the server service is not activated/);
- assert.match(ui,/Invitation history is not available for this workspace/);
+ assert.match(ui,/Invitation history is temporarily unavailable/);
+ assert.match(ui,/Invitation history is unavailable for this workspace/);
  assert.doesNotMatch(app,/managementEnabled:WS11_INVITATION_MANAGEMENT_ENABLED/);
 });

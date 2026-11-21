@@ -11,14 +11,18 @@ const deny=(message,status)=>{throw new ApiError(message,status)};
 
 export function captureInvitationLink(location,history){
  const hash=String(location?.hash||'');
- if(!hash.startsWith('#/invitations/accept/'))return null;
- const raw=hash.slice('#/invitations/accept/'.length);
- // If history replacement fails, DO NOT keep a token in memory while it is
- // exposed in the location bar, referrer or a subsequent navigation.
+ const query=new URLSearchParams(String(location?.search||'').replace(/^\?/,''));
+ const hashRoute=hash.startsWith('#/invitations/accept/');
+ const raw=hashRoute?hash.slice('#/invitations/accept/'.length):query.get('invite')||'';
+ if(!hashRoute&&!query.has('invite'))return null;
+ // Scrub the one-time bearer before auth callbacks, navigation or rendering.
  try{
   if(typeof history?.replaceState!=='function')return {status:'invalid',token:null};
+  query.delete('invite');
+  const search=query.toString();
+  const cleanHash=hashRoute?'#/invitations/accept':hash;
   history.replaceState(history.state??null,'',
-   String(location.pathname||'/')+String(location.search||'')+'#/invitations/accept');
+   String(location.pathname||'/')+(search?'?'+search:'')+cleanHash);
  }catch{return {status:'invalid',token:null};}
  return TOKEN.test(raw)?Object.freeze({status:'ready',token:raw}):
   Object.freeze({status:'invalid',token:null});
@@ -34,9 +38,9 @@ export function renderInvitationAcceptance({pending,enabled=false,busy=false,sta
   'Invitation acceptance has not been activated on the trusted server. No membership changes were made.';
  return '<section class="ws02d-acceptance" aria-labelledby="ws02d-accept-title">'+
   '<p class="ws02d-accept-eyebrow">Workspace invitation</p>'+
-  '<h1 id="ws02d-accept-title">Review invitation</h1>'+
+  '<h1 id="ws02d-accept-title">Join your workspace</h1>'+
   '<p class="ws02d-accept-message" role="status" aria-live="polite">'+message+'</p>'+
-  '<p class="ws02d-accept-note">A valid invitation requires a verified, matching recipient email and an active signed session. Workspace membership is never granted merely by opening a link.</p>'+
+  '<p class="ws02d-accept-note">Sign in with the email address that received this invitation, then confirm to join the workspace.</p>'+
   '<div class="ws02d-accept-actions"><button type="button" class="primary" data-action="ws02d-accept-invitation"'+
   (actionable?'':' disabled')+'>'+(busy?'Verifying…':'Accept invitation')+'</button>'+
   '<a href="#/overview" class="secondary">Return to Overview</a></div></section>';

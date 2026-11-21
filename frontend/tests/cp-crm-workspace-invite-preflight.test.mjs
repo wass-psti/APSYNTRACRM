@@ -12,9 +12,10 @@ test('production UI explicitly marks send, acceptance and manager listing dorman
  assert.equal(WS02D_ACCEPTANCE_ENABLED,false);
  assert.equal(WS11_INVITATION_MANAGEMENT_ENABLED,false);
  const ui=source('frontend/workspace-ui.js');
- assert.match(ui,/Send invites — pending activation/);
- assert.match(ui,/data-ws11-refresh disabled/);
- assert.match(ui,/Membership starts only after recipient acceptance/);
+ assert.match(ui,/Send invitation/);
+ assert.match(ui,/data-ws11-refresh/);
+ assert.match(ui,/refresh.disabled=!canManage/);
+ assert.match(ui,/recipient joins after signing in and accepting/);
 });
 test('dormant clients do not attempt authenticated writes or reads',async()=>{
  const auth={authorized:()=>{throw Error('unexpected network')}};

@@ -49,6 +49,7 @@ test('UI does not attribute missing backend to lost account authority',()=>{
  const ui=readFileSync('frontend/workspace-ui.js','utf8');
  assert.match(ui,/error\?\.code==='INVITATION_BACKEND_NOT_DEPLOYED'/);
  assert.match(ui,/Workspace Invitation backend is not deployed/);
- assert.match(ui,/Your account role has not changed/);
- assert.match(ui,/No email was submitted/);
+ assert.match(ui,/invitation service is unavailable/i);
+ assert.match(ui,/No email was sent/);
+ assert.doesNotMatch(ui,/Your account role has not changed/);
 });
