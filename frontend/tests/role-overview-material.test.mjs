@@ -31,11 +31,11 @@ test('Role Configuration styling is Overview-token aligned, scoped, responsive a
 test('all role screens retain staged-only authority and action contracts',()=>{
  const denied=renderRoleConfiguration({verified:false,data});
  assert.doesNotMatch(denied,/role-stat-grid|member@example.invalid/);
- for(const tab of ['roles','users','matrix','workspace','audit']){
+ for(const tab of ['roles','users','matrix','board-access','workspace','audit']){
   const html=renderRoleConfiguration({verified:true,data,tab});
-  assert.match(html,/Change control: STAGED ONLY/);
+  assert.match(html,/Role proposals: STAGED ONLY/);
   assert.match(html,/data-action="role-refresh"/);
-  assert.equal((html.match(/data-action="role-tab"/g)||[]).length,5);
+  assert.equal((html.match(/data-action="role-tab"/g)||[]).length,6);
   assert.equal((html.match(/aria-pressed="true"/g)||[]).length,1);
   assert.match(html,/role-stat-grid/);
   assert.match(html,/role-config-hero/);
@@ -45,4 +45,42 @@ test('all role screens retain staged-only authority and action contracts',()=>{
  assert.match(matrix,/not effective grants/);
  assert.match(source,/bootstrapProtected/);
  assert.match(source,/Protected bootstrap identity/);
+});
+
+test('Board Access tab exposes the existing live board assignment controls and preserves owner/read-only states',()=>{
+ const actor='77777777-7777-4777-8777-777777777777';
+ const member='22222222-2222-4222-8222-222222222222';
+ const protectedUser='44444444-4444-4444-8444-444444444444';
+ const board='33333333-3333-4333-8333-333333333333';
+ const boardData={users:[
+  {id:member,name:'Member',email:'member@example.invalid',protected:false},
+  {id:actor,name:'Current admin',email:'admin@example.invalid',protected:false},
+  {id:protectedUser,name:'Protected admin',email:'protected@example.invalid',protected:true}
+ ],boards:[{id:board,name:'Operations board'},
+  {id:'55555555-5555-4555-8555-555555555555',name:'Owner board'}],
+  boardAssignments:[
+   {userId:member,boardId:board,role:'viewer'},
+   {userId:member,boardId:'55555555-5555-4555-8555-555555555555',role:'owner'}
+  ]};
+ const output=renderRoleConfiguration({verified:true,data,tab:'board-access',boardAccessData:boardData,
+  selectedBoardUserId:member,actorUserId:actor});
+ assert.match(output,/viewer<\/span>/);
+ assert.match(output,/owner<\/span>/);
+ assert.match(output,/data-action="user-role-edit-board"/);
+ assert.match(output,/data-action="user-role-revoke-board"/);
+ assert.match(output,/Owner is protected/);
+ const protectedOutput=renderRoleConfiguration({verified:true,data,tab:'board-access',boardAccessData:boardData,
+  selectedBoardUserId:protectedUser,actorUserId:actor});
+ assert.match(protectedOutput,/protected administrator is read-only/);
+ assert.match(protectedOutput,/data-action="user-role-edit-board"[^>]*disabled/);
+ const selfOutput=renderRoleConfiguration({verified:true,data,tab:'board-access',boardAccessData:boardData,
+  selectedBoardUserId:actor,actorUserId:actor});
+ assert.match(selfOutput,/Your own board access cannot be assigned or revoked/);
+ assert.match(selfOutput,/data-action="user-role-edit-board"[^>]*disabled/);
+ const filtered=renderRoleConfiguration({verified:true,data,tab:'board-access',boardAccessData:boardData,
+  selectedBoardUserId:member,actorUserId:actor,boardSearch:'owner'});
+ assert.match(filtered,/data-role-board-access-row[^>]*hidden/);
+ assert.match(filtered,/id="role-board-access-count"/);
+ const missing=renderRoleConfiguration({verified:true,data,tab:'board-access'});
+ assert.match(missing,/Loading verified board access assignments/);
 });
