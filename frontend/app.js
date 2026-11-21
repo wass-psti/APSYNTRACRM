@@ -12077,9 +12077,10 @@ root.addEventListener('change',event=>{
   const group=root.querySelector('#tt-note-wrap');
   const note=root.querySelector('#tt-note');
   if(group&&note){
-   const showHomeNote=event.target.value==='Offsite (Home)';
+   const showHomeNote=event.target.value==='Offsite (Home)'&&
+    isTimeTrackerHomeNoteRequired(event.target.value,state.ttAttendance?.access?.email,state.ttAttendance?.access?.userId);
    group.hidden=!showHomeNote;
-   note.required=isTimeTrackerHomeNoteRequired(event.target.value,state.ttAttendance?.access?.email,state.ttAttendance?.access?.userId);
+   note.required=showHomeNote;
    const requirement=root.querySelector('#tt-note-requirement');
    if(requirement)requirement.textContent=note.required?' (required)':' (optional)';
    if(!showHomeNote)note.value='';
