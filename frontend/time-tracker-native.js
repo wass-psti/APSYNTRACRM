@@ -590,7 +590,7 @@ export class TimeTrackerNativeClient{
   // authoritative. The SQL write endpoint independently enforces the mapping.
   const note=String(workNote||'').trim();
   if(note.length>500)deny('Work note exceeds 500 characters');
-  if(action==='clock-in'&&isTimeTrackerHomeNoteRequired(committedLocation,before.access.email)&&!note)
+  if(action==='clock-in'&&isTimeTrackerHomeNoteRequired(committedLocation,before.access.email,before.access.userId)&&!note)
    deny('Offsite Work Note is mandatory');
   if(!isRecord(geo)||geo.status!=='captured'||!Number.isFinite(geo.latitude)||
     geo.latitude < -90||geo.latitude>90||!Number.isFinite(geo.longitude)||

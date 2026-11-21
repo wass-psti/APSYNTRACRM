@@ -461,6 +461,19 @@ test('only two authenticated email accounts can clock in at Home without a note'
  }
 });
 
+test('verified mvasquez user ID permits an empty Home note without an email field',async()=>{
+ const signedUserId='5655922e-bb42-45e4-bf8b-348a0bf77f3a';
+ const s=setup({writeReady:true,activeUser:signedUserId,email:''});
+ const geo={status:'captured',latitude:10,longitude:123,accuracy:20};
+ const snapshot=await s.client.snapshot(board);
+ assert.equal(snapshot.access.email,'');
+ assert.equal(snapshot.access.userId,signedUserId);
+ const receipt=await s.client.commit(board,{action:'clock-in',location:'Offsite (Home)',workNote:'   ',geo});
+ assert.equal(receipt.action,'clock-in');
+ assert.equal(s.lastWrite().p_work_note,null);
+ assert.equal(s.commits(),1);
+});
+
 test('Home reason readback is scoped to the signed attendance owner',()=>{
  const own={...example(),clockIn:{...example().clockIn,location:'Offsite (Home)',workNote:'  Approved home schedule  '}};
  const foreignRecord={...example(other),id:'foreign-note',clockIn:{...example(other).clockIn,workNote:'Sensitive note'}};

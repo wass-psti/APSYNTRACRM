@@ -14,6 +14,17 @@ test('only verified-account allowlist bypasses the Home requirement',()=>{
   assert.equal(isTimeTrackerHomeNoteRequired(location,''),false);
 });
 
+test('accessible mvasquez account remains exempt when verified email is omitted from the TimeTracker snapshot',()=>{
+ const verifiedId='5655922e-bb42-45e4-bf8b-348a0bf77f3a';
+ assert.equal(isTimeTrackerHomeNoteRequired('Offsite (Home)','',verifiedId),false);
+ assert.equal(isTimeTrackerHomeNoteRequired('Offsite (Home)',null,verifiedId.toUpperCase()),false);
+ assert.equal(isTimeTrackerHomeNoteRequired('Offsite (Home)','wrong@example.test',verifiedId),true);
+ assert.equal(isTimeTrackerHomeNoteRequired('Offsite (Home)','',null),true);
+ assert.equal(isTimeTrackerHomeNoteRequired('Offsite (Home)','',
+  '00000000-0000-4000-8000-000000000003'),true);
+ assert.equal(isTimeTrackerHomeNoteRequired('Local Field Works','',null),false);
+});
+
 test('SQL keeps actor identity authoritative and atomic write behavior unchanged',()=>{
  const sql=readFileSync('supabase/migrations/20261121061831_cp_tt_offsite_home_note_account_exemptions.sql','utf8');
  assert.match(sql,/FROM auth\.users u WHERE u\.id=v_user/);

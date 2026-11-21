@@ -4577,7 +4577,7 @@ async function submitTimeTrackerAction(form,actionName){
   render();return;
  }
  const workNote=actionName==='clock-in'?String(form.querySelector('#tt-note')?.value||'').trim():'';
- if(actionName==='clock-in'&&isTimeTrackerHomeNoteRequired(location,state.ttAttendance.access?.email)&&!workNote){
+ if(actionName==='clock-in'&&isTimeTrackerHomeNoteRequired(location,state.ttAttendance.access?.email,state.ttAttendance.access?.userId)&&!workNote){
   state.ttError='Offsite Work Note is mandatory for Home. Enter a reason before starting your session.';
   render();return;
  }
@@ -12079,7 +12079,9 @@ root.addEventListener('change',event=>{
   if(group&&note){
    const showHomeNote=event.target.value==='Offsite (Home)';
    group.hidden=!showHomeNote;
-   note.required=isTimeTrackerHomeNoteRequired(event.target.value,state.ttAttendance?.access?.email);
+   note.required=isTimeTrackerHomeNoteRequired(event.target.value,state.ttAttendance?.access?.email,state.ttAttendance?.access?.userId);
+   const requirement=root.querySelector('#tt-note-requirement');
+   if(requirement)requirement.textContent=note.required?' (required)':' (optional)';
    if(!showHomeNote)note.value='';
   }
  }
