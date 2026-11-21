@@ -5,11 +5,11 @@ import {STYLE_SOURCES,STYLE_BUNDLE} from '../../scripts/priority5-style-manifest
 import {generateStyleBundle} from '../../scripts/build-priority5-styles.mjs';
 const css=readFileSync('frontend/dark-enterprise-monday.css','utf8');
 test('reference-inspired dark layer follows the existing native dark layer',()=>{
- assert.deepEqual(STYLE_SOURCES.slice(-7,-4),[
+ assert.deepEqual(STYLE_SOURCES.slice(-8,-5),[
   'frontend/dark-theme-foundation.css','frontend/dark-native-applications.css',
   'frontend/dark-enterprise-monday.css']);
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());
- assert.match(readFileSync('index.html','utf8'),/apsyntra-styles\.bundle\.css\?v=(?:cp-crm-dark-0[34]|(?:cp-crm-dark-invite-01|cp-crm-dark-05))/);
+ assert.match(readFileSync('index.html','utf8'),/apsyntra-styles\.bundle\.css\?v=(?:cp-crm-dark-0[34]|(?:cp-crm-dark-invite-01|(?:cp-crm-dark-05|cp-crm-dark-06)))/);
 });
 test('compact, restrained enterprise palette covers existing shell and modules',()=>{
  for(const item of ['--crm-dark-canvas:#121212','--crm-dark-sidebar:#181818',

@@ -68,6 +68,7 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/dark-role-configuration.css",
  "frontend/dark-overview-legibility.css",
  "frontend/dark-workspace-invitations.css",
- "frontend/dark-board-sharing.css"
+ "frontend/dark-board-sharing.css",
+ "frontend/dark-search-settings.css"
 ]);
 export const STYLE_BUNDLE="frontend/apsyntra-styles.bundle.css";
