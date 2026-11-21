@@ -39,20 +39,28 @@ export function backendAdminFetch(path: string, options: RequestInit = {}): Prom
 
 /** Frontend convenience only; every sensitive backend route independently checks the session. */
 export function StagingAdminGate({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<'checking' | 'allowed' | 'denied'>('checking');
+  const [status, setStatus] = useState<'checking' | 'allowed' | 'denied' | 'unavailable'>('checking');
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
     if (!backendAdminEnabled) { setStatus('allowed'); return; }
     const controller = new AbortController();
     backendAdminFetch('/v1/admin/session', {
       signal: controller.signal, cache: 'no-store',
     }).then(response => {
-      if (!controller.signal.aborted) setStatus(response.ok ? 'allowed' : 'denied');
+      if (!controller.signal.aborted) setStatus(response.ok ? 'allowed' :
+        [401, 403].includes(response.status) ? 'denied' : 'unavailable');
     }).catch(() => {
-      if (!controller.signal.aborted) setStatus('denied');
+      if (!controller.signal.aborted) setStatus('unavailable');
     });
     return () => controller.abort();
-  }, []);
+  }, [retry]);
   if (status === 'checking') return <div className="container section" role="status">Checking administrator session…</div>;
+  if (status === 'unavailable') return <div className="container section" role="alert">
+    <p>Administrator session check is temporarily unavailable. Your session has not been signed out.</p>
+    <button type="button" className="button button-primary" onClick={() => {
+      setStatus('checking'); setRetry(value => value + 1);
+    }}>Retry session check</button>
+  </div>;
   if (status === 'denied') return <Navigate to="/admin/sign-in" replace />;
   return <>{children}</>;
 }

@@ -52,6 +52,8 @@ try{
   await page.close();
  }
  const admin=await browser.newPage();
+ await admin.route('**/functions/v1/pdl-guest-api/v1/admin/session',async route=>
+   route.fulfill({status:401,json:{error:'missing_session'}}));
  await admin.goto(base+'paseo/admin');
  await admin.getByRole('heading',{name:/Administrator sign-in/i}).waitFor({timeout:15000});
  assert.deepEqual(await admin.locator('.admin-metrics').count(),0);
@@ -186,20 +188,71 @@ try{
  const moduleErrors=[];
  modules.on('pageerror',error=>moduleErrors.push(error.message));
  await modules.addInitScript(()=>sessionStorage.setItem('pdl-booking-admin-access-token','SYNTHETIC_TEST_ONLY'));
+ const courtState={courtId:'court-1',name:'Court 1',enabled:false,openMinute:480,closeMinute:1320,rates:[]};
+ const policyState={reservationLeadHours:0,arrivalGraceMinutes:15,publicNotice:''};
+ const calendarState={weekdays:[],blocks:[]};
+ const bookingState={
+   id:'33333333-3333-4333-8333-333333333333',court_code:'court-1',
+   reservation_date:'2026-11-23',start_minute:480,duration_minutes:60,
+   amount_minor:50000,full_name:'Acceptance Customer',email:'acceptance@example.test',
+   phone:'09171234567',payment_method:'gcash',booking_status:'pending_verification',
+   payment_status:'submitted',version:1,created_at:'2026-11-21T12:00:00Z',
+ };
+ const methods=[{method:'gcash',recipient:'Test Recipient',imageUrl:null},
+   {method:'maya',recipient:'Other Recipient',imageUrl:null},
+   {method:'bpi',recipient:'Third Recipient',imageUrl:null}];
+ const writeCalls=[];
  await modules.route('**/functions/v1/pdl-guest-api/v1/admin/**',async route=>{
-   const path=new URL(route.request().url()).pathname;
+   const request=route.request();
+   const path=new URL(request.url()).pathname;
    const send=(json,status=200)=>route.fulfill({status,json});
    if(path.endsWith('/v1/admin/session'))return send({authenticated:true});
-   if(path.endsWith('/v1/admin/courts'))return send({courts:[
-     {courtId:'court-1',name:'Court 1',enabled:false,openMinute:480,closeMinute:1320,rates:[]},
-   ]});
-   if(path.endsWith('/v1/admin/reservations/page'))return send({reservations:[],nextCursor:null});
-   if(path.endsWith('/v1/admin/calendar'))return send({weekdays:[],blocks:[]});
-   if(path.endsWith('/v1/admin/policies'))return send({reservationLeadHours:0,arrivalGraceMinutes:15,publicNotice:''});
+   if(request.method()!=='GET')writeCalls.push(path);
+   if(path.endsWith('/v1/admin/courts'))return send({courts:[courtState]});
+   if(path.endsWith('/v1/admin/courts/court-1')&&request.method()==='PUT'){
+     Object.assign(courtState,request.postDataJSON());return send({updated:true});
+   }
+   if(path.endsWith('/v1/admin/rates/court-1/60')&&request.method()==='PUT'){
+     const rate=request.postDataJSON();
+     courtState.rates=[{durationMinutes:60,...rate}];
+     return send({updated:true});
+   }
+   if(path.endsWith('/v1/admin/reservations/page'))return send({reservations:[bookingState],nextCursor:null});
+   if(path.endsWith('/v1/admin/reservations/'+bookingState.id+'/verification')){
+     const body=request.postDataJSON();
+     if(body.expectedVersion!==bookingState.version)return send({error:'verification_conflict'},409);
+     bookingState.payment_status=body.decision;
+     bookingState.booking_status=body.decision==='verified'?'confirmed':'rejected';
+     bookingState.version++;return send({updated:true});
+   }
+   if(path.endsWith('/v1/admin/calendar')&&request.method()==='GET')return send(calendarState);
+   if(path.includes('/v1/admin/calendar/')&&path.includes('/weekdays/')&&request.method()==='PUT'){
+     const data=request.postDataJSON();
+     calendarState.weekdays=[{courtId:'court-1',weekday:1,...data}];return send({updated:true});
+   }
+   if(path.endsWith('/v1/admin/calendar/maintenance')&&request.method()==='POST'){
+     calendarState.blocks=[{id:'44444444-4444-4444-8444-444444444444',...request.postDataJSON()}];
+     return send({created:true});
+   }
+   if(path.endsWith('/v1/admin/calendar/maintenance/44444444-4444-4444-8444-444444444444')&&request.method()==='DELETE'){
+     calendarState.blocks=[];return send({removed:true});
+   }
+   if(path.endsWith('/v1/admin/policies')){
+     if(request.method()==='PUT'){
+       Object.assign(policyState,request.postDataJSON());return send({updated:true});
+     }
+     return send(policyState);
+   }
+   if(path.endsWith('/v1/admin/payment-methods/gcash')&&request.method()==='PUT'){
+     const form=request.postData();
+     assert.ok(form?.includes('Acceptance Recipient'));
+     methods[0]={...methods[0],recipient:'Acceptance Recipient',imageUrl:null};
+     return send({updated:true});
+   }
    return send({error:'missing_fixture'},404);
  });
  await modules.route('**/functions/v1/pdl-guest-api/v1/payment-methods',async route=>
-   route.fulfill({status:200,json:{methods:[]}}));
+   route.fulfill({status:200,json:{methods}}));
  const routes=[
    ['courts','Court schedule'],['calendar','Weekly operating hours'],
    ['bookings','Booking queue'],['pricing','Server-authoritative booking rate'],
@@ -222,9 +275,98 @@ try{
  await modules.getByText('Court schedule',{exact:true}).waitFor();
  await modules.goForward();
  await modules.getByText('Weekly operating hours',{exact:true}).waitFor();
+ // Stateful, isolated HTTP fixtures verify genuine UI save -> GET -> reload flows.
+ await modules.goto(base+'paseo/admin/courts');
+ await modules.locator('#pdl-open-minute').fill('540');
+ await modules.getByRole('button',{name:'Save court configuration'}).click();
+ await modules.getByText('Court settings saved in the dedicated Paseo Supabase schema.').waitFor();
+ await modules.reload();
+ await modules.waitForFunction(() => document.querySelector('#pdl-open-minute')?.value==='540');
+ assert.equal(courtState.openMinute,540);
+ console.log('PASS court configuration write and persisted fixture readback after refresh');
+
+ await modules.goto(base+'paseo/admin/pricing');
+ await modules.locator('#pdl-rate-amount').fill('500');
+ await modules.getByRole('button',{name:'Save server rate'}).click();
+ await modules.getByText('Rate saved. Enable the court and rate only after venue approval.').waitFor();
+ await modules.reload();
+ await modules.waitForFunction(() => document.querySelector('#pdl-rate-amount')?.value==='500.00');
+ console.log('PASS rate configuration write and persisted fixture readback after refresh');
+
+ await modules.goto(base+'paseo/admin/calendar');
+ await modules.getByRole('combobox',{name:'Opening time'}).selectOption('540');
+ await modules.getByRole('button',{name:'Save weekday schedule'}).click();
+ await modules.getByText('Saved and confirmed by a fresh server read.').waitFor();
+ await modules.reload();
+ await modules.waitForFunction(() => document.querySelector('[aria-label=\"Opening time\"]')?.value==='540');
+ await modules.getByRole('button',{name:'Add maintenance block'}).click();
+ await modules.getByRole('button',{name:'Remove block'}).waitFor();
+ await modules.reload();
+ await modules.getByRole('button',{name:'Remove block'}).waitFor();
+ await modules.getByRole('button',{name:'Remove block'}).click();
+ await modules.getByText('No maintenance blocks stored for this court and date.').waitFor();
+ console.log('PASS calendar weekday and maintenance create/read/delete persistence fixtures');
+
+ await modules.goto(base+'paseo/admin/settings');
+ await modules.locator('.fe08-settings-form input').first().fill('3');
+ await modules.getByRole('button',{name:'Save operational policies'}).click();
+ await modules.getByText('Policy saved and verified by server readback.').waitFor();
+ await modules.reload();
+ await modules.waitForFunction(() => document.querySelector('.fe08-settings-form input')?.value==='3');
+ console.log('PASS operational policy write and persisted fixture readback after refresh');
+
+ await modules.goto(base+'paseo/admin/bookings');
+ await modules.getByText('Acceptance Customer',{exact:false}).first().waitFor();
+ await modules.getByRole('button',{name:'Mark payment verified'}).click();
+ await modules.getByText('Booking: confirmed',{exact:false}).waitFor();
+ await modules.reload();
+ await modules.getByText('Payment: verified',{exact:false}).waitFor();
+ await modules.goto(base+'paseo/admin/customers');
+ await modules.getByText('acceptance@example.test',{exact:true}).waitFor();
+ console.log('PASS booking payment verification and customer projection persist across modules');
+
+ await modules.goto(base+'paseo/admin/payments');
+ await modules.locator('#admin-qr-recipient-gcash').fill('Acceptance Recipient');
+ await modules.locator('#admin-qr-image-gcash').setInputFiles({
+   name:'test-qr.png',mimeType:'image/png',
+   buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9YseMZkAAAAASUVORK5CYII=','base64'),
+ });
+ await modules.getByRole('button',{name:'Save GCash QR configuration'}).click();
+ await modules.getByText('GCash QR image saved for this payment method.').waitFor();
+ await modules.reload();
+ await modules.waitForFunction(() => document.querySelector('#admin-qr-recipient-gcash')?.value==='Acceptance Recipient');
+ assert.ok(writeCalls.some(path=>path.endsWith('/v1/admin/payment-methods/gcash')));
+ console.log('PASS synthetic QR payment configuration upload and readback after refresh');
  assert.deepEqual(moduleErrors,[]);
  console.log('PASS seven admin module routes: direct link, refresh, tab switching, back/forward without runtime errors');
  await modules.close();
+ // A gateway outage is not evidence that a signed administrator lost access.
+ const recovery=await browser.newPage();
+ const recoveryErrors=[];
+ recovery.on('pageerror',error=>recoveryErrors.push(error.message));
+ await recovery.addInitScript(()=>sessionStorage.setItem('pdl-booking-admin-access-token','SYNTHETIC_TEST_ONLY'));
+ let sessionChecks=0;
+ await recovery.route('**/functions/v1/pdl-guest-api/v1/admin/**',async route=>{
+   const path=new URL(route.request().url()).pathname;
+   if(path.endsWith('/v1/admin/session')){
+     sessionChecks++;
+     return route.fulfill({status:sessionChecks===1?503:200,json:sessionChecks===1?
+       {error:'synthetic_service_unavailable'}:{authenticated:true}});
+   }
+   if(path.endsWith('/v1/admin/policies'))return route.fulfill({status:200,json:{
+     reservationLeadHours:0,arrivalGraceMinutes:15,publicNotice:'',
+   }});
+   return route.fulfill({status:404,json:{error:'missing_fixture'}});
+ });
+ await recovery.goto(base+'paseo/admin/settings');
+ await recovery.getByRole('button',{name:'Retry session check'}).waitFor({timeout:15000});
+ assert.equal(new URL(recovery.url()).pathname,prefix+'paseo/admin/settings');
+ await recovery.getByRole('button',{name:'Retry session check'}).click();
+ await recovery.getByRole('button',{name:'Save operational policies'}).waitFor({timeout:15000});
+ assert.equal(sessionChecks,2);
+ assert.deepEqual(recoveryErrors,[]);
+ console.log('PASS transient administrator session outage preserves route and recovers on retry');
+ await recovery.close();
  const crm=await browser.newPage();
  await crm.goto(base+'#/paseo');
  await crm.locator('.aps-auth-v2').waitFor({timeout:16000});
