@@ -68,4 +68,4 @@ jobs:
       - name: Verify formatting
         run: |
           npm run format:check
-          npx prettier --check frontend/native-application-role-assignment.js frontend/tests/native-application-role-assignment.test.mjs frontend/tests/user-role-tooltrace-workspace.test.mjs docs/CP-ROLE-NATIVE-APP-ACCESS-02.md .github/workflows/cp-role-native-app-access-02.yml
+          npx prettier --check frontend/native-application-role-assignment.js frontend/tests/native-application-role-assignment.test.mjs docs/CP-ROLE-NATIVE-APP-ACCESS-02.md .github/workflows/cp-role-native-app-access-02.yml

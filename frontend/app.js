@@ -212,7 +212,6 @@ import {mountRoleConfigurationMotion,stopRoleConfigurationMotion} from './role-c
 import {mountUserRoleMotion,stopUserRoleMotion} from './user-role-visuals.js';
 import {settingsIcon,mountSettingsMotion,stopSettingsMotion} from './settings-visuals.js';
 import {crmPlatformRoleChangeNeeded,FUELTRANS_WORKSPACE_ROLES,SCOPED_SIX_MODULE_IDS,UserRoleManagementClient,renderUserRoleManagement,selectDefaultUserRoleTarget,defaultModuleRoleForAssignment,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
-import {writeNativeApplicationRoleAssignment,nativeApplicationRoleAssignmentPersisted} from './native-application-role-assignment.js';
 import {parseSignedCrmRole,signedCrmRoleLabel,signedCrmIdentityLabel,currentSignedCrmRole} from './crm-role-context.js';
 import {workspaceRelationFromCatalog,workspaceRelationLabel} from './workspace-relation-context.js';
 
@@ -2680,8 +2679,10 @@ async function applyUserRoleChange({userId,scope,resourceId,role,enabled,expecte
  const identity=await auth.getVerifiedUser(),ctx=await db.context();
  if(identity?.id!==ctx.user_id||ctx.user_id!==state.context?.user_id||
     ctx.workspace_id!==state.context?.workspace_id)throw new ApiError('Signed identity or workspace changed.',403);
+ const assignmentTools=scope==='module'?
+  await import('./native-application-role-assignment.js'):null;
  if(scope==='module'){
-  await writeNativeApplicationRoleAssignment(userRoleManager,{
+  await assignmentTools.writeNativeApplicationRoleAssignment(userRoleManager,{
    workspaceId:ctx.workspace_id,userId,moduleId:resourceId,role,enabled,
    expectedUpdatedAt,snapshot:state.userRoleData
   });
@@ -2692,7 +2693,7 @@ async function applyUserRoleChange({userId,scope,resourceId,role,enabled,expecte
  if(scope==='board')await loadBoardAccessConfiguration();
  else await loadUserRoleManagement();
  const persisted=scope==='module'?
-  nativeApplicationRoleAssignmentPersisted(state.userRoleData,{userId,
+  assignmentTools.nativeApplicationRoleAssignmentPersisted(state.userRoleData,{userId,
    moduleId:resourceId,role,enabled}):
   (()=>{
    const actual=state.userRoleData?.boardAssignments.find(r=>
@@ -9838,9 +9839,10 @@ async function action(name,button){
      if(currentIdentity?.id!==ctx.user_id||currentContext.user_id!==ctx.user_id||
         currentContext.workspace_id!==ctx.workspace_id)
       throw new ApiError('Signed identity or active workspace changed before application writes.',403);
+     const assignmentTools=await import('./native-application-role-assignment.js');
      for(const op of plan.operations){
       try{
-       await writeNativeApplicationRoleAssignment(userRoleManager,{
+       await assignmentTools.writeNativeApplicationRoleAssignment(userRoleManager,{
         workspaceId:ctx.workspace_id,userId:op.userId,moduleId:op.resourceId,
         role:op.role,enabled:op.enabled,expectedUpdatedAt:op.expectedUpdatedAt,
         snapshot:current
@@ -9863,7 +9865,7 @@ async function action(name,button){
        status:'Skipped',detail:item.reason}))
      ];
      for(const {op,error} of writeResults){
-      const persisted=readbackAvailable&&nativeApplicationRoleAssignmentPersisted(
+      const persisted=readbackAvailable&&assignmentTools.nativeApplicationRoleAssignmentPersisted(
        state.userRoleData,{userId:op.userId,moduleId:op.resourceId,
         role:op.role,enabled:op.enabled});
       results.push({userId:op.userId,moduleId:op.resourceId,

@@ -369,9 +369,18 @@ test("individual and native bulk UI share the same write and authoritative readb
     individual,
     /writeNativeApplicationRoleAssignment\(userRoleManager/,
   );
+  assert.match(
+    individual,
+    /await import\('\.\/native-application-role-assignment\.js'\)/,
+  );
   assert.match(individual, /nativeApplicationRoleAssignmentPersisted/);
   assert.match(bulk, /writeNativeApplicationRoleAssignment\(userRoleManager/);
+  assert.match(
+    bulk,
+    /await import\('\.\/native-application-role-assignment\.js'\)/,
+  );
   assert.match(bulk, /nativeApplicationRoleAssignmentPersisted/);
+  assert.doesNotMatch(app, /^import .*native-application-role-assignment/m);
   assert.doesNotMatch(
     bulk,
     /userRoleManager\.set(?:Fueltrans|Charter|ScopedSix|Frt|ToolTraceability)/,

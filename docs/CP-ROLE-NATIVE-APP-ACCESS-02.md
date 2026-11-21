@@ -10,7 +10,7 @@
 The CP-01 interface and existing application-specific RPC contracts were already deployed. CP-02 consolidates the duplicated individual and native-bulk write routing into `frontend/native-application-role-assignment.js`.
 
 - `writeNativeApplicationRoleAssignment()` routes all twelve application IDs through the existing specialized assignment setters or the existing generic role-management RPC.
-- Individual and bulk operations now share the same service mapping.
+- Individual and bulk operations now share the same service mapping. The helper is dynamically imported only when an assignment action runs, preserving the initial application module graph.
 - Existing workspace-source revision handling is preserved for FuelTrans, Fund Tracker, Charter Navigator, the six shared-source applications, and Tool Traceability.
 - The six shared-source applications retain their existing generic single-workspace fallback when the scoped contract is unavailable; no new fallback or access grant is introduced.
 - `nativeApplicationRoleAssignmentPersisted()` confirms the requested role and enabled state only from a refreshed authoritative assignment snapshot. Revocation is confirmed only when the row is absent or disabled.
@@ -50,12 +50,13 @@ The in-memory RPC harness verifies frontend orchestration and readback classific
 ## 4. Verification
 
 - Focused role/application regression: PASS.
-- Full frontend suite: **3,281 / 3,281 PASS**.
+- Full frontend suite: **3,289 / 3,289 PASS**.
 - `npm run check`: PASS.
 - `npm run lint`: PASS.
 - Focused ESLint for changed app/helper/tests: PASS.
 - Production Vite build: PASS; existing large-chunk advisory remains nonblocking.
 - Repository formatting: PASS.
+- Disposable unsigned Chromium module-graph acceptance: PASS. Baseline 248 JS resources / 3,022,353 decoded bytes versus optimized 230 / 2,779,648; anonymous boot remained `UNAUTHENTICATED`, login UI rendered, and optional FuelTrans/import modules were not fetched on the optimized first paint. Observed load event: 203 ms baseline versus 94 ms optimized in this local synthetic run.
 
 Disposable PostgreSQL 17 role-setter acceptance is tracked through the existing CP-CRM-URM-INTEGRITY-03 scoped matrix, CP-03T four-native mutation/restoration, CP-URM scoped role, and CP-RC03 MRH workflows.
 
