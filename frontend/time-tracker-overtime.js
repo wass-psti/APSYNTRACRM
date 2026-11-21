@@ -1,3 +1,4 @@
+import {formatTimeTrackerDurationMinutes} from './time-tracker-duration-format.js';
 import {formatTimeTrackerWallClock} from './time-tracker-time-format.js';
 /** Production RPCs and authenticated EXECUTE contracts verified; per-session OT access is still server signed. */
 export const TT_OT_WRITES_ACCEPTED=true;
@@ -13,8 +14,7 @@ const phtDay=(at=new Date())=>{
 const fmt=x=>validDay(x)?new Intl.DateTimeFormat('en-US',{
  timeZone:'UTC',month:'short',day:'numeric'
 }).format(new Date(x+'T00:00:00Z')):'—';
-const minutesLabel=n=>Number.isInteger(n)&&n>=0?
- Math.floor(n/60)+'h '+String(n%60).padStart(2,'0')+'m':'—';
+const minutesLabel=formatTimeTrackerDurationMinutes;
 export function timeTrackerOtWeek(offset=0,at=new Date()){
  if(!Number.isInteger(offset)||Math.abs(offset)>104)throw Error('Invalid OT week');
  const today=phtDay(at);

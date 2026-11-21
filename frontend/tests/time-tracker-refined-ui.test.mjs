@@ -16,10 +16,10 @@ const at=new Date('2026-11-19T07:55:00.000Z');
 
 test('active elapsed timer is based on signed clock-in time, not local storage',()=>{
  const elapsed=timeTrackerSessionElapsed(active.clockIn,at);
- assert.equal(elapsed.label,'07:55');
+ assert.equal(elapsed.label,'07:55:00');
  assert.ok(elapsed.progress>.87 && elapsed.progress<.89);
- assert.deepEqual(timeTrackerSessionElapsed('bad',at),{label:'00:00',progress:0});
- assert.equal(timeTrackerSessionElapsed('2026-11-19T08:00:00Z',at).label,'00:00');
+ assert.deepEqual(timeTrackerSessionElapsed('bad',at),{label:'00:00:00',progress:0});
+ assert.equal(timeTrackerSessionElapsed('2026-11-19T08:00:00Z',at).label,'00:00:00');
  assert.equal(timeTrackerSessionElapsed('2026-11-18T00:00:00Z',at).progress,1);
 });
 
@@ -30,7 +30,7 @@ test('rendering matches the warm clock reference without weakening signed action
  });
  assert.match(html,/data-tt-view="clock"/);
  assert.match(html,/class="tt-session-ring"/);
- assert.match(html,/id="tt-session-elapsed" data-clock-in="2026-11-19T00:00:00.000Z">07:55/);
+ assert.match(html,/id="tt-session-elapsed" data-clock-in="2026-11-19T00:00:00.000Z">07:55:00/);
  assert.match(html,/id="tt-session-progress"/);
  assert.match(html,/role="timer" aria-label="Elapsed time/);
  assert.match(html,/data-action="tt-tab" data-target="hours"/);
@@ -65,7 +65,7 @@ test('existing clock tick updates elapsed text and SVG offset without rebuilding
  nodes.get('tt-session-elapsed').dataset.clockIn=active.clockIn;
  const root={querySelector(selector){return nodes.get(selector.slice(1))||null;}};
  assert.equal(syncTimeTrackerClock(root,at),true);
- assert.equal(nodes.get('tt-session-elapsed').textContent,'07:55');
+ assert.equal(nodes.get('tt-session-elapsed').textContent,'07:55:00');
  assert.ok(Number(nodes.get('tt-session-progress')['stroke-dashoffset'])<50);
  assert.equal(nodes.get('tt-clock-hours').textContent,'03');
  assert.equal(nodes.get('tt-clock-period').textContent,'PM');

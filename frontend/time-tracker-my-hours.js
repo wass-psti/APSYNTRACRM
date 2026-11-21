@@ -1,3 +1,4 @@
+import {formatTimeTrackerDurationMs} from './time-tracker-duration-format.js';
 import {formatTimeTrackerClock} from './time-tracker-time-format.js';
 /** TimeTracker My Hours — read-only signed self-only history.
  * Input must be TimeTrackerNativeClient.snapshot().records (projectOwnAttendance),
@@ -24,7 +25,7 @@ const longDate=d=>new Intl.DateTimeFormat('en-US',{
  timeZone:'UTC',weekday:'short',month:'short',day:'numeric'
 }).format(new Date(dateMs(d)));
 const timePHT=v=>validTime(v)?formatTimeTrackerClock(v):'—';
-const hours=ms=>(ms/3600000).toFixed(1);
+const hours=formatTimeTrackerDurationMs;
 const safeRows=(records,at,userId)=>{
  if(!Array.isArray(records)||records.length>25000)throw Error('Invalid self attendance source');
  const now=+new Date(at);
@@ -106,7 +107,7 @@ const sessionLine=r=>
  '</strong><small>'+esc(r.location)+' · '+esc(r.department)+'</small></div>'+
  '<div><span>'+esc(timePHT(r.clockIn))+' – '+esc(timePHT(r.clockOut))+
  '</span><small>'+esc(r.classification)+' · '+esc(r.status)+'</small></div>'+
- '<b>'+esc(r.creditedMs===null?'Pending':hours(r.creditedMs)+'h')+'</b></div>';
+ '<b>'+esc(r.creditedMs===null?'Pending':hours(r.creditedMs))+'</b></div>';
 function monthGrid(data,selectedDay){
  const firstDay=new Date(dateMs(data.month+'-01')).getUTCDay();
  const n=Math.ceil((firstDay+data.days.length)/7)*7;
@@ -162,9 +163,9 @@ export function renderTimeTrackerMyHours({
    '<div class="tt-hours-hero-telemetry" aria-label="Signed personal attendance snapshot">'+
     '<span class="tt-hours-telemetry-caption">SIGNED WEEKLY SNAPSHOT</span>'+
     '<div class="tt-hours-telemetry-primary"><strong>'+hours(model.weekCreditedMs)+
-     'h</strong><span>Credited this week<br>from signed history</span></div>'+
+     '</strong><span>Credited this week<br>from signed history</span></div>'+
     '<div class="tt-hours-telemetry-grid">'+
-     '<div><strong>'+hours(model.monthCreditedMs)+'h</strong><span>Month total</span></div>'+
+     '<div><strong>'+hours(model.monthCreditedMs)+'</strong><span>Month total</span></div>'+
      '<div><strong>'+model.sessions+'</strong><span>Sessions</span></div>'+
      '<div><strong>'+model.late+'</strong><span>Late</span></div>'+
     '</div>'+
@@ -182,7 +183,7 @@ export function renderTimeTrackerMyHours({
     (weekOffset>=104?' disabled':'')+'>›</button>'+
    '<button type="button" data-action="tt-hours-week-current">This Week</button></div></div>'+
   '<div class="tt-hours-kpis">'+
-   [['WEEK HOURS',hours(model.weekCreditedMs)+'h'],['MONTH HOURS',hours(model.monthCreditedMs)+'h'],
+   [['WEEK HOURS',hours(model.weekCreditedMs)],['MONTH HOURS',hours(model.monthCreditedMs)],
     ['SESSIONS',model.sessions],['LATE',model.late]].map(([label,value])=>
     '<div><strong>'+esc(value)+'</strong><span>'+label+'</span></div>').join('')+
   '</div>'+
@@ -201,7 +202,7 @@ export function renderTimeTrackerMyHours({
    '</div><div class="tt-hours-progress-foot"><progress max="45" value="'+
     progress.toFixed(4)+'" aria-label="Credited weekly hours toward 45-hour target"></progress>'+
     '<div><span>'+Math.round(progress/45*100)+'% of 45h weekly target</span>'+
-    '<span>'+hours(Math.max(0,45*3600000-model.weekCreditedMs))+'h remaining</span></div></div>'+
+    '<span>'+hours(Math.max(0,45*3600000-model.weekCreditedMs))+' remaining</span></div></div>'+
   '</section>'+
   section('MONTHLY OVERVIEW',displayMonth)+
   '<section class="tt-hours-panel tt-hours-calendar"><div class="tt-hours-month-nav">'+

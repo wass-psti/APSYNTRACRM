@@ -87,8 +87,8 @@ test('corrected signed Clock-In timestamp rebases displayed active timer',()=>{
  const now=new Date('2026-11-20T02:30:00.000Z');
  const original=timeTrackerSessionElapsed('2026-11-20T00:30:00.000Z',now);
  const corrected=timeTrackerSessionElapsed('2026-11-20T00:00:00.000Z',now);
- assert.equal(original.label,'02:00');
- assert.equal(corrected.label,'02:30');
+ assert.equal(original.label,'02:00:00');
+ assert.equal(corrected.label,'02:30:00');
  const own={
   id:recordId,ownerId:'cloud:'+employeeId,
   clockIn:'2026-11-20T00:00:00.000Z',clockOut:null,

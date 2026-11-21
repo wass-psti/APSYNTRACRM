@@ -1,3 +1,4 @@
+import {formatTimeTrackerDurationMs} from './time-tracker-duration-format.js';
 import {formatTimeTrackerDateTime} from './time-tracker-time-format.js';
 /** Native TimeTracker UI. Screen language adapted from the supplied Clock-tab reference.
  * Existing CRM shell, central identity, module access, and PostgreSQL data remain authoritative.
@@ -24,7 +25,7 @@ const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({
 }[c]));
 const date=v=>v&&Number.isFinite(Date.parse(v))?
  formatTimeTrackerDateTime(v):'—';
-const hrs=ms=>Number.isFinite(ms)?(ms/3600000).toFixed(2)+' h':'—';
+const hrs=formatTimeTrackerDurationMs;
 const sections=[
  ['overview','Overview',true],['clock','Clock',true],['employees','Employees',true],['log','Log',true],
  ['reports','Reports',true],['calendar','Calendar',true],
@@ -72,12 +73,10 @@ export function timeTrackerClockParts(at=new Date()){
 export function timeTrackerSessionElapsed(clockIn,at=new Date()){
  const start=Date.parse(clockIn);
  const now=new Date(at).getTime();
- if(!Number.isFinite(start)||!Number.isFinite(now))return {label:'00:00',progress:0};
+ if(!Number.isFinite(start)||!Number.isFinite(now))return {label:'00:00:00',progress:0};
  const elapsed=Math.max(0,now-start);
- const hours=Math.floor(elapsed/3600000);
- const minutes=Math.floor((elapsed%3600000)/60000);
  return {
-  label:String(hours).padStart(2,'0')+':'+String(minutes).padStart(2,'0'),
+  label:formatTimeTrackerDurationMs(elapsed),
   progress:Math.min(1,elapsed/TT_POLICY.requiredWorkMs)
  };
 }
@@ -119,7 +118,7 @@ export function ownAttendanceCsv(records){
  const safe=v=>'"'+String(v??'').replaceAll('"','""').replace(/^[=+@\-\t\r]/,"' $&")+'"';
  for(const r of records||[])rows.push([
   formatTimeTrackerDateTime(r.clockIn),r.clockOut?formatTimeTrackerDateTime(r.clockOut):'',r.location,r.department,r.classification,r.status,
-  r.creditedMs===null?'':(r.creditedMs/3600000).toFixed(2)
+  r.creditedMs===null?'':hrs(r.creditedMs)
  ]);
  return '\uFEFF'+rows.map(row=>row.map(safe).join(',')) .join('\r\n')+'\r\n';
 }
@@ -245,7 +244,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
     '<div class="tt-dashboard-section-label">TODAY’S ATTENDANCE</div>'+
     '<div class="tt-session-summary" aria-label="My attendance today">'+
      '<div><strong>'+todayRows.length+'</strong><span>Sessions</span></div>'+
-     '<div><strong>'+(credited/3600000).toFixed(1)+'</strong><span>Hours</span></div>'+
+     '<div><strong>'+hrs(credited)+'</strong><span>Hours</span></div>'+
      '<div><strong class="tt-summary-status">'+status+'</strong><span>Status</span></div>'+
     '</div>'+
     '<p class="tt-dashboard-source">Attendance totals use your authorized TimeTracker records.</p>'+

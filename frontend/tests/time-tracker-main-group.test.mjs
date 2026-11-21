@@ -45,7 +45,7 @@ test('signed private projection maps identity, Philippine time, two independent 
  assert.doesNotMatch(html,/<Sample>/);
  assert.match(html,/10\.12346, 123\.98765/);
  assert.match(html,/10\.54321, 123\.65432/);
- assert.match(html,/11\.00 h/);
+ assert.match(html,/11:00:00/);
  assert.match(html,/tt-main-status-completed/);
  assert.doesNotMatch(html,/recordId|source_record_id|clock_in_geo/);
 });
@@ -57,7 +57,7 @@ test('clock-out fields stay absent for active sessions, with no fabricated elaps
  assert.match(html,/Not recorded/);
  assert.match(html,/In progress/);
  assert.match(html,/tt-main-status-active/);
- assert.doesNotMatch(html,/10\.54321|11\.00 h/);
+ assert.doesNotMatch(html,/10\.54321|11:00:00/);
 });
 
 test('overnight shifts use Philippine calendar dates and authoritative credited duration',()=>{
@@ -69,8 +69,8 @@ test('overnight shifts use Philippine calendar dates and authoritative credited 
  const html=renderTimeTrackerMainGroup({...opts,projection:{...verified,rows:[shift]}});
  assert.ok(html.includes(formatTimeTrackerDateTime(shift.clockInAt)));
  assert.ok(html.includes(formatTimeTrackerDateTime(shift.clockOutAt)));
- assert.match(html,/4\.00 h/);
- assert.doesNotMatch(html,/11\.00 h/);
+ assert.match(html,/04:00:00/);
+ assert.doesNotMatch(html,/11:00:00/);
 });
 
 test('foreign board, workspace, actor and out-of-group private rows never display',()=>{
@@ -101,7 +101,7 @@ test('server-redacted HR and own history joins only matching source record IDs; 
  const html=renderTimeTrackerMainGroup({...opts,projection:log,
   boardColumns:columns,boardValues:values});
  assert.match(html,/Verified HR employee/);
- assert.match(html,/11\.00 h/);
+ assert.match(html,/11:00:00/);
  assert.match(html,/>Restricted<\/span>/);
  assert.doesNotMatch(html,/66|111|77|122|SHOULD_NOT_LEAK/);
  for(const changed of [

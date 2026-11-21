@@ -1,3 +1,4 @@
+import {formatTimeTrackerDurationMs} from './time-tracker-duration-format.js';
 import {formatTimeTrackerShortDateTime} from './time-tracker-time-format.js';
 /** Read-only attendance Reports derived from centrally authorized TimeTracker Log rows.
  * No other personnel directory or GPS/audit state is accessed by this module.
@@ -15,7 +16,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({
 }[c]));
 const isTime=v=>typeof v==='string'&&Number.isFinite(Date.parse(v));
 const safeNumber=n=>Number.isFinite(n)&&n>=0?n:0;
-const fmtHours=ms=>(ms/3600000).toFixed(1);
+const fmtHours=formatTimeTrackerDurationMs;
 const fmtTime=value=>isTime(value)?formatTimeTrackerShortDateTime(value):'—';
 const fmtDay=day=>new Intl.DateTimeFormat('en-PH',{
  timeZone:'Asia/Manila',month:'short',day:'numeric',year:'numeric'
@@ -138,7 +139,7 @@ const departmentItems=(items,kind)=>{
   x.creditedMs/x.completed:0:x.count));
  return '<div class="tt-report-departments">'+items.map(item=>{
   const value=kind==='hours'?(item.completed?item.creditedMs/item.completed:0):item.count;
-  const display=kind==='hours'?(item.completed?fmtHours(value)+' h':'No completed sessions'):
+  const display=kind==='hours'?(item.completed?fmtHours(value):'No completed sessions'):
    item.count+' session'+(item.count===1?'':'s');
   return '<div class="tt-report-dept"><div><strong>'+esc(item.department)+
    '</strong><small>'+esc(display)+'</small></div>'+
@@ -163,7 +164,7 @@ const recordRow=(r,query='')=>{
   '<td>'+esc(r.department||'Unassigned')+'</td>'+
   '<td>'+esc(r.classification||'Unknown')+'</td>'+
   '<td>'+esc(r.status||'Unknown')+'</td>'+
-  '<td>'+esc(Number.isFinite(r.creditedMs)?fmtHours(r.creditedMs)+' h':'—')+'</td>'+
+  '<td>'+esc(Number.isFinite(r.creditedMs)?fmtHours(r.creditedMs):'—')+'</td>'+
   '<td>'+details(r)+'</td></tr>';
 };
 const option=(value,label,selected)=>'<option value="'+value+'"'+
@@ -186,7 +187,7 @@ export function renderTimeTrackerReports({
  const team=scope==='AUTHORIZED_WORKSPACE_TEAM';
  const metrics=[
   ['Records',String(summary.records)],['Employees',String(summary.employees)],
-  ['Avg Hours',summary.averageMs===null?'—':fmtHours(summary.averageMs)+' h'],
+  ['Avg Hours',summary.averageMs===null?'—':fmtHours(summary.averageMs)],
   ['Late',String(summary.late)],['On-time Rate',summary.onTimeRate===null?'—':summary.onTimeRate+'%']
  ];
  const periods=[['all','All dates'],['today','Today'],
@@ -215,7 +216,7 @@ export function renderTimeTrackerReports({
      '<div><strong>'+summary.completed+'</strong><span>Completed</span></div>'+
      '<div><strong>'+(summary.onTimeRate===null?'—':summary.onTimeRate+'%')+
       '</strong><span>On-time rate</span></div>'+
-     '<div><strong>'+(summary.averageMs===null?'—':fmtHours(summary.averageMs)+' h')+
+     '<div><strong>'+(summary.averageMs===null?'—':fmtHours(summary.averageMs))+
       '</strong><span>Avg credited hours</span></div>'+
     '</div>'+
     '<div class="tt-reports-actions">'+

@@ -51,7 +51,7 @@ test('Reports clearly label approved OT as comparison only and do not mutate hou
  assert.match(html,/Signed overtime reconciliation/);
  assert.match(html,/120 minutes of clocked approved OT overlap/);
  assert.match(html,/These minutes are not added to credited hours/);
- assert.match(html,/4.0 h/);
+ assert.match(html,/04:00:00/);
  const noContract=renderTimeTrackerReports({rows:[record],otRequests:[approved],
   now:new Date('2026-11-18T03:00:00Z')});
  assert.match(noContract,/Authoritative OT approval contract is not active/);

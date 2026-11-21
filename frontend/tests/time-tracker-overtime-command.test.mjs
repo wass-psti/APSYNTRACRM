@@ -42,7 +42,7 @@ test('OT uses a distinct, data-driven command hero and one optional passive Pixi
  const m=timeTrackerOtMetrics(rows,{},now);
  assert.equal(m.all.length,3);
  assert.equal(m.approvedMinutes,120);
- assert.match(markup,/>2h 00m<\/strong><span>Approved overtime/);
+ assert.match(markup,/>02:00:00<\/strong><span>Approved overtime/);
  assert.match(markup,/>1<\/strong><span>Pending<\/span>/);
  assert.match(markup,/>1<\/strong><span>Approved<\/span>/);
  assert.match(markup,/>1<\/strong><span>Rejected<\/span>/);

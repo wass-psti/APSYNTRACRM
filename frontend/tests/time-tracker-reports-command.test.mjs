@@ -56,7 +56,7 @@ test('Report hero reads only the filtered signed projection, never guesses a met
  assert.match(html,/>3<\/strong><span>Attendance sessions/);
  assert.match(html,/>2<\/strong><span>Completed<\/span>/);
  assert.match(html,/>67%<\/strong><span>On-time rate<\/span>/);
- assert.match(html,/>6\.0 h<\/strong><span>Avg credited hours<\/span>/);
+ assert.match(html,/>06:00:00<\/strong><span>Avg credited hours<\/span>/);
  assert.match(html,/Authorized workspace team/);
  const today=render({period:'today'});
  assert.match(today,/>2<\/strong><span>Attendance sessions/);

@@ -1,3 +1,4 @@
+import {formatTimeTrackerDurationMs,parseTimeTrackerDuration} from './time-tracker-duration-format.js';
 import {formatTimeTrackerAdminWallDateTime,parseTimeTrackerAdminWallDateTime} from './time-tracker-time-format.js';
 /** System Admin attendance record editor. All mutations are delegated to the signed PostgreSQL RPC. */
 import {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
@@ -133,10 +134,9 @@ export function buildTimeTrackerAdminPatch(formData,{mode='single',record=null,r
       if(bulk||Number.isSafeInteger(record?.creditedMsOverride))assign('creditedMsOverride',null);
     }else{
       const hoursText=read('durationHours');
-      if(!hoursText)throw Error('Enter the corrected working duration in hours.');
-      const hours=Number(hoursText);
-      if(!Number.isFinite(hours)||hours<0||hours>744)throw Error('Working duration must be between 0 and 744 hours.');
-      const milliseconds=Math.round(hours*3600000);
+      if(!hoursText)throw Error('Enter the corrected working duration as HH:MM:SS.');
+      const milliseconds=parseTimeTrackerDuration(hoursText);
+      if(milliseconds===null)throw Error('Working duration must use HH:MM:SS (maximum 744 hours).');
       if(effectiveStatus!=='Completed'&&(!bulk||needsClockOut))
         throw Error('Manual working duration requires completed attendance records.');
       if(bulk||milliseconds!==record?.creditedMsOverride||patch.clockInAt||patch.clockOutAt)
@@ -214,7 +214,7 @@ export function renderTimeTrackerAdminEditor({editor,directory=[],busy=false,err
   const durationMode=Number.isSafeInteger(record?.creditedMsOverride)?'manual':'auto';
   const durationMs=Number.isSafeInteger(record?.creditedMsOverride)?record.creditedMsOverride:
     record?.clockOut?.timestamp?creditedAttendanceMs(record.clockIn?.timestamp,record.clockOut.timestamp):null;
-  const hours=durationMs===null?'':(durationMs/3600000).toFixed(2);
+  const hours=durationMs===null?'':formatTimeTrackerDurationMs(durationMs);
   const reasonLabel=bulk?'Reason for bulk correction':'Reason for correction';
   const recordName=record?.ownerName||record?.name||'Selected employee';
   const recordMeta=[record?.department||'Unassigned department',record?.clockIn?.location||'Unspecified location',
@@ -250,7 +250,7 @@ export function renderTimeTrackerAdminEditor({editor,directory=[],busy=false,err
       {value:'auto',label:'Calculate from corrected timestamps'},
       {value:'manual',label:'Set manual credited duration'}
     ],bulk?'':durationMode,{bulk})+
-    inputField('Working duration (hours)','durationHours',bulk?'':hours,{type:'number',step:'0.01',min:0,max:744,placeholder:bulk?'Leave unchanged':'0.00'})+
+    inputField('Working duration (HH:MM:SS)','durationHours',bulk?'':hours,{type:'text',placeholder:bulk?'Leave unchanged':'00:00:00'})+
     '</div><p>Automatic duration applies the existing Philippine Time unpaid-break policy. Manual duration is stored as an explicit administrative override.</p></section>'+
     '<section class="tt-admin-field-section"><h4>Correction note</h4><label class="tt-admin-field"><span>'+reasonLabel+'</span><textarea name="reason" maxlength="500" rows="2" placeholder="Optional explanation for the audit record"></textarea></label></section>'+
     '</div></fieldset><footer class="tt-admin-editor-actions"><span class="tt-admin-editor-footnote">'+

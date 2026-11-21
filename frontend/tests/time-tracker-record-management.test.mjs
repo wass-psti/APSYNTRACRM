@@ -46,7 +46,7 @@ test('individual edit builds a sparse patch for employee, timestamps, GPS, statu
   employeeId:adminId,location:'Local Field Works',department:'Engineering',
   status:'Completed',clockInAt:'2026-11-16T17:00',...geoFields('clockInGeo'),
   clockOutAt:'2026-11-16T18:00',...geoFields('clockOutGeo',10.33,123.93,13),
-  durationMode:'manual',durationHours:'1.5',reason:'Corrected from signed supporting record'
+  durationMode:'manual',durationHours:'01:30:00',reason:'Corrected from signed supporting record'
  }),{mode:'single',record:activeRecord()});
  assert.equal(patch.employeeId,adminId);
  assert.equal(patch.location,'Local Field Works');
@@ -115,7 +115,7 @@ test('automatic duration clears a previous manual override',()=>{
 
 test('time correction preserves an explicitly selected manual duration override',()=>{
  const {patch}=buildTimeTrackerAdminPatch(form({
-  clockOutAt:'2026-11-16T18:15',durationMode:'manual',durationHours:'1.00'
+  clockOutAt:'2026-11-16T18:15',durationMode:'manual',durationHours:'01:00:00'
  }),{mode:'single',record:completedRecord()});
  assert.equal(patch.creditedMsOverride,3600000);
  assert.equal(patch.clockOutAt,'2026-11-16T10:15:00.000Z');
@@ -156,13 +156,13 @@ test('invalid GPS coordinates, incomplete fixes and excessive duration are rejec
   clockInGeolatitude:10.3,clockInGeolongitude:123.9
  }),{mode:'single',record:completedRecord()}),/requires latitude/);
  assert.throws(()=>buildTimeTrackerAdminPatch(form({
-  durationMode:'manual',durationHours:745
- }),{mode:'single',record:completedRecord()}),/between 0 and 744/);
+  durationMode:'manual',durationHours:'745:00:00'
+ }),{mode:'single',record:completedRecord()}),/maximum 744 hours/);
 });
 
 test('empty edit is rejected and duration cannot be manually assigned to an active session',()=>{
  assert.throws(()=>buildTimeTrackerAdminPatch(form(),{mode:'single',record:completedRecord()}),/No attendance fields/);
- assert.throws(()=>buildTimeTrackerAdminPatch(form({durationMode:'manual',durationHours:1}),{
+ assert.throws(()=>buildTimeTrackerAdminPatch(form({durationMode:'manual',durationHours:'01:00:00'}),{
   mode:'single',record:activeRecord()
  }),/completed attendance/);
 });

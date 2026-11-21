@@ -51,14 +51,14 @@ test('hero data is sourced from the signed self-only projection and excludes oth
  assert.equal(data.sessions,2);
  assert.equal(data.late,1);
  const markup=render();
- assert.match(markup,/>9\.0h<\/strong><span>Credited this week/);
- assert.match(markup,/>9\.0h<\/strong><span>Month total<\/span>/);
+ assert.match(markup,/>09:00:00<\/strong><span>Credited this week/);
+ assert.match(markup,/>09:00:00<\/strong><span>Month total<\/span>/);
  assert.match(markup,/>2<\/strong><span>Sessions<\/span>/);
  assert.match(markup,/>1<\/strong><span>Late<\/span>/);
  assert.doesNotMatch(markup,/Private colleague location|Private/);
  assert.equal(TT_MY_HOURS_WEEK_TARGET,45);
  const empty=render({records:[]});
- assert.match(empty,/>0\.0h<\/strong><span>Credited this week/);
+ assert.match(empty,/>00:00:00<\/strong><span>Credited this week/);
 });
 test('My Hours controls and correction approval gates remain unchanged',()=>{
  const markup=render({busy:true,selectedDay:'2026-11-04'});
