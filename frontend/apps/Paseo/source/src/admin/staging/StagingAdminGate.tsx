@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { configuredGuestApiBase } from '../../guest/guestReservation';
+import { AdminSessionSkeleton } from '../../components/admin/AdminSessionSkeleton';
 
 export const stagingAdminEnabled = import.meta.env.DEV &&
   import.meta.env.VITE_STAGING_ONLY === '1' && configuredGuestApiBase === '/api';
@@ -54,7 +55,7 @@ export function StagingAdminGate({ children }: { children: ReactNode }) {
     });
     return () => controller.abort();
   }, [retry]);
-  if (status === 'checking') return <div className="container section" role="status">Checking administrator session…</div>;
+  if (status === 'checking') return <AdminSessionSkeleton />;
   if (status === 'unavailable') return <div className="container section" role="alert">
     <p>Administrator session check is temporarily unavailable. Your session has not been signed out.</p>
     <button type="button" className="button button-primary" onClick={() => {
