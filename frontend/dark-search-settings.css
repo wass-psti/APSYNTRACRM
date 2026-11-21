@@ -1,0 +1,127 @@
+/* CP-CRM-DARK-06: uncovered global search and Settings surfaces.
+ * Dark-only styling; no search handlers, permissions, settings logic or routes changed. */
+html[data-aps-monday-theme="dark"] .aps-global-search-backdrop,
+html[data-aps-monday-theme="dark"] .native-search-detail-backdrop {
+ background:#000b;
+}
+html[data-aps-monday-theme="dark"] .aps-global-search-dialog,
+html[data-aps-monday-theme="dark"] .native-search-detail-drawer {
+ background:#292929;color:#ededed;border-color:#575757;
+ box-shadow:0 20px 62px #000a;color-scheme:dark;
+}
+html[data-aps-monday-theme="dark"] :is(.aps-global-search-heading h2,.native-search-detail-header h2) {color:#ededed}
+html[data-aps-monday-theme="dark"] :is(
+ .aps-global-search-heading p,.aps-global-search-status,.aps-global-search-empty,
+ .native-search-detail-header p,.native-search-detail-field dt
+) {color:#c8c8c8}
+html[data-aps-monday-theme="dark"] .aps-global-search-close {
+ background:#343434;color:#eee;border-color:#696969;
+}
+html[data-aps-monday-theme="dark"] .aps-global-search-close:hover {background:#424242;color:#fff}
+html[data-aps-monday-theme="dark"] .aps-global-search-input-wrap {
+ background:#202020;border-color:#737373;box-shadow:none;
+}
+/* The original input declares !important for light text; override only within its dialog. */
+html[data-aps-monday-theme="dark"] .aps-global-search-dialog .aps-global-search-input {
+ color:#ededed!important;caret-color:#ededed;
+ -webkit-text-fill-color:#ededed;
+}
+html[data-aps-monday-theme="dark"] .aps-global-search-dialog .aps-global-search-input::placeholder {color:#bdbdbd}
+html[data-aps-monday-theme="dark"] .aps-global-search-input-wrap:focus-within {
+ border-color:#a9c6ff;outline:2px solid #a9c6ff;outline-offset:2px;
+}
+html[data-aps-monday-theme="dark"] .aps-global-search-glyph {color:#bad4ff}
+html[data-aps-monday-theme="dark"] .aps-global-search-option:hover,
+html[data-aps-monday-theme="dark"] .aps-global-search-option.is-active {
+ background:#353d50;border-color:#617cac;
+}
+html[data-aps-monday-theme="dark"] .aps-global-search-option-icon {
+ background:#343d53;color:#bed4ff;border-color:#576b8c;
+}
+html[data-aps-monday-theme="dark"] .aps-global-search-option-title {color:#ededed}
+html[data-aps-monday-theme="dark"] :is(
+ .aps-global-search-option-subtitle,.aps-global-search-option-excerpt
+) {color:#c7c7c7}
+html[data-aps-monday-theme="dark"] .aps-global-search-option-kind {
+ background:#3b3b3b;color:#dedede;
+}
+html[data-aps-monday-theme="dark"] .aps-global-search-footer {
+ background:#252525;color:#ccc;border-color:#545454;
+}
+html[data-aps-monday-theme="dark"] .aps-global-search-footer kbd,
+html[data-aps-monday-theme="dark"] .aps-global-search-shortcut {
+ background:#383838;color:#e2e2e2;border-color:#666;
+}
+html[data-aps-monday-theme="dark"] :is(.native-search-detail-header,.native-search-detail-footer) {
+ border-color:#545454;
+}
+html[data-aps-monday-theme="dark"] .native-search-detail-field {
+ background:#323232;border-color:#575757;
+}
+html[data-aps-monday-theme="dark"] .native-search-detail-field dd {color:#ededed}
+html[data-aps-monday-theme="dark"] :is(.aps-global-search-dialog,.native-search-detail-drawer) :is(button,a[href],[role="option"]):focus-visible {
+ outline:2px solid #a9c6ff;outline-offset:2px;
+}
+/* Account & security route: no new fields or access restrictions. */
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell {
+ --settings-ink:#ededed;--settings-muted:#c8c8c8;
+ --settings-accent:#accbff;--settings-stroke:#555;
+ background:#121212;background-image:none;color:#ededed;
+}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell>.topbar {
+ background:#202020;background-image:none;border-color:#484848;
+}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .topbar :is(.breadcrumb,.breadcrumb strong) {color:#ededed}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .topbar .top-pill {
+ background:#292929;color:#ededed;border-color:#555;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings {color:#ededed}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(
+ .settings-panel-header h3,.settings-profile-copy .name,.settings-detail strong,
+ .settings-verify-block h3,.settings-verify-block .csp-u028
+) {color:#ededed}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(
+ .settings-profile-copy .role,.settings-detail label,.settings-profile-footnote,
+ .settings-session-intro p,.settings-verify-block>p.muted,.settings-verify-block .csp-u058
+) {color:#c8c8c8}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(
+ .settings-profile-panel,.settings-session-panel,.settings-detail,
+ .settings-session-callout,.settings-auth-detail,.settings-verify-block .csp-u048,
+ .settings-verify-block .csp-u008
+) {background:#292929;background-image:none;color:#ededed;border-color:#545454;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings .settings-panel-header {
+ background:transparent;background-image:none;border-color:#545454;
+}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(
+ .settings-panel-title>span,.settings-session-intro-badge
+) {background:#353d50;color:#bdd4ff}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(
+ .settings-auth-provider,.settings-readonly-chip
+) {background:#343e57;color:#cbdcff;border-color:#5e739a}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings .settings-detail-status .status {
+ background:#244537;color:#b0efd0;border-color:#578b71;
+}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings .settings-session-callout {
+ background:#303953;border-left-color:#85aaf0;color:#d7e2ff;
+}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings .settings-token-warning {
+ background:#463a2a;border-color:#987649;border-left-color:#d8ab66;color:#ffe4b7;
+}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings .settings-token-warning b {color:#ffe4b7}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(
+ .settings-session-actions button,.settings-verify-block button,
+ .settings-verify-block a.secondary,.settings-avatar-actions button
+) {background:#343434;color:#ededed;border-color:#646464;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(
+ .settings-session-actions button,.settings-verify-block button,
+ .settings-verify-block a.secondary,.settings-avatar-actions button
+):hover:not(:disabled) {background:#424242;color:#fff;border-color:#888;transform:none}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(button,input,a[href]):focus-visible {
+ outline:2px solid #a9c6ff;outline-offset:2px;
+}
+@media(prefers-reduced-motion:reduce){
+ html[data-aps-monday-theme="dark"] :is(.aps-global-search-dialog,.native-search-detail-drawer),
+ html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(button,a[href]) {
+ animation:none;transition:none;transform:none;
+ }
+}
