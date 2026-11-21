@@ -739,17 +739,17 @@ html[data-aps-monday-theme="dark"] #app .aps-sidebar .aps-board-search-field inp
 /* Unified dashboard palette */
 html[data-aps-monday-theme="dark"] #app .aps-overview-shell,
 html[data-aps-monday-theme="dark"] #app .aps-overview-shell > .main-content {
-    background: #15171c !important;
-    color: #edf1f8;
+    background: var(--crm-dark-canvas,#15171c) !important;
+    color: var(--crm-dark-text,#edf1f8);
 }
 
 /* Make all four dashboard metrics identical in structure */
 html[data-aps-monday-theme="dark"] #app .aps-overview .overview-stat-grid > .stat-card {
-    background: #242832 !important;
-    border: 1px solid #3b424e !important;
+    background: var(--crm-dark-surface,#242832) !important;
+    border: 1px solid var(--crm-dark-border,#3b424e) !important;
     border-radius: 12px;
     box-shadow: none !important;
-    color: #edf1f8 !important;
+    color: var(--crm-dark-text,#edf1f8) !important;
     box-sizing: border-box;
     min-width: 0;
 }
@@ -759,15 +759,15 @@ html[data-aps-monday-theme="dark"] #app .aps-overview .stat-card::before {
 }
 
 html[data-aps-monday-theme="dark"] #app .aps-overview .stat-label {
-    color: #b5bfd0 !important;
+    color: var(--crm-dark-muted,#b5bfd0) !important;
 }
 
 html[data-aps-monday-theme="dark"] #app .aps-overview .stat-value {
-    color: #f3f6fb !important;
+    color: var(--crm-dark-text,#f3f6fb) !important;
 }
 
 html[data-aps-monday-theme="dark"] #app .aps-overview .stat-footer {
-    color: #aab6c9 !important;
+    color: var(--crm-dark-muted,#aab6c9) !important;
 }
 
 /* Dashboard headings and board descriptions */
@@ -778,16 +778,16 @@ html[data-aps-monday-theme="dark"] #app .aps-overview .overview-board-grid .boar
 
 html[data-aps-monday-theme="dark"] #app .aps-overview .overview-board-count,
 html[data-aps-monday-theme="dark"] #app .aps-overview .overview-board-grid .board-card p {
-    color: #aebacd !important;
+    color: var(--crm-dark-muted,#aebacd) !important;
 }
 
 /* Consistent board cards */
 html[data-aps-monday-theme="dark"] #app .aps-overview .overview-board-grid .board-card {
-    background: #242832 !important;
-    border: 1px solid #3b424e !important;
+    background: var(--crm-dark-surface,#242832) !important;
+    border: 1px solid var(--crm-dark-border,#3b424e) !important;
     border-radius: 12px;
     box-shadow: none !important;
-    color: #edf1f8;
+    color: var(--crm-dark-text,#edf1f8);
 }
 
 html[data-aps-monday-theme="dark"] #app .aps-overview .overview-board-grid .board-card::before {
@@ -795,39 +795,39 @@ html[data-aps-monday-theme="dark"] #app .aps-overview .overview-board-grid .boar
 }
 
 html[data-aps-monday-theme="dark"] #app .aps-overview .overview-board-grid .board-card-footer {
-    border-color: #414957 !important;
-    color: #abb8ca !important;
+    border-color: var(--crm-dark-border,#414957) !important;
+    color: var(--crm-dark-muted,#abb8ca) !important;
 }
 
 html[data-aps-monday-theme="dark"] #app .aps-overview .overview-board-grid .board-card-footer span:first-child {
-    background: #303848 !important;
+    background: var(--crm-dark-raised,#303848) !important;
     color: #d8e4f6 !important;
 }
 
 /* Dark board menu buttons */
 html[data-aps-monday-theme="dark"] #app .aps-overview .overview-board-grid .board-card-actions > summary {
-    background: #303642 !important;
-    border-color: #495163 !important;
+    background: var(--crm-dark-raised,#303642) !important;
+    border-color: var(--crm-dark-border,#495163) !important;
     color: #e9eef8 !important;
 }
 
 html[data-aps-monday-theme="dark"] #app .aps-overview .overview-board-grid .board-card-actions > summary:hover {
-    background: #3c4555 !important;
+    background: var(--crm-dark-hover,#3c4555) !important;
 }
 
 /* Empty states and supplementary dashboard panels */
 html[data-aps-monday-theme="dark"] #app .aps-overview :is(.overview-empty, .overview-essentials) {
-    background: #242832 !important;
-    border-color: #3b424e !important;
-    color: #edf1f8 !important;
+    background: var(--crm-dark-surface,#242832) !important;
+    border-color: var(--crm-dark-border,#3b424e) !important;
+    color: var(--crm-dark-text,#edf1f8) !important;
 }
 
 html[data-aps-monday-theme="dark"] #app .aps-overview .overview-essentials .activity-item {
-    border-color: #414957 !important;
+    border-color: var(--crm-dark-border,#414957) !important;
 }
 
 html[data-aps-monday-theme="dark"] #app .aps-overview .overview-essentials .activity-item b {
-    color: #edf1f8 !important;
+    color: var(--crm-dark-text,#edf1f8) !important;
 }
 
 /* Make metric cards retain even spacing */

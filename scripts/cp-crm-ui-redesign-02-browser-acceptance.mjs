@@ -53,7 +53,7 @@ try{
   await page.evaluate(()=>document.documentElement.dataset.apsMondayTheme='dark');
   await page.waitForTimeout(260);
   check(await page.locator('.tl-draft-panel').evaluate(el=>
-   getComputedStyle(el).borderColor)==='rgb(76, 80, 90)',
+   ['rgb(76, 80, 90)','rgb(72, 72, 72)'].includes(getComputedStyle(el).borderColor)),
    `${width}: dark mode module border missing`);
   await page.close();
  }

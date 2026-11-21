@@ -63,6 +63,7 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/uiverse-design-system.css",
  "frontend/uiverse-native-workflows.css",
  "frontend/dark-theme-foundation.css",
- "frontend/dark-native-applications.css"
+ "frontend/dark-native-applications.css",
+ "frontend/dark-enterprise-monday.css"
 ]);
 export const STYLE_BUNDLE="frontend/apsyntra-styles.bundle.css";

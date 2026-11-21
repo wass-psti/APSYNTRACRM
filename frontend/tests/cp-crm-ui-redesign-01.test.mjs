@@ -7,11 +7,11 @@ import {generateStyleBundle} from '../../scripts/build-priority5-styles.mjs';
 const source=readFileSync('frontend/uiverse-design-system.css','utf8');
 
 test('single shared Uiverse visual layer comes after module styles without duplicating CSS requests',()=>{
- assert.equal(STYLE_SOURCES.at(-4),'frontend/uiverse-design-system.css');
+ assert.equal(STYLE_SOURCES.at(-5),'frontend/uiverse-design-system.css');
  assert.equal(new Set(STYLE_SOURCES).size,STYLE_SOURCES.length);
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());
  const html=readFileSync('index.html','utf8');
- assert.match(html,/apsyntra-styles\.bundle\.css\?v=(?:cp-crm-ui-redesign-0[12]|cp-crm-dark-0[12])/);
+ assert.match(html,/apsyntra-styles\.bundle\.css\?v=(?:cp-crm-ui-redesign-0[12]|cp-crm-dark-0[123])/);
  assert.match(html,/frontend\/uiverse-design-system\.css/);
  assert.equal((html.match(/<link rel="stylesheet"/g)||[]).length,1);
 });
