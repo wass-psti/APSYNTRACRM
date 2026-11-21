@@ -1,3 +1,4 @@
+import {isTimeTrackerHomeNoteRequired} from './time-tracker-offsite-note.js';
 import {TT_LOCATIONS,creditedAttendanceMs,creditedAttendanceRecordMs,manilaClockMinutes,TT_PHT_OFFSET_MS} from './time-tracker-policy.js';
 export {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
 import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-overview.js';
@@ -52,6 +53,7 @@ export function projectOwnAttendance(value,userId){
    id:x.id,ownerId:x.ownerId,clockIn:x.clockIn.timestamp,clockOut:out?.timestamp||null,
    location:String(x.clockIn.location||'—').slice(0,100),
    department:String(x.clockIn.department||'—').slice(0,100),
+   workNote:typeof x.clockIn.workNote==='string'?x.clockIn.workNote.slice(0,500):'',
    status:label,classification:attendanceClassification(x),
    creditedMs:out?creditedAttendanceRecordMs(x,x.clockIn.timestamp,out.timestamp):null,
    automatic:out?.automatic===true
@@ -153,6 +155,7 @@ export class TimeTrackerNativeClient{
   return Object.freeze({userId:who.id,workspaceId:ctx.workspace_id,boardId,
     platformRole:ctx.profile?.platform_role||'Unassigned',
     moduleRole:self.module_role,name:String(self.display_name||'Signed user').slice(0,100),
+    email:typeof who.email==='string'?who.email.trim().toLowerCase():'',
     overviewDirectory:Object.freeze(overviewDirectory),employees});
 
  }
@@ -587,7 +590,7 @@ export class TimeTrackerNativeClient{
   // authoritative. The SQL write endpoint independently enforces the mapping.
   const note=String(workNote||'').trim();
   if(note.length>500)deny('Work note exceeds 500 characters');
-  if(committedLocation==='Offsite (Home)'&&before.access.moduleRole!=='System Admin'&&!note)
+  if(action==='clock-in'&&isTimeTrackerHomeNoteRequired(committedLocation,before.access.email)&&!note)
    deny('Offsite Work Note is mandatory');
   if(!isRecord(geo)||geo.status!=='captured'||!Number.isFinite(geo.latitude)||
     geo.latitude < -90||geo.latitude>90||!Number.isFinite(geo.longitude)||

@@ -230,7 +230,10 @@ function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=fals
     '<span><small>Clock Out</small>'+esc(dateTime(row.clockOut))+'</span>'+
     '<span><small>Department</small>'+esc(row.department||'Unassigned')+'</span>'+
     '<span><small>Location</small>'+esc(row.location||'Unspecified')+'</span>'+
-    '<span><small>Arrival</small>'+esc(row.classification||'Unknown')+'</span></div></section>'+
+    '<span><small>Arrival</small>'+esc(row.classification||'Unknown')+'</span></div>'+
+    (row.location==='Offsite (Home)'&&row.workNote?
+     '<p class="tt-log-offsite-note"><strong>Offsite Work Note</strong> '+esc(row.workNote)+'</p>':'')+
+    '</section>'+
   '<div class="tt-log-evidence-title"><strong>DEVICE &amp; LOCATION</strong></div>'+
   '<div class="tt-log-location-evidence"><div>'+
    '<h6>LOCATION EVIDENCE</h6><p>'+esc(row.location||'Unspecified')+'</p>'+

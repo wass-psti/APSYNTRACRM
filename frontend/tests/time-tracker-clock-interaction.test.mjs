@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {isTimeTrackerHomeNoteRequired} from '../time-tracker-offsite-note.js';
 import {attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError}
  from '../time-tracker-clock-recovery.js';
 
@@ -43,14 +44,14 @@ function harness({commit=async()=>({action:'clock-out',revision:2,recordId}),
  const functions=new Function('state','render','auth','moduleByBoardName',
   'TT_LIVE_ATTENDANCE_WRITES_ACCEPTED','FormData','captureAttendanceGeo',
   'timeTracker','routeSerial','navigator','attendanceSnapshotOutcome',
-  'attendanceAuthFailure','attendanceClockError',
+  'attendanceAuthFailure','attendanceClockError','isTimeTrackerHomeNoteRequired',
   'rememberTimeTrackerClockPending','clearTimeTrackerClockPending',
   'restoreTimeTrackerClockPending',clockSource+
   ';return {submitTimeTrackerAction,verifyTimeTrackerAttendance};')(
   state,()=>{updates++;},{isSignedIn:true},
   ()=>({key:'timetracker'}),true,
   class{get(key){return key==='tt-location'?'Office-Base Duty':key==='tt-department'?'HR':null;}},capture,timeTracker,1,{geolocation:{}},
-  attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError,
+  attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError,isTimeTrackerHomeNoteRequired,
   context=>{state.ttClockPending=context;},
   ()=>{state.ttClockPending=null;},
   ()=>{}

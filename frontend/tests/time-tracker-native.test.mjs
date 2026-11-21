@@ -19,9 +19,9 @@ const example=(ownerId=user)=>({
  clockOut:null
 });
 function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=workspace,
- records=[],malformed=false,writeReady=false,foreignCapability=false,autoClockoutSnapshot=null,departmentValue='HR'}={}){
+ records=[],malformed=false,writeReady=false,foreignCapability=false,autoClockoutSnapshot=null,departmentValue='HR',email='employee@example.test'}={}){
  let commitCount=0, lastWrite=null;
- const auth={userId:activeUser,getVerifiedUser:async()=>({id:activeUser})};
+ const auth={userId:activeUser,getVerifiedUser:async()=>({id:activeUser,email})};
  let currentRecords=records;
  const api={
   context:async()=>({user_id:activeUser,workspace_id:ctxWs,profile:{status:'active',platform_role:'hr'}}),
@@ -56,7 +56,8 @@ function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=works
      lastWrite=args;
      if(args.p_action==='clock-in'){
       currentRecords=[{id:'new-attendance',ownerId:'cloud:'+activeUser,clockIn:{
-       timestamp:stamp(8),location:args.p_location,department:args.p_department},clockOut:null},
+       timestamp:stamp(8),location:args.p_location,department:args.p_department,
+       ...(args.p_work_note?{workNote:args.p_work_note}:{})},clockOut:null},
        ...currentRecords];
      }
      return {mode:'COMMITTED',contract:'tt-attendance-1',action:args.p_action,
@@ -427,6 +428,44 @@ test('active Clock Out reuses signed Clock In context and requires a fresh GPS f
  const homeView=renderTimeTrackerNative({result:await home.client.snapshot(board)});
  assert.match(homeView,/Offsite Work Note/);
  assert.doesNotMatch(homeView,/id="tt-note-wrap" hidden/);
- await assert.rejects(()=>home.client.commit(board,{
-  action:'clock-out',geo:gps}),/Offsite Work Note/);
+ const clockOut=await home.client.commit(board,{action:'clock-out',geo:gps});
+ assert.equal(clockOut.action,'clock-out');
+});
+
+
+test('Home requires a trimmed note for ordinary accounts including System Admin',async()=>{
+ const geo={status:'captured',latitude:10,longitude:123,accuracy:20};
+ for(const role of ['Employee','System Admin']){
+  const s=setup({writeReady:true,role,email:'other@watchdogautomation.com.ph'});
+  const request={action:'clock-in',location:'Offsite (Home)',geo};
+  await assert.rejects(s.client.commit(board,{...request,workNote:'   '}),/Offsite Work Note/);
+  assert.equal(s.commits(),0);
+  await s.client.commit(board,{...request,workNote:'  Checking reports from home  '});
+  assert.equal(s.lastWrite().p_work_note,'Checking reports from home');
+  const snap=await s.client.snapshot(board);
+  assert.equal(snap.records[0].workNote,'Checking reports from home');
+ }
+});
+
+test('only two authenticated email accounts can clock in at Home without a note',async()=>{
+ const geo={status:'captured',latitude:10,longitude:123,accuracy:20};
+ for(const email of ['asenagan@watchdogautomation.com.ph','mvasquez@watchdogautomation.com.ph']){
+  const s=setup({writeReady:true,email:email.toUpperCase()});
+  const snap=await s.client.snapshot(board);
+  assert.equal(snap.access.email,email);
+  const receipt=await s.client.commit(board,{
+   action:'clock-in',location:'Offsite (Home)',workNote:'   ',geo
+  });
+  assert.equal(receipt.action,'clock-in');
+  assert.equal(s.lastWrite().p_work_note,null);
+ }
+});
+
+test('Home reason readback is scoped to the signed attendance owner',()=>{
+ const own={...example(),clockIn:{...example().clockIn,location:'Offsite (Home)',workNote:'  Approved home schedule  '}};
+ const foreignRecord={...example(other),id:'foreign-note',clockIn:{...example(other).clockIn,workNote:'Sensitive note'}};
+ const rows=projectOwnAttendance({version:1,records:[own,foreignRecord]},user);
+ assert.equal(rows.length,1);
+ assert.equal(rows[0].workNote,'  Approved home schedule  ');
+ assert.equal(JSON.stringify(rows).includes('Sensitive note'),false);
 });

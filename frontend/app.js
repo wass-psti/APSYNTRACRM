@@ -180,6 +180,7 @@ import {FundTrackerNativeClient} from './fund-tracker-native.js';
 import {renderFundTrackerNative} from './fund-tracker-ui.js';
 import {findFundTrackerBoard,FUND_TRACKER_APPLICATION_ROUTE,parseFundTrackerRecordRoute,fundTrackerRecordHref} from './fund-tracker-application.js';
 import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock} from './time-tracker-ui.js';
+import {isTimeTrackerHomeNoteRequired} from './time-tracker-offsite-note.js';
 import {mountTimeTrackerPixi,stopTimeTrackerPixi} from './time-tracker-pixi-scene.js';
 import {startSelectExperience} from './select-experience.js';
 import {startActionMenuExperience,enhanceActionContextMenu} from './action-menu-experience.js';
@@ -4579,7 +4580,11 @@ async function submitTimeTrackerAction(form,actionName){
   state.ttError='Your department has not been assigned by a TimeTracker administrator. Clock In is unavailable until it is verified.';
   render();return;
  }
- const workNote=String(form.querySelector('#tt-note')?.value||'');
+ const workNote=actionName==='clock-in'?String(form.querySelector('#tt-note')?.value||'').trim():'';
+ if(actionName==='clock-in'&&isTimeTrackerHomeNoteRequired(location,state.ttAttendance.access?.email)&&!workNote){
+  state.ttError='Offsite Work Note is mandatory for Home. Enter a reason before starting your session.';
+  render();return;
+ }
  const seq=routeSerial,run=++state.ttRunId,identity=state.context.user_id,
   ws=state.context.workspace_id,boardId=state.boardId;
  const context={action:actionName,recordId:active?.id||null,userId:identity,workspaceId:ws,boardId,
@@ -12074,10 +12079,10 @@ root.addEventListener('change',event=>{
   const group=root.querySelector('#tt-note-wrap');
   const note=root.querySelector('#tt-note');
   if(group&&note){
-   const offsite=event.target.value==='Offsite (Home)' &&
-    state.ttAttendance?.access?.moduleRole!=='System Admin';
-   group.hidden=!offsite;note.required=offsite;
-   if(!offsite)note.value='';
+   const showHomeNote=event.target.value==='Offsite (Home)';
+   group.hidden=!showHomeNote;
+   note.required=isTimeTrackerHomeNoteRequired(event.target.value,state.ttAttendance?.access?.email);
+   if(!showHomeNote)note.value='';
   }
  }
  if(event.target.id==='managed-user'&&state.adminVerified&&state.userRoleData){
