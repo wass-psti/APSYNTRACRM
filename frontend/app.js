@@ -1017,11 +1017,10 @@ function overview(){
  const countLabel=value=>Number(value).toLocaleString('en-US');
  return `<div class="aps-overview">
  <section class="page-head overview-hero overview-entrance" aria-labelledby="overview-title">
-  <div class="overview-hero-index" aria-hidden="true"><span>APSYNTRA</span><strong>01 / WORKSPACE</strong></div>
   <div class="overview-hero-copy">
    <span class="label-top"><span class="overview-hero-dot" aria-hidden="true"></span> Workspace / Overview</span>
    <h1 id="overview-title">Good to see you, `+e(name().split(' ')[0])+` <span class="overview-wave" aria-hidden="true">👋</span></h1>
-   <p>Everything in motion. One connected place to plan, organize and move your work forward.</p>
+   <p>Here's what your workspace looks like today.</p>
   </div>
   <div class="head-actions">
    <button type="button" class="secondary overview-refresh" data-action="refresh">`+overviewIcon('refresh')+`<span>Refresh</span></button>
@@ -1062,7 +1061,6 @@ function overview(){
    <div class="stat-footer">`+e(workspaceRelationLabel(state.workspaceRelationSnapshot,state.context))+` · `+e(signedCrmIdentityLabel(state.context))+`</div>
   </div>
  </section>
- <div class="overview-command-grid`+(state.roleVerified===true?'':' overview-command-grid-full')+`">
  <section class="overview-board-section" aria-labelledby="overview-boards-title">
  <div class="section-header overview-section-heading overview-entrance">
   <div class="overview-heading-copy"><span class="overview-section-eyebrow">YOUR WORKSPACE</span><h2 id="overview-boards-title" class="section-title">Your boards</h2><p class="overview-board-count">Showing `+recent.length+` of `+countLabel(visibleBoards.length)+` available boards</p></div>
@@ -1073,7 +1071,6 @@ function overview(){
   '<div class="panel overview-empty">'+empty('Start with your first board',
    'Create a board to organize tasks and updates.',
    '<button class="primary" data-action="new-board">＋ Create board</button>')+'</div>')+'</section>'+(state.roleVerified===true?`
- <aside class="overview-insight-rail" aria-label="Workspace status and essentials">
  <div class="section-header overview-section-heading overview-essentials-heading overview-entrance">
   <div class="overview-heading-copy"><span class="overview-section-eyebrow">FOUNDATION</span><h2 class="section-title">Workspace essentials</h2></div>
  </div>
@@ -1095,9 +1092,7 @@ function overview(){
     <span class="overview-essentials-indicator" aria-hidden="true">`+overviewIcon('check')+`</span>
    </div>
   </div>
- </section>
- </aside>`:'')+`
- </div>
+ </section>`:'')+`
  </div>`;
 }
 function boardsPage(){
