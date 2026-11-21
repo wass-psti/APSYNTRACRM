@@ -2,12 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
+import {createOtpRequestControl} from '../ws02d-otp-request-control.js';
 const html=readFileSync(new URL('../ws02d-staging-signin.html',import.meta.url),'utf8');
 const script=html.match(/<script type="module">([\s\S]+?)<\/script>/)?.[1];
+const executableScript=script?.replace(/^import \{createOtpRequestControl\} from ['"]\.\/ws02d-otp-request-control\.js['"];?\s*/m,'');
+function createStorage(){const values=new Map();return {values,getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)}}
 test('staging sign-in is an isolated HTML entry point with no production credentials or auth calls',()=>{
  assert.ok(script); assert.match(html,/<meta name="referrer" content="no-referrer"/);
  assert.match(script,/https:\/\/jeqwjlxubntsddeauvqa\.supabase\.co/);
- assert.doesNotMatch(script,/jtlusodorfnyzgyuewkz|service_role|sb_secret_|localStorage|sessionStorage|indexedDB|document\.cookie|console\.log|window\.location/);
+ assert.doesNotMatch(script,/jtlusodorfnyzgyuewkz|service_role|sb_secret_|sessionStorage|indexedDB|document\.cookie|console\.log|window\.location/);
+ assert.match(script,/createOtpRequestControl/);
+ assert.match(script,/recordRateLimit/);
  assert.match(script,/email_confirmed_at/);assert.match(script,/is_anonymous===true/);
  assert.match(script,/a\.id===b\.id/);
  assert.match(script,/type:'email'/);
@@ -43,13 +48,13 @@ test('staging script parses as JavaScript in an ES module',async()=>{
  assert.equal(result.status,0,result.stderr);
 });test('OTP request is staging-scoped, does not register users, and names the exact staging redirect',async()=>{
  const buttons=new Map(),elements=new Map(),calls=[];
- const make=(id,value='')=>{const x={value,textContent:'',addEventListener(){}};elements.set(id,x);return x};
+ const make=(id,value='')=>{const x={value,textContent:'',disabled:false,addEventListener(){}};elements.set(id,x);return x};
  make('inviter-email','lmsenagan@watchdogautomation.com.ph');make('recipient-email','jspagsuguiron@watchdogautomation.com.ph');
  make('inviter-status');make('recipient-status');make('workspace');
  const document={
   getElementById:id=>elements.get(id)??make(id),
   querySelectorAll:selector=>['inviter','recipient'].map(which=>({
-   dataset:{[selector.slice(6,-1)]:which},
+   dataset:{[selector.slice(6,-1)]:which},textContent:selector==='[data-otp]'?'Request numeric email code':'',disabled:false,
    addEventListener:(_name,callback)=>buttons.set(selector+'-'+which,callback)
   }))
  };
@@ -58,7 +63,7 @@ test('staging script parses as JavaScript in an ES module',async()=>{
   calls.push({url,options});
   return {ok:true,status:200,json:async()=>({})};
  },encodeURIComponent,crypto:{randomUUID:()=> '00000000-0000-4000-8000-000000000000'}};
- runInNewContext(script,wrapper);
+ runInNewContext(executableScript,{...wrapper,createOtpRequestControl,localStorage:createStorage(),setTimeout:()=>1});
  assert.equal(elements.get('workspace').value,workspaceId);
  await buttons.get('[data-otp]-inviter')();
  assert.equal(calls.length,1);
@@ -66,7 +71,37 @@ test('staging script parses as JavaScript in an ES module',async()=>{
  assert.equal(target.url,'https://jeqwjlxubntsddeauvqa.supabase.co/auth/v1/otp?redirect_to='+encodeURIComponent('https://wass-psti.github.io/APSYNTRACRM/frontend/ws02d-staging-signin.html'));
  assert.deepEqual(JSON.parse(target.options.body),{email:'lmsenagan@watchdogautomation.com.ph',create_user:false});
  assert.match(elements.get('inviter-status').textContent,/Magic Link email template/);
+ assert.equal(elements.get('inviter-status').textContent.includes('cooldown'),true);
+ await buttons.get('[data-otp]-recipient')();
+ assert.equal(calls.length,1,'the shared cooldown prevents a second account from sending immediately');
 });
+test('HTTP 429 applies persistent cooldown to both account OTP buttons and never retries automatically',async()=>{
+ const handlers=new Map(),elements=new Map(),calls=[],store=createStorage();
+ const make=(id,value='')=>{const x={value,textContent:'',disabled:false,addEventListener(){}};elements.set(id,x);return x};
+ make('inviter-email','lmsenagan@watchdogautomation.com.ph');make('recipient-email','jspagsuguiron@watchdogautomation.com.ph');
+ make('inviter-status');make('recipient-status');make('workspace');make('result');
+ const otpButtons=[];
+ const document={getElementById:id=>elements.get(id)??make(id),querySelectorAll:selector=>['inviter','recipient'].map(which=>{
+  const button={dataset:{[selector.slice(6,-1)]:which},textContent:'Request numeric email code',disabled:false,
+   addEventListener:(_event,fn)=>handlers.set(selector+'-'+which,fn)};
+  if(selector==='[data-otp]')otpButtons.push(button);
+  return button;
+ })};
+ const fetch=async(url)=>{calls.push(url);return {ok:false,status:429,headers:{get:()=>null},json:async()=>({message:'email rate limit exceeded'})}};
+ runInNewContext(executableScript,{document,location:{search:''},URLSearchParams,fetch,encodeURIComponent,
+ createOtpRequestControl,localStorage:store,setTimeout:()=>1,crypto:{randomUUID:()=>''}});
+ await handlers.get('[data-otp]-inviter')();
+ assert.equal(calls.length,1);
+ assert.match(elements.get('inviter-status').textContent,/Provider email rate limit reached/);
+ assert.match(elements.get('inviter-status').textContent,/No automatic retry/);
+ assert.match(elements.get('result').textContent,/both staging accounts/);
+ assert.equal(otpButtons.every(button=>button.disabled),true);
+ const persisted=[...store.values.values()].join(' ');
+ assert.match(persisted,/notBefore/);
+ await handlers.get('[data-otp]-recipient')();
+ assert.equal(calls.length,1,'the recipient button is blocked by the shared provider cooldown');
+});
+
 test('numeric verification uses email OTP and rejects malformed codes before network calls',async()=>{
  const handlers=new Map(),elements=new Map(),calls=[];
  const input=(id,value='')=>{const x={value,textContent:'',addEventListener(){}};elements.set(id,x);return x};
@@ -75,9 +110,9 @@ test('numeric verification uses email OTP and rejects malformed codes before net
  input('inviter-code','not-a-code');input('recipient-code','');
  input('inviter-status');input('recipient-status');
  const document={getElementById:id=>elements.get(id)??input(id),
- querySelectorAll:selector=>['inviter','recipient'].map(which=>({dataset:{[selector.slice(6,-1)]:which},
+ querySelectorAll:selector=>['inviter','recipient'].map(which=>({dataset:{[selector.slice(6,-1)]:which},textContent:'Request numeric email code',disabled:false,
  addEventListener:(_event,fn)=>handlers.set(selector+'-'+which,fn)}))};
- runInNewContext(script,{document,location:{search:''},URLSearchParams,fetch:async(url,opts)=>{calls.push({url,opts});return {ok:false,status:403,json:async()=>({message:'invalid code'})}},encodeURIComponent,crypto:{randomUUID:()=>''}});
+ runInNewContext(executableScript,{document,location:{search:''},URLSearchParams,fetch:async(url,opts)=>{calls.push({url,opts});return {ok:false,status:403,json:async()=>({message:'invalid code'})}},encodeURIComponent,crypto:{randomUUID:()=>''},createOtpRequestControl,localStorage:createStorage(),setTimeout:()=>1});
  await handlers.get('[data-verify]-inviter')();
  assert.equal(calls.length,0);
  assert.equal(elements.get('inviter-code').value,'');
