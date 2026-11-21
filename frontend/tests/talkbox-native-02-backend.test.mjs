@@ -93,6 +93,60 @@ test('native deletion hides DB record before deleting exact private object',asyn
  assert.equal(calls.filter(x=>x.name==='toolbox_issues_confirm_attachment_purged').length,1);
 });
 
+test('native removal cache-busts only post-DELETE private absence verification',async()=>{
+ const {client,calls}=attachmentTransport();
+ await client.removeVerified('301',asset);
+ const deleteRequest=calls.find(x=>x.url&&x.init.method==='DELETE');
+ const absenceRequest=calls.find(x=>x.url&&x.init.method==='GET');
+ assert.equal(deleteRequest.url.includes('cacheNonce='),false);
+ assert.match(absenceRequest.url,/\\?cacheNonce=[^&]+$/);
+ assert.equal(absenceRequest.init.cache,'no-store');
+ assert.equal(absenceRequest.init.credentials,'omit');
+});
+
+test('stale original authenticated URL cannot falsely block verified CDN-fresh deletion',async()=>{
+ const calls=[];
+ const signed={userId,isSignedIn:true,token:async()=> 'fake-token'};
+ const api={rpc:async(name)=>{
+  calls.push(name);
+  const hidden=calls.includes('toolbox_issues_unregister_attachment');
+  const purged=calls.includes('toolbox_issues_confirm_attachment_purged');
+  if(name==='toolbox_issues_get_issue')
+   return {...base,assets:hidden?[]:[asset],
+    pendingAttachmentCleanup:hidden&&!purged?[asset]:[]};
+  if(name==='toolbox_issues_unregister_attachment'||
+     name==='toolbox_issues_confirm_attachment_purged')
+   return {success:true,id:'77',storagePath:filePath,issueId:'301'};
+  throw Error(name);
+ }};
+ const fetchCalls=[];
+ const fetchImpl=async(url,opts)=>{
+  fetchCalls.push({url,method:opts.method});
+  // Existing cached authenticated object would still return 200; a
+  // cacheNonce request must go to a fresh key and see the origin 404.
+  if(opts.method==='GET')
+   return {ok:!url.includes('cacheNonce='),status:url.includes('cacheNonce=')?404:200};
+  return {ok:true,status:200};
+ };
+ const client=new TalkBoxAttachmentClient({api,auth:signed,workspaceId,fetchImpl});
+ const result=await client.removeVerified('301',asset);
+ assert.deepEqual(result.pendingAttachmentCleanup,[]);
+ assert.equal(calls.filter(x=>x==='toolbox_issues_confirm_attachment_purged').length,1);
+ assert.equal(fetchCalls.filter(x=>x.method==='GET').length,1);
+ assert.match(fetchCalls.find(x=>x.method==='GET').url,/cacheNonce=/);
+});
+
+test('even cache-busted 200 remains pending rather than asserting storage purged',async()=>{
+ const {client,calls}=attachmentTransport();
+ client.fetch=async(url,opts)=>{
+  calls.push({url,init:opts});
+  return {ok:true,status:200};
+ };
+ await assert.rejects(()=>client.removeVerified('301',asset),/remains downloadable/);
+ assert.equal(calls.filter(x=>x.name==='toolbox_issues_confirm_attachment_purged').length,0);
+ assert.match(calls.find(x=>x.url&&x.init.method==='GET').url,/cacheNonce=/);
+});
+
 test('native removal does not delete Storage if backend acknowledgement is mismatched',async()=>{
  const {client,calls}=attachmentTransport({rpcResponse:{
   success:true,id:'77',storagePath:'different/path',issueId:'301'}});
