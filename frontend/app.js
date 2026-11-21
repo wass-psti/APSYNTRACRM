@@ -474,7 +474,7 @@ async function loadTalkBox({more=false,selectedId=null}={}){
   const known=new Set(existing.map(item=>item.id));
   const items=[...existing,...page.items.filter(item=>!known.has(item.id))];
   const openId=selectedId||talkBoxState.selected?.id;
-  const selected=openId?await client.get(openId):null;
+  const selected=openId?await client.getIfAvailable(openId):null;
   if(!talkBoxCurrent(scope))return;
   talkBoxState={page:{...page,items},selected,busy:false,error:'',scope,filter:talkBoxState.filter,features};
  }catch(err){if(talkBoxCurrent(scope))talkBoxState={...talkBoxState,busy:false,error:errorMessage(err)};}
@@ -484,8 +484,9 @@ async function openTalkBoxIssue(issueId){
  const scope=[auth.userId,state.context?.workspace_id,state.boardId].join('|');
  if(!talkBoxCurrent(scope)||talkBoxState.busy)return;
  talkBoxState.busy=true;render();
- try{const selected=await talkBoxClient().get(issueId);
-  if(talkBoxCurrent(scope))talkBoxState={...talkBoxState,selected,error:''};
+ try{const selected=await talkBoxClient().getIfAvailable(issueId);
+  if(talkBoxCurrent(scope))talkBoxState={...talkBoxState,selected,
+   error:selected?'':'This issue is no longer available. Refresh the list.'};
  }catch(err){if(talkBoxCurrent(scope))talkBoxState.error=errorMessage(err);}
  finally{if(talkBoxCurrent(scope)){talkBoxState.busy=false;render();}}
 }
