@@ -8,7 +8,7 @@
  * Do not deploy/activate without staging negative tests and delivery review.
  */
 import postgres from 'npm:postgres@3.4.5';
-import {sendWorkspaceSmtp,validWorkspaceSmtpConfig} from './ws02d-smtp.mjs';
+import {sendWorkspaceSmtp,validWorkspaceSmtpConfig,verifyWorkspaceSmtp} from './ws02d-smtp.mjs';
 import {invitationDeliveryReadiness,summarizeInvitationReadiness} from './ws02d-readiness.mjs';
 
 type Route = 'invite' | 'accept' | 'manage' | 'board';
@@ -366,6 +366,7 @@ export function serveInvitationRoute(route: Route) {
       const isReadiness=route==='manage' && body.operation==='readiness';
       if (!deliveryEnabled && !isReadiness)
         return respond(req, 503, { state: 'unavailable' });
+      let smtpConfig: ObjectMap | null = null;
       if (route === 'invite') {
         const smtp = Deno.env.get('APSYNTRA_INVITE_TRANSPORT') === 'smtp';
         const config = {host:Deno.env.get('APSYNTRA_INVITE_SMTP_HOST'),
@@ -376,8 +377,20 @@ export function serveInvitationRoute(route: Route) {
         if (smtp ? !validWorkspaceSmtpConfig(config) :
             (!Deno.env.get('RESEND_API_KEY') || !config.from))
           return fail(503, 'Mail delivery not configured');
+        if (smtp) smtpConfig = config;
       }
       const actor = await verifyUser(req);
+      if (route === 'invite' && smtpConfig) {
+        // Authenticate against the real SMTP server before creating an
+        // invitation or delivery-ledger row. Invalid credentials must not
+        // leave an unsent pending invitation behind.
+        const {default:nodemailer} = await import('npm:nodemailer@10.6.0');
+        const smtpCheck = await verifyWorkspaceSmtp({
+          config:smtpConfig,createTransport:nodemailer.createTransport.bind(nodemailer)
+        });
+        if (smtpCheck.state !== 'verified')
+          return fail(503, 'SMTP authentication failed; no invitation was issued');
+      }
       const receipt = await trustedSql(actor, route, body);
       if (isReadiness) {
         const readiness=summarizeInvitationReadiness({
