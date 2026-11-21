@@ -1,0 +1,118 @@
+/* FE-IMM-05: visual-only treatment; never affects forms, reservations, or provider state. */
+.immersive-booking-progress {
+  margin: 22px 0 28px;
+  padding: 16px clamp(14px, 2vw, 24px);
+  border: 1px solid var(--ds-border-soft);
+  border-radius: 15px;
+  background: #fff;
+}
+.immersive-booking-progress ol {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: 10px;
+}
+.immersive-booking-progress li {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  color: #6a7a70;
+  min-width: 0;
+}
+.immersive-step-number {
+  position: relative; isolation: isolate;
+  width: 38px; height: 38px; flex: 0 0 38px;
+  display: grid; place-items: center;
+  border-radius: 50%; border: 1px solid #c9d9c7;
+  font-size: 11px; font-weight: 800;
+}
+.immersive-step-number > span:last-child { position: relative; z-index: 1; }
+.immersive-step-active {
+  position: absolute; z-index: 0; inset: 2px;
+  border-radius: 50%; background: #d7ef69;
+}
+.immersive-booking-progress li[aria-current=step] { color: #143e31; font-weight: 800; }
+.immersive-booking-progress li.step-visited .immersive-step-number {
+  background: #e9f3dc; color: #21563e; border-color: #abc7ab;
+}
+.immersive-step-label { font-size: 12px; line-height: 1.3; }
+.immersive-booking-progress > p {
+  border-top: 1px solid #e5ebe2;
+  padding-top: 12px; margin: 14px 0 0;
+  font-size: 11px; color: #647268;
+}
+.immersive-draft-summary {
+  border: 1px solid #d3e2cf;
+  background: linear-gradient(130deg, #eef6e7 0%, #f7faf4 100%);
+  box-shadow: var(--ds-shadow-rest);
+}
+.immersive-summary-heading {
+  display: flex; flex-wrap: wrap; align-items: center;
+  justify-content: space-between; gap: 8px;
+  border-bottom: 1px solid #d5e5d0; padding-bottom: 12px; margin-bottom: 12px;
+}
+.immersive-summary-heading h2 { margin: 0 !important; }
+.immersive-draft-tag {
+  font-size: 10px; letter-spacing: .12em; font-weight: 900;
+  color: #395b3e; background: #dfecc8;
+  border-radius: 100px; padding: 7px 10px;
+}
+.immersive-summary-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 14px;
+}
+.immersive-summary-grid p { min-width: 0; overflow-wrap: anywhere; }
+.customer-form {
+  border-color: #d4e2d1; box-shadow: var(--ds-shadow-rest);
+}
+.customer-form .form-field input {
+  min-height: 48px; background: #fcfdf9;
+  transition: border-color var(--ds-duration-fast) ease, box-shadow var(--ds-duration-fast) ease;
+}
+.customer-form .form-field input:focus-visible {
+  border-color: #307555; box-shadow: 0 0 0 3px rgb(82 125 3 / 12%);
+}
+.customer-form .form-field input[aria-invalid=true] {
+  border-color: #a33b36; background: #fff9f7;
+}
+.payment-panel { border-color: #d4e2d1; box-shadow: var(--ds-shadow-rest); }
+.immersive-payment-option {
+  min-height: 110px; position: relative; isolation: isolate;
+  overflow: hidden; transition: border-color var(--ds-duration-fast) ease;
+}
+.immersive-payment-option:has(input:focus-visible) {
+  outline: 3px solid var(--ds-focus-ring); outline-offset: 3px;
+}
+.immersive-payment-option input, .immersive-payment-copy { position: relative; z-index: 1; }
+.immersive-payment-copy { min-width: 0; overflow-wrap: anywhere; }
+.immersive-payment-highlight {
+  position: absolute; z-index: 0; inset: 2px;
+  background: #e6f3d5; border-radius: 8px; pointer-events: none;
+}
+.immersive-payment-status { overflow: hidden; min-height: 126px; }
+.immersive-payment-status[data-demo-status=successful] {
+  border-left-color: #4c8b55; background: #f1f8ed;
+}
+.immersive-payment-status[data-demo-status=failed],
+.immersive-payment-status[data-demo-status=expired],
+.immersive-payment-status[data-demo-status=cancelled] {
+  border-left-color: #99705c; background: #fbf4ef;
+}
+.immersive-payment-status[data-demo-status=processing] {
+  border-left-color: #598a90; background: #edf6f6;
+}
+@media (max-width: 620px) {
+  .immersive-booking-progress { padding: 12px; }
+  .immersive-booking-progress ol { gap: 5px; }
+  .immersive-booking-progress li { flex-direction: column; text-align: center; gap: 6px; }
+  .immersive-step-number { width: 32px; height: 32px; flex-basis: 32px; }
+  .immersive-step-label { font-size: 10px; overflow-wrap: anywhere; }
+  .immersive-summary-grid { grid-template-columns: 1fr; }
+  .immersive-payment-option { min-height: 90px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .immersive-payment-option,
+  .customer-form .form-field input { transition: none; }
+}

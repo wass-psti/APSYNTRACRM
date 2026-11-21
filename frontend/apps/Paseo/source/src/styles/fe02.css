@@ -1,0 +1,95 @@
+/* FE-02: Court catalog and journey styles. Kept separate from the FE-01 design system. */
+.court-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 0;
+  margin: 16px 0 0;
+  list-style: none;
+}
+.court-features li {
+  border-radius: 99px;
+  background: #eff3e8;
+  color: #365c48;
+  font-size: 11px;
+  padding: 6px 10px;
+}
+.court-data {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  border-top: 1px solid #e6ebdf;
+  padding-top: 18px;
+}
+.court-data div { display: grid; gap: 7px; }
+.court-data span { font-size: 11px; color: var(--muted); }
+.court-data strong { font-size: 12px; line-height: 1.5; }
+.status-unknown { color: #6c6150; }
+.court-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+.court-card .card-body { gap: 20px; }
+.card-art .art-disclaimer {
+  position: absolute;
+  bottom: 12px;
+  right: 13px;
+  font-size: 9px;
+  letter-spacing: .08em;
+  font-weight: 750;
+  color: #234736;
+}
+.catalog-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.catalog-controls label { font-size: 13px; font-weight: 800; }
+.catalog-controls input {
+  min-height: 44px;
+  min-width: min(100%, 280px);
+  border: 1px solid #abbcaf;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+}
+.catalog-controls span { font-size: 12px; color: var(--muted); }
+.catalog-empty {
+  padding: 32px;
+  border: 1px solid #dce6dc;
+  border-radius: 12px;
+  background: #fff;
+}
+.catalog-empty h2 { font-size: 24px; margin: 0 0 10px; }
+.catalog-empty p { color: var(--muted); }
+.court-detail-layout { display: grid; grid-template-columns: 1.12fr 1fr; gap: 58px; margin-top: 32px; align-items: start; }
+.court-art-large { height: 410px; border-radius: 14px; }
+.detail-subtitle { font-size: 20px; margin-top: 27px; }
+.detail-features { padding-left: 22px; line-height: 2; }
+.detail-information { border-block: 1px solid #dde5d8; margin: 20px 0; padding: 10px 0; }
+.detail-information p { font-size: 14px; }
+.journey-list { list-style: none; padding: 0; max-width: 790px; margin: 20px 0 38px; }
+.journey-list li { display: flex; gap: 24px; padding: 22px 0; border-bottom: 1px solid #dbe4db; }
+.journey-number { color: #457451; font-weight: 900; font-size: 19px; }
+.journey-list h2 { margin: 0; font-size: 22px; }
+.journey-list p { color: var(--muted); line-height: 1.7; font-size: 14px; }
+.steps-list { margin: 0; list-style: none; }
+.steps-list li { display: flex; align-items: start; gap: 24px; border-bottom: 1px solid #547569; padding: 22px 0; }
+.steps-list li b { color: var(--lime); font-size: 18px; }
+.steps-list li strong, .steps-list li small { display: block; }
+.steps-list li strong { font-size: 19px; }
+.steps-list li small { font-size: 12px; margin-top: 7px; color: #b0c5ba; }
+:focus-visible { outline: 3px solid #8daa27; outline-offset: 3px; }
+@media (max-width: 900px) {
+  .court-detail-layout { grid-template-columns: 1fr; gap: 24px; }
+}
+@media (max-width: 680px) {
+  .court-data { grid-template-columns: 1fr 1fr; }
+  .court-card-actions { width: 100%; }
+  .court-card-actions .button { flex: 1; }
+  .court-art-large { height: 290px; }
+  .catalog-controls { align-items: stretch; flex-direction: column; }
+  .catalog-controls input { width: 100%; }
+}

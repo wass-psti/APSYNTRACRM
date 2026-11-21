@@ -1,0 +1,42 @@
+name: Paseo Native CRM Integration Acceptance
+on:
+  pull_request:
+    paths:
+      - 'frontend/apps/Paseo/**'
+      - 'frontend/app.js'
+      - 'frontend/sidebar-active-route.js'
+      - 'frontend/tests/pdl-aps-native.test.mjs'
+      - 'paseo/**'
+      - '404.html'
+      - 'scripts/pdl-aps-native-browser.mjs'
+      - 'scripts/build-pdl-native.mjs'
+      - '.github/workflows/pdl-aps-native-01.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-public-and-admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --no-audit --no-fund
+      - run: npm ci --prefix frontend/apps/Paseo/source --no-audit --no-fund
+      - name: Build public application from its locked source
+        run: npm run build:pdl
+      - name: Verify published bundle corresponds to source
+        run: git diff --exit-code -- paseo
+      - name: Verify native access boundaries and regression contracts
+        run: |
+          npm run check
+          node scripts/verify-pages-source.mjs
+          node --test frontend/tests/pdl-aps-native.test.mjs
+          npm test
+          npm run build
+      - name: Public/CRM browser isolation and direct-link acceptance
+        run: |
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$BROWSER" || { echo 'BLOCKED: Chromium executable not found'; exit 1; }
+          CHROME_BIN="$BROWSER" node scripts/pdl-aps-native-browser.mjs

@@ -1,0 +1,195 @@
+/* FE-IMM-06: Premium administrative console styling, visual-only. */
+.immersive-admin-section {
+  --admin-ink: #183c32;
+  --admin-border: #d7e5da;
+  --admin-muted: #587568;
+  padding-top: clamp(34px, 5.5vw, 76px);
+}
+.immersive-admin-heading {
+  position: relative;
+  padding: clamp(20px, 3vw, 34px);
+  border-radius: 18px;
+  overflow: hidden;
+  background: radial-gradient(circle at 86% 14%, #2b6655 0, transparent 32%),
+    linear-gradient(118deg, #102e2a 0%, #19483c 100%);
+  color: #f7faf0;
+  isolation: isolate;
+}
+.immersive-admin-heading::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  z-index: -1;
+  right: -40px;
+  top: -74px;
+  width: 300px;
+  height: 300px;
+  border: 1px solid rgb(218 237 191 / 15%);
+  border-radius: 50%;
+  box-shadow: 0 0 0 45px rgb(218 237 191 / 3%),
+              0 0 0 95px rgb(218 237 191 / 2%);
+}
+.immersive-admin-heading .eyebrow { color: #b4d0bf; letter-spacing: .16em; font-size: 10px; }
+.immersive-admin-heading .page-title {
+  margin: 12px 0 0;
+  color: #f7faf0;
+  font-size: clamp(31px, 4vw, 54px);
+  letter-spacing: -.055em;
+}
+.immersive-admin-label {
+  display: inline-block;
+  margin-top: 18px;
+  color: #d1e99b;
+  border: 1px solid rgb(209 233 155 / 50%);
+  padding: 7px 11px;
+  border-radius: 100px;
+  letter-spacing: .14em;
+  font-size: 10px;
+  font-weight: 850;
+}
+.immersive-admin-banner {
+  border: 1px solid #d2e0ca;
+  border-left: 4px solid #56804a;
+  background: #eff6e9;
+  padding: 17px 20px;
+  margin: 18px 0 20px;
+}
+.immersive-admin-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid var(--admin-border);
+  border-radius: 13px;
+  background: #f2f6f0;
+  margin: 20px 0 30px;
+}
+.immersive-admin-navigation .immersive-admin-nav-link {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 11px 13px;
+  color: #35594c;
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.immersive-admin-navigation .immersive-admin-nav-link:hover {
+  background: rgb(206 230 198 / 55%);
+  border-color: #b5d0b4;
+}
+.immersive-admin-navigation .immersive-admin-nav-link[aria-current=page] {
+  color: #143d31;
+  background: transparent;
+  border-color: transparent;
+}
+.immersive-admin-nav-label { position: relative; z-index: 1; }
+.immersive-admin-nav-current {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: #d7efb7;
+  border: 1px solid #a4c78f;
+  box-shadow: 0 2px 6px rgb(33 75 43 / 9%);
+  z-index: 0;
+  pointer-events: none;
+}
+.immersive-admin-content { min-width: 0; }
+.immersive-admin-content > .page-lede { max-width: 860px; margin-bottom: 24px; }
+.immersive-admin-section .admin-metrics {
+  gap: 14px;
+}
+.immersive-admin-section .admin-metrics > div {
+  position: relative;
+  overflow: hidden;
+  padding: 22px 20px;
+  min-height: 112px;
+  border: 1px solid var(--admin-border);
+  border-radius: 13px;
+  background: linear-gradient(144deg, #f7faf4, #eaf3e7);
+  box-shadow: var(--ds-shadow-rest);
+}
+.immersive-admin-section .admin-metrics > div::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: #7aa365;
+}
+.immersive-admin-section .admin-metrics strong { color: #143e31; letter-spacing: -.04em; }
+.immersive-admin-section .admin-metrics span { color: var(--admin-muted); font-weight: 600; }
+.immersive-admin-section :where(.admin-court-card, .fe08-card, .booking-panel) {
+  border: 1px solid var(--admin-border);
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: var(--ds-shadow-rest);
+  min-width: 0;
+}
+.immersive-admin-section .fe08-card {
+  border-top: 3px solid #8db67e;
+}
+.immersive-admin-section :where(.fe08-card, .admin-court-card) h2 {
+  color: var(--admin-ink);
+  letter-spacing: -.035em;
+}
+.immersive-admin-section :where(.fe08-card, .admin-court-card) p {
+  color: #385b4a;
+}
+.immersive-admin-section :where(.fe08-card, .admin-court-card, .booking-panel) .button {
+  min-height: 42px;
+}
+.immersive-admin-section :where(input, textarea, select) {
+  font-size: 14px;
+  color: #163e32;
+}
+.immersive-admin-section :where(.fe08-filters input, .fe08-filters select, .admin-filter-row select, .admin-filter-row input,
+  .admin-maintenance-form select, .fe08-settings-form input, .fe08-settings-form textarea, .fe08-rate-field input,
+  .admin-court-card input:not([type=checkbox]), .admin-court-card select, .admin-weekday-label select) {
+  border-radius: 9px;
+  min-height: 44px;
+  background: #fcfefb;
+  border-color: #a9c1af;
+}
+.immersive-admin-section :where(input, select, textarea):focus-visible {
+  outline: 3px solid var(--ds-focus-ring);
+  outline-offset: 2px;
+}
+.immersive-admin-section .fe08-data-note {
+  border-color: #638e5e;
+  background: #edf5e8;
+}
+.immersive-admin-section .admin-message {
+  border-left: 3px solid #638e5e;
+  color: #275240;
+}
+.immersive-admin-section .fe08-card-list { gap: 18px; }
+.immersive-admin-section .admin-toggle {
+  gap: 9px;
+}
+.immersive-admin-section .admin-block-list li {
+  border-color: #d7e5da;
+}
+@media (max-width: 680px) {
+  .immersive-admin-heading { padding: 22px 18px; }
+  .immersive-admin-navigation { gap: 6px; padding: 7px; }
+  .immersive-admin-navigation .immersive-admin-nav-link {
+    flex: 1 1 calc(50% - 8px);
+    padding-inline: 5px;
+    font-size: 11px;
+    white-space: normal;
+    text-align: center;
+  }
+  .immersive-admin-section .admin-metrics > div { padding: 17px 15px; min-height: 96px; }
+  .immersive-admin-section :where(.admin-court-card, .fe08-card) { padding: 17px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .immersive-admin-nav-current { animation: none !important; transition: none !important; }
+}

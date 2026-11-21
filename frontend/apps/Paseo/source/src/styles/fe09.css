@@ -1,0 +1,16 @@
+/* FE-09: keyboard, responsive, and reduced-motion improvements. */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+:where(input, textarea, select, a, button):focus-visible { outline: 3px solid #527d03; outline-offset: 3px; }
+#main h1:focus { outline: none; }
+.admin-navigation { max-width: 100%; }
+:where(.admin-card, .fe08-card, .booking-panel) { min-width: 0; }
+@media(max-width: 480px) {
+  .admin-navigation a { flex: 1 1 auto; text-align: center; }
+  .fe08-filters label { flex-basis: 100%; }
+  .booking-section { padding-top: 42px; }
+}
+@media(prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
+.navigation-progress { margin: 0; background: #e2f1cc; color: #224838; padding: 10px 24px; font-size: 13px; font-weight: 750; text-align: center; }

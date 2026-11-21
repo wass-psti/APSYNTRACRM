@@ -1,0 +1,25 @@
+/* Motion owns transforms for opt-in surfaces. Existing buttons keep their behavior elsewhere. */
+.motion-button {
+  touch-action: manipulation;
+}
+.button.motion-button:hover:not(:disabled) {
+  transform: none;
+}
+.motion-button-inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: inherit;
+  min-width: 0;
+}
+.motion-court-card {
+  transform-origin: center center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .motion-court-card,
+  .motion-button-inner,
+  [data-motion-reveal] {
+    animation: none !important;
+    transition: none !important;
+  }
+}

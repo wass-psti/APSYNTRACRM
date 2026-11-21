@@ -1,0 +1,368 @@
+/* PDL-ADMIN-SIGNIN-UI-02
+   Route-scoped visual refinement. No authentication/session/network changes.
+   Uiverse-inspired fields, primary action, surface and feedback treatments. */
+.pdl-admin-signin {
+  --pdl-admin-ink: var(--ds-forest-800);
+  --pdl-admin-muted: #566d5f;
+  --pdl-admin-border: #d8e5d7;
+  --pdl-admin-green: #234f3f;
+  --pdl-admin-lime: var(--ds-lime-300);
+  padding-top: clamp(52px, 6.7vw, 100px);
+  padding-bottom: clamp(70px, 8vw, 112px);
+}
+.pdl-admin-signin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, .98fr);
+  gap: clamp(28px, 6vw, 88px);
+  align-items: center;
+}
+.pdl-admin-signin-intro { min-width: 0; }
+.pdl-admin-signin .pdl-admin-signin-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 0 0 24px;
+  color: #436a54;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .15em;
+}
+.pdl-admin-signin-eyebrow-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: #7cab70;
+  box-shadow: 0 0 0 4px #eaf2e4;
+}
+.pdl-admin-signin .page-title {
+  max-width: 590px;
+  margin: 0 0 19px;
+  font-size: clamp(46px, 5.7vw, 74px);
+  line-height: 1.02;
+  letter-spacing: -.07em;
+  color: var(--pdl-admin-ink);
+}
+.pdl-admin-signin-title-nowrap { white-space: nowrap; }
+.pdl-admin-signin .page-lede {
+  max-width: 540px;
+  margin: 0;
+  color: var(--pdl-admin-muted);
+  line-height: 1.85;
+  font-size: clamp(13px, 1.3vw, 15px);
+}
+.pdl-admin-signin-art {
+  margin-top: 31px;
+  padding: 17px 21px 12px;
+  border: 1px solid #2c6353;
+  border-radius: 20px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 90% 10%, rgb(215 239 105 / 12%), transparent 31%),
+    linear-gradient(135deg, #1c4f42, #0d302c);
+  box-shadow: 0 17px 35px rgb(18 57 38 / 12%);
+  color: #fff;
+}
+.pdl-admin-signin-art-top,
+.pdl-admin-signin-art-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #d5e5d5;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .095em;
+}
+.pdl-admin-signin-art-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pdl-admin-lime);
+  box-shadow: 0 0 0 4px rgb(215 239 105 / 14%);
+}
+.pdl-admin-signin-art svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 250px;
+  margin: 7px auto 5px;
+  filter: drop-shadow(0 10px 11px rgb(0 0 0 / 16%));
+}
+.pdl-admin-signin-art-bottom {
+  padding-top: 12px;
+  border-top: 1px solid rgb(241 253 233 / 16%);
+  font-size: 8px;
+}
+.pdl-admin-signin .pdl-admin-signin-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  max-width: none;
+  margin: 18px 0 0;
+  padding: 16px 18px;
+  border: 1px solid #d8e6d2;
+  border-radius: 13px;
+  background: #f1f7ec;
+  color: #395c45;
+  font-size: 12px;
+  line-height: 1.75;
+}
+.pdl-admin-signin-notice-icon {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  border: 1px solid #d3e3cb;
+  border-radius: 50%;
+  background: #e4f0dc;
+  color: #4a7955;
+  font-family: Georgia, serif;
+  font-size: 16px;
+  font-weight: bold;
+}
+.pdl-admin-signin-card {
+  min-width: 0;
+  padding: clamp(22px, 3.4vw, 42px);
+  border: 1px solid var(--pdl-admin-border);
+  border-radius: 23px;
+  background: linear-gradient(150deg, #fff 0%, #fcfdf9 100%);
+  box-shadow: 0 24px 56px rgb(19 55 37 / 9%), inset 0 1px 0 rgb(255 255 255 / 95%);
+}
+.pdl-admin-signin-card-heading { margin-bottom: 26px; }
+.pdl-admin-signin-card-icon {
+  display: grid;
+  place-items: center;
+  width: 53px;
+  height: 53px;
+  margin-bottom: 23px;
+  border: 1px solid #d7e7d0;
+  border-radius: 15px;
+  background: #edf5e7;
+  color: #2d6b49;
+}
+.pdl-admin-signin-card-icon svg { width: 27px; height: 27px; }
+.pdl-admin-signin-card-kicker {
+  display: block;
+  color: #69846d;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .15em;
+}
+.pdl-admin-signin-card-heading h2 {
+  margin: 9px 0 9px;
+  color: #1f4838;
+  font-size: clamp(28px, 3vw, 39px);
+  line-height: 1.15;
+  letter-spacing: -.06em;
+}
+.pdl-admin-signin-card-heading p {
+  max-width: 370px;
+  margin: 0;
+  color: var(--pdl-admin-muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.pdl-admin-signin .pdl-admin-signin-form {
+  display: grid;
+  gap: 19px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.pdl-admin-signin-field { display: grid; gap: 9px; min-width: 0; }
+.pdl-admin-signin .pdl-admin-signin-form .pdl-admin-signin-field label {
+  margin: 0;
+  color: #365a43;
+  font-size: 12px;
+  font-weight: 800;
+}
+.pdl-admin-signin-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  min-height: 56px;
+  padding: 0 15px;
+  border: 1px solid #bfcfbe;
+  border-radius: 12px;
+  background: #f9fbf7;
+  box-shadow: inset 0 1px 2px rgb(18 45 37 / 3%);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+.pdl-admin-signin-input > svg {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 19px;
+  color: #738f78;
+}
+.pdl-admin-signin-input:hover:not(:focus-within) { border-color: #84ac89; }
+.pdl-admin-signin-input:focus-within {
+  background: #fff;
+  border-color: #568863;
+  box-shadow: 0 0 0 3px rgb(80 135 93 / 16%);
+}
+.pdl-admin-signin .pdl-admin-signin-form .pdl-admin-signin-input input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  min-height: 53px;
+  padding: 11px 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #254634;
+  font-size: 14px;
+  box-shadow: none;
+  outline: none;
+}
+.pdl-admin-signin .pdl-admin-signin-form .pdl-admin-signin-input input:hover,
+.pdl-admin-signin .pdl-admin-signin-form .pdl-admin-signin-input input:focus-visible {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+}
+.pdl-admin-signin .pdl-admin-signin-input:has(input:focus-visible) {
+  outline: 3px solid var(--ds-focus-ring);
+  outline-offset: 3px;
+}
+.pdl-admin-signin-password { padding-right: 7px; }
+.pdl-admin-password-visibility {
+  display: grid;
+  place-items: center;
+  min-width: 49px;
+  min-height: 44px;
+  flex: 0 0 49px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #466e51;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 850;
+  transition: background-color 160ms ease;
+}
+.pdl-admin-password-visibility:hover { background: #eaf2e5; }
+.pdl-admin-password-visibility:focus-visible { outline: 3px solid var(--ds-focus-ring); outline-offset: 1px; }
+.pdl-admin-signin .pdl-admin-signin-error {
+  margin: 0;
+  padding: 13px 15px;
+  border: 1px solid #ebc7c2;
+  border-left: 4px solid #b04e43;
+  border-radius: 10px;
+  background: #fff4f2;
+  color: #89342b;
+  font-size: 12px;
+  line-height: 1.65;
+}
+.pdl-admin-signin .pdl-admin-signin-submit {
+  display: inline-flex;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 54px;
+  justify-self: stretch;
+  margin-top: 6px;
+  padding: 13px 18px;
+  border: 1px solid #bcd65c;
+  border-radius: 12px;
+  background: var(--pdl-admin-lime);
+  color: #193f31;
+  box-shadow: 0 5px 0 #b4ce4c;
+  font-size: 12px;
+  font-weight: 850;
+  transition: transform 160ms var(--ds-ease-standard), box-shadow 160ms ease, background-color 160ms ease;
+}
+.pdl-admin-signin .pdl-admin-signin-submit:hover:not(:disabled) {
+  background: #e1f58a;
+  box-shadow: 0 7px 0 #b4ce4c, 0 11px 20px rgb(35 70 38 / 10%);
+  transform: translateY(-2px);
+}
+.pdl-admin-signin .pdl-admin-signin-submit:active:not(:disabled) { transform: translateY(0); box-shadow: 0 2px 0 #b4ce4c; }
+.pdl-admin-signin .pdl-admin-signin-submit:disabled {
+  opacity: 1;
+  border-color: #d7e0d2;
+  background: #ecf1e5;
+  color: #687967;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.pdl-admin-signin-spinner {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: pdl-admin-signin-spin .8s linear infinite;
+}
+@keyframes pdl-admin-signin-spin { to { transform: rotate(360deg); } }
+.pdl-admin-signin-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin-top: 27px;
+  padding-top: 17px;
+  border-top: 1px solid #e6eee3;
+}
+.pdl-admin-signin-card-footer > span {
+  color: #708773;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+.pdl-admin-signin .pdl-admin-signin-return {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: #366646;
+  font-size: 11px;
+  font-weight: 800;
+}
+.pdl-admin-signin .pdl-admin-signin-return:hover { color: #20513a; }
+@media (max-width: 900px) {
+  .pdl-admin-signin-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 26px; }
+  .pdl-admin-signin-card { padding: clamp(21px, 3vw, 30px); }
+}
+@media (max-width: 700px) {
+  .pdl-admin-signin { padding-top: 43px; padding-bottom: 65px; }
+  .pdl-admin-signin-grid { grid-template-columns: 1fr; gap: 24px; }
+  .pdl-admin-signin .page-title { font-size: clamp(43px, 9vw, 62px); }
+  .pdl-admin-signin-art { max-width: 600px; }
+  .pdl-admin-signin-card { padding: 26px; }
+}
+@media (max-width: 420px) {
+  .pdl-admin-signin .page-title { font-size: 43px; }
+  .pdl-admin-signin-art { padding: 13px 14px; border-radius: 16px; }
+  .pdl-admin-signin-art-top, .pdl-admin-signin-art-bottom { font-size: 7px; }
+  .pdl-admin-signin-card { padding: 20px; border-radius: 18px; }
+  .pdl-admin-signin-card-footer { align-items: flex-start; flex-direction: column; }
+  .pdl-admin-signin .pdl-admin-signin-submit { font-size: 11px; }
+}
+@media (hover: none) {
+  .pdl-admin-signin .pdl-admin-signin-submit:hover:not(:disabled) {
+    transform: none; background: var(--pdl-admin-lime); box-shadow: 0 5px 0 #b4ce4c;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pdl-admin-signin :where(.pdl-admin-signin-input,.pdl-admin-password-visibility,.pdl-admin-signin-submit) {
+    transition: none !important;
+  }
+  .pdl-admin-signin .pdl-admin-signin-submit:hover:not(:disabled) { transform: none; }
+  .pdl-admin-signin-spinner { animation: none; border-top-color: currentColor; }
+}
