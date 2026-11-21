@@ -138,7 +138,6 @@ import {MANAGED_TT_GROUP_DELETE_ENABLED,isManagedTimeTrackerBoard,
  readHiddenEmptyGroups,hideEmptyTimeTrackerGroup,
  restoreHiddenTimeTrackerGroups,deleteEmptyManagedTimeTrackerGroup} from './managed-time-tracker-groups.js';
 import {isRow01Fixture,readRow01Pending,prepareRow01Acceptance,finalizeRow01Acceptance,sanitizeRow01Report} from './board/acceptance/row01-signed-acceptance.js';
-import {runBoardTtSignedReadOnly} from './board/acceptance/tt-signed-acceptance.js';
 import {normalizeBoardActivity,renderBoardActivityResults,boardItemSummary} from './board/presentation/activity-ui.js';
 import {BOARD_COL01_AUDIT_CURSOR_ENABLED,BOARD_COL01_AUDIT_MAX_PAGES,
  loadBoardInvitableDirectory,renderBoardInvitableDirectory,
@@ -146,7 +145,6 @@ import {BOARD_COL01_AUDIT_CURSOR_ENABLED,BOARD_COL01_AUDIT_MAX_PAGES,
 import {loadBoardCollaboration,renderBoardCollaboration} from './board/collaboration/collaboration.js';
 import {normalizeBoardPeople,renderBoardPeople,boardInviteControl,renderMentionDraft,mentionCandidates,insertMention,renderMentionOptions} from './board/collaboration/people.js';
 import {BoardPreferenceStore} from './board/services/preferences-idb.js';
-import {sampleBrowserFrames} from './performance-profile.js';
 import {createStartupCriticalPath} from './performance-critical-path.js';
 import {summarizeEntryWaterfall} from './performance-entry-waterfall.js';
 import {readWorkspaceStartup} from './workspace-startup-read.js';
@@ -7074,6 +7072,7 @@ async function action(name,button){
   state.performanceBusy=true;state.performanceReport=null;
   if(state.view==='settings')render();
   try{
+   const {sampleBrowserFrames}=await import('./performance-profile.js');
    const profile=await sampleBrowserFrames({signal:controller.signal});
    if(!auth.isSignedIn||state.roleVerified!==true||actor!==auth.userId||
       workspace!==state.context?.workspace_id||controller.signal.aborted)break;
@@ -11263,6 +11262,7 @@ case 'new-group':{
    if(state.boardTtSignedBusy||!state.context)return;
    state.boardTtSignedBusy=true;state.boardTtSignedResult=null;render();
    try{
+     const {runBoardTtSignedReadOnly}=await import('./board/acceptance/tt-signed-acceptance.js');
      state.boardTtSignedResult=await runBoardTtSignedReadOnly({
        auth,api:db,timeTracker,isBootstrap:state.roleVerified===true
      });
