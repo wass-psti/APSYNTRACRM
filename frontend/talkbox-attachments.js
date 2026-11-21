@@ -42,9 +42,14 @@ export class TalkBoxAttachmentClient{
   if(!validUuid(actor)||!this.auth.isSignedIn)throw new ApiError('Signed CRM session is required',401);
   return {actor,token:await this.auth.token()};
  }
- async signedFetch(path,method,body,contentType){
+ async signedFetch(path,method,body,contentType,{verifyAbsent=false}={}){
+  if(verifyAbsent&&method!=='GET')
+   throw new TypeError('Private object absence verification requires GET');
   const {actor,token}=await this.context();
-  const response=await this.fetch(urlFor(path,method),{
+  // Supabase Storage CDN can briefly serve a previously cached object after DELETE.
+  // Read a unique URL when checking absence; never treat a cached 200 as proof of purge.
+  const url=urlFor(path,method)+(verifyAbsent?'?cacheNonce='+encodeURIComponent(this.randomId()):'');
+  const response=await this.fetch(url,{
    method,mode:'cors',redirect:'error',cache:'no-store',credentials:'omit',
    headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+token,
     ...(contentType?{'Content-Type':contentType,'x-upsert':'false'}:{})},
@@ -121,7 +126,7 @@ export class TalkBoxAttachmentClient{
   }
   let missing=false;
   try{
-   await this.signedFetch(path,'GET');
+   await this.signedFetch(path,'GET',undefined,undefined,{verifyAbsent:true});
   }catch(error){
    if(error?.status===404)missing=true;
    else throw new ApiError('Private attachment absence could not be verified; use Retry cleanup',409);
