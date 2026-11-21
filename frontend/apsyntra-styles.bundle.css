@@ -29163,3 +29163,254 @@ html[data-aps-monday-theme="dark"] .aps-invite-overlay{--invite-bg:#292a2e;--inv
 .aps-invite-dialog button:focus-visible{outline:2px solid var(--invite-accent);outline-offset:2px}
 @media(max-width:640px){.aps-invite-overlay{padding:9px}.aps-invite-dialog{max-height:94dvh}.aps-invite-heading{padding:18px 17px 14px}.aps-invite-heading h2{font-size:19px}.aps-invite-search-region{padding:0 17px}.aps-invite-tabs{margin:8px 17px 0}.aps-invite-policy,.aps-invite-members-title{padding-left:17px;padding-right:17px}.aps-invite-members{padding:0 11px 4px 17px}.aps-invite-footer{padding:9px 17px 14px}.aps-invite-role{display:none}}
 @media(prefers-reduced-motion:reduce){.aps-invite-person.is-new{animation:none}}
+
+/* frontend/enterprise-ui-refinement.css */
+/* CP-CRM-UI-REFINEMENT-01 — shared visual polish inspired by Uiverse.
+ * Presentation only: no new markup, state, event handlers, dependencies, or
+ * changes to board-row geometry, menus' positioning, or module permissions.
+ * This layer is appended after every pre-existing module stylesheet.
+ */
+:root {
+  --crm-ui-focus: #6869b7;
+  --crm-ui-focus-halo: #6869b738;
+  --crm-ui-edge: #dce3ed;
+  --crm-ui-edge-hover: #b9c4d7;
+  --crm-ui-elevation: 0 3px 15px #2234510b, 0 1px 3px #2234510a;
+  --crm-ui-elevation-hover: 0 10px 26px #22345113, 0 2px 6px #2234510d;
+  --crm-ui-sheen: inset 0 1px 0 #ffffffb8;
+  --crm-ui-control-radius: 11px;
+  --crm-ui-card-radius: 17px;
+  --crm-ui-duration: 150ms;
+}
+
+/* Accessible focus and native controls: do not style hidden or disabled inputs. */
+#app
+  :is(
+    button,
+    a[href],
+    input,
+    select,
+    textarea,
+    summary,
+    [role="button"]
+  ):focus-visible {
+  outline: 2px solid var(--crm-ui-focus);
+  outline-offset: 3px;
+}
+#app
+  :is(.primary, .secondary, .icon-button, .modal-close, .segment, .tab):not(
+    :disabled
+  ) {
+  transition:
+    background-color var(--crm-ui-duration) ease,
+    color var(--crm-ui-duration) ease,
+    border-color var(--crm-ui-duration) ease,
+    box-shadow var(--crm-ui-duration) ease;
+}
+#app :is(.primary, .secondary):not(:disabled):active {
+  box-shadow: inset 0 2px 5px #141c3514;
+}
+#app .primary:not(:disabled):hover {
+  box-shadow: 0 5px 16px #5254a326;
+}
+#app .secondary:not(:disabled):hover,
+#app .icon-button:not(:disabled):hover {
+  border-color: var(--crm-ui-edge-hover);
+  box-shadow: 0 2px 9px #253a6412;
+}
+#app
+  :is(.field input, .field select, .field textarea, .search-input):not(
+    :disabled
+  ) {
+  border-radius: var(--crm-ui-control-radius);
+  transition:
+    border-color var(--crm-ui-duration) ease,
+    box-shadow var(--crm-ui-duration) ease,
+    background-color var(--crm-ui-duration) ease;
+}
+#app
+  :is(
+    .field input,
+    .field select,
+    .field textarea,
+    .search-input
+  ):focus-visible {
+  border-color: var(--crm-ui-focus);
+  box-shadow: 0 0 0 3px var(--crm-ui-focus-halo);
+}
+#app :is(input, textarea, select)[aria-invalid="true"]:focus-visible {
+  box-shadow: 0 0 0 3px #b3475530;
+  outline-color: var(--sm-danger, #b34755);
+}
+
+/* Sidebar and global header: keep existing widths, sticky geometry and navigation. */
+#app .aps-sidebar .nav-link {
+  border-radius: 9px;
+  transition:
+    color var(--crm-ui-duration) ease,
+    background-color var(--crm-ui-duration) ease,
+    border-color var(--crm-ui-duration) ease;
+}
+#app .aps-sidebar .nav-link:focus-visible {
+  box-shadow: 0 0 0 3px var(--crm-ui-focus-halo);
+}
+#app .topbar .top-actions > :is(button, a, summary):focus-visible {
+  outline-offset: 3px;
+}
+#app
+  :is(
+    .aps-overview-shell,
+    .aps-boards-shell,
+    .aps-board-shell,
+    .aps-settings-shell
+  )
+  .topbar {
+  border-bottom-color: var(--crm-ui-edge);
+}
+
+/* Dashboard and reusable surfaces: elevate on hover without layout movement. */
+#app
+  :is(.aps-overview, .aps-boards, .aps-settings)
+  :is(.stat-card, .board-card, .panel) {
+  border-radius: var(--crm-ui-card-radius);
+  box-shadow: var(--crm-ui-elevation);
+}
+#app :is(.aps-overview, .aps-boards) :is(.stat-card, .board-card):hover {
+  box-shadow: var(--crm-ui-elevation-hover);
+}
+#app :is(.aps-overview, .aps-boards) .board-card:focus-within {
+  border-color: var(--crm-ui-focus);
+  box-shadow:
+    0 0 0 3px var(--crm-ui-focus-halo),
+    var(--crm-ui-elevation);
+}
+#app :is(.aps-overview, .aps-boards, .aps-settings) .panel-header {
+  border-bottom-color: var(--crm-ui-edge);
+}
+#app :is(.aps-overview, .aps-boards) .empty-icon {
+  border-radius: 18px;
+  box-shadow: var(--crm-ui-sheen);
+}
+
+/* Preserve board table sizing, row clicks, pinned columns and group scrolling. */
+#app .aps-board-shell .board-group-panel {
+  box-shadow: var(--crm-ui-elevation);
+}
+#app .aps-board-shell .board-table-custom tbody tr:focus-within td {
+  box-shadow:
+    inset 0 1px 0 #787ac533,
+    inset 0 -1px 0 #787ac533;
+}
+#app .aps-board-shell .board-bulk-toolbar:focus-within {
+  outline: 2px solid var(--crm-ui-focus);
+  outline-offset: 2px;
+}
+#app :is(.aps-boards, .aps-overview, .aps-settings) .tabs .tab:focus-visible,
+#app .aps-board-shell .tabs .tab:focus-visible {
+  border-radius: 7px 7px 0 0;
+}
+
+/* Common dialogs, popovers and notifications retain existing stacking/placement. */
+#app .modal {
+  border: 1px solid var(--crm-ui-edge);
+  border-radius: 18px;
+  box-shadow:
+    0 20px 60px #111b3440,
+    0 5px 16px #111b3418;
+}
+#app .modal .modal-close {
+  border-radius: 9px;
+  color: var(--sm-text, #405068);
+}
+#app .modal .modal-close:not(:disabled):hover {
+  background-color: var(--sm-surface-soft, #f1f3f7);
+}
+#app .toast {
+  border: 1px solid #ffffff29;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px #111b3426;
+}
+#app .aps-board-shell .aps-action-popover,
+#app .aps-board-shell .board-tool-menu-panel {
+  box-shadow: var(--crm-ui-elevation-hover);
+}
+#app .aps-select-trigger:focus-visible {
+  box-shadow: 0 0 0 3px var(--crm-ui-focus-halo);
+}
+
+/* Native modules keep their own branding; shared elevations reconcile the surface feel. */
+#app
+  :is(
+    .fm1-app .fm1-panel,
+    .fm1-app .fm1-metric-card,
+    .ft3-panel,
+    .aps-tradelink-app .tl-panel,
+    .aps-tradelink-app .tl-draft-panel,
+    .tt-native .tt-attendance-console,
+    .tb-panel,
+    .frt-exec-panel,
+    .frt-ref-table-card,
+    .ws01-browser-card
+  ) {
+  box-shadow: var(--crm-ui-elevation);
+}
+#app
+  :is(.fm1-app, .tt-native, .aps-tradelink-app, .ft3-app)
+  :is(button, input, select, textarea):focus-visible {
+  outline-color: var(--crm-ui-focus);
+  outline-offset: 2px;
+}
+#app .aps-sidebar .nav-ico svg,
+#app .topbar .top-actions svg {
+  display: inline-block;
+  flex: none;
+  vertical-align: middle;
+}
+
+/* The shared shell is fluid; horizontally scrollable boards remain scrollable. */
+#app .shell,
+#app .main,
+#app .main-content,
+#app .page-head,
+#app .toolbar {
+  min-width: 0;
+}
+#app :is(.aps-overview, .aps-boards, .aps-settings) .card-grid > *,
+#app .settings-grid > * {
+  min-width: 0;
+}
+@media (max-width: 720px) {
+  #app :is(.aps-overview, .aps-boards, .aps-settings) .panel-header,
+  #app .page-head {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  #app :is(.aps-overview, .aps-boards, .aps-settings) .panel-body {
+    min-width: 0;
+  }
+}
+
+/* Optional theme inherits the actual host's dark appearance; no light cards in dark shell. */
+html[data-aps-monday-theme="dark"] {
+  --crm-ui-focus: #a7a9f5;
+  --crm-ui-focus-halo: #a7a9f533;
+  --crm-ui-edge: #474b55;
+  --crm-ui-edge-hover: #6a7283;
+  --crm-ui-elevation: 0 3px 15px #00000025;
+  --crm-ui-elevation-hover: 0 9px 25px #00000034;
+  --crm-ui-sheen: inset 0 1px 0 #ffffff12;
+}
+html[data-aps-monday-theme="dark"] #app .modal {
+  box-shadow: 0 20px 55px #0008;
+}
+html[data-aps-monday-theme="dark"] #app .modal .modal-close {
+  color: #d4d7e3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app :is(.primary, .secondary, .icon-button, .modal-close, .segment, .tab),
+  #app .aps-sidebar .nav-link,
+  #app :is(.field input, .field select, .field textarea, .search-input) {
+    transition: none;
+  }
+}
