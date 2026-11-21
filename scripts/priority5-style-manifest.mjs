@@ -58,6 +58,7 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/login-minimal.css",
  "frontend/talkbox-application.css",
  "frontend/board-invite.css",
- "frontend/enterprise-ui-refinement.css"
+ "frontend/enterprise-ui-refinement.css",
+ "frontend/application-ui-refinement.css"
 ]);
 export const STYLE_BUNDLE="frontend/apsyntra-styles.bundle.css";
