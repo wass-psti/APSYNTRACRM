@@ -31646,3 +31646,70 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native :is(
  ) :is(button,input,select,textarea) {animation:none;transition:none;transform:none}
 }
 }
+
+/* frontend/dark-workspace-account-completion.css */
+/* CP-CRM-DARK-09 — Screenshot-driven workspace and account control refinement.
+ * Presentation only: workspace membership, creation policy, credentials, tokens,
+ * sign-in/session and backend verification remain unchanged. */
+@media screen {
+html[data-aps-monday-theme="dark"] .ws01-overlay :is(.ws01-menu-card,.ws01-browser-card,.ws01-create-card,.ws01-details-card) {
+ background:#292929;color:#ededed;border-color:#505050;box-shadow:0 22px 62px #0009;color-scheme:dark;
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay :is(.ws01-browser-top,.ws01-browser-tabs,.ws01-menu-actions,.ws01-create-footer) {
+ border-color:#505050;
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay .ws01-browser-tabs {background:#252525}
+html[data-aps-monday-theme="dark"] .ws01-overlay :is(.ws01-entry,.ws01-browser-results .ws01-note,.ws01-menu-card .ws01-note,.ws01-create-safety,.ws01-create-intro) {
+ background:#303030;color:#ededed;border-color:#575757;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay :is(.ws01-entry-copy strong,.ws01-browser-results h3,.ws01-browser-top h2,.ws01-menu-heading,.ws01-create-card h2) {color:#ededed}
+html[data-aps-monday-theme="dark"] .ws01-overlay :is(.ws01-entry-copy small,.ws01-create-subtitle,.ws01-create-intro p,.ws01-field-hint,.ws01-create-safety,.ws01-create-state,.ws01-note,.ws01-eyebrow) {color:#c8c8c8}
+html[data-aps-monday-theme="dark"] .ws01-overlay :is(.ws01-entry-button,.ws01-browser-tabs button,.ws01-menu-actions button) {
+ background:transparent;color:#ededed;border-color:#555;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay :is(.ws01-entry-button,.ws01-browser-tabs button,.ws01-menu-actions button):hover:not(:disabled) {background:#3c3c3c;color:#fff}
+html[data-aps-monday-theme="dark"] .ws01-overlay .ws01-browser-tabs button[aria-pressed=true] {background:#193c78;color:#fff}
+html[data-aps-monday-theme="dark"] .ws01-overlay :is(.ws01-browser-count,.ws01-entry-badge) {background:#243d36;color:#b9f0d7;border:1px solid #527d69}
+html[data-aps-monday-theme="dark"] .ws01-overlay :is(.ws01-browser-search-icon,.ws01-menu-search-icon) {color:#c4c4c4}
+html[data-aps-monday-theme="dark"] .ws01-overlay :is(input[type=text],input[type=search],.ws01-create-card select) {
+ background:#202020;color:#ededed;border-color:#686868;caret-color:#ededed;-webkit-text-fill-color:#ededed;
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay :is(input[type=text],input[type=search])::placeholder {color:#bfbfbf;-webkit-text-fill-color:#bfbfbf}
+html[data-aps-monday-theme="dark"] .ws01-overlay :is(input[type=text],input[type=search]):focus-visible {border-color:#a9c6ff;outline:2px solid #a9c6ff;outline-offset:2px}
+html[data-aps-monday-theme="dark"] .ws01-overlay [data-ws01-close] {color:#d6d6d6;background:#333}
+html[data-aps-monday-theme="dark"] .ws01-overlay [data-ws01-close]:hover {background:#454545;color:#fff}
+html[data-aps-monday-theme="dark"] .ws01-overlay .ws01-create-card fieldset label {background:#333;color:#ededed;border-color:#626262}
+html[data-aps-monday-theme="dark"] .ws01-overlay .ws01-create-card fieldset label:has(input:checked) {background:#243d70;color:#e1edff;border-color:#7eaaff}
+html[data-aps-monday-theme="dark"] .ws01-overlay .ws01-create-card fieldset label:has(input:disabled) {background:#303030;color:#c5c5c5;border-color:#585858}
+html[data-aps-monday-theme="dark"] .ws01-overlay .ws01-create-card footer button:not(.ws01-primary),
+html[data-aps-monday-theme="dark"] .ws01-overlay .ws01-menu-actions button:first-child {background:#353535;color:#ededed;border-color:#676767}
+html[data-aps-monday-theme="dark"] .ws01-overlay .ws01-create-card footer .ws01-primary,
+html[data-aps-monday-theme="dark"] .ws01-overlay .ws01-browser-tabs .ws01-add-button {background:#285fa9;color:#fff;border-color:#639bef}
+html[data-aps-monday-theme="dark"] .ws01-overlay .ws01-create-card footer button:disabled {background:#303030;color:#bdbdbd;border-color:#565656}
+html[data-aps-monday-theme="dark"] .ws01-overlay .ws01-create-card :is(button,input,select):focus-visible {outline:2px solid #a9c6ff;outline-offset:2px}
+/* Account & security: profile-image editor, notices, password, session controls. */
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(.settings-avatar-editor,.settings-profile-editor,.settings-password-form) {background:#292929;background-image:none;color:#ededed;border-color:#535353;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(.settings-avatar-editor-head h4,.settings-profile-editor-head h4,.settings-password-heading h4,.settings-password-field label) {color:#ededed}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(.settings-avatar-editor-head p,.settings-profile-editor-head p,.settings-password-heading p,.settings-password-hint,.settings-password-status,.settings-avatar-controls small,.settings-avatar-file-label) {color:#c8c8c8}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings #settings-avatar-file {background:#202020;color:#ededed;border:1px solid #626262;color-scheme:dark}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings #settings-avatar-file::file-selector-button {background:#303e53;color:#cce0ff;border:1px solid #7597c7}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(.settings-avatar-gate,.settings-avatar-status,.settings-avatar-crop) {background:#333;color:#e3e3e3;border-color:#606060}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(.settings-avatar-gate,.settings-avatar-status).is-error {background:#482e33;color:#ffc8cb;border-color:#96646b}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings .settings-password-icon {background:#303e53;color:#c5dcff}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings .settings-password-field input {background:#202020;color:#ededed;border-color:#626262;caret-color:#ededed;-webkit-text-fill-color:#ededed;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings .settings-password-field input::placeholder {color:#bdbdbd;-webkit-text-fill-color:#bdbdbd}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings .settings-password-field input:focus-visible {border-color:#a9c6ff;outline:2px solid #a9c6ff;outline-offset:2px;box-shadow:0 0 0 2px #a9c6ff25}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings .settings-password-submit:not(:disabled) {background:#285fa9;color:#fff;border-color:#6098ed;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings .settings-password-submit:disabled {background:#303030;color:#bdbdbd;border-color:#565656}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(.settings-token-warning,.settings-token-warning b) {color:#ffe2b6}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings .settings-token-warning {background:#473625;border-color:#a97c44;border-left:3px solid #d8a158}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings .settings-session-actions .settings-token-button {background:#303e53;color:#d3e4ff;border-color:#789aca}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(.settings-profile-notice,.settings-avatar-gate,.settings-photo-note) {background:#353129;color:#f1deb5;border-color:#987b4b}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(.settings-verify-block,.settings-session-panel,.settings-profile-panel) {border-color:#535353}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(.settings-verify-block button,.settings-session-actions button,.settings-avatar-actions button):hover:not(:disabled) {background:#414141;color:#fff;border-color:#858585}
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(button,input,select,textarea):focus-visible {outline:2px solid #a9c6ff;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){
+html[data-aps-monday-theme="dark"] .ws01-overlay :is(button,input,select),
+html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(button,input,select,textarea) {transition:none;transform:none}
+}
+}
