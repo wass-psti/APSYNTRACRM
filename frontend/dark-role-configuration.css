@@ -1,0 +1,155 @@
+/* CP-CRM-DARK-03: Role Configuration + Native Application Access.
+ * All changes are dark-only presentation. Access assignment handlers, data, roles,
+ * approvals, persistence, session and backend authorization are untouched. */
+html[data-aps-monday-theme="dark"] #app .aps-role-config-shell {
+ --role-ink:#ededed;--role-muted:#c4c4c4;
+ --role-border:#484848;--role-accent:#a9c6ff;
+ background:#121212;color:#ededed;
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-config-shell>.topbar {
+ background:#202020;border-color:#414141;color:#ededed;
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-config-shell .topbar :is(.breadcrumb,.breadcrumb strong,.top-pill) {
+ color:#dedede;
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-config-shell .topbar .top-pill {
+ background:#292929;border-color:#484848;
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration {
+ color:#ededed;--ur-ink:#ededed;--ur-muted:#c4c4c4;
+ --ur-line:#484848;--ur-indigo:#a9c6ff;
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-config-hero {
+ min-height:0;padding:19px clamp(17px,2.4vw,30px);
+ margin-bottom:16px;background:#202020;background-image:none;
+ border:1px solid #484848;border-radius:9px;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration :is(.role-config-hero::after,.role-hero-art) {display:none}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-config-hero h1 {
+ color:#f2f2f2;font-size:clamp(22px,2.2vw,30px);
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-config-hero :is(p,.label-top) {color:#ccc}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-refresh-button {
+ color:#ededed;background:#292929;border-color:#555;
+ backdrop-filter:none;box-shadow:none;border-radius:7px;
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-refresh-button:hover:not(:disabled) {
+ color:#fff;background:#383838;border-color:#747474;transform:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration :is(
+ .role-stat-card,.role-table-panel,.panel:not(.role-table-panel),
+ .role-config-tabs,.role-info-note,.role-staged-note,
+ .role-hierarchy-note,.note:not(.role-staged-note)
+) {
+ color:#ededed;background:#292929;background-image:none;
+ border-color:#484848;box-shadow:none;border-radius:9px;
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-stat-card {
+ min-height:0;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-stat-card::before {display:none}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-stat-card:hover {
+ transform:none;background:#333;border-color:#696969;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-stat-card :is(.stat-value,.stat-label) {color:#ededed}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-stat-card .stat-label {color:#c4c4c4}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration :is(
+ .role-config-tabs .role-tab-button.secondary,.role-data-table td,
+ .role-data-table th,.role-staged-note,.role-info-note,
+ .note:not(.role-staged-note),.role-staged-note strong,
+ .role-hierarchy-note strong
+) {color:#dedede}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-config-tabs .role-tab-button.secondary:hover {
+ color:#fff;background:#383838;
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-config-tabs .role-tab-button.primary {
+ color:#fff;background:#193c78;border-color:#3764a3;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration :is(
+ .role-section-header strong,.section-header strong,
+ .role-data-table td strong,.panel-header h3,
+ .role-data-table td .csp-u020
+) {color:#ededed}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration :is(
+ .role-data-table thead,.panel:not(.role-table-panel) .panel-header
+) {background:#303030;border-color:#484848}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-data-table :is(th,td) {border-color:#484848}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-data-table tbody tr:nth-child(even) {background:#2d2d2d}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-data-table tbody tr:hover {background:#383838}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration :is(
+ .role-search,input.search-input,.role-activation-button,
+ .role-data-table td button.secondary
+) {background:#202020;border-color:#555;color:#ededed;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration :is(
+ .role-search,input.search-input
+)::placeholder {color:#bdbdbd}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration :is(
+ .role-activation-button,.role-data-table td button.secondary
+):hover {background:#383838;border-color:#747474;color:#fff;transform:none}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration :is(
+ .role-proposal-button,.role-config-tabs .role-tab-button.primary
+) {background:#193c78;border-color:#3764a3;color:#fff;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration :is(.role-info-note,.role-staged-note) {
+ border-left:3px solid #6b94da;
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-staged-note {
+ border-left-color:#d9ad6e;
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-data-table .status.done {
+ color:#b1eed1;background:#214437;
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .role-data-table .status.todo {
+ color:#f4d49b;background:#4d3c25;
+}
+/* Native Application Access is nested role-management markup. */
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .native-application-access {
+ color:#ededed;--ur-ink:#ededed;--ur-muted:#c4c4c4;--ur-line:#484848;
+}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .native-application-access :is(
+ .user-role-stat-card,.user-role-selection-panel,.user-role-selected-panel,
+ .user-role-platform-panel,.user-role-table-panel,.user-role-loading,
+ .user-role-batch-panel,.user-role-batch-users,.user-role-batch-fields,
+ .user-role-batch-summary,.user-role-native-app-picker,.user-role-native-app-row
+) {background:#292929;border-color:#484848;color:#ededed;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .native-application-access :is(
+ .panel-header,.user-role-table thead,.user-role-mode-nav,.user-role-access-nav,
+ .user-role-batch-toolbar,.user-role-batch-heading
+) {background:#303030;border-color:#484848;color:#ededed}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .native-application-access :is(
+ h2,h3,strong,legend,label,.stat-value,.user-role-section-header strong,
+ .user-role-table td,.user-role-table th,.user-role-batch-step
+) {color:#ededed}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .native-application-access :is(
+ p,small,.stat-label,.user-role-helper,.user-role-batch-summary dt,
+ .user-role-native-app-choice small,.user-role-native-app-role,
+ .user-role-native-batch-action
+) {color:#c4c4c4}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .native-application-access :is(
+ .user-role-account-select,.user-role-board-filter,
+ .user-role-batch-toolbar input,.user-role-batch-fields select,
+ .user-role-native-app-role select,.user-role-native-batch-action select
+) {background:#202020;color:#ededed;border-color:#555;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .native-application-access :is(
+ .user-role-batch-user-list label,.user-role-batch-scope label
+) {background:#303030;border-color:#555;color:#ededed}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .native-application-access :is(
+ .user-role-batch-user-list label:has(input:checked),
+ .user-role-batch-scope label:has(input:checked)
+) {background:#193c78;border-color:#688fca;color:#fff}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .native-application-access .user-role-table :is(th,td) {border-color:#484848}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .native-application-access .user-role-table tbody tr:nth-child(even) {background:#2d2d2d}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .native-application-access .user-role-table tbody tr:hover {background:#383838}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .native-application-access :is(
+ .user-role-protected,.user-role-warning,.user-role-ceiling-note
+) {background:#453725;color:#f6ddb1;border-color:#97734d}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration .native-application-access :is(
+ .user-role-helper,.user-role-boundary-note,.user-role-board-note
+) {background:#303030;color:#ddd;border-color:#555}
+html[data-aps-monday-theme="dark"] #app .aps-role-configuration :is(
+ button,a[href],input,select,textarea,[role="button"],.role-table-scroll
+):focus-visible {outline:2px solid #a9c6ff;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){
+ html[data-aps-monday-theme="dark"] #app .aps-role-configuration :is(
+ .role-stat-card,.role-refresh-button,.role-proposal-button,.role-activation-button
+) {transition:none;transform:none}
+}

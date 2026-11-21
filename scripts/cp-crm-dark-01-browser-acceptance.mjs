@@ -40,7 +40,7 @@ try{
       `${theme} ${width}: document horizontal overflow`);
      if(theme==='dark'){
       for(const selector of ['.ws01-menu-card','.ws01-browser-card','.ws01-details-card','.ws01-create-card']){
-       check(find(selector).background==='rgb(36, 40, 50)',`${width} ${selector} not a dark panel: ${find(selector).background}`);
+       check(['rgb(36, 40, 50)','rgb(41, 41, 41)'].includes(find(selector).background),`${width} ${selector} not a dark panel: ${find(selector).background}`);
        check(find(selector).contrast>=4.5,`${width} ${selector} text ratio ${find(selector).contrast}`);
       }
       for(const selector of ['.sidebar-brand-subtitle','.nav-link:not(.active)',

@@ -1,0 +1,303 @@
+/* CP-CRM-DARK-03: compact enterprise dark mode, based on supplied visual reference.
+ * Original CSS, dark-only. No changes to routes, layout grid or business logic. */
+html[data-aps-monday-theme="dark"] {
+ --crm-dark-canvas:#121212;--crm-dark-sidebar:#181818;
+ --crm-dark-surface:#292929;--crm-dark-raised:#303030;
+ --crm-dark-hover:#383838;--crm-dark-text:#ededed;
+ --crm-dark-muted:#c4c4c4;--crm-dark-border:#484848;
+ --crm-dark-focus:#a9c6ff;--crm-dark-accent:#b6cfff;
+ --crm-dark-accent-surface:#193c78;--crm-dark-shadow:none;
+ --crm-native-canvas:#151515;--crm-native-panel:#292929;
+ --crm-native-elevated:#303030;--crm-native-input:#202020;
+ --crm-native-border:#484848;--crm-native-ink:#ededed;
+ --crm-native-muted:#c4c4c4;--crm-native-link:#b6ceff;
+ --crm-native-active:#193c78;--crm-native-focus:#a9c6ff;
+ --uv-ink:#ededed;--uv-secondary:#ccc;--uv-accent:#346bd0;
+ --uv-accent-hover:#447fe4;--uv-accent-tint:#193c78;
+ --uv-surface:#292929;--uv-surface-hover:#383838;
+ --uv-stroke:#484848;--uv-stroke-strong:#696969;
+ --uv-focus:#a9c6ff;--uv-halo:#649bff42;
+ --uv-shadow:none;--uv-shadow-hover:none;
+ --sm-ink:#ededed;--sm-text:#ddd;--sm-sub:#c4c4c4;
+ --sm-surface:#292929;--sm-surface-soft:#252525;
+ --sm-surface-raised:#303030;--sm-border:#484848;
+ --sm-border-strong:#696969;--sm-accent:#346bd0;
+ --sm-accent-hover:#447fe4;--sm-accent-soft:#193c78;
+ color-scheme:dark;
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar {
+ background:#181818;background-image:none;border-color:#404040;
+ box-shadow:none;color:#ededed;--side-ink:#ededed;
+ --side-muted:#c4c4c4;--side-accent:#b6ceff;
+ --side-line:#414141;--side-surface:#292929;
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .sidebar-brand-wrap {
+ padding-top:18px;padding-bottom:15px;border-bottom-color:#414141;
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar :is(.brand,.brand-text,.workspace-name,.profile .name) {color:#f1f1f1}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .nav-link {
+ min-height:38px;padding-block:6px;border-radius:6px;box-shadow:none;transform:none;
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .nav-link:not(.active) {
+ color:#c8c8c8;background:transparent;border-color:transparent;
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .nav-link:hover:not(.active) {
+ color:#fff;background:#353535;border-color:transparent;transform:none;
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .nav-link.active,
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .nav-link[aria-current="page"] {
+ background:#193c78;background-image:none;color:#fff;
+ border-color:#193c78;box-shadow:none;border-radius:6px;
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .nav-link.active::before {opacity:0}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .nav-link :is(.nav-ico,.nav-count) {
+ background:transparent;color:inherit;
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .workspace-switcher {
+ background:#242424;background-image:none;border-color:#454545;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .workspace-switcher::after {background:none}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .side-bottom {
+ background:#1b1b1b;background-image:none;border-color:#414141;
+}
+html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar :is(.side-section,.sidebar-brand-subtitle,.workspace-sub,.profile .role) {color:#bdbdbd}
+/* Flatten the hero and the four metric areas, without changing DOM or column layout. */
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell,
+html[data-aps-monday-theme="dark"] #app .aps-boards-shell {
+ background:#121212;background-image:none;color:#ededed;
+}
+html[data-aps-monday-theme="dark"] #app :is(.aps-overview-shell,.aps-boards-shell)>.topbar {
+ background:#202020;background-image:none;border-color:#414141;
+ box-shadow:none;color:#ededed;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .topbar :is(.breadcrumb,.breadcrumb strong,.top-pill) {color:#e0e0e0}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .topbar .top-pill {
+ background:#292929;border-color:#484848;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview {
+ --ov-ink:#ededed;--ov-sub:#c4c4c4;--ov-line:#484848;
+ --ov-violet:#b6ceff;color:#ededed;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-hero {
+ min-height:0;padding:18px clamp(17px,2.4vw,30px);
+ margin-bottom:14px;background:#202020;background-image:none;
+ border:1px solid #414141;border-radius:9px;
+ box-shadow:none;color:#f1f1f1;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-hero::after,
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-hero-art {display:none}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-hero h1 {
+ color:#f1f1f1;font-size:clamp(21px,2.2vw,30px);line-height:1.2;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-hero :is(p,.label-top) {color:#cdcdcd}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-hero .overview-refresh {
+ background:#292929;color:#e8e8e8;border:1px solid #535353;
+ box-shadow:none;backdrop-filter:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-hero .overview-create {
+ background:#146bd2;color:#fff;border:1px solid #347fdb;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-hero .head-actions button {
+ border-radius:7px;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-stat-grid {border-color:#484848}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-stat-grid .stat-card {
+ color:#ededed;background:transparent;border-color:#484848;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-stat-grid :is(.stat-label,.stat-footer) {color:#c4c4c4}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-stat-grid .stat-value {color:#f1f1f1}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-stat-grid .stat-icon {background:#303a54;color:#c0d5ff}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-board-grid .board-card {
+ background:#292929;background-image:none;border:1px solid #484848;
+ border-radius:9px;box-shadow:none;color:#ededed;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-board-grid .board-card:hover,
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-board-grid .board-card:focus-within {
+ background:#343434;border-color:#747474;box-shadow:none;transform:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-board-grid .board-card :is(h3,p,.board-card-footer) {color:#ededed}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-essentials {
+ background:#292929;border:1px solid #484848;border-radius:9px;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview :is(.overview-section-heading .section-title,.overview-essentials .activity-item b) {color:#f1f1f1}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview :is(.overview-section-eyebrow,.overview-board-count,.overview-essentials .activity-item small) {color:#c4c4c4}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-essentials .activity-item {border-color:#484848}
+/* Board catalog, forms, menus and existing native panels remain compact. */
+html[data-aps-monday-theme="dark"] #app .aps-boards-shell .aps-boards :is(.boards-hero,.boards-filter-panel) {
+ background:transparent;border-color:#484848;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-boards-shell .aps-boards .boards-hero :is(h1,p),
+html[data-aps-monday-theme="dark"] #app .aps-boards-shell .aps-boards .boards-control-label {color:#e5e5e5}
+html[data-aps-monday-theme="dark"] #app .aps-boards-shell .aps-boards .boards-catalog-grid .board-card {
+ background:#292929;color:#ededed;border:1px solid #484848;
+ border-radius:9px;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-boards-shell .aps-boards .boards-catalog-grid .board-card:hover,
+html[data-aps-monday-theme="dark"] #app .aps-boards-shell .aps-boards .boards-catalog-grid .board-card:focus-within {
+ background:#343434;border-color:#747474;box-shadow:none;transform:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-boards-shell .aps-boards .boards-catalog-grid .board-card :is(h3,p) {color:#ededed}
+html[data-aps-monday-theme="dark"] #app .aps-boards-shell .aps-boards :is(.boards-status-segments,#board-search) {
+ background:#252525;color:#ededed;border-color:#525252;
+}
+html[data-aps-monday-theme="dark"] #app .aps-boards-shell .aps-boards .boards-status-segments .segment {color:#d7d7d7}
+html[data-aps-monday-theme="dark"] #app .aps-boards-shell .aps-boards .boards-status-segments .segment.active {
+ background:#193c78;color:#fff;border-color:#3764a3;
+}
+html[data-aps-monday-theme="dark"] #app :is(
+ .aps-board-shell .board-group-panel,.aps-board-shell .board-bulk-toolbar,
+ .frt-ref-table-card,.ft3-app .ft3-panel,.tb-app .tb-panel,
+ .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-panel
+) {border-color:#484848;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app :is(
+ .aps-action-popover,.board-tool-menu-panel,.board-column-menu-content,
+ .aps-select-listbox,.ws01-menu-card,.ws01-browser-card,.ws01-details-card,
+ .ws01-create-card,.modal,.aps-global-search-dialog
+) {background:#292929;color:#ededed;border-color:#555;box-shadow:0 10px 25px #0005}
+html[data-aps-monday-theme="dark"] #app :is(.primary,.secondary,.icon-button,.aps-select-trigger):not(:disabled) {
+ border-radius:7px;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app :is(.secondary,.icon-button,.aps-select-trigger):not(:disabled) {
+ background:#292929;color:#ededed;border-color:#555;
+}
+html[data-aps-monday-theme="dark"] #app :is(.secondary,.icon-button,.aps-select-trigger):hover:not(:disabled) {
+ background:#383838;color:#fff;border-color:#777;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app :is(.primary,.secondary,.icon-button):active:not(:disabled) {transform:none}
+html[data-aps-monday-theme="dark"] #app :is(button,a[href],input,textarea,select,summary,[role="button"],[role="menuitem"]):focus-visible {
+ outline:2px solid #a9c6ff;outline-offset:2px;
+}
+@media(prefers-reduced-motion:reduce) {
+ html[data-aps-monday-theme="dark"] #app :is(.nav-link,.primary,.secondary,.icon-button,.board-card) {transition:none;transform:none}
+}
+/* Match the reference's compact mobile action row; no oversized tap targets. */
+@media(max-width:395px){
+ html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-hero .head-actions {
+  gap:8px;align-items:stretch;
+ }
+ html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-hero .head-actions button {
+  flex:none;min-height:40px;max-height:44px;padding:8px 12px;
+ }
+}
+
+/* CP-CRM-DARK-03B: Uiverse-inspired control language; original scoped CSS.
+ * Flat input/trigger surfaces, consistent hover/focus and readable states.
+ * Keep every real handler, state attribute and pointer target unchanged. */
+html[data-aps-monday-theme="dark"] #app {
+ --crm-control-field:#242424;
+ --crm-control-border:#565656;
+ --crm-control-hover:#353535;
+ --crm-control-selected:#193c78;
+ --crm-control-focus:#a9c6ff;
+}
+/* Sidebar search, switcher, create and collapse control. */
+html[data-aps-monday-theme="dark"] #app .aps-sidebar .aps-board-search-field {
+ background:var(--crm-control-field);border-color:var(--crm-control-border);
+ color:#d9d9d9;box-shadow:none;border-radius:8px;
+}
+html[data-aps-monday-theme="dark"] #app .aps-sidebar .aps-board-search-field:hover {
+ background:#292929;border-color:#777;
+}
+html[data-aps-monday-theme="dark"] #app .aps-sidebar .aps-board-search-field:focus-within {
+ background:#292929;border-color:var(--crm-control-focus);
+ box-shadow:0 0 0 2px #a9c6ff35;
+}
+html[data-aps-monday-theme="dark"] #app .aps-sidebar .aps-board-search-field input {
+ color:#ededed;-webkit-text-fill-color:#ededed;caret-color:#d8e6ff;
+}
+html[data-aps-monday-theme="dark"] #app .aps-sidebar .aps-board-search-field input::placeholder {
+ color:#bfbfbf;-webkit-text-fill-color:#bfbfbf;
+}
+html[data-aps-monday-theme="dark"] #app .aps-sidebar :is(.sidebar-layout-toggle,.aps-workspace-add-board) {
+ background:#292929;color:#e7e7e7;border-color:#595959;
+ box-shadow:none;border-radius:7px;
+}
+html[data-aps-monday-theme="dark"] #app .aps-sidebar :is(.sidebar-layout-toggle,.aps-workspace-add-board):hover:not(:disabled) {
+ background:#393939;color:#fff;border-color:#828282;
+}
+html[data-aps-monday-theme="dark"] #app .aps-sidebar .workspace-switcher :is(button,[role="button"]):focus-visible {
+ outline:2px solid var(--crm-control-focus);outline-offset:2px;
+}
+/* Topbar search, status pills, sync, account controls and action buttons. */
+html[data-aps-monday-theme="dark"] #app .topbar .aps-global-search-trigger {
+ background:#292929;color:#ebebeb;border:1px solid #5a5a5a;
+ border-radius:8px;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .topbar .aps-global-search-trigger:hover {
+ background:#393939;color:#fff;border-color:#818181;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .topbar .aps-global-search-trigger-icon,
+html[data-aps-monday-theme="dark"] #app .topbar .aps-global-search-trigger-label {color:inherit}
+html[data-aps-monday-theme="dark"] #app .topbar .aps-global-search-trigger kbd {
+ background:#343434;border:1px solid #626262;color:#e1e1e1;
+}
+html[data-aps-monday-theme="dark"] #app .topbar .top-pill {
+ background:#292929;color:#e5e5e5;border:1px solid #505050;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .topbar .aps-sync {
+ background:#25382f;color:#d4f5e4;border:1px solid #477c63;
+ box-shadow:none;border-radius:8px;
+}
+html[data-aps-monday-theme="dark"] #app .topbar .aps-sync:hover {
+ background:#2f483b;border-color:#67a384;color:#f0fff7;
+}
+html[data-aps-monday-theme="dark"] #app .topbar .aps-sync:is([data-sync-state="offline"],[data-sync-state="error"]) {
+ background:#46302f;color:#ffe7e5;border-color:#a3635d;
+}
+html[data-aps-monday-theme="dark"] #app .topbar .aps-sync[data-sync-state="reconnecting"] {
+ background:#493e28;color:#ffebc2;border-color:#a78b55;
+}
+html[data-aps-monday-theme="dark"] #app .topbar :is(.topbar-signout,.aps-monday-top-icon) {
+ background:#292929;color:#e9e9e9;border:1px solid #555;border-radius:8px;
+ box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .topbar :is(.topbar-signout,.aps-monday-top-icon):hover {
+ background:#393939;color:#fff;border-color:#7f7f7f;
+}
+html[data-aps-monday-theme="dark"] #app .topbar .top-avatar {box-shadow:none}
+/* Overview metrics and board-card affordances should look clickable, not luminous. */
+html[data-aps-monday-theme="dark"] #app .aps-overview .overview-stat-grid .stat-icon {
+ background:#353535;color:#d6e3ff;border:1px solid #555;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview .overview-board-grid .board-card-actions>summary,
+html[data-aps-monday-theme="dark"] #app .aps-boards .boards-catalog-grid .board-card-actions>summary {
+ background:var(--crm-dark-raised);color:#ededed;border:1px solid #606060;
+ border-radius:7px;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview .overview-board-grid .board-card-actions>summary:hover,
+html[data-aps-monday-theme="dark"] #app .aps-overview .overview-board-grid .board-card-actions[open]>summary,
+html[data-aps-monday-theme="dark"] #app .aps-boards .boards-catalog-grid .board-card-actions>summary:hover,
+html[data-aps-monday-theme="dark"] #app .aps-boards .boards-catalog-grid .board-card-actions[open]>summary {
+ background:#404040;color:#fff;border-color:#8b8b8b;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview .overview-board-grid .board-card-footer span:first-child,
+html[data-aps-monday-theme="dark"] #app .aps-boards .boards-catalog-grid .board-card-footer span:first-child {
+ background:#383838;color:#e0e0e0;border-radius:6px;
+}
+/* Shared focus and field affordances; preserve native controls and data actions. */
+html[data-aps-monday-theme="dark"] #app :is(
+ .field input,.field textarea,.field select,.search-input,
+ .tl-reference-portal input,.tl-reference-portal select,.tl-reference-portal textarea,
+ .tb-app input,.tb-app select,.frt-ref select
+) {
+ color:#ededed;background:#242424;border-color:#595959;
+ caret-color:#ededed;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app :is(
+ .field input,.field textarea,.field select,.search-input,
+ .tl-reference-portal input,.tl-reference-portal select,.tb-app input,.tb-app select
+):hover:not(:disabled) {border-color:#858585}
+html[data-aps-monday-theme="dark"] #app :is(
+ .field input,.field textarea,.field select,.search-input,
+ .tl-reference-portal input,.tl-reference-portal select,.tb-app input,.tb-app select
+):focus-visible {
+ border-color:var(--crm-control-focus);outline:2px solid var(--crm-control-focus);
+ outline-offset:1px;box-shadow:0 0 0 2px #a9c6ff20;
+}
+html[data-aps-monday-theme="dark"] #app :is(.field input,.search-input,.tb-app input)::placeholder {color:#bdbdbd}
+@media(prefers-reduced-motion:reduce){
+ html[data-aps-monday-theme="dark"] #app :is(
+  .aps-board-search-field,.aps-global-search-trigger,.sidebar-layout-toggle,
+  .aps-workspace-add-board,.board-card-actions>summary,.aps-sync
+ ) {transition:none;transform:none}
+}
