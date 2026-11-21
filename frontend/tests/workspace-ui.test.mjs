@@ -376,11 +376,11 @@ test('invitation panel offers signed server-checked send without client-side mem
  assert.match(module,/function inviteContent\(current,\{enabled=false\}=\{\}\)/);
  assert.match(module,/role="dialog" aria-modal="true"/);
  assert.match(module,/ws02-invite-title/);
- for(const part of ['name="email"','type="email"','name="role"','name="message"',
-  'value="member"',
-  'Send invites — pending activation','data-ws02-action=\"send\"',
-  'data-ws02-context','No invitation was sent'])
+ for(const part of ['name="email"','type="email"','name="message"',
+  'Workspace access','Send invitation','data-ws11-refresh',
+  "role:'member'",'No email was sent'])
   assert.ok(module.includes(part),part);
+ assert.doesNotMatch(module,/Review invitation|Further platform or board roles|data-ws02-context|Send invites — pending activation/);
  assert.doesNotMatch(module,/\.rpc\(['"](?:wm_ws02_invite|wm_invite_workspace|wm_ws01_invite)/);
  assert.doesNotMatch(module,/fetch\(['"]\/auth\/v1\/invite|fetch\(['"]\/rest\/v1\/rpc/);
  assert.match(app,/renderWorkspaceInviteLaunch\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\},\{placement:'topbar'\}\)/);
@@ -392,7 +392,7 @@ test('invitation panel offers signed server-checked send without client-side mem
  assert.match(app,/const workspaceInvitationLiveClient=new WorkspaceInvitationClient\(\{auth,api:db,enabled:true\}\)/);
  assert.match(app,/const checkWorkspaceInvitationAvailability=workspaceId=>workspaceInvitationLiveManager\.readiness\(workspaceId\)/);
  assert.match(module,/await options\.checkInvitationAvailability\(row\.id\)/);
- assert.match(module,/availability\?\.status!=='SIGNED_INVITATION_READINESS'/);
+ assert.match(module,/readiness\?\.status!=='SIGNED_INVITATION_READINESS'/);
  assert.match(module,/Send invitation/);
  assert.match(css,/\.ws02-invite-card/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
@@ -416,7 +416,7 @@ test('frontend entrypoint refreshes workspace-related module assets together',()
  const app=readFileSync('frontend/app.js','utf8');
  const lifecycle=readFileSync('frontend/workspace-lifecycle-client.js','utf8');
  const index=readFileSync('index.html','utf8');
- const moduleUrl='./workspace-ui.js?v=ws01-controls-20261106';
+ const moduleUrl='./workspace-ui.js?v=cp-crm-wm-invite-flow-01';
  assert.ok(app.includes(moduleUrl));
  assert.ok(lifecycle.includes(moduleUrl));
  assert.ok(index.includes('<script type="module" src="./frontend/app.js"></script>'));
@@ -477,8 +477,8 @@ test('workspace controls are actionable for verified rows and fail closed for un
  assert.match(css,/\.ws01-details-card/);
  assert.match(source,/WS01_SWITCHING_ENABLED=true/);
  assert.doesNotMatch(source,/WS02_INVITATIONS_ENABLED/);
- assert.match(source,/Send invites — pending activation/);
- assert.match(source,/\(enabled\?'':'disabled '\)/);
+ assert.match(source,/Send invitation/);
+ assert.match(source,/\(enabled\?'':'disabled'\)/);
 });
 
 

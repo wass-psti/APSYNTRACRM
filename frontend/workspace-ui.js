@@ -797,46 +797,30 @@ function inviteContent(current,{enabled=false}={}){
  const title=escape(current.name);
  return '<section class="ws02-invite-card" role="dialog" aria-modal="true"'+
   ' aria-labelledby="ws02-invite-title" aria-describedby="ws02-invite-description">'+
-  '<header class="ws02-invite-heading"><div><p class="ws02-eyebrow">Workspace collaboration</p>'+
-  '<h2 id="ws02-invite-title">Invite to '+title+'</h2></div>'+
+  '<header class="ws02-invite-heading"><div><p class="ws02-eyebrow">WORKSPACE INVITATION</p>'+
+  '<h2 id="ws02-invite-title">Invite people to '+title+'</h2></div>'+
   '<button type="button" data-ws01-close aria-label="Close invitations">×</button></header>'+
-  '<p id="ws02-invite-description" class="ws02-invite-subtitle">Invite collaborators to this workspace. '+
-  'This invitation grants workspace Member access only after the recipient signs in and accepts. '+
-  'Platform and board permissions remain controlled by authorized User Role Management.</p>'+
+  '<p id="ws02-invite-description" class="ws02-invite-subtitle">'+
+  'Send an email invitation. People with an APSYNTRA account can sign in and accept; new users can request account access first.</p>'+
   '<form id="ws02-invite-preview" novalidate>'+
-  '<div class="ws02-invite-fields"><div class="ws02-invite-addresses">'+
-  '<label for="ws02-invite-email">Recipient email address</label>'+
+  '<div class="ws02-invite-field"><label for="ws02-invite-email">Email address</label>'+
   '<input id="ws02-invite-email" name="email" type="email" maxlength="254" '+
-   'placeholder="name@example.com" autocomplete="email" inputmode="email" spellcheck="false" required>'+
-  '<small>Enter the exact email address. An existing account is reused when the recipient accepts.</small></div>'+
-  '<div class="ws02-invite-role"><label for="ws02-invite-role">Workspace role</label>'+
-  '<input id="ws02-invite-role" type="text" value="Member" disabled aria-describedby="ws02-invite-role-note">'+
-  '<input type="hidden" name="role" value="member">'+
-  '<small id="ws02-invite-role-note">Further platform or board roles require independent administrator approval.</small></div></div>'+
-  '<label for="ws02-invite-message">Add a custom message <span>(optional)</span></label>'+
+   'placeholder="name@company.com" autocomplete="email" inputmode="email" spellcheck="false" required>'+
+  '<small>We will send a one-time invitation link to this address.</small></div>'+
+  '<div class="ws02-invite-field"><label for="ws02-invite-message">Message <span>(optional)</span></label>'+
   '<textarea name="message" id="ws02-invite-message" rows="3" maxlength="500"'+
-  ' placeholder="Tell your team what they will work on together"></textarea>'+
-  '<div class="ws02-invite-context"><span>Suggested context</span><div role="group" aria-label="Message suggestions">'+
-  '<button type="button" data-ws02-context="work">Track and manage work</button>'+
-  '<button type="button" data-ws02-context="team">Collaborate with your team</button>'+
-  '<button type="button" data-ws02-context="project">Coordinate a project</button></div></div>'+
-  '<p class="ws02-invite-safety">'+(enabled?
-   'Invitation sending requires a successful signed server readiness check. No email is sent until the server confirms delivery.':
-   'Invitation sending is not activated yet. Only authorized workspace owners '+
-   'or delegated workspace administrators will be able to send invitations after '+
-   'the signed server-side invitation and role contracts pass acceptance.')+'</p>'+
+  ' placeholder="Add a short note to your invitation"></textarea></div>'+
+  '<div class="ws02-invite-access"><span class="ws02-invite-access-icon" aria-hidden="true">✓</span>'+
+  '<span><strong>Workspace access</strong><small>Member</small></span></div>'+
   '<p class="ws02-invite-feedback" role="status" aria-live="polite"></p>'+
   '<footer class="ws02-invite-footer">'+
   '<button type="button" class="ws02-secondary" data-ws01-close>Cancel</button>'+
-  '<button type="submit" class="ws02-secondary">Review invitation</button>'+
-  '<button type="button" class="ws02-send" data-ws02-action="send" '+
-  (enabled?'':'disabled ')+ 'aria-describedby="ws02-invite-description">'+
-  (enabled?'Send invitation':'Send invites — pending activation')+
-  '</button></footer></form>'+
-  '<section class="ws11-manage" aria-label="Workspace invitation history">'+
-  '<div class="ws11-manage-heading"><h3>Invited members</h3>'+
-  '<button type="button" data-ws11-refresh disabled>Refresh</button></div>'+
-  '<p class="ws11-manage-feedback" role="status">Invitation status is available only to verified workspace administrators after server activation.</p>'+
+  '<button type="submit" class="ws02-send" '+(enabled?'':'disabled')+'>Send invitation</button>'+
+  '</footer></form>'+
+  '<section class="ws11-manage" aria-label="Workspace invitations">'+
+  '<div class="ws11-manage-heading"><h3>Invitations</h3>'+
+  '<button type="button" data-ws11-refresh>Refresh</button></div>'+
+  '<p class="ws11-manage-feedback" role="status" aria-live="polite">Loading invitations…</p>'+
   '<div class="ws11-invite-list" aria-live="polite"></div></section></section>';
 }
 function openInvites(current,options={}){
@@ -849,7 +833,7 @@ function openInvites(current,options={}){
  const canManage=options.managementEnabled===true&&
   typeof options.listInvitations==='function'&&
   typeof options.revokeInvitation==='function';
- let managementBusy=false;
+ let managementBusy=false,managementRefreshPending=false;
  const manageFeedback=layer.querySelector('.ws11-manage-feedback');
  const manageList=layer.querySelector('.ws11-invite-list');
  const refresh=layer.querySelector('[data-ws11-refresh]');
@@ -862,26 +846,31 @@ function openInvites(current,options={}){
    const article=document.createElement('article');
    article.className='ws11-invite-row';
    const detail=document.createElement('div'),email=document.createElement('strong');
-   const meta=document.createElement('small');
+   const meta=document.createElement('small'),state=document.createElement('span');
    email.textContent=invitation.email;
-   meta.textContent=invitation.state+' · Member · '+new Date(invitation.issuedAt).toLocaleDateString();
-   detail.append(email,meta);article.append(detail);
+   meta.textContent='Sent '+new Date(invitation.issuedAt).toLocaleDateString()+
+    ' · Expires '+new Date(invitation.expiresAt).toLocaleDateString();
+   state.className='ws02-invite-state is-'+invitation.state;
+   state.textContent=invitation.state.charAt(0).toUpperCase()+invitation.state.slice(1);
+   detail.append(email,meta);article.append(detail,state);
    if(invitation.state==='pending'){
     const revoke=document.createElement('button');
-    revoke.type='button';revoke.dataset.ws11Revoke=invitation.id;
+    revoke.type='button';revoke.className='ws02-invite-revoke';
+    revoke.dataset.ws11Revoke=invitation.id;
     revoke.textContent='Revoke';article.append(revoke);
    }
    return article;
   });
   manageList.replaceChildren(...nodes);
   manageFeedback.textContent=nodes.length?
-   'Status is verified from the signed workspace invitation service.':
-   'No invitations are recorded for this workspace.';
+   'Invitation status is up to date.':
+   'No invitations are recorded for this workspace yet.';
  };
  const load=async()=>{
-  if(!canManage||managementBusy||!layer.isConnected||activeOverlay!==layer)return;
+  if(!canManage||!layer.isConnected||activeOverlay!==layer)return;
+  if(managementBusy){managementRefreshPending=true;return;}
   managementBusy=true;refresh.disabled=true;
-  manageFeedback.textContent='Checking signed invitation status…';
+  manageFeedback.textContent='Refreshing invitations…';
   try{
    const listing=await options.listInvitations(row.id);
    if(activeOverlay===layer&&layer.isConnected)draw(listing);
@@ -889,124 +878,114 @@ function openInvites(current,options={}){
    if(activeOverlay===layer&&layer.isConnected){
     manageList.replaceChildren();
     manageFeedback.textContent=error?.status===503?
-     'Invitation history is unavailable because the server service is not activated. No records were loaded.':
-     error?.status===401?'Sign in again to view invitation history.':
-     error?.status===403?'Invitation history is not available for this workspace.':
-     'Invitation status cannot be verified. No records are displayed.';
+     'Invitation history is temporarily unavailable.':
+     error?.status===401?'Sign in again to view invitations.':
+     error?.status===403?'Invitation history is unavailable for this workspace.':
+     'Invitation status could not be refreshed. Try again.';
    }
   }finally{
    managementBusy=false;
    if(activeOverlay===layer&&layer.isConnected)refresh.disabled=!canManage;
+   if(managementRefreshPending&&activeOverlay===layer&&layer.isConnected){
+    managementRefreshPending=false;
+    void load();
+   }
   }
  };
  refresh.addEventListener('click',()=>{void load();});
  manageList.addEventListener('click',async event=>{
-  const inviteId=event.target.closest('[data-ws11-revoke]')?.dataset.ws11Revoke;
+  const target=event.target.closest('[data-ws11-revoke]');
+  const inviteId=target?.dataset.ws11Revoke;
   if(!canManage||managementBusy||!validUuid(inviteId)||!layer.isConnected||
    activeOverlay!==layer)return;
   const requestId=globalThis.crypto?.randomUUID?.();
   if(!validUuid(requestId))return;
-  managementBusy=true;refresh.disabled=true;
-  const target=event.target.closest('[data-ws11-revoke]');
-  target.disabled=true;
-  manageFeedback.textContent='Requesting verified invitation revocation…';
+  managementBusy=true;refresh.disabled=true;target.disabled=true;
+  manageFeedback.textContent='Revoking invitation…';
   try{
    const receipt=await options.revokeInvitation({workspaceId:row.id,invitationId:inviteId,requestId});
    if(activeOverlay!==layer||!layer.isConnected)return;
    if(receipt?.state!=='revoked'||receipt?.invitationId!==inviteId)throw Error('Unverified');
-   manageFeedback.textContent='Revoked. Refreshing signed invitation status…';
+   manageFeedback.textContent='Invitation revoked.';
   }catch{
    if(activeOverlay!==layer||!layer.isConnected)return;
-   manageFeedback.textContent='Revocation outcome is unconfirmed. Refresh and reconcile before retrying.';
+   manageFeedback.textContent='Revocation was not confirmed. Refresh invitations before trying again.';
   }finally{
    managementBusy=false;
    if(activeOverlay===layer&&layer.isConnected)refresh.disabled=!canManage;
   }
-  // A fresh server read, never an optimistic local membership or status mutation.
   void load();
  });
  if(canManage)void load();
- const contexts={
-  work:'Join us to track and manage work in our workspace.',
-  team:'Join our workspace to collaborate with the team.',
-  project:'Join our workspace to coordinate the project together.'
- };
- form.addEventListener('click',event=>{
-  const key=event.target.closest('[data-ws02-context]')?.dataset.ws02Context;
-  if(key&&Object.hasOwn(contexts,key)){
-   const field=form.querySelector('#ws02-invite-message');
-   field.value=contexts[key];field.focus();
-  }
- });
  let busy=false,completed=false,requestId='',requestDraft='';
+ const button=form.querySelector('[type="submit"]');
+ const feedback=form.querySelector('.ws02-invite-feedback');
  const draft=()=>{
   const data=new FormData(form);
-  return validateDirectEmailInvitation({
-   email:data.get('email'),message:data.get('message')
-  });
+  return validateDirectEmailInvitation({email:data.get('email'),message:data.get('message')});
  };
- form.querySelector('[data-ws02-action="send"]').addEventListener('click',async()=>{
+ form.addEventListener('input',event=>{
+  if(busy||completed)return;
+  feedback.textContent='';
+  if(event.target.id==='ws02-invite-email')event.target.removeAttribute('aria-invalid');
+ });
+ form.addEventListener('submit',async event=>{
+  event.preventDefault();
   if(!enabled||busy||completed||!layer.isConnected||activeOverlay!==layer)return;
   const result=draft();
-  const feedback=form.querySelector('.ws02-invite-feedback');
-  if(!result.valid){feedback.textContent=result.reason;return;}
+  if(!result.valid){
+   feedback.textContent=result.reason;
+   form.querySelector('#ws02-invite-email').setAttribute('aria-invalid','true');
+   return;
+  }
   const fingerprint=JSON.stringify([row.id,result.email,'member',result.message]);
   if(requestDraft!==fingerprint){
    requestId=globalThis.crypto?.randomUUID?.()||'';requestDraft=fingerprint;
   }
-  if(!validUuid(requestId)){feedback.textContent='Secure request ID unavailable. No invitation was submitted.';return;}
-  busy=true;
-  const button=form.querySelector('[data-ws02-action="send"]');
-  button.disabled=true;feedback.textContent='Verifying the signed invitation service…';
+  if(!validUuid(requestId)){feedback.textContent='Could not prepare this invitation. No email was sent.';return;}
+  busy=true;button.disabled=true;feedback.textContent='Preparing invitation…';
   let serviceReady=false;
   try{
-   // Read-only, workspace-scoped readiness verifies SQL issuance and SMTP/Edge
-   // configuration, not just that manager listing happens to be available.
-   const availability=await options.checkInvitationAvailability(row.id);
-   if(availability?.status!=='SIGNED_INVITATION_READINESS'||availability.workspaceId!==row.id)
-    throw new Error('Readiness not verified');
-   if(availability.ready!==true){
-    feedback.textContent=availability.reason==='delivery_configuration_missing'?
-     'Invitation email service is not configured. No email was submitted. Contact your workspace administrator.':
-     'Invitation sending is not yet activated on the trusted server. No email was submitted.';
+   const readiness=await options.checkInvitationAvailability(row.id);
+   if(readiness?.status!=='SIGNED_INVITATION_READINESS'||readiness.workspaceId!==row.id)
+    throw Error('Readiness not verified');
+   if(readiness.ready!==true){
+    feedback.textContent=readiness.reason==='delivery_configuration_missing'?
+     'Email delivery is not configured yet. No invitation was sent.':
+     'Invitations are not available yet. No email was sent.';
     return;
    }
    serviceReady=true;
    if(activeOverlay!==layer||!layer.isConnected)return;
-   feedback.textContent='Requesting signed invitation delivery…';
+   feedback.textContent='Sending invitation…';
    const receipt=await options.sendInvitation({workspaceId:row.id,
     requestId,email:result.email,role:'member',message:result.message});
    if(activeOverlay!==layer||!layer.isConnected)return;
    if(!validUuid(receipt?.invitationId)||!['delivery-submitted','already-issued'].includes(receipt?.state))
     throw Error('Unconfirmed server receipt');
    completed=true;
+   button.textContent=receipt.state==='delivery-submitted'?'Invitation sent':'Already invited';
    feedback.textContent=receipt.state==='delivery-submitted'?
-    'The trusted delivery service accepted this invitation. Membership starts only after recipient acceptance.':
-    'This request was already issued; no new email was sent. Contact an administrator for delivery reconciliation.';
+    'Invitation accepted by the email service. The recipient joins after signing in and accepting.':
+    'This invitation was already issued. Check the invitation list for its current status.';
+   void load();
   }catch(error){
    if(activeOverlay!==layer||!layer.isConnected)return;
-   feedback.textContent=serviceReady?
-    'Delivery outcome is unconfirmed. Do not resubmit; ask an administrator to reconcile this request.':
-    error?.status===401?'Your session must be verified again before sending invitations. No email was submitted.':
-    error?.status===403?'Invitation sending was denied for this workspace. No email was submitted.':
-    error?.code==='INVITATION_BACKEND_NOT_DEPLOYED'?
-     'Workspace Invitation backend is not deployed. Your account role has not changed. No email was submitted. Contact the system operator to activate the service.':
-    'The trusted invitation service is unavailable or not activated. No email was submitted. Contact your workspace administrator.';
+   if(serviceReady){
+    completed=true;
+    button.textContent='Check invitations';
+    feedback.textContent='The delivery result is unconfirmed. Do not send another invitation; refresh the invitation list to check its status.';
+    void load();
+   }else{
+    feedback.textContent=error?.status===401?'Your session expired. Sign in again before sending an invitation.':
+     error?.status===403?'You cannot send invitations from this workspace. No email was sent.':
+     error?.code==='INVITATION_BACKEND_NOT_DEPLOYED'?'Workspace Invitation backend is not deployed. No email was sent.':
+     'The invitation service is unavailable. No email was sent.';
+   }
   }finally{
    busy=false;
    if(activeOverlay===layer&&layer.isConnected)button.disabled=completed;
   }
- });
- form.addEventListener('submit',event=>{
-  event.preventDefault();
-  const data=new FormData(form);
-  const result=validateDirectEmailInvitation({
-   email:data.get('email'),message:data.get('message')
-  });
-  form.querySelector('.ws02-invite-feedback').textContent=!result.valid?result.reason:
-   'Exact email address validated for workspace Member access. No invitation was sent. '+
-   (enabled?'Select Send invitation to verify the server and request delivery.':
-   'Secure invitation delivery remains pending activation.');
  });
  form.querySelector('#ws02-invite-email').focus();
 }

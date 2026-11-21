@@ -41,6 +41,19 @@ test('activated FormSubmit request form never creates a Supabase account',()=>{
  assert.doesNotMatch(app,/auth\.signUp\(|auth\.register\(/);
  assert.doesNotMatch(client,/auth\/v1\/signup/);
 });
+test('invitation sign-in preserves the open invitation and keeps account requests in a separate tab',()=>{
+ const login=renderAuthMarkup({mode:'login',invitationPending:true});
+ assert.match(login,/Sign in to accept your invitation/);
+ assert.match(login,/email address that received the invitation/);
+ assert.match(login,/href="#\/register" target="_blank" rel="noopener noreferrer"/);
+ assert.match(login,/keep this invitation open/i);
+ const register=renderAuthMarkup({mode:'register',invitationPending:true});
+ assert.match(register,/target="_blank"/);
+ assert.match(register,/Keep the original invitation tab open/);
+ assert.match(register,/This form does not create an account/);
+ assert.doesNotMatch(register,/name="password"/);
+});
+
 test('FormSubmit inputs are validated without collecting credentials',()=>{
  assert.equal(validateAccessRequest({name:'Example Person',email:'request@example.invalid',consent:true}),'');
  assert.match(validateAccessRequest({name:'',email:'a@example.com',consent:true}),/full name/);

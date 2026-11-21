@@ -75,9 +75,9 @@ test('signed readiness SQL verifies sender role and feature flag but never issue
  assert.match(server,/if \(!deliveryEnabled && !isReadiness\)/);
  assert.match(server,/invitationDeliveryReadiness\(Deno\.env\)/);
  const ui=readFileSync('frontend/workspace-ui.js','utf8');
- assert.match(ui,/if\(availability\.ready!==true\)/);
- assert.ok(ui.indexOf('if(availability.ready!==true)') < ui.indexOf('options.sendInvitation({workspaceId:row.id'));
+ assert.match(ui,/if\(readiness\.ready!==true\)/);
+ assert.ok(ui.indexOf('if(readiness.ready!==true)') < ui.indexOf('options.sendInvitation({workspaceId:row.id'));
  assert.match(ui,/error\?\.status===401/);
  assert.match(ui,/error\?\.status===403/);
- assert.match(ui,/Delivery outcome is unconfirmed/);
+ assert.match(ui,/delivery result is unconfirmed/);
 });

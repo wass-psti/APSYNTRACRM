@@ -57,3 +57,13 @@ test("CP07 evidence requires fresh screenshots rather than previous run artifact
   );
   assert.match(runner, /screenshot is stale/);
 });
+
+test("CP08 restoration failures retain measurements and cannot certify a pass", () => {
+  assert.match(script, /on error restoreSizeError/);
+  assert.match(script, /on error restorePositionError/);
+  assert.match(script, /on error restoreReadError/);
+  assert.match(script, /CP06\|RESTORE_ERROR\|SIZE:/);
+  assert.match(script, /CP06\|RESTORED\|/);
+  assert.match(runner, /\["ERROR", "RESTORE_ERROR"\]/);
+  assert.match(runner, /\["width", "height", "x", "y"\]/);
+});

@@ -7,7 +7,7 @@ import {formSubmitAction,FORM_SUBMIT_RECIPIENT_ALIAS,REQUEST_RECEIVED_URL} from 
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,
  char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 /** @param {AuthMarkupOptions} options */
-export function renderAuthMarkup({message='',notice='',year=new Date().getFullYear(),mode='login',resetReady=false,emailValue='',requestAlias=FORM_SUBMIT_RECIPIENT_ALIAS,requestReceivedUrl=REQUEST_RECEIVED_URL}={}){
+export function renderAuthMarkup({message='',notice='',year=new Date().getFullYear(),mode='login',resetReady=false,emailValue='',requestAlias=FORM_SUBMIT_RECIPIENT_ALIAS,requestReceivedUrl=REQUEST_RECEIVED_URL,invitationPending=false}={}){
  const error=message?'<div class="login-error" role="alert">'+escapeHtml(message)+'</div>':'';
  const confirmation=notice?'<div class="auth-message" role="status">'+escapeHtml(notice)+'</div>':'';
  const loginForm=`     <form id="login-form" aria-describedby="auth-login-description">
@@ -29,10 +29,11 @@ export function renderAuthMarkup({message='',notice='',year=new Date().getFullYe
      </form>`;
  const accessAction=formSubmitAction(requestAlias);
  const registerNotice=accessAction?
-  '<p class="auth-form-explanation" id="auth-registration-status">Request access from an administrator. This form does not create an account.</p>':
+  '<p class="auth-form-explanation" id="auth-registration-status">Request access from an administrator. This form does not create an account.'+
+  (invitationPending?' Keep the original invitation tab open. After your account is activated and your email is verified, return there to sign in and accept.':'')+'</p>':
   '<p class="auth-admission-warning" role="status" id="auth-registration-status">Request collection is awaiting administrator FormSubmit setup. Existing accounts can still sign in.</p>';
  const registerForm=`${registerNotice}
-     <form id="register-form" method="POST" ${accessAction?'action="'+escapeHtml(accessAction)+'"':''} aria-describedby="auth-registration-status">
+     <form id="register-form" method="POST" ${invitationPending?'target="_blank"':''} ${accessAction?'action="'+escapeHtml(accessAction)+'"':''} aria-describedby="auth-registration-status">
       <div class="field"><label for="register-name">Full name</label><input id="register-name" name="name" type="text" autocomplete="name" minlength="2" maxlength="120" required placeholder="Your full name"/></div>
       <div class="field"><label for="register-email">Email address</label><input id="register-email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="254" required placeholder="you@company.com"/></div>
       <div class="request-access-privacy"><label><input name="consent" value="yes" type="checkbox" required/> I agree to send my name and email to FormSubmit for administrator review.</label><p>FormSubmit may retain requests for 30 days. Sending a request does not create an account. Never submit a password. <a href="https://formsubmit.co/privacy.pdf" target="_blank" rel="noopener noreferrer">Privacy policy</a>.</p></div>
@@ -60,9 +61,17 @@ export function renderAuthMarkup({message='',notice='',year=new Date().getFullYe
  forgot:{eyebrow:'Secure account recovery',title:'Forgot password',description:'Request a time-limited recovery link for your existing APSYNTRA CRM account.',label:'PASSWORD RECOVERY',note:'Recovery never modifies roles, memberships, or board permissions.'},
  reset:{eyebrow:'Protected password update',title:'Reset password',description:'Verify your recovery link and choose a new password.',label:'PASSWORD RESET',note:'Sign in again after changing your password.'}
  }[view];
+ if(view==='login'&&invitationPending){
+  copy.eyebrow='WORKSPACE INVITATION';
+  copy.title='Sign in to accept your invitation';
+  copy.description='Use the email address that received the invitation. After signing in, you can accept and join the workspace.';
+  copy.note='New to APSYNTRA? Request account access in a separate tab and keep this invitation open. Return here after your account is activated and your email is verified.';
+ }
  const form=view==='register'?registerForm:view==='forgot'?forgotForm:view==='reset'?resetForm:loginForm;
  const links=[['login','Sign in','#/login'],['register','Request account access','#/register'],['forgot','Forgot password?','#/forgot-password']]
-  .map(([key,label,url])=>'<a href="'+url+'"'+(view===key?' aria-current="page"':'')+'>'+label+'</a>').join('');
+  .map(([key,label,url])=>'<a href="'+url+'"'+
+   (invitationPending&&key==='register'?' target="_blank" rel="noopener noreferrer"':'')+
+   (view===key?' aria-current="page"':'')+'>'+label+'</a>').join('');
  return `<div class="auth-layout aps-auth-v2" data-auth-layout-mode="${view}">
   <div class="auth-left">
    <header class="auth-brandbar auth-reveal">
@@ -75,7 +84,7 @@ export function renderAuthMarkup({message='',notice='',year=new Date().getFullYe
    <main class="auth-panel">
     <div class="auth-intro auth-reveal">
      <span class="eyebrow">${escapeHtml(copy.eyebrow)}</span>
-     ${view==='login'?'<h1>Welcome to<br/><span>APSYNTRA CRM</span></h1>':'<h1>'+escapeHtml(copy.title)+'<span class="auth-heading-stop">.</span></h1>'}
+     ${view==='login'&&!invitationPending?'<h1>Welcome to<br/><span>APSYNTRA CRM</span></h1>':'<h1>'+escapeHtml(copy.title)+'<span class="auth-heading-stop">.</span></h1>'}
      <p class="muted" id="auth-login-description">${escapeHtml(copy.description)}</p>
     </div>
     <div class="auth-form-card auth-reveal">

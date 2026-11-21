@@ -275,7 +275,8 @@ async function deliver(
       envelope:{to:request.email, invitationId:receipt.invitationId,
         subject:'APSYNTRA CRM workspace invitation',
         text:'You have been invited to join a workspace in APSYNTRA CRM.\n' +
-         'Sign in with this exact email address, then accept within 24 hours.\n' +
+         'If you already have an APSYNTRA account, sign in with this exact email and accept within 24 hours.\n' +
+         'If you are new, request account access from the sign-in page first. Keep this invitation and return after your account is activated and your email is verified.\n' +
           msg + '\nInvitation: ' + href +
          '\n\nIf unexpected, ignore this message.'},
       createTransport:nodemailer.createTransport.bind(nodemailer)});
@@ -297,7 +298,8 @@ async function deliver(
       body: JSON.stringify({
         from, to: [request.email], subject: 'APSYNTRA CRM workspace invitation',
         text: 'You have been invited to join a workspace in APSYNTRA CRM.\n' +
-          'Sign in with this exact email address, then accept within 24 hours.\n' +
+          'If you already have an APSYNTRA account, sign in with this exact email and accept within 24 hours.\n' +
+         'If you are new, request account access from the sign-in page first. Keep this invitation and return after your account is activated and your email is verified.\n' +
           msg + '\nInvitation: ' + href +
           '\n\nIf unexpected, ignore this message.',
       }),

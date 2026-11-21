@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {
  WS02D_TRUSTED_DELIVERY_ENABLED,validateTrustedDeliveryDraft,
@@ -151,4 +152,12 @@ test('sending is denied before issuance when durable receipt writer is absent',a
 test('email bearer link rejects arbitrary data and cannot alter destination',()=>{
  for(const unsafe of ['','../../','https://evil.example/',token+'?',token.toUpperCase()])
   assert.throws(()=>inviteLinkForTrustedEmail(unsafe));
+});
+
+
+test('invitation email explains the existing-account and new-account paths',()=>{
+ const source=readFileSync(new URL('../../supabase/functions/_shared/ws02d-trusted.ts',import.meta.url),'utf8');
+ assert.match(source,/If you already have an APSYNTRA account/);
+ assert.match(source,/request account access from the sign-in page first/);
+ assert.match(source,/return after your account is activated and your email is verified/);
 });
