@@ -47,8 +47,9 @@ small{display:block;color:inherit;opacity:.8}h1{font-size:1.5rem}h2{font-size:1.
 <button type="button" id="pair">Verify both signed users in this tab (optional)</button>
 <label for="workspace">Inviter's isolated staging workspace ID (available after onboarding)</label>
 <input id="workspace" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
+<button type="button" id="readiness">Check signed invitation readiness</button>
 <button type="button" id="send">Send one staging invitation</button>
-<button type="button" id="list">Read invitation delivery states</button>
+<button type="button" id="list">Read invitation statuses</button>
 <label for="invitation-token">One-time token from the recipient's invitation email</label>
 <input id="invitation-token" type="password" autocomplete="off">
 <button type="button" id="accept">Accept as recipient</button>
@@ -64,7 +65,10 @@ const KEY='sb_publishable_i7UQfD8eqxNadP8mhmxy3g_w4gbyWco';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const INVITE_TOKEN=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[0-9a-f]{64}$/;
 const slots={inviter:null,recipient:null};
+let pendingRequestId=null,pendingRequestScope='';
 const $=id=>document.getElementById(id);
+const workspaceParam=new URLSearchParams(location.search).get('workspaceId');
+if(UUID.test(workspaceParam||''))$('workspace').value=workspaceParam;
 const status=(id,message)=>{$(id).textContent=message};
 async function api(path,body,token){
  const r=await fetch(BASE+path,{method:'POST',headers:{apikey:KEY,'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{})},body:JSON.stringify(body),cache:'no-store',referrerPolicy:'no-referrer'});
@@ -126,23 +130,80 @@ async function edge(route,body,which){
  const token=slots[which]?.access_token;if(!token)throw Error('Sign in '+which+' first');
  return api('/functions/v1/ws02d-'+route,body,token);
 }
+async function readiness(){
+ const workspaceId=workspace();
+ await identity('inviter');
+ const result=await edge('manage',{operation:'readiness',workspaceId},'inviter');
+ const reasons=['ready','invitation_feature_disabled','delivery_configuration_missing'];
+ if(result?.schemaVersion!==1||result.workspaceId!==workspaceId||result.authorized!==true||
+  typeof result.ready!=='boolean'||!reasons.includes(result.reason)||
+  result.ready!==(result.reason==='ready'))throw Error('Signed invitation readiness response is invalid');
+ status('result',result.ready?'Signed readiness confirmed. Invitation email transport and staging issuance are ready.':
+  'Invitation is not ready ('+result.reason+'). No invitation email was submitted.');
+ return result.ready;
+}
+$('readiness').addEventListener('click',async()=>{try{await readiness()}catch(e){showError('result',e)}});
 $('send').addEventListener('click',async()=>{
- try{await identity('inviter');const result=await edge('invite',{workspaceId:workspace(),requestId:crypto.randomUUID(),email:$('recipient-email').value,role:'member',message:''},'inviter');
-  status('result','Invitation provider response: '+String(result.state||'unknown')+'. Check recipient inbox and server delivery ledger. Do not retry uncertain sends.')}
- catch(e){showError('result',e)}
+ let sendAttempted=false;
+ try{
+  const {recipient}=await pair();
+  const workspaceId=workspace();
+  if(!await readiness())return;
+  const scope=workspaceId+':'+recipient.email;
+  if(pendingRequestScope!==scope){pendingRequestScope=scope;pendingRequestId=crypto.randomUUID()}
+  sendAttempted=true;
+  const result=await edge('invite',{workspaceId,requestId:pendingRequestId,email:recipient.email,role:'member',message:''},'inviter');
+  if(!UUID.test(result?.invitationId)||!['delivery-submitted','already-issued'].includes(result?.state))
+   throw Error('Invitation delivery receipt was not confirmed');
+  const manager=await edge('manage',{operation:'list',workspaceId},'inviter');
+  const persisted=manager?.authorized===true&&manager.workspaceId===workspaceId&&
+   manager.invitations?.some(item=>item.id===result.invitationId&&item.state==='pending')&&
+   manager.delivery?.some(item=>item.invitationId===result.invitationId&&item.deliveryState==='submitted');
+  if(!persisted){
+   status('result','Provider accepted the invitation request, but pending-state persistence could not be confirmed. Do not retry; reconcile the invitation ledger.');
+   return;
+  }
+  status('result',result.state==='delivery-submitted'?
+   'Provider accepted the invitation; manager readback confirms pending invitation and submitted delivery ledger. Inbox receipt and recipient acceptance are still pending. Invitation: '+result.invitationId:
+   'The existing pending invitation was confirmed. No new email was sent. Check the recipient inbox before any further action. Invitation: '+result.invitationId);
+ }catch(e){
+  if(sendAttempted)status('result','Invitation request outcome or readback is uncertain. Do not retry; reconcile the invitation and delivery ledgers first.');
+  else showError('result',e);
+ }
 });
 $('list').addEventListener('click',async()=>{
  try{await identity('inviter');const result=await edge('manage',{operation:'list',workspaceId:workspace()},'inviter');
-  const states=Array.isArray(result.invitations)?result.invitations.map(x=>x.state).join(', '):'unavailable';
-  status('result','Manager states: '+states)}
+  if(result?.authorized!==true||!Array.isArray(result.invitations))throw Error('Manager readback was not verified');
+  const states=result.invitations.map(x=>String(x.id)+': '+String(x.state)).join('\n')||'No invitations recorded';
+  const delivery=result.delivery.map(x=>String(x.invitationId)+': '+String(x.deliveryState)).join('\n')||'No delivery records';
+  status('result','Signed invitation status readback:\n'+states+'\nDelivery ledger:\n'+delivery)}
  catch(e){showError('result',e)}
 });
 $('accept').addEventListener('click',async()=>{
  const input=$('invitation-token'),token=input.value.trim();input.value='';
- try{await identity('recipient');if(!INVITE_TOKEN.test(token))throw Error('Valid one-time inbox invitation token required');
+ let acceptanceAttempted=false,acceptedReceipt=false;
+ try{
+  await pair();
+  if(!INVITE_TOKEN.test(token))throw Error('Valid one-time inbox invitation token required');
+  const invitationId=token.slice(0,token.indexOf('.'));
+  const workspaceId=workspace();
+  acceptanceAttempted=true;
   const result=await edge('accept',{token},'recipient');
-  status('result',result.state==='accepted'?'Signed recipient acceptance confirmed; check membership via server readback':'Unexpected acceptance state')}
- catch(e){showError('result',e)}
+  if(result?.state!=='accepted'||result?.role!=='member'||result?.switched!==false||result?.workspaceId!==workspaceId)
+   throw Error('Signed recipient acceptance receipt was invalid');
+  acceptedReceipt=true;
+  const manager=await edge('manage',{operation:'list',workspaceId},'inviter');
+  const accepted=manager?.invitations?.some(item=>item.id===invitationId&&item.state==='accepted');
+  if(!accepted){
+   status('result','Recipient acceptance receipt is confirmed, but inviter status readback is not yet accepted. Do not retry; reconcile the invitation record.');
+   return;
+  }
+  status('result','Recipient acceptance is committed. Independent inviter readback confirms the invitation is accepted. Verify the persisted workspace membership in the staging database.');
+ }catch(e){
+  if(acceptedReceipt)status('result','Recipient acceptance receipt is confirmed, but cross-account status readback failed. Do not retry; reconcile the invitation record.');
+  else if(acceptanceAttempted)status('result','Invitation acceptance outcome is uncertain. Do not retry; reconcile the invitation record and membership before another attempt.');
+  else showError('result',e);
+ }
 });
 </script>
 </body>
