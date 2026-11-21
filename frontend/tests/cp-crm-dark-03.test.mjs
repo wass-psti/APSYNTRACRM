@@ -17,7 +17,9 @@ test('compact, restrained enterprise palette covers existing shell and modules',
   '.aps-sidebar .nav-link.active','.overview-hero','.overview-stat-grid',
   '.overview-board-grid .board-card','.overview-essentials',
   '.boards-catalog-grid .board-card','.board-group-panel',
-  '.aps-action-popover','.ws01-menu-card',':focus-visible'])
+  '.aps-action-popover','.ws01-menu-card','.aps-global-search-trigger',
+  '.aps-board-search-field','.sidebar-layout-toggle','.aps-workspace-add-board',
+  '.aps-sync','.topbar-signout','.board-card-actions>summary',':focus-visible'])
    assert.ok(css.includes(item),`Missing dark design component ${item}`);
 });
 test('dark-only change has no layout rewrite, expensive animation or privilege logic',()=>{

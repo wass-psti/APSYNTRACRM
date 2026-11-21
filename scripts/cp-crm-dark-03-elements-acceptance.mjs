@@ -1,8 +1,10 @@
 /** Real Chromium element-level dark/light acceptance; representative DOM only. */
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,mkdirSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {chromium} from 'playwright';
+const previewDirectory='docs/visual/cp-crm-dark-03';
+mkdirSync(previewDirectory,{recursive:true});
 const previous=execFileSync('git',['show','origin/main:frontend/apsyntra-styles.bundle.css'],{encoding:'utf8',maxBuffer:8*1024*1024});
 const current=readFileSync('frontend/apsyntra-styles.bundle.css','utf8');
 const markup=`<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="app"><div class="shell"><aside class="aps-sidebar"><div class="sidebar-brand-wrap"><a href="#/overview" class="brand"><span class="brand-text">APSYNTRA CRM</span></a><button class="sidebar-layout-toggle" aria-label="Collapse navigation">◀</button></div><div class="aps-board-search-v3"><label class="aps-board-search-field"><input placeholder="Search boards" aria-label="Search boards"/></label></div><div class="workspace-switcher"><button class="ws01-switcher-button"><span class="workspace-name">Work Management</span></button><button class="aps-workspace-add-board" aria-label="Create board">+</button></div><nav class="nav-list"><a class="nav-link active" aria-current="page" href="#/overview"><span class="nav-ico">▦</span>Overview</a><a class="nav-link" href="#/boards">My Boards</a></nav></aside><main class="main aps-overview-shell"><header class="topbar"><div class="breadcrumb">Workspace / Overview</div><div class="top-actions"><button class="aps-global-search-trigger"><span class="aps-global-search-trigger-icon">⌕</span><span class="aps-global-search-trigger-label">Search</span><kbd>⌘ K</kbd></button><button class="aps-monday-top-icon" aria-label="Notifications">☆</button><span class="top-pill">Secure session</span><button class="aps-sync" data-sync-state="synchronized"><span class="aps-sync-orbit"></span><span class="aps-sync-caption">Live synced</span></button><button class="secondary topbar-signout">Sign out</button></div></header><div class="main-content"><div class="aps-overview"><section class="overview-board-grid"><article class="board-card"><div class="board-card-top"><details class="board-card-actions"><summary aria-label="Board options">⋮</summary><div class="board-card-actions-list"><button>Rename</button></div></details></div><a class="board-card-main" href="#/boards/1"><h3>TradeLink</h3><p>Recent work</p><div class="board-card-footer"><span>299 items</span></div></a></article></section><section class="aps-boards"><div class="boards-catalog-grid"><article class="board-card"><details class="board-card-actions"><summary aria-label="More actions">⋮</summary></details><a href="#/boards/2">Work board</a><div class="board-card-footer"><span>850 items</span></div></article></div></section><label class="field">Title<input placeholder="Enter title" aria-label="Title"/></label><button class="primary">Save</button><button class="secondary" disabled>Disabled</button></div></div></main></div></div></body></html>`;
@@ -20,6 +22,7 @@ try{
     await page.setContent(markup);await page.evaluate(t=>document.documentElement.dataset.apsMondayTheme=t,theme);
     await page.addStyleTag({content:css});await page.waitForTimeout(300);
     const states=await page.evaluate(items=>items.map(selector=>{const el=document.querySelector(selector);const s=getComputedStyle(el);return {selector,color:s.color,background:s.backgroundColor,border:s.borderColor,outline:s.outlineStyle}}),selectors);
+    if(theme==='dark'&&version==='after'&&(width===390||width===1440))await page.screenshot({path:`${previewDirectory}/elements-after-${width}.png`,fullPage:true});
     const get=selector=>states.find(x=>x.selector===selector);
     if(version==='after'){
      if(theme==='light'){
