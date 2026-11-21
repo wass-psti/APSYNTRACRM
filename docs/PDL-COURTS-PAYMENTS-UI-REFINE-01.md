@@ -9,7 +9,7 @@ The existing JPEG/PNG validation, 2 MB limit, upload endpoint, recipient field, 
 - Native Paseo TypeScript/Vite production build: PASS.
 - Isolated Chromium full Paseo flow: PASS, including new broken saved-image fallback, replacement preview, successful QR save and deliberate false-positive write acknowledgement denial.
 - New QR presentation contract tests: 3 PASS.
-- Full CRM tests: 3,276 PASS, 0 FAIL.
+- Post-main-merge CRM tests: 3,279 PASS, 0 FAIL.
 - Existing lint and diff whitespace checks: PASS.
 - Chromium verified responsive cards at 1440px (three columns), 768px (two), and 390px (one), with no horizontal overflow.
 - Broken saved image status is labelled unavailable rather than incorrectly presented as successfully displayed.
