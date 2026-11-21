@@ -5,9 +5,9 @@ import {STYLE_SOURCES,STYLE_BUNDLE} from '../../scripts/priority5-style-manifest
 import {generateStyleBundle} from '../../scripts/build-priority5-styles.mjs';
 const css=readFileSync('frontend/dark-overview-legibility.css','utf8');
 test('Overview legibility stylesheet is last and published in deterministic bundle',()=>{
- assert.equal(STYLE_SOURCES.at(-1),'frontend/dark-overview-legibility.css');
+ assert.equal(STYLE_SOURCES.at(-2),'frontend/dark-overview-legibility.css');
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());
- assert.match(readFileSync('index.html','utf8'),/bundle\.css\?v=cp-crm-dark-04b/);
+ assert.match(readFileSync('index.html','utf8'),/bundle\.css\?v=cp-crm-dark-invite-01/);
 });
 test('board initials use readable dark color variants and no new privileges',()=>{
  for(const cls of ['.board-symbol.green','.board-symbol.blue','.board-symbol.orange','.board-symbol.pink','.sidebar-board-initial']){

@@ -31108,3 +31108,103 @@ html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overv
 html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-essentials .activity-item {
  background:#303030;border-color:#4e4e4e;
 }
+
+/* frontend/dark-workspace-invitations.css */
+/* CP-CRM-DARK-INVITE-01: actual workspace invitation dialog, dark mode only.
+ * Existing invitation form, validation, status, permissions and RPCs unchanged. */
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite {
+ background:rgba(0,0,0,.72);
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-card {
+ --invite-bg:#292929;
+ --invite-surface:#222222;
+ --invite-text:#ededed;
+ --invite-muted:#c4c4c4;
+ --invite-border:#525252;
+ --invite-accent:#8ab9ff;
+ background:var(--invite-bg);background-image:none;
+ color:var(--invite-text);border-color:var(--invite-border);
+ box-shadow:0 18px 52px #0009;
+ color-scheme:dark;
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-card :is(
+ .ws02-invite-heading h2,.ws11-manage-heading h3,
+ .ws02-invite-card label,.ws02-invite-access strong,
+ .ws11-invite-row strong
+) {color:var(--invite-text)}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-card :is(
+ .ws02-invite-subtitle,.ws02-invite-card label span,
+ .ws02-invite-field small,.ws02-invite-access small,
+ .ws11-manage-feedback,.ws11-invite-row small,
+ .ws02-invite-feedback
+) {color:var(--invite-muted)}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-card .ws02-eyebrow {
+ color:#a9c6ff;
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-card :is(
+ input[type=email],input[type=text],textarea,select
+) {
+ background:#202020;color:#ededed;border-color:#616161;
+ caret-color:#ededed;-webkit-text-fill-color:#ededed;
+ box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-card :is(
+ input[type=email],input[type=text],textarea
+)::placeholder {color:#bdbdbd;-webkit-text-fill-color:#bdbdbd}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-card :is(
+ input[type=email],input[type=text],textarea,select
+):hover:not(:disabled) {border-color:#888}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-card :is(
+ input[type=email],input[type=text],textarea,select
+):focus-visible {
+ background:#252525;border-color:#a9c6ff;outline:2px solid #a9c6ff;
+ outline-offset:1px;-webkit-text-fill-color:#ededed;
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-card :is(
+ input[type=email],input[type=text],textarea,select
+):disabled {background:#303030;color:#bdbdbd;-webkit-text-fill-color:#bdbdbd}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-card input[aria-invalid=true] {
+ border-color:#f39a9a;
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-access {
+ background:#303030;color:#ededed;border-color:#525252;
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-access-icon {
+ background:#244537;color:#b0efd0;
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-footer,
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws11-manage,
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws11-invite-row {
+ border-color:#525252;
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-card :is(
+ .ws02-secondary,.ws11-manage-heading button,.ws02-invite-revoke,[data-ws01-close]
+) {
+ background:#343434;color:#ededed;border-color:#676767;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-card :is(
+ .ws02-secondary,.ws11-manage-heading button,.ws02-invite-revoke,[data-ws01-close]
+):hover:not(:disabled) {background:#424242;color:#fff;border-color:#8b8b8b}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-card .ws02-send {
+ background:#285fa9;color:#fff;border-color:#629cef;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-card .ws02-send:hover:not(:disabled) {
+ background:#3474c6;color:#fff;
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-card :is(
+ button,input,textarea,select
+):focus-visible {outline:2px solid #a9c6ff;outline-offset:2px}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-state {
+ background:#3a3a3a;color:#ededed;
+}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-state.is-accepted {background:#244537;color:#b0efd0}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-state.is-pending {background:#524329;color:#ffe4a5}
+html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-state:is(.is-expired,.is-revoked,.is-declined) {
+ background:#522c32;color:#ffbfc6;
+}
+@media(prefers-reduced-motion:reduce){
+ html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-card,
+ html[data-aps-monday-theme="dark"] .ws01-overlay.ws01-invite .ws02-invite-card :is(button,input,textarea,select) {
+  animation:none;transition:none;
+ }
+}
