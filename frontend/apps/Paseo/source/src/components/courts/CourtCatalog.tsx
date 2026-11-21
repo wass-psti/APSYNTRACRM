@@ -19,7 +19,7 @@ export function CourtCatalog({ searchText = '' }: CourtCatalogProps) {
           <p>Try Court 1, Court 2, Court 3, or a different keyword.</p>
         </div>
       )}
-      <p className="mock-note">Court illustrations are conceptual, not venue photographs. Prices and available times must be confirmed by the reservation service before booking.</p>
+      <p className="mock-note">Court images are illustrations. Confirm current prices and available times before booking.</p>
     </>
   );
 }

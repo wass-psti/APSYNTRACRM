@@ -41,13 +41,13 @@ async function checkAdministration(signal: AbortSignal): Promise<CheckResult[]> 
     typeof item?.email === 'string' ? item.email.toLowerCase() : '')).size : 0;
 
   return [
-    { name: 'Court Settings', passed: hasCourts, details: hasCourts ? `${courts?.length ?? 0} court records loaded` : 'Court data unavailable' },
-    { name: 'Court Calendar', passed: hasCalendar, details: hasCalendar ? 'Weekdays and maintenance records loaded' : 'Calendar data unavailable' },
-    { name: 'Bookings', passed: hasBookings, details: hasBookings ? `${records?.length ?? 0} reservations in first page` : 'Booking data unavailable' },
-    { name: 'Pricing', passed: hasRates, details: hasRates ? 'Court rate collections loaded' : 'Rate data unavailable' },
-    { name: 'Payments', passed: hasPayments && hasBookings, details: hasPayments && hasBookings ? 'Payment methods and booking payment states loaded' : 'Payment readback unavailable' },
-    { name: 'Customers', passed: hasBookings, details: hasBookings ? `${customers} distinct contacts in first reservation page` : 'Customer readback unavailable' },
-    { name: 'Settings', passed: hasPolicy, details: hasPolicy ? 'Operational policies loaded' : 'Policy data unavailable' },
+    { name: 'Court Settings', passed: hasCourts, details: hasCourts ? `${courts?.length ?? 0} court records loaded` : 'Court information unavailable' },
+    { name: 'Court Calendar', passed: hasCalendar, details: hasCalendar ? 'Court schedules available' : 'Calendar unavailable' },
+    { name: 'Bookings', passed: hasBookings, details: hasBookings ? `${records?.length ?? 0} recent reservations available` : 'Bookings unavailable' },
+    { name: 'Pricing', passed: hasRates, details: hasRates ? 'Court rates loaded' : 'Rates unavailable' },
+    { name: 'Payments', passed: hasPayments && hasBookings, details: hasPayments && hasBookings ? 'Payment details available' : 'Payment details unavailable' },
+    { name: 'Customers', passed: hasBookings, details: hasBookings ? `${customers} recent customer contacts` : 'Customer details unavailable' },
+    { name: 'Settings', passed: hasPolicy, details: hasPolicy ? 'Settings available' : 'Settings unavailable' },
   ];
 }
 
@@ -69,22 +69,22 @@ export function AdminAcceptancePage() {
   }, [revision]);
 
   const passed = results.filter(result => result.passed).length;
-  return <AdminShell title="Administration readback.">
-    <p className="page-lede">Read-only verification of the seven administration modules using this browser tab's existing session. No settings or records are changed.</p>
-    <section className="booking-panel" aria-label="Seven-module readback">
-      <h2 className="review-heading">Existing server data checks</h2>
-      <p role="status" aria-live="polite">{running ? 'Checking server data…' :
-        !sharedSupabaseAdminEnabled ? 'The shared server is not configured.' :
-        `${passed} of 7 read-only checks passed.`}</p>
+  return <AdminShell title="Workspace status.">
+    <p className="page-lede">Check the availability of the booking administration sections. This check does not change any records.</p>
+    <section className="booking-panel" aria-label="Workspace status">
+      <h2 className="review-heading">Administration sections</h2>
+      <p role="status" aria-live="polite">{running ? 'Checking workspace…' :
+        !sharedSupabaseAdminEnabled ? 'Workspace status is unavailable.' :
+        `${passed} of 7 sections available.`}</p>
       {!running && <ul className="admin-block-list">
         {results.map(result => <li key={result.name}>
-          <span><strong>{result.name}</strong> — {result.passed ? 'PASS' : 'UNAVAILABLE'}: {result.details}</span>
+          <span><strong>{result.name}</strong> — {result.passed ? 'Available' : 'Needs attention'}: {result.details}</span>
         </li>)}
       </ul>}
-      <p className="booking-help">A successful read is not certification of production writes, full customer history, payment settlement, or independent administrator acceptance.</p>
+      <p className="booking-help">This checks section availability only. Payment approvals and booking updates must still be reviewed individually.</p>
       <div className="booking-actions">
         <button type="button" className="button button-primary" disabled={running}
-          onClick={() => setRevision(value => value + 1)}>Run readback again</button>
+          onClick={() => setRevision(value => value + 1)}>Check again</button>
         <Link to="/admin" className="button button-secondary">Back to overview</Link>
       </div>
     </section>

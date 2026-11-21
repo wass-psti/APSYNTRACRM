@@ -93,7 +93,7 @@ describe('guest API request contract — fake server only', () => {
   it('rejects server receipts for the wrong reservation', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => serverReceipt }));
     await expect(fetchGuestReceipt('abcdef12-1234-1234-1234-123456789abc', accessToken, base))
-      .rejects.toThrow(/Invalid server receipt/);
+      .rejects.toThrow(/Your booking receipt could not be confirmed/);
   });
 });
 
@@ -131,7 +131,7 @@ describe('settled reservation retry status', () => {
       quote: quote as GuestReservationInput['quote'],
       idempotencyKey: 'aabbccdd-1234-4444-8888-123456789abc',
     };
-    await expect(submitGuestReservation(input, base)).rejects.toThrow(/invalid submission status/);
+    await expect(submitGuestReservation(input, base)).rejects.toThrow(/could not confirm whether the booking was accepted/);
   });
 });
 
@@ -147,6 +147,6 @@ describe('guest payment cannot auto-verify on proof upload', () => {
       quote: quote as GuestReservationInput['quote'],
       idempotencyKey: 'aabbccdd-1234-4444-8888-123456789abc',
     };
-    await expect(submitGuestReservation(input, base)).rejects.toThrow(/invalid submission status/);
+    await expect(submitGuestReservation(input, base)).rejects.toThrow(/could not confirm whether the booking was accepted/);
   });
 });

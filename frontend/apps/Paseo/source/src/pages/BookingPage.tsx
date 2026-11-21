@@ -40,9 +40,9 @@ export function BookingPage() {
     });
     void fetch(`${configuredGuestApiBase}/v1/availability?${params}`, { signal:controller.signal })
       .then(async response => {
-        if (!response.ok) throw new Error('Server availability is unavailable. Refresh before selecting a time.');
+        if (!response.ok) throw new Error('Could not check available times. Please refresh before choosing a time.');
         const data: {source: string; slots: {startMinute: number; status: 'available'|'unavailable'}[]} = await response.json();
-        if (data.source !== 'server') throw new Error('Server availability was not confirmed.');
+        if (data.source !== 'server') throw new Error('Available times could not be confirmed. Please refresh.');
         return Object.fromEntries(data.slots.map(slot => [slot.startMinute, slot.status])) as Record<number,'available'|'unavailable'>;
       })
       .then(slots => {
@@ -92,11 +92,11 @@ export function BookingPage() {
       </Link>
       <header className="courts-page-intro booking-page-intro">
         <div className="courts-page-copy">
-          <div className="eyebrow eyebrow-dark">{stagingAvailability ? 'BOOKING / SERVER AVAILABILITY' : 'BOOKING / SCHEDULE YOUR GAME'}</div>
+          <div className="eyebrow eyebrow-dark">{stagingAvailability ? 'BOOKING / CHOOSE YOUR TIME' : 'BOOKING / SCHEDULE YOUR GAME'}</div>
           <h1 className="page-title">Plan your next game.</h1>
           <p className="page-lede">{stagingAvailability ? (localStaging
-            ? 'Court slots are checked against a local staging database. Prices are test fixtures, not venue-approved rates.'
-            : 'Court slots are checked against the Paseo booking schema in Supabase. Unapproved courts remain unavailable.') : 'Choose a court to start. Live availability, checkout, and booking confirmation are not connected.'}</p>
+            ? 'These are sample times and prices for testing only. They are not real venue offers.'
+            : 'Choose a date and time. Courts awaiting venue approval are not available for booking.') : 'Choose a court to explore sample times. Online reservations are not yet available.'}</p>
         </div>
         <div className="courts-page-summary booking-page-summary" role="group" aria-label="Booking selection overview">
           <div><strong>{selectedCourt ? selectedCourt.id.split('-').at(-1)?.padStart(2, '0') : '03'}</strong><span>{selectedCourt ? 'Selected court' : 'Courts to choose from'}</span></div>
@@ -106,10 +106,10 @@ export function BookingPage() {
       </header>
       <BookingProgress stage="schedule" />
       <div className="demo-banner" role="note">
-        <strong>{stagingAvailability ? (localStaging ? 'LOCAL STAGING — not real venue inventory or rates' : 'SUPABASE BOOKING — COURT APPROVAL REQUIRED') : 'Demonstration schedule only'}</strong>
+        <strong>{stagingAvailability ? (localStaging ? 'TEST BOOKING — DO NOT SEND MONEY' : 'COURT AVAILABILITY SUBJECT TO APPROVAL') : 'Demonstration schedule only'}</strong>
         <p>{stagingAvailability ? (localStaging
-          ? 'Local SQLite overlap checks determine the visible time slots. Existing venue inventory, venue rates and bank confirmation are not connected. Do not transfer funds for a test booking.'
-          : 'Supabase controls availability and rejects overlapping reservations. Courts and rates remain disabled until approved by the venue. Do not pay without a server-issued amount.') : 'All times, occupied periods, and maintenance blocks are illustrative mock data. No slot is checked against a real booking system, held, or reserved. Times shown are Philippine time (Asia/Manila).'}</p>
+          ? 'Times and prices shown here are for testing only. Do not transfer money for a test booking.'
+          : 'Only approved courts and times can be booked. Do not send payment until you receive a confirmed amount and recipient details.') : 'These are example times, not actual court availability. Choosing a time does not reserve a court. All times use Philippine time.'}</p>
       </div>
 
       <div className="booking-panel booking-scheduler">
@@ -122,7 +122,7 @@ export function BookingPage() {
         <p className="selection-feedback" role="status"><strong>{selectedCourt ? `${selectedCourt.name} selected` : 'No court selected'}</strong></p>
 
         <h2 className="booking-heading">Choose a date</h2>
-        <p className="booking-help">{stagingAvailability ? '14 dates in Philippine time, checked against server reservations.' : '14 demonstration dates starting today in the venue\'s timezone.'}</p>
+        <p className="booking-help">{stagingAvailability ? 'Select a date from the next 14 days (Philippine time).' : '14 sample dates starting today (Philippine time).'}</p>
         <DateSelector dates={dates} selectedDate={selectedDate} onSelect={changeDate} serverBacked={stagingAvailability} />
 
         <h2 className="booking-heading">Choose your duration</h2>
@@ -146,9 +146,9 @@ export function BookingPage() {
           <span className="is-unavailable"><i aria-hidden="true" /> Unavailable</span>
           {!stagingAvailability && <span className="is-maintenance"><i aria-hidden="true" /> Maintenance</span>}
         </div>
-        <p className="booking-help">{stagingAvailability ? 'Server-owned slots: occupied and unapproved periods are disabled. Venue operating hours require administrator approval.' : '8:00 AM–10:00 PM mock operating hours. Each choice checks the entire selected duration. Disabled periods cannot be selected.'}</p>
+        <p className="booking-help">{stagingAvailability ? 'Unavailable or unapproved time slots cannot be selected.' : 'Example operating hours are 8:00 AM–10:00 PM. Unavailable periods cannot be selected.'}</p>
         {stagingAvailability && selectedCourt && (
-          <p className="booking-help" role="status">{availabilityError || (serverStatuses ? 'Server availability loaded.' : 'Checking server availability…')}</p>
+          <p className="booking-help" role="status">{availabilityError || (serverStatuses ? 'Available times updated.' : 'Checking available times…')}</p>
         )}
         {selectedCourt ? (
           <TimeSlotSelector courtId={selectedCourt.id} dayIndex={dayIndex}
@@ -165,11 +165,11 @@ export function BookingPage() {
           <p><strong>Duration:</strong> {durationMinutes} minutes</p>
           <p><strong>Time:</strong> {validSelection && selectedMinute !== null
             ? `${formatTime(selectedMinute)} – ${formatTime(selectedMinute + durationMinutes)}`
-            : (stagingAvailability ? 'Select a server-available slot' : 'Select a mock available slot')}</p>
+            : (stagingAvailability ? 'Choose an available time' : 'Time not selected')}</p>
           <p><strong>Price:</strong> Not configured</p>
-          <p><strong>Status:</strong> {validSelection ? (stagingAvailability ? 'Server-available selection — not reserved' : 'Valid mock selection — not reserved') : (stagingAvailability ? 'Awaiting server availability' : 'Incomplete mock selection')}</p>
+          <p><strong>Status:</strong> {validSelection ? (stagingAvailability ? 'Available selection — not yet reserved' : 'Sample selection — not reserved') : (stagingAvailability ? 'Checking available times' : 'Time not selected')}</p>
         </div>
-        <div className="booking-continue-section"><p className="booking-help">Enter customer details to review this draft. Only a server-issued receipt can confirm a submitted reservation.</p>
+        <div className="booking-continue-section"><p className="booking-help">Add your contact details to review the booking. Your time is not reserved until the booking is accepted.</p>
         <button className="button button-primary" type="button"
           disabled={!validSelection} onClick={proceedToDetails}>
           Continue to customer details <span aria-hidden="true">↗</span>

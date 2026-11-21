@@ -1,7 +1,7 @@
 const steps = [
   { title: 'Choose your court', detail: 'Explore three separately identified courts.' },
-  { title: 'Pick a date and time', detail: 'Choose a time validated against server availability and approved rates.' },
-  { title: 'Review and select payment', detail: 'Review the server quote and verified payment instructions before transferring funds.' },
+  { title: 'Pick a date and time', detail: 'Choose an available time and review approved prices.' },
+  { title: 'Review and select payment', detail: 'Review the booking amount and confirmed payment instructions before transferring funds.' },
 ];
 
 export function BookingSteps() {

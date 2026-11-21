@@ -58,7 +58,7 @@ export function GuestQrPaymentPage() {
       })
       .catch(() => {
         if (!controller.signal.aborted) {
-          setManagedQrError('Payment QR configuration could not be retrieved.');
+          setManagedQrError('Payment QR images could not be loaded. Please refresh.');
           setManagedQrLoading(false);
         }
       });
@@ -67,7 +67,7 @@ export function GuestQrPaymentPage() {
   useEffect(() => {
     if (!schedule || !scheduleValid) return;
     if (!guestSubmissionConfigured) {
-      setQuoteError('Live pricing and verified availability have not been connected. Do not transfer funds using the preview QR.');
+      setQuoteError('Payment is not available for this booking yet. Do not transfer funds.');
       return;
     }
     const controller = new AbortController();
@@ -158,8 +158,8 @@ export function GuestQrPaymentPage() {
       <p className="page-lede">No guest account is required. Select a payment method, follow the instructions, then attach proof of payment.</p>
       <BookingProgress stage="payment" />
       <div className="demo-banner" role="note">
-        <strong>{import.meta.env.VITE_STAGING_ONLY === '1' ? 'LOCAL STAGING — TEST RATES ONLY — DO NOT TRANSFER FUNDS' : quoteReady ? 'Server quote received — payment verification remains pending' : 'QR preview only — do not send money yet'}</strong>
-        <p>{quoteError || 'The server controls the amount, availability and final reservation outcome. Uploading proof does not verify payment.'}</p>
+        <strong>{import.meta.env.VITE_STAGING_ONLY === '1' ? 'TEST PAYMENT — DO NOT TRANSFER FUNDS' : quoteReady ? 'BOOKING AMOUNT READY — PAYMENT PENDING REVIEW' : 'PAYMENT NOT READY — DO NOT SEND MONEY'}</strong>
+        <p>{quoteError || 'The booking amount and available time must be confirmed. Uploading a receipt does not mean payment is approved.'}</p>
       </div>
       <BookingSummary schedule={schedule} />
       <div className="booking-panel guest-qr-panel">
@@ -179,17 +179,17 @@ export function GuestQrPaymentPage() {
           <div className="guest-qr-image-wrap">
             {qrReady && chosen.image
               ? <img src={chosen.image} alt={`${chosen.name} recipient payment QR supplied by the venue`} decoding="async" />
-              : <p role="status" className="guest-backend-blocker">No approved, administrator-uploaded payment QR is configured for this method. Payment is unavailable.</p>}
+              : <p role="status" className="guest-backend-blocker">A payment QR is not available for this method. Do not send money.</p>}
           </div>
           <div className="guest-qr-instructions">
             <h3>{chosen.name}</h3>
             <p>QR display name: <strong>{chosen.recipient}</strong></p>
-            <p>Reservation amount: <strong>{quoteReady ? formatPeso(quote.amountMinor) + (import.meta.env.VITE_STAGING_ONLY === '1' ? ' (test fixture only)' : '') : 'Awaiting verified server quote'}</strong></p>
+            <p>Reservation amount: <strong>{quoteReady ? formatPeso(quote.amountMinor) + (import.meta.env.VITE_STAGING_ONLY === '1' ? ' (test amount only)' : '') : 'Waiting for confirmed amount'}</strong></p>
             {isSharedSupabase && (managedQrLoading || managedQrError) && (
               <p role="status">{managedQrLoading ? 'Loading venue QR payment settings…' : managedQrError}</p>
             )}
             <p>{qrReady ? 'Scan this QR using a compatible payment application and verify the recipient matches before transferring funds.' : 'Do not send money. The payment recipient QR has not been configured.'}</p>
-            <p className="guest-qr-warning">Do not pay based on mock court availability or an unverified amount. Transfer fees may apply.</p>
+            <p className="guest-qr-warning">Do not pay for a sample time or an unconfirmed amount. Transfer fees may apply.</p>
           </div>
         </div>
         <h2>2. Confirm payment action</h2>
@@ -197,7 +197,7 @@ export function GuestQrPaymentPage() {
           onClick={() => { setPaymentDone(true); setError(''); }}>
           Payment Done — I have completed the transfer
         </button>
-        {!quoteReady && <p className="booking-help">Payment acknowledgement is unavailable until the reservation server returns a valid quote and the recipient QR is configured.</p>}
+        {!quoteReady && <p className="booking-help">Payment cannot continue until the booking amount and recipient QR are available.</p>}
         {paymentDone && (
           <form className="guest-proof-form" onSubmit={(event) => { void submit(event); }}>
             <h2>3. Attach payment receipt</h2>
@@ -210,12 +210,12 @@ export function GuestQrPaymentPage() {
             <label htmlFor="transaction-reference">Transaction reference (optional)</label>
             <input id="transaction-reference" type="text" maxLength={100} value={reference}
               onChange={(event) => { setReference(event.target.value); attemptId.current = crypto.randomUUID(); }} placeholder="Reference displayed by your payment app" />
-            <p className="booking-help">Submitting requests a server-issued reservation ID. It does not mean the payment is verified. The administrator must review proof separately.</p>
+            <p className="booking-help">Submitting your booking will issue a reservation reference. Your payment receipt must still be reviewed before confirmation.</p>
             {error && <p role="alert" className="form-error">{error}</p>}
             <button type="submit" className="button button-primary" disabled={!canSubmit}>
               {isSubmitting ? 'Submitting…' : 'Submit reservation'}
             </button>
-            {!guestSubmissionConfigured && <p role="status" className="guest-backend-blocker">Submission unavailable: the reservation backend, rates, conflict protection and secure proof storage are not configured.</p>}
+            {!guestSubmissionConfigured && <p role="status" className="guest-backend-blocker">Booking submission is currently unavailable. Please try again later or contact the venue.</p>}
           </form>
         )}
         <div className="booking-actions">

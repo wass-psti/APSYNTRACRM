@@ -33,7 +33,7 @@ export function BookingProgress({ stage }: { stage: BookingStage }) {
           );
         })}
       </ol>
-      <p>A selection is not a confirmed reservation. The server must verify availability and payment evidence.</p>
+      <p>A selection is not a confirmed reservation. Court availability and payment must be confirmed.</p>
     </nav>
   );
 }

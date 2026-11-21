@@ -25,7 +25,7 @@ describe('FE-01 booking entry', () => {
   it('does not allow booking to proceed without a validated schedule', () => {
     renderBooking('/book?court=court-1');
     expect(screen.getByRole('button', { name: /continue to customer details/i })).toBeDisabled();
-    expect(screen.getByText(/live availability, checkout/i)).toBeInTheDocument();
+    expect(screen.getByText(/Online reservations are not yet available/i)).toBeInTheDocument();
   });
   it('ignores unrecognized court query values', () => {
     renderBooking('/book?court=unknown');
@@ -36,32 +36,32 @@ describe('FE-01 booking entry', () => {
 describe('FE-03 interactive mock scheduling', () => {
   it('shows 14 demo dates and three duration choices', () => {
     renderBooking('/book?court=court-2');
-    expect(screen.getByRole('group', { name: 'Demo booking dates' }).querySelectorAll('button')).toHaveLength(14);
+    expect(screen.getByRole('group', { name: 'Sample booking dates' }).querySelectorAll('button')).toHaveLength(14);
     expect(screen.getByRole('group', { name: 'Booking duration' }).querySelectorAll('button')).toHaveLength(3);
     expect(screen.getByRole('note')).toHaveTextContent('Demonstration schedule only');
   });
 
   it('supports a mock selection and clears the selected time when duration changes', () => {
     renderBooking('/book?court=court-1');
-    fireEvent.click(screen.getByRole('button', { name: '8:00 AM, mock available' }));
-    expect(screen.getByText(/Valid mock selection — not reserved/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '8:00 AM, sample available' }));
+    expect(screen.getByText(/Sample selection — not reserved/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /continue to customer details/i })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: '90 minutes' }));
-    expect(screen.getByText(/Incomplete mock selection/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Time not selected/i).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /continue to customer details/i })).toBeDisabled();
   });
 
   it('disables occupied demo periods rather than presenting them as bookable', () => {
     renderBooking('/book?court=court-1');
-    expect(screen.getByRole('button', { name: '10:00 AM, mock unavailable' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '9:30 AM, mock unavailable' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '10:00 AM, sample unavailable' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '9:30 AM, sample unavailable' })).toBeDisabled();
   });
 
   it('clears time selection when changing courts', () => {
     renderBooking('/book?court=court-1');
-    fireEvent.click(screen.getByRole('button', { name: '8:00 AM, mock available' }));
+    fireEvent.click(screen.getByRole('button', { name: '8:00 AM, sample available' }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Select court' }), { target: { value: 'court-3' } });
     expect(screen.getByText('Court 3 selected')).toBeInTheDocument();
-    expect(screen.getByText(/Incomplete mock selection/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Time not selected/i).length).toBeGreaterThan(0);
   });
 });

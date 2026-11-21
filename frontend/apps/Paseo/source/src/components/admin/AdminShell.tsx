@@ -31,12 +31,12 @@ function AdminShellContent({ title, children, liveReservations }: { title: strin
         </span>
       </m.div>
       <div className="demo-banner immersive-admin-banner" role="note">
-        <strong>{backendAdminEnabled ? (stagingAdminEnabled ? 'Local authenticated staging — not production' : 'Shared Supabase backend — authorized administrators only') : 'Reservation backend not configured'}</strong>
+        <strong>{backendAdminEnabled ? (stagingAdminEnabled ? 'Test workspace — no real bookings or payments' : 'Paseo administration') : 'Reservation services unavailable'}</strong>
         <p>{backendAdminEnabled
           ? (stagingAdminEnabled
-            ? 'The stored-reservations page reads and updates the local SQLite staging database. This is not production data.'
-            : 'Reservation records and supported court/rate settings are read from the dedicated Paseo schema. Unsupported features are displayed as unavailable.')
-          : 'No live reservation backend is connected. Operational editing and payment actions are unavailable.'}</p>
+            ? 'This workspace uses sample information. Do not accept real bookings or payments here.'
+            : 'Manage reservations, court availability and approved rates here. Verify received funds before approving payments.')
+          : 'Bookings and payment management are currently unavailable. Please try again later.'}</p>
       </div>
       <AdminNavigation />
       <div className="immersive-admin-content">

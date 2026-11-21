@@ -108,7 +108,7 @@ export function ManagedQrMethodCard({
       const updated = await onSaved();
       const saved = updated.find(item => item.method === method);
       if (!saved || saved.recipient !== recipient.trim() || !saved.imageUrl) {
-        throw new Error(`${label} QR update was acknowledged but not confirmed by server readback. Review before retrying.`);
+        throw new Error(`${label} QR image save could not be confirmed. Refresh before trying again.`);
       }
       // New revision forces the actual stored asset URL to reload.
       setRevision(value => value + 1);
@@ -182,7 +182,7 @@ export function ManagedQrMethodCard({
         {saving ? 'Saving…' : `Save ${label} QR configuration`}
       </button>
       <p role="status" aria-live="polite">{message}</p>
-      {!sharedSupabaseAdminEnabled && <p className="booking-help">Local staging only.</p>}
+      {!sharedSupabaseAdminEnabled && <p className="booking-help">Test workspace only.</p>}
     </form>
   );
 }

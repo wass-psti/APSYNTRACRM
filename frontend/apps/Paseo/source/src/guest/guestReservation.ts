@@ -73,7 +73,7 @@ export async function requestReservationQuote(schedule: ScheduleChoice, signal?:
       parsed.data.date !== schedule.date || parsed.data.startMinute !== schedule.startMinute ||
       parsed.data.durationMinutes !== schedule.durationMinutes ||
       Date.parse(parsed.data.expiresAt) <= Date.now()) {
-    throw new Error('The reservation server returned an invalid or expired quote.');
+    throw new Error('The booking amount or time could not be confirmed. Please choose a time again.');
   }
   return parsed.data;
 }
@@ -132,7 +132,7 @@ export interface GuestReservationInput {
 }
 
 export async function submitGuestReservation(input: GuestReservationInput, apiBaseUrl = configuredGuestApiBase): Promise<ServerReceipt> {
-  if (!validApiBase(apiBaseUrl)) throw new Error('The reservation server is not configured.');
+  if (!validApiBase(apiBaseUrl)) throw new Error('Booking submission is currently unavailable. Please try again later.');
   const error = validatePaymentProof(input.proof);
   if (error) throw new Error(error);
 
@@ -157,7 +157,7 @@ export async function submitGuestReservation(input: GuestReservationInput, apiBa
   });
   if (!response.ok) throw new Error(response.status === 409
     ? 'That court and time are no longer available. Choose another slot.'
-    : `Reservation submission failed (HTTP ${response.status}). No receipt was issued.`);
+    : `We could not confirm your booking submission. No receipt was issued. Check your booking status before retrying.`);
   const parsed = serverReceiptSchema.safeParse(await response.json());
   const validFirstSubmission = parsed.success &&
     parsed.data.bookingStatus === 'pending_verification' &&
@@ -166,7 +166,7 @@ export async function submitGuestReservation(input: GuestReservationInput, apiBa
     (['confirmed:verified', 'rejected:rejected']
       .includes(`${parsed.data.bookingStatus}:${parsed.data.paymentStatus}`));
   if (!validFirstSubmission && !validSettledReplay) {
-    throw new Error('The reservation server returned an invalid submission status. Contact the administrator before retrying.');
+    throw new Error('We could not confirm whether the booking was accepted. Contact the venue before trying again.');
   }
   return parsed.data;
 }
@@ -183,7 +183,7 @@ export async function fetchGuestReceipt(reservationId: string, accessToken: stri
   if (!response.ok) throw new Error('The reservation receipt could not be retrieved.');
   const parsed = serverReceiptSchema.safeParse(await response.json());
   if (!parsed.success || parsed.data.reservationId !== reservationId) {
-    throw new Error('Invalid server receipt.');
+    throw new Error('Your booking receipt could not be confirmed. Please try again.');
   }
   return parsed.data;
 }

@@ -16,12 +16,12 @@ export function PaymentPage() {
   return <section className="container section booking-section">
     <div className="eyebrow eyebrow-dark">BOOKING / PAYMENT</div>
     <h1 className="page-title">Payment setup required.</h1>
-    <p className="page-lede">The reservation service is not configured for this frontend. A payment cannot be processed or marked successful here.</p>
+    <p className="page-lede">Payment is not available on this page. No payment has been processed.</p>
     <BookingProgress stage="payment" />
     <BookingSummary schedule={schedule} />
     <section className="booking-panel" role="status">
       <h2 className="review-heading">No payment request has been issued</h2>
-      <p>Available methods, approved pricing and receipt submission must be confirmed by the reservation backend. No money should be transferred from this screen.</p>
+      <p>Payment is not available from this page. Do not transfer money until you receive confirmed booking details and payment instructions.</p>
       <div className="booking-actions">
         <Link className="button button-secondary" to="/book/review">Back to booking review</Link>
         <Link className="button button-primary" to="/book/qr-payment">Review QR payment requirements</Link>

@@ -25,11 +25,11 @@ describe('How It Works reservation journey', () => {
 
   it('presents accurate readiness without obsolete FE preview claims', () => {
     renderPage();
-    expect(screen.getByText(/Bookable times depend on approved server rates/)).toBeInTheDocument();
-    expect(screen.getByText(/Retrieve the server-issued receipt with your private code/)).toBeInTheDocument();
-    expect(screen.getAllByText('SERVER REQUIRED')).toHaveLength(2);
-    expect(screen.getByRole('progressbar', { name: 'Frontend journey coverage' })).toHaveAttribute('aria-valuenow', '5');
-    expect(screen.getByRole('complementary', { name: 'Reservation readiness' })).toHaveTextContent('No selection alone creates a reservation or verifies payment');
+    expect(screen.getByText(/Bookable times depend on approved prices/)).toBeInTheDocument();
+    expect(screen.getByText(/View your receipt using your private access code/)).toBeInTheDocument();
+    expect(screen.getAllByText('CONFIRMATION REQUIRED')).toHaveLength(2);
+    expect(screen.getByRole('progressbar', { name: 'Booking journey' })).toHaveAttribute('aria-valuenow', '5');
+    expect(screen.getByRole('complementary', { name: 'Reservation readiness' })).toHaveTextContent('Choosing a court does not reserve it or verify a payment');
     expect(screen.queryByText(/FE-02 PREVIEW|Planned for FE-/)).not.toBeInTheDocument();
   });
 

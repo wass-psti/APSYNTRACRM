@@ -10,8 +10,8 @@ const lifecycle=readFileSync('supabase/pdl-booking/source/migrations/20261121153
 test('uncertain cancellation reports failure of the follow-up readback separately',()=>{
  assert.match(admin,/async function load\([^)]*\): Promise<boolean>/);
  assert.match(admin,/const refreshed = await load\(\)/);
- assert.match(admin,/Readback failed\. Do not retry cancellation until a successful refresh/);
- assert.match(admin,/Cancellation accepted, but updated records could not be retrieved/);
+ assert.match(admin,/booking status could not be checked\. Refresh before trying again/);
+ assert.match(admin,/The cancellation may have succeeded, but the updated booking could not be checked/);
 });
 
 test('pagination deduplicates overlapping ids without losing existing results',()=>{

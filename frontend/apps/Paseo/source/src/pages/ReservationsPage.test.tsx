@@ -50,7 +50,7 @@ describe('Reservations customer dashboard', () => {
 
   it('preserves receipt lookup guidance and secure password input semantics', () => {
     renderReservations();
-    expect(screen.getByText(/Live reservation receipts are not yet connected/)).toBeInTheDocument();
+    expect(screen.getByText(/Booking receipts are currently unavailable/)).toBeInTheDocument();
     expect(screen.getByLabelText('Private receipt access code')).toHaveAttribute('type', 'password');
     expect(screen.getByLabelText('Reservation ID')).toHaveAttribute('minLength', '8');
     expect(screen.getByLabelText('Private receipt access code')).toHaveAttribute('minLength', '16');

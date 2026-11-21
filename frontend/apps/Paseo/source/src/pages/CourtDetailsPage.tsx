@@ -59,7 +59,7 @@ export function CourtDetailsPage() {
           <ButtonLink to={`/book?court=${encodeURIComponent(court.id)}`}>
             Select {court.name} <span aria-hidden="true">↗</span>
           </ButtonLink>
-          <p className="mock-note">The next screen keeps your court selection in the URL. It does not create a reservation.</p>
+          <p className="mock-note">Your court choice will carry into the next step. No reservation has been made yet.</p>
         </div>
       </div>
     </section>

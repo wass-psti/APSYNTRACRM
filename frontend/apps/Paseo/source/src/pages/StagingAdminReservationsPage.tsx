@@ -102,7 +102,7 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
       const data: {reservations: (StageReservation & {
         court_code?:string; reservation_date?:string; duration_minutes?:number;
       })[]; nextCursor?:ReservationCursor|null} = await response.json();
-      if (!Array.isArray(data.reservations)) throw new Error('Invalid reservation response.');
+      if (!Array.isArray(data.reservations)) throw new Error('Reservation list is temporarily unavailable. Please refresh.');
       const normalized = data.reservations.map(item=>({
         ...item,court_id:item.court_id??item.court_code??'',
         day:item.day??item.reservation_date??'',
@@ -116,7 +116,7 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
       });
       setNextCursor(data.nextCursor??null);
       setReservationLoaded(true);
-      setStatus(`${cursor ? 'More' : normalized.length} ${sharedSupabaseAdminEnabled ? 'Supabase' : 'locally'} stored reservations loaded`);
+      setStatus(cursor ? 'More bookings loaded.' : `${normalized.length} reservations found.`);
       return true;
     } catch(reason) {
       if (requestId===loadRequest.current) setStatus(reason instanceof Error ? reason.message:'Reservation retrieval failed.');
@@ -136,7 +136,7 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
     const response = await backendAdminFetch('/v1/admin/courts', { cache:'no-store' });
     if (!response.ok) throw new Error('Court configuration could not be loaded.');
     const result: {courts: typeof courtConfig} = await response.json();
-    if (!Array.isArray(result.courts)) throw new Error('Invalid court configuration response.');
+    if (!Array.isArray(result.courts)) throw new Error('Court settings are temporarily unavailable. Please refresh.');
     setCourtConfig(result.courts);
     return result.courts;
   }
@@ -150,14 +150,14 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
       });
       if (!response.ok) throw new Error('Court update was not accepted.');
       const acknowledged = await response.json() as { updated?: boolean };
-      if (!acknowledged.updated) throw new Error('Court update was not acknowledged.');
+      if (!acknowledged.updated) throw new Error('Court settings could not be confirmed. Refresh before trying again.');
       const readback = await loadCourtConfig();
       const persisted = readback.find(item => item.courtId === selectedCourt);
       if (!persisted || persisted.enabled !== courtEnabled || persisted.openMinute !== opening ||
         persisted.closeMinute !== closing) {
-        throw new Error('Court save returned, but the stored configuration did not match. Refresh before retrying.');
+        throw new Error('Court settings could not be confirmed after saving. Refresh before trying again.');
       }
-      setConfigMessage('Court settings saved in the dedicated Paseo Supabase schema.');
+      setConfigMessage('Court settings saved.');
     } catch (reason) { setConfigMessage(reason instanceof Error ? reason.message : 'Court settings failed.'); }
   }
   async function updateRate(event: React.FormEvent<HTMLFormElement>) {
@@ -172,12 +172,12 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
       });
       if (!response.ok) throw new Error('Rate configuration was not accepted.');
       const acknowledged = await response.json() as { updated?: boolean };
-      if (!acknowledged.updated) throw new Error('Rate update was not acknowledged.');
+      if (!acknowledged.updated) throw new Error('Rate update could not be confirmed. Refresh before trying again.');
       const readback = await loadCourtConfig();
       const persisted = readback.find(item => item.courtId === selectedCourt)?.rates.find(
         rate => rate.durationMinutes === rateDuration);
       if (!persisted || persisted.amountMinor !== amountMinor || persisted.enabled !== rateEnabled) {
-        throw new Error('Rate save returned, but the stored rate did not match. Refresh before retrying.');
+        throw new Error('Rate changes could not be confirmed after saving. Refresh before trying again.');
       }
       setConfigMessage('Rate saved. Enable the court and rate only after venue approval.');
     } catch (reason) { setConfigMessage(reason instanceof Error ? reason.message : 'Rate settings failed.'); }
@@ -186,7 +186,7 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
     const response = await fetch(`${configuredGuestApiBase}/v1/payment-methods`, {cache:'no-store'});
     if (!response.ok) throw new Error('Payment methods not available.');
     const value: {methods: ManagedMethod[]} = await response.json();
-    if (!Array.isArray(value.methods)) throw new Error('Invalid payment methods response.');
+    if (!Array.isArray(value.methods)) throw new Error('Payment methods are temporarily unavailable. Please refresh.');
     const methods = value.methods.map(item => ({
       ...item, imageUrl: resolveManagedQrImageUrl(item.method, item.imageUrl),
     }));
@@ -245,13 +245,13 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
       if (!response.ok) throw new Error(response.status === 409 ? 'Reservation changed in another session. Refresh and retry.' : 'Verification could not be saved.');
       const refreshed = await load();
       if (!refreshed) {
-        setStatus('Verification accepted, but status readback failed. Do not retry until a successful refresh confirms the booking.');
+        setStatus('The payment decision may have been saved, but its status could not be confirmed. Refresh before taking another action.');
       }
     } catch (reason) {
       const message=reason instanceof Error ? reason.message : 'Verification outcome uncertain.';
       const refreshed = await load();
       setStatus(refreshed ? `${message} Review the refreshed booking status before another decision.` :
-        `${message} Readback failed. Do not retry verification until a successful refresh confirms the booking status.`);
+        `${message} The booking status could not be checked. Refresh before trying again.`);
     } finally { setBusyId(''); }
   }
 
@@ -267,12 +267,12 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
         'Booking changed in another session. Refresh and review.' : 'Cancellation could not be saved.');
       const refreshed = await load();
       setStatus(refreshed ? 'Booking cancelled. Payment status is unchanged; reconcile any submitted funds separately.' :
-        'Cancellation accepted, but updated records could not be retrieved. Refresh to confirm before any further action.');
+        'The cancellation may have succeeded, but the updated booking could not be checked. Refresh before taking another action.');
     } catch(reason) {
       const message=reason instanceof Error ? reason.message : 'Cancellation outcome uncertain.';
       const refreshed = await load();
       setStatus(refreshed ? `${message} Review the refreshed booking status before retrying.` :
-        `${message} Readback failed. Do not retry cancellation until a successful refresh confirms the booking status.`);
+        `${message} The booking status could not be checked. Refresh before trying again.`);
     } finally { setBusyId(''); }
   }
 
@@ -290,10 +290,10 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
             <h2>{workspaceTitles[view]}</h2>
             <p>Review bookings, validate payment evidence and manage approved court availability in one place.</p>
           </div>
-          <span className="pdl-live-source">{sharedSupabaseAdminEnabled ? 'Connected to Paseo records' : 'Local staging records'}</span>
+          <span className="pdl-live-source">{sharedSupabaseAdminEnabled ? 'Booking records' : 'Test bookings'}</span>
         </div>
         {showRecords && <div className="pdl-live-metrics" aria-label="Current reservation results">
-          <div><span>Reservations in results</span><strong>{reservationLoaded ? records.length : '—'}</strong><small>Current server response</small></div>
+          <div><span>Reservations in results</span><strong>{reservationLoaded ? records.length : '—'}</strong><small>Current results</small></div>
           <div><span>Awaiting review</span><strong>{reservationLoaded ? records.filter(item => item.payment_status === 'submitted').length : '—'}</strong><small>Payment proof submitted</small></div>
           <div><span>Payments verified</span><strong>{reservationLoaded ? records.filter(item => item.payment_status === 'verified').length : '—'}</strong><small>In current results</small></div>
         </div>}
@@ -302,8 +302,8 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
             <div><p className="pdl-live-kicker">01 / RESERVATIONS</p><h2 id="pdl-reservations-heading">{view === 'customers' ? 'Customers from stored reservations' : view === 'payments' ? 'Booking payments' : 'Booking queue'}</h2></div>
             <span className="pdl-live-section-description">Search, review and verify</span>
           </div>
-      <div className="demo-banner" role="note"><strong>{sharedSupabaseAdminEnabled ? 'PASEO RECORDS / SHARED SUPABASE PROJECT' : 'LOCAL STAGING RECORDS ONLY'}</strong>
-        <p>{sharedSupabaseAdminEnabled ? 'These records are stored separately from APSYNTRA CRM. Check that money reached the correct recipient before verifying any payment proof.' : 'These are persisted SQLite staging submissions, not production financial records. Check payment funds independently before approving any proof.'}</p>
+      <div className="demo-banner" role="note"><strong>{sharedSupabaseAdminEnabled ? 'BOOKINGS AND PAYMENTS' : 'TEST BOOKINGS ONLY'}</strong>
+        <p>{sharedSupabaseAdminEnabled ? 'Check that funds reached the correct recipient before approving a payment receipt.' : 'These are test bookings, not real payments. Do not approve actual transfers here.'}</p>
       </div>
       <div className="booking-panel staging-admin-toolbar" aria-busy={reservationLoading}>
         <div className="pdl-live-search">
@@ -379,7 +379,7 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
           <div className="pdl-live-section-heading">
             <div><p className="pdl-live-kicker">02 / VENUE SETTINGS</p><h2 id="pdl-config-heading">Court availability and venue rate configuration</h2></div>
           </div>
-          <p className="guest-qr-warning">All courts start disabled and no rates were pre-approved. Enable the actual venue prices and schedules only after confirming them with management. Changes affect the Paseo schema only.</p>
+          <p className="guest-qr-warning">Courts and prices need venue approval before they can be made available for booking.</p>
           <label htmlFor="pdl-config-court">Court</label>
           <select id="pdl-config-court" value={selectedCourt}
             onChange={event => setSelectedCourt(event.target.value)}>
@@ -402,7 +402,7 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
             <button type="submit" className="button button-secondary">Save court configuration</button>
           </form>}
           {(view === 'all' || view === 'pricing') && <form className="guest-proof-form" onSubmit={(event) => { void updateRate(event); }}>
-            <h3>Server-authoritative booking rate</h3>
+            <h3>Approved booking rate</h3>
             <label htmlFor="pdl-rate-duration">Duration</label>
             <select id="pdl-rate-duration" value={rateDuration}
               onChange={event => setRateDuration(Number(event.target.value))}>
@@ -419,7 +419,7 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
               Enable this rate after venue approval
             </label>
             <button className="button button-secondary" type="submit" disabled={!rateAmount}>
-              Save server rate
+              Save rate
             </button>
           </form>}
           </div>
@@ -432,8 +432,8 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
           <span className="pdl-live-section-description">Three independent methods</span>
         </div>
         <p className="booking-help">{sharedSupabaseAdminEnabled
-          ? 'Each method has its own stored recipient and QR image in the dedicated Paseo bucket. Confirm payment recipients independently before enabling real transfers.'
-          : 'Each method has its own local staging QR configuration; no live bank account is modified.'}</p>
+          ? 'Each payment method has its own recipient and QR image. Confirm recipient details before accepting transfers.'
+          : 'These payment details are for testing only. Do not transfer real funds.'}</p>
         <p role="status">{qrMessage}</p>
         <div className="managed-qr-grid">
           {managedPaymentMethods.map(({method, label}) => (

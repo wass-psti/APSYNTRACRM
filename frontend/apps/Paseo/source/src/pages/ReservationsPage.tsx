@@ -27,7 +27,7 @@ export function ReservationsPage() {
 
         <aside className="reservations-status-card" role="note">
           <div className="reservations-status-topline">
-            <span>RESERVATION SERVICE</span>
+            <span>BOOKING RECEIPTS</span>
             <span className="reservations-preview-pill">RECEIPT ACCESS</span>
           </div>
           <div className="reservations-status-icon" aria-hidden="true">
@@ -39,9 +39,9 @@ export function ReservationsPage() {
             </svg>
           </div>
           <strong>Reservation history unavailable here</strong>
-          <p>Individual receipts can be retrieved with server-issued access details when the reservation service is configured. This page does not list bookings belonging to a customer account.</p>
+          <p>Use your booking reference and private access code to view a receipt. A full booking history is not available here.</p>
           <div className="reservations-status-footer">
-            <span>RECEIPT SERVICE</span>
+            <span>RECEIPT ACCESS</span>
             <strong><i aria-hidden="true" /> {guestSubmissionConfigured ? 'Configured' : 'Not configured'}</strong>
           </div>
         </aside>
@@ -86,7 +86,7 @@ export function ReservationsPage() {
         <div className="reservations-receipt-intro">
           <p className="reservations-section-kicker">02 / GUEST ACCESS</p>
           <h2 className="review-heading" id="guest-receipt-heading">Retrieve a guest reservation receipt</h2>
-          <p>No account is required. Use the reservation ID and private receipt access code issued by the reservation service.</p>
+          <p>No account is required. Use the reservation reference and private receipt access code provided with your booking.</p>
           <div className="reservations-receipt-assurance">
             <span className="reservations-receipt-assurance-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none">
@@ -129,8 +129,8 @@ export function ReservationsPage() {
 
           <p className="booking-help reservations-receipt-help" id="guest-receipt-help">
             {guestSubmissionConfigured
-              ? 'Only a matching server-issued reservation and access code can retrieve a receipt.'
-              : 'Live reservation receipts are not yet connected. No server-issued records are available.'}
+              ? 'Enter the matching booking reference and private access code to view your receipt.'
+              : 'Booking receipts are currently unavailable. Please try again later.'}
           </p>
           <button type="submit" className="button button-primary reservations-receipt-submit" disabled={!receiptDetailsValid}>
             Retrieve receipt <span aria-hidden="true">↗</span>

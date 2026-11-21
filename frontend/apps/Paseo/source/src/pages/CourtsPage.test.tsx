@@ -71,7 +71,7 @@ describe('FE-02 three-court catalog', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(`Court ${courtNumber}`);
     expect(document.querySelector('.court-details-page')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: new RegExp(`select court ${courtNumber}`, 'i') })).toHaveAttribute('href', `/book?court=${courtId}`);
-    expect(screen.getByText(/does not create a reservation/i)).toBeInTheDocument();
+    expect(screen.getByText(/No reservation has been made yet/i)).toBeInTheDocument();
   });
 
   it('does not claim a real court for an unknown detail URL', () => {

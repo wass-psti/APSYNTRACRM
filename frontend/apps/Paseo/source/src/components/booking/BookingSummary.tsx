@@ -17,7 +17,7 @@ export function BookingSummary({ schedule }: { schedule: ScheduleChoice }) {
         <p><strong>Time:</strong> {formatTime(schedule.startMinute)} – {formatTime(schedule.startMinute + schedule.durationMinutes)}</p>
         <p><strong>Duration:</strong> {schedule.durationMinutes} minutes</p>
         <p><strong>Price:</strong> Not configured</p>
-        <p><strong>Status:</strong> Draft only — server confirmation required</p>
+        <p><strong>Status:</strong> Draft only — not yet reserved</p>
       </div>
     </div>
   );
