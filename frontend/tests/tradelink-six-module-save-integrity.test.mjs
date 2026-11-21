@@ -79,6 +79,18 @@ test('array order is exact, object order is not, and malformed responses fail cl
   {content:payload,document_number:'Q-100',document_type:'other'}])
   assert.equal(tradeLinkSavedDraftMatches(bad,payload),false);
 });
+test('deep JSON fields survive signed readback without losing exact-value verification',()=>{
+ const payload={documentType:'quotation',documentNumber:'Q-100',items:[]};
+ let nested={value:'signed'};
+ for(let level=0;level<9;level++)nested={child:nested};
+ payload.metadata=nested;
+ assert.equal(tradeLinkSavedDraftMatches(row(sortedJson(payload)),payload),true);
+ const changed=structuredClone(payload);
+ let cursor=changed.metadata;
+ for(let level=0;level<9;level++)cursor=cursor.child;
+ cursor.value='stale';
+ assert.equal(tradeLinkSavedDraftMatches(row(changed),payload),false);
+});
 test('signed post-commit success requires persisted content parity before showing success toast',()=>{
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const guard=source.indexOf('!tradeLinkSavedDraftMatches(record,savedDraft)');

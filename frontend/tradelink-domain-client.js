@@ -156,19 +156,30 @@ export function tradeLinkBoardProjectionMatches(boardItem,{
  * would incorrectly reject valid saves. Array order and every field/value
  * are still checked exactly. Never log financial/customer contents.
  */
-function sameTradeLinkJsonValue(left,right,depth=0){
- if(left===right)return true;
- if(depth>5)return false;
- if(Array.isArray(left)||Array.isArray(right))
-  return Array.isArray(left)&&Array.isArray(right)&&
-   left.length===right.length&&
-   left.every((value,index)=>sameTradeLinkJsonValue(value,right[index],depth+1));
- if(!left||!right||typeof left!=='object'||typeof right!=='object')
-  return false;
- const leftKeys=Object.keys(left),rightKeys=Object.keys(right);
- return leftKeys.length===rightKeys.length&&leftKeys.every(key=>
-  Object.hasOwn(right,key)&&
-   sameTradeLinkJsonValue(left[key],right[key],depth+1));
+function sameTradeLinkJsonValue(left,right){
+ // The server returns JSON values. An iterative comparison supports nested
+ // document fields without rejecting valid payloads at an arbitrary depth.
+ const pending=[[left,right]];
+ let compared=0;
+ while(pending.length){
+  // Refuse unexpectedly complex or cyclic non-JSON objects, rather than hang.
+  if(++compared>131072)return false;
+  const [a,b]=pending.pop();
+  if(a===b)continue;
+  if(Array.isArray(a)||Array.isArray(b)){
+   if(!Array.isArray(a)||!Array.isArray(b)||a.length!==b.length)return false;
+   for(let index=0;index<a.length;index++)pending.push([a[index],b[index]]);
+   continue;
+  }
+  if(!a||!b||typeof a!=='object'||typeof b!=='object')return false;
+  const aKeys=Object.keys(a),bKeys=Object.keys(b);
+  if(aKeys.length!==bKeys.length)return false;
+  for(const key of aKeys){
+   if(!Object.hasOwn(b,key))return false;
+   pending.push([a[key],b[key]]);
+  }
+ }
+ return true;
 }
 export function tradeLinkSavedDraftMatches(record,submitted){
  return !!record&&!!record.content&&
@@ -510,6 +521,9 @@ export class TradeLinkDomainClient{
     (typeof result.primaryAt!=='string'||!Number.isFinite(Date.parse(result.primaryAt))))||
    (result.secondaryAt!==null&&result.secondaryAt!==undefined&&
     (typeof result.secondaryAt!=='string'||!Number.isFinite(Date.parse(result.secondaryAt))))||
+   (stage==='primary'&&result.primaryAt!==result.recordedAt)||
+   (stage==='secondary'&&result.secondaryAt!==result.recordedAt)||
+   (result.state==='approved'&&(!result.primaryAt||!result.secondaryAt))||
    typeof result.idempotent!=='boolean')
    deny('Signed TradeLink review receipt mismatch.',409);
   return {...result,actorId:session.actorId,workspaceId:session.workspaceId};
