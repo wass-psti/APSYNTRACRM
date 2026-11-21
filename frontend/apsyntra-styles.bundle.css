@@ -30381,3 +30381,147 @@ html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar
     .ws01-menu-card, .ws01-browser-card, .ws01-details-card, .ws01-create-card
   ) :is(button, input, select, textarea) { transition: none; }
 }
+
+/* frontend/dark-native-applications.css */
+/* CP-CRM-DARK-02: dark-only native module surfaces and accessible foregrounds.
+ * Presentation only: preserve component geometry, native workflow and light mode. */
+html[data-aps-monday-theme="dark"] {
+ --crm-native-canvas:#171b22;
+ --crm-native-panel:#252b35;
+ --crm-native-elevated:#2e3542;
+ --crm-native-input:#1e242e;
+ --crm-native-border:#4c5668;
+ --crm-native-ink:#edf1f8;
+ --crm-native-muted:#c0cadb;
+ --crm-native-link:#b6c5ff;
+ --crm-native-active:#363e64;
+ --crm-native-focus:#b5b9ff;
+}
+/* TradeLink's dedicated reference portal has its own unthemed white panels. */
+html[data-aps-monday-theme="dark"] #app .aps-tradelink-app.tl-reference-portal {
+ --tl-ref-ink:var(--crm-native-ink);
+ --tl-ref-muted:var(--crm-native-muted);
+ --tl-ref-line:var(--crm-native-border);
+ --tl-ref-back:var(--crm-native-canvas);
+ --tl-ref-blue-dark:var(--crm-native-link);
+ color:var(--crm-native-ink);
+ background:var(--crm-native-canvas);
+}
+html[data-aps-monday-theme="dark"] #app .tl-reference-portal :is(
+ .tl-reference-topbar,.tl-reference-portal-links,.tl-reference-manual-panel,
+ .tl-reference-workspace,.tl-app-nav,.tl-stat,.tl-content-panel,.tl-draft-panel,
+ .tl-reference-document-topcard,.tl-reference-editor-content,.tl-overview-tile,
+ .tl-reference-list-details,.tl-records-table,.tl-reference-manual-panel
+) {
+ background:var(--crm-native-panel);
+ border-color:var(--crm-native-border);
+ color:var(--crm-native-ink);
+}
+html[data-aps-monday-theme="dark"] #app .tl-reference-portal :is(
+ .tl-app-hero,.tl-hero-status,.tl-reference-overview-tile
+) {
+ background:var(--crm-native-elevated);
+ border-color:var(--crm-native-border);
+ color:var(--crm-native-ink);
+}
+html[data-aps-monday-theme="dark"] #app .tl-reference-portal :is(
+ h2,h3,h4,.tl-reference-brand,.tl-reference-document-title h3,
+ .tl-content-panel h2,.tl-app-hero h2,.tl-reference-document-icon,
+ .tl-reference-workspace,.tl-reference-document-toolbar button
+) {color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .tl-reference-portal :is(
+ p,small,.tl-reference-access-note,.tl-content-panel p,
+ .tl-app-hero>p:not(.tl-eyebrow),.tl-reference-manual-panel p,
+ .tl-reference-brand small,.tl-app-nav h3
+) {color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .tl-reference-portal :is(
+ .tl-reference-portal-links>a,.tl-reference-portal-links>span,
+ .tl-reference-manual>summary,.tl-app-nav>a
+) {color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .tl-reference-portal :is(
+ .tl-reference-portal-links a:hover,.tl-reference-manual>summary:hover,
+ .tl-app-nav>a:hover,.tl-overview-tile:hover
+) {background:var(--crm-native-elevated);color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .tl-reference-portal :is(
+ .tl-app-nav>a.active,.tl-reference-portal-links .tl-reference-create
+) {background:var(--crm-native-active);color:#f1f2ff;border-color:var(--crm-native-border)}
+html[data-aps-monday-theme="dark"] #app .tl-reference-portal :is(
+ input,textarea,select,.tl-reference-input,.tl-reference-select,
+ .tl-reference-document-toolbar button
+) {background:var(--crm-native-input);color:var(--crm-native-ink);border-color:var(--crm-native-border)}
+html[data-aps-monday-theme="dark"] #app .tl-reference-portal :is(input,textarea)::placeholder {color:var(--crm-native-muted)}
+/* Fund Tracker reporting surfaces retain dark headers and financial status accents. */
+html[data-aps-monday-theme="dark"] #app .frt-ref {
+ --frt-ink:var(--crm-native-ink);
+ --frt-muted:var(--crm-native-muted);
+ --frt-border:var(--crm-native-border);
+ background:var(--crm-native-canvas);color:var(--crm-native-ink);
+ border-color:var(--crm-native-border);
+}
+html[data-aps-monday-theme="dark"] #app .frt-ref :is(
+ .frt-ref-nav,.frt-ref-hero,.frt-ref-metric,.frt-ref-chart,
+ .frt-ref-table-card,.frt-ref-filters,.frt-ref-table-footer,.frt-ref-loading,
+ .frt-ref-more-menu,.frt-ref-action:not(.is-primary),.frt-ref-pill
+) {background:var(--crm-native-panel);border-color:var(--crm-native-border);color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .frt-ref :is(
+ .frt-ref-metric.frt-ref-teal,.frt-ref-metric.frt-ref-orange,
+ .frt-ref-metric.frt-ref-rose
+) {background:var(--crm-native-elevated)}
+html[data-aps-monday-theme="dark"] #app .frt-ref :is(
+ .frt-ref-hero-title h2,.frt-ref-metric strong,
+ .frt-ref-chart header strong,.frt-ref-request-name,
+ .frt-ref-deadlines strong
+) {color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .frt-ref :is(
+ .frt-ref-hero-title p,.frt-ref-metric span:first-child,
+ .frt-ref-chart header small,.frt-ref-legend,
+ .frt-ref-filters,.frt-ref-table-footer,.frt-ref-company-name,
+ .frt-ref-filters>span,.frt-ref-table td,.frt-ref-loading
+) {color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .frt-ref :is(
+ .frt-ref-table td,.frt-ref-table tbody tr:nth-child(even) td
+) {background:var(--crm-native-panel);color:var(--crm-native-ink);border-color:var(--crm-native-border)}
+html[data-aps-monday-theme="dark"] #app .frt-ref .frt-ref-table tbody tr:hover td {
+ background:var(--crm-native-elevated)}
+html[data-aps-monday-theme="dark"] #app .frt-ref :is(
+ .frt-ref-filters select,.frt-ref-more-menu button
+) {background:var(--crm-native-input);border-color:var(--crm-native-border);color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .frt-ref :is(
+ .frt-ref-more-menu button:hover:not(:disabled),.frt-ref-action:hover:not(:disabled)
+) {background:var(--crm-native-elevated);color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .frt-ref .frt-ref-more-menu button:disabled {
+ color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .frt-ref .frt-ref-deadlines {
+ background:#46313b;border-color:#93606e;color:#fff0f2}
+html[data-aps-monday-theme="dark"] #app .frt-ref .frt-ref-deadlines small {color:#f0d2d7}
+html[data-aps-monday-theme="dark"] #app .frt-ref .frt-ref-deadlines b {
+ background:#663545;color:#ffe0e7}
+html[data-aps-monday-theme="dark"] #app .frt-ref .frt-ref-donut-center,
+html[data-aps-monday-theme="dark"] #app .frt-ref .frt-ref-bars text {fill:var(--crm-native-muted)}
+/* Native modules with light-only standalone panels. */
+html[data-aps-monday-theme="dark"] #app .ft3-app :is(.ft3-panel,.ft3-signed-rich .ft3-panel,.ft3-signed-rich .ft3-panel-head) {
+ background:var(--crm-native-panel);border-color:var(--crm-native-border);color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .ft3-app .ft3-panel-head h3 {color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .ft3-app .ft3-panel-head p {color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .tb-app {
+ --tb-panel:var(--crm-native-panel);--tb-edge:var(--crm-native-border);
+ --tb-ink:var(--crm-native-ink);--tb-muted:var(--crm-native-muted);
+ --panel:var(--crm-native-panel);--surface-2:var(--crm-native-elevated);
+ --text:var(--crm-native-ink);--muted:var(--crm-native-muted);
+ color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .tb-app :is(.tb-panel,.tb-metric,.tb-drawer,.tb-filter input,.tb-filter select) {
+ background:var(--crm-native-panel);border-color:var(--crm-native-border);color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .tb-app :is(.tb-panel-footer,.tb-panel thead,.tb-panel tbody tr:hover) {
+ background:var(--crm-native-elevated)}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-panel {
+ background:var(--crm-native-panel);border-color:var(--crm-native-border);color:var(--crm-native-ink)}
+/* Keyboard focus remains apparent, including native form fields and actions. */
+html[data-aps-monday-theme="dark"] #app :is(
+ .tl-reference-portal,.frt-ref,.ft3-app,.tb-app,.tt-native
+) :is(button,a[href],input,select,textarea,summary,[role="button"]):focus-visible {
+ outline:2px solid var(--crm-native-focus);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){
+ html[data-aps-monday-theme="dark"] #app :is(
+  .tl-reference-portal,.frt-ref,.ft3-app,.tb-app,.tt-native
+ ) :is(button,input,select,textarea){transition:none}
+}
