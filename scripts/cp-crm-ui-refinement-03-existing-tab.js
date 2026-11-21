@@ -16,43 +16,66 @@
   const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
   async function verifyVisibleMenus(route) {
-    const candidates = [...document.querySelectorAll('.aps-action-surface')]
+    // A board-list refresh can replace an entire card during inspection.
+    // Never validate ARIA or geometry against a detached old DOM node.
+    const visibleMenus = () => [...document.querySelectorAll('.aps-action-surface')]
       .filter(menu => {
+        if (!menu.isConnected) return false;
         const trigger = menu.querySelector('summary');
         const anchor = trigger?.getBoundingClientRect();
         return anchor && anchor.left >= 0 && anchor.right <= innerWidth &&
           anchor.top >= 0 && anchor.bottom <= innerHeight &&
           menu.querySelector('[role="menu"]');
       });
-    if (!candidates.length) return;
-    const positions = [...new Set([0, Math.floor(candidates.length / 2), candidates.length - 1])];
+    const first = visibleMenus();
+    if (!first.length) return;
+    const positions = [...new Set([0, Math.floor(first.length / 2), first.length - 1])];
     for (const index of positions) {
-      const menu = candidates[index];
-      const trigger = menu.querySelector('summary');
-      if (document.visibilityState !== 'visible') {
-        result.menuChecks.push({route, index, skipped: 'TAB_NOT_FOREGROUND'});
-        continue;
-      }
-      if (!menu.open) trigger.click();
-      // Foreground-overlay positions via requestAnimationFrame. Allow the real
-      // top-layer coordinates to settle before reading geometry.
-      await delay(550);
-      const popup = menu.querySelector('[role="menu"]');
-      const rect = popup?.getBoundingClientRect();
-      if (document.visibilityState !== 'visible') {
+      let checked = false;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        if (document.visibilityState !== 'visible') {
+          result.menuChecks.push({route, index, skipped: 'TAB_NOT_FOREGROUND'});
+          checked = true;
+          break;
+        }
+        const candidates = visibleMenus();
+        const menu = candidates[Math.min(index, candidates.length - 1)];
+        if (!menu) {
+          await delay(250);
+          continue;
+        }
+        const trigger = menu.querySelector('summary');
+        if (!menu.open) trigger.click();
+        // Allow the same-tab foreground placement to settle, but do not
+        // assume a menu node survived the async board refresh.
+        await delay(350);
+        if (document.visibilityState !== 'visible') {
+          if (menu.isConnected && menu.open) trigger.click();
+          result.menuChecks.push({route, index, skipped: 'TAB_LOST_FOREGROUND'});
+          checked = true;
+          break;
+        }
+        if (!menu.isConnected || !trigger.isConnected) {
+          await delay(250);
+          continue;
+        }
+        const popup = menu.querySelector('[role="menu"]');
+        const rect = popup?.getBoundingClientRect();
+        result.menuChecks.push({
+          route, index, open: menu.open,
+          expanded: trigger.getAttribute('aria-expanded'),
+          fits: !!rect && rect.left >= 0 && rect.right <= innerWidth &&
+            rect.top >= 0 && rect.bottom <= innerHeight,
+          items: popup?.querySelectorAll('[role="menuitem"]').length || 0,
+          connected: menu.isConnected,
+        });
         if (menu.open) trigger.click();
-        result.menuChecks.push({route, index, skipped: 'TAB_LOST_FOREGROUND'});
-        continue;
+        checked = true;
+        await delay(90);
+        break;
       }
-      result.menuChecks.push({
-        route, index, open: menu.open,
-        expanded: trigger.getAttribute('aria-expanded'),
-        fits: !!rect && rect.left >= 0 && rect.right <= innerWidth &&
-          rect.top >= 0 && rect.bottom <= innerHeight,
-        items: popup?.querySelectorAll('[role="menuitem"]').length || 0,
-      });
-      if (menu.open) trigger.click();
-      await delay(90);
+      if (!checked)
+        result.menuChecks.push({route, index, skipped: 'DOM_REPLACED_DURING_CHECK'});
     }
   }
 
