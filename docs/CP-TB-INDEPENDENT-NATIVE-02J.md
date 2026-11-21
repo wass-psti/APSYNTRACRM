@@ -45,3 +45,11 @@ After the cacheNonce patch was deployed in PR #682, a fresh signed browser loade
 The 02J follow-up treats Storage DELETE HTTP 400 or 404 as a *possible already-absent object* on retry, never as final success. It still requires a cache-fresh signed authenticated GET 404, signed backend purge receipt, and independent signed issue readback before returning success. Any signed GET 200, denied operation or failed confirmation preserves recoverable pending state. No backend mutation bypass, direct database write, RBAC/RLS change, or secret handling is introduced.
 
 Automated tests separately cover HTTP 400 + signed GET 404 (safe continuation) and HTTP 400 + signed GET 200 (no confirmation). The final production signed retry remains subject to exact-commit Pages deployment and independent database readback.
+
+## Proof-gated cleanup after opaque DELETE transport failures
+
+After the second release (PR #683), production Chromium loaded the exact published JS source including 400/404 idempotent handling. A signed retry still reported the "private binary deletion unconfirmed" message before reaching the fresh GET. Storage logs independently prove the original DELETE had succeeded and subsequent retries hit NoSuchKey; the browser-visible error classification can be opaque when a failing cross-origin DELETE does not produce a usable HTTP response.
+
+The final client correction treats the DELETE attempt as best-effort transport only, not an authoritative deletion receipt. Regardless of response/rejection, the workflow MUST independently obtain an authenticated, nonce-fresh GET 404 and a successful server-side RPC which checks the Storage metadata, then independently read back the issue with no active or pending attachment. Any GET 200/401/403/5xx or server uncertainty preserves pending cleanup. Tests cover transport failure + GET 404 + confirmation PASS; transport failure + GET 200 DENIED; retry after an uncertain GET DENIED, then recovered GET 404 PASS. There is no new RLS or permission grant, project, dependency, stored secret, backend migration or role change.
+
+Production confirmation requires replaying existing pending attachment #1 for QA issue #5 only after this source passes CI and exact-commit Pages deployment. Never manually set storage_purged_at or claim cross-account parity without two independent genuine Work Management sessions.

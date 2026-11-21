@@ -154,9 +154,24 @@ test('native removal does not delete Storage if backend acknowledgement is misma
  assert.equal(calls.filter(x=>x.url).length,0);
 });
 
-test('native removal reports uncertain Storage deletion instead of claiming success',async()=>{
- const {client}=attachmentTransport({deleteOk:false});
- await assert.rejects(()=>client.removeVerified('301',asset),/binary deletion unconfirmed/);
+test('native removal verifies signed absence despite a failed DELETE transport',async()=>{
+ const {client,calls}=attachmentTransport({deleteOk:false});
+ const result=await client.removeVerified('301',asset);
+ assert.deepEqual(result.pendingAttachmentCleanup,[]);
+ assert.equal(calls.filter(x=>x.name==='toolbox_issues_confirm_attachment_purged').length,1);
+ assert.match(calls.find(x=>x.url&&x.init.method==='GET').url,/cacheNonce=/);
+});
+
+test('uncertain DELETE followed by cached or real GET 200 never confirms purge',async()=>{
+ const {client,calls}=attachmentTransport({deleteOk:false});
+ client.fetch=async(url,init)=>{
+  calls.push({url,init});
+  if(init.method==='DELETE')throw new TypeError('Failed to fetch');
+  if(init.method==='GET')return {ok:true,status:200};
+  throw Error('Unexpected method');
+ };
+ await assert.rejects(()=>client.removeVerified('301',asset),/remains downloadable/);
+ assert.equal(calls.filter(x=>x.name==='toolbox_issues_confirm_attachment_purged').length,0);
 });
 
 test('already-absent Storage DELETE 400 permits proof-based cleanup but never bypasses signed GET',async()=>{
@@ -186,9 +201,23 @@ test('already-absent DELETE 400 without a signed GET 404 remains recoverable',as
  assert.equal(calls.filter(x=>x.name==='toolbox_issues_confirm_attachment_purged').length,0);
 });
 
-test('private file cleanup survives a failed deletion and resumes from pending metadata',async()=>{
+test('private cleanup resumes after signed absence readback failed on first attempt',async()=>{
  const {client,calls}=attachmentTransport({deleteFailures:1});
+ let getAttempts=0,deleteAttempts=0;
+ client.fetch=async(url,init)=>{
+  calls.push({url,init});
+  if(init.method==='DELETE'){
+   deleteAttempts++;
+   return {ok:deleteAttempts>1,status:deleteAttempts>1?200:500};
+  }
+  if(init.method==='GET'){
+   getAttempts++;
+   return {ok:false,status:getAttempts>1?404:503};
+  }
+  throw Error('Unexpected method');
+ };
  await assert.rejects(()=>client.removeVerified('301',asset),/use Retry cleanup/);
+ assert.equal(calls.filter(x=>x.name==='toolbox_issues_confirm_attachment_purged').length,0);
  const result=await client.removeVerified('301',asset);
  assert.equal(result.pendingAttachmentCleanup.length,0);
  assert.equal(calls.filter(x=>x.url&&x.init.method==='DELETE').length,2);

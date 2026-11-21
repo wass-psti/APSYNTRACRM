@@ -120,12 +120,11 @@ export class TalkBoxAttachmentClient{
    throw new ApiError('Attachment still appears in signed native issue readback',409);
   try{
    await this.signedFetch(path,'DELETE');
-  }catch(error){
-   // On an already-deleted object Supabase Storage may return HTTP 400
-   // NoSuchKey instead of 404. Neither response proves deletion: proceed
-   // only to the independent cache-fresh signed GET and server receipt.
-   if(error?.status!==400&&error?.status!==404)
-    throw new ApiError('Attachment hidden but private binary deletion unconfirmed; use Retry cleanup',409);
+  }catch{
+   // On retry the object may already be gone (Storage can return 400
+   // NoSuchKey, 404, or a browser-opaque transport failure). A failed
+   // DELETE is never proof of removal: only the fresh signed GET 404 and
+   // backend Storage-metadata check below can confirm it.
   }
   let missing=false;
   try{
