@@ -43,3 +43,11 @@ test("background-tab menu checks are blocked rather than falsely failed", () => 
     /result: problems.length \? ["\']FAILED["\'] : skipped.length \? ["\']BLOCKED["\'] : ["\']PASS["\']/,
   );
 });
+
+test("live menu verifier never accepts stale detached DOM after refresh", () => {
+  assert.match(source, /if \(!menu\.isConnected \|\| !trigger\.isConnected\)/);
+  assert.match(source, /DOM_REPLACED_DURING_CHECK/);
+  assert.match(source, /const candidates = visibleMenus\(\)/);
+  assert.match(source, /connected: menu\.isConnected/);
+  assert.match(runner, /skipped\.length/);
+});
