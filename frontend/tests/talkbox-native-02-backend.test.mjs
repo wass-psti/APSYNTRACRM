@@ -104,6 +104,42 @@ test('native removal cache-busts only post-DELETE private absence verification',
  assert.equal(absenceRequest.init.credentials,'omit');
 });
 
+test('Storage GET 400 NoSuchKey maps to absence only in signed post-delete verification',async()=>{
+ const {client,calls}=attachmentTransport();
+ client.fetch=async(url,init)=>{
+  calls.push({url,init});
+  if(init.method==='DELETE')return {ok:false,status:400};
+  if(init.method==='GET')return {ok:false,status:400,json:async()=>({code:'NoSuchKey'})};
+  throw Error('Unexpected method');
+ };
+ const result=await client.removeVerified('301',asset);
+ assert.deepEqual(result.pendingAttachmentCleanup,[]);
+ assert.equal(calls.filter(x=>x.name==='toolbox_issues_confirm_attachment_purged').length,1);
+ assert.match(calls.find(x=>x.url&&x.init.method==='GET').url,/cacheNonce=/);
+});
+
+test('Storage GET 400 InvalidRequest never verifies absence or confirms purge',async()=>{
+ const {client,calls}=attachmentTransport();
+ client.fetch=async(url,init)=>{
+  calls.push({url,init});
+  if(init.method==='DELETE')return {ok:false,status:400};
+  if(init.method==='GET')return {ok:false,status:400,json:async()=>({code:'InvalidRequest'})};
+  throw Error('Unexpected method');
+ };
+ await assert.rejects(()=>client.removeVerified('301',asset),/Private attachment absence could not be verified/);
+ assert.equal(calls.filter(x=>x.name==='toolbox_issues_confirm_attachment_purged').length,0);
+});
+
+test('opaque Storage GET 400 is not proof of object absence',async()=>{
+ const {client,calls}=attachmentTransport();
+ client.fetch=async(url,init)=>{
+  calls.push({url,init});
+  return {ok:false,status:400};
+ };
+ await assert.rejects(()=>client.removeVerified('301',asset),/Private attachment absence could not be verified/);
+ assert.equal(calls.filter(x=>x.name==='toolbox_issues_confirm_attachment_purged').length,0);
+});
+
 test('stale original authenticated URL cannot falsely block verified CDN-fresh deletion',async()=>{
  const calls=[];
  const signed={userId,isSignedIn:true,token:async()=> 'fake-token'};

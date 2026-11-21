@@ -53,3 +53,13 @@ After the second release (PR #683), production Chromium loaded the exact publish
 The final client correction treats the DELETE attempt as best-effort transport only, not an authoritative deletion receipt. Regardless of response/rejection, the workflow MUST independently obtain an authenticated, nonce-fresh GET 404 and a successful server-side RPC which checks the Storage metadata, then independently read back the issue with no active or pending attachment. Any GET 200/401/403/5xx or server uncertainty preserves pending cleanup. Tests cover transport failure + GET 404 + confirmation PASS; transport failure + GET 200 DENIED; retry after an uncertain GET DENIED, then recovered GET 404 PASS. There is no new RLS or permission grant, project, dependency, stored secret, backend migration or role change.
 
 Production confirmation requires replaying existing pending attachment #1 for QA issue #5 only after this source passes CI and exact-commit Pages deployment. Never manually set storage_purged_at or claim cross-account parity without two independent genuine Work Management sessions.
+
+## GET 400 NoSuchKey: exact-code absence verification
+
+Production Storage logs after the proof-gated release recorded the cache-fresh authenticated GET using operation object.get_authenticated_info, HTTP 400, internal status 404, error code NoSuchKey. The signed browser therefore left cleanup pending with "Private attachment absence could not be verified", despite source Storage metadata being absent.
+
+The narrow final client correction checks the documented Storage response JSON code ONLY when the post-delete signed GET returned HTTP 400. Exact NoSuchKey is normalized to absent (404) for the existing verifier; InvalidRequest, opaque/unparseable HTTP400, authorization errors, stale 200, and other failures do not count as absence. The subsequent signed confirm_attachment_purged RPC still independently checks storage.objects for the exact private object path, and independent signed issue readback must show no active or pending attachment. The signed user is also revalidated before interpreting any Storage response.
+
+New tests verify exact-code NoSuchKey can proceed to server confirmation, InvalidRequest cannot, and an unparseable response cannot. No RLS/RBAC/permissions/project/credentials/monday runtime changes.
+
+Live production certification still requires the exact merged build to be deployed, a signed retry of QA issue #5 attachment #1, and an independent backend readback of storage_purged_at. Genuine separate two-account Work Management acceptance remains pending.
