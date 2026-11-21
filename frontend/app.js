@@ -9,7 +9,7 @@ import {avatarPreviewMarkup,mountAvatarPreview,stopAvatarPreview,mergeProfileAva
 import {ProfileAvatarClient} from './profile-avatar-client.js';
 import {mountAvatarImages} from './profile-avatar.js';
 
-import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels,WS01_SWITCHING_ENABLED} from './workspace-ui.js?v=ws01-controls-20261106';
+import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels,WS01_SWITCHING_ENABLED} from './workspace-ui.js?v=cp-crm-wm-invite-flow-01';
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
 import {WorkspaceInvitationClient,WS02D_INVITE_CLIENT_ENABLED} from './workspace-invitation-client.js';
 import {WorkspaceInvitationManagementClient} from './workspace-invitation-management.js';
@@ -614,7 +614,7 @@ function renderLogin(message='',{mode=authViewFromHash(),notice='',emailValue=''
  stopPagesAcceptanceMotion();
  const formsubmitReturn=mode==='register'&&new URLSearchParams(location.search).get('request_access')==='received';
  root.innerHTML=renderAuthMarkup({message,emailValue,notice:notice||(formsubmitReturn?
-  'Returned from FormSubmit. If the provider confirmed success, the request was sent for administrator review. No account has been created.':''),mode,resetReady:mode==='reset'&&!!recoveryContext});
+  'Returned from FormSubmit. If the provider confirmed success, the request was sent for administrator review. No account has been created.':''),mode,resetReady:mode==='reset'&&!!recoveryContext,invitationPending:pendingInvitation?.status==='ready'});
  if(state.tl03RevokedReport&&!auth.isSignedIn)
   root.insertAdjacentHTML('beforeend',renderTradeLinkSignedOutRevocationResult(state.tl03RevokedReport));
  authVisualController=mountAuthExperience(root.querySelector('.aps-auth-v2'));
@@ -12704,7 +12704,8 @@ window.addEventListener('keydown',event=>{
   if(state.groupEditId&&!state.groupEditBusy){state.groupEditId=null;render();}
   if(state.ttOtModalOpen){state.ttOtModalOpen=false;render();}
 }});
-auth.onExpired=()=>{boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();state.paseoManagement=null;timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;globalSearchController?.close({restoreFocus:false});pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;pendingInvitation=null;invitationAcceptanceStatus='';startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
+auth.onExpired=()=>{boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();state.paseoManagement=null;timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;globalSearchController?.close({restoreFocus:false});pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;invitationAcceptanceStatus='';// Keep an open invitation through session expiry so the user can sign in again.
+ startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
 async function boot(){
  if(startupBusy)return;
  startupBusy=true;
@@ -12716,6 +12717,12 @@ async function boot(){
  let outcome='RECOVERABLE_ERROR';
  try{
   setInitializationPhase('authentication');
+  // Capture and scrub an invitation before a GoTrue confirmation callback can
+  // replace the URL. The one-time invitation remains volatile in this tab.
+  if(!pendingInvitation){
+   pendingInvitation=captureInvitationLink(location,history);
+   if(pendingInvitation)approvedRouteHash=location.hash;
+  }
   const callback=captureAuthReturn(location,history);
   if(callback){
    // Recovery tokens are never installed as normal CRM sessions.
@@ -12732,17 +12739,14 @@ async function boot(){
       {mode:'forgot'});
     }
    }else if(callback.kind==='confirmation'){
-    renderLogin('',{mode:'login',notice:
+    renderLogin('',{mode:'login',notice:pendingInvitation?.status==='ready'?
+     'Email verified. Sign in with the invited email address to accept your workspace invitation.':
      'Email verification completed. Workspace access still requires administrator approval. Sign in only after your account is admitted.'});
    }else{
     renderLogin('The authentication link is invalid or expired.',{mode:'forgot'});
    }
    outcome='UNAUTHENTICATED';
    return;
-  }
-  if(!pendingInvitation){
-   pendingInvitation=captureInvitationLink(location,history);
-   if(pendingInvitation)approvedRouteHash=location.hash;
   }
   if(['#/register','#/forgot-password','#/reset-password'].includes(location.hash)){
    renderLogin(location.hash==='#/reset-password'?

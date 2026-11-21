@@ -31,10 +31,12 @@ test('workspace creation and invitation retain fail-closed signed behavior',()=>
  assert.match(ui,/name="privacy" value="closed" checked/);
  assert.match(ui,/submitWorkspaceCreation\(/);
  assert.match(ui,/workspaceCreatorUiAllowed\(/);
- assert.match(ui,/name="role" value="member"/);
+ assert.match(ui,/role:'member'/);
+ assert.match(ui,/Invite people to /);
+ assert.match(ui,/Send invitation/);
  assert.match(ui,/validateDirectEmailInvitation\(/);
  assert.match(ui,/options\.sendInvitation\(/);
- assert.match(ui,/\(enabled\?'':'disabled '\)/);
+ assert.match(ui,/\(enabled\?'':'disabled'\)/);
  assert.match(css,/CP-WS-UX-04/);
  assert.match(css,/@media\(max-width:720px\)/);
  assert.match(css,/@media\(max-width:420px\)/);

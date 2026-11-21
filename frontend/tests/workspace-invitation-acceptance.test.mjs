@@ -26,6 +26,26 @@ test('one-time bearer token is scrubbed from URL before any app view',()=>{
  assert.equal(captureInvitationLink({...location,hash:'#/overview'},history),null);
  assert.equal(captureInvitationLink(location,{replaceState:()=>{throw Error('blocked');}}).status,'invalid');
 });
+test('query invitation handoff is scrubbed before a GoTrue auth callback is processed',()=>{
+ const authFragment='#access_token='+'A'.repeat(64)+'&type=signup';
+ const incoming={pathname:'/APSYNTRACRM/',search:'?invite='+encodeURIComponent(token)+'&source=email',hash:authFragment};
+ let replaced='';
+ const captured=captureInvitationLink(incoming,{state:{tab:1},replaceState:(state,_,url)=>{
+  assert.deepEqual(state,{tab:1});replaced=url;
+ }});
+ assert.deepEqual(captured,{status:'ready',token});
+ assert.equal(replaced,'/APSYNTRACRM/?source=email'+authFragment);
+ assert.equal(replaced.includes(token),false);
+});
+
+test('invalid query invitation is scrubbed and cannot be retained',()=>{
+ let replaced='';
+ const captured=captureInvitationLink({pathname:'/APSYNTRACRM/',search:'?invite=bad',hash:'#/login'},
+  {state:null,replaceState:(_,__,url)=>{replaced=url;}});
+ assert.deepEqual(captured,{status:'invalid',token:null});
+ assert.equal(replaced,'/APSYNTRACRM/#/login');
+});
+
 test('invalid fragment token is always scrubbed and never retained',()=>{
  let target='';
  for(const suffix of ['../invalid','https://evil.invalid','short','']){
@@ -83,6 +103,8 @@ test('server denial, timeout and bad receipt do not report accepted membership',
 test('SPA integrates sanitized route and signed acceptance while backend retains persistence authority',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/captureInvitationLink\(location,history\)/);
+ assert.ok(app.indexOf('pendingInvitation=captureInvitationLink(location,history)')<app.indexOf('const callback=captureAuthReturn(location,history)'));
+ assert.match(app,/Email verified\. Sign in with the invited email address/);
  assert.match(app,/parts\[0\]==='invitations'&&parts\[1\]==='accept'/);
  assert.match(app,/state\.view='invitation'/);
  assert.match(app,/pendingInvitation=null;invitationAcceptanceStatus=''/);
