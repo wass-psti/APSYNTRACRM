@@ -138,7 +138,6 @@ import {MANAGED_TT_GROUP_DELETE_ENABLED,isManagedTimeTrackerBoard,
  readHiddenEmptyGroups,hideEmptyTimeTrackerGroup,
  restoreHiddenTimeTrackerGroups,deleteEmptyManagedTimeTrackerGroup} from './managed-time-tracker-groups.js';
 import {isRow01Fixture,readRow01Pending,prepareRow01Acceptance,finalizeRow01Acceptance,sanitizeRow01Report} from './board/acceptance/row01-signed-acceptance.js';
-import {runBoardTtSignedReadOnly} from './board/acceptance/tt-signed-acceptance.js';
 import {normalizeBoardActivity,renderBoardActivityResults,boardItemSummary} from './board/presentation/activity-ui.js';
 import {BOARD_COL01_AUDIT_CURSOR_ENABLED,BOARD_COL01_AUDIT_MAX_PAGES,
  loadBoardInvitableDirectory,renderBoardInvitableDirectory,
@@ -146,7 +145,6 @@ import {BOARD_COL01_AUDIT_CURSOR_ENABLED,BOARD_COL01_AUDIT_MAX_PAGES,
 import {loadBoardCollaboration,renderBoardCollaboration} from './board/collaboration/collaboration.js';
 import {normalizeBoardPeople,renderBoardPeople,boardInviteControl,renderMentionDraft,mentionCandidates,insertMention,renderMentionOptions} from './board/collaboration/people.js';
 import {BoardPreferenceStore} from './board/services/preferences-idb.js';
-import {sampleBrowserFrames} from './performance-profile.js';
 import {createStartupCriticalPath} from './performance-critical-path.js';
 import {summarizeEntryWaterfall} from './performance-entry-waterfall.js';
 import {readWorkspaceStartup} from './workspace-startup-read.js';
@@ -180,6 +178,7 @@ import {FundTrackerNativeClient} from './fund-tracker-native.js';
 import {renderFundTrackerNative} from './fund-tracker-ui.js';
 import {findFundTrackerBoard,FUND_TRACKER_APPLICATION_ROUTE,parseFundTrackerRecordRoute,fundTrackerRecordHref} from './fund-tracker-application.js';
 import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock} from './time-tracker-ui.js';
+import {isTimeTrackerHomeNoteRequired} from './time-tracker-offsite-note.js';
 import {mountTimeTrackerPixi,stopTimeTrackerPixi} from './time-tracker-pixi-scene.js';
 import {startSelectExperience} from './select-experience.js';
 import {startActionMenuExperience,enhanceActionContextMenu} from './action-menu-experience.js';
@@ -4579,7 +4578,11 @@ async function submitTimeTrackerAction(form,actionName){
   state.ttError='Your department has not been assigned by a TimeTracker administrator. Clock In is unavailable until it is verified.';
   render();return;
  }
- const workNote=String(form.querySelector('#tt-note')?.value||'');
+ const workNote=actionName==='clock-in'?String(form.querySelector('#tt-note')?.value||'').trim():'';
+ if(actionName==='clock-in'&&isTimeTrackerHomeNoteRequired(location,state.ttAttendance.access?.email)&&!workNote){
+  state.ttError='Offsite Work Note is mandatory for Home. Enter a reason before starting your session.';
+  render();return;
+ }
  const seq=routeSerial,run=++state.ttRunId,identity=state.context.user_id,
   ws=state.context.workspace_id,boardId=state.boardId;
  const context={action:actionName,recordId:active?.id||null,userId:identity,workspaceId:ws,boardId,
@@ -7069,6 +7072,7 @@ async function action(name,button){
   state.performanceBusy=true;state.performanceReport=null;
   if(state.view==='settings')render();
   try{
+   const {sampleBrowserFrames}=await import('./performance-profile.js');
    const profile=await sampleBrowserFrames({signal:controller.signal});
    if(!auth.isSignedIn||state.roleVerified!==true||actor!==auth.userId||
       workspace!==state.context?.workspace_id||controller.signal.aborted)break;
@@ -11258,6 +11262,7 @@ case 'new-group':{
    if(state.boardTtSignedBusy||!state.context)return;
    state.boardTtSignedBusy=true;state.boardTtSignedResult=null;render();
    try{
+     const {runBoardTtSignedReadOnly}=await import('./board/acceptance/tt-signed-acceptance.js');
      state.boardTtSignedResult=await runBoardTtSignedReadOnly({
        auth,api:db,timeTracker,isBootstrap:state.roleVerified===true
      });
@@ -12074,10 +12079,10 @@ root.addEventListener('change',event=>{
   const group=root.querySelector('#tt-note-wrap');
   const note=root.querySelector('#tt-note');
   if(group&&note){
-   const offsite=event.target.value==='Offsite (Home)' &&
-    state.ttAttendance?.access?.moduleRole!=='System Admin';
-   group.hidden=!offsite;note.required=offsite;
-   if(!offsite)note.value='';
+   const showHomeNote=event.target.value==='Offsite (Home)';
+   group.hidden=!showHomeNote;
+   note.required=isTimeTrackerHomeNoteRequired(event.target.value,state.ttAttendance?.access?.email);
+   if(!showHomeNote)note.value='';
   }
  }
  if(event.target.id==='managed-user'&&state.adminVerified&&state.userRoleData){

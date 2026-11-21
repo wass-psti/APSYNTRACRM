@@ -1932,6 +1932,13 @@
       "file": "20261120194000_cp_board_group_view_01_user_prefs.sql",
       "bytes": 7239,
       "sha256": "459193082663cfa1f0d82c9ed0e87e9e0b354e4dca5dbe2d38d17f94726f2263"
+    },
+    {
+      "version": "20261121060625",
+      "name": "cp_tt_offsite_home_note_account_exemptions",
+      "file": "20261121060625_cp_tt_offsite_home_note_account_exemptions.sql",
+      "bytes": 7307,
+      "sha256": "238b4a965ec52a12a573304ec3203dd122f03d25aa2ed3273f3ac3c0ce240667"
     }
   ]
 }

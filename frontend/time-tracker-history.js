@@ -57,6 +57,7 @@ export function projectTimeTrackerLog({value,directory=[],userId,moduleRole}={})
    clockIn:inTime,clockOut:outTime,
    department:text(record.clockIn.department||'Unassigned',80),
    location,status,classification,
+   workNote:typeof record.clockIn.workNote==='string'?record.clockIn.workNote.slice(0,500):'',
    creditedMs:outTime?creditedAttendanceRecordMs(record,inTime,outTime):null
   }));
  }

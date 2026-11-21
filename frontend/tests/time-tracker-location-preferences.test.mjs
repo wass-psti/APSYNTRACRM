@@ -69,3 +69,26 @@ test('central catalog includes the separate General Administration department',(
  assert.match(sql,/IT Administrator/);
  assert.match(sql,/REVOKE ALL ON private\.tt_employee_departments/);
 });
+
+
+test('Home note appears for both exempt accounts but is not required',()=>{
+ for(const email of ['asenagan@watchdogautomation.com.ph','mvasquez@watchdogautomation.com.ph']){
+  const data=verified();data.access.email=email;
+  const html=renderTimeTrackerNative({result:data,view:'clock',locationPreference:'Offsite (Home)'});
+  assert.match(html,/id="tt-note-wrap"/);
+  assert.doesNotMatch(html,/id="tt-note-wrap" hidden/);
+  assert.match(html,/textarea id="tt-note" maxlength/);
+  assert.doesNotMatch(html,/textarea id="tt-note" required/);
+ }
+});
+
+test('System Admin is not implicitly exempt and an existing Home note is shown after refresh',()=>{
+ const data=verified();data.access.moduleRole='System Admin';data.access.email='other@example.test';
+ const html=renderTimeTrackerNative({result:data,view:'clock',locationPreference:'Offsite (Home)'});
+ assert.match(html,/textarea id="tt-note" required/);
+ data.active={id:'s1',clockIn:'2026-11-21T02:00:00.000Z',department:'Engineering',location:'Offsite (Home)',workNote:'Home network maintenance'};
+ data.records=[data.active];
+ const active=renderTimeTrackerNative({result:data,view:'clock'});
+ assert.match(active,/Home network maintenance/);
+ assert.match(active,/textarea id="tt-note" readonly/);
+});

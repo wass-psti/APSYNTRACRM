@@ -1,3 +1,4 @@
+import {isTimeTrackerHomeNoteRequired} from './time-tracker-offsite-note.js';
 import {formatTimeTrackerDurationMs} from './time-tracker-duration-format.js';
 import {formatTimeTrackerDateTime} from './time-tracker-time-format.js';
 /** Native TimeTracker UI. Screen language adapted from the supplied Clock-tab reference.
@@ -203,7 +204,8 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
   'Please press Start Session or End Session to request a fresh location fix.');
  const employeeDepartment=access?.employeeDepartment||null;
  const location=TT_LOCATIONS.includes(locationPreference)?locationPreference:'';
- const offsite=location==='Offsite (Home)'&&access?.moduleRole!=='System Admin';
+ const showHomeNote=location==='Offsite (Home)';
+ const requireHomeNote=isTimeTrackerHomeNoteRequired(location,access?.email);
  const session=active?timeTrackerSessionElapsed(active.clockIn,now):null;
  const autoClockout=active&&result.autoClockout?.recordId===active.id?result.autoClockout:null;
  const autoDeadline=autoClockout?.nextAt||autoClockout?.cutoffAt;
@@ -296,8 +298,10 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
        (employeeDepartment?'':'<small>Ask your TimeTracker administrator to assign your department before clocking in.</small>')+
       '</div>')+
      '<label for="tt-note" class="tt-note-field" id="tt-note-wrap"'+
-      (((active&&active.location==='Offsite (Home)')||(!active&&offsite))?'':' hidden')+'>'+
-      'Offsite Work Note<textarea id="tt-note"'+((!active&&offsite)?' required':'')+' maxlength="500" rows="3" placeholder="Describe your offsite work"></textarea></label>'+
+      (((active&&active.location==='Offsite (Home)')||(!active&&showHomeNote))?'':' hidden')+'>'+
+      'Offsite Work Note<textarea id="tt-note"'+((!active&&requireHomeNote)?' required':'')+
+      (active?' readonly':'')+' maxlength="500" rows="3" placeholder="Describe your offsite work">'+
+      (active?esc(active.workNote||''):'')+'</textarea></label>'+
      (geoPromptVisible?'<div class="tt-location-readiness '+(locationEnabled?'is-ready':geoWarning?'needs-action':'needs-permission')+
       '" role="status" aria-live="polite">'+
       '<span class="tt-location-indicator" aria-hidden="true">'+(locationEnabled?'✓':'⌖')+'</span>'+

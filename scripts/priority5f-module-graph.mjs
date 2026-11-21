@@ -39,7 +39,9 @@ export function originalImportBaseline(source=readFileSync(appFile,'utf8')){
  return source.replace("import {syncFuelTrans} from './fueltrans-lazy.js';",
   "import {syncFuelTrans} from './fueltrans-native.js';")+
   "\nimport {openBoardImportWizard} from './board/import/import-ui.js';"+
-  "\nimport {runTwelveBoardQa} from './board/acceptance/operational-qa.js';\n";
+  "\nimport {runTwelveBoardQa} from './board/acceptance/operational-qa.js';\n"+
+  "\nimport {sampleBrowserFrames} from './performance-profile.js';"+
+  "\nimport {runBoardTtSignedReadOnly} from './board/acceptance/tt-signed-acceptance.js';";
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const optimized=inspectStaticModuleGraph();
