@@ -27,3 +27,23 @@ The automated browser check also covers 768px, light-mode computed color preserv
 ## Acceptance boundary
 
 This does not certify the aesthetic preference of the actual signed application, screenshots from every native route, physical-device interactions or full WCAG 2.2 AA. Do not call the fixture images authenticated production screenshots. The checkpoint remains a review candidate until visual approval; a passing build or stylesheet test is not visual acceptance. No production data or permissions are modified.
+
+## Role Configuration dark-mode element adaptation
+
+After the user accepted the proposed overall dark direction and requested refinement of `#/role-configuration`, this review branch gained `frontend/dark-role-configuration.css`, scoped exclusively to `html[data-aps-monday-theme="dark"] #app .aps-role-configuration` and its shell.
+
+Coverage includes the role header, metrics, selected tabs, help/warning notes, role catalog and audit tables, input/search/select controls, focus and keyboard states, plus the embedded Native Application Access user picker, per-application selection/role, and bulk-assignment controls. Dark surfaces use the same flat charcoal/blue palette as Overview; light mode remains unchanged. No role configuration, grant, server-side permission or persistence logic is altered.
+
+Representative Chromium role-page screenshots (fixture data, not a signed session):
+- `docs/visual/cp-crm-dark-03/role-before-1440.png`
+- `docs/visual/cp-crm-dark-03/role-after-1440.png`
+- `docs/visual/cp-crm-dark-03/role-before-390.png`
+- `docs/visual/cp-crm-dark-03/role-after-390.png`
+
+Role-specific browser acceptance checks actual computed surfaces, 4.5:1 text contrast, focus states and light-mode invariance at 390/768/1440 pixels. Existing horizontal tab/table scrolling is preserved. These are not authenticated production readback or real-device certification.
+
+## Shared controls and interactive states
+
+The dark presentation also harmonizes sidebar board search, navigation collapse and add-board affordances, topbar global search and keyboard hints, connection/synchronization indicator (including offline/reconnecting), sign-out, board action menus, board item counters, form fields, hover and focus treatment. Existing actions, event handlers, session verification and save/readback behavior remain untouched.
+
+`scripts/cp-crm-dark-03-elements-acceptance.mjs` verifies light/dark computed colors, borders, hover/focus, reduced motion, and disconnected-sync visual state in Chromium across 390/768/1440px. This is presentation acceptance only, not an actual network disconnect or a signed production session.

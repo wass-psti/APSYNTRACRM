@@ -6,7 +6,7 @@ import {generateStyleBundle} from '../../scripts/build-priority5-styles.mjs';
 const source=readFileSync('frontend/dark-native-applications.css','utf8');
 
 test('the native dark palette is last and the CSS bundle remains deterministic',()=>{
- assert.deepEqual(STYLE_SOURCES.slice(-3,-1),['frontend/dark-theme-foundation.css','frontend/dark-native-applications.css']);
+ assert.deepEqual(STYLE_SOURCES.slice(-4,-2),['frontend/dark-theme-foundation.css','frontend/dark-native-applications.css']);
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());
  assert.match(readFileSync('index.html','utf8'),/apsyntra-styles\.bundle\.css\?v=cp-crm-dark-0[23]/);
 });

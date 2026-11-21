@@ -800,7 +800,7 @@ html[data-aps-monday-theme="dark"] #app .aps-overview .overview-board-grid .boar
 }
 
 html[data-aps-monday-theme="dark"] #app .aps-overview .overview-board-grid .board-card-footer span:first-child {
-    background: var(--crm-dark-raised,#303848) !important;
+    background: var(--crm-control-hover,var(--crm-dark-raised,#303848)) !important;
     color: #d8e4f6 !important;
 }
 

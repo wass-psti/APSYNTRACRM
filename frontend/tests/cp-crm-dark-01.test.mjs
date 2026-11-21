@@ -6,7 +6,7 @@ import {generateStyleBundle} from '../../scripts/build-priority5-styles.mjs';
 const css=readFileSync('frontend/dark-theme-foundation.css','utf8');
 
 test('semantic dark layer is last in the deterministic single stylesheet',()=>{
- assert.equal(STYLE_SOURCES.at(-3),'frontend/dark-theme-foundation.css');
+ assert.equal(STYLE_SOURCES.at(-4),'frontend/dark-theme-foundation.css');
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());
  const html=readFileSync('index.html','utf8');
  assert.match(html,/apsyntra-styles\.bundle\.css\?v=cp-crm-dark-0[123]/);
