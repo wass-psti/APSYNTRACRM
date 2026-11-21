@@ -1,0 +1,100 @@
+/* CP-CRM-DARK-04 — focused Overview legibility/layout fix. Dark mode only.
+ * Retain the current page structure, board links, status meanings and light mode. */
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview
+  .overview-board-grid .board-symbol,
+html[data-aps-monday-theme="dark"] #app .aps-boards-shell .aps-boards
+  .boards-catalog-grid .board-symbol {
+ display:grid;place-items:center;
+ background:#333054;color:#d6cfff;border:1px solid #625b8d;
+ box-shadow:none;text-shadow:none;
+ font-weight:800;line-height:1;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview
+  .overview-board-grid .board-symbol.green,
+html[data-aps-monday-theme="dark"] #app .aps-boards-shell .aps-boards
+  .boards-catalog-grid .board-symbol.green {
+ background:#213d36;color:#b5f2d8;border-color:#426f5e;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview
+  .overview-board-grid .board-symbol.blue,
+html[data-aps-monday-theme="dark"] #app .aps-boards-shell .aps-boards
+  .boards-catalog-grid .board-symbol.blue {
+ background:#233a4d;color:#bfe4ff;border-color:#476c8c;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview
+  .overview-board-grid .board-symbol.orange,
+html[data-aps-monday-theme="dark"] #app .aps-boards-shell .aps-boards
+  .boards-catalog-grid .board-symbol.orange {
+ background:#463529;color:#ffe1ac;border-color:#846442;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview
+  .overview-board-grid .board-symbol.pink,
+html[data-aps-monday-theme="dark"] #app .aps-boards-shell .aps-boards
+  .boards-catalog-grid .board-symbol.pink {
+ background:#452b3c;color:#ffd3e5;border-color:#85556e;
+}
+/* Sidebar recent-board initials retain their functional tone differentiation. */
+html[data-aps-monday-theme="dark"] #app .aps-sidebar .sidebar-board-initial {
+ background:#333054;color:#d6cfff;box-shadow:none;
+}
+html[data-aps-monday-theme="dark"] #app .aps-sidebar .sidebar-board-initial.sidebar-tone-teal {background:#213d36;color:#b5f2d8}
+html[data-aps-monday-theme="dark"] #app .aps-sidebar .sidebar-board-initial.sidebar-tone-amber {background:#463529;color:#ffe1ac}
+html[data-aps-monday-theme="dark"] #app .aps-sidebar .sidebar-board-initial.sidebar-tone-rose {background:#452b3c;color:#ffd3e5}
+html[data-aps-monday-theme="dark"] #app .aps-sidebar .sidebar-board-initial.sidebar-tone-blue {background:#233a4d;color:#bfe4ff}
+html[data-aps-monday-theme="dark"] #app .aps-sidebar .sidebar-board-initial.sidebar-tone-indigo {background:#333054;color:#d6cfff}
+
+/* No overlap: every essentials item has its own grid, with dedicated icon,
+ * minmax text and status columns. Flexible text wraps inside its own cell. */
+#app .aps-overview-shell .aps-overview .overview-essentials {
+ min-width:0;box-sizing:border-box;overflow:hidden;
+}
+#app .aps-overview-shell .aps-overview .overview-essentials .panel-body {
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:0;min-width:0;box-sizing:border-box;
+}
+#app .aps-overview-shell .aps-overview .overview-essentials .activity-item {
+ display:grid;grid-template-columns:34px minmax(0,1fr) 19px;
+ align-items:start;gap:11px;min-width:0;min-height:0;
+ margin:0;box-sizing:border-box;
+}
+#app .aps-overview-shell .aps-overview .overview-essentials .activity-item>div {
+ min-width:0;width:auto;overflow-wrap:anywhere;word-break:normal;
+}
+#app .aps-overview-shell .aps-overview .overview-essentials .activity-item :is(b,small) {
+ max-width:100%;overflow-wrap:anywhere;white-space:normal;
+}
+#app .aps-overview-shell .aps-overview .overview-essentials .activity-avatar,
+#app .aps-overview-shell .aps-overview .overview-essentials .overview-essentials-indicator {
+ flex:none;align-self:start;justify-self:center;
+}
+@media(max-width:1150px) {
+ #app .aps-overview-shell .aps-overview .overview-essentials .panel-body {
+  grid-template-columns:minmax(0,1fr);
+  padding:8px 18px;
+ }
+ #app .aps-overview-shell .aps-overview .overview-essentials .activity-item {
+  padding:15px 0;border-right:0;border-bottom:1px solid var(--sm-border,#484848);
+ }
+ #app .aps-overview-shell .aps-overview .overview-essentials .activity-item:last-child {border-bottom:0}
+}
+@media(max-width:420px){
+ #app .aps-overview-shell .aps-overview .overview-essentials .panel-body {padding:7px 12px}
+ #app .aps-overview-shell .aps-overview .overview-essentials .activity-item {
+  grid-template-columns:32px minmax(0,1fr) 18px;gap:9px;
+ }
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-essentials {
+ background:#292929;border:1px solid #484848;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-essentials .activity-item {
+ border-color:#484848;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-essentials .activity-avatar {
+ background:#30384a;color:#b4c9f7;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-essentials .activity-item:nth-child(2) .activity-avatar {
+ background:#233e35;color:#b6e8d3;
+}
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-essentials .activity-item:nth-child(3) .activity-avatar {
+ background:#45382a;color:#f2d5a9;
+}
