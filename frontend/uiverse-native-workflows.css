@@ -1,0 +1,167 @@
+/* CP-CRM-UI-REDESIGN-02 — native workflow visual alignment.
+ * Uiverse-inspired original CSS; preserves existing module geometry, handlers,
+ * table scrolling, branding, API flows and access control. */
+
+/* Native dashboards share depth and focus without replacing their identities. */
+#app :is(
+ .aps-tradelink-app .tl-content-panel,
+ .aps-tradelink-app .tl-draft-panel,
+ .aps-tradelink-app .tl-stat,
+ .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-panel,
+ .aps-board-shell .frt-native .frt-app-header,
+ .frt-ref-table-card,
+ .ft3-app .ft3-panel,
+ .ft3-app .ft3-metric,
+ .tb-app .tb-panel,
+ .tb-app .tb-metrics article
+) {
+ border-color: var(--uv-stroke);
+ box-shadow: var(--uv-shadow);
+}
+#app :is(
+ .aps-tradelink-app .tl-content-panel,
+ .aps-tradelink-app .tl-draft-panel,
+ .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-panel,
+ .frt-ref-table-card,
+ .ft3-app .ft3-panel,
+ .tb-app .tb-panel
+):focus-within {
+ border-color: var(--uv-stroke-strong);
+ box-shadow: 0 0 0 2px var(--uv-halo), var(--uv-shadow);
+}
+
+/* TradeLink source forms and signed document actions. */
+#app .aps-tradelink-app .tl-draft-field :is(input, select, textarea),
+#app .aps-tradelink-app .tl-finance-fields :is(input, select),
+#app .tl-reference-portal :is(.tl-reference-input, .tl-reference-select) {
+ border-color: var(--uv-stroke);
+ border-radius: var(--uv-radius-control);
+ box-shadow: inset 0 1px 2px #192a4208;
+ transition: border-color var(--uv-speed) ease, box-shadow var(--uv-speed) ease;
+}
+#app .aps-tradelink-app .tl-draft-field :is(input, select, textarea):hover:not(:disabled),
+#app .aps-tradelink-app .tl-finance-fields :is(input, select):hover:not(:disabled) {
+ border-color: var(--uv-stroke-strong);
+}
+#app .aps-tradelink-app .tl-draft-field :is(input, select, textarea):focus-visible,
+#app .aps-tradelink-app .tl-finance-fields :is(input, select):focus-visible {
+ outline: 2px solid var(--uv-focus);
+ outline-offset: 2px;
+ border-color: var(--uv-focus);
+ box-shadow: 0 0 0 3px var(--uv-halo);
+}
+#app .aps-tradelink-app .tl-draft-actions button:not(:disabled),
+#app .tl-reference-portal .tl-reference-document-toolbar button:not(:disabled) {
+ border-radius: var(--uv-radius-control);
+ transition: background-color var(--uv-speed) ease, border-color var(--uv-speed) ease,
+   box-shadow var(--uv-speed) ease, color var(--uv-speed) ease;
+}
+#app .aps-tradelink-app .tl-draft-actions button:not(:disabled):hover,
+#app .tl-reference-portal .tl-reference-document-toolbar button:not(:disabled):hover {
+ box-shadow: var(--uv-shadow);
+}
+#app .aps-tradelink-app .tl-app-nav a.active,
+#app .aps-tradelink-app .tl-app-nav a[aria-current="page"] {
+ box-shadow: inset 3px 0 0 var(--uv-accent);
+}
+#app .aps-tradelink-app .tl-records-table tbody tr:focus-within {
+ outline: 2px solid var(--uv-focus);
+ outline-offset: -2px;
+}
+
+/* TimeTracker navigation and active work panels. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app .tt-nav-tab.fm1-tab {
+ transition: background-color var(--uv-speed) ease, color var(--uv-speed) ease,
+  box-shadow var(--uv-speed) ease;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app .tt-nav-tab.fm1-tab.is-current,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app .tt-nav-tab.fm1-tab[aria-selected="true"] {
+ box-shadow: inset 0 -2px 0 currentColor;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app .tt-nav-tab.fm1-tab:focus-visible {
+ outline: 2px solid var(--uv-focus);
+ outline-offset: 2px;
+}
+
+/* FuelTrack and FRT: readable action focus and independent native brand accents. */
+#app .ft3-app .ft3-soft-action:not(:disabled),
+#app .ft3-app .ft3-preflight button:not(:disabled),
+#app .frt-native :is(button, select, input, textarea) {
+ transition: background-color var(--uv-speed) ease, border-color var(--uv-speed) ease,
+   box-shadow var(--uv-speed) ease;
+}
+#app .ft3-app :is(.ft3-soft-action, .ft3-preflight button):focus-visible,
+#app .frt-native :is(button, input, select, textarea):focus-visible {
+ outline: 2px solid var(--uv-focus);
+ outline-offset: 2px;
+}
+#app .ft3-app .ft3-app-tab.is-active,
+#app .ft3-app .ft3-app-tab[aria-selected="true"] {
+ box-shadow: inset 0 -2px 0 currentColor;
+}
+#app .ft3-app .ft3-recent-table tbody tr:focus-within,
+#app .frt-native table tbody tr:focus-within {
+ outline: 2px solid var(--uv-focus);
+ outline-offset: -2px;
+}
+
+/* TalkBox issue actions, drawer forms and readable rows. */
+#app .tb-app .tb-filter :is(input, select),
+#app .tb-app .tb-drawer :is(input, select, textarea) {
+ border-color: var(--uv-stroke);
+ border-radius: var(--uv-radius-control);
+ transition: border-color var(--uv-speed) ease, box-shadow var(--uv-speed) ease;
+}
+#app .tb-app .tb-filter :is(input, select):focus-visible,
+#app .tb-app .tb-drawer :is(input, select, textarea):focus-visible,
+#app .tb-app :is(.tb-issue-link, .tb-row-action):focus-visible {
+ outline: 2px solid var(--uv-focus);
+ outline-offset: 2px;
+ box-shadow: 0 0 0 3px var(--uv-halo);
+}
+#app .tb-app .tb-panel tbody tr:focus-within {
+ outline: 2px solid var(--uv-focus);
+ outline-offset: -2px;
+}
+#app .tb-app .tb-update:focus-within {
+ border-color: var(--uv-stroke-strong);
+}
+
+/* Board tools and rows: keep sticky columns, group scroll and row height intact. */
+#app .aps-board-shell :is(.board-bulk-toolbar, .board-group-panel, .board-tool-menu-panel) {
+ border-color: var(--uv-stroke);
+}
+#app .aps-board-shell .board-table-custom tbody tr:focus-within td {
+ box-shadow: inset 0 1px 0 var(--uv-focus), inset 0 -1px 0 var(--uv-focus);
+}
+#app .aps-board-shell :is(.board-customize-toolbar, .board-bulk-toolbar)
+ :is(button, select, input):focus-visible {
+ outline: 2px solid var(--uv-focus);
+ outline-offset: 2px;
+}
+
+/* Interactions never rely solely on hover, and motion is opt-out by OS preference. */
+@media (max-width: 720px) {
+ #app .aps-tradelink-app :is(.tl-draft-actions, .tl-panel-heading),
+ #app .tb-app :is(.tb-panel-actions, .tb-filter),
+ #app .ft3-app :is(.ft3-dashboard-actions, .ft3-dashboard-head) {
+  min-width: 0;
+  flex-wrap: wrap;
+ }
+ #app .aps-tradelink-app .tl-draft-actions > :is(button, a),
+ #app .tb-app .tb-panel-actions > :is(button, a) { max-width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+ #app .aps-tradelink-app .tl-draft-field :is(input, select, textarea),
+ #app .aps-tradelink-app .tl-draft-actions button,
+ #app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app .tt-nav-tab.fm1-tab,
+ #app .ft3-app :is(.ft3-soft-action, .ft3-preflight button),
+ #app .frt-native :is(button, input, select, textarea),
+ #app .tb-app .tb-filter :is(input, select),
+ #app .tb-app .tb-drawer :is(input, select, textarea) { transition: none; }
+}
+html[data-aps-monday-theme="dark"] #app :is(
+ .aps-tradelink-app .tl-draft-panel,
+ .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-panel,
+ .frt-ref-table-card, .ft3-app .ft3-panel, .tb-app .tb-panel
+) { border-color: var(--uv-stroke); }
