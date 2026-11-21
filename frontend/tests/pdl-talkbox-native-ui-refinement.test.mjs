@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { sidebarIcon } from '../sidebar-visuals.js';
 
 const app = readFileSync('frontend/app.js', 'utf8');
-const css = readFileSync('frontend/pdl-crm-native-refinement.css', 'utf8');
+const css = readFileSync('frontend/dark-workspace-account-completion.css', 'utf8');
 const styles = readFileSync('frontend/apsyntra-styles.bundle.css', 'utf8');
 const manifest = readFileSync('scripts/priority5-style-manifest.mjs', 'utf8');
 
@@ -49,7 +49,7 @@ test('UI CSS is scoped, responsive, dark mode and reduced-motion aware', () => {
  assert.match(css, /:focus-visible/);
  assert.match(css, /nav-link\[href="#\/paseo"\]/);
  assert.match(css, /nav-link\[href="#\/talkbox"\]/);
- assert.match(manifest, /frontend\/pdl-crm-native-refinement\.css/);
- assert.match(styles, /\/\* frontend\/pdl-crm-native-refinement\.css \*\//);
+ assert.match(manifest, /frontend\/dark-workspace-account-completion\.css/);
+ assert.match(styles, /\/\* frontend\/dark-workspace-account-completion\.css \*\//);
  assert.ok(styles.endsWith(css.trimEnd()+'\n'), 'CSS delivery bundle includes source without alteration');
 });
