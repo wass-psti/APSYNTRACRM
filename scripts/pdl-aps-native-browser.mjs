@@ -337,6 +337,15 @@ try{
  await modules.waitForFunction(() => document.querySelector('#admin-qr-recipient-gcash')?.value==='Acceptance Recipient');
  assert.ok(writeCalls.some(path=>path.endsWith('/v1/admin/payment-methods/gcash')));
  console.log('PASS synthetic QR payment configuration upload and readback after refresh');
+ const beforeReadbackWrites=writeCalls.length;
+ await modules.goto(base+'paseo/admin/acceptance');
+ await modules.getByText('7 of 7 read-only checks passed.').waitFor({timeout:15000});
+ await modules.getByRole('button',{name:'Run readback again'}).click();
+ await modules.getByText('7 of 7 read-only checks passed.').waitFor({timeout:15000});
+ assert.equal(writeCalls.length,beforeReadbackWrites,'readback must not change persisted data');
+ await modules.getByRole('link',{name:'Back to overview'}).click();
+ await modules.getByRole('link',{name:'Check seven-module readback'}).waitFor();
+ console.log('PASS seven-module same-tab server readback, manual retry and zero write requests');
  assert.deepEqual(moduleErrors,[]);
  console.log('PASS seven admin module routes: direct link, refresh, tab switching, back/forward without runtime errors');
  await modules.close();
