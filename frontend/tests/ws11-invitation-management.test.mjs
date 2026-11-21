@@ -111,7 +111,7 @@ test('trusted UI and migrations remain OFF until separate production activation'
  assert.match(ui,/data-ws11-revoke/);
  assert.match(ui,/manageList\.replaceChildren/);
  assert.match(ui,/options\.listInvitations/);
- assert.match(app,/WS11_INVITATION_MANAGEMENT_ENABLED/);
+ assert.match(app,/workspaceInvitationLiveManager\.list\(workspaceId\)/);
  assert.match(app,/directoryMode==='board'&&BOARD_GROUP_ACCESS_ENABLED/);
  assert.match(app,/directoryMode==='admin'/);
  assert.match(readFileSync('frontend/workspace-board-groups.js','utf8'),/BOARD_GROUP_ACCESS_ENABLED=false/);
