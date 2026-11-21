@@ -78,3 +78,17 @@
 .tb-app .tb-panel th:last-child{position:relative}
 .tb-app .tb-inline-status{max-width:175px;min-height:36px;border:1px solid #adc5e2;border-radius:10px;padding:7px 10px;background:var(--tb-panel);color:var(--tb-ink);font:inherit;font-size:.76rem;font-weight:680;cursor:pointer}
 .tb-app .tb-inline-status:disabled{opacity:.6;cursor:progress}
+/* Persisted meeting sheet and history, extending the existing native TalkBox surface. */
+.tb-app .tb-meeting-record,.tb-app .tb-meeting-history{display:grid;gap:15px;min-width:0;padding:clamp(16px,2vw,26px);border:1px solid var(--tb-edge);border-radius:18px;background:var(--tb-panel);box-shadow:0 7px 21px rgba(29,53,81,.04)}
+.tb-app .tb-meeting-record-head{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+.tb-app .tb-meeting-record-head h3{margin:5px 0 7px;font-size:1.19rem;color:var(--tb-ink)}
+.tb-app .tb-meeting-record-head p{margin:0;font-size:.84rem;color:var(--tb-muted)}
+.tb-app .tb-meeting-record label{font-size:.8rem;font-weight:750;color:var(--tb-ink)}
+.tb-app .tb-meeting-record textarea{width:100%;box-sizing:border-box;border:1px solid var(--tb-edge);border-radius:12px;padding:13px;background:var(--tb-panel);color:var(--tb-ink);resize:vertical;min-height:105px}
+.tb-app .tb-meeting-record>button{justify-self:start}
+.tb-app .tb-history-list{display:grid;gap:8px}
+.tb-app .tb-history-list button{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;width:100%;text-align:left;border:1px solid var(--tb-edge);border-radius:12px;background:var(--surface-2,#f8fafc);padding:14px 16px;color:var(--tb-ink);cursor:pointer;font:inherit}
+.tb-app .tb-history-list button:hover{border-color:#a5bfe1;background:var(--tb-panel)}
+.tb-app .tb-history-list button strong{font-size:.86rem}.tb-app .tb-history-list button span{font-size:.76rem;color:var(--tb-muted)}
+.tb-app .tb-history-empty{font-size:.84rem;color:var(--tb-muted)}
+.tb-app .tb-unavailable{opacity:.73;cursor:default}

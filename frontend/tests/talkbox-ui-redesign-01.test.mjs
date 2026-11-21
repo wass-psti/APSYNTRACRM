@@ -31,7 +31,7 @@ test('Meeting Sheet renders selected presentation date without inventing persist
  assert.match(html,/Main issues log/);
  assert.match(html,/data-action="tb-meeting-back"/);
  assert.match(html,/class="tb-date-chip">2026-11-21/);
- assert.match(html,/not a saved meeting record/);
+ assert.match(html,/Persisted meeting issues and carried-over actions/);
  assert.doesNotMatch(html,/data-action="tb-meeting-enter"/);
 });
 
