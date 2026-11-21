@@ -31034,44 +31034,59 @@ html[data-aps-monday-theme="dark"] #app .aps-sidebar .sidebar-board-initial.side
 html[data-aps-monday-theme="dark"] #app .aps-sidebar .sidebar-board-initial.sidebar-tone-blue {background:#233a4d;color:#bfe4ff}
 html[data-aps-monday-theme="dark"] #app .aps-sidebar .sidebar-board-initial.sidebar-tone-indigo {background:#333054;color:#d6cfff}
 
-/* No overlap: every essentials item has its own grid, with dedicated icon,
- * minmax text and status columns. Flexible text wraps inside its own cell. */
+/* The check indicator must never sit beside, or over, the heading/text.
+ * Each essentials entry is an independent tile with its own header and body. */
 #app .aps-overview-shell .aps-overview .overview-essentials {
- min-width:0;box-sizing:border-box;overflow:hidden;
+ min-width:0;box-sizing:border-box;overflow:visible;
 }
 #app .aps-overview-shell .aps-overview .overview-essentials .panel-body {
- display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
- gap:0;min-width:0;box-sizing:border-box;
+ display:grid;
+ grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));
+ gap:14px;padding:16px;min-width:0;box-sizing:border-box;
 }
-#app .aps-overview-shell .aps-overview .overview-essentials .activity-item {
- display:grid;grid-template-columns:34px minmax(0,1fr) 19px;
- align-items:start;gap:11px;min-width:0;min-height:0;
- margin:0;box-sizing:border-box;
+#app .aps-overview-shell .aps-overview .overview-essentials .activity-item,
+#app .aps-overview-shell .aps-overview .overview-essentials .activity-item:first-child,
+#app .aps-overview-shell .aps-overview .overview-essentials .activity-item:last-child {
+ display:grid;
+ grid-template-columns:minmax(0,1fr) auto;
+ grid-template-rows:auto minmax(0,1fr);
+ grid-template-areas:"icon status" "content content";
+ align-items:start;column-gap:14px;row-gap:14px;
+ min-width:0;min-height:0;box-sizing:border-box;
+ padding:20px;margin:0;
+ border:1px solid var(--sm-border,#484848);
+ border-radius:12px;
+ background:var(--sm-surface,#292929);
+}
+#app .aps-overview-shell .aps-overview .overview-essentials .activity-avatar {
+ grid-area:icon;align-self:start;justify-self:start;
+ flex:none;
+}
+#app .aps-overview-shell .aps-overview .overview-essentials .overview-essentials-indicator {
+ grid-area:status;align-self:start;justify-self:end;
+ flex:none;
 }
 #app .aps-overview-shell .aps-overview .overview-essentials .activity-item>div {
- min-width:0;width:auto;overflow-wrap:anywhere;word-break:normal;
+ grid-area:content;min-width:0;width:100%;overflow-wrap:anywhere;
 }
 #app .aps-overview-shell .aps-overview .overview-essentials .activity-item :is(b,small) {
- max-width:100%;overflow-wrap:anywhere;white-space:normal;
+ display:block;max-width:100%;overflow-wrap:anywhere;
+ white-space:normal;
 }
-#app .aps-overview-shell .aps-overview .overview-essentials .activity-avatar,
-#app .aps-overview-shell .aps-overview .overview-essentials .overview-essentials-indicator {
- flex:none;align-self:start;justify-self:center;
+#app .aps-overview-shell .aps-overview .overview-essentials .activity-item b {
+ margin:0 0 8px;line-height:1.4;
 }
-@media(max-width:1150px) {
+#app .aps-overview-shell .aps-overview .overview-essentials .activity-item small {
+ line-height:1.6;
+}
+@media(max-width:650px){
  #app .aps-overview-shell .aps-overview .overview-essentials .panel-body {
-  grid-template-columns:minmax(0,1fr);
-  padding:8px 18px;
+  padding:12px;gap:12px;
  }
- #app .aps-overview-shell .aps-overview .overview-essentials .activity-item {
-  padding:15px 0;border-right:0;border-bottom:1px solid var(--sm-border,#484848);
- }
- #app .aps-overview-shell .aps-overview .overview-essentials .activity-item:last-child {border-bottom:0}
-}
-@media(max-width:420px){
- #app .aps-overview-shell .aps-overview .overview-essentials .panel-body {padding:7px 12px}
- #app .aps-overview-shell .aps-overview .overview-essentials .activity-item {
-  grid-template-columns:32px minmax(0,1fr) 18px;gap:9px;
+ #app .aps-overview-shell .aps-overview .overview-essentials .activity-item,
+ #app .aps-overview-shell .aps-overview .overview-essentials .activity-item:first-child,
+ #app .aps-overview-shell .aps-overview .overview-essentials .activity-item:last-child {
+  padding:16px;
  }
 }
 html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-essentials {
@@ -31088,4 +31103,8 @@ html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overv
 }
 html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-essentials .activity-item:nth-child(3) .activity-avatar {
  background:#45382a;color:#f2d5a9;
+}
+
+html[data-aps-monday-theme="dark"] #app .aps-overview-shell .aps-overview .overview-essentials .activity-item {
+ background:#303030;border-color:#4e4e4e;
 }

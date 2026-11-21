@@ -17,15 +17,16 @@ const evaluate=()=>{
  const lum=color=>color.map(c=>{c/=255;return c<=.04045?c/12.92:((c+.055)/1.055)**2.4}).reduce((a,v,i)=>a+v*[.2126,.7152,.0722][i],0);
  const ratio=(a,b)=>{const x=lum(rgb(a)),y=lum(rgb(b));return Number(((Math.max(x,y)+.05)/(Math.min(x,y)+.05)).toFixed(2))};
  const panel=document.querySelector('.overview-essentials'),panelRect=rect(panel),body=rect(panel.querySelector('.panel-body'));
+ const gridCols=getComputedStyle(panel.querySelector('.panel-body')).gridTemplateColumns;
  const samples=Array.from(document.querySelectorAll('.overview-board-grid .board-symbol')).map(el=>({tone:el.className,color:getComputedStyle(el).color,background:getComputedStyle(el).backgroundColor,contrast:ratio(getComputedStyle(el).color,getComputedStyle(el).backgroundColor)}));
  const essentials=Array.from(document.querySelectorAll('.overview-essentials .activity-item')).map(el=>{
   const avatar=rect(el.querySelector('.activity-avatar')),text=rect(el.querySelector('div')),check=rect(el.querySelector('.overview-essentials-indicator')),r=rect(el),bold=rect(el.querySelector('b')),small=rect(el.querySelector('small'));
-  return {r,avatar,text,check,bold,small,overlap:collide(avatar,text)||collide(text,check)||collide(avatar,check),contained:r.left>=panelRect.left-1&&r.right<=panelRect.right+1&&r.top>=panelRect.top-1&&r.bottom<=panelRect.bottom+1&&bold.left>=text.left-1&&small.right<=text.right+1};
+  return {r,avatar,text,check,bold,small,background:getComputedStyle(el).backgroundColor,headingBelowStatus:bold.top>=check.bottom+6,overlap:collide(avatar,text)||collide(text,check)||collide(avatar,check),contained:r.left>=panelRect.left-1&&r.right<=panelRect.right+1&&r.top>=panelRect.top-1&&r.bottom<=panelRect.bottom+1&&bold.left>=text.left-1&&small.right<=text.right+1};
  });
- return {panel:panelRect,body,essentials,samples,overflow:document.documentElement.scrollWidth-innerWidth};
+ return {panel:panelRect,body,gridCols,essentials,samples,overflow:document.documentElement.scrollWidth-innerWidth};
 };
 try{
- for(const width of [390,768,1024,1280,1440])for(const theme of ['dark','light']){
+ for(const width of [390,768,1024,1280,1440,1898])for(const theme of ['dark','light']){
   let base;
   for(const [version,css] of [['before',previous],['after',current]]){
    const page=await browser.newPage({viewport:{width,height:900},deviceScaleFactor:1});
@@ -37,6 +38,8 @@ try{
     for(const [i,s] of data.essentials.entries()){
      check(!s.overlap,`${theme} ${width} essentials item ${i+1} content overlaps`);
      check(s.contained,`${theme} ${width} essentials item ${i+1} protrudes outside panel`);
+     check(s.headingBelowStatus,`${theme} ${width} essentials item ${i+1}: check overlaps heading row`);
+     check(s.background!=='rgba(0, 0, 0, 0)',`${theme} ${width} essentials item ${i+1}: no independent card surface`);
     }
     if(theme==='dark'){
      for(const s of data.samples){check(s.contrast>=4.5,`${width} ${s.tone} initial contrast ${s.contrast}`);check(s.background!=='rgb(239, 238, 255)',`${width} ${s.tone} retained light initial tile`);}
@@ -44,10 +47,10 @@ try{
      for(let i=0;i<data.samples.length;i++)check(data.samples[i].background===base.samples[i].background,`${width} light initial background changed`);
     }
    }else base=data;
-   if(theme==='dark'&&(width===390||width===1440)){
+   if(theme==='dark'&&(width===390||width===1440||width===1898)){
     await page.screenshot({path:`${destination}/overview-${version}-${width}.png`,fullPage:true});
    }
-   if(theme==='dark'&&version==='after')console.log('LAYOUT',width,JSON.stringify({panel:data.panel,items:data.essentials.map(s=>({overlap:s.overlap,contained:s.contained})),initials:data.samples.map(s=>({tone:s.tone,contrast:s.contrast,background:s.background}))}));
+   if(theme==='dark'&&version==='after')console.log('LAYOUT',width,JSON.stringify({panel:data.panel,columns:data.gridCols,items:data.essentials.map(s=>({overlap:s.overlap,contained:s.contained,headingBelowStatus:s.headingBelowStatus})),initials:data.samples.map(s=>({tone:s.tone,contrast:s.contrast,background:s.background}))}));
    await page.close();
   }
  }
