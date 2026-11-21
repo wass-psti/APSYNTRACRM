@@ -15,7 +15,7 @@ test('only verified-account allowlist bypasses the Home requirement',()=>{
 });
 
 test('SQL keeps actor identity authoritative and atomic write behavior unchanged',()=>{
- const sql=readFileSync('supabase/migrations/20261121060625_cp_tt_offsite_home_note_account_exemptions.sql','utf8');
+ const sql=readFileSync('supabase/migrations/20261121061831_cp_tt_offsite_home_note_account_exemptions.sql','utf8');
  assert.match(sql,/FROM auth\.users u WHERE u\.id=v_user/);
  assert.match(sql,/p_action='clock-in' AND p_location='Offsite \(Home\)' AND v_note IS NULL/);
  assert.match(sql,/asenagan@watchdogautomation\.com\.ph/);
