@@ -31713,3 +31713,170 @@ html[data-aps-monday-theme="dark"] .ws01-overlay :is(button,input,select),
 html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(button,input,select,textarea) {transition:none;transform:none}
 }
 }
+
+/* frontend/pdl-crm-native-refinement.css */
+/* PDL CRM-native launcher and navigation icon refinement.
+   Scoped presentation only: preserve links, actions and signed data flow. */
+#app .pdl-crm-portal {
+ --pdl-canvas:#f7f9fc;--pdl-panel:#ffffff;--pdl-muted:#63718a;
+ --pdl-ink:#1e293b;--pdl-border:#dce3ed;--pdl-accent:#295fbd;
+ --pdl-accent-hover:#1e4f9d;
+ color:var(--pdl-ink);max-width:1160px;margin:0 auto;
+ padding:clamp(22px,3vw,42px);display:grid;gap:24px;
+}
+#app .pdl-crm-portal * {box-sizing:border-box}
+#app .pdl-crm-portal .pdl-crm-eyebrow {
+ margin:0 0 9px;color:var(--pdl-muted);
+ font-size:10px;font-weight:760;letter-spacing:.14em;text-transform:uppercase;
+}
+#app .pdl-crm-portal .pdl-crm-hero {
+ display:flex;align-items:center;justify-content:space-between;gap:24px;
+ padding:0 0 23px;border-bottom:1px solid var(--pdl-border);
+}
+#app .pdl-crm-portal .pdl-crm-hero h1 {
+ margin:0;font-size:clamp(28px,3.4vw,42px);line-height:1.13;
+ letter-spacing:-.045em;color:var(--pdl-ink);font-weight:760;
+}
+#app .pdl-crm-portal .pdl-crm-hero p:last-child {
+ margin:13px 0 0;max-width:590px;font-size:14px;
+ line-height:1.65;color:var(--pdl-muted);
+}
+#app .pdl-crm-portal .pdl-crm-hero-mark {
+ display:grid;place-items:center;flex:none;width:64px;height:64px;
+ color:#396ab0;background:#e9eff9;border-radius:17px;
+}
+#app .pdl-crm-portal .pdl-crm-hero-mark .sidebar-svg-icon {width:36px;height:36px}
+#app .pdl-crm-portal .pdl-crm-actions {
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;
+}
+#app .pdl-crm-portal .pdl-crm-action {
+ display:flex;flex-direction:column;gap:15px;
+ padding:clamp(20px,2.2vw,28px);border:1px solid var(--pdl-border);
+ border-radius:14px;background:var(--pdl-panel);box-shadow:none;min-width:0;
+}
+#app .pdl-crm-portal .pdl-crm-action-symbol {
+ display:grid;place-items:center;width:42px;height:42px;
+ border-radius:11px;background:#e9eff9;color:#356bb5;
+}
+#app .pdl-crm-portal .pdl-crm-action-symbol .sidebar-svg-icon {width:23px;height:23px}
+#app .pdl-crm-portal .pdl-crm-action-copy {flex:1}
+#app .pdl-crm-portal .pdl-crm-action h2,
+#app .pdl-crm-portal .pdl-crm-summary h2 {
+ font-size:20px;letter-spacing:-.025em;color:var(--pdl-ink);
+ font-weight:730;margin:0;
+}
+#app .pdl-crm-portal .pdl-crm-action-copy > p:last-child {
+ margin:10px 0 0;font-size:13px;line-height:1.65;color:var(--pdl-muted);
+}
+#app .pdl-crm-portal .pdl-crm-action-buttons {
+ display:flex;flex-wrap:wrap;gap:9px;
+}
+#app .pdl-crm-portal .pdl-crm-button {
+ display:inline-flex;align-items:center;justify-content:center;gap:10px;
+ min-height:42px;padding:10px 15px;border-radius:8px;
+ font:inherit;font-size:12px;font-weight:710;line-height:1.3;
+ text-decoration:none;cursor:pointer;transition:background-color .16s,border-color .16s,color .16s;
+ box-shadow:none;white-space:normal;text-align:center;
+}
+#app .pdl-crm-portal .pdl-crm-button-primary {
+ background:var(--pdl-accent);border:1px solid var(--pdl-accent);color:#fff;
+}
+#app .pdl-crm-portal .pdl-crm-button-primary:hover {
+ background:var(--pdl-accent-hover);color:#fff;border-color:var(--pdl-accent-hover);
+}
+#app .pdl-crm-portal .pdl-crm-button-secondary {
+ background:transparent;border:1px solid var(--pdl-border);color:var(--pdl-ink);
+}
+#app .pdl-crm-portal .pdl-crm-button-secondary:hover {
+ background:rgba(117,137,167,.12);border-color:#8397b2;
+}
+#app .pdl-crm-portal .pdl-crm-button:focus-visible {
+ outline:2px solid #8ab3fa;outline-offset:3px;
+}
+#app .pdl-crm-portal .pdl-crm-button:disabled {opacity:.55;cursor:wait}
+#app .pdl-crm-portal .pdl-crm-summary {
+ padding:23px 0 0;border-top:1px solid var(--pdl-border);
+ background:transparent;box-shadow:none;min-width:0;
+}
+#app .pdl-crm-portal .pdl-crm-summary-head {
+ display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:18px;
+}
+#app .pdl-crm-portal .pdl-crm-status {
+ display:inline-flex;align-items:center;gap:7px;
+ color:var(--pdl-muted);font-size:11px;font-weight:700;
+}
+#app .pdl-crm-portal .pdl-crm-status > span {
+ width:7px;height:7px;border-radius:50%;background:#3da37f;
+}
+#app .pdl-crm-portal .pdl-crm-metrics {
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:0;border:1px solid var(--pdl-border);border-radius:12px;overflow:hidden;
+ background:var(--pdl-panel);
+}
+#app .pdl-crm-portal .pdl-crm-metric {
+ display:grid;gap:8px;padding:19px 22px;min-width:0;
+}
+#app .pdl-crm-portal .pdl-crm-metric + .pdl-crm-metric {border-left:1px solid var(--pdl-border)}
+#app .pdl-crm-portal .pdl-crm-metric > span {font-size:12px;color:var(--pdl-muted)}
+#app .pdl-crm-portal .pdl-crm-metric strong {font-size:29px;line-height:1;font-weight:760;color:var(--pdl-ink)}
+#app .pdl-crm-portal .pdl-crm-metric small {font-size:16px;color:var(--pdl-muted);font-weight:600}
+#app .pdl-crm-portal .pdl-crm-records {padding:20px 1px 0}
+#app .pdl-crm-portal .pdl-crm-records h3 {font-size:13px;margin:0 0 12px;color:var(--pdl-ink)}
+#app .pdl-crm-portal .pdl-crm-empty,
+#app .pdl-crm-portal .pdl-crm-notice p {font-size:13px;color:var(--pdl-muted);line-height:1.6}
+#app .pdl-crm-portal .pdl-crm-records ul {list-style:none;padding:0;margin:0 0 15px}
+#app .pdl-crm-portal .pdl-crm-records li {
+ display:flex;gap:8px;justify-content:space-between;align-items:center;
+ padding:12px 0;border-top:1px solid var(--pdl-border);font-size:12px;
+}
+#app .pdl-crm-portal .pdl-crm-record-meta {color:var(--pdl-muted);overflow-wrap:anywhere;text-align:right}
+#app .pdl-crm-portal .pdl-crm-record-name {font-weight:700;overflow-wrap:anywhere}
+#app .pdl-crm-portal .pdl-crm-loading {display:grid;gap:16px}
+#app .pdl-crm-portal .pdl-crm-skeleton {
+ border-radius:8px;background:linear-gradient(100deg,#b6c4d323,#d0d9e350,#b6c4d323);
+ background-size:200% 100%;animation:pdl-crm-shimmer 1.5s linear infinite;
+}
+#app .pdl-crm-portal .pdl-crm-skeleton-heading {width:37%;height:20px}
+#app .pdl-crm-portal .pdl-crm-skeleton-metric {height:84px}
+@keyframes pdl-crm-shimmer {to{background-position-x:-200%}}
+html[data-aps-monday-theme="dark"] #app .pdl-crm-portal {
+ --pdl-canvas:#151618;--pdl-panel:#24272d;--pdl-muted:#abb6c6;
+ --pdl-ink:#f0f2f6;--pdl-border:#3a414b;
+ --pdl-accent:#3477d6;--pdl-accent-hover:#4589e8;
+}
+html[data-aps-monday-theme="dark"] #app .pdl-crm-portal .pdl-crm-hero-mark,
+html[data-aps-monday-theme="dark"] #app .pdl-crm-portal .pdl-crm-action-symbol {
+ background:#303b4b;color:#b1cfff;
+}
+html[data-aps-monday-theme="dark"] #app .pdl-crm-portal .pdl-crm-button-secondary:hover {
+ background:#333a44;border-color:#697c97;
+}
+/* Native application icons share the standard sidebar rail geometry. */
+#app .aps-sidebar .nav-link[href="#/paseo"] .sidebar-svg-icon,
+#app .aps-sidebar .nav-link[href="#/talkbox"] .sidebar-svg-icon {
+ width:19px;height:19px;filter:none;stroke-width:1.7;
+}
+#app .aps-sidebar .nav-link[href="#/paseo"] .nav-ico,
+#app .aps-sidebar .nav-link[href="#/talkbox"] .nav-ico {box-shadow:none}
+@media(max-width:800px) {
+ #app .pdl-crm-portal .pdl-crm-actions {grid-template-columns:1fr}
+ #app .pdl-crm-portal {padding:22px 19px;gap:20px}
+ #app .pdl-crm-portal .pdl-crm-hero-mark {width:50px;height:50px;border-radius:13px}
+ #app .pdl-crm-portal .pdl-crm-hero-mark .sidebar-svg-icon {width:28px;height:28px}
+}
+@media(max-width:480px) {
+ #app .pdl-crm-portal .pdl-crm-hero {align-items:flex-start;gap:12px}
+ #app .pdl-crm-portal .pdl-crm-hero h1 {font-size:28px}
+ #app .pdl-crm-portal .pdl-crm-hero-mark {width:42px;height:42px}
+ #app .pdl-crm-portal .pdl-crm-action {padding:18px}
+ #app .pdl-crm-portal .pdl-crm-action-buttons {flex-direction:column;align-items:stretch}
+ #app .pdl-crm-portal .pdl-crm-summary-head {align-items:flex-start}
+ #app .pdl-crm-portal .pdl-crm-metric {padding:15px}
+ #app .pdl-crm-portal .pdl-crm-metric strong {font-size:25px}
+ #app .pdl-crm-portal .pdl-crm-records li {align-items:flex-start;flex-direction:column}
+ #app .pdl-crm-portal .pdl-crm-record-meta {text-align:left}
+}
+@media(prefers-reduced-motion:reduce) {
+ #app .pdl-crm-portal .pdl-crm-skeleton {animation:none}
+ #app .pdl-crm-portal .pdl-crm-button {transition:none}
+}
