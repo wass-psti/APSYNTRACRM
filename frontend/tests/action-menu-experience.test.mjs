@@ -111,6 +111,13 @@ test('WAI-ARIA button/menu/menuitem semantics and keyboard support are implement
  assert.match(source,/details\.open=false/);
 });
 
+test('native details open attribute synchronizes ARIA after coalesced toggle events',()=>{
+ assert.match(source,/record\.type==='attributes'&&record\.attributeName==='open'/);
+ assert.match(source,/attributeFilter:\['open'\]/);
+ assert.match(source,/String\(details\.open\)/);
+ assert.match(source,/controllers\.has\(details\)/);
+});
+
 test('app continues dispatching original data-action commands for authorized board actions',()=>{
  for(const action of ['board-card-edit','board-card-trash','board-card-restore',
   'group-inline-edit','group-select-visible','board-members','board-structure',

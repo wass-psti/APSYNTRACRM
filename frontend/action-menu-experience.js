@@ -360,12 +360,22 @@ export function startActionMenuExperience(root=globalThis.document?.body){
  }
  const observer=new MutationObserver(records=>{
   if(!running)return;
-  for(const record of records)
+  for(const record of records){
    if(record.type==='childList')record.addedNodes.forEach(scan);
+   // Native <details> toggle events can be coalesced during rapid menu changes.
+   // Keep the trigger state synchronized with the actual open attribute.
+   if(record.type==='attributes'&&record.attributeName==='open'){
+    const details=record.target;
+    if(controllers.has(details))
+     details.querySelector(':scope > summary')?.setAttribute(
+      'aria-expanded',String(details.open));
+   }
+  }
   for(const controller of controllers.values())
    if(!controller.details.isConnected)controller.destroy();
  });
- observer.observe(root,{subtree:true,childList:true});
+ observer.observe(root,{subtree:true,childList:true,attributes:true,
+  attributeFilter:['open']});
  const outside=event=>{
   for(const controller of controllers.values()){
    if(controller.details.open&&!controller.details.contains(event.target))

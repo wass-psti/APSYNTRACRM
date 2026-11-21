@@ -71,6 +71,27 @@ async function main(){
  await page.call('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
  await sleep(20);
  assert.equal(await details(),false,'Escape dismisses the popup');
+ // CP03: rapid native open/close updates the actual ARIA trigger state.
+ // This exercises the existing root observer rather than invoking a command.
+ await page.eval(`document.querySelector('.aps-board-shell').insertAdjacentHTML('beforeend',
+  '<details class="board-card-actions"><summary>Board one actions</summary><div class="board-card-actions-list"><button data-action="board-card-edit">Edit board</button></div></details>'+
+  '<details class="board-card-actions"><summary>Board two actions</summary><div class="board-card-actions-list"><button data-action="board-card-edit">Edit board</button></div></details>'+
+  '<details class="board-card-actions"><summary>Board three actions</summary><div class="board-card-actions-list"><button data-action="board-card-edit">Edit board</button></div></details>')`);
+ await until(()=>page.eval(`document.querySelectorAll('.board-card-actions.aps-action-surface').length===3`));
+ for(let index=0;index<3;index++){
+  await page.eval(`(()=>{
+   const details=document.querySelectorAll('.board-card-actions')[${index}];
+   details.open=true;details.open=false;details.open=true;
+   return details.querySelector('summary').getAttribute('aria-expanded');
+  })()`);
+  // MutationObserver callbacks run at the next microtask checkpoint.
+  const expanded=await page.eval(`document.querySelectorAll('.board-card-actions')[${index}].querySelector('summary').getAttribute('aria-expanded')`);
+  assert.equal(expanded,'true',`board menu ${index} must report expanded after rapid open`);
+  await page.eval(`document.querySelectorAll('.board-card-actions')[${index}].open=false`);
+  const collapsed=await page.eval(`document.querySelectorAll('.board-card-actions')[${index}].querySelector('summary').getAttribute('aria-expanded')`);
+  assert.equal(collapsed,'false',`board menu ${index} must report collapsed`);
+ }
+ console.log('CP03_BOARD_MENU_ARIA_PASS: sequential native details state mirrors ARIA');
  console.log('GROUP_MENU_BROWSER_PASS: real pointer selection, outside click, keyboard focus and Escape');
  }finally{page?.close();if(browser)browser.kill('SIGTERM');await new Promise(ok=>server.close(ok));await sleep(500);try{rmSync(profile,{recursive:true,force:true,maxRetries:10,retryDelay:150})}catch{}}}
 main().catch(e=>{console.error('GROUP_MENU_BROWSER_FAIL',e.stack);process.exitCode=1});
