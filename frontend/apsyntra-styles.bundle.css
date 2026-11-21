@@ -31429,3 +31429,108 @@ html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(bu
  animation:none;transition:none;transform:none;
  }
 }
+
+/* frontend/dark-native-refinements.css */
+/* CP-CRM-DARK-07: focused native application corrections.
+ * Dark-only presentation; no print/PDF, map tile, workflow or permission changes. */
+@media screen {
+/* TimeTracker GPS controls: leave Leaflet map tiles and coordinate data untouched. */
+html[data-aps-monday-theme="dark"] #app .tt-gps {
+ color:#ededed;--tt-gps-ink:#ededed;background:#171717;
+}
+html[data-aps-monday-theme="dark"] #app .tt-gps :is(
+ .tt-gps-controls,.tt-gps-compare-controls,.tt-gps-panel,
+ .tt-gps-kpis .tt-gps-kpi,.tt-gps-map-stats,.tt-gps-map-modes,.tt-gps-map-zoom
+) {background:#292929;color:#ededed;border-color:#525252;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .tt-gps :is(
+ .tt-gps-controls label,.tt-gps-compare-controls label,
+ .tt-gps-panel-head p,.tt-gps-legend,.tt-gps-legend span:last-child,
+ .tt-gps-kpis .tt-gps-kpi span,.tt-gps-record-person small,.tt-gps-record-fix small,
+ .tt-gps-note,.tt-gps-privacy,.tt-gps-empty-list,.tt-gps-loading,
+ .tt-gps-map-stats .tt-gps-kpi span
+) {color:#c8c8c8}
+html[data-aps-monday-theme="dark"] #app .tt-gps :is(
+ .tt-gps-panel-head h4,.tt-gps-record-person strong,
+ .tt-gps-kpis .tt-gps-kpi strong,.tt-gps-bar strong
+) {color:#ededed}
+html[data-aps-monday-theme="dark"] #app .tt-gps :is(
+ .tt-gps-controls input,.tt-gps-controls select,
+ .tt-gps-compare-controls input,.tt-gps-compare-controls select
+) {background:#202020;color:#ededed;border-color:#656565;caret-color:#ededed}
+html[data-aps-monday-theme="dark"] #app .tt-gps :is(
+ .tt-gps-controls button,.tt-gps-compare-controls button,
+ .tt-gps-map-modes button,.tt-gps-map-zoom button
+) {background:#353535;color:#ededed;border-color:#585858}
+html[data-aps-monday-theme="dark"] #app .tt-gps :is(
+ .tt-gps-controls button,.tt-gps-compare-controls button,
+ .tt-gps-map-modes button,.tt-gps-map-zoom button
+):hover:not(:disabled) {background:#464646;color:#fff}
+html[data-aps-monday-theme="dark"] #app .tt-gps .tt-gps-map-modes button.is-active {
+ background:#193c78;color:#fff}
+html[data-aps-monday-theme="dark"] #app .tt-gps .tt-gps-map-modes button:disabled {
+ background:#303030;color:#bebebe}
+html[data-aps-monday-theme="dark"] #app .tt-gps .tt-gps-map-zoom button {border-bottom-color:#585858}
+html[data-aps-monday-theme="dark"] #app .tt-gps .tt-gps-map-footer span {
+ background:#292929ed;color:#ededed;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .tt-gps :is(
+ .tt-gps-records li,.tt-gps-panel-head,.tt-gps-map-stats .tt-gps-kpi
+) {border-color:#525252}
+html[data-aps-monday-theme="dark"] #app .tt-gps .tt-gps-record-link {
+ background:#353535;color:#f1bc9e;border-color:#7b6254}
+html[data-aps-monday-theme="dark"] #app .tt-gps .tt-gps-record-link:hover {background:#4c3830}
+html[data-aps-monday-theme="dark"] #app .tt-gps :is(.tt-gps-restricted,.tt-gps-error) {
+ background:#4a3030;color:#ffd9d7;border-color:#945c5c}
+html[data-aps-monday-theme="dark"] #app .tt-gps :is(button,input,select,a):focus-visible {
+ outline:2px solid #a9c6ff;outline-offset:2px}
+/* TimeTracker My Hours: preserve calculations, status meaning and chart colors. */
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-my-hours-command :is(
+ .tt-hours-week-nav,.tt-hours-month-nav,.tt-hours-kpis>div
+) {background:#292929;color:#ededed;border-color:#555;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-my-hours-command :is(
+ .tt-hours-week-nav strong,.tt-hours-kpis strong
+) {color:#ededed}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-my-hours-command .tt-hours-week-nav>span {color:#c8c8c8}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-my-hours-command :is(
+ .tt-hours-week-nav button,.tt-hours-month-nav button
+) {background:#343434;color:#ededed;border-color:#626262}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-my-hours-command :is(
+ .tt-hours-week-nav button,.tt-hours-month-nav button
+):hover:not(:disabled) {background:#444;color:#fff;border-color:#848484}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-my-hours-command :is(button,input,select):focus-visible {
+ outline:2px solid #a9c6ff;outline-offset:2px}
+/* TradeLink draft and finance: never touch official print/PDF-only selectors. */
+html[data-aps-monday-theme="dark"] #app .aps-tradelink-app :is(
+ .tl-finance-preview,.tl-draft-finance,.tl-draft-summary,
+ .tl-draft-finance-results>div,.tl-finance-results>div,.tl-draft-summary-rows>div,
+ .tl-analytics-kpis article,.tl-analytics-grid>section,.tl-analytics-table-section,
+ .tl-analytics-aging,.tl-analytics-empty
+) {background:#292929;color:#ededed;border-color:#545454;box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .aps-tradelink-app :is(
+ .tl-finance-fields input,.tl-finance-fields select,
+ .tl-draft-field input,.tl-draft-field select,.tl-draft-field textarea,
+ .tl-draft-finance-inputs input,.tl-draft-finance-inputs select
+) {background:#202020;color:#ededed;border-color:#666;caret-color:#ededed}
+html[data-aps-monday-theme="dark"] #app .aps-tradelink-app :is(
+ .tl-draft-finance-results dt,.tl-draft-summary-rows dt,
+ .tl-draft-help,.tl-records-table caption
+) {color:#c8c8c8}
+html[data-aps-monday-theme="dark"] #app .aps-tradelink-app :is(
+ .tl-draft-finance-results dd,.tl-draft-summary-rows dd,.tl-draft-summary h4
+) {color:#ededed}
+html[data-aps-monday-theme="dark"] #app .aps-tradelink-app :is(
+ .tl-draft-badge,.tl-draft-summary,.tl-draft-finance,.tl-draft-boundary,
+ .tl-module-boundary,.tl-workflow-reference
+) {border-color:#626262}
+html[data-aps-monday-theme="dark"] #app .aps-tradelink-app :is(
+ .tl-draft-badge,.tl-draft-boundary,.tl-module-boundary,.tl-workflow-reference
+) {background:#30384c;color:#dce6ff}
+html[data-aps-monday-theme="dark"] #app .aps-tradelink-app .tl-draft-list-filters :disabled {
+ background:#303030;color:#c2c2c2;border-color:#606060}
+html[data-aps-monday-theme="dark"] #app .aps-tradelink-app :is(input,select,textarea,button):focus-visible {
+ outline:2px solid #a9c6ff;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){
+ html[data-aps-monday-theme="dark"] #app :is(.tt-gps,.tt-my-hours-command,.aps-tradelink-app) :is(button,input,select,textarea) {
+ transition:none;transform:none}
+}
+
+}
