@@ -411,26 +411,98 @@ export function renderSystemAdminSection({data=null,selectedUser=null,actorId=nu
   '</section>';
 }
 
-export function renderUserRoleManagement({verified=false,data=null,selectedUserId=null,actorUserId=null,busy=false,error='',accessSection='applications',systemAdminData=null,systemAdminBusy=false,systemAdminError='',boardSearch='',batchMode=false,batchSelected=[],batchScope='module',batchResource='',batchRole='viewer',batchAction='assign',batchMemberSearch=''}={}){
+function renderNativeApplicationBatch({data,actorUserId,busy,batchSelected=[],batchMemberSearch='',
+ batchModulesSelected=[],batchModuleRoles={},batchAction='assign',results=[]}){
+ const allowed=data.users.filter(member=>!member.protected&&member.id!==actorUserId);
+ const memberQuery=String(batchMemberSearch||'').trim().toLocaleLowerCase().slice(0,120);
+ const visibleMemberCount=allowed.filter(member=>
+  (String(member.name||'')+' '+String(member.email||'')).toLocaleLowerCase().includes(memberQuery)).length;
+ const applications=ROLE_MODULE_OPTIONS.map(([moduleId,name])=>{
+  const unavailable=(moduleId==='fueltrans'&&data.fueltransWorkspaceAvailable!==true)||
+   (moduleId==='tool-traceability'&&data.toolTraceabilityWorkspaceAvailable!==true)||
+   (moduleId==='fund-released-tracker'&&data.frtWorkspaceAvailable!==true)||
+   (moduleId==='charter-navigator'&&data.charterWorkspaceAvailable!==true)||
+   (moduleId==='material-request-hub'&&data.workspaceScopedMrhAvailable!==true);
+  const options=unavailable?[]:moduleId==='fueltrans'?FUELTRANS_WORKSPACE_ROLES:
+   MODULE_ROLE_OPTIONS[moduleId]||[];
+  const role=options.includes(batchModuleRoles[moduleId])?batchModuleRoles[moduleId]:options[0]||'';
+  return {moduleId,name,options,role,selected:options.length>0&&batchModulesSelected.includes(moduleId)};
+ });
+ const selectedApplications=applications.filter(application=>application.selected);
+ let html='<section class="panel user-role-batch-panel user-role-native-batch" aria-label="Bulk native application access">'+
+  '<div class="user-role-batch-heading"><div class="user-role-batch-eyebrow">NATIVE APPLICATION ACCESS / BULK WORKFLOW</div>'+
+  '<div class="user-role-batch-title-row"><div><h2>Configure multiple applications</h2>'+
+  '<p>Apply application roles across selected members and applications in one reviewed operation.</p></div>'+
+  '<span class="user-role-batch-workspace">Active workspace</span></div></div>'+
+  '<div class="panel-body user-role-batch-layout"><div class="user-role-batch-main">'+
+  '<fieldset class="user-role-batch-users"><legend><span class="user-role-batch-step">01</span> Select members</legend>'+
+  '<div class="user-role-batch-toolbar"><label for="user-role-batch-member-search">Find workspace members</label>'+
+  '<input type="search" id="user-role-batch-member-search" name="batchMemberSearch" placeholder="Search by name or email" autocomplete="off" value="'+esc(batchMemberSearch)+'" aria-controls="user-role-batch-user-list" aria-describedby="user-role-batch-search-count">'+
+  '<span id="user-role-batch-search-count" role="status" aria-live="polite">'+visibleMemberCount+' matching</span></div>'+
+  '<div class="user-role-batch-user-list" id="user-role-batch-user-list">'+allowed.map(member=>
+   '<label data-batch-member-row data-search-name="'+esc((String(member.name||'')+' '+String(member.email||'')).toLocaleLowerCase())+'"'+
+   ((String(member.name||'')+' '+String(member.email||'')).toLocaleLowerCase().includes(memberQuery)?'':' hidden')+'>'+
+   '<input type="checkbox" name="userRoleBatchMember" data-user-role-batch-member value="'+esc(member.id)+'"'+
+   (batchSelected.includes(member.id)?' checked':'')+'><span>'+esc(member.name||member.email)+' <small>'+esc(member.email)+'</small></span></label>').join('')+'</div>'+
+  '<p class="user-role-batch-count" role="status" aria-live="polite">'+batchSelected.length+' selected of '+allowed.length+' available workspace members</p>'+
+  '<div class="user-role-batch-selection-actions"><button type="button" class="secondary" data-action="user-role-batch-select-eligible">Select all available members</button>'+
+  '<button type="button" class="secondary" data-action="user-role-batch-clear"'+(batchSelected.length?'':' disabled')+'>Clear selection</button></div></fieldset>'+
+  '<fieldset class="user-role-native-app-picker"><legend><span class="user-role-batch-step">02</span> Select applications and roles</legend>'+
+  '<div class="user-role-native-app-list">'+applications.map(application=>
+   '<div class="user-role-native-app-row" data-native-app-row="'+esc(application.moduleId)+'">'+
+   '<label class="user-role-native-app-choice"><input type="checkbox" id="user-role-batch-app-'+esc(application.moduleId)+'" data-user-role-batch-app value="'+esc(application.moduleId)+'"'+
+   (application.selected?' checked':'')+(application.options.length?'':' disabled')+'><span><strong>'+esc(application.name)+'</strong>'+
+   (application.options.length?'':'<small>Application assignment service unavailable</small>')+'</span></label>'+
+   '<label class="user-role-native-app-role">Role<select id="user-role-batch-app-role-'+esc(application.moduleId)+'" data-user-role-batch-app-role data-module-id="'+esc(application.moduleId)+'"'+
+   (application.options.length?'':' disabled')+'>'+application.options.map(role=>
+    '<option value="'+esc(role)+'"'+(role===application.role?' selected':'')+'>'+esc(role)+'</option>').join('')+'</select></label></div>'
+  ).join('')+'</div></fieldset>'+
+  '<div class="user-role-native-batch-action"><label for="user-role-batch-action">Operation</label>'+
+  '<select id="user-role-batch-action"><option value="assign"'+(batchAction==='assign'?' selected':'')+'>Assign or change access</option>'+
+  '<option value="revoke"'+(batchAction==='revoke'?' selected':'')+'>Revoke selected application access</option></select></div>'+
+  '</div><aside class="user-role-batch-summary" aria-label="Native application batch review">'+
+  '<div class="user-role-batch-summary-top"><span class="user-role-batch-step">03</span><strong>Review &amp; apply</strong></div>'+
+  '<p class="user-role-batch-summary-intro">Planned configuration</p><dl>'+
+  '<div><dt>Members</dt><dd id="user-role-batch-summary-count">'+batchSelected.length+' selected</dd></div>'+
+  '<div><dt>Applications</dt><dd>'+selectedApplications.length+' selected</dd></div>'+
+  '<div><dt>Potential pairs</dt><dd>'+batchSelected.length*selectedApplications.length+'</dd></div>'+
+  '<div><dt>Operation</dt><dd>'+(batchAction==='revoke'?'Revoke':'Assign / change')+'</dd></div></dl>'+
+  '<p class="user-role-batch-hint">Each member/application result is reported separately. Saved changes are verified against refreshed authoritative assignments.</p>'+
+  '<button class="primary user-role-batch-review" type="button" data-action="user-role-native-batch-review"'+
+  (batchSelected.length&&selectedApplications.length&&!busy?'':' disabled')+'>Review '+(batchSelected.length*selectedApplications.length)+' member/application pairs</button>'+
+  '</aside></div></section>';
+ if(results.length){
+  html+='<section class="panel user-role-native-results" aria-labelledby="user-role-native-results-title"><div class="panel-header"><h3 id="user-role-native-results-title">Latest bulk operation results</h3><span>'+results.length+' member/application pairs</span></div>'+
+   '<div class="table-scroll user-role-table-scroll" role="region" aria-label="Bulk application assignment results" tabindex="0"><table class="board-table user-role-table"><thead><tr><th scope="col">Member</th><th scope="col">Application</th><th scope="col">Result</th><th scope="col">Details</th></tr></thead><tbody>'+
+   results.map(result=>'<tr><td>'+esc(result.email||result.userId)+'</td><td>'+esc(ROLE_MODULE_OPTIONS.find(([id])=>id===result.moduleId)?.[1]||result.moduleId)+'</td><td><span class="status '+(result.status==='Saved & verified'?'done':result.status==='Unchanged'?'todo':'stuck')+'">'+esc(result.status)+'</span></td><td>'+esc(result.detail||'')+'</td></tr>').join('')+
+   '</tbody></table></div></section>';
+ }
+ return html;
+}
+
+export function renderUserRoleManagement({verified=false,data=null,selectedUserId=null,actorUserId=null,busy=false,error='',accessSection='applications',systemAdminData=null,systemAdminBusy=false,systemAdminError='',boardSearch='',batchMode=false,batchSelected=[],batchScope='module',batchResource='',batchRole='viewer',batchAction='assign',batchMemberSearch='',applicationAccessOnly=false,batchModulesSelected=[],batchModuleRoles={},nativeBatchResults=[]}={}){
  if(!verified)return '<div class="access-denied">Role management unavailable</div>';
- let html='<div class="aps-user-role-management"><section class="page-head user-role-hero user-role-entrance" aria-labelledby="user-role-title"><div class="user-role-hero-copy"><span class="label-top"><span class="user-role-hero-dot" aria-hidden="true"></span>Administration / CRM Admin</span>'+
- '<h1 id="user-role-title">User Role Management<span class="user-role-heading-stop">.</span></h1><p>Manage APSYNTRA CRM platform, application and board roles from the central backend.</p></div>'+
- '<button class="secondary user-role-refresh" data-action="user-role-refresh" '+(busy?'disabled':'')+'>'+roleConfigurationIcon('refresh')+'<span>Refresh assignments</span></button>'+
+ let html='<div class="aps-user-role-management'+(applicationAccessOnly?' native-application-access':'')+'"><section class="page-head user-role-hero user-role-entrance" aria-labelledby="user-role-title"><div class="user-role-hero-copy"><span class="label-top"><span class="user-role-hero-dot" aria-hidden="true"></span>Administration / '+(applicationAccessOnly?'Native applications':'CRM Admin')+'</span>'+
+ '<h1 id="user-role-title">'+(applicationAccessOnly?'Native Application Access':'User Role Management')+'<span class="user-role-heading-stop">.</span></h1><p>'+(applicationAccessOnly?'Configure individual and bulk access to the twelve native APSYNTRA applications.':'Manage APSYNTRA CRM platform, application and board roles from the central backend.')+'</p></div>'+
+ (applicationAccessOnly?'':'<button class="secondary user-role-refresh" data-action="user-role-refresh" '+(busy?'disabled':'')+'>'+roleConfigurationIcon('refresh')+'<span>Refresh assignments</span></button>')+
  '<svg class="user-role-hero-decoration" viewBox="0 0 420 210" aria-hidden="true" focusable="false" fill="none"><circle cx="345" cy="0" r="122" stroke="currentColor" stroke-opacity=".16"/><circle cx="345" cy="0" r="192" stroke="currentColor" stroke-opacity=".07"/><path d="M95 230C201 80 319 86 449 139" stroke="currentColor" stroke-opacity=".18"/></svg></section>'+
- '<div class="note security-note user-role-warning user-role-entrance"><span class="user-role-warning-icon" aria-hidden="true">'+roleConfigurationIcon('lock')+'</span><div>Verified CRM Administrators can manage roles in their active workspace. The two designated bootstrap identities remain protected. The backend rejects self-promotion, protected administrators, stale updates, and cross-workspace targets. Changes are audited and visible to subsequent signed sessions.</div></div>';
+ (applicationAccessOnly?'<div class="note user-role-warning user-role-entrance"><span class="user-role-warning-icon" aria-hidden="true">'+roleConfigurationIcon('boards')+'</span><div>Individual and bulk application changes use the existing native assignment services and are checked against refreshed assignment records.</div></div>':'<div class="note security-note user-role-warning user-role-entrance"><span class="user-role-warning-icon" aria-hidden="true">'+roleConfigurationIcon('lock')+'</span><div>Verified CRM Administrators can manage roles in their active workspace. The two designated bootstrap identities remain protected. The backend rejects self-promotion, protected administrators, stale updates, and cross-workspace targets. Changes are audited and visible to subsequent signed sessions.</div></div>');
  if(error)html+='<div class="error-banner" role="alert">'+esc(error)+'</div>';
- if(data?.crmPlatformUnavailable)html+='<div class="note security-note" role="status">APSYNTRA CRM platform role assignments are unavailable because the required backend migration is not installed. CRM changes are disabled. Existing application and board assignments remain governed by the centralized backend.</div>';
+ if(!applicationAccessOnly&&data?.crmPlatformUnavailable)html+='<div class="note security-note" role="status">APSYNTRA CRM platform role assignments are unavailable because the required backend migration is not installed. CRM changes are disabled. Existing application and board assignments remain governed by the centralized backend.</div>';
  if(!data)return html+'<div class="panel user-role-loading"><p class="muted">Loading authorized workspace members…</p></div></div>';
  const defaultTargetId=selectDefaultUserRoleTarget(data.users,actorUserId,selectedUserId);
  const u=selected(data,selectedUserId)||selected(data,defaultTargetId)||data.users[0]||null;
- html+='<section class="stat-grid user-role-stat-grid user-role-entrance" aria-label="User role management statistics">'+[
+ html+='<section class="stat-grid user-role-stat-grid user-role-entrance" aria-label="'+(applicationAccessOnly?'Native application access statistics':'User role management statistics')+'">'+(applicationAccessOnly?[
+  ['Active workspace members',data.users.length,'users'],['Native applications',ROLE_MODULE_OPTIONS.length,'roles'],
+  ['Application assignments',data.moduleAssignments.length,'proposals']]:[
   ['Active workspace members',data.users.length,'users'],['Application assignments',data.moduleAssignments.length,'roles'],
-  ['Board memberships',data.boardAssignments.length,'boards'],['Available boards',data.boards.length,'proposals']
- ].map(([k,v,icon])=>'<div class="stat-card user-role-stat-card user-role-stat-'+icon+'"><span class="user-role-stat-icon" aria-hidden="true">'+roleConfigurationIcon(icon)+'</span><span class="stat-label">'+esc(k)+'</span><strong class="stat-value">'+Number(v)+'</strong></div>').join('')+'</section>';
+  ['Board memberships',data.boardAssignments.length,'boards'],['Available boards',data.boards.length,'proposals']]).map(([k,v,icon])=>'<div class="stat-card user-role-stat-card user-role-stat-'+icon+'"><span class="user-role-stat-icon" aria-hidden="true">'+roleConfigurationIcon(icon)+'</span><span class="stat-label">'+esc(k)+'</span><strong class="stat-value">'+Number(v)+'</strong></div>').join('')+'</section>';
  html+='<div class="user-role-mode-nav" role="group" aria-label="Configuration workflow">'+
   '<button type="button" data-action="user-role-mode" data-mode="individual" aria-pressed="'+(!batchMode)+'">Individual configuration</button>'+
   '<button type="button" data-action="user-role-mode" data-mode="batch" aria-pressed="'+batchMode+'">Batch configuration</button></div>';
  if(batchMode){
+  if(applicationAccessOnly)return html+renderNativeApplicationBatch({data,actorUserId,busy,batchSelected,
+   batchMemberSearch,batchModulesSelected,batchModuleRoles,batchAction,results:nativeBatchResults})+'</div>';
   const allowed=data.users.filter(member=>!member.protected&&member.id!==actorUserId);
   const resourceEntries=batchScope==='module'?ROLE_MODULE_OPTIONS:data.boards.map(board=>[board.id,board.name]);
   const resource=resourceEntries.some(([id])=>id===batchResource)?batchResource:resourceEntries[0]?.[0]||'';
@@ -492,6 +564,9 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  const otherAssignableMembers=data.users.filter(member=>
   !member.protected&&member.id!==actorUserId);
  const globalModuleRoleBlocked=activeWorkspaceCount===null||activeWorkspaceCount>1;
+ if(applicationAccessOnly){
+  html+='<section class="panel user-role-selected-panel user-role-entrance" aria-label="Selected workspace member"><div class="panel-header"><h3>'+esc(u.name||u.email)+'</h3><span>Selected member</span></div><div class="panel-body"><div class="settings-detail"><label>Workspace account</label><strong>'+esc(u.email)+'</strong></div>'+(u.protected?'<div class="note user-role-protected">Protected account — existing application assignments are displayed without modification controls.</div>':isSelf?'<div class="note user-role-self">Select another workspace member to configure application assignments.</div>':'<div class="note user-role-helper">Choose an application below to assign, change, or revoke this member’s native application role.</div>')+'</div></section>';
+ }else{
  html+='<section class="panel user-role-selected-panel user-role-entrance" aria-label="Selected user authorization"><div class="panel-header"><h3>'+esc(u.name||u.email)+'</h3><span>'+esc(accountRoleLabel(data,u))+'</span></div>'+
  '<div class="panel-body"><div class="settings-detail user-role-effective-summary"><label>Current CRM role / identity</label><strong>'+esc(accountRoleLabel(data,u))+'</strong></div>'+(u.protected?
  '<div class="note security-note user-role-protected">Protected administrator — role modifications are intentionally disabled.</div>':
@@ -503,15 +578,16 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  (!data.fueltransWorkspaceAvailable?'<div class="note user-role-fueltrans-scope-unavailable">FuelTrans role changes require its authoritative workspace membership integration. The legacy global role action is disabled to prevent assigning a role in another workspace.</div>':'')+
  (!data.workspaceScopedMrhAvailable?'<div class="note security-note user-role-mrh-scope-unavailable">Workspace-scoped Material Request Hub role management is not yet confirmed by the backend. Its role changes remain disabled until the CP-RC03 migration is installed.</div>':'')+
  '</div></section>';
+ }
  const section=['applications','boards','system-admins'].includes(accessSection)?accessSection:'applications';
- html+='<nav class="user-role-access-nav" aria-label="Access configuration sections" role="group">'+
+ if(!applicationAccessOnly)html+='<nav class="user-role-access-nav" aria-label="Access configuration sections" role="group">'+
   '<button type="button" data-action="user-role-section" data-section="applications" aria-pressed="'+(section==='applications')+'">Application access</button>'+
   '<button type="button" data-action="user-role-section" data-section="boards" aria-pressed="'+(section==='boards')+'">Board access ('+data.boards.length.toLocaleString('en-US')+')</button>'+
-  '<button type="button" data-action="user-role-section" data-section="system-admins" aria-pressed="'+(section==='system-admins')+'">System Admin</button></nav>'+
-  '<section class="user-role-access-section" data-role-access-section="applications" aria-label="Application access settings"'+(section==='applications'?'':' hidden')+'>';
+  '<button type="button" data-action="user-role-section" data-section="system-admins" aria-pressed="'+(section==='system-admins')+'">System Admin</button></nav>';
+ html+='<section class="user-role-access-section" data-role-access-section="applications" aria-label="Application access settings"'+(section==='applications'?'':' hidden')+'>';
  const locked=!!u.protected||isSelf||busy;
  const crm=data.crmPlatformRoles?.find(r=>r.userId===u.id)||null;
- html+='<div class="section-header user-role-section-header user-role-entrance"><strong>APSYNTRA CRM Platform Role</strong></div>'+
+ if(!applicationAccessOnly)html+='<div class="section-header user-role-section-header user-role-entrance"><strong>APSYNTRA CRM Platform Role</strong></div>'+
  '<div class="note security-note user-role-ceiling-note">This is the CRM-wide authorization ceiling. CRM tier assignments are workspace-specific, not changes to the inherited WatchdogWorkspace account role. Admin grants CRM administrative authority for the active workspace, not unrelated module assignments or board ownership. Explicit Viewer blocks module write-level roles and board edit/manage; existing legacy behavior is preserved until an override is assigned.</div>'+
  '<div class="panel user-role-platform-panel"><div class="panel-body"><div class="settings-detail"><label>Assigned workspace role</label><strong>'+
  esc(data.crmPlatformUnavailable?'Unavailable — backend migration pending':crm?.effectiveRole||'Unverified')+
@@ -523,7 +599,7 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  (crm?.assignedRole?'<button class="secondary" data-action="user-role-revert-crm-platform" data-user-id="'+esc(u.id)+'" '+
  (locked||data.crmPlatformUnavailable?'disabled':'')+'>Revert to inherited role</button>':'')+
  '</div></div>';
- html+='<div class="section-header user-role-section-header"><strong>Application-specific assignments</strong></div>'+
+ html+='<div class="section-header user-role-section-header"><strong>'+(applicationAccessOnly?'Native Application Assignments':'Application-specific assignments')+'</strong></div>'+
  '<div class="panel user-role-table-panel"><div class="table-scroll user-role-table-scroll" role="region" aria-label="Application assignments, scroll horizontally for more columns" tabindex="0"><table class="board-table user-role-table" aria-label="Application-specific assignments"><thead><tr><th scope="col">Application</th><th scope="col">Effective stored role</th><th scope="col">Enforcement</th><th scope="col">Action</th></tr></thead><tbody>';
  for(const [id,name] of ROLE_MODULE_OPTIONS){
   const a=data.moduleAssignments.find(x=>x.userId===u.id&&x.moduleId===id);
@@ -576,7 +652,8 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
     (revokeBlocked?'disabled title="'+esc(editReason||'This application role cannot be changed for the selected member.')+'"':'')+'>Revoke</button>':'')+
   '</td></tr>';
  }
- html+='</tbody></table></div></div>';
+ html+='</tbody></table></div></div>'+(applicationAccessOnly?'</section></div>':'');
+ if(applicationAccessOnly)return html;
  html+='</section><section class="user-role-access-section" data-role-access-section="boards" aria-label="Board access settings"'+(section==='boards'?'':' hidden')+'>';
  const boardNeedle=String(boardSearch||'').trim().toLocaleLowerCase().slice(0,120);
  const visibleBoardCount=data.boards.filter(board=>String(board.name||'').toLocaleLowerCase().includes(boardNeedle)).length;
