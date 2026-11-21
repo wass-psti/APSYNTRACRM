@@ -8,6 +8,7 @@ import { MissingDraft } from '../components/booking/MissingDraft';
 import { paymentQr } from '../guest/paymentQr';
 import {
   configuredGuestApiBase, formatPeso, guestSubmissionConfigured, requestReservationQuote,
+  resolveManagedQrImageUrl,
   submitGuestReservation, validatePaymentProof, validatePaymentProofSignature, type ServerQuote,
 } from '../guest/guestReservation';
 import type { PaymentMethod } from '../types/domain';
@@ -49,7 +50,9 @@ export function GuestQrPaymentPage() {
       })
       .then(value => {
         if (!controller.signal.aborted) {
-          setManagedMethods(value.methods);
+          setManagedMethods(value.methods.map(item => ({
+            ...item, imageUrl: resolveManagedQrImageUrl(item.method, item.imageUrl),
+          })));
           setManagedQrLoading(false);
         }
       })

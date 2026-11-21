@@ -99,6 +99,19 @@ const serverReceiptSchema = z.object({
 export type ServerReceipt = z.infer<typeof serverReceiptSchema>;
 
 export const configuredGuestApiBase = (import.meta.env.VITE_RESERVATION_API_BASE_URL ?? '').trim().replace(/\/$/, '');
+/** Build the canonical QR asset endpoint from the configured API base.
+ * The existing Edge metadata may expose an internal HTTP host/path, which is
+ * not a valid browser image URL on the HTTPS GitHub Pages application.
+ * A null image reference still means the method is not configured.
+ */
+export function resolveManagedQrImageUrl(
+  method: PaymentMethod, storedImageUrl: string | null,
+  apiBaseUrl = configuredGuestApiBase,
+): string | null {
+  if (!storedImageUrl || !apiBaseUrl) return null;
+  return `${apiBaseUrl}/v1/payment-methods/${method}/image`;
+}
+
 export const guestSubmissionConfigured =
   /^https:\/\//.test(configuredGuestApiBase) ||
   (import.meta.env.DEV && import.meta.env.VITE_STAGING_ONLY === '1' && configuredGuestApiBase === '/api');

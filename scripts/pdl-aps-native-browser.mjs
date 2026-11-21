@@ -203,6 +203,11 @@ try{
    {method:'bpi',recipient:'Third Recipient',imageUrl:null}];
  const writeCalls=[];
  let persistWrites=true;
+ let qrImageAvailable=false;
+ const tinyQrPng=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9YseMZkAAAAASUVORK5CYII=','base64');
+ await modules.route('**/functions/v1/pdl-guest-api/v1/payment-methods/*/image**',route=>
+   route.fulfill(qrImageAvailable ? {status:200,contentType:'image/png',body:tinyQrPng}
+     : {status:404,json:{error:'qr_unavailable'}}));
  await modules.route('**/functions/v1/pdl-guest-api/v1/admin/**',async route=>{
    const request=route.request();
    const path=new URL(request.url()).pathname;
@@ -366,11 +371,30 @@ try{
  await modules.getByText('New image preview',{exact:true}).first().waitFor();
  await modules.getByText('Preview only — save to update the stored image.').first().waitFor();
  console.log('PASS saved QR broken-image fallback and replacement preview without raw alt text');
+ // The deployed metadata may contain an internal HTTP address. Read from the
+ // configured public HTTPS API path instead, for all three saved methods.
+ for(const item of methods) item.imageUrl=`http://internal.example/pdl-guest-api/v1/payment-methods/${item.method}/image`;
+ qrImageAvailable=true;
+ await modules.reload();
+ for(const method of ['gcash','maya','bpi']){
+   const picture=modules.getByRole('img',{name:`${method==='gcash'?'GCash':method==='maya'?'Maya':'BPI'} payment QR code`});
+   await picture.waitFor({timeout:15000});
+   await modules.waitForFunction(name=>{
+     const image=document.querySelector(`img[alt="${name} payment QR code"]`);
+     return image instanceof HTMLImageElement && image.naturalWidth>0;
+   },method==='gcash'?'GCash':method==='maya'?'Maya':'BPI');
+   const resolved=await picture.getAttribute('src');
+   assert.ok(resolved.startsWith('https://') && new URL(resolved).pathname.endsWith(`/v1/payment-methods/${method}/image`),resolved);
+ }
+ console.log('PASS malformed HTTP QR metadata resolves to three loaded canonical HTTPS image endpoints');
+ qrImageAvailable=false;
+
 
 
  // An HTTP 200 cannot certify a write if a subsequent GET retains old values.
  persistWrites=false;
  await modules.goto(base+'paseo/admin/courts');
+ await modules.waitForFunction(() => document.querySelector('#pdl-open-minute')?.value === '540');
  await modules.locator('#pdl-open-minute').fill('570');
  await modules.getByRole('button',{name:'Save court configuration'}).click();
  await modules.getByText(/Court save returned, but the stored configuration did not match/).waitFor();
