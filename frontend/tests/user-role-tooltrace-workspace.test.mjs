@@ -79,5 +79,7 @@ test('role handler and effective access read path both use the same scoped Tool 
  assert.match(sql,/INSERT INTO public\.tool_traceability_memberships/);
  assert.match(sql,/p_expected_updated_at/);
  assert.match(effective,/traceability\.workspace_id = v_workspace/);
- assert.match(app,/setToolTraceabilityWorkspaceRole/);
+ assert.match(app,/writeNativeApplicationRoleAssignment/);
+ const assignment=readFileSync('frontend/native-application-role-assignment.js','utf8');
+ assert.match(assignment,/manager\.setToolTraceabilityWorkspaceRole/);
 });

@@ -212,6 +212,7 @@ import {mountRoleConfigurationMotion,stopRoleConfigurationMotion} from './role-c
 import {mountUserRoleMotion,stopUserRoleMotion} from './user-role-visuals.js';
 import {settingsIcon,mountSettingsMotion,stopSettingsMotion} from './settings-visuals.js';
 import {crmPlatformRoleChangeNeeded,FUELTRANS_WORKSPACE_ROLES,SCOPED_SIX_MODULE_IDS,UserRoleManagementClient,renderUserRoleManagement,selectDefaultUserRoleTarget,defaultModuleRoleForAssignment,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
+import {writeNativeApplicationRoleAssignment,nativeApplicationRoleAssignmentPersisted} from './native-application-role-assignment.js';
 import {parseSignedCrmRole,signedCrmRoleLabel,signedCrmIdentityLabel,currentSignedCrmRole} from './crm-role-context.js';
 import {workspaceRelationFromCatalog,workspaceRelationLabel} from './workspace-relation-context.js';
 
@@ -2679,49 +2680,26 @@ async function applyUserRoleChange({userId,scope,resourceId,role,enabled,expecte
  const identity=await auth.getVerifiedUser(),ctx=await db.context();
  if(identity?.id!==ctx.user_id||ctx.user_id!==state.context?.user_id||
     ctx.workspace_id!==state.context?.workspace_id)throw new ApiError('Signed identity or workspace changed.',403);
- if(scope==='module'&&resourceId==='fueltrans'){
-  if(state.userRoleData?.fueltransWorkspaceAvailable!==true)
-   throw new ApiError('FuelTrans workspace role contract is unavailable.',409);
-  await userRoleManager.setFueltransWorkspaceRole({
-   workspaceId:ctx.workspace_id,userId,role,enabled,expectedUpdatedAt});
- }else if(scope==='module'&&resourceId==='charter-navigator'){
-  if(state.userRoleData?.charterWorkspaceAvailable!==true)
-   throw new ApiError('Charter workspace role contract is unavailable.',409);
-  const previous=state.userRoleData.moduleAssignments.find(a=>
-    a.userId===userId&&a.moduleId===resourceId);
-  await userRoleManager.setCharterWorkspaceRole({
-   workspaceId:ctx.workspace_id,userId,role,enabled,
-   expectedUpdatedAt:previous?.scopedSource===true?expectedUpdatedAt:null});
- }else if(scope==='module'&&SCOPED_SIX_MODULE_IDS.includes(resourceId)&&
-   state.userRoleData?.scopedSixAvailable===true){
-  const stored=state.userRoleData.moduleAssignments.find(a=>
-    a.userId===userId&&a.moduleId===resourceId);
-  await userRoleManager.setScopedSixRole({
+ if(scope==='module'){
+  await writeNativeApplicationRoleAssignment(userRoleManager,{
    workspaceId:ctx.workspace_id,userId,moduleId:resourceId,role,enabled,
-   expectedUpdatedAt:stored?.scopedSource===true?expectedUpdatedAt:null});
- }else if(scope==='module'&&resourceId==='fund-released-tracker'){
-  if(state.userRoleData?.frtWorkspaceAvailable!==true)
-   throw new ApiError('Fund Tracker workspace role contract is unavailable.',409);
-  await userRoleManager.setFrtWorkspaceRole({
-   workspaceId:ctx.workspace_id,userId,role,enabled,
-   expectedUpdatedAt:state.userRoleData?.moduleAssignments.some(a=>
-     a.userId===userId&&a.moduleId===resourceId&&a.scopedSource===true)?
-     expectedUpdatedAt:null});
- }else if(scope==='module'&&resourceId==='tool-traceability'){
-  if(state.userRoleData?.toolTraceabilityWorkspaceAvailable!==true)
-   throw new ApiError('Tool Traceability workspace role contract is unavailable.',409);
-  await userRoleManager.setToolTraceabilityWorkspaceRole({
-   workspaceId:ctx.workspace_id,userId,role,enabled,expectedUpdatedAt});
+   expectedUpdatedAt,snapshot:state.userRoleData
+  });
  }else{
-  await userRoleManager.mutate({workspaceId:ctx.workspace_id,userId,scope,resourceId,role,enabled,expectedUpdatedAt});
+  await userRoleManager.mutate({workspaceId:ctx.workspace_id,userId,scope,
+   resourceId,role,enabled,expectedUpdatedAt});
  }
  if(scope==='board')await loadBoardAccessConfiguration();
  else await loadUserRoleManagement();
- const actual=scope==='module'?
-   state.userRoleData?.moduleAssignments.find(r=>r.userId===userId&&r.moduleId===resourceId):
-   state.userRoleData?.boardAssignments.find(r=>r.userId===userId&&r.boardId===resourceId);
- if((enabled&&(!actual||actual.role!==role||(scope==='module'&&!actual.enabled)))||
-    (!enabled&&actual&&(scope==='board'||actual.enabled)))
+ const persisted=scope==='module'?
+  nativeApplicationRoleAssignmentPersisted(state.userRoleData,{userId,
+   moduleId:resourceId,role,enabled}):
+  (()=>{
+   const actual=state.userRoleData?.boardAssignments.find(r=>
+    r.userId===userId&&r.boardId===resourceId);
+   return enabled?actual?.role===role:!actual;
+  })();
+ if(!persisted)
    throw new ApiError('The role write was acknowledged, but the refreshed workspace assignment could not be verified. Refresh before trying again.',409);
  toast('Authoritative user role updated and audited.');
  render();
@@ -9862,29 +9840,11 @@ async function action(name,button){
       throw new ApiError('Signed identity or active workspace changed before application writes.',403);
      for(const op of plan.operations){
       try{
-       if(op.resourceId==='fueltrans'){
-        await userRoleManager.setFueltransWorkspaceRole({workspaceId:ctx.workspace_id,...op});
-       }else if(op.resourceId==='charter-navigator'){
-        await userRoleManager.setCharterWorkspaceRole({workspaceId:ctx.workspace_id,
-         userId:op.userId,role:op.role,enabled:op.enabled,
-         expectedUpdatedAt:current.moduleAssignments.some(a=>a.userId===op.userId&&
-          a.moduleId===op.resourceId&&a.scopedSource===true)?op.expectedUpdatedAt:null});
-       }else if(SCOPED_SIX_MODULE_IDS.includes(op.resourceId)&&current.scopedSixAvailable===true){
-        await userRoleManager.setScopedSixRole({workspaceId:ctx.workspace_id,userId:op.userId,
-         moduleId:op.resourceId,role:op.role,enabled:op.enabled,
-         expectedUpdatedAt:current.moduleAssignments.some(a=>a.userId===op.userId&&
-          a.moduleId===op.resourceId&&a.scopedSource===true)?op.expectedUpdatedAt:null});
-       }else if(op.resourceId==='fund-released-tracker'){
-        await userRoleManager.setFrtWorkspaceRole({workspaceId:ctx.workspace_id,
-         userId:op.userId,role:op.role,enabled:op.enabled,
-         expectedUpdatedAt:current.moduleAssignments.some(a=>a.userId===op.userId&&
-          a.moduleId===op.resourceId&&a.scopedSource===true)?op.expectedUpdatedAt:null});
-       }else if(op.resourceId==='tool-traceability'){
-        await userRoleManager.setToolTraceabilityWorkspaceRole({workspaceId:ctx.workspace_id,
-         userId:op.userId,role:op.role,enabled:op.enabled,expectedUpdatedAt:op.expectedUpdatedAt});
-       }else{
-        await userRoleManager.mutate({workspaceId:ctx.workspace_id,...op});
-       }
+       await writeNativeApplicationRoleAssignment(userRoleManager,{
+        workspaceId:ctx.workspace_id,userId:op.userId,moduleId:op.resourceId,
+        role:op.role,enabled:op.enabled,expectedUpdatedAt:op.expectedUpdatedAt,
+        snapshot:current
+       });
        writeResults.push({op,error:''});
       }catch(error){
        writeResults.push({op,error:errorMessage(error)});
@@ -9903,10 +9863,9 @@ async function action(name,button){
        status:'Skipped',detail:item.reason}))
      ];
      for(const {op,error} of writeResults){
-      const actual=readbackAvailable?state.userRoleData?.moduleAssignments.find(item=>
-       item.userId===op.userId&&item.moduleId===op.resourceId):null;
-      const persisted=readbackAvailable&&(op.enabled?
-       actual?.enabled===true&&actual.role===op.role:!actual||actual.enabled!==true);
+      const persisted=readbackAvailable&&nativeApplicationRoleAssignmentPersisted(
+       state.userRoleData,{userId:op.userId,moduleId:op.resourceId,
+        role:op.role,enabled:op.enabled});
       results.push({userId:op.userId,moduleId:op.resourceId,
        email:state.userRoleData?.users.find(user=>user.id===op.userId)?.email||
         snapshot.users.find(user=>user.id===op.userId)?.email||'',
