@@ -1,0 +1,71 @@
+/* FE-IMM-04: transform/opacity-based selection visuals, never changes mock status. */
+.booking-section .booking-panel {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcf8 100%);
+  border-color: #d4e0d2;
+  box-shadow: var(--ds-shadow-rest);
+}
+.booking-section .booking-heading {
+  color: #143b32;
+  scroll-margin-top: 100px;
+}
+.immersive-date-grid, .immersive-slot-grid, .duration-grid { isolation: isolate; }
+.immersive-date-button, .immersive-slot-button, .immersive-duration-button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-width: 0;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.immersive-date-button, .immersive-duration-button { min-height: 50px; }
+.immersive-date-text, .immersive-duration-text,
+.immersive-slot-button strong, .immersive-slot-button small {
+  position: relative; z-index: 1;
+}
+.immersive-date-selection, .immersive-duration-selection, .immersive-slot-selection {
+  position: absolute;
+  inset: 2px;
+  z-index: 0;
+  border-radius: 6px;
+  background: #d5edab;
+  box-shadow: inset 0 0 0 1px #5e8b62;
+  pointer-events: none;
+}
+.immersive-date-button[aria-pressed=true],
+.immersive-duration-button[aria-pressed=true],
+.immersive-slot-button[aria-pressed=true] {
+  color: #143a30;
+  background: #eff5df;
+}
+.immersive-slot-button[data-slot-state=available]:not([aria-pressed=true]) {
+  background: #f7faf5;
+  border-color: #b5cfb7;
+}
+.immersive-slot-button[data-slot-state=blocked]:disabled {
+  background: #efe9dc;
+  border-color: #c7baa1;
+  color: #736047;
+}
+.immersive-slot-button[data-slot-state=unavailable]:disabled {
+  background: #f2f0ef;
+  border-color: #d8d4d2;
+  color: #77716d;
+}
+.immersive-slot-button[aria-pressed=true] .immersive-slot-selection {
+  background: #d0eca1;
+}
+.immersive-booking-summary {
+  border: 1px solid #d4e5d0;
+  box-shadow: 0 8px 28px rgb(21 70 39 / 5%);
+}
+@media (max-width: 600px) {
+  .immersive-date-grid, .immersive-slot-grid { gap: 9px; }
+  .immersive-date-button, .immersive-slot-button { padding: 12px 5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .immersive-date-button, .immersive-slot-button, .immersive-duration-button,
+  .immersive-date-selection, .immersive-duration-selection, .immersive-slot-selection {
+    animation: none !important;
+    transition: none !important;
+  }
+}

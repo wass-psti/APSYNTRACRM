@@ -30,7 +30,8 @@
     "pretest": "npm run build:frt-pdf-engine",
     "test:conn02d:edge": "node scripts/cp-crm-conn02d-edge-trace-acceptance.mjs",
     "test:conn02d:edge:unit": "node --test frontend/tests/cp-crm-conn02d-edge-trace.test.mjs",
-    "format:share-access": "prettier --write frontend/board/collaboration/share.js frontend/board/collaboration/people.js frontend/workspace-board-groups.js frontend/workspace-invitation-client.js frontend/workspace-invitation-management.js frontend/resource-email-invitations.js frontend/workspace-ui.js frontend/board-share-clean.css frontend/workspace-board-groups.css frontend/workspace-ui.css supabase/functions/_shared/ws02d-trusted.ts && node scripts/build-priority5-styles.mjs"
+    "format:share-access": "prettier --write frontend/board/collaboration/share.js frontend/board/collaboration/people.js frontend/workspace-board-groups.js frontend/workspace-invitation-client.js frontend/workspace-invitation-management.js frontend/resource-email-invitations.js frontend/workspace-ui.js frontend/board-share-clean.css frontend/workspace-board-groups.css frontend/workspace-ui.css supabase/functions/_shared/ws02d-trusted.ts && node scripts/build-priority5-styles.mjs",
+    "build:pdl": "node scripts/build-pdl-native.mjs"
   },
   "type": "module",
   "name": "apsyntra-crm",

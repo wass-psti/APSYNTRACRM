@@ -1,0 +1,25 @@
+.admin-section { padding-top: 60px; }
+.admin-navigation { display: flex; flex-wrap: wrap; gap: 12px; margin: 25px 0 30px; }
+.admin-navigation a { padding: 11px 15px; border: 1px solid #b9cbbb; border-radius: 9px; font-size: 13px; font-weight: 750; }
+.admin-navigation a[aria-current="page"] { background: #d5edb3; border-color: #276147; }
+.admin-metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin: 20px 0 30px; }
+.admin-metrics div { display: grid; gap: 8px; padding: 18px; background: #ecf3e6; border-radius: 10px; min-width: 0; }
+.admin-metrics strong { font-size: clamp(17px,2vw,31px); overflow-wrap: anywhere; }
+.admin-metrics span { font-size: 12px; color: #4b6457; }
+.admin-court-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+.admin-court-card { background: #fff; border: 1px solid #dbe4dc; border-radius: 12px; padding: 22px; min-width: 0; }
+.admin-court-card h2 { font-size: 25px !important; margin: 0 0 25px !important; }
+.admin-court-card label, .admin-filter-row label, .admin-maintenance-form label { display: grid; gap: 8px; font-size: 13px; font-weight: 750; }
+.admin-court-card input:not([type="checkbox"]), .admin-court-card select, .admin-filter-row select, .admin-filter-row input, .admin-maintenance-form select { font: inherit; background: white; color: #183e33; width: 100%; padding: 11px; border: 1px solid #a6b9a7; border-radius: 7px; min-width: 0; }
+.admin-court-card .admin-toggle { display: flex; align-items: center; margin: 22px 0; }
+.admin-toggle input { accent-color: #306347; width: 18px; height: 18px; }
+.admin-time-row, .admin-filter-row, .admin-maintenance-form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; margin: 20px 0; }
+.admin-maintenance-form { grid-template-columns: 1fr 1fr auto; align-items: end; }
+.admin-block-list { list-style: none; padding: 0; }
+.admin-block-list li { display: flex; justify-content: space-between; align-items: center; gap: 15px; padding: 12px 0; border-bottom: 1px solid #dae6dc; }
+.admin-message { padding: 13px; border-radius: 9px; background: #eaf4de; font-weight: 650; }
+@media(max-width: 950px) { .admin-court-grid { grid-template-columns: 1fr; } .admin-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width: 600px) { .admin-metrics, .admin-filter-row, .admin-maintenance-form { grid-template-columns: 1fr; } .admin-block-list li { align-items: stretch; flex-direction: column; } }
+
+.admin-weekday-label { display: grid; gap: 8px; max-width: 320px; margin: 15px 0 22px; font-size: 13px; font-weight: 750; }
+.admin-weekday-label select { padding: 11px; border: 1px solid #a6b9a7; border-radius: 7px; font: inherit; background: white; }

@@ -22,6 +22,8 @@ import {captureAuthReturn,
 import {mountAuthExperience} from './auth/experience.js';
 import {sidebarIcon,animateSidebarSelection,stopSidebarSelection} from './sidebar-visuals.js';
 import {sidebarActiveRoute} from './sidebar-active-route.js';
+import {readPaseoManagement} from './apps/Paseo/native-admin.js';
+import {PASEO_APPLICATION} from './apps/Paseo/manifest.js';
 import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-visuals.js';
 import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board/presentation/catalog-visuals.js';
 import {BOARD_ITEM_PAGE_SIZE,DomainApi,validUuid} from './data.js';
@@ -656,6 +658,53 @@ function currentSidebarNavigation(){
   recentBoardIds
  });
 }
+async function loadPaseoManagement(){
+ const actor=auth.userId;
+ if(!actor||!state.context||state.view!=='paseo')return;
+ state.paseoManagement={status:'LOADING'};
+ render();
+ try{
+  const token=await auth.token();
+  const result=await readPaseoManagement(token);
+  if(auth.userId===actor&&state.context?.user_id===actor&&state.view==='paseo'){
+   state.paseoManagement=result;
+   render();
+  }
+ }catch(error){
+  if(auth.userId===actor&&state.context?.user_id===actor&&state.view==='paseo'){
+   state.paseoManagement={status:'UNAVAILABLE',message:errorMessage(error)};
+   render();
+  }
+ }
+}
+
+function renderPaseoNative(){
+ const current=state.paseoManagement||{status:'LOADING'};
+ const summary=current.status==='VERIFIED'?`<section class="card" aria-label="Signed booking administration">
+  <h2>Verified booking administration</h2>
+  <p>Enabled courts: ${current.enabledCourtCount} / ${current.courtCount}</p>
+  <p>Reservations returned: ${current.reservations.length} (latest results)</p>
+  ${current.reservations.length?`<ul>${current.reservations.map(record=>
+    `<li>${e(record.id)} — ${e(record.name)} — ${e(record.bookingStatus)} / ${e(record.paymentStatus)}</li>`
+   ).join('')}</ul>`:'<p>No reservation records returned.</p>'}
+ </section>`:current.status==='DENIED'?'<p role="status">Your current CRM account is not assigned as a Paseo booking administrator. Public booking remains accessible.</p>':
+ current.status==='UNAVAILABLE'?'<p role="alert">The Paseo management service is unavailable. '+e(current.message||'')+'</p>':
+ '<p role="status">Checking your current signed CRM session against the Paseo booking administrator directory…</p>';
+ return `<section class="section" aria-labelledby="pdl-native-title">
+   <div class="page-header"><div><p class="muted">APSYNTRA CRM / Native applications</p>
+   <h1 id="pdl-native-title">Paseo de Lomboy</h1>
+   <p>Public court availability and booking run separately from private CRM workspaces.</p></div></div>
+   <div class="card"><h2>Pickleball booking</h2>
+   <p>Public visitors do not need APSYNTRA CRM accounts.</p>
+   <a class="primary" href="${PASEO_APPLICATION.publicPath}">Open public booking</a></div>
+   <div class="card"><h2>Booking administration</h2>
+   <p>The booking API independently verifies your signed CRM account and existing Paseo administrator assignment.</p>
+   <button type="button" data-action="pdl-refresh">Refresh booking records</button>
+   <a href="${PASEO_APPLICATION.adminPath}">Open full booking administration</a></div>
+   ${summary}
+ </section>`;
+}
+
 function sidebar(){
  const engineeringUi=showEngineeringDiagnostics(location.search,state.roleVerified===true);
  const recent=state.boards.filter(board=>!isStandaloneApplicationBoard(board));
@@ -677,6 +726,7 @@ function sidebar(){
   sidebarNav('#/fund-tracker','Fund Tracker','finance',active('fund-tracker'))+
   sidebarNav(FUELTRACK_V3_APPLICATION_ROUTE,'FuelTrack+','fueltrack',active('fueltrack'))+
   sidebarNav(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',active('tradelink'))+
+  sidebarNav('#/paseo','Paseo de Lomboy','boards',active('paseo'))+
   (state.boards.some(b=>moduleByBoardName(b.name)?.key==='toolbox')?sidebarNav(TALKBOX_APPLICATION_ROUTE,'TalkBox','boards',active('talkbox')):'')+
   boardApplications+
   (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',active('foundation')):'')+
@@ -1803,6 +1853,7 @@ function render(){
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='fm1'){shell('<div id="fm1-application-root"></div>');fm1Module?.mountFm1Application(root.querySelector('#fm1-application-root'),{userId:state.context?.user_id,workspaceId:state.context?.workspace_id,api:db});}
  else if(state.view==='time-tracker')shell(renderTimeTrackerRouteUnavailable());
+ else if(state.view==='paseo')shell(renderPaseoNative());
  else if(state.view==='tradelink')shell(renderTradeLinkRouteUnavailable(state.error));
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
@@ -4877,6 +4928,9 @@ async function onRoute(){
   state.view='invitation';render();return;
  }
  if(pendingInvitation){pendingInvitation=null;invitationAcceptanceStatus='';}
+ if(parts[0]==='paseo'){
+  state.view='paseo';await loadPaseoManagement();return;
+ }
  if(parts[0]==='fm1')fm1Module=await import('./fm1/index.js');
  if(parts[0]==='fm1'&&parts[1]==='ticket'&&parts[2]){
   let recordId='';try{recordId=decodeURIComponent(parts[2]);}catch{}
@@ -7026,6 +7080,7 @@ async function openBoardStructure(){
 }
 
 async function action(name,button){
+ if(name==='pdl-refresh'){await loadPaseoManagement();return;}
  switch(name){
  case 'profile-name-edit':{
   if(state.view!=='settings'||!state.context||!auth.isSignedIn)return;
@@ -7159,7 +7214,7 @@ async function action(name,button){
       state.ws02dB3HandoffPending=true;
       await auth.signOut({scope:'local'});
     }
-    state.row01Busy=false;state.row01Result=null;state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;if(!isB3LocalRevoke&&!isTl03LocalRevoke&&!isB3RlsHandoff)await auth.signOut();timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtExpandedRequestIds=[];state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};boardCacheChannel.stop();db.invalidateBoardCache();state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;state.tl03ReadRunId++;state.tl03ReadBusy=false;state.tl03ReadResult=null;state.context=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.ws02dB3RevokeArmed=false;state.ws02dB3RevokedReport=revoked;state.b2QaRunId++;state.b2QaBusy=false;state.b2QaReport=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';state.tl03RevokeArmed=false;state.tl03RevokedReport=isTl03LocalRevoke?state.tl03RevokedReport:null;renderLogin();toast(isB3RlsHandoff?'Local sign-out complete. Sign in as another existing user in another workspace; then click B3 Step 2 without refreshing.':
+    state.paseoManagement=null;    state.row01Busy=false;state.row01Result=null;state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;if(!isB3LocalRevoke&&!isTl03LocalRevoke&&!isB3RlsHandoff)await auth.signOut();timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtExpandedRequestIds=[];state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};boardCacheChannel.stop();db.invalidateBoardCache();state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;state.tl03ReadRunId++;state.tl03ReadBusy=false;state.tl03ReadResult=null;state.context=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.ws02dB3RevokeArmed=false;state.ws02dB3RevokedReport=revoked;state.b2QaRunId++;state.b2QaBusy=false;state.b2QaReport=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';state.tl03RevokeArmed=false;state.tl03RevokedReport=isTl03LocalRevoke?state.tl03RevokedReport:null;renderLogin();toast(isB3RlsHandoff?'Local sign-out complete. Sign in as another existing user in another workspace; then click B3 Step 2 without refreshing.':
      isTl03LocalRevoke?'Signed out of this session only. TradeLink revocation: '+(state.tl03RevokedReport?.status||'BLOCKED')+'.':
      isB3LocalRevoke?'Signed out of this session only. B3 revocation: '+(revoked?.status||'BLOCKED')+'.':'Signed out successfully.');break;}
  case 'ws01-open':{
@@ -12649,7 +12704,7 @@ window.addEventListener('keydown',event=>{
   if(state.groupEditId&&!state.groupEditBusy){state.groupEditId=null;render();}
   if(state.ttOtModalOpen){state.ttOtModalOpen=false;render();}
 }});
-auth.onExpired=()=>{boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;globalSearchController?.close({restoreFocus:false});pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;pendingInvitation=null;invitationAcceptanceStatus='';startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
+auth.onExpired=()=>{boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();state.paseoManagement=null;timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;globalSearchController?.close({restoreFocus:false});pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;pendingInvitation=null;invitationAcceptanceStatus='';startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
 async function boot(){
  if(startupBusy)return;
  startupBusy=true;

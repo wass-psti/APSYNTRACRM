@@ -1,0 +1,45 @@
+/**
+ * FE-IMM-01 — Premium shared design tokens.
+ * Existing class names and older tokens are preserved to avoid functional churn.
+ */
+:root {
+  --ds-forest-950: #102c2a;
+  --ds-forest-800: #18473d;
+  --ds-emerald-700: #1b5748;
+  --ds-lime-300: #d7ef69;
+  --ds-ivory-50: #f8f7f1;
+  --ds-ink-900: #192c28;
+  --ds-muted-600: #65746c;
+  --ds-border-soft: #dce6dc;
+  --ds-surface: #ffffff;
+  --ds-shadow-rest: 0 8px 24px rgb(18 45 37 / 5%);
+  --ds-shadow-raised: 0 18px 36px rgb(18 45 37 / 10%);
+  --ds-focus-ring: #527d03;
+  --ds-radius-control: 8px;
+  --ds-radius-card: 13px;
+  --ds-radius-section: 20px;
+  --ds-touch-target: 44px;
+  --ds-ease-standard: cubic-bezier(.2,.7,.2,1);
+  --ds-duration-instant: 100ms;
+  --ds-duration-fast: 160ms;
+  --ds-duration-standard: 260ms;
+  --ds-duration-gentle: 380ms;
+
+  --forest: var(--ds-forest-950);
+  --evergreen: var(--ds-forest-800);
+  --canvas: var(--ds-ivory-50);
+  --lime: var(--ds-lime-300);
+  --ink: var(--ds-ink-900);
+  --muted: var(--ds-muted-600);
+}
+:where(.court-card, .booking-panel, .fe08-card, .admin-court-card, .reservation-card) {
+  border-color: var(--ds-border-soft);
+  box-shadow: var(--ds-shadow-rest);
+}
+:where(.court-card, .booking-panel, .fe08-card, .admin-court-card, .reservation-card) {
+  min-width: 0;
+}
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 3px solid var(--ds-focus-ring);
+  outline-offset: 3px;
+}

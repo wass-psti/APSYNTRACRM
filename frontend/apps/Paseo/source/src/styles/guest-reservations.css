@@ -1,0 +1,61 @@
+.guest-qr-page { max-width: 1120px; }
+.guest-qr-panel { display: grid; gap: 20px; }
+.guest-qr-panel h2 { margin: 10px 0 0; font-size: clamp(20px,2.5vw,28px); }
+.guest-method-selector { border: none; padding: 0; margin: 0; }
+.guest-method-selector legend { font-weight: 700; margin-bottom: 10px; }
+.guest-method-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+.guest-method { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 12px; border: 2px solid #c7d9c7; background: #f9fcf8; border-radius: 12px; cursor: pointer; font-weight: 800; }
+.guest-method.is-selected { background: #e5f3d8; border-color: #3e765b; }
+.guest-method:focus-within { outline: 3px solid var(--ds-focus-ring); outline-offset: 2px; }
+.guest-qr-layout { display: grid; grid-template-columns: minmax(0,0.85fr) minmax(0,1fr); gap: clamp(20px,3vw,40px); align-items: center; }
+.guest-qr-image-wrap { border: 1px solid #d8e3d8; padding: 8px; border-radius: 16px; max-width: 360px; background: #fff; }
+.guest-qr-image-wrap img { display: block; width: 100%; height: auto; border-radius: 10px; }
+.guest-qr-instructions h3 { font-size: 30px; margin-bottom: 15px; }
+.guest-qr-instructions p { margin-bottom: 14px; line-height: 1.65; }
+.guest-qr-warning, .guest-backend-blocker { padding: 15px; border-left: 4px solid #b27828; border-radius: 6px; background: #fff5e6; color: #634519; }
+.guest-proof-form { display: grid; gap: 12px; background: #f5faf2; border: 1px solid #d4e4d0; padding: clamp(16px,3vw,24px); border-radius: 14px; min-width: 0; }
+.guest-proof-form label { font-weight: 700; font-size: 14px; }
+.guest-proof-form input { width: 100%; max-width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #aac4ad; background: #fff; }
+.guest-proof-form button { justify-self: start; }
+@media(max-width:680px) {
+  .guest-qr-layout { grid-template-columns: 1fr; }
+  .guest-qr-image-wrap { width: min(100%,340px); margin-inline: auto; }
+  .guest-method { font-size: 12px; gap: 6px; }
+}
+@media print {
+  .site-header,.site-footer,.booking-actions,.guest-proof-form,.guest-method-selector { display: none !important; }
+}
+.guest-receipt-content { max-width: 780px; }
+.guest-receipt-content h2 { margin: 8px 0 20px; }
+.guest-receipt-content dl { display: grid; gap: 9px; }
+.guest-receipt-content dl > div { display: grid; grid-template-columns: minmax(100px, 32%) 1fr; border-bottom: 1px solid #d8e4d9; padding: 9px 0; gap: 15px; overflow-wrap: anywhere; }
+.guest-receipt-content dt { font-weight: 800; color: #395c48; }
+.guest-receipt-content dd { margin: 0; }
+@media(max-width:540px){ .guest-receipt-content dl > div { grid-template-columns: 1fr; gap: 2px; } }
+@media print {
+  .guest-receipt-page { max-width: 100%; padding: 0; }
+  .guest-receipt-content .booking-actions,.guest-receipt-page > p:last-child { display: none !important; }
+  .guest-receipt-content { border: none; box-shadow: none; }
+}
+
+.guest-receipt-lookup { display:grid; gap:12px; margin-top:24px; }
+.guest-receipt-lookup label { font-weight:700; }
+.guest-receipt-lookup input { width:100%; border:1px solid #a7c1a8; border-radius:9px; padding:12px; max-width:520px; }
+.guest-receipt-lookup button { justify-self:start; }
+.staging-admin-toolbar { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+.staging-admin-toolbar input { flex:1 1 260px; min-width:0; padding:11px; border:1px solid #aac4ad; border-radius:9px; }
+.staging-reservations-list { display:grid; gap:16px; }
+.staging-reservation-card { overflow-wrap:anywhere; }
+.staging-reservation-card h2 { font-size:clamp(16px,2vw,22px); }
+.staging-proof-panel img { display:block; max-width:min(100%,480px); height:auto; }
+.staging-proof-panel iframe { display:block; width:min(100%,620px); height:540px; border:1px solid #d6dfd6; }
+
+.managed-qr-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.managed-qr-method { display:grid; align-content:start; gap:10px; min-width:0; }
+.managed-qr-method h3 { margin:0; }
+.managed-qr-method label { font-weight:700; }
+.managed-qr-method input { min-width:0; width:100%; border:1px solid #a7c1a8; border-radius:9px; padding:10px; }
+.managed-qr-method button { width:100%; }
+.managed-qr-preview img { display:block; width:min(100%,240px); max-height:260px; object-fit:contain; border-radius:10px; }
+.managed-qr-preview p { font-weight:650; }
+@media(max-width:950px){ .managed-qr-grid { grid-template-columns:1fr; } }

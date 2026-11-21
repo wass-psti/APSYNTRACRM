@@ -1,0 +1,291 @@
+/* PDL-APP-UI-01: shared visual consistency and homepage finishing.
+   Uiverse-inspired surface, press, input and focus patterns; no logic changes. */
+:root {
+  --pdl-ui-control-radius: 11px;
+  --pdl-ui-surface-radius: 18px;
+  --pdl-ui-control-height: 46px;
+  --pdl-ui-border: var(--ds-border-soft);
+  --pdl-ui-ink: var(--ds-forest-800);
+  --pdl-ui-muted: #526b5d;
+  --pdl-ui-shadow: 0 12px 30px rgb(20 57 38 / 6%);
+  --pdl-ui-ease: var(--ds-ease-standard);
+}
+.site-shell { overflow-wrap: break-word; }
+.site-shell :where(button, a, input, select, textarea) { -webkit-tap-highlight-color: transparent; }
+.site-shell :where(button, input, select, textarea) { max-width: 100%; }
+.site-shell :where(button, select, input[type="checkbox"], input[type="radio"]) { accent-color: #2f6849; }
+.site-shell :where(.button, .choice-button):not(:disabled) { touch-action: manipulation; }
+.site-shell :where(.button, .choice-button):disabled { box-shadow: none; transform: none; }
+.site-shell :where(a, button, input, select, textarea):focus-visible {
+  outline: 3px solid var(--ds-focus-ring);
+  outline-offset: 3px;
+}
+.site-shell :where(.booking-panel, .notice, .admin-court-card, .fe08-card) {
+  min-width: 0;
+}
+.site-shell :where(.text-link) { text-underline-offset: 4px; text-decoration-thickness: 1px; }
+.site-shell :where(.text-link:hover) { text-decoration-thickness: 2px; }
+.site-shell :where(.form-error, [role="alert"]) { overflow-wrap: anywhere; }
+.site-shell :where(input:not([type=checkbox]):not([type=radio]), select, textarea):not(:disabled) {
+  transition: border-color var(--ds-duration-fast) ease, box-shadow var(--ds-duration-fast) ease;
+}
+.site-shell :where(input:not([type=checkbox]):not([type=radio]), select, textarea):not(:disabled):focus-visible {
+  border-color: #538764;
+}
+.site-shell :where(input:not([type=checkbox]):not([type=radio]), select, textarea):disabled {
+  cursor: not-allowed; background-color: #f1f3ee; color: #617065; opacity: 1;
+}
+.site-shell .skip-link {
+  border: 2px solid #426b4d;
+  border-radius: var(--pdl-ui-control-radius);
+  box-shadow: var(--ds-shadow-raised);
+  color: #1d4837;
+  font-weight: 800;
+}
+/* Shared shell is refined without changing the route links or site navigation behavior. */
+.site-shell .site-header {
+  position: relative;
+  z-index: 10;
+  border-bottom-color: #dfe8dd;
+  box-shadow: 0 5px 24px rgb(23 49 33 / 3%);
+}
+.site-shell .header-cta {
+  min-height: 46px;
+  border-radius: var(--pdl-ui-control-radius);
+  transition: transform var(--ds-duration-fast) var(--pdl-ui-ease),
+    background-color var(--ds-duration-fast) ease, box-shadow var(--ds-duration-fast) ease;
+}
+.site-shell .header-cta:hover {
+  box-shadow: 0 7px 15px rgb(15 49 36 / 14%);
+}
+.site-shell .immersive-nav-link {
+  text-underline-offset: 5px;
+  transition: color var(--ds-duration-fast) ease;
+}
+.site-shell .site-footer { border-top: 1px solid rgb(231 249 219 / 10%); }
+.site-shell .footer-inner { row-gap: 18px; }
+.site-shell .footer-admin-link {
+  display: inline-flex; align-items: center; min-height: 44px;
+  padding: 8px 11px; border: 1px solid rgb(221 240 216 / 25%);
+  border-radius: 10px; transition: background-color var(--ds-duration-fast) ease;
+}
+.site-shell .footer-admin-link:hover { background: rgb(236 248 225 / 11%); }
+/* Homepage hero — refine the existing React Motion entry without extra animations. */
+.site-shell:has(.immersive-hero) .immersive-hero .hero-layout {
+  gap: clamp(28px, 5.5vw, 82px);
+}
+.site-shell:has(.immersive-hero) .immersive-hero h1 {
+  font-size: clamp(53px, 6.35vw, 90px);
+  line-height: 1;
+  letter-spacing: -.075em;
+  margin-block: 28px 22px;
+}
+.site-shell:has(.immersive-hero) .immersive-hero .hero-copy > p {
+  font-size: clamp(14px, 1.3vw, 16px);
+  line-height: 1.9;
+  max-width: 470px;
+  color: #c9dbd0;
+}
+.site-shell:has(.immersive-hero) .hero-actions {
+  gap: 12px;
+  margin-top: 32px;
+}
+.site-shell:has(.immersive-hero) .hero-actions .button {
+  min-height: 52px;
+  padding: 13px 22px;
+  border-radius: var(--pdl-ui-control-radius);
+  font-weight: 850;
+  transition: transform var(--ds-duration-fast) var(--pdl-ui-ease),
+    box-shadow var(--ds-duration-fast) ease, background-color var(--ds-duration-fast) ease;
+}
+.site-shell:has(.immersive-hero) .hero-actions .button-primary {
+  box-shadow: 0 5px 0 #b7d34b;
+}
+.site-shell:has(.immersive-hero) .hero-actions .button-primary:hover {
+  background: #e5f58c;
+  box-shadow: 0 7px 0 #b7d34b, 0 11px 20px rgb(2 24 17 / 22%);
+}
+.site-shell:has(.immersive-hero) .hero-actions .button-secondary {
+  border: 1px solid #779b8c;
+  background: rgb(255 255 255 / 6%);
+}
+.site-shell:has(.immersive-hero) .hero-actions .button-secondary:hover {
+  border-color: #d7ef69;
+  background: rgb(215 239 105 / 11%);
+}
+.site-shell:has(.immersive-hero) .hero-stat {
+  border-color: rgb(235 248 224 / 22%);
+  color: #bfd3c7;
+}
+.site-shell:has(.immersive-hero) .intro-band {
+  border-bottom: 1px solid rgb(23 68 47 / 13%);
+}
+.site-shell:has(.immersive-hero) .intro-inner {
+  min-height: 60px;
+  font-size: 10px;
+  letter-spacing: .11em;
+}
+/* Homepage discovery — keep the interactive court selector as the only court explorer. */
+.site-shell:has(.immersive-hero) .courts-section .interactive-court-explorer { margin-bottom: 0; }
+.site-shell:has(.immersive-hero) .courts-section .section-heading h2 {
+  color: var(--pdl-ui-ink);
+  letter-spacing: -.06em;
+  line-height: 1.05;
+}
+.site-shell:has(.immersive-hero) .courts-section .section-heading > p {
+  max-width: 340px;
+  color: var(--pdl-ui-muted);
+}
+/* The legacy selector targeted divs although BookingSteps renders semantic li elements. */
+.site-shell:has(.immersive-hero) .steps-section {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(120deg, #194a3e, #10312d);
+  border-top: 1px solid #2a5f4d;
+}
+.site-shell:has(.immersive-hero) .steps-inner {
+  grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
+  gap: clamp(30px, 7vw, 100px);
+  align-items: center;
+}
+.site-shell:has(.immersive-hero) .steps-section h2 {
+  line-height: 1.07;
+  letter-spacing: -.065em;
+  max-width: 560px;
+}
+.site-shell:has(.immersive-hero) .steps-list {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  counter-reset: steps;
+}
+.site-shell:has(.immersive-hero) .steps-list > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 19px 20px;
+  min-width: 0;
+  border: 1px solid rgb(231 246 219 / 19%);
+  border-radius: 15px;
+  background: linear-gradient(125deg, rgb(255 255 255 / 9%), rgb(255 255 255 / 4%));
+  box-shadow: 0 10px 23px rgb(4 27 19 / 9%);
+  transition: border-color var(--ds-duration-fast) ease,
+    transform var(--ds-duration-fast) var(--pdl-ui-ease),
+    background-color var(--ds-duration-fast) ease;
+}
+.site-shell:has(.immersive-hero) .steps-list > li:hover {
+  border-color: rgb(215 239 105 / 55%);
+  background: rgb(255 255 255 / 12%);
+  transform: translateY(-2px);
+}
+.site-shell:has(.immersive-hero) .steps-list > li > b {
+  display: grid;
+  place-items: center;
+  width: 39px;
+  height: 39px;
+  flex: 0 0 39px;
+  border: 1px solid rgb(215 239 105 / 25%);
+  border-radius: 11px;
+  background: rgb(215 239 105 / 12%);
+  font-size: 12px;
+  color: var(--ds-lime-300);
+}
+.site-shell:has(.immersive-hero) .steps-list strong {
+  margin-top: 1px;
+  font-size: clamp(16px, 1.7vw, 19px);
+  font-weight: 800;
+  letter-spacing: -.025em;
+}
+.site-shell:has(.immersive-hero) .steps-list small {
+  margin-top: 6px;
+  color: #c8dad0;
+  font-size: 12px;
+  line-height: 1.75;
+}
+/* Staging admin entry: form-only styling, preserving sign-in and server errors. */
+.pdl-admin-entry {
+  --pdl-admin-surface: #fff;
+  padding-top: clamp(48px, 7vw, 80px);
+}
+.pdl-admin-entry .page-title {
+  font-size: clamp(38px, 5vw, 66px);
+  color: var(--pdl-ui-ink);
+  letter-spacing: -.065em;
+}
+.pdl-admin-entry .page-lede { color: var(--pdl-ui-muted); }
+.pdl-admin-entry > .demo-banner {
+  border: 1px solid #dbe6d5;
+  border-left: 4px solid #87a875;
+  background: #f1f7ec;
+  color: #3c5d46;
+  border-radius: 13px;
+  padding: 17px 21px;
+  line-height: 1.75;
+}
+.pdl-admin-entry .guest-receipt-lookup {
+  max-width: 640px;
+  padding: clamp(20px, 3vw, 32px);
+  border: 1px solid var(--pdl-ui-border);
+  border-radius: 18px;
+  background: linear-gradient(130deg, #fff, #fafcf8);
+  box-shadow: var(--pdl-ui-shadow);
+}
+.pdl-admin-entry .guest-receipt-lookup label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #2d523c;
+}
+.pdl-admin-entry .guest-receipt-lookup input {
+  border: 1px solid #c6d9c9;
+  border-radius: 10px;
+  min-height: 50px;
+  padding: 11px 14px;
+  background: #fff;
+  color: #1f4937;
+}
+.pdl-admin-entry .guest-receipt-lookup input:hover { border-color: #91b49a; }
+.pdl-admin-entry .guest-receipt-lookup input:focus-visible {
+  border-color: #588d67;
+  outline: 3px solid var(--ds-focus-ring);
+  outline-offset: 3px;
+}
+.pdl-admin-entry .guest-receipt-lookup .button {
+  min-height: 50px;
+  border-radius: 11px;
+  font-size: 12px;
+}
+@media (max-width: 950px) {
+  .site-shell:has(.immersive-hero) .steps-inner { gap: 35px; }
+}
+@media (max-width: 680px) {
+  .site-shell:has(.immersive-hero) .immersive-hero h1 { font-size: clamp(43px, 11vw, 64px); }
+  .site-shell:has(.immersive-hero) .hero-actions { flex-direction: column; }
+  .site-shell:has(.immersive-hero) .hero-actions .button { width: 100%; }
+  .site-shell:has(.immersive-hero) .steps-inner { grid-template-columns: 1fr; gap: 26px; }
+  .site-shell:has(.immersive-hero) .steps-list > li { padding: 17px; }
+  .site-shell .header-cta { min-height: 44px; }
+  .site-shell .footer-admin-actions { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; }
+  .pdl-admin-entry .guest-receipt-lookup { padding: 20px; }
+}
+@media (hover: none) {
+  .site-shell:has(.immersive-hero) .steps-list > li:hover {
+    transform: none; border-color: rgb(231 246 219 / 19%); background: rgb(255 255 255 / 9%);
+  }
+  .site-shell:has(.immersive-hero) .hero-actions .button-primary:hover {
+    background: var(--ds-lime-300); box-shadow: 0 5px 0 #b7d34b;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .site-shell :where(button,a,input,select,textarea) { scroll-behavior: auto; }
+  .site-shell .header-cta,
+  .site-shell .immersive-nav-link,
+  .site-shell .footer-admin-link,
+  .site-shell :where(input,select,textarea):not(:disabled),
+  .site-shell:has(.immersive-hero) .hero-actions .button,
+  .site-shell:has(.immersive-hero) .steps-list > li {
+    transition: none !important;
+  }
+  .site-shell:has(.immersive-hero) .steps-list > li:hover { transform: none; }
+}

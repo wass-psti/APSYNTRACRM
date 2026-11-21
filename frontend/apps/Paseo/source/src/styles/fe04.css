@@ -1,0 +1,10 @@
+.customer-form { display: grid; gap: 22px; max-width: 740px; }
+.form-field { display: grid; gap: 8px; }
+.form-field label { font-size: 14px; font-weight: 750; }
+.form-field input { width: 100%; border: 1px solid #9dac9d; border-radius: 8px; padding: 13px; font: inherit; }
+.form-field input[aria-invalid="true"] { border-color: #a33b36; }
+.form-error { color: #9c2825; font-size: 13px; margin: 0; }
+.booking-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 15px 0; }
+.review-heading { font-size: 24px; margin: 0 0 18px; }
+.booking-panel > p { line-height: 1.7; }
+@media(max-width: 600px){ .booking-actions { flex-direction: column; align-items: stretch; } .booking-actions .button { width: 100%; } }

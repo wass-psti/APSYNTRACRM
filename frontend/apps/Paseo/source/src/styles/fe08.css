@@ -1,0 +1,19 @@
+.fe08-data-note { border-left: 4px solid #477858; background: #eaf4de; padding: 15px 18px; border-radius: 8px; line-height: 1.6; font-size: 13px; }
+.fe08-filters { display: flex; align-items: end; gap: 16px; flex-wrap: wrap; margin: 24px 0 16px; }
+.fe08-filters label,.fe08-settings-form label { display: grid; gap: 8px; font-size: 13px; font-weight: 700; min-width: 0; }
+.fe08-filters input,.fe08-filters select,.fe08-settings-form input,.fe08-settings-form textarea,.fe08-rate-field input { width: 100%; min-width: 0; padding: 11px 12px; font: inherit; color: #143f32; border: 1px solid #a8bbad; border-radius: 8px; background: white; }
+.fe08-filters label { flex: 1 1 240px; }
+.fe08-card-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin: 20px 0; }
+.fe08-card { border: 1px solid #d9e5db; background: #fff; padding: 22px; border-radius: 13px; min-width: 0; }
+.fe08-card h2 { font-size: 21px !important; margin: 0 0 17px !important; overflow-wrap: anywhere; }
+.fe08-card p { font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; }
+.fe08-pricing-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+.fe08-rate-field { display: grid; align-content: start; gap: 8px; min-width: 0; }
+.fe08-rate-field label { font-size: 12px; font-weight: 700; }
+.fe08-rate-field .button { font-size: 11px; padding-inline: 7px; }
+.fe08-settings-form { max-width: 760px; display: grid; gap: 19px; }
+.fe08-settings-form textarea { resize: vertical; }
+.admin-navigation { gap: 8px; }
+.admin-navigation a { padding: 10px 12px; }
+@media(max-width: 950px) { .fe08-pricing-grid { grid-template-columns: 1fr; } }
+@media(max-width: 700px) { .fe08-card-list { grid-template-columns: 1fr; } .fe08-card { padding: 18px; } }
