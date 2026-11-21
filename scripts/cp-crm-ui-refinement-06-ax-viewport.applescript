@@ -20,7 +20,7 @@ tell application "System Events"
     set measuredSize to size of targetWindow
     set resultLines to resultLines & "CP06|MEASURED|" & requestedWidth & "|" & item 1 of measuredSize & "|" & item 2 of measuredSize & return
     -- Screenshots can include private UI: restrict filesystem permissions.
-    do shell script "umask 077; screencapture -x -m /tmp/cp-crm-ui06-existing-" & requestedWidth & ".png; chmod 600 /tmp/cp-crm-ui06-existing-" & requestedWidth & ".png"
+    do shell script "umask 077; rm -f /tmp/cp-crm-ui06-existing-" & requestedWidth & ".png; screencapture -x -m /tmp/cp-crm-ui06-existing-" & requestedWidth & ".png; chmod 600 /tmp/cp-crm-ui06-existing-" & requestedWidth & ".png"
    end repeat
   on error errText
    set resultLines to resultLines & "CP06|ERROR|" & errText & return
