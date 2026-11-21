@@ -159,6 +159,33 @@ test('native removal reports uncertain Storage deletion instead of claiming succ
  await assert.rejects(()=>client.removeVerified('301',asset),/binary deletion unconfirmed/);
 });
 
+test('already-absent Storage DELETE 400 permits proof-based cleanup but never bypasses signed GET',async()=>{
+ const {client,calls}=attachmentTransport();
+ client.fetch=async(url,init)=>{
+  calls.push({url,init});
+  if(init.method==='DELETE')return {ok:false,status:400};
+  if(init.method==='GET')return {ok:false,status:404};
+  throw Error('Unexpected method');
+ };
+ const result=await client.removeVerified('301',asset);
+ assert.equal(result.pendingAttachmentCleanup.length,0);
+ assert.equal(calls.filter(x=>x.name==='toolbox_issues_confirm_attachment_purged').length,1);
+ const freshGet=calls.find(x=>x.url&&x.init.method==='GET');
+ assert.match(freshGet.url,/cacheNonce=/);
+});
+
+test('already-absent DELETE 400 without a signed GET 404 remains recoverable',async()=>{
+ const {client,calls}=attachmentTransport();
+ client.fetch=async(url,init)=>{
+  calls.push({url,init});
+  if(init.method==='DELETE')return {ok:false,status:400};
+  if(init.method==='GET')return {ok:true,status:200};
+  throw Error('Unexpected method');
+ };
+ await assert.rejects(()=>client.removeVerified('301',asset),/Attachment remains downloadable/);
+ assert.equal(calls.filter(x=>x.name==='toolbox_issues_confirm_attachment_purged').length,0);
+});
+
 test('private file cleanup survives a failed deletion and resumes from pending metadata',async()=>{
  const {client,calls}=attachmentTransport({deleteFailures:1});
  await assert.rejects(()=>client.removeVerified('301',asset),/use Retry cleanup/);

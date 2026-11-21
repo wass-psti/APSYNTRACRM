@@ -37,3 +37,11 @@ No new dependencies, RLS/RBAC policies, user permissions, credentials, signed-in
 4. Independently verify a downloaded synthetic file's bytes in browser or on disk; do not equate clicking Download with verified bytes.
 
 If any gate remains open, proceed to CP-TB-INDEPENDENT-NATIVE-02K — CDN-Fresh Private Attachment Production Readback, Genuine Dual-Account Signed Workflow Acceptance, and Final Functional Closeout.
+
+## NoSuchKey live production diagnosis and idempotent retry correction
+
+After the cacheNonce patch was deployed in PR #682, a fresh signed browser loaded the updated module. A retry remained pending with the error "Attachment hidden but private binary deletion unconfirmed". Read-only Supabase Storage logs provided authoritative detail: the original Storage DELETE succeeded with HTTP 200; subsequent delete requests to the same already-absent object returned HTTP 400 with internal error code NoSuchKey and internal status 404. Storage metadata remained absent, and the CRM attachment remained soft-deleted with no purge confirmation.
+
+The 02J follow-up treats Storage DELETE HTTP 400 or 404 as a *possible already-absent object* on retry, never as final success. It still requires a cache-fresh signed authenticated GET 404, signed backend purge receipt, and independent signed issue readback before returning success. Any signed GET 200, denied operation or failed confirmation preserves recoverable pending state. No backend mutation bypass, direct database write, RBAC/RLS change, or secret handling is introduced.
+
+Automated tests separately cover HTTP 400 + signed GET 404 (safe continuation) and HTTP 400 + signed GET 200 (no confirmation). The final production signed retry remains subject to exact-commit Pages deployment and independent database readback.
