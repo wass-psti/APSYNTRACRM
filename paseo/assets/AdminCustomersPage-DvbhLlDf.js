@@ -1,0 +1,1 @@
+import{j as r}from"./index-BEYJGemp.js";import{StagingAdminReservationsPage as t}from"./StagingAdminReservationsPage-lYU1y2ri.js";import"./AdminShell-Cu4tRogK.js";import"./StagingAdminGate--Qbknqa5.js";import"./guestReservation-DVmlkDWG.js";import"./schemas-noyL-ESB.js";function p(){return r.jsx(t,{view:"customers"})}export{p as AdminCustomersPage};
