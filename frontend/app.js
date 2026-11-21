@@ -22,8 +22,6 @@ import {captureAuthReturn,
 import {mountAuthExperience} from './auth/experience.js';
 import {sidebarIcon,animateSidebarSelection,stopSidebarSelection} from './sidebar-visuals.js';
 import {sidebarActiveRoute} from './sidebar-active-route.js';
-import {readPaseoManagement} from './apps/Paseo/native-admin.js';
-import {PASEO_APPLICATION} from './apps/Paseo/manifest.js';
 import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-visuals.js';
 import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board/presentation/catalog-visuals.js';
 import {BOARD_ITEM_PAGE_SIZE,DomainApi,validUuid} from './data.js';
@@ -665,6 +663,7 @@ async function loadPaseoManagement(){
  render();
  try{
   const token=await auth.token();
+  const {readPaseoManagement}=await import('./apps/Paseo/native-admin.js');
   const result=await readPaseoManagement(token);
   if(auth.userId===actor&&state.context?.user_id===actor&&state.view==='paseo'){
    state.paseoManagement=result;
@@ -696,11 +695,11 @@ function renderPaseoNative(){
    <p>Public court availability and booking run separately from private CRM workspaces.</p></div></div>
    <div class="card"><h2>Pickleball booking</h2>
    <p>Public visitors do not need APSYNTRA CRM accounts.</p>
-   <a class="primary" href="${PASEO_APPLICATION.publicPath}">Open public booking</a></div>
+   <a class="primary" href="./paseo/">Open public booking</a></div>
    <div class="card"><h2>Booking administration</h2>
    <p>The booking API independently verifies your signed CRM account and existing Paseo administrator assignment.</p>
    <button type="button" data-action="pdl-refresh">Refresh booking records</button>
-   <a href="${PASEO_APPLICATION.adminPath}">Open full booking administration</a></div>
+   <a href="./paseo/admin/sign-in">Open full booking administration</a></div>
    ${summary}
  </section>`;
 }
