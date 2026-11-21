@@ -112,6 +112,32 @@ test('assigned reviewer client uses signed native application context and record
  assert.equal(calls[1].args.p_stage,'primary');
 });
 
+test('review-stage approval receipts require both authoritative reviewer timestamps',async()=>{
+ const actor='11111111-1111-4111-8111-111111111111';
+ const documentId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+ const boardItemId='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+ const workspaceId='00000000-0000-4000-8000-000000000001';
+ const stamp='2026-11-12T08:10:00Z';
+ const receipt={documentId,boardItemId,revision:3,stage:'secondary',
+  recordedAt:stamp,primaryAt:null,secondaryAt:stamp,state:'approved',idempotent:false};
+ const client=new TradeLinkDomainClient({
+  auth:{userId:actor,getVerifiedUser:async()=>({id:actor})},
+  api:{context:async()=>({user_id:actor,workspace_id:workspaceId,profile:{status:'active'}}),
+   nativeApplicationBoardContext:async()=>({userId:actor,workspaceId,
+    board:{id:'264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',workspace_id:workspaceId,
+     name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}}),
+   rpc:async()=>receipt}
+ });
+ await assert.rejects(()=>client.recordReviewStage({documentId,expectedRevision:3,
+  stage:'secondary'}),/review receipt mismatch/);
+ receipt.primaryAt='2026-11-12T08:05:00Z';
+ assert.equal((await client.recordReviewStage({documentId,expectedRevision:3,
+  stage:'secondary'})).state,'approved');
+ receipt.secondaryAt=null;
+ await assert.rejects(()=>client.recordReviewStage({documentId,expectedRevision:3,
+  stage:'secondary'}),/review receipt mismatch/);
+});
+
 test('assigned reviewer can read assigned TradeLink documents without generic Board VIEW',async()=>{
  const actor='11111111-1111-4111-8111-111111111111';
  const workspaceId='00000000-0000-4000-8000-000000000001';

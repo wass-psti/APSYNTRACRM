@@ -521,6 +521,9 @@ export class TradeLinkDomainClient{
     (typeof result.primaryAt!=='string'||!Number.isFinite(Date.parse(result.primaryAt))))||
    (result.secondaryAt!==null&&result.secondaryAt!==undefined&&
     (typeof result.secondaryAt!=='string'||!Number.isFinite(Date.parse(result.secondaryAt))))||
+   (stage==='primary'&&result.primaryAt!==result.recordedAt)||
+   (stage==='secondary'&&result.secondaryAt!==result.recordedAt)||
+   (result.state==='approved'&&(!result.primaryAt||!result.secondaryAt))||
    typeof result.idempotent!=='boolean')
    deny('Signed TradeLink review receipt mismatch.',409);
   return {...result,actorId:session.actorId,workspaceId:session.workspaceId};
