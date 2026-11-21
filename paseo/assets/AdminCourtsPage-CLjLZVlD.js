@@ -1,0 +1,1 @@
+import{j as r}from"./index-CkUlkOxV.js";import{StagingAdminReservationsPage as t}from"./StagingAdminReservationsPage-pMBZbti1.js";import"./AdminShell-CPQj7kSe.js";import"./StagingAdminGate-Kfsj6kWo.js";import"./guestReservation-DVmlkDWG.js";import"./schemas-noyL-ESB.js";function s(){return r.jsx(t,{view:"courts"})}export{s as AdminCourtsPage};

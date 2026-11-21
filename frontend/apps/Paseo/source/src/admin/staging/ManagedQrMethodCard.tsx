@@ -132,7 +132,7 @@ export function ManagedQrMethodCard({
       onSubmit={event => { void save(event); }}>
       <div className="managed-qr-heading">
         <div><span className="managed-qr-eyebrow">PAYMENT METHOD</span><h3>{label}</h3></div>
-        <span className="managed-qr-status">{previewUrl ? 'Unsaved preview' : storedUrl ? 'Saved configuration' : 'Not configured'}</span>
+        <span className="managed-qr-status">{previewUrl ? 'Unsaved preview' : storedUrl && imageState === 'error' ? 'Image unavailable' : storedUrl ? 'Saved configuration' : 'Not configured'}</span>
       </div>
       <label htmlFor={`admin-qr-recipient-${method}`}>{label} recipient name</label>
       <input id={`admin-qr-recipient-${method}`} value={recipient} required minLength={2} maxLength={100}
@@ -146,7 +146,7 @@ export function ManagedQrMethodCard({
       <div className="managed-qr-preview" aria-label={`${label} QR image preview`}>
         <div className="managed-qr-preview-heading">
           <span>{previewIsUnsaved ? 'New image preview' : 'Saved QR image'}</span>
-          <span>{previewIsUnsaved ? 'NOT YET SAVED' : storedUrl ? 'ON FILE' : 'NO IMAGE'}</span>
+          <span>{previewIsUnsaved ? 'NOT YET SAVED' : storedUrl && imageState === 'error' ? 'NEEDS ATTENTION' : storedUrl ? 'ON FILE' : 'NO IMAGE'}</span>
         </div>
         <div className="managed-qr-media">
           {activeUrl && imageState !== 'error' && (

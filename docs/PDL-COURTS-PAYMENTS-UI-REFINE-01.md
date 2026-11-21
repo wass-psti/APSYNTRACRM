@@ -11,7 +11,8 @@ The existing JPEG/PNG validation, 2 MB limit, upload endpoint, recipient field, 
 - New QR presentation contract tests: 3 PASS.
 - Full CRM tests: 3,276 PASS, 0 FAIL.
 - Existing lint and diff whitespace checks: PASS.
-- Responsive grid: three columns desktop, two tablet and one mobile through existing live-admin breakpoints.
+- Chromium verified responsive cards at 1440px (three columns), 768px (two), and 390px (one), with no horizontal overflow.
+- Broken saved image status is labelled unavailable rather than incorrectly presented as successfully displayed.
 
 ## Limitation
 The browser acceptance uses synthetic API fixtures and does not verify that every live payment QR URL resolves. When a live image URL fails, the card now presents an intentional recovery state rather than browser error chrome. Correcting a stale or inaccessible stored QR URL requires a legitimate replacement upload through the existing workflow.
