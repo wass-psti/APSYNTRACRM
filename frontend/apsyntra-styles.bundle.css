@@ -31833,11 +31833,10 @@ html[data-aps-monday-theme="dark"] #app .aps-settings-shell .aps-settings :is(bu
 #app .pdl-crm-portal .pdl-crm-loading {display:grid;gap:16px}
 #app .pdl-crm-portal .pdl-crm-skeleton {
  border-radius:8px;background:linear-gradient(100deg,#b6c4d323,#d0d9e350,#b6c4d323);
- background-size:200% 100%;animation:pdl-crm-shimmer 1.5s linear infinite;
+ background-size:200% 100%;
 }
 #app .pdl-crm-portal .pdl-crm-skeleton-heading {width:37%;height:20px}
 #app .pdl-crm-portal .pdl-crm-skeleton-metric {height:84px}
-@keyframes pdl-crm-shimmer {to{background-position-x:-200%}}
 html[data-aps-monday-theme="dark"] #app .pdl-crm-portal {
  --pdl-canvas:#151618;--pdl-panel:#24272d;--pdl-muted:#abb6c6;
  --pdl-ink:#f0f2f6;--pdl-border:#3a414b;
