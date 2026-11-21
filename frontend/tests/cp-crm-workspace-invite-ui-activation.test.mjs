@@ -49,3 +49,14 @@ test('all invite launch points use a live list gate before provider submission, 
  assert.match(ui,/Delivery outcome is unconfirmed/);
  assert.doesNotMatch(ui,/INSERT INTO public\.workspace_members/);
 });
+
+test('production-facing invitation surfaces wire signed history and revocation, without static disabled manager',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const ui=readFileSync('frontend/workspace-ui.js','utf8');
+ assert.equal((app.match(/managementEnabled:true/g)||[]).length,3);
+ assert.equal((app.match(/listInvitations:workspaceId=>workspaceInvitationLiveManager.list\(workspaceId\)/g)||[]).length,3);
+ assert.equal((app.match(/revokeInvitation:request=>workspaceInvitationLiveManager.revoke\(request\)/g)||[]).length,3);
+ assert.match(ui,/Invitation history is unavailable because the server service is not activated/);
+ assert.match(ui,/Invitation history is not available for this workspace/);
+ assert.doesNotMatch(app,/managementEnabled:WS11_INVITATION_MANAGEMENT_ENABLED/);
+});

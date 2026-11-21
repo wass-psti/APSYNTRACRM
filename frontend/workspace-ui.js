@@ -885,10 +885,14 @@ function openInvites(current,options={}){
   try{
    const listing=await options.listInvitations(row.id);
    if(activeOverlay===layer&&layer.isConnected)draw(listing);
-  }catch{
+  }catch(error){
    if(activeOverlay===layer&&layer.isConnected){
     manageList.replaceChildren();
-    manageFeedback.textContent='Invitation status cannot be verified. No records are displayed.';
+    manageFeedback.textContent=error?.status===503?
+     'Invitation history is unavailable because the server service is not activated. No records were loaded.':
+     error?.status===401?'Sign in again to view invitation history.':
+     error?.status===403?'Invitation history is not available for this workspace.':
+     'Invitation status cannot be verified. No records are displayed.';
    }
   }finally{
    managementBusy=false;

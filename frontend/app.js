@@ -12,7 +12,7 @@ import {mountAvatarImages} from './profile-avatar.js';
 import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels,WS01_SWITCHING_ENABLED} from './workspace-ui.js?v=ws01-controls-20261106';
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
 import {WorkspaceInvitationClient,WS02D_INVITE_CLIENT_ENABLED} from './workspace-invitation-client.js';
-import {WorkspaceInvitationManagementClient,WS11_INVITATION_MANAGEMENT_ENABLED} from './workspace-invitation-management.js';
+import {WorkspaceInvitationManagementClient} from './workspace-invitation-management.js';
 import {WorkspaceInvitationAcceptanceClient,captureInvitationLink,renderInvitationAcceptance} from './workspace-invitation-acceptance.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
 import {renderAuthMarkup} from './auth/markup.js';
@@ -233,8 +233,6 @@ const boardCacheChannel=new BoardCacheChannel({auth,onInvalidate:({boardId,revis
 db.onBoardMutation=({boardId,revision})=>boardCacheChannel.publish(boardId,revision);
 const profileAvatarClient=new ProfileAvatarClient({auth});
 const workspaceLifecycleClient=new WorkspaceLifecycleClient({auth,api:db});
-const workspaceInvitationClient=new WorkspaceInvitationClient({auth,api:db});
-const workspaceInvitationManagementClient=new WorkspaceInvitationManagementClient({auth,api:db});
 const boardGroupAccessClient=new BoardGroupAccessClient({auth,api:db});
 // The recipient confirmation UI is available after a valid one-time link;
 // the trusted Edge accept route and SQL are the only membership authority.
@@ -7182,9 +7180,9 @@ async function action(name,button){
      invitationEnabled:true,
      sendInvitation:sendWorkspaceInvitation,
      checkInvitationAvailability:checkWorkspaceInvitationAvailability,
-     managementEnabled:WS11_INVITATION_MANAGEMENT_ENABLED,
-     listInvitations:workspaceId=>workspaceInvitationManagementClient.list(workspaceId),
-     revokeInvitation:request=>workspaceInvitationManagementClient.revoke(request),
+     managementEnabled:true,
+     listInvitations:workspaceId=>workspaceInvitationLiveManager.list(workspaceId),
+     revokeInvitation:request=>workspaceInvitationLiveManager.revoke(request),
      switchingEnabled:WS01_SWITCHING_ENABLED,
      onWorkspaceSwitched:()=>{
       // Reload only after a verified server-side scope change. The fresh app
@@ -7220,9 +7218,9 @@ async function action(name,button){
      enabled:true,
      sendInvitation:sendWorkspaceInvitation,
      checkInvitationAvailability:checkWorkspaceInvitationAvailability,
-     managementEnabled:WS11_INVITATION_MANAGEMENT_ENABLED,
-     listInvitations:workspaceId=>workspaceInvitationManagementClient.list(workspaceId),
-     revokeInvitation:request=>workspaceInvitationManagementClient.revoke(request)
+     managementEnabled:true,
+     listInvitations:workspaceId=>workspaceInvitationLiveManager.list(workspaceId),
+     revokeInvitation:request=>workspaceInvitationLiveManager.revoke(request)
    });
    break;
  }
@@ -8429,9 +8427,9 @@ async function action(name,button){
       openWorkspaceInvitationDialog({id:workspaceId,name:workspaceName()},{
         enabled:true,sendInvitation:sendWorkspaceInvitation,
         checkInvitationAvailability:checkWorkspaceInvitationAvailability,
-        managementEnabled:WS11_INVITATION_MANAGEMENT_ENABLED,
-        listInvitations:workspaceId=>workspaceInvitationManagementClient.list(workspaceId),
-        revokeInvitation:request=>workspaceInvitationManagementClient.revoke(request)
+        managementEnabled:true,
+        listInvitations:workspaceId=>workspaceInvitationLiveManager.list(workspaceId),
+        revokeInvitation:request=>workspaceInvitationLiveManager.revoke(request)
       });
     }
   });
