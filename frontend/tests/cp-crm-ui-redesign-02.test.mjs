@@ -6,11 +6,11 @@ import {generateStyleBundle} from '../../scripts/build-priority5-styles.mjs';
 const css=readFileSync('frontend/uiverse-native-workflows.css','utf8');
 
 test('native visual layer follows original shared tokens and retains one CSS bundle',()=>{
- assert.deepEqual(STYLE_SOURCES.slice(-3,-1),[
+ assert.deepEqual(STYLE_SOURCES.slice(-2),[
   'frontend/uiverse-design-system.css','frontend/uiverse-native-workflows.css']);
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());
  const html=readFileSync('index.html','utf8');
- assert.match(html,/apsyntra-styles\.bundle\.css\?v=cp-crm-ui-redesign-0[23]/);
+ assert.match(html,/apsyntra-styles\.bundle\.css\?v=cp-crm-ui-redesign-02/);
  assert.match(html,/frontend\/uiverse-native-workflows\.css/);
  assert.equal((html.match(/<link rel="stylesheet"/g)||[]).length,1);
 });
