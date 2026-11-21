@@ -26,7 +26,7 @@ small{display:block;color:inherit;opacity:.8}h1{font-size:1.5rem}h2{font-size:1.
 <h2>1. Sign in as inviter</h2>
 <label for="inviter-email">Verified inviter</label><input id="inviter-email" type="email" autocomplete="username" readonly value="lmsenagan@watchdogautomation.com.ph">
 <label for="inviter-password">Staging account password</label><input id="inviter-password" type="password" autocomplete="off">
-<button type="button" data-login="inviter">Sign in inviter</button>
+<button type="button" data-login="inviter">Sign in inviter (password; no email sent)</button>
 <button type="button" data-otp="inviter">Request numeric email code</button>
 <label for="inviter-code">Numeric email OTP code</label><input id="inviter-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9]{8}">
 <button type="button" data-verify="inviter">Verify inviter code</button>
@@ -36,7 +36,7 @@ small{display:block;color:inherit;opacity:.8}h1{font-size:1.5rem}h2{font-size:1.
 <h2>2. Sign in as recipient</h2>
 <label for="recipient-email">Verified recipient</label><input id="recipient-email" type="email" autocomplete="username" readonly value="jspagsuguiron@watchdogautomation.com.ph">
 <label for="recipient-password">Staging account password</label><input id="recipient-password" type="password" autocomplete="off">
-<button type="button" data-login="recipient">Sign in recipient</button>
+<button type="button" data-login="recipient">Sign in recipient (password; no email sent)</button>
 <button type="button" data-otp="recipient">Request numeric email code</button>
 <label for="recipient-code">Numeric email OTP code</label><input id="recipient-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9]{8}">
 <button type="button" data-verify="recipient">Verify recipient code</button>
@@ -54,14 +54,20 @@ small{display:block;color:inherit;opacity:.8}h1{font-size:1.5rem}h2{font-size:1.
 <input id="invitation-token" type="password" autocomplete="off">
 <button type="button" id="accept">Accept as recipient</button>
 <output id="result" role="status">Two independent live staging sessions are required for server-side onboarding, but can be established on separate devices. Email delivery and workspace permissions are not altered by signing in.</output>
-<small>Numeric OTP requires the staging Supabase Authentication → Email Templates → Magic Link template to include {{ .Token }} instead of {{ .ConfirmationURL }}. Never paste passwords, verification codes, access tokens, or invitation tokens into chat. No production endpoint is used. Email submission does not prove inbox receipt.</small>
+<small>Use password sign-in when the account holder has their staging password; it does not send email. OTP email requests are shared across both account slots and have a persistent client-side cooldown to prevent duplicate sends. A provider HTTP 429 increases the cooldown; the page never retries automatically and honors Retry-After when supplied. Numeric OTP requires the staging Supabase Authentication → Email Templates → Magic Link template to include {{ .Token }} instead of {{ .ConfirmationURL }}. Never paste passwords, verification codes, access tokens, or invitation tokens into chat. No production endpoint is used. Email submission does not prove inbox receipt.</small>
 </section>
 </main>
 <script type="module">
+import {createOtpRequestControl} from './ws02d-otp-request-control.js';
 const BASE='https://jeqwjlxubntsddeauvqa.supabase.co';
 // Explicit staging redirect fallback; GoTrue still formats the email from its Magic Link template.
 const OTP_REDIRECT='https://wass-psti.github.io/APSYNTRACRM/frontend/ws02d-staging-signin.html';
 const KEY='sb_publishable_i7UQfD8eqxNadP8mhmxy3g_w4gbyWco';
+let otpStorage=null;try{otpStorage=globalThis.localStorage}catch{}
+const otpRequestControl=createOtpRequestControl({storage:otpStorage});
+const otpButtons=Array.from(document.querySelectorAll('[data-otp]'));
+const otpButtonLabels=new Map(otpButtons.map(button=>[button,button.textContent||'Request numeric email code']));
+let otpRequestBusy=false,otpCooldownTimer=null;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const INVITE_TOKEN=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[0-9a-f]{64}$/;
 const slots={inviter:null,recipient:null};
@@ -70,17 +76,34 @@ const $=id=>document.getElementById(id);
 const workspaceParam=new URLSearchParams(location.search).get('workspaceId');
 if(UUID.test(workspaceParam||''))$('workspace').value=workspaceParam;
 const status=(id,message)=>{$(id).textContent=message};
+const formatWait=milliseconds=>{const seconds=Math.max(1,Math.ceil(milliseconds/1000));return seconds<60?seconds+' seconds':Math.ceil(seconds/60)+' minutes'};
+function refreshOtpButtons(){
+ const remaining=otpRequestControl.remaining();
+ for(const button of otpButtons){
+  const label=otpButtonLabels.get(button);
+  button.disabled=otpRequestBusy||remaining>0;
+  button.textContent=otpRequestBusy?'Requesting…':remaining>0?label+' · wait '+formatWait(remaining):label;
+ }
+ if(remaining>0&&otpCooldownTimer===null){
+  otpCooldownTimer=setTimeout(()=>{otpCooldownTimer=null;refreshOtpButtons()},Math.min(1000,remaining));
+ }else if(remaining===0){otpCooldownTimer=null}
+}
+refreshOtpButtons();
+if(typeof globalThis.addEventListener==='function')globalThis.addEventListener('storage',event=>{
+ if(event.key==='apsyntra:ws02d:otp-send-cooldown:v1')refreshOtpButtons();
+});
 async function api(path,body,token){
  const r=await fetch(BASE+path,{method:'POST',headers:{apikey:KEY,'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{})},body:JSON.stringify(body),cache:'no-store',referrerPolicy:'no-referrer'});
  const payload=await r.json().catch(()=>({}));
  if(!r.ok){
   const message=typeof payload?.error_description==='string'?payload.error_description:
    typeof payload?.msg==='string'?payload.msg:typeof payload?.message==='string'?payload.message:'Request failed';
-  if(r.status===429)throw Error('Too many requests. Wait until the provider permits another request.');
-  if(path.startsWith('/auth/v1/verify')&&[400,401,403,422].includes(r.status))
-   throw Error('Invalid, expired, or already-used email code. Request a fresh code after the provider cooldown.');
-  if(r.status===422||r.status===400)throw Error('Verification rejected: '+message);
-  throw Error('Request denied ('+r.status+'): '+message);
+  if(r.status===429){const error=new Error('Too many requests. Wait until the provider permits another request.');error.status=429;error.retryAfter=r.headers?.get?.('Retry-After')??null;throw error;}
+  if(path.startsWith('/auth/v1/verify')&&[400,401,403,422].includes(r.status)){
+   const error=new Error('Invalid, expired, or already-used email code. Request a fresh code after the provider cooldown.');error.status=r.status;throw error;
+  }
+  if(r.status===422||r.status===400){const error=new Error('Verification rejected: '+message);error.status=r.status;throw error;}
+  const error=new Error('Request denied ('+r.status+'): '+message);error.status=r.status;throw error;
  }
  return payload;
 }
@@ -113,10 +136,32 @@ document.querySelectorAll('[data-login]').forEach(b=>b.addEventListener('click',
  try{await save(which,await api('/auth/v1/token?grant_type=password',{email:$(which+'-email').value,password}))}
  catch(e){slots[which]=null;showError(which+'-status',e)}
 }));
-document.querySelectorAll('[data-otp]').forEach(b=>b.addEventListener('click',async()=>{
+otpButtons.forEach(b=>b.addEventListener('click',async()=>{
  const which=b.dataset.otp;
- try{await api('/auth/v1/otp?redirect_to='+encodeURIComponent(OTP_REDIRECT),{email:$(which+'-email').value,create_user:false});status(which+'-status','Email request accepted by GoTrue. Check inbox for a numeric code. If it still contains a Sign in link, the staging Magic Link email template must be changed to {{ .Token }}; requesting another email will not fix the template.')}
- catch(e){showError(which+'-status',e)}
+ if(!otpRequestControl.begin()){
+  const remaining=otpRequestControl.remaining();
+  status(which+'-status',otpRequestControl.isInFlight()?
+   'Another staging email request is already in progress. Wait for its result; no duplicate request was sent.':
+   'Staging email requests are cooling down for '+formatWait(remaining)+'. No new email was requested. Password sign-in remains available.');
+  refreshOtpButtons();return;
+ }
+ otpRequestBusy=true;refreshOtpButtons();
+ try{
+  await api('/auth/v1/otp?redirect_to='+encodeURIComponent(OTP_REDIRECT),{email:$(which+'-email').value,create_user:false});
+  otpRequestControl.recordSuccess();
+  status(which+'-status','Email request accepted by GoTrue. Check inbox for a numeric code. A shared one-minute cooldown now prevents duplicate email sends. If it still contains a Sign in link, the staging Magic Link email template must be changed to {{ .Token }}; requesting another email will not fix the template.');
+ }catch(e){
+  if(e?.status===429){
+   const delay=otpRequestControl.recordRateLimit(e.retryAfter);
+   const message='Provider email rate limit reached. No automatic retry was made. Wait '+formatWait(delay)+' before requesting another code. Password sign-in remains available.';
+   status(which+'-status',message);status('result',message+' This cooldown applies to both staging accounts.');
+  }else if(!Number.isInteger(e?.status)||e.status===408||e.status>=500){
+   const delay=otpRequestControl.recordUncertain();
+   status(which+'-status','The email request outcome is uncertain. No automatic retry was made. Wait '+formatWait(delay)+' and check the inbox before trying again.');
+  }else showError(which+'-status',e);
+ }finally{
+  otpRequestBusy=false;otpRequestControl.finish();refreshOtpButtons();
+ }
 }));
 document.querySelectorAll('[data-verify]').forEach(b=>b.addEventListener('click',async()=>{
  const which=b.dataset.verify,field=$(which+'-code'),token=field.value.trim();field.value='';
