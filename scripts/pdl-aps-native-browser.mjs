@@ -23,7 +23,7 @@ const port=server.address().port;
 const base=`http://127.0.0.1:${port}${prefix}`;
 let browser;
 try{
- browser=await chromium.launch({headless:true});
+ browser=await chromium.launch({headless:true,...(process.env.CHROME_BIN?{executablePath:process.env.CHROME_BIN}:{})});
  for(const width of [390,768,1440]){
   const page=await browser.newPage({viewport:{width,height:900}});
   const errors=[],crmBundles=[];

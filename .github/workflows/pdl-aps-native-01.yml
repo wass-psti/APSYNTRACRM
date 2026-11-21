@@ -35,7 +35,8 @@ jobs:
           node --test frontend/tests/pdl-aps-native.test.mjs
           npm test
           npm run build
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
       - name: Public/CRM browser isolation and direct-link acceptance
-        run: node scripts/pdl-aps-native-browser.mjs
+        run: |
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$BROWSER" || { echo 'BLOCKED: Chromium executable not found'; exit 1; }
+          CHROME_BIN="$BROWSER" node scripts/pdl-aps-native-browser.mjs
