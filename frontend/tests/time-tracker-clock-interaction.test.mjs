@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {isTimeTrackerHomeNoteRequired} from '../time-tracker-offsite-note.js';
+import {isTimeTrackerHomeNoteRequired,createTimeTrackerWorkNoteDraft} from '../time-tracker-offsite-note.js';
 import {attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError}
  from '../time-tracker-clock-recovery.js';
 
@@ -30,13 +30,16 @@ function newClockInRow(){return {...activeRow(),id:'new-clock-in-record'};}
 function harness({commit=async()=>({action:'clock-out',revision:2,recordId}),
  snapshot=async()=>ownSnapshot(completedRow()),initialAttendance=ownSnapshot(),
  capture=async()=>({status:'captured',latitude:10.3,longitude:123.9,
-  accuracy:20,capturedAt:new Date().toISOString(),source:'browser-geolocation'})}={}){
+  accuracy:20,capturedAt:new Date().toISOString(),source:'browser-geolocation'}),
+ location='Office-Base Duty',noteValue=''}={}){
  const state={view:'board',tab:'attendance',ttBusy:false,ttClockPending:null,
   ttRunId:0,ttError:'',ttSuccess:'',boardId,
   board:{board:{name:'TimeTracker Attendance'}},
   context:{user_id:userId,workspace_id:workspaceId},
   ttAttendance:initialAttendance};
  let writes=0,reads=0,updates=0;
+ const draft=createTimeTrackerWorkNoteDraft();
+ const noteScope=()=>({userId,workspaceId,boardId});
  const timeTracker={
   async commit(...args){writes++;return commit(...args);},
   async snapshot(...args){reads++;return snapshot(...args);}
@@ -46,18 +49,18 @@ function harness({commit=async()=>({action:'clock-out',revision:2,recordId}),
   'timeTracker','routeSerial','navigator','attendanceSnapshotOutcome',
   'attendanceAuthFailure','attendanceClockError','isTimeTrackerHomeNoteRequired',
   'rememberTimeTrackerClockPending','clearTimeTrackerClockPending',
-  'restoreTimeTrackerClockPending',clockSource+
+  'restoreTimeTrackerClockPending','ttWorkNoteDraft','timeTrackerWorkNoteScope',clockSource+
   ';return {submitTimeTrackerAction,verifyTimeTrackerAttendance};')(
   state,()=>{updates++;},{isSignedIn:true},
   ()=>({key:'timetracker'}),true,
-  class{get(key){return key==='tt-location'?'Office-Base Duty':key==='tt-department'?'HR':null;}},capture,timeTracker,1,{geolocation:{}},
+  class{get(key){return key==='tt-location'?location:key==='tt-department'?'HR':null;}},capture,timeTracker,1,{geolocation:{}},
   attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError,isTimeTrackerHomeNoteRequired,
   context=>{state.ttClockPending=context;},
   ()=>{state.ttClockPending=null;},
-  ()=>{}
+  ()=>{},draft,noteScope
  );
- const form={querySelector:()=>({value:''})};
- return {state,form,...functions,counts:()=>({writes,reads,updates})};
+ const form={querySelector:()=>({value:noteValue})};
+ return {state,form,draft,noteScope,...functions,counts:()=>({writes,reads,updates})};
 }
 
 test('successful End Session commits once, refreshes the signed row and stops being active',async()=>{
@@ -216,4 +219,57 @@ test('Clock-In failure is retryable only after signed read confirms no revision 
  assert.equal(sim.state.ttClockPending,null);
  assert.match(sim.state.ttError,/Clock In was not committed/);
  assert.equal(sim.counts().writes,1);
+});
+
+test('Home work plan remains intact after GPS permission denial and allows another attempt',async()=>{
+ const plan='Review material delivery, coordinate with team, and prepare inspection notes.';
+ const sim=harness({initialAttendance:idleSnapshot(),location:'Offsite (Home)',noteValue:plan,
+  capture:async()=>{const err=Error('Location permission denied');err.code='TT_GEO_DENIED';throw err;}});
+ await sim.submitTimeTrackerAction(sim.form,'clock-in');
+ assert.equal(sim.counts().writes,0);
+ assert.equal(sim.draft.read(sim.noteScope()),plan);
+ assert.equal(sim.state.ttBusy,false);
+ assert.match(sim.state.ttError,/GPS|location/i);
+});
+
+test('Home work plan survives GPS unavailability without a database write',async()=>{
+ const plan='Complete customer follow-ups and daily engineering checklist.';
+ const sim=harness({initialAttendance:idleSnapshot(),location:'Offsite (Home)',noteValue:plan,
+  capture:async()=>{const err=Error('Timed out');err.code='TT_GEO_UNAVAILABLE';throw err;}});
+ await sim.submitTimeTrackerAction(sim.form,'clock-in');
+ assert.equal(sim.counts().writes,0);
+ assert.equal(sim.draft.read(sim.noteScope()),plan);
+ assert.equal(sim.state.ttClockPending,null);
+});
+
+test('Home work plan is retained during uncertain Clock In but cleared after a signed confirmation',async()=>{
+ const plan='Design review and documented progress for scheduled tasks.';
+ const row=newClockInRow();let readable=false;
+ const sim=harness({initialAttendance:idleSnapshot(),location:'Offsite (Home)',noteValue:plan,
+  commit:async()=>{throw Error('Network interrupted');},
+  snapshot:async()=>{if(!readable)throw Error('Offline');return {...ownSnapshot(row),revision:3};}});
+ await sim.submitTimeTrackerAction(sim.form,'clock-in');
+ assert.equal(sim.draft.read(sim.noteScope()),plan);
+ assert.ok(sim.state.ttClockPending);
+ readable=true;
+ await sim.verifyTimeTrackerAttendance();
+ assert.equal(sim.state.ttClockPending,null);
+ assert.equal(sim.draft.read(sim.noteScope()),'');
+});
+
+test('Home work plan only clears after server-confirmed commit and is absent from Office payload',async()=>{
+ const plan='Draft HVAC inspection plan and compliance checklist.';
+ const row=newClockInRow();
+ let payload=null;
+ const sim=harness({initialAttendance:idleSnapshot(),location:'Offsite (Home)',noteValue:plan,
+  commit:async(_board,request)=>{payload=request;return {action:'clock-in',revision:3,recordId:row.id};},
+  snapshot:async()=>({...ownSnapshot(row),revision:3})});
+ await sim.submitTimeTrackerAction(sim.form,'clock-in');
+ assert.equal(payload.workNote,plan);
+ assert.equal(sim.draft.read(sim.noteScope()),'');
+ const office=harness({initialAttendance:idleSnapshot(),location:'Office-Base Duty',noteValue:plan,
+  commit:async(_board,request)=>{payload=request;return {action:'clock-in',revision:3,recordId:row.id};},
+  snapshot:async()=>({...ownSnapshot(row),revision:3})});
+ await office.submitTimeTrackerAction(office.form,'clock-in');
+ assert.equal(payload.workNote,'');
 });
