@@ -114,7 +114,7 @@ export class TimeTrackerOjtClient{
   return this.perform(s,'timetracker_ojt_group_set',
    {p_shared_user_id:userId,p_enabled:enabled},
    v=>{if(v?.contract!=='tt-ojt-admin-write-1'||v.workspaceId!==s.workspaceId||
-       v.userId!==userId||v.enabled!==enabled)fail('OJT group write unverified');return v});
+       v.boardId!==s.boardId||v.userId!==userId||v.enabled!==enabled)fail('OJT group write unverified');return v});
  }
  async setIntern(s,{userId,id=null,name,active=true}={}){
   name=String(name??'').trim();
@@ -123,7 +123,7 @@ export class TimeTrackerOjtClient{
   return this.perform(s,'timetracker_ojt_intern_set',
    {p_shared_user_id:userId,p_intern_id:id,p_name:name,p_active:active},
    v=>{if(v?.contract!=='tt-ojt-admin-write-1'||v.workspaceId!==s.workspaceId||
-      !uuid.test(v.internId||'')||v.active!==active)fail('OJT identity write unverified');return v});
+      v.boardId!==s.boardId||!uuid.test(v.internId||'')||v.active!==active)fail('OJT identity write unverified');return v});
  }
  snapshot(s,internId){
   if(!uuid.test(internId||''))fail('Select an active intern');
@@ -169,17 +169,16 @@ export function renderTimeTrackerOjtClock({
  if(roster?.mode==='SETUP_REQUIRED')
   return html+'<p role="status">The shared OJT roster has not been enabled yet. Ask a TimeTracker administrator to enable the existing company login and add intern names.</p></section>';
  if(!selected){
-  html+='<div class="tt-ojt-session"><h4>Start your session</h4>'+
-   '<label for="tt-ojt-intern-select">Select your name</label>'+
+  html+='<div class="tt-ojt-session"><h4>Choose your name to continue</h4>'+
+   '<label for="tt-ojt-intern-select">Intern name</label>'+
    '<select id="tt-ojt-intern-select"'+disabled+' required>'+
     '<option value="">Choose an intern</option>'+
     (roster?.interns||[]).map(i=>'<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('')+
    '</select>'+
    ((roster?.interns||[]).length?
-    '<p>Choose your name from the list. Your attendance will be recorded under that intern.</p>':
+    '<p>Select your name. Your attendance history will load automatically; GPS is requested only when you start or end a session.</p>':
     '<p>No active interns are registered yet. Ask the TimeTracker administrator to add your name.</p>')+
-   '<button type="button" class="tt-ojt-clock-button" data-action="tt-ojt-clock"'+
-    (busy||!(roster?.interns||[]).length?' disabled':'')+'>Start Session</button></div>';
+   '</div>';
   return html+'</section>';
  }
  const active=attendance?.active||null;
