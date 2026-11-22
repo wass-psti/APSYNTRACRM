@@ -244,7 +244,7 @@ test('Home work plan survives GPS unavailability without a database write',async
 
 test('Home work plan is retained during uncertain Clock In but cleared after a signed confirmation',async()=>{
  const plan='Design review and documented progress for scheduled tasks.';
- const row=newClockInRow();let readable=false;
+ const row={...newClockInRow(),location:'Offsite (Home)'};let readable=false;
  const sim=harness({initialAttendance:idleSnapshot(),location:'Offsite (Home)',noteValue:plan,
   commit:async()=>{throw Error('Network interrupted');},
   snapshot:async()=>{if(!readable)throw Error('Offline');return {...ownSnapshot(row),revision:3};}});
