@@ -178,7 +178,7 @@ function heading(title,desc){
   esc(desc)+'</p></div></div>';
 }
 function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-out',locationPreference='',{
- success='',clockCorrectionNotice='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle'
+ success='',clockCorrectionNotice='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',workPlanDraft=''
 }={}){
  const {access,records,active}=result;
  const writeReady=TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&access?.attendanceWritesAccepted===true;
@@ -305,7 +305,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
       ((active?showActiveHomeNote:showHomeNote)?'':' hidden')+'>'+
       'Offsite Work Note'+(!active?'<span id="tt-note-requirement">'+(requireHomeNote?' (required)':' (optional)')+'</span>':'')+'<textarea id="tt-note"'+((!active&&requireHomeNote)?' required':'')+
       (active?' readonly':'')+' maxlength="500" rows="3" placeholder="Describe your offsite work">'+
-      (active?esc(active.workNote||''):'')+'</textarea></label>'+
+      (active?esc(active.workNote||''):esc(workPlanDraft))+'</textarea></label>'+
      (geoPromptVisible?'<div class="tt-location-readiness '+(locationEnabled?'is-ready':geoWarning?'needs-action':'needs-permission')+
       '" role="status" aria-live="polite">'+
       '<span class="tt-location-indicator" aria-hidden="true">'+(locationEnabled?'✓':'⌖')+'</span>'+
@@ -365,7 +365,7 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',clockCorrectionNotice='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
+ result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',workPlanDraft='',ojtWorkPlanDraft='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',clockCorrectionNotice='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError='',
  adminEligible=false,adminFullAccess=adminEligible,adminDirectory=[],adminSelectedIds=[],adminEditor=null,adminDeleteConfirm=null,adminBusy=false,adminError='',adminSuccess='',
  ojtSelected=null,ojtAttendance=null,ojtBusy=false,ojtError='',ojtSuccess=''
@@ -397,7 +397,7 @@ export function renderTimeTrackerNative({
  }
  if(sharedOjt){
   html+=renderTimeTrackerOjtClock({roster:result.ojtRoster,selected:ojtSelected,
-   attendance:ojtAttendance,busy:busy||ojtBusy,error:ojtError,success:ojtSuccess});
+   attendance:ojtAttendance,busy:busy||ojtBusy,error:ojtError,success:ojtSuccess,workPlanDraft:ojtWorkPlanDraft});
   html+=applicationFooter()+'</div></section>';
   return html;
  }
@@ -405,7 +405,7 @@ export function renderTimeTrackerNative({
   overview:result.overview,access:result.access,now,filters:overviewFilters
  });
  if(selected==='clock')html+=clockPage(result,busy,new Date(now),clockPending,clockPendingAction,locationPreference,{
-  success,clockCorrectionNotice,geoPromptVisible,geoPermission,geoMessage,clockStage
+  success,clockCorrectionNotice,geoPromptVisible,geoPermission,geoMessage,clockStage,workPlanDraft
  });
  if(selected==='employees'){
   html+=renderTimeTrackerEmployees({
