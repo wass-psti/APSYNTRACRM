@@ -5,10 +5,12 @@ import {Script} from 'node:vm';
 
 const entry = readFileSync('index.html', 'utf8');
 const script = readFileSync('frontend/mobile-home.js', 'utf8');
-const css = readFileSync('frontend/mobile-home.css', 'utf8');
+const css = readFileSync('frontend/crm-complete-design-system.css', 'utf8');
 
 test('mobile shell loads after existing frontend scripts and built styles', () => {
-  assert.ok(entry.indexOf('frontend/mobile-home.css') > entry.indexOf('apsyntra-styles.bundle.css'));
+  assert.equal((entry.match(/<link rel="stylesheet"/g) || []).length, 1);
+  assert.ok(entry.includes('frontend/crm-complete-design-system.css'));
+  assert.ok(css.includes('APSYNTRA Mobile Home — responsive signed shell'));
   assert.ok(entry.indexOf('frontend/mobile-home.js') > entry.indexOf('frontend/monday-inspired-ui.js'));
   assert.ok(entry.indexOf('frontend/mobile-home.js') > entry.indexOf('frontend/app.js'));
   assert.doesNotMatch(script, /\bfetch\s*\(|\bDomainApi\b|\bsupabase\b|\bAuthClient\b/);
@@ -45,6 +47,7 @@ test('mobile home and immersive destinations never replace native application co
 
 test('mobile search, favorite toggle, keyboard focus and dark theme are supported', () => {
   assert.match(script, /data-apsm-search/);
+  assert.match(script, /id="apsm-home-search" name="apsm-home-search"/);
   assert.match(script, /data-apsm-favorite/);
   assert.match(script, /data-apsm-focus-search/);
   assert.match(script, /aria-pressed/);
