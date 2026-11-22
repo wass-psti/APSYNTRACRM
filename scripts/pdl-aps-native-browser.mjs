@@ -195,10 +195,11 @@ try{
  const moduleErrors=[];
  modules.on('pageerror',error=>moduleErrors.push(error.message));
  await modules.addInitScript(()=>sessionStorage.setItem('pdl-booking-admin-access-token','SYNTHETIC_TEST_ONLY'));
- const courtState={courtId:'court-1',name:'Court 1',enabled:false,openMinute:480,closeMinute:1320,rates:[]};
+ const makeRates=()=>[60,90,120].map(durationMinutes=>({durationMinutes,amountMinor:durationMinutes===60?15000:durationMinutes===90?22500:30000,enabled:true}));
+ const courtState={courtId:'court-1',name:'Court 1',enabled:true,openMinute:480,closeMinute:1320,rates:makeRates()};
  const courtStates=[courtState,
-   {courtId:'court-2',name:'Court 2',enabled:false,openMinute:480,closeMinute:1320,rates:[]},
-   {courtId:'court-3',name:'Court 3',enabled:false,openMinute:480,closeMinute:1320,rates:[]},
+   {courtId:'court-2',name:'Court 2',enabled:true,openMinute:480,closeMinute:1440,rates:makeRates()},
+   {courtId:'court-3',name:'Court 3',enabled:true,openMinute:480,closeMinute:1440,rates:makeRates()},
  ];
  const policyState={reservationLeadHours:0,arrivalGraceMinutes:15,publicNotice:''};
  const calendarState={weekdays:[
@@ -235,7 +236,7 @@ try{
    }
    if(path.endsWith('/v1/admin/rates/court-1/60')&&request.method()==='PUT'){
      const rate=request.postDataJSON();
-     if(persistWrites)courtState.rates=[{durationMinutes:60,...rate}];
+     if(persistWrites){const current=courtState.rates.find(item=>item.durationMinutes===60);if(current)Object.assign(current,rate);else courtState.rates.push({durationMinutes:60,...rate});}
      return send({updated:true});
    }
    if(path.endsWith('/v1/admin/reservations/page'))return send({reservations:[bookingState],nextCursor:null});
@@ -286,7 +287,7 @@ try{
    route.fulfill({status:200,json:{methods}}));
  const routes=[
    ['courts','Court schedule'],['calendar','Weekly operating hours · Court 1'],
-   ['bookings','Booking queue'],['pricing','Approved booking rate'],
+   ['bookings','Booking queue'],['pricing','Booking rate'],
    ['payments','Admin-managed QR payment settings'],['customers','Customer directory.'],
    ['settings','Save operational policies'],
  ];
@@ -308,6 +309,23 @@ try{
  await modules.getByText('Weekly operating hours · Court 1',{exact:true}).waitFor();
  // Stateful, isolated HTTP fixtures verify genuine UI save -> GET -> reload flows.
  await modules.goto(base+'paseo/admin/courts');
+ await modules.getByRole('heading',{name:'Three-court rate readiness'}).waitFor();
+ assert.equal(await modules.locator('.pdl-rate-matrix tbody tr').count(),3);
+ assert.equal(await modules.locator('.pdl-rate-configured').count(),9);
+ assert.equal(await modules.getByText('₱150.00').count(),3);
+ assert.equal(await modules.getByText('₱225.00').count(),3);
+ assert.equal(await modules.getByText('₱300.00').count(),3);
+ assert.equal(await modules.locator('.pdl-rate-court-enabled').count(),3);
+ assert.equal(await modules.locator('.pdl-rate-configured small').count(),9);
+ await modules.getByRole('button',{name:'Refresh configuration'}).click();
+ await modules.getByRole('heading',{name:'Three-court rate readiness'}).waitFor();
+ for(const width of [390,768,1440]){
+   await modules.setViewportSize({width,height:950});
+   assert.equal(await modules.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,`rate matrix page has no horizontal overflow at ${width}px`);
+   assert.ok(await modules.locator('.pdl-rate-matrix-scroll').evaluate(el=>el.scrollWidth>=el.clientWidth),`rate matrix scroll container remains measurable at ${width}px`);
+ }
+ await modules.setViewportSize({width:900,height:950});
+ console.log('PASS nine saved court rates, enabled states, refresh readback and responsive matrix at 390/768/1440px');
  await modules.locator('#pdl-open-minute').fill('540');
  await modules.getByRole('button',{name:'Save court configuration'}).click();
  await modules.getByText('Court settings saved.').waitFor();
@@ -319,7 +337,7 @@ try{
  await modules.goto(base+'paseo/admin/pricing');
  await modules.locator('#pdl-rate-amount').fill('500');
  await modules.getByRole('button',{name:'Save rate'}).click();
- await modules.getByText('Rate saved. Enable the court and rate only after venue approval.').waitFor();
+ await modules.getByText('Rate saved and confirmed.').waitFor();
  await modules.reload();
  await modules.waitForFunction(() => document.querySelector('#pdl-rate-amount')?.value==='500.00');
  console.log('PASS rate configuration write and persisted fixture readback after refresh');

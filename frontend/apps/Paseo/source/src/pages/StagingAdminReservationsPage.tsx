@@ -179,7 +179,7 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
       if (!persisted || persisted.amountMinor !== amountMinor || persisted.enabled !== rateEnabled) {
         throw new Error('Rate changes could not be confirmed after saving. Refresh before trying again.');
       }
-      setConfigMessage('Rate saved. Enable the court and rate only after venue approval.');
+      setConfigMessage('Rate saved and confirmed.');
     } catch (reason) { setConfigMessage(reason instanceof Error ? reason.message : 'Rate settings failed.'); }
   }
   async function loadMethods(): Promise<ManagedMethod[]> {
@@ -288,7 +288,7 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
           <div>
             <p className="pdl-live-kicker">OPERATIONS / BOOKING CONTROL</p>
             <h2>{workspaceTitles[view]}</h2>
-            <p>Review bookings, validate payment evidence and manage approved court availability in one place.</p>
+            <p>Review bookings, validate payment evidence and manage court hours and rates in one place.</p>
           </div>
           <span className="pdl-live-source">{sharedSupabaseAdminEnabled ? 'Booking records' : 'Test bookings'}</span>
         </div>
@@ -379,12 +379,55 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
           <div className="pdl-live-section-heading">
             <div><p className="pdl-live-kicker">02 / VENUE SETTINGS</p><h2 id="pdl-config-heading">Court availability and venue rate configuration</h2></div>
           </div>
-          <p className="guest-qr-warning">Courts and prices need venue approval before they can be made available for booking.</p>
+          <p className="guest-qr-warning">Current court activation and saved PHP rates are read from the shared booking database.</p>
           <label htmlFor="pdl-config-court">Court</label>
           <select id="pdl-config-court" value={selectedCourt}
             onChange={event => setSelectedCourt(event.target.value)}>
             {['court-1','court-2','court-3'].map(code => <option key={code} value={code}>{code}</option>)}
           </select>
+          <div className="pdl-rate-matrix" aria-labelledby="pdl-rate-matrix-heading">
+            <div className="pdl-rate-matrix-heading">
+              <div>
+                <h3 id="pdl-rate-matrix-heading">Three-court rate readiness</h3>
+                <p>Live saved values for every booking duration</p>
+              </div>
+              <button className="button button-secondary" type="button" onClick={() => { void loadCourtConfig(); }}>
+                Refresh configuration
+              </button>
+            </div>
+            <div className="pdl-rate-matrix-scroll">
+              <table>
+                <thead><tr><th scope="col">Court</th><th scope="col">60 minutes</th><th scope="col">90 minutes</th><th scope="col">120 minutes</th></tr></thead>
+                <tbody>
+                  {courtConfig.map(court => (
+                    <tr key={court.courtId}>
+                      <th scope="row">
+                        <span>{court.name}</span>
+                        <small className={court.enabled ? 'pdl-rate-court-enabled' : 'pdl-rate-court-disabled'}>
+                          {court.enabled ? 'Court enabled' : 'Court disabled'}
+                        </small>
+                      </th>
+                      {[60, 90, 120].map(duration => {
+                        const rate = court.rates.find(item => item.durationMinutes === duration);
+                        return (
+                          <td key={duration}>
+                            {rate ? (
+                              <span className={rate.enabled ? 'pdl-rate-configured' : 'pdl-rate-disabled'}>
+                                <strong>{formatPeso(rate.amountMinor)}</strong>
+                                <small>{rate.enabled ? 'Rate enabled' : 'Rate disabled'}</small>
+                              </span>
+                            ) : (
+                              <span className="pdl-rate-missing">Not configured</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
           <div className="pdl-live-config-grid">
           {(view === 'all' || view === 'courts') && <form className="guest-proof-form" onSubmit={(event) => { void updateCourt(event); }}>
             <h3>Court schedule</h3>
@@ -397,12 +440,12 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
             <label>
               <input type="checkbox" checked={courtEnabled}
                 onChange={event => setCourtEnabled(event.target.checked)} />
-              Enable this court after venue approval
+              Enable this court
             </label>
             <button type="submit" className="button button-secondary">Save court configuration</button>
           </form>}
           {(view === 'all' || view === 'pricing') && <form className="guest-proof-form" onSubmit={(event) => { void updateRate(event); }}>
-            <h3>Approved booking rate</h3>
+            <h3>Booking rate</h3>
             <label htmlFor="pdl-rate-duration">Duration</label>
             <select id="pdl-rate-duration" value={rateDuration}
               onChange={event => setRateDuration(Number(event.target.value))}>
@@ -410,13 +453,13 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
               <option value={90}>90 minutes</option>
               <option value={120}>120 minutes</option>
             </select>
-            <label htmlFor="pdl-rate-amount">Approved total in PHP</label>
+            <label htmlFor="pdl-rate-amount">Total in PHP</label>
             <input id="pdl-rate-amount" type="number" min="0.01" max="100000" step="0.01"
               value={rateAmount} onChange={event => setRateAmount(event.target.value)} required />
             <label>
               <input type="checkbox" checked={rateEnabled}
                 onChange={event => setRateEnabled(event.target.checked)} />
-              Enable this rate after venue approval
+              Enable this rate
             </label>
             <button className="button button-secondary" type="submit" disabled={!rateAmount}>
               Save rate

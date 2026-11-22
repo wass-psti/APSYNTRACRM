@@ -12,6 +12,13 @@ const bookingPage = read(
 const courtMap = read(
   "frontend/apps/Paseo/source/src/components/courts/InteractiveCourtMap.tsx",
 );
+const adminPage = read(
+  "frontend/apps/Paseo/source/src/pages/StagingAdminReservationsPage.tsx",
+);
+const courtDetails = read(
+  "frontend/apps/Paseo/source/src/pages/CourtDetailsPage.tsx",
+);
+const adminStyles = read("frontend/apps/Paseo/source/src/styles/pdl-live-admin.css");
 const browser = read("scripts/pdl-aps-native-browser.mjs");
 const workflow = read(".github/workflows/pdl-aps-native-01.yml");
 const acceptance = read(
@@ -64,6 +71,24 @@ test("public booking copy reflects live availability and server-priced review", 
     courtMap,
     /Price: Confirm at booking · Availability: Check schedule/,
   );
+  assert.match(courtDetails, /Server quote at booking/);
+  assert.match(courtDetails, /Check live booking schedule/);
+});
+
+test("admin rate readiness shows all three courts and every duration from saved server values", () => {
+  assert.match(adminPage, /Three-court rate readiness/);
+  assert.match(adminPage, /courtConfig\.map/);
+  assert.match(adminPage, /Not configured/);
+  assert.match(adminPage, /Refresh configuration/);
+  assert.match(adminPage, /\[\s*60,\s*90,\s*120\s*\]\.map/);
+  assert.match(adminPage, /aria-labelledby="pdl-rate-matrix-heading"/);
+  assert.match(adminPage, /scope="col"/);
+  assert.match(adminPage, /Rate saved and confirmed/);
+  assert.match(adminStyles, /\.pdl-rate-matrix-scroll \{ overflow-x:auto; \}/);
+  assert.match(adminStyles, /@media\(max-width:620px\)/);
+  assert.doesNotMatch(adminPage, /Enable this rate after venue approval/);
+  assert.doesNotMatch(adminPage, /Enable this court after venue approval/);
+  assert.doesNotMatch(adminPage, /Courts and prices need venue approval/);
 });
 
 test("native Pages browser acceptance chooses tomorrow before testing the full slot grid", () => {
