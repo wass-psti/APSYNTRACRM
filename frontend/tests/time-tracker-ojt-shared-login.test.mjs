@@ -73,7 +73,7 @@ test('attendance projection is bound to the selected intern and rejects conflict
  assert.throws(()=>projectOjtAttendance({...attendance(),workspaceId:scope.userId},scope,intern),/attendance/);
  assert.throws(()=>projectOjtAttendance({...attendance(),records:[
   ...attendance().records,{...attendance().records[0],id:intern2}
- ]},scope,intern),/Conflicting active/);
+ ]},scope,intern),/Conflicting OJT sessions/);
 });
 
 test('client uses scoped intern-ID RPCs and does not issue identity tokens',async()=>{
@@ -214,7 +214,7 @@ test('forward migration removes PIN/session infrastructure and preserves histori
   'DROP FUNCTION IF EXISTS public.timetracker_ojt_leave',
   'p_board_id uuid,p_intern_id uuid',
   'i.shared_user_id=auth.uid() AND i.active',
-  'a.intern_id=v_id AND a.shared_user_id=auth.uid()',
+  'a.intern_id=v_id AND a.shared_user_id=p_shared_user_id',
   'ADD COLUMN IF NOT EXISTS intern_name text',
   'UPDATE private.tt_ojt_attendance a',
   'intern_id,intern_name',
