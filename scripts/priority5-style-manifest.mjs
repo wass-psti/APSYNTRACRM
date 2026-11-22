@@ -72,6 +72,7 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/dark-search-settings.css",
  "frontend/dark-native-refinements.css",
  "frontend/dark-attendance-admin.css",
- "frontend/dark-workspace-account-completion.css"
+ "frontend/dark-workspace-account-completion.css",
+ "frontend/dark-simplified-system.css"
 ]);
 export const STYLE_BUNDLE="frontend/apsyntra-styles.bundle.css";
