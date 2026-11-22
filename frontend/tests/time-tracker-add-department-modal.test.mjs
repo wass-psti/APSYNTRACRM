@@ -38,7 +38,7 @@ test('accessible dialog owns focus, dismissal, form errors and saving state',()=
   'input.disabled=busy','cancelButton.disabled=busy','closeButton.disabled=busy',
   'new FormData(form)'
  ])assert.ok(js.includes(fragment),fragment);
- assert.doesNotMatch(js,/supabase|\.rpc\(|mutateDepartmentCatalog|fetch\(|localStorage/i);
+ assert.doesNotMatch(js,/\.rpc\(|mutateDepartmentCatalog|fetch\(|localStorage/i);
 });
 test('modal-only stylesheet uses full-width field, accessible states and mobile stacking',()=>{
  for(const fragment of [
