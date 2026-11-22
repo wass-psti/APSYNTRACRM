@@ -1,0 +1,392 @@
+/* CP-CRM-DARK-SIMPLIFY-01 — restrained enterprise dark mode.
+ * Decorative presentation only. Light mode, status colors, focus affordances,
+ * module data tables, destructive confirmation and workflow states stay intact. */
+@media screen {
+  html[data-aps-monday-theme="dark"] {
+    --crm-dark-canvas: #17181b;
+    --crm-dark-sidebar: #1c1d21;
+    --crm-dark-surface: #26272b;
+    --crm-dark-raised: #2d2e33;
+    --crm-dark-hover: #36383e;
+    --crm-dark-text: #efeff1;
+    --crm-dark-muted: #c0c1c6;
+    --crm-dark-border: #45464d;
+    --crm-dark-focus: #a2bdff;
+    --crm-dark-accent: #94b7f7;
+    --crm-dark-accent-surface: #273b59;
+    --crm-native-canvas: #17181b;
+    --crm-native-panel: #26272b;
+    --crm-native-elevated: #303137;
+    --crm-native-input: #202126;
+    --crm-native-border: #46474e;
+    --crm-native-ink: #efeff1;
+    --crm-native-muted: #c0c1c6;
+    --crm-native-link: #9cbbf7;
+    --crm-native-active: #2d405c;
+    --crm-native-focus: #a2bdff;
+  }
+  /* One compact, filled icon family. Light theme retains its existing line icons. */
+  html[data-aps-monday-theme="dark"]
+    #app
+    :is(.sidebar-svg-icon, .overview-svg-icon)
+    .icon-outline {
+    display: none;
+  }
+  html[data-aps-monday-theme="dark"]
+    #app
+    :is(.sidebar-svg-icon, .overview-svg-icon)
+    .icon-solid {
+    display: inline;
+    opacity: 1;
+  }
+  html:not([data-aps-monday-theme="dark"])
+    #app
+    :is(.sidebar-svg-icon, .overview-svg-icon)
+    .icon-solid {
+    display: none;
+  }
+  html[data-aps-monday-theme="dark"]
+    #app
+    .shell
+    .aps-sidebar
+    :is(.nav-ico, .sidebar-layout-toggle-glyph) {
+    background: transparent;
+    color: inherit;
+    border: 0;
+    box-shadow: none;
+    filter: none;
+  }
+  html[data-aps-monday-theme="dark"] #app .shell .aps-sidebar .nav-link.active {
+    background: #293c59;
+    border-color: #293c59;
+    color: #f4f6fb;
+  }
+  html[data-aps-monday-theme="dark"]
+    #app
+    .shell
+    .aps-sidebar
+    .nav-link:not(.active):hover {
+    background: #303238;
+    border-color: transparent;
+  }
+  html[data-aps-monday-theme="dark"]
+    #app
+    .shell
+    .aps-sidebar
+    :is(.sidebar-board-initial, .nav-count) {
+    border: 0;
+    box-shadow: none;
+    filter: none;
+  }
+  /* Hierarchy comes from type and spacing, not nested slabs of backgrounds. */
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview
+    :is(.overview-hero, .overview-essentials) {
+    background: transparent;
+    background-image: none;
+    border: 0;
+    box-shadow: none;
+  }
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview
+    .overview-stat-grid
+    .stat-card {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview
+    .overview-stat-grid
+    .stat-card
+    + .stat-card {
+    border-left: 1px solid #414248;
+  }
+  @media (max-width: 850px) {
+    html[data-aps-monday-theme="dark"]
+      #app
+      .aps-overview-shell
+      .aps-overview
+      .overview-stat-grid
+      .stat-card:nth-child(odd) {
+      border-left: 0;
+    }
+    html[data-aps-monday-theme="dark"]
+      #app
+      .aps-overview-shell
+      .aps-overview
+      .overview-stat-grid
+      .stat-card:nth-child(even) {
+      border-left: 1px solid #414248;
+    }
+  }
+  @media (max-width: 395px) {
+    html[data-aps-monday-theme="dark"]
+      #app
+      .aps-overview-shell
+      .aps-overview
+      .overview-stat-grid
+      .stat-card,
+    html[data-aps-monday-theme="dark"]
+      #app
+      .aps-overview-shell
+      .aps-overview
+      .overview-stat-grid
+      .stat-card:nth-child(even) {
+      border-left: 0;
+      border-bottom: 1px solid #414248;
+    }
+    html[data-aps-monday-theme="dark"]
+      #app
+      .aps-overview-shell
+      .aps-overview
+      .overview-stat-grid
+      .stat-card:last-child {
+      border-bottom: 0;
+    }
+  }
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview
+    :is(.overview-stat-grid .stat-icon, .overview-essentials .activity-avatar) {
+    background: transparent;
+    background-image: none;
+    color: #becde7;
+    border: 0;
+    box-shadow: none;
+  }
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview
+    .overview-essentials
+    .panel-body {
+    gap: 0;
+    padding: 6px 0 0;
+  }
+  /* Preserve CP-DARK-04's explicit header/content grid, so headings never overlap checks. */
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview
+    .overview-essentials
+    .activity-item,
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview
+    .overview-essentials
+    .activity-item:first-child,
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview
+    .overview-essentials
+    .activity-item:last-child {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    border-bottom: 1px solid #3c3d43;
+    padding: 18px 18px 19px;
+  }
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview
+    .overview-essentials
+    .activity-item
+    :is(b, small) {
+    line-height: 1.5;
+  }
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview
+    .overview-essentials
+    .overview-essentials-indicator {
+    background: transparent;
+    color: #a4e3c1;
+    border: 0;
+    box-shadow: none;
+  }
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview
+    .overview-board-grid
+    .board-card,
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-boards-shell
+    .aps-boards
+    .boards-catalog-grid
+    .board-card {
+    background: #242529;
+    background-image: none;
+    border: 1px solid #42434a;
+    border-radius: 8px;
+    box-shadow: none;
+  }
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview
+    .overview-board-grid
+    .board-card:hover,
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-boards-shell
+    .aps-boards
+    .boards-catalog-grid
+    .board-card:hover {
+    background: #2b2d32;
+    border-color: #60636e;
+    box-shadow: none;
+  }
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview
+    .overview-board-grid
+    .board-card-actions
+    > summary,
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-boards
+    .boards-catalog-grid
+    .board-card-actions
+    > summary {
+    background: transparent;
+    color: #cdd0d8;
+    border-color: #565861;
+    box-shadow: none;
+  }
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview
+    .overview-board-grid
+    .board-card-footer
+    span:first-child,
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-boards
+    .boards-catalog-grid
+    .board-card-footer
+    span:first-child {
+    background: #303137;
+    color: #dedfe4;
+    border-radius: 4px;
+  }
+  /* Native apps: remove redundant elevation on read-only panels, not form fields
+ * or selected/alert/confirmation states. Do not collapse their layout. */
+  html[data-aps-monday-theme="dark"]
+    #app
+    :is(
+      .tl-reference-portal .tl-overview-tile,
+      .tl-reference-portal .tl-stat,
+      .frt-ref .frt-ref-metric,
+      .frt-ref .frt-ref-chart,
+      .ft3-app .ft3-panel,
+      .tb-app .tb-panel,
+      .tt-native .tt-hours-kpis > div,
+      .tt-native .tt-monitor-stat
+    ) {
+    box-shadow: none;
+    border-color: #41434a;
+  }
+  html[data-aps-monday-theme="dark"]
+    #app
+    :is(
+      .tl-reference-portal .tl-overview-tile,
+      .tl-reference-portal .tl-stat,
+      .frt-ref .frt-ref-metric,
+      .ft3-app .ft3-panel,
+      .tb-app .tb-panel
+    ) {
+    background: #26272b;
+  }
+  /* Forms and dialogs stay visibly interactive. Only decorative glows disappear. */
+  html[data-aps-monday-theme="dark"]
+    #app
+    :is(
+      .aps-global-search-dialog,
+      .native-search-detail-drawer,
+      .modal,
+      .aps-action-popover,
+      .board-tool-menu-panel,
+      .board-column-menu-content
+    ) {
+    box-shadow: 0 12px 32px #0007;
+  }
+  html[data-aps-monday-theme="dark"]
+    #app
+    :is(
+      .topbar .aps-monday-top-icon,
+      .topbar .topbar-signout,
+      .overview-hero .head-actions .secondary
+    ) {
+    background: transparent;
+    box-shadow: none;
+    border-color: #484a50;
+  }
+  html[data-aps-monday-theme="dark"]
+    #app
+    :is(.overview-hero-art, .tb-app .tb-hero:after) {
+    opacity: 0;
+    box-shadow: none;
+    filter: none;
+  }
+  /* Status/focus must remain distinguishable without luminous outlines. */
+  html[data-aps-monday-theme="dark"]
+    #app
+    :is(
+      button,
+      a[href],
+      input,
+      select,
+      textarea,
+      [role="button"]
+    ):focus-visible {
+    outline: 2px solid #aac4ff;
+    outline-offset: 2px;
+  }
+  @media (max-width: 650px) {
+    html[data-aps-monday-theme="dark"]
+      #app
+      .aps-overview-shell
+      .aps-overview
+      .overview-essentials
+      .activity-item {
+      padding-inline: 12px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html[data-aps-monday-theme="dark"]
+      #app
+      :is(.board-card, .stat-card, .nav-link) {
+      transition: none;
+      transform: none;
+    }
+  }
+}
+/* Specific panel selectors win over the earlier semantic component skin. */
+@media screen {
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview
+    section.panel.overview-essentials {
+    background: transparent;
+    background-image: none;
+    border: 0;
+    box-shadow: none;
+  }
+}
