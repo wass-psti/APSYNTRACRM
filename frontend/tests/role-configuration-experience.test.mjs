@@ -132,7 +132,7 @@ test('Native Application Access supports individual assignments and multi-app bu
  const actorId='77777777-7777-4777-8777-777777777777';
  const accessData={
   users:[{id:userId,name:'Example user',email:'user@example.invalid',protected:false,activeWorkspaceCount:1}],
-  modules:[],boards:[],boardAssignments:[],
+  modules:ROLE_MODULE_OPTIONS.map(([id])=>id),boards:[],boardAssignments:[],
   moduleAssignments:[{userId,moduleId:'time-tracker',role:'Employee',enabled:true,updatedAt:'2026-11-20T10:00:00Z'}],
   fueltransWorkspaceAvailable:true,frtWorkspaceAvailable:true,scopedSixAvailable:true,
   charterWorkspaceAvailable:true,toolTraceabilityWorkspaceAvailable:true,
