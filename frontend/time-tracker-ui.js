@@ -411,7 +411,7 @@ export function renderTimeTrackerNative({
   html+=renderTimeTrackerEmployees({
    directory:result.access?.employees,access:result.access,search:employeesSearch,loading:busy
   });
-  if(result.ojtAdmin||['System Admin','IT Administrator'].includes(result.access?.moduleRole))
+  if(['System Admin','IT Administrator'].includes(result.access?.moduleRole))
    html+=renderTimeTrackerOjtAdmin({admin:result.ojtAdmin,
     attendance:result.ojtAdminAttendance,
     employees:result.access?.employees?.members||[]});
