@@ -635,7 +635,8 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
    frtScoped?'Workspace Fund Tracker membership':
    sixScoped?'Workspace application membership':
    charterScoped?'Workspace Charter membership':
-   delegatedModules.has(id)?'Existing domain role handler':'Central role contract';
+   delegatedModules.has(id)?'Existing domain role handler':
+   !opt.length?'Registered — assignment contract unavailable':'Central role contract';
   const tooltraceScoped=id==='tool-traceability'&&data.toolTraceabilityWorkspaceAvailable===true;
   const workspaceScopedModule=id==='material-request-hub'||id==='toolbox-issues'||fueltransScoped||tooltraceScoped||frtScoped||sixScoped||charterScoped;
   const editBlocked=locked||!opt.length||(id==='fueltrans'&&!fueltransScoped)||
