@@ -143,6 +143,10 @@ docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
   < "$root/sql/acceptance/cp-native-app-autosync-15-constraint-normalization.sql" \
   >"$restore_log"
 echo 'PASS: source-compatible schema fingerprint and known check normalization'
+# CP19: always report Auth ownership differences before any synthetic fixtures.
+# This is read-only, not a permission repair or a GoTrue acceptance claim.
+node "$root/scripts/cp-native-app-autosync-19-ownership.mjs" --clone-only
+
 
 # Three DISTINCT PostgreSQL sessions: synthetic users cannot sign in.
 # The clone is destroyed unconditionally, even when any test fails.
