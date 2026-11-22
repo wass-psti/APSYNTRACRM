@@ -203,7 +203,7 @@ import {TT_BOARD_GPS_PROJECTION_ENABLED,loadTimeTrackerBoardGps,renderTimeTracke
 import {renderTimeTrackerMainGroup} from './time-tracker-main-group.js';
 import {findTimeTrackerAttendanceBoard,TIMETRACKER_APPLICATION_ROUTE} from './time-tracker-application.js';
 import {openTimeTrackerAddDepartmentModal} from './apps/TimeTracker/time-tracker-add-department-modal.js';
-import {TimeTrackerOjtClient} from './apps/TimeTracker/time-tracker-ojt.js';
+import {TimeTrackerOjtClient,isEligibleTimeTrackerSharedOjtAccount,TIMETRACKER_SHARED_OJT_USER_ID} from './apps/TimeTracker/time-tracker-ojt.js';
 import {attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError} from './time-tracker-clock-recovery.js';
 import {signedMapPoints,mountTimeTrackerMaps,disposeTimeTrackerMaps,setTimeTrackerMapTheme,retryTimeTrackerMaps,toggleTimeTrackerMapFullscreen} from './time-tracker-map.js';
 import {inspectMySignedEffectiveAccess,sanitizeEffectiveAccessReport} from './signed-effective-access.js';
@@ -9288,7 +9288,10 @@ async function action(name,button){
   const scope=timeTrackerOjtAdminScope(),id=button.dataset.ojtUser;
   const enabled=name==='tt-ojt-group-enable'?true:button.dataset.ojtEnabled==='true';
   const users=state.ttAttendance?.access?.employees?.members||[];
-  if(!scope||state.ttOjtBusy||!users.some(u=>u.id===id&&u.role==='OJT'))break;
+  const eligible=users.some(u=>u.id===id&&isEligibleTimeTrackerSharedOjtAccount(u));
+  const configured=state.ttAttendance?.ojtAdmin?.groups?.some(g=>g.userId===id);
+  if(!scope||state.ttOjtBusy||id!==TIMETRACKER_SHARED_OJT_USER_ID||
+    (enabled?!eligible:!configured))break;
   if(!enabled&&!confirm('Disable shared login and revoke all intern identity sessions? Attendance history will be preserved.'))break;
   state.ttOjtBusy=true;render();
   try{await timeTrackerOjt.setGroup(scope,id,enabled);

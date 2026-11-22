@@ -7,7 +7,7 @@ import {projectTimeTrackerOtRows,validateOvertimeDraft,TT_OT_WRITES_ACCEPTED} fr
 import {projectTimeTrackerTeamDirectory,projectTimeTrackerTeamDepartments,TT_TEAM_DEPARTMENTS,validTimeTrackerDepartmentName} from './time-tracker-team.js';
 import {projectTimeTrackerEmployees,projectTimeTrackerEmployeeDepartments,projectTimeTrackerDepartmentCatalog} from './time-tracker-application.js';
 import {validateTimeTrackerGps} from './time-tracker-gps.js';
-import {projectOjtRoster,projectOjtAdmin,projectOjtAdminAttendance} from './apps/TimeTracker/time-tracker-ojt.js';
+import {projectOjtRoster,projectOjtAdmin,projectOjtAdminAttendance,TIMETRACKER_SHARED_OJT_USER_ID} from './apps/TimeTracker/time-tracker-ojt.js';
 /**
  * TimeTracker native APSYNTRA adapter. Source reference: TimeTracker v2.0.14.
  * No standalone app, storage shim, local JWT, synthetic rows, or privileged key.
@@ -307,12 +307,19 @@ export class TimeTrackerNativeClient{
   }
   // Optional OJT feature detection uses the already-verified native session.
   // Ordinary TimeTracker snapshots must remain compatible with older backends.
+  const designatedSharedOjt=access.userId===TIMETRACKER_SHARED_OJT_USER_ID;
   let ojtRoster=null,ojtAdmin=null,ojtAdminAttendance=null;
-  if(access.moduleRole==='OJT'){
-   try{ojtRoster=projectOjtRoster(
-    await this.api.rpc('timetracker_ojt_roster',{p_board_id:boardId}),access);}
-   catch(error){
+  if(designatedSharedOjt){
+   try{
+    const signedRoster=projectOjtRoster(
+     await this.api.rpc('timetracker_ojt_roster',{p_board_id:boardId}),access);
+    // An unconfigured shared account cannot use ordinary Employee Clock.
+    ojtRoster=signedRoster.mode==='PERSONAL'?
+     {mode:'SETUP_REQUIRED',interns:[]} : signedRoster;
+   }catch(error){
     if(!/PGRST202|Could not find the function|Unexpected RPC timetracker_ojt_roster/.test(String(error?.message||error)))throw error;
+    // Clear front-end-only error state, not an invented signed server roster.
+    ojtRoster={mode:'SERVICE_UNAVAILABLE',interns:[]};
    }
   }
   if(!clockOnly&&['System Admin','IT Administrator'].includes(access.moduleRole)){
@@ -328,7 +335,7 @@ export class TimeTrackerNativeClient{
   await checkIdentity(this.auth,this.api,access,boardId);
   return {status:'VERIFIED_READ',clockOnly:clockOnly===true,
    access:{...access,...otAccess,
-    attendanceWritesAccepted:ojtRoster?.mode==='SHARED_LOGIN'?false:attendanceWritesAccepted,
+    attendanceWritesAccepted:designatedSharedOjt?false:attendanceWritesAccepted,
     employeeDepartment,employees,departmentCatalog},
    ojtRoster,ojtAdmin,ojtAdminAttendance,
    records,otRequests,autoClockout,autoClockoutUnavailable,overview,log,

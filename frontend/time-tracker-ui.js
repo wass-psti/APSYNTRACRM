@@ -374,7 +374,7 @@ export function renderTimeTrackerNative({
  const selected=((view==='team'&&teamEligible!==true)||
   (view==='gps'&&gpsEligible!==true))?'clock':
  ['overview','clock','employees','log','reports','calendar','ot','hours','team','monitor','gps'].includes(view)?view:'clock';
- const sharedOjt=verified&&['SHARED_LOGIN','SHARED_DISABLED'].includes(result.ojtRoster?.mode);
+ const sharedOjt=verified&&['SHARED_LOGIN','SHARED_DISABLED','SERVICE_UNAVAILABLE','SETUP_REQUIRED'].includes(result.ojtRoster?.mode);
  let html='<section class="tt-native" aria-label="TimeTracker attendance application"><div class="fm1-app tt-application" data-tt-view="'+selected+'" data-tt-application-root>'+
   head(verified?result.access:null,busy,selected)+
   (sharedOjt?'<nav class="tt-ojt-navigation" aria-label="Intern attendance"><strong>OJT attendance</strong></nav>':
