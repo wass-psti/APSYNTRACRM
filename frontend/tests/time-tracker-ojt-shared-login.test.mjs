@@ -26,7 +26,7 @@ const fresh=(mode='SHARED_LOGIN')=>({
 test('signed OJT roster projects independent subprofiles without trust in client names',()=>{
  assert.deepEqual(projectOjtRoster(fresh(),scope).interns,[{id:intern,name:'Intern Alpha'}]);
  for(const key of ['actorId','workspaceId','boardId']){
-  assert.throws(()=>projectOjtRoster({...fresh(),[key]:scope.userId},scope),
+  assert.throws(()=>projectOjtRoster({...fresh(),[key]:intern},scope),
    /roster/);
  }
  assert.throws(()=>projectOjtRoster({...fresh(),interns:[
