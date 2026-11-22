@@ -745,10 +745,6 @@ html[data-aps-monday-theme="dark"] #app .aps-overview-shell > .main-content {
 
 /* Make all four dashboard metrics identical in structure */
 html[data-aps-monday-theme="dark"] #app .aps-overview .overview-stat-grid > .stat-card {
-    background: var(--crm-dark-surface,#242832) !important;
-    border: 1px solid var(--crm-dark-border,#3b424e) !important;
-    border-radius: 12px;
-    box-shadow: none !important;
     color: var(--crm-dark-text,#edf1f8) !important;
     box-sizing: border-box;
     min-width: 0;
@@ -816,7 +812,7 @@ html[data-aps-monday-theme="dark"] #app .aps-overview .overview-board-grid .boar
 }
 
 /* Empty states and supplementary dashboard panels */
-html[data-aps-monday-theme="dark"] #app .aps-overview :is(.overview-empty, .overview-essentials) {
+html[data-aps-monday-theme="dark"] #app .aps-overview .overview-empty {
     background: var(--crm-dark-surface,#242832) !important;
     border-color: var(--crm-dark-border,#3b424e) !important;
     color: var(--crm-dark-text,#edf1f8) !important;
