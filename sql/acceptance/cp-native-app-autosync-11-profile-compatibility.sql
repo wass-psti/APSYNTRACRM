@@ -7,22 +7,26 @@ CREATE TEMP TABLE cp11_staging_profiles (
   email_verified_at timestamptz,
   updated_at timestamptz NOT NULL DEFAULT now(),
   status text NOT NULL DEFAULT 'active'
+    CHECK(status IN ('active','disabled'))
 ) ON COMMIT DROP;
 INSERT INTO cp11_staging_profiles(id,email,display_name,status)
 VALUES ('10000000-0000-4000-8000-000000000001','qa-one@example.invalid','QA One','active'),
-       ('20000000-0000-4000-8000-000000000002','qa-two@example.invalid','QA Two','inactive');
+       ('20000000-0000-4000-8000-000000000002','qa-two@example.invalid','QA Two','disabled');
 -- Rehearse exactly the missing columns in the existing CRM foundation,
 -- using its current defaults. This is NOT a staging migration or grant.
 ALTER TABLE cp11_staging_profiles
  ADD COLUMN platform_role text NOT NULL DEFAULT 'employee',
  ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE cp11_staging_profiles
+ ADD CONSTRAINT cp11_platform_role_check
+ CHECK (platform_role IN ('admin_general_manager','hr','supervisor','employee'));
 DO $$
 BEGIN
  IF (SELECT count(*) FROM cp11_staging_profiles)<>2
     OR (SELECT count(*) FROM cp11_staging_profiles WHERE platform_role='employee')<>2
     OR (SELECT count(*) FROM cp11_staging_profiles WHERE created_at IS NOT NULL)<>2
     OR (SELECT status FROM cp11_staging_profiles
-        WHERE id='20000000-0000-4000-8000-000000000002')<>'inactive'
+        WHERE id='20000000-0000-4000-8000-000000000002')<>'disabled'
  THEN RAISE EXCEPTION 'Staging compatibility rehearsal changed source profile semantics'; END IF;
  IF (SELECT count(*) FROM information_schema.columns
      WHERE table_name='cp11_staging_profiles'

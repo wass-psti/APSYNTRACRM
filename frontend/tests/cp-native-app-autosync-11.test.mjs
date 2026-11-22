@@ -23,7 +23,7 @@ test('staging compatibility rehearsal uses only a disposable temporary table',()
 });
 test('existing profiles are not assigned new authorities as part of clone test',()=>{
  assert.match(sql,/platform_role text NOT NULL DEFAULT 'employee'/);
- assert.match(sql,/WHERE id='20000000-0000-4000-8000-000000000002'\)<>\'inactive\'/);
+ assert.match(sql,/WHERE id='20000000-0000-4000-8000-000000000002'\)<>\'disabled\'/);
  assert.match(runner,/NOT VERIFIED: three real signed browser sessions/);
  assert.match(runner,/cp-native-app-autosync-11-profile-compatibility.sql/);
 });
