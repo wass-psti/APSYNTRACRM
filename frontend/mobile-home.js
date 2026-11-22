@@ -130,7 +130,7 @@ function renderHome(shell, items) {
       '<a href="#/settings" class="apsm-settings" aria-label="Open account settings">' +
       svg('settings') + '</a></div>' +
     '<div class="apsm-search" role="search">' + svg('search', 20) +
-      '<input type="text" inputmode="search" autocomplete="off" data-apsm-search' +
+      '<input type="text" id="apsm-home-search" name="apsm-home-search" inputmode="search" autocomplete="off" data-apsm-search' +
       ' aria-label="Search applications and boards" placeholder="Search apps and boards…" value="' +
       escapeHtml(searchText) + '"></div>' +
     '<section class="apsm-section apsm-favorites" id="apsm-favorites" data-apsm-collection>' +
