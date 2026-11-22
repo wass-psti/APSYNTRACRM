@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {
  projectOjtRoster,projectOjtAdmin,projectOjtAttendance,projectOjtAdminAttendance,
  TimeTrackerOjtClient,TIMETRACKER_SHARED_OJT_USER_ID,
@@ -14,6 +15,7 @@ const firstMigration=readFileSync('supabase/migrations/20261123100000_cp_tt_ojt_
 const correction=readFileSync('supabase/migrations/20261123130000_cp_tt_ojt_employee_department_identity.sql','utf8');
 const dropdownMigration=readFileSync('supabase/migrations/20261123140000_cp_tt_ojt_dropdown_identity.sql','utf8');
 const docs=readFileSync('docs/CP-TT-OJT-01-SHARED-LOGIN.md','utf8');
+const migrationManifest=JSON.parse(readFileSync('supabase/migration-source-manifest.json','utf8'));
 const scope={userId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
  workspaceId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
  boardId:'46bf4ee7-368a-4c35-842c-8593ea1f6ac3'};
@@ -192,6 +194,8 @@ test('app wires dropdown selection, signed attendance and admin roster actions',
  assert.match(native,/attendanceWritesAccepted:designatedSharedOjt\?false/);
  assert.match(native,/timetracker_ojt_roster/);
  assert.match(native,/timetracker_ojt_admin_snapshot/);
+ assert.match(native,/canManageOjt=moduleAdmin\|\|bootstrapAdmin/);
+ assert.match(app,/state\.roleVerified!==true/);
 });
 
 test('forward migration removes PIN/session infrastructure and preserves historical names',()=>{
@@ -220,4 +224,8 @@ test('forward migration removes PIN/session infrastructure and preserves histori
  assert.doesNotMatch(dropdownMigration,/CREATE\s+USER|INSERT INTO auth\.users/i);
  assert.match(docs,/self-identification, not proof/i);
  assert.match(docs,/intern_name|historical attendance/i);
+ const entry=migrationManifest.forward_migrations.find(x=>x.file==='20261123140000_cp_tt_ojt_dropdown_identity.sql');
+ assert.ok(entry,'dropdown migration must be registered in the source manifest');
+ assert.equal(entry.bytes,Buffer.byteLength(dropdownMigration,'utf8'));
+ assert.equal(entry.sha256,createHash('sha256').update(dropdownMigration,'utf8').digest('hex'));
 });
