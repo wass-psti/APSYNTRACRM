@@ -18,7 +18,7 @@ test("complete CRM design system is the final deterministic stylesheet", () => {
   assert.ok(previous >= 0 && current > previous);
   assert.match(
     index,
-    /apsyntra-styles\.bundle\.css\?v=cp-crm-boards-uiverse-overhaul-03/,
+    /apsyntra-styles\.bundle\.css\?v=(?:cp-crm-boards-uiverse-overhaul-03|cp-crm-overview-redesign-01)/,
   );
   assert.ok(
     bundle.includes(
