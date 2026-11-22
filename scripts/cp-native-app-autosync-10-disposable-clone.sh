@@ -37,6 +37,10 @@ echo "PASS: isolated local PostgreSQL CRM schema and fixture restore"
 docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 -U postgres -d "$clone" \
   -f /dev/stdin < "$repository/sql/acceptance/cp-native-app-autosync-11-profile-compatibility.sql" >/dev/null
 echo "PASS: staging-shaped profile DDL addition and synthetic row preservation"
+docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 -U postgres -d "$clone" \
+  -f /dev/stdin < "$repository/sql/acceptance/cp-native-app-autosync-14-staging-membership-fidelity.sql" >/dev/null
+echo "PASS: staging invitation and workspace membership FK/role/cascade fidelity"
+
 if [[ "$(docker exec "$container" psql -X -U postgres -d "$clone" -Atqc "SELECT count(*) FROM public.module_role_assignments")" != "0" ]]; then
  echo "BLOCKED: clone contains prior module assignment rows" >&2; exit 2
 fi
