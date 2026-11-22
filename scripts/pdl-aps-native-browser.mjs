@@ -313,6 +313,17 @@ try{
  const savedWeekdays=modules.getByRole('list',{name:'Saved weekly schedules'});
  await savedWeekdays.getByText('Monday').waitFor();
  await savedWeekdays.getByText('9:00 AM – 10:00 PM').waitFor();
+ await modules.locator('[aria-label="Opening time"]').selectOption('600');
+ await modules.locator('[aria-label="Closing time"]').selectOption('1260');
+ await savedWeekdays.getByRole('button',{name:'Edit Court 1 Monday schedule'}).click();
+ await modules.waitForFunction(() => document.querySelector('[aria-label=\"Opening time\"]')?.value==='540' && document.querySelector('[aria-label=\"Closing time\"]')?.value==='1320');
+ await modules.locator('[aria-label="Opening time"]').selectOption('570');
+ await modules.getByRole('button',{name:'Update weekday schedule'}).click();
+ await modules.getByText('Changes saved.').waitFor();
+ await modules.reload();
+ await modules.waitForFunction(() => document.querySelector('[aria-label=\"Opening time\"]')?.value==='570');
+ await modules.getByRole('list',{name:'Saved weekly schedules'}).getByText('9:30 AM – 10:00 PM').waitFor();
+ console.log('PASS Edit Schedule restores saved values, updates the existing row, and persists after refresh');
  await modules.getByRole('button',{name:'Add maintenance block'}).click();
  const savedBlocks=modules.getByRole('list',{name:'Saved maintenance blocks'});
  const removeBlock=savedBlocks.getByRole('button',{name:/Remove Court 1 maintenance on/});
@@ -414,7 +425,7 @@ try{
  await modules.getByRole('button',{name:'Save operational policies'}).click();
  await modules.getByText(/Policy changes could not be confirmed after saving/).waitFor();
  await modules.goto(base+'paseo/admin/calendar');
- await modules.waitForFunction(() => document.querySelector('[aria-label=\"Opening time\"]')?.value==='540');
+ await modules.waitForFunction(() => document.querySelector('[aria-label=\"Opening time\"]')?.value==='570');
  await modules.getByRole('combobox',{name:'Opening time'}).selectOption('600');
  await modules.getByRole('button',{name:'Save weekday schedule'}).click();
  await modules.getByText(/The schedule change could not be confirmed/).waitFor();
