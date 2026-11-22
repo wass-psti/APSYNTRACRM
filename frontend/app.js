@@ -1591,7 +1591,7 @@ function timeTrackerOjtScope(){
 }
 function timeTrackerOjtAdminScope(){
  const a=state.ttAttendance?.access;
- if(!a||!['System Admin','IT Administrator'].includes(a.moduleRole)||
+ if(!a||(!['System Admin','IT Administrator'].includes(a.moduleRole)&&state.roleVerified!==true)||
   !auth.isSignedIn||a.userId!==auth.userId||
   a.workspaceId!==state.context?.workspace_id||a.boardId!==state.boardId||
   state.view!=='board'||state.tab!=='attendance'||state.ttView!=='employees')return null;
