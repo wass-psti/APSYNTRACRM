@@ -138,6 +138,20 @@ describe("Paseo saved court calendar", () => {
             });
           return response({ updated: true });
         }
+        if (
+          options.method === "POST" &&
+          path === "/v1/admin/calendar/maintenance"
+        ) {
+          const body = JSON.parse(String(options.body)) as {
+            courtId: string;
+            date: string;
+            startMinute: number;
+            endMinute: number;
+          };
+          const id = "block-created";
+          calendar.blocks.push({ id, ...body });
+          return response({ created: true, id });
+        }
         if (options.method === "DELETE") {
           const id = path.split("/").at(-1);
           calendar.blocks = calendar.blocks.filter((block) => block.id !== id);
@@ -148,18 +162,56 @@ describe("Paseo saved court calendar", () => {
     );
   });
 
-  it("shows every saved weekly schedule and maintenance block after loading", async () => {
+  it("shows three court tabs and isolates saved weekly schedules by selected court", async () => {
     renderCalendar();
 
-    const weeklyList = await screen.findByRole("list", {
+    const tablist = await screen.findByRole("tablist", {
+      name: "Court schedule tabs",
+    });
+    const tabs = within(tablist).getAllByRole("tab");
+    const [courtOneTab, courtTwoTab, courtThreeTab] = tabs;
+    if (!courtOneTab || !courtTwoTab || !courtThreeTab) {
+      throw new Error("All three court tabs must be available.");
+    }
+    expect(tabs).toHaveLength(3);
+    expect(courtOneTab).toHaveAccessibleName("Court 1 schedules, 1 saved");
+    expect(courtTwoTab).toHaveAccessibleName("Court 2 schedules, 1 saved");
+    expect(courtThreeTab).toHaveAccessibleName("Court 3 schedules, 0 saved");
+    expect(courtOneTab).toHaveAttribute("aria-selected", "true");
+
+    const courtOneList = await screen.findByRole("list", {
       name: "Saved weekly schedules",
     });
-    expect(within(weeklyList).getByText("Sunday")).toBeInTheDocument();
+    expect(within(courtOneList).getByText("Sunday")).toBeInTheDocument();
+    expect(within(courtOneList).queryByText("Tuesday")).not.toBeInTheDocument();
+    expect(within(courtOneList).queryByText("Closed")).not.toBeInTheDocument();
     expect(
-      within(weeklyList).getByText("8:00 AM – 10:00 PM"),
+      within(courtOneList).getByText("8:00 AM – 10:00 PM"),
     ).toBeInTheDocument();
-    expect(within(weeklyList).getByText("Tuesday")).toBeInTheDocument();
-    expect(within(weeklyList).getByText("Closed")).toBeInTheDocument();
+
+    fireEvent.click(courtTwoTab);
+    await waitFor(() => {
+      expect(courtTwoTab).toHaveAttribute("aria-selected", "true");
+      expect(courtOneTab).toHaveAttribute("aria-selected", "false");
+    });
+    const courtTwoList = screen.getByRole("list", {
+      name: "Saved weekly schedules",
+    });
+    expect(within(courtTwoList).getByText("Tuesday")).toBeInTheDocument();
+    expect(within(courtTwoList).getByText("Closed")).toBeInTheDocument();
+    expect(within(courtTwoList).queryByText("Sunday")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Weekly operating hours · Court 2" }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(courtThreeTab);
+    await screen.findByText(
+      "No weekly operating schedules have been saved for Court 3.",
+    );
+    expect(
+      screen.queryByRole("list", { name: "Saved weekly schedules" }),
+    ).not.toBeInTheDocument();
+    expect(courtThreeTab).toHaveAttribute("aria-selected", "true");
 
     const maintenanceList = screen.getByRole("list", {
       name: "Saved maintenance blocks",
@@ -171,6 +223,189 @@ describe("Paseo saved court calendar", () => {
     ).toBeInTheDocument();
     expect(
       within(maintenanceList).getByText("1:00 PM – 3:00 PM"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "Maintenance court" }),
+    ).toHaveValue("court-1");
+  });
+
+  it("keeps maintenance targeting independent from the selected weekly schedule tab", async () => {
+    renderCalendar();
+    const tablist = await screen.findByRole("tablist", {
+      name: "Court schedule tabs",
+    });
+    fireEvent.click(
+      within(tablist).getByRole("tab", {
+        name: "Court 3 schedules, 0 saved",
+      }),
+    );
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Maintenance court" }),
+      { target: { value: "court-2" } },
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add maintenance block" }),
+    );
+
+    await screen.findByText("Changes saved.");
+    const maintenanceWrite = backendAdminFetch.mock.calls.find(
+      ([path, options]) =>
+        path === "/v1/admin/calendar/maintenance" && options?.method === "POST",
+    );
+    expect(maintenanceWrite).toBeDefined();
+    expect(JSON.parse(String(maintenanceWrite?.[1]?.body))).toMatchObject({
+      courtId: "court-2",
+    });
+    expect(
+      within(
+        screen.getByRole("list", { name: "Saved maintenance blocks" }),
+      ).getByText("Court 2"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Weekly operating hours · Court 3" }),
+    ).toBeInTheDocument();
+  });
+
+  it("supports arrow-key court tab navigation and keeps the active panel synchronized", async () => {
+    renderCalendar();
+    const tablist = await screen.findByRole("tablist", {
+      name: "Court schedule tabs",
+    });
+    const tabs = within(tablist).getAllByRole("tab");
+    const [courtOneTab, courtTwoTab, courtThreeTab] = tabs;
+    if (!courtOneTab || !courtTwoTab || !courtThreeTab) {
+      throw new Error("All three court tabs must be available.");
+    }
+
+    courtOneTab.focus();
+    fireEvent.keyDown(courtOneTab, { key: "ArrowRight" });
+    await waitFor(() => {
+      expect(courtTwoTab).toHaveAttribute("aria-selected", "true");
+      expect(courtTwoTab).toHaveFocus();
+    });
+    expect(
+      screen.getByRole("heading", { name: "Weekly operating hours · Court 2" }),
+    ).toBeInTheDocument();
+
+    fireEvent.keyDown(courtTwoTab, { key: "End" });
+    await waitFor(() => {
+      expect(courtThreeTab).toHaveAttribute("aria-selected", "true");
+      expect(courtThreeTab).toHaveFocus();
+    });
+  });
+
+  it("edits the selected court record and preserves another court's saved hours", async () => {
+    renderCalendar();
+    const tablist = await screen.findByRole("tablist", {
+      name: "Court schedule tabs",
+    });
+    const courtTwoTab = within(tablist).getByRole("tab", {
+      name: "Court 2 schedules, 1 saved",
+    });
+    fireEvent.click(courtTwoTab);
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Edit Court 2 Tuesday schedule",
+      }),
+    );
+    await waitFor(() => {
+      expect(courtTwoTab).toHaveAttribute("aria-selected", "true");
+      expect(
+        screen.getByRole("combobox", { name: "Operating weekday" }),
+      ).toHaveValue("2");
+      expect(
+        screen.getByRole("combobox", { name: "Opening time" }),
+      ).toHaveValue("600");
+      expect(
+        screen.getByRole("combobox", { name: "Closing time" }),
+      ).toHaveValue("1200");
+    });
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Opening time" }), {
+      target: { value: "630" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Update weekday schedule" }),
+    );
+    await screen.findByText("Changes saved.");
+
+    expect(backendAdminFetch).toHaveBeenCalledWith(
+      "/v1/admin/calendar/court-2/weekdays/2",
+      expect.objectContaining({ method: "PUT" }),
+    );
+    expect(
+      calendar.weekdays.find(
+        (item) => item.courtId === "court-2" && item.weekday === 2,
+      ),
+    ).toMatchObject({ openMinute: 630, closeMinute: 1200, enabled: false });
+    expect(
+      calendar.weekdays.find(
+        (item) => item.courtId === "court-1" && item.weekday === 0,
+      ),
+    ).toMatchObject({ openMinute: 480, closeMinute: 1320, enabled: true });
+  });
+
+  it("creates a schedule for the selected court without changing another court", async () => {
+    const view = renderCalendar();
+    const tablist = await screen.findByRole("tablist", {
+      name: "Court schedule tabs",
+    });
+    const tabs = within(tablist).getAllByRole("tab");
+    const courtThreeTab = tabs[2];
+    if (!courtThreeTab) throw new Error("Court 3 tab is not available.");
+
+    fireEvent.click(courtThreeTab);
+    await screen.findByText(
+      "No weekly operating schedules have been saved for Court 3.",
+    );
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Operating weekday" }),
+      {
+        target: { value: "3" },
+      },
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: "Opening time" }), {
+      target: { value: "720" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "Closing time" }), {
+      target: { value: "1080" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Save weekday schedule" }),
+    );
+
+    await screen.findByText("Changes saved.");
+    expect(backendAdminFetch).toHaveBeenCalledWith(
+      "/v1/admin/calendar/court-3/weekdays/3",
+      expect.objectContaining({ method: "PUT" }),
+    );
+    expect(
+      within(
+        screen.getByRole("list", { name: "Saved weekly schedules" }),
+      ).getByText("Wednesday"),
+    ).toBeInTheDocument();
+    expect(
+      calendar.weekdays.find(
+        (item) => item.courtId === "court-1" && item.weekday === 0,
+      ),
+    ).toMatchObject({ openMinute: 480, closeMinute: 1320 });
+
+    view.unmount();
+    renderCalendar();
+    const refreshedTabs = await screen.findByRole("tablist", {
+      name: "Court schedule tabs",
+    });
+    fireEvent.click(
+      within(refreshedTabs).getByRole("tab", {
+        name: "Court 3 schedules, 1 saved",
+      }),
+    );
+    expect(await screen.findByText("12:00 PM – 6:00 PM")).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole("list", { name: "Saved weekly schedules" }),
+      ).getByText("Wednesday"),
     ).toBeInTheDocument();
   });
 
@@ -184,8 +419,8 @@ describe("Paseo saved court calendar", () => {
     );
     await waitFor(() => {
       expect(
-        screen.getByRole("combobox", { name: "Calendar court" }),
-      ).toHaveValue("court-1");
+        screen.getByRole("tab", { name: "Court 1 schedules, 1 saved" }),
+      ).toHaveAttribute("aria-selected", "true");
       expect(
         screen.getByRole("combobox", { name: "Operating weekday" }),
       ).toHaveValue("0");
