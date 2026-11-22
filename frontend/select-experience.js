@@ -253,7 +253,12 @@ export function startSelectExperience(root=globalThis.document?.body,{
    },{signal:abort.signal});
    list.addEventListener('click',event=>{
     const option=event.target.closest?.('[data-option-index]');
-    if(option)choose(Number(option.getAttribute('data-option-index')));
+    if(!option)return;
+    // The listbox may live inside a label. Prevent the closing click from
+    // reaching the label's open handler after choose() removes the popup.
+    event.preventDefault();
+    event.stopPropagation();
+    choose(Number(option.getAttribute('data-option-index')));
    },{signal:abort.signal});
    popup=list;anchor.append(list);
    stopForeground=showForegroundPopover(list,trigger,{
@@ -321,8 +326,8 @@ export function startSelectExperience(root=globalThis.document?.body,{
   },{signal:abort.signal});
   for(const label of Array.from(select.labels||[])){
    label.addEventListener('click',event=>{
-    if(trigger.contains(event.target)||event.target.closest?.(
-      'button,a,input,textarea,[contenteditable="true"]'))return;
+    if(anchor.contains(event.target)||event.composedPath?.().includes(anchor)||
+      event.target.closest?.('button,a,input,textarea,[contenteditable="true"]'))return;
     event.preventDefault();trigger.focus();open();
    },{signal:abort.signal});
   }
