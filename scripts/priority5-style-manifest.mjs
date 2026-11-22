@@ -62,6 +62,7 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/board-invite.css",
  "frontend/enterprise-ui-refinement.css",
  "frontend/application-ui-refinement.css",
+ "frontend/mobile-home.css",
  "frontend/uiverse-design-system.css",
  "frontend/uiverse-native-workflows.css",
  "frontend/dark-theme-foundation.css",
