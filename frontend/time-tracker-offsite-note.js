@@ -19,3 +19,33 @@ export function isTimeTrackerHomeNoteRequired(location,verifiedEmail,verifiedUse
  const userId=typeof verifiedUserId==='string'?verifiedUserId.trim().toLowerCase():'';
  return !HOME_NOTE_EXEMPT_USER_IDS.has(userId);
 }
+
+/**
+ * Volatile, signed-scope work-plan draft. Never persists a draft in browser
+ * storage or sends one to the attendance server before a Clock In request.
+ * One draft at a time prevents a shared-OJT intern from seeing another's text.
+ */
+export function createTimeTrackerWorkNoteDraft(){
+ let draft=null;
+ const key=scope=>{
+  if(!scope||!['userId','workspaceId','boardId'].every(field=>
+   typeof scope[field]==='string'&&scope[field].length>0))return null;
+  const internId=scope.internId??'';
+  if(typeof internId!=='string')return null;
+  return JSON.stringify([scope.userId,scope.workspaceId,scope.boardId,internId]);
+ };
+ return Object.freeze({
+  read(scope){
+   const k=key(scope);
+   return k&&draft?.key===k?draft.text:'';
+  },
+  write(scope,text){
+   const k=key(scope);
+   if(!k)return;
+   draft={key:k,text:String(text??'').slice(0,500)};
+  },
+  clear(scope=null){
+   if(scope===null||key(scope)===draft?.key)draft=null;
+  }
+ });
+}
