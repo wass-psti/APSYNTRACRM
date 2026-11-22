@@ -29,3 +29,11 @@ Implementation branch integrates CP02–CP05 native application registry work wi
 Use an approved existing isolated nonproduction app environment with two independent signed profiles, plus an authorized admin in the same workspace. Confirm application module registration and role vocabulary using its real backend, apply reversible role changes only to QA identities, compare independent authoritative snapshots after refresh and reconnect, revoke test grants, and verify baseline restoration. Do not use production employees as QA targets.
 
 The PR should remain a draft until those checks and relevant deployment review are complete. Do not merge to main or deploy the new registry RPC on the strength of this local evidence alone.
+
+## PR CI remediation (verified after review)
+
+- The disposable-role-readback job initially failed because the CP03 registry migration was not listed in the forward-migration source manifest. Commit f2ad2d0 adds the migration filename, size and SHA-256; source manifest verification then passed for 222 baseline plus 54 forward migrations. The next CI run showed disposable-role-readback PASS.
+- The existing Priority5F unsigned Chromium test initially reported 248 baseline vs 231 optimized module network resources (17 fewer, below its required 18). Keeping its acceptance threshold intact, the restricted TimeTracker board GPS projection was moved to a dynamic import only on its authorized feature paths. The shared UI visibility flag remains true and the signed GPS domain checks are unchanged.
+- Local unsigned Chromium repeated PASS: baseline 248, optimized 230, reduction 18; first paint remains unauthenticated with optional FuelTrans/import modules deferred.
+- Restricted TimeTracker GPS focused tests PASS; full frontend regression 3,333/3,333 PASS; Vite production build PASS.
+- GitHub PR checks on the latest branch head must be verified independently after pushing these corrections.

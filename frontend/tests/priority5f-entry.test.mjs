@@ -36,3 +36,16 @@ test('existing boot entry, initialization recovery and security policy are uncha
  const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
  assert.match(smoke,/frontend\/fueltrans-lazy\.js/);
 });
+test('restricted TimeTracker GPS projection is deferred until authorized board use',()=>{
+ const optimized=inspectStaticModuleGraph();
+ const baseline=inspectStaticModuleGraph({appSource:originalImportBaseline()});
+ assert.ok(baseline.modules.includes('frontend/time-tracker-board-projection.js'));
+ assert.ok(!optimized.modules.includes('frontend/time-tracker-board-projection.js'));
+ const app=readFileSync('frontend/app.js','utf8');
+ const projection=readFileSync('frontend/time-tracker-board-projection.js','utf8');
+ const config=readFileSync('frontend/config.js','utf8');
+ assert.match(app,/await import\('\.\/time-tracker-board-projection\.js'\)/);
+ assert.match(app,/if\(!TT_BOARD_GPS_PROJECTION_ENABLED\|\|/);
+ assert.match(projection,/export \{TT_BOARD_GPS_PROJECTION_ENABLED\}/);
+ assert.match(config,/export const TT_BOARD_GPS_PROJECTION_ENABLED = true/);
+});

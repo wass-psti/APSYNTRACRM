@@ -35,7 +35,7 @@ let closeBoardInviteDialog=()=>{};
 import {normalizeSignedBoardCandidates,normalizeAdminBoardCandidates,adminBoardChangeTarget,BoardGroupAccessClient,
  BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
 import {CreatorAccessClient,WS10_CREATOR_POLICY_ACTIVE} from './ws10-ownership.js';
-import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
+import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,TT_BOARD_GPS_PROJECTION_ENABLED} from './config.js';
 import {PlatformSync,shouldRefreshWorkspaceBoardList,shouldRecheckWorkspaceRoles,shouldResumeDeferredReconciliation} from './platform-sync.js';
 import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
@@ -199,7 +199,6 @@ import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
 import {probeTimeTrackerMonitor} from './time-tracker-monitor.js';
 import {buildTimeTrackerAdminPatch,TT_ADMIN_RECORD_LIMIT} from './time-tracker-record-management.js';
 import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
-import {TT_BOARD_GPS_PROJECTION_ENABLED,loadTimeTrackerBoardGps,renderTimeTrackerBoardGps} from './time-tracker-board-projection.js';
 import {renderTimeTrackerMainGroup} from './time-tracker-main-group.js';
 import {findTimeTrackerAttendanceBoard,TIMETRACKER_APPLICATION_ROUTE} from './time-tracker-application.js';
 import {attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError} from './time-tracker-clock-recovery.js';
@@ -2438,6 +2437,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   }
   if(tab==='items'&&moduleByBoardName(detail.board.name)?.key==='timetracker'){
    if(state.ttBoardGpsEligible&&TT_BOARD_GPS_PROJECTION_ENABLED){
+    const {loadTimeTrackerBoardGps}=await import('./time-tracker-board-projection.js');
     state.ttBoardAttendance=await loadTimeTrackerBoardGps({
      auth,api:db,boardId,workspaceId,enabled:true
     });
@@ -3148,6 +3148,7 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
    if(!sameSession())return;
    if(state.ttBoardGpsEligible){
      try{
+       const {loadTimeTrackerBoardGps}=await import('./time-tracker-board-projection.js');
        const data=await loadTimeTrackerBoardGps({
          auth,api:db,boardId,workspaceId:workspace,enabled:true
        });
@@ -6534,6 +6535,7 @@ async function openTimeTrackerBoardProjectedGps(){
   !activeBoardLayout()||state.tab!=='items'||moduleByBoardName(state.board?.board?.name)?.key!=='timetracker')return;
  const snapshot={boardId:state.boardId,userId:auth.userId,
   workspaceId:state.context.workspace_id};
+ const {loadTimeTrackerBoardGps,renderTimeTrackerBoardGps}=await import('./time-tracker-board-projection.js');
  const details=await loadTimeTrackerBoardGps({
   auth,api:db,boardId:snapshot.boardId,workspaceId:snapshot.workspaceId
  });
