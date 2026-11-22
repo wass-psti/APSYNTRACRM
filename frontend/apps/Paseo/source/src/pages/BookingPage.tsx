@@ -11,7 +11,7 @@ import { TimeSlotSelector } from '../components/booking/TimeSlotSelector';
 import { courts } from '../mocks/courts';
 import { configuredGuestApiBase, guestSubmissionConfigured } from '../guest/guestReservation';
 import {
-  durationChoices, formatDemoDate, formatTime, getDemoDates,
+  durationChoices, formatBookingDuration, formatDurationHours, formatDemoDate, formatTime, getDemoDates,
   getDemoStartDate,
 } from '../utils/scheduleUtils';
 
@@ -163,7 +163,7 @@ export function BookingPage() {
         <div className="courts-page-summary booking-page-summary" role="group" aria-label="Booking selection overview">
           <div><strong>{selectedCourt ? selectedCourt.id.split('-').at(-1)?.padStart(2, '0') : '03'}</strong><span>{selectedCourt ? 'Selected court' : 'Courts to choose from'}</span></div>
           <span className="courts-summary-divider" aria-hidden="true" />
-          <div><strong>{durationMinutes}</strong><span>Starting minutes</span></div>
+          <div><strong>{formatDurationHours(durationMinutes)}</strong><span>{durationMinutes} minutes</span></div>
         </div>
       </header>
       <BookingProgress stage="schedule" />
@@ -191,13 +191,15 @@ export function BookingPage() {
         <div className="duration-grid" role="group" aria-label="Booking duration">
           {durationChoices.map((duration) => (
             <m.button key={duration} type="button" className="choice-button immersive-duration-button"
+              aria-label={formatBookingDuration(duration)}
               aria-pressed={durationMinutes === duration}
               onClick={() => changeDuration(duration)}
               {...(reduced ? {} : { whileTap: { scale: 0.97 } })}
               transition={motionSprings.interactive}>
               {durationMinutes === duration && <m.span className="immersive-duration-selection" aria-hidden="true"
                 {...(reduced ? {} : { layoutId: 'booking-duration-selection' })} transition={motionSprings.interactive} />}
-              <span className="immersive-duration-text">{duration} minutes</span>
+              <span className="immersive-duration-text">{formatDurationHours(duration)}</span>
+              <small className="immersive-duration-minutes">{duration} minutes</small>
             </m.button>
           ))}
         </div>
@@ -241,7 +243,7 @@ export function BookingPage() {
           <h2>Selection summary</h2>
           <p><strong>Court:</strong> {selectedCourt?.name ?? 'Not selected'}</p>
           <p><strong>Date:</strong> {formatDemoDate(selectedDate)}</p>
-          <p><strong>Duration:</strong> {durationMinutes} minutes</p>
+          <p><strong>Duration:</strong> <span className="booking-duration-value"><strong>{formatDurationHours(durationMinutes)}</strong> <small>({durationMinutes} minutes)</small></span></p>
           <p><strong>Time:</strong> {validSelection && selectedMinute !== null
             ? `${formatTime(selectedMinute)} – ${formatTime(selectedMinute + durationMinutes)}`
             : (stagingAvailability ? 'Choose an available time' : 'Time not selected')}</p>

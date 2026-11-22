@@ -5,7 +5,7 @@ import { motionPresets, motionSprings } from '../motion/presets';
 
 const bookingSteps = [
   { title: 'Explore courts', detail: 'Compare Courts 1, 2 and 3 and choose a preferred court.', milestone: 'AVAILABLE', phase: 'COURTS', state: 'available' },
-  { title: 'Choose a schedule', detail: 'Select a date and duration. Bookable times depend on approved prices and actual court availability.', milestone: 'CHECK AVAILABILITY', phase: 'SCHEDULE', state: 'available' },
+  { title: 'Choose a schedule', detail: 'Select a date and a 1-hour, 1.5-hour or 2-hour session. Bookable times depend on approved prices and actual court availability.', milestone: 'CHECK AVAILABILITY', phase: 'SCHEDULE', state: 'available' },
   { title: 'Enter details and review', detail: 'Provide guest contact details and review the proposed booking before submission.', milestone: 'AVAILABLE', phase: 'DETAILS', state: 'available' },
   { title: 'Choose payment', detail: 'Choose a payment QR and submit a payment receipt only after the amount and recipient are confirmed.', milestone: 'CONFIRMATION REQUIRED', phase: 'PAYMENT', state: 'planned' },
   { title: 'Receive confirmation', detail: 'View your receipt using your private access code. The venue reviews payment before confirming a booking.', milestone: 'CONFIRMATION REQUIRED', phase: 'RECEIPT', state: 'planned' },

@@ -34,6 +34,17 @@ export function formatTime(minutes: number) {
   return `${clockHours}:${String(minutes % 60).padStart(2, '0')} ${suffix}`;
 }
 
+export function formatDurationHours(durationMinutes: number) {
+  const hours = durationMinutes / 60;
+  const value = Number.isInteger(hours) ? String(hours) : hours.toFixed(1);
+  return `${value} ${hours === 1 ? 'hour' : 'hours'}`;
+}
+
+/** Customer-facing duration with hours first and the unchanged minute value alongside. */
+export function formatBookingDuration(durationMinutes: number) {
+  return `${formatDurationHours(durationMinutes)} (${durationMinutes} minutes)`;
+}
+
 export const durationChoices = [60, 90, 120] as const;
 export const firstStartMinute = 8 * 60;
 export const closingMinute = 22 * 60;

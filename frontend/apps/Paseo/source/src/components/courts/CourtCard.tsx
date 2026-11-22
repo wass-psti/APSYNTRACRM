@@ -5,6 +5,7 @@ import { motionPresets, motionSprings } from '../../motion/presets';
 import { ButtonLink } from '../ui/ButtonLink';
 import { CourtIllustration } from './CourtIllustration';
 import { getCourtNumber } from '../../utils/courtUtils';
+import { durationChoices, formatBookingDuration } from '../../utils/scheduleUtils';
 
 interface CourtCardProps {
   court: Court;
@@ -33,8 +34,9 @@ export function CourtCard({ court }: CourtCardProps) {
           </ul>
         </div>
         <dl className="court-data" aria-label={`${court.name} booking information`}>
-          <div><dt>Hourly rate</dt><dd>Awaiting venue approval</dd></div>
+          <div><dt>Hourly rate</dt><dd>Server quote at booking</dd></div>
           <div><dt>Availability</dt><dd className="status-unknown">Check booking schedule</dd></div>
+          <div className="court-duration-data"><dt>Booking durations</dt><dd>{durationChoices.map(formatBookingDuration).join(' · ')}</dd></div>
         </dl>
         <div className="court-card-actions">
           <ButtonLink to={`/courts/${court.id}`} secondary>View details</ButtonLink>

@@ -288,3 +288,12 @@
   .booking-page :where(.choice-button,.button,.field,.booking-panel) { animation:none !important;transition:none !important; }
   .booking-page .choice-button:hover:not(:disabled) { transform:none; }
 }
+
+/* Show customer-friendly hours first while retaining the exact minute equivalent. */
+.booking-page .immersive-duration-button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; }
+.booking-page .immersive-duration-text { position:relative; z-index:1; font-size:14px; font-weight:800; line-height:1.25; }
+.booking-page .immersive-duration-minutes { position:relative; z-index:1; font-size:10px; font-weight:650; line-height:1.25; opacity:.78; }
+.booking-duration-value { display:inline-flex; flex-wrap:wrap; align-items:baseline; gap:5px; }
+.booking-duration-value > strong { font-weight:850; }
+.booking-duration-value > small { color:#647168; font-size:.9em; }
+@media(max-width:540px) { .booking-page .immersive-duration-text { font-size:12px; } .booking-page .immersive-duration-minutes { font-size:9px; } }
