@@ -28,6 +28,9 @@ const safeRoute = href => typeof href === 'string' &&
   /^#\/[a-zA-Z0-9_+.%/?=&-]+$/.test(href) && href.length < 400;
 const path = () => (location.hash || HOME).split('?')[0].replace(/\/$/, '') || HOME;
 const isHome = () => [HOME, '#', '#/'].includes(path());
+const homeSection = () => isHome() &&
+  new URLSearchParams((location.hash || HOME).split('?')[1] || '').get('section') === 'favorites'
+  ? 'favorites' : 'home';
 const mobile = () => window.matchMedia('(max-width: 810px)').matches;
 
 // This state is deliberately session-local and revalidated against currently
@@ -103,11 +106,14 @@ function recentRow(item) {
     '<span class="apsm-recent-arrow">' + svg('open', 19) + '</span></a>';
 }
 function bottomNavigation() {
+  const active = homeSection();
+  const homeCurrent = active === 'home' ? ' class="selected" aria-current="page"' : '';
+  const favoritesCurrent = active === 'favorites' ? ' class="selected" aria-current="page"' : '';
   return '<nav class="apsm-bottom-nav" aria-label="Mobile navigation">' +
-    '<a href="#/overview" class="selected" aria-current="page" aria-label="Home">' + svg('home') + '<span>Home</span></a>' +
-    '<a href="#/boards" aria-label="Boards">' + svg('board') + '<span>Boards</span></a>' +
-    '<button type="button" data-apsm-focus-search aria-label="Search apps and boards">' + svg('search') + '<span>Search</span></button>' +
-    '<button type="button" data-apsm-scroll-favorites aria-label="Go to favorites">' + svg('star') + '<span>Favorites</span></button>' +
+    '<a href="#/overview"' + homeCurrent + ' aria-label="Home">' + svg('home') + '<span>Home</span></a>' +
+    '<a href="#/boards" aria-label="My Boards">' + svg('board') + '<span>My Boards</span></a>' +
+    '<button type="button" data-apsm-open-search aria-label="Search APSYNTRA CRM" aria-haspopup="dialog">' + svg('search') + '<span>Search</span></button>' +
+    '<a href="#/overview?section=favorites"' + favoritesCurrent + ' aria-label="Favorites">' + svg('star') + '<span>Favorites</span></a>' +
     '<a href="#/settings" aria-label="Settings">' + svg('settings') + '<span>Settings</span></a></nav>';
 }
 function renderHome(shell, items) {
@@ -115,7 +121,7 @@ function renderHome(shell, items) {
   if (!home) return;
   const workspace = shell.querySelector('.aps-sidebar .workspace-name')?.textContent?.trim() || 'Your workspace';
   const monogram = shell.querySelector('.top-avatar [data-avatar-initials]')?.textContent?.trim() || 'A';
-  const signature = JSON.stringify([workspace, monogram,
+  const signature = JSON.stringify([workspace, monogram, homeSection(),
     items.all.map(item => [item.href,item.label,item.type]), [...favorites],
     visited.map(item => item.href)]);
   if (home.dataset.apsmSignature === signature) return;
@@ -126,7 +132,8 @@ function renderHome(shell, items) {
     '<div class="apsm-hero">' +
       '<div class="apsm-identity"><span class="apsm-avatar" aria-hidden="true">' +
       escapeHtml(monogram) + '</span><div><span class="apsm-eyebrow">APSYNTRA CRM</span>' +
-      '<h1>Your workspace</h1><p>' + escapeHtml(workspace) + '</p></div></div>' +
+      '<h1>' + (homeSection() === 'favorites' ? 'My favorites' : 'Your workspace') +
+      '</h1><p>' + escapeHtml(workspace) + '</p></div></div>' +
       '<a href="#/settings" class="apsm-settings" aria-label="Open account settings">' +
       svg('settings') + '</a></div>' +
     '<div class="apsm-search" role="search">' + svg('search', 20) +
@@ -161,15 +168,22 @@ function renderHome(shell, items) {
 }
 function applyFilter(home) {
   const q = searchText.trim().toLocaleLowerCase();
+  const favoritesOnly = homeSection() === 'favorites';
   let matches = 0;
   for (const entry of home.querySelectorAll('[data-apsm-filter-name]')) {
-    const found = !q || entry.dataset.apsmFilterName.includes(q);
+    const section = entry.closest('.apsm-section');
+    const inScope = !favoritesOnly || section?.classList.contains('apsm-favorites');
+    const found = inScope && (!q || entry.dataset.apsmFilterName.includes(q));
     entry.hidden = !found;
     if (found) matches++;
   }
   // Recent routes are true session visits; hide only the route collections
   // that do not contain a matching destination.
   for (const section of home.querySelectorAll('[data-apsm-collection]')) {
+    if (favoritesOnly && !section.classList.contains('apsm-favorites')) {
+      section.hidden = true;
+      continue;
+    }
     if (!q) { section.hidden = false; continue; }
     if (section.classList.contains('apsm-recents')) { section.hidden = true; continue; }
     section.hidden = !section.querySelector('[data-apsm-filter-name]:not([hidden])');
@@ -243,31 +257,46 @@ if (root) {
     applyFilter(event.target.closest('.apsm-home'));
   });
   root.addEventListener('click', event => {
-    const button = event.target.closest?.('[data-apsm-favorite], [data-apsm-focus-search], [data-apsm-scroll-favorites]');
-    if (button?.hasAttribute('data-apsm-favorite')) {
-      const href = button.getAttribute('data-apsm-favorite');
+    const favoriteButton = event.target.closest?.('[data-apsm-favorite]');
+    if (favoriteButton) {
+      const href = favoriteButton.getAttribute('data-apsm-favorite');
       const shell = root.querySelector(':scope > .shell');
-      if (!catalog(shell).all.some(item => item.href === href)) return;
+      if (!shell || !catalog(shell).all.some(item => item.href === href)) return;
       if (favorites.has(href)) favorites.delete(href); else favorites.add(href);
       shell.querySelector('.apsm-home')?.removeAttribute('data-apsm-signature');
       scheduleSync();
       return;
     }
-    if (button?.hasAttribute('data-apsm-focus-search')) {
-      const search = root.querySelector('.apsm-home [data-apsm-search]');
-      search?.focus();
-      search?.scrollIntoView({block: 'center', behavior: 'smooth'});
+
+    const searchButton = event.target.closest?.('[data-apsm-open-search]');
+    if (searchButton) {
+      // Reuse the authenticated CRM-wide search dialog; the launcher input
+      // remains a fast local filter for the visible app and board catalog.
+      const globalSearchTrigger = root.querySelector('[data-global-search-open]');
+      if (globalSearchTrigger) globalSearchTrigger.click();
+      else {
+        const search = root.querySelector('.apsm-home [data-apsm-search]');
+        search?.focus();
+        search?.scrollIntoView({block: 'center', behavior: 'smooth'});
+      }
       return;
     }
-    if (button?.hasAttribute('data-apsm-scroll-favorites')) {
-      root.querySelector('.apsm-favorites')?.scrollIntoView({block: 'start', behavior: 'smooth'});
+
+    const navAnchor = event.target.closest?.('.apsm-bottom-nav a[href^="#/"]');
+    if (navAnchor && mobile()) {
+      const href = navAnchor.getAttribute('href');
+      if (!safeRoute(href)) { event.preventDefault(); return; }
+      event.preventDefault();
+      if (location.hash !== href) location.hash = href;
+      else root.querySelector('.apsm-home')?.scrollIntoView({block: 'start', behavior: 'smooth'});
       return;
     }
+
     const anchor = event.target.closest?.('a[href^="#/"]');
     if (!anchor || !mobile()) return;
     const href = anchor.getAttribute('href');
     const shell = root.querySelector(':scope > .shell');
-    if (!shell || href === HOME) return;
+    if (!shell || href === HOME || href.startsWith('#/overview?section=')) return;
     const items = catalog(shell).all;
     const matched = items.find(item => item.href === href);
     if (!matched) return;
