@@ -202,6 +202,7 @@ import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
 import {TT_BOARD_GPS_PROJECTION_ENABLED,loadTimeTrackerBoardGps,renderTimeTrackerBoardGps} from './time-tracker-board-projection.js';
 import {renderTimeTrackerMainGroup} from './time-tracker-main-group.js';
 import {findTimeTrackerAttendanceBoard,TIMETRACKER_APPLICATION_ROUTE} from './time-tracker-application.js';
+import {openTimeTrackerAddDepartmentModal} from './apps/TimeTracker/time-tracker-add-department-modal.js';
 import {attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError} from './time-tracker-clock-recovery.js';
 import {signedMapPoints,mountTimeTrackerMaps,disposeTimeTrackerMaps,setTimeTrackerMapTheme,retryTimeTrackerMaps,toggleTimeTrackerMapFullscreen} from './time-tracker-map.js';
 import {inspectMySignedEffectiveAccess,sanitizeEffectiveAccessReport} from './signed-effective-access.js';
@@ -9224,10 +9225,7 @@ async function action(name,button){
    if(rename&&!dept)return;
    const seq=routeSerial,boardId=state.boardId,actorId=state.context?.user_id,
     workspaceId=state.context?.workspace_id;
-   openModal(rename?'Rename '+dept.name:'Add department',
-    '<p class="note">Changes to department names and current assignments are saved to this workspace in Supabase.</p>'+
-    '<label>Department name<input type="text" name="departmentName" minlength="2" maxlength="60" required value="'+e(dept?.name||'')+'"></label>',
-    async fd=>{
+   const submitDepartment=async fd=>{
      if(seq!==routeSerial||state.view!=='board'||state.tab!=='attendance'||
         state.ttView!=='employees'||state.context?.user_id!==actorId||
         state.context?.workspace_id!==workspaceId||state.boardId!==boardId)
@@ -9244,8 +9242,23 @@ async function action(name,button){
       throw Error('Department saved but the workspace changed; refresh Employees');
      if(!after.departments.some(d=>d.name===nextName))throw Error('Department could not be verified');
      await loadTimeTracker(seq);
-    },{submitLabel:rename?'Save department name':'Add department',
-       successMessage:rename?'Department renamed.':'Department added.'});
+   };
+   if(rename){
+    // Existing rename fields and backend mutation stay unchanged.
+    openModal('Rename '+dept.name,
+     '<p class="note">Changes to department names and current assignments are saved to this workspace in Supabase.</p>'+
+     '<label>Department name<input type="text" name="departmentName" minlength="2" maxlength="60" required value="'+e(dept.name)+'"></label>',
+     submitDepartment,{submitLabel:'Save department name',
+      successMessage:'Department renamed.'});
+   }else{
+    // Only the Add department interaction uses the specialized modal.
+    hideModal();
+    modal=openTimeTrackerAddDepartmentModal({
+     existingDepartments:catalog.departments,trigger:button,
+     onSubmit:submitDepartment,onSuccess:()=>toast('Department added.'),
+     onError:notice,onClose:()=>{modal=null;flushVisibleBoardContent();}
+    });
+   }
    break;
  }
  case 'tt-departments-delete':{
