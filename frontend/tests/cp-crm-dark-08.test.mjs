@@ -7,7 +7,7 @@ const css=readFileSync('frontend/dark-attendance-admin.css','utf8');
 test('attendance admin CSS is last and bundled deterministically',()=>{
  assert.equal(STYLE_SOURCES.at(-4),'frontend/dark-attendance-admin.css');
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());
- assert.match(readFileSync('index.html','utf8'),/bundle\.css\?v=(?:cp-crm-dark-08|(?:cp-crm-dark-09|cp-crm-boards-overhaul-01))/);
+ assert.match(readFileSync('index.html','utf8'),/bundle\.css\?v=(?:cp-crm-dark-08|(?:cp-crm-dark-09|cp-crm-item-details-overlay-01))/);
 });
 test('all admin, destructive-dialog and monitor controls are dark-only and screen-only',()=>{
  for(const token of ['.tt-log-admin-toolbar','.tt-log-admin-selection-status',

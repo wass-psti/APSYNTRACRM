@@ -19,7 +19,7 @@ test("board overhaul is the final deterministic stylesheet and has a fresh produ
   assert.equal(STYLE_SOURCES.at(-2), "frontend/dark-simplified-system.css");
   assert.match(
     page,
-    /apsyntra-styles\.bundle\.css\?v=cp-crm-boards-overhaul-01/,
+    /apsyntra-styles\.bundle\.css\?v=cp-crm-item-details-overlay-01/,
   );
   assert.ok(page.includes("frontend/board-overhaul-experience.css"));
   assert.ok(smoke.includes("frontend/board-overhaul-experience.css"));
@@ -135,7 +135,9 @@ test("Uiverse-inspired styles are original static CSS with no external runtime o
   );
   assert.doesNotMatch(css, /\.style\s*=|setAttribute\s*\(\s*['"]style/);
   assert.doesNotMatch(css, /\sstyle="|\sonclick=|\soninput=/);
-  assert.doesNotMatch(css, /position:\s*fixed/);
+  const fixedPositionRules = [...css.matchAll(/position:\s*fixed/g)];
+  assert.equal(fixedPositionRules.length, 1);
+  assert.match(css, /\.board-detail-backdrop\s*\{[^}]*position:\s*fixed/s);
   assert.match(css, /aps-time-tracker-shell/);
   assert.match(css, /aps-fund-tracker-shell/);
   assert.match(css, /aps-tradelink-shell/);
