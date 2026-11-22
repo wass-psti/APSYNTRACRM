@@ -3,6 +3,7 @@ import { CourtIllustration } from '../components/courts/CourtIllustration';
 import { ButtonLink } from '../components/ui/ButtonLink';
 import { courts } from '../mocks/courts';
 import { getCourtById } from '../utils/courtUtils';
+import { durationChoices, formatBookingDuration } from '../utils/scheduleUtils';
 
 export function CourtDetailsPage() {
   const { courtId } = useParams();
@@ -55,6 +56,7 @@ export function CourtDetailsPage() {
             <div><span>RATE</span><strong>Server quote at booking</strong></div>
             <div><span>LIVE AVAILABILITY</span><strong>Check booking schedule</strong></div>
             <div><span>OPERATING HOURS</span><strong>Check live booking schedule</strong></div>
+            <div><span>BOOKING DURATIONS</span><strong>{durationChoices.map(formatBookingDuration).join(' · ')}</strong></div>
           </div>
           <ButtonLink to={`/book?court=${encodeURIComponent(court.id)}`}>
             Select {court.name} <span aria-hidden="true">↗</span>

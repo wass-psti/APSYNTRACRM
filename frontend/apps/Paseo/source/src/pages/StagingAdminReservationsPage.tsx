@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { formatBookingDuration } from '../utils/scheduleUtils';
 import { AdminShell } from '../components/admin/AdminShell';
 import { configuredGuestApiBase, formatPeso, resolveManagedQrImageUrl } from '../guest/guestReservation';
 import {
@@ -350,7 +351,7 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
             </div>
             <dl className="pdl-reservation-details">
               <div><dt>Contact</dt><dd>{item.email}<span>{item.phone}</span></dd></div>
-              <div><dt>Court & schedule</dt><dd>{item.court_id}, {item.day} at {Math.floor(item.start_minute / 60).toString().padStart(2,'0')}:{String(item.start_minute % 60).padStart(2,'0')}<span>{item.duration} minutes</span></dd></div>
+              <div><dt>Court & schedule</dt><dd>{item.court_id}, {item.day} at {Math.floor(item.start_minute / 60).toString().padStart(2,'0')}:{String(item.start_minute % 60).padStart(2,'0')}<span>{formatBookingDuration(item.duration)}</span></dd></div>
               <div><dt>Amount & method</dt><dd>{formatPeso(item.amount_minor)}<span>{item.payment_method.toUpperCase()}</span></dd></div>
             </dl>
             <div className="booking-actions">
@@ -397,7 +398,7 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
             </div>
             <div className="pdl-rate-matrix-scroll">
               <table>
-                <thead><tr><th scope="col">Court</th><th scope="col">60 minutes</th><th scope="col">90 minutes</th><th scope="col">120 minutes</th></tr></thead>
+                <thead><tr><th scope="col">Court</th><th scope="col">1 hour (60 minutes)</th><th scope="col">1.5 hours (90 minutes)</th><th scope="col">2 hours (120 minutes)</th></tr></thead>
                 <tbody>
                   {courtConfig.map(court => (
                     <tr key={court.courtId}>
@@ -449,9 +450,9 @@ export function StagingAdminReservationsPage({ view = 'all' }: { view?: Workspac
             <label htmlFor="pdl-rate-duration">Duration</label>
             <select id="pdl-rate-duration" value={rateDuration}
               onChange={event => setRateDuration(Number(event.target.value))}>
-              <option value={60}>60 minutes</option>
-              <option value={90}>90 minutes</option>
-              <option value={120}>120 minutes</option>
+              <option value={60}>1 hour (60 minutes)</option>
+              <option value={90}>1.5 hours (90 minutes)</option>
+              <option value={120}>2 hours (120 minutes)</option>
             </select>
             <label htmlFor="pdl-rate-amount">Total in PHP</label>
             <input id="pdl-rate-amount" type="number" min="0.01" max="100000" step="0.01"

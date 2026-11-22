@@ -901,3 +901,7 @@
   .court-details-page .court-detail-content > .button:hover,
   .booking-page .button-primary:hover:not(:disabled) { transform: none; }
 }
+
+/* Hour-first booking duration labels on court selection cards. */
+.courts-page .court-data .court-duration-data { grid-column: 1 / -1; }
+.courts-page .court-data .court-duration-data dd { line-height: 1.6; }

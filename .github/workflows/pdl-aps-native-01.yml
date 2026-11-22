@@ -14,6 +14,10 @@ on:
       - 'frontend/tests/pdl-aps-native-02-readiness.test.mjs'
       - 'frontend/tests/pdl-aps-native-05-contract.test.mjs'
       - 'frontend/tests/pdl-aps-native-06-availability.test.mjs'
+      - 'frontend/tests/pdl-aps-native-04-duration-contract.test.mjs'
+      - 'scripts/cp-pdl-booking-availability-04-*.mjs'
+      - 'scripts/cp-pdl-booking-availability-04-disposable-acceptance.sh'
+      - 'docs/CP-PDL-BOOKING-AVAILABILITY-04-ACCEPTANCE.md'
       - 'supabase/pdl-booking/source/functions/**'
       - 'supabase/pdl-booking/source/migrations/*pdl_admin_paginated_lifecycle.sql'
       - 'supabase/pdl-booking/source/migrations/*pdl_exclude_past_same_day_slots.sql'
@@ -45,9 +49,15 @@ jobs:
         run: |
           npm run check
           node scripts/verify-pages-source.mjs
-          node --test frontend/tests/pdl-aps-native.test.mjs frontend/tests/pdl-aps-native-02-readiness.test.mjs frontend/tests/pdl-aps-native-05-contract.test.mjs frontend/tests/pdl-aps-native-06-availability.test.mjs
+          node --test frontend/tests/pdl-aps-native.test.mjs frontend/tests/pdl-aps-native-02-readiness.test.mjs frontend/tests/pdl-aps-native-05-contract.test.mjs frontend/tests/pdl-aps-native-06-availability.test.mjs frontend/tests/pdl-aps-native-04-duration-contract.test.mjs
+          npm test --prefix frontend/apps/Paseo/source -- --reporter=dot
           npm test
           npm run build
+      - name: CP04 hour-first duration and booking review browser acceptance
+        run: |
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$BROWSER" || { echo 'BLOCKED: Chromium executable not found'; exit 1; }
+          CHROME_BIN="$BROWSER" node scripts/cp-pdl-booking-availability-04-browser.mjs
       - name: Public/CRM browser isolation and direct-link acceptance
         run: |
           BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"

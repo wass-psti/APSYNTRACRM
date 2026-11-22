@@ -26,7 +26,8 @@ describe('FE-02 three-court catalog', () => {
     for (let index = 0; index < cards.length; index++) {
       const card = within(cards[index] as HTMLElement);
       expect(card.getByRole('heading', { name: `Court ${index + 1}` })).toBeInTheDocument();
-      expect(card.getByText('Awaiting venue approval')).toBeInTheDocument();
+      expect(card.getByText('Server quote at booking')).toBeInTheDocument();
+      expect(card.getByText(/1 hour \(60 minutes\).*1.5 hours \(90 minutes\).*2 hours \(120 minutes\)/)).toBeInTheDocument();
       expect(card.getByText('Check booking schedule')).toBeInTheDocument();
       expect(card.getByRole('link', { name: /select court/i })).toHaveAttribute('href', `/book?court=court-${index + 1}`);
     }
@@ -71,6 +72,7 @@ describe('FE-02 three-court catalog', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(`Court ${courtNumber}`);
     expect(document.querySelector('.court-details-page')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: new RegExp(`select court ${courtNumber}`, 'i') })).toHaveAttribute('href', `/book?court=${courtId}`);
+    expect(screen.getByText(/1 hour \(60 minutes\).*1.5 hours \(90 minutes\).*2 hours \(120 minutes\)/)).toBeInTheDocument();
     expect(screen.getByText(/No reservation has been made yet/i)).toBeInTheDocument();
   });
 

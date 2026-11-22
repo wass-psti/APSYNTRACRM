@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, formatTime, getDemoDates, getStartStatus } from './scheduleUtils';
+import { addDays, formatBookingDuration, formatDurationHours, formatTime, getDemoDates, getStartStatus } from './scheduleUtils';
 
 describe('FE-03 deterministic demonstration schedule', () => {
   it('generates 14 sequential dates across month boundaries', () => {
@@ -22,6 +22,15 @@ describe('FE-03 deterministic demonstration schedule', () => {
     expect(getStartStatus('court-1', 0, 540, 60)).toBe('available');
     expect(getStartStatus('court-1', 0, 540, 90)).toBe('unavailable');
     expect(getStartStatus('court-3', 2, 660, 120)).toBe('blocked');
+  });
+
+  it.each([
+    [60, '1 hour', '1 hour (60 minutes)'],
+    [90, '1.5 hours', '1.5 hours (90 minutes)'],
+    [120, '2 hours', '2 hours (120 minutes)'],
+  ])('formats %i minutes with hours first and retains the minute equivalent', (minutes, hours, full) => {
+    expect(formatDurationHours(minutes)).toBe(hours);
+    expect(formatBookingDuration(minutes)).toBe(full);
   });
 
   it('formats midnight as 12:00 AM after a late closing interval', () => {
