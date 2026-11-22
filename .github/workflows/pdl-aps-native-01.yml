@@ -15,6 +15,9 @@ on:
       - 'frontend/tests/pdl-aps-native-05-contract.test.mjs'
       - 'frontend/tests/pdl-aps-native-06-availability.test.mjs'
       - 'frontend/tests/pdl-aps-native-04-duration-contract.test.mjs'
+      - 'frontend/tests/cp-pdl-booking-availability-05-contract.test.mjs'
+      - 'scripts/cp-pdl-booking-availability-05-production-acceptance.mjs'
+      - 'docs/CP-PDL-BOOKING-AVAILABILITY-05-ACCEPTANCE.md'
       - 'scripts/cp-pdl-booking-availability-04-*.mjs'
       - 'scripts/cp-pdl-booking-availability-04-disposable-acceptance.sh'
       - 'docs/CP-PDL-BOOKING-AVAILABILITY-04-ACCEPTANCE.md'
@@ -49,7 +52,7 @@ jobs:
         run: |
           npm run check
           node scripts/verify-pages-source.mjs
-          node --test frontend/tests/pdl-aps-native.test.mjs frontend/tests/pdl-aps-native-02-readiness.test.mjs frontend/tests/pdl-aps-native-05-contract.test.mjs frontend/tests/pdl-aps-native-06-availability.test.mjs frontend/tests/pdl-aps-native-04-duration-contract.test.mjs
+          node --test frontend/tests/pdl-aps-native.test.mjs frontend/tests/pdl-aps-native-02-readiness.test.mjs frontend/tests/pdl-aps-native-05-contract.test.mjs frontend/tests/pdl-aps-native-06-availability.test.mjs frontend/tests/pdl-aps-native-04-duration-contract.test.mjs frontend/tests/cp-pdl-booking-availability-05-contract.test.mjs
           npm test --prefix frontend/apps/Paseo/source -- --reporter=dot
           npm test
           npm run build
