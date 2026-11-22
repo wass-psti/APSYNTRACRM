@@ -46,14 +46,14 @@ test('mobile home and immersive destinations never replace native application co
 });
 
 test('bottom navigation reaches real CRM sections and opens the existing global search', () => {
-  assert.match(script, /href="#\\/boards" aria-label="My Boards"/);
-  assert.match(script, /href="#\\/settings"/);
-  assert.match(script, /href="#\\/overview\\?section=favorites"/);
+  assert.match(script, /href="#\/boards" aria-label="My Boards"/);
+  assert.match(script, /href="#\/settings"/);
+  assert.match(script, /href="#\/overview\?section=favorites"/);
   assert.match(script, /data-apsm-open-search/);
-  assert.match(script, /globalSearchTrigger = root\\.querySelector\\('\[data-global-search-open\]'\)/);
-  assert.match(script, /globalSearchTrigger\\.click\\(\\)/);
-  assert.match(script, /if \\(location\\.hash !== href\\) location\\.hash = href/);
-  assert.match(script, /function homeSection/);
+  assert.match(script, /globalSearchTrigger = root\.querySelector\('\[data-global-search-open\]'\)/);
+  assert.match(script, /globalSearchTrigger\.click\(\)/);
+  assert.match(script, /if \(location\.hash !== href\) location\.hash = href/);
+  assert.match(script, /const homeSection = \(\) =>/);
   assert.match(script, /favoritesOnly/);
   assert.doesNotMatch(script, /data-apsm-focus-search|data-apsm-scroll-favorites/);
 });
