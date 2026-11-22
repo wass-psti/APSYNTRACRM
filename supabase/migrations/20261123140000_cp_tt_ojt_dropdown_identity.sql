@@ -14,8 +14,9 @@ ALTER TABLE private.tt_ojt_interns
  DROP COLUMN IF EXISTS failed_attempts,
  DROP COLUMN IF EXISTS locked_until;
 
--- Preserve the intern's display name as it was at clock-in. Renaming a roster
--- entry must not rewrite the name shown on historical attendance.
+-- Backfill legacy rows with the best available current roster name. If a
+-- profile was renamed before this migration, its earlier label is unrecoverable.
+-- New clock-ins below snapshot the name so later renames cannot rewrite history.
 ALTER TABLE private.tt_ojt_attendance
  ADD COLUMN IF NOT EXISTS intern_name text;
 UPDATE private.tt_ojt_attendance a
