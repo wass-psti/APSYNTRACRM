@@ -1,0 +1,112 @@
+.admin-calendar-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 20px 0 24px;
+}
+
+.admin-calendar-toolbar .admin-message {
+  flex: 1 1 260px;
+  margin: 0;
+}
+
+.admin-calendar-record-section {
+  margin-top: 32px;
+  padding-top: 22px;
+  border-top: 1px solid #dce5dc;
+}
+
+.admin-calendar-record-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.admin-calendar-record-header .review-heading {
+  margin-bottom: 8px;
+}
+
+.admin-calendar-record-header .booking-help {
+  max-width: 620px;
+  margin-bottom: 0;
+}
+
+.admin-calendar-record-count {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  border: 1px solid #d4e2d5;
+  border-radius: 999px;
+  background: #eef5e9;
+  color: #365b45;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.admin-calendar-record-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-calendar-record-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid #dce7dd;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.admin-calendar-record-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-calendar-record-copy strong {
+  color: #1c3f32;
+  font-size: 14px;
+}
+
+.admin-calendar-record-copy span {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.admin-calendar-record-copy small {
+  color: #617368;
+  font-size: 12px;
+}
+
+.admin-calendar-empty {
+  padding: 14px 0;
+  color: #617368;
+}
+
+@media (max-width: 600px) {
+  .admin-calendar-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-calendar-record-header {
+    flex-direction: column;
+  }
+
+  .admin-calendar-record-list li {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-calendar-record-list li .button {
+    width: 100%;
+  }
+}

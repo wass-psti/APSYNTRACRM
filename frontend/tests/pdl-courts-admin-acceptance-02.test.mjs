@@ -35,9 +35,20 @@ test('disposable PostgreSQL acceptance covers existing persisted configuration A
 
 test('browser fixtures verify every module save and refresh, without touching production API',()=>{
  for(const label of ['court configuration write','rate configuration write',
-   'calendar weekday and maintenance','operational policy write',
+   'saved weekly schedule and all-maintenance readback','operational policy write',
    'booking payment verification and customer projection','synthetic QR payment configuration upload']){
    assert.ok(browser.includes(label),label);
  }
  assert.match(browser,/moduleErrors,\[\]/);
+});
+
+
+const scheduleMigration=readFileSync('supabase/pdl-booking/source/migrations/20261122014311_pdl_schedule_visibility_and_calendar_readback.sql','utf8');
+test('schedule visibility preserves booking state and reads every saved maintenance block',()=>{
+ assert.match(scheduleMigration,/bookingEnabled/);
+ assert.match(scheduleMigration,/court_not_enabled/);
+ assert.match(scheduleMigration,/rates_not_configured/);
+ assert.match(scheduleMigration,/weekday_closed/);
+ assert.doesNotMatch(scheduleMigration,/where day between/);
+ assert.doesNotMatch(scheduleMigration,/^(?:grant|revoke|create role|drop policy|create policy)\b/im);
 });

@@ -27,7 +27,7 @@ test('policy and calendar readbacks compare submitted data before claiming succe
  assert.match(settings,/persisted\.publicNotice !== policy\.publicNotice\.trim\(\)/);
  assert.match(calendar,/item\.enabled !== submitted\.enabled/);
  assert.match(calendar,/item\.startMinute !== submitted\.startMinute/);
- assert.match(calendar,/stored\.blocks\.some\(block => block\.id === id\)/);
+ assert.match(calendar,/stored\.blocks\.some\(\(?block\)?\s*=>\s*block\.id === id\)/);
  assert.match(calendar,/Maintenance removal could not be confirmed/);
 });
 
