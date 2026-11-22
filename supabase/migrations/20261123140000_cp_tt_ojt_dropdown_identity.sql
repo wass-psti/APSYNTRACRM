@@ -14,6 +14,17 @@ ALTER TABLE private.tt_ojt_interns
  DROP COLUMN IF EXISTS failed_attempts,
  DROP COLUMN IF EXISTS locked_until;
 
+-- Preserve the intern's display name as it was at clock-in. Renaming a roster
+-- entry must not rewrite the name shown on historical attendance.
+ALTER TABLE private.tt_ojt_attendance
+ ADD COLUMN IF NOT EXISTS intern_name text;
+UPDATE private.tt_ojt_attendance a
+ SET intern_name=i.display_name
+ FROM private.tt_ojt_interns i
+ WHERE i.id=a.intern_id AND a.intern_name IS NULL;
+ALTER TABLE private.tt_ojt_attendance
+ ALTER COLUMN intern_name SET NOT NULL;
+
 CREATE OR REPLACE FUNCTION public.timetracker_ojt_group_set(
  p_board_id uuid,p_shared_user_id uuid,p_enabled boolean)
  RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=''
@@ -149,7 +160,8 @@ CREATE FUNCTION public.timetracker_ojt_commit(
  AS $f$
  DECLARE
   v_ws uuid;v_id uuid:=p_intern_id;v_record uuid;v_stamp timestamptz;
-  v_geo_time timestamptz;v_note text:=pg_catalog.btrim(COALESCE(p_work_note,''));
+  v_name text;v_geo_time timestamptz;
+  v_note text:=pg_catalog.btrim(COALESCE(p_work_note,''));
  BEGIN
   v_ws:=private.tt_ojt_scope(p_board_id);
   PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(
@@ -160,9 +172,10 @@ CREATE FUNCTION public.timetracker_ojt_commit(
   END IF;
   PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(
    v_ws::text||':tt-ojt:'||v_id::text,0));
-  IF NOT EXISTS(SELECT 1 FROM private.tt_ojt_interns i
+  SELECT i.display_name INTO v_name FROM private.tt_ojt_interns i
    WHERE i.id=v_id AND i.workspace_id=v_ws AND i.board_id=p_board_id
-    AND i.shared_user_id=auth.uid() AND i.active) THEN
+    AND i.shared_user_id=auth.uid() AND i.active;
+  IF v_name IS NULL THEN
    RAISE EXCEPTION 'Selected intern is not active in this OJT roster'
     USING ERRCODE='42501';
   END IF;
@@ -204,9 +217,9 @@ CREATE FUNCTION public.timetracker_ojt_commit(
     RAISE EXCEPTION 'An attendance session is already active' USING ERRCODE='PT409';
    END IF;
    INSERT INTO private.tt_ojt_attendance(
-    workspace_id,board_id,shared_user_id,intern_id,clock_in_at,location,
-    work_note,clock_in_geo,clock_in_actor)
-   VALUES(v_ws,p_board_id,auth.uid(),v_id,v_stamp,p_location,
+    workspace_id,board_id,shared_user_id,intern_id,intern_name,
+    clock_in_at,location,work_note,clock_in_geo,clock_in_actor)
+   VALUES(v_ws,p_board_id,auth.uid(),v_id,v_name,v_stamp,p_location,
     NULLIF(v_note,''),p_geo,auth.uid()) RETURNING id INTO v_record;
   ELSE
    IF p_record_id IS NULL THEN
@@ -228,6 +241,28 @@ CREATE FUNCTION public.timetracker_ojt_commit(
    'actorId',auth.uid()::text,'workspaceId',v_ws::text,
    'boardId',p_board_id::text,'internId',v_id::text,
    'recordId',v_record::text,'action',p_action,'committedAt',v_stamp);
+ END
+ $f$;
+
+-- Admin attendance reads use the immutable name captured at clock-in.
+CREATE OR REPLACE FUNCTION public.timetracker_ojt_admin_attendance(p_board_id uuid)
+ RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=''
+ AS $f$
+ DECLARE v_ws uuid;
+ BEGIN
+  v_ws:=private.tt_ojt_admin(p_board_id);
+  RETURN pg_catalog.jsonb_build_object('contract','tt-ojt-admin-attendance-1',
+   'actorId',auth.uid()::text,'workspaceId',v_ws::text,
+   'boardId',p_board_id::text,
+   'records',COALESCE((
+    SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+     'id',a.id::text,'internId',a.intern_id::text,'name',a.intern_name,
+     'clockIn',a.clock_in_at,'clockOut',a.clock_out_at,'location',a.location)
+     ORDER BY a.clock_in_at DESC)
+    FROM (SELECT * FROM private.tt_ojt_attendance
+     WHERE workspace_id=v_ws AND board_id=p_board_id
+     ORDER BY clock_in_at DESC LIMIT 100) a
+   ),'[]'::jsonb));
  END
  $f$;
 
