@@ -34,15 +34,22 @@ try{
     await route.fulfill({status:200,headers:{'access-control-allow-origin':'*'},json:{
       source:'server',courtId:request.searchParams.get('courtId'),date:request.searchParams.get('date'),
       durationMinutes:Number(request.searchParams.get('durationMinutes')),
-      slots:[{startMinute:360,status:'available'},{startMinute:390,status:'unavailable'},{startMinute:1380,status:'available'}],
+      slots:[{startMinute:480,status:'available'},{startMinute:510,status:'unavailable'},{startMinute:1380,status:'available'}],
     }});
   });
   await page.goto(base+'paseo/book?court=court-1');
+  const dateParts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const dateValues=Object.fromEntries(dateParts.map(part=>[part.type,part.value]));
+  const tomorrow=new Date(Date.UTC(Number(dateValues.year),Number(dateValues.month)-1,Number(dateValues.day)+1)).toISOString().slice(0,10);
+  const tomorrowLabel=new Intl.DateTimeFormat('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'}).format(new Date(tomorrow+'T00:00:00Z'));
+  await page.getByRole('button',{name:tomorrowLabel}).click();
+  await page.getByRole('button',{name:'8:00 AM, available'}).waitFor({timeout:15000});
   await page.getByRole('button',{name:'11:00 PM, available'}).waitFor({timeout:15000});
   assert.equal(new URL(page.url()).pathname,prefix+'paseo/book');
   assert.equal(await page.locator('.slot-button').count(),3);
   await page.reload();
-  await page.getByRole('button',{name:'6:00 AM, available'}).waitFor();
+  await page.getByRole('button',{name:tomorrowLabel}).click();
+  await page.getByRole('button',{name:'8:00 AM, available'}).waitFor();
   await page.getByRole('button',{name:'11:00 PM, available'}).click();
   assert.match(await page.locator('.immersive-booking-summary').innerText(),/11:00 PM – 12:00 AM/);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth),true);

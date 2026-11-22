@@ -158,7 +158,7 @@ export function BookingPage() {
           <h1 className="page-title">Plan your next game.</h1>
           <p className="page-lede">{stagingAvailability ? (localStaging
             ? 'These are sample times and prices for testing only. They are not real venue offers.'
-            : 'Choose a date and time. Courts awaiting venue approval are not available for booking.') : 'Choose a court to explore sample times. Online reservations are not yet available.'}</p>
+            : 'Choose a court, date and duration. Live availability and PHP pricing are checked against the reservation service.') : 'Choose a court to explore sample times. Online reservations are not yet available.'}</p>
         </div>
         <div className="courts-page-summary booking-page-summary" role="group" aria-label="Booking selection overview">
           <div><strong>{selectedCourt ? selectedCourt.id.split('-').at(-1)?.padStart(2, '0') : '03'}</strong><span>{selectedCourt ? 'Selected court' : 'Courts to choose from'}</span></div>
@@ -168,10 +168,10 @@ export function BookingPage() {
       </header>
       <BookingProgress stage="schedule" />
       <div className="demo-banner" role="note">
-        <strong>{stagingAvailability ? (localStaging ? 'TEST BOOKING — DO NOT SEND MONEY' : 'COURT AVAILABILITY SUBJECT TO APPROVAL') : 'Demonstration schedule only'}</strong>
+        <strong>{stagingAvailability ? (localStaging ? 'TEST BOOKING — DO NOT SEND MONEY' : 'LIVE SERVER AVAILABILITY') : 'Demonstration schedule only'}</strong>
         <p>{stagingAvailability ? (localStaging
           ? 'Times and prices shown here are for testing only. Do not transfer money for a test booking.'
-          : 'Only approved courts and times can be booked. Do not send payment until you receive a confirmed amount and recipient details.') : 'These are example times, not actual court availability. Choosing a time does not reserve a court. All times use Philippine time.'}</p>
+          : 'The server checks operating hours, enabled rates, maintenance blocks and existing reservations. Selecting a time does not reserve it. A reservation is created only after the server accepts your submission; payment remains subject to staff review.') : 'These are example times, not actual court availability. Choosing a time does not reserve a court. All times use Philippine time.'}</p>
       </div>
 
       <div className="booking-panel booking-scheduler">
@@ -208,7 +208,7 @@ export function BookingPage() {
           <span className="is-unavailable"><i aria-hidden="true" /> Unavailable</span>
           {!stagingAvailability && <span className="is-maintenance"><i aria-hidden="true" /> Maintenance</span>}
         </div>
-        <p className="booking-help">{stagingAvailability ? 'Unavailable or unapproved time slots cannot be selected.' : 'Example operating hours are 8:00 AM–10:00 PM. Unavailable periods cannot be selected.'}</p>
+        <p className="booking-help">{stagingAvailability ? 'Unavailable time slots cannot be selected.' : 'Example operating hours are 8:00 AM–10:00 PM. Unavailable periods cannot be selected.'}</p>
         {stagingAvailability && selectedCourt && (
           <>
             <p className="booking-help" role="status">
@@ -245,7 +245,7 @@ export function BookingPage() {
           <p><strong>Time:</strong> {validSelection && selectedMinute !== null
             ? `${formatTime(selectedMinute)} – ${formatTime(selectedMinute + durationMinutes)}`
             : (stagingAvailability ? 'Choose an available time' : 'Time not selected')}</p>
-          <p><strong>Price:</strong> Not configured</p>
+          <p><strong>Price:</strong> {stagingAvailability ? 'Server quote at review' : 'Not configured'}</p>
           <p><strong>Status:</strong> {bookingStatus}</p>
         </div>
         <div className="booking-continue-section"><p className="booking-help">Add your contact details to review the booking. Your time is not reserved until the booking is accepted.</p>
