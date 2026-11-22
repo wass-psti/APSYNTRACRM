@@ -55,17 +55,17 @@ Browser acceptance writes before/restored screenshots to `docs/visual/cp-crm-ui-
 
 ## Local verification results
 
-| Verification | Result |
-| --- | ---: |
-| Full frontend regression | 3,389 passed, 0 failed |
-| Syntax checks | PASS |
-| ESLint | PASS |
-| Prettier | PASS |
-| Production Vite build | PASS |
-| Overview browser acceptance | 242 checks passed |
-| Boards browser acceptance | 344 checks passed |
-| Mobile launcher runtime acceptance | 20 checks passed |
-| Git diff whitespace check | PASS |
+| Verification                       |                 Result |
+| ---------------------------------- | ---------------------: |
+| Full frontend regression           | 3,389 passed, 0 failed |
+| Syntax checks                      |                   PASS |
+| ESLint                             |                   PASS |
+| Prettier                           |                   PASS |
+| Production Vite build              |                   PASS |
+| Overview browser acceptance        |      242 checks passed |
+| Boards browser acceptance          |      344 checks passed |
+| Mobile launcher runtime acceptance |       20 checks passed |
+| Git diff whitespace check          |                   PASS |
 
 The production build retains the repository's existing advisory warnings: the classic `startup-guard.js` script is not bundled by Vite, and the main application/PDF chunks exceed the 500 kB advisory threshold. The build completes successfully; this restoration does not alter chunk splitting or the startup-guard loading model.
 
