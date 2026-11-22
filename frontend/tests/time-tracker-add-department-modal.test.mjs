@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {validateTimeTrackerNewDepartmentName} from '../apps/TimeTracker/time-tracker-add-department-modal.js';
 
 const js=readFileSync('frontend/apps/TimeTracker/time-tracker-add-department-modal.js','utf8');
-const css=readFileSync('frontend/apps/TimeTracker/time-tracker-add-department-modal.css','utf8');
+const css=readFileSync('frontend/apps/TimeTracker/time-tracker-refined.css','utf8');
 const app=readFileSync('frontend/app.js','utf8');
 const index=readFileSync('index.html','utf8');
 
@@ -49,7 +49,7 @@ test('modal-only stylesheet uses full-width field, accessible states and mobile 
   'gap:12px','margin:24px 0 0',
   'flex-direction:column-reverse','prefers-reduced-motion:reduce'
  ])assert.ok(css.includes(fragment),fragment);
- assert.match(index,/frontend\/apps\/TimeTracker\/time-tracker-add-department-modal\.css/);
+ assert.equal((index.match(/<link rel="stylesheet"/g)||[]).length,1);
 });
 test('Add department routes to scoped modal, while rename/delete preserve existing server mutation',()=>{
  assert.match(app,/import \{openTimeTrackerAddDepartmentModal\}/);
