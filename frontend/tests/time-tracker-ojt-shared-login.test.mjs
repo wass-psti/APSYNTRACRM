@@ -188,6 +188,14 @@ test('app wires dropdown selection, signed attendance and admin roster actions',
  assert.match(app,/timeTrackerOjt\.setIntern\(scope/);
  assert.match(app,/timeTrackerOjt\.setGroup\(scope/);
  assert.match(app,/Select your name from the list before starting/);
+ const dropdownStart=app.indexOf("root.addEventListener('change',async event=>");
+ const dropdownEnd=app.indexOf("root.addEventListener('input',event=>",dropdownStart);
+ assert.ok(dropdownStart>=0&&dropdownEnd>dropdownStart);
+ assert.doesNotMatch(app.slice(dropdownStart,dropdownEnd),/captureAttendanceGeo/);
+ const draftWrite=app.indexOf("ttWorkNoteDraft.write(timeTrackerWorkNoteScope(selected.id)");
+ const gpsCapture=app.indexOf("captureAttendanceGeo(navigator.geolocation)",draftWrite);
+ assert.ok(draftWrite>=0&&gpsCapture>draftWrite,
+  'OJT work-plan draft must be persisted before requesting GPS');
  assert.doesNotMatch(app,/timeTrackerOjt\.select\(|timeTrackerOjt\.leave\(|tt-ojt-choose|ojtPin|p_pin|private PIN/i);
  assert.match(ui,/renderTimeTrackerOjtClock/);
  assert.match(ui,/renderTimeTrackerOjtAdmin/);
