@@ -72,4 +72,13 @@ for step in assign readback update deny revoke final; do
  -f /dev/stdin < "$root/sql/acceptance/cp-native-app-autosync-16-$step.sql" >"$tmp/$step.log"
  echo "PASS: canonical TimeTracker writer $step separate SQL connection"
 done
+if [[ "${CP17_LOCAL_BULK_PROBE:-}" == 1 ]]; then
+  for step in bulk bulk-readback bulk-deny bulk-final; do
+    docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
+      -U postgres -d "$clone" -f /dev/stdin \
+      < "$root/sql/acceptance/cp-native-app-autosync-17-$step.sql" \
+      >"$tmp/cp17-$step.log"
+    echo "PASS: CP17 canonical two-member $step persisted SQL acceptance"
+  done
+fi
 echo 'NOT VERIFIED: real signed Auth sessions or arbitrary new-module writer'
