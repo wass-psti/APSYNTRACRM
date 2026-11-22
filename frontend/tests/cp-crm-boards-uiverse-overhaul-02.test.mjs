@@ -12,13 +12,16 @@ const renderer = readFileSync(
   "utf8",
 );
 
-test("Uiverse board stylesheet is the final deterministic CSS layer", () => {
+test("previous Uiverse board stylesheet remains before the complete CRM design system", () => {
   const previous = manifest.indexOf('"frontend/board-overhaul-experience.css"');
   const current = manifest.indexOf('"frontend/board-uiverse-overhaul.css"');
-  assert.ok(previous >= 0 && current > previous);
+  const complete = manifest.indexOf(
+    '"frontend/crm-complete-design-system.css"',
+  );
+  assert.ok(previous >= 0 && current > previous && complete > current);
   assert.match(
     page,
-    /apsyntra-styles\.bundle\.css\?v=cp-crm-boards-uiverse-overhaul-02/,
+    /apsyntra-styles\.bundle\.css\?v=cp-crm-boards-uiverse-overhaul-03/,
   );
   assert.ok(bundle.includes(css.trimEnd()));
   assert.ok(
