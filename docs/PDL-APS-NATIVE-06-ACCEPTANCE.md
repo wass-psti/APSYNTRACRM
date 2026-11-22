@@ -61,6 +61,8 @@ This is real PostgreSQL function/persistence acceptance. It is not represented a
 
 - Public booking copy now describes live server availability and pricing rather than claiming all courts await approval.
 - Booking summary identifies the server-issued quote as available at the review step; it does not invent a client-side price.
+- Court details no longer claim the live rate is unconfigured. The admin settings now show a three-court × three-duration saved-rate matrix with explicit enabled/missing states and refresh readback.
+- Removed obsolete venue-approval wording from the admin rate editor; no new approval gate was introduced.
 - Court map copy no longer says rates and availability are unconnected.
 - Static Pages bundle was regenerated from `frontend/apps/Paseo/source/` with the existing `/APSYNTRACRM/paseo/` base.
 - Native Pages browser acceptance selects tomorrow before checking the full slot grid, avoiding a false expectation that a past same-day start remains available.
@@ -73,13 +75,13 @@ This is real PostgreSQL function/persistence acceptance. It is not represented a
 | Paseo TypeScript typecheck                  | PASS                                                                               |
 | Paseo unit suite                            | 67/67 PASS (13 files)                                                              |
 | CP-PDL-03 migration/source contracts        | 5/5 PASS                                                                           |
-| Native PDL contract suite                   | 24/24 PASS                                                                         |
-| Native Pages browser acceptance             | PASS at 390, 768 and 1440 px; admin, receipt and lifecycle fixture paths also PASS |
+| Native PDL contract suite                   | 25/25 PASS                                                                         |
+| Native Pages browser acceptance             | PASS at 390, 768 and 1440 px; all nine rate-matrix values and admin/readback/lifecycle paths PASS |
 | Disposable PostgreSQL E2E                   | PASS; full rollback verified                                                       |
 | Live production availability                | 9/9 PASS                                                                           |
 | Live same-day past-slot and quote rejection | PASS                                                                               |
 | Root CRM syntax check                       | PASS                                                                               |
-| Root CRM tests                              | 3,340/3,340 PASS                                                                   |
+| Root CRM tests                              | 3,341/3,341 PASS                                                                   |
 | Root CRM production build                   | PASS (existing large-chunk advisory only)                                          |
 | Paseo native bundle build                   | PASS (existing Rollup annotation and static restore-script advisories only)        |
 | Pages source verification                   | PASS                                                                               |
@@ -89,8 +91,10 @@ Prettier check on several existing compact source/workflow files reports pre-exi
 
 ## Release boundary and remaining acceptance
 
-The production database migration is applied and live API behavior is verified. The canonical frontend source and generated `paseo/` assets are changed locally on `feat/cp-pdl-booking-availability-03`; they have not been pushed, merged or deployed to GitHub Pages.
+The production database migration and first public booking correction were merged in PR #768 and deployed through the canonical Pages workflow. The deployed bundle is `assets/index-BU7Wg1lN.js`. Live production browser smoke passed at 390, 768 and 1440 px: same-day past starts remain hidden, future-date 60/90/120-minute availability loads from the server, four live availability requests per viewport completed without failed requests or page errors, and the booking summary shows server quote pricing.
+
+The additional consolidated admin rate-readiness matrix is a follow-up frontend change on `feat/cp-pdl-booking-availability-03b-rate-readiness`; it is not yet deployed. It uses the existing read-only court configuration endpoint and does not modify production rate values.
 
 The existing browser acceptance uses isolated synthetic fixtures for UI and administrator lifecycle flows. The disposable PostgreSQL test proves the real SQL quote-to-reservation persistence path. A production reservation was deliberately not created using synthetic guest/payment-proof data, because that would create a live pending-payment record in the operational reservation queue.
 
-**Status:** `IMPLEMENTED` for production rate/configuration readback, live availability, same-day correction and disposable database workflow. `PENDING` for canonical Pages deployment/CDN acceptance and a controlled production reservation acceptance using an explicitly designated test booking/cleanup procedure. No payment was initiated or marked verified.
+**Status:** `IMPLEMENTED` for production rate/configuration readback, live availability, same-day correction, the first public Pages release, and disposable quote-to-reservation database acceptance. `PENDING` for deployment of the consolidated admin rate-readiness matrix and a controlled production reservation acceptance using an explicitly designated test booking/cleanup procedure. No payment was initiated or marked verified.
