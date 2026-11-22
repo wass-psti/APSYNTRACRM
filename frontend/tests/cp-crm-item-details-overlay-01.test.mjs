@@ -65,7 +65,7 @@ test("existing item-detail renderer and close action remain unchanged", () => {
 test("overlay correction is delivered in the final production CSS layer", () => {
   assert.match(
     page,
-    /apsyntra-styles\.bundle\.css\?v=cp-crm-item-details-overlay-01/,
+    /apsyntra-styles\.bundle\.css\?v=cp-crm-boards-uiverse-overhaul-02/,
   );
   assert.ok(bundle.includes(boardStyles.trimEnd()));
   assert.ok(
