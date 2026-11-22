@@ -10,7 +10,8 @@ export const TIMETRACKER_SHARED_OJT_USER_ID='d613280d-907b-418f-b872-c0f6dd53e58
 export function isEligibleTimeTrackerSharedOjtAccount(member){
  return member?.id===TIMETRACKER_SHARED_OJT_USER_ID &&
   member?.role==='Employee' &&
-  member?.department?.trim().toLocaleLowerCase()==='ojt';
+  typeof member?.department==='string' &&
+  member.department.trim().toLocaleLowerCase()==='ojt';
 }
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
