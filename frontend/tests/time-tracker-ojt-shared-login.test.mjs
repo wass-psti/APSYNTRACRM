@@ -128,7 +128,7 @@ test('client rejects an account or workspace change before using the selected in
   workspace_id:'ffffffff-ffff-4fff-8fff-ffffffffffff',profile:{status:'active'}}),
   rpc:async()=>{throw Error('RPC must not run after identity mismatch');}};
  const client=new TimeTrackerOjtClient({auth,api});
- await assert.rejects(client.snapshot(scope,intern),/identity or workspace changed/);
+ await assert.rejects(client.snapshot(scope,intern),/session or workspace changed/);
 });
 
 test('Clock uses a dropdown and loads the selected intern before exposing clock actions',()=>{
