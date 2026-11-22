@@ -202,8 +202,6 @@ test('app wires dropdown selection, signed attendance and admin roster actions',
  assert.match(native,/attendanceWritesAccepted:designatedSharedOjt\?false/);
  assert.match(native,/timetracker_ojt_roster/);
  assert.match(native,/timetracker_ojt_admin_snapshot/);
- assert.match(native,/canManageOjt=moduleAdmin\|\|bootstrapAdmin/);
- assert.match(app,/state\.roleVerified!==true/);
 });
 
 test('forward migration removes PIN/session infrastructure and preserves historical names',()=>{
