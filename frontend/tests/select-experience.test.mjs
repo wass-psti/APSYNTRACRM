@@ -255,7 +255,7 @@ test('mock DOM: TimeTracker Location choice closes without reopening via the for
   Object.defineProperty(globalThis,'MutationObserver',{value:MO,configurable:true});
   const stop=startSelectExperience(doc.body,{loadFloating:async()=>lib});
   for(let i=0;i<8;i++)await Promise.resolve();
-  const anchor=doc.body.children.find(n=>n.className==='aps-select-anchor');
+  const anchor=label.children.find(n=>n.className==='aps-select-anchor');
   assert.ok(anchor,'a select positioning anchor is rendered');
   const trigger=anchor.children.find(n=>n.getAttribute('role')==='combobox');
   assert.ok(trigger,'a progressive combobox is rendered');
