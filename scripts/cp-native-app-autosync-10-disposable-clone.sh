@@ -9,18 +9,17 @@ lock_dir="/tmp/cp_native10_disposable.lock"
 if ! mkdir "$lock_dir" 2>/dev/null; then
  echo "BLOCKED: existing local clone acceptance is in progress" >&2; exit 2
 fi
-exec_db() { local database="$1"; shift; docker exec "$container" psql -X -v ON_ERROR_STOP=1 -U postgres -d "$database" "$@"; }
-
-if [[ "$(exec_db postgres -Atqc "SELECT count(*) FROM pg_database WHERE datname='$clone'")" != "0" ]]; then
- echo "BLOCKED: $clone already exists; refusing overwrite" >&2; exit 2
-fi
 created=0
+exec_db() { local database="$1"; shift; docker exec "$container" psql -X -v ON_ERROR_STOP=1 -U postgres -d "$database" "$@"; }
 cleanup() {
  if ((created)); then docker exec "$container" dropdb -U postgres "$clone" || echo "CLEANUP REQUIRED" >&2; fi
  docker exec "$container" rm -f "$dump" 2>/dev/null || true
  rmdir "$lock_dir" 2>/dev/null || true
 }
 trap cleanup EXIT
+if [[ "$(exec_db postgres -Atqc "SELECT count(*) FROM pg_database WHERE datname='$clone'")" != "0" ]]; then
+ echo "BLOCKED: $clone already exists; refusing overwrite" >&2; exit 2
+fi
 docker exec "$container" pg_dump -U postgres -d postgres -Fc -n public -n auth -n private --no-owner --no-acl -f "$dump"
 docker exec "$container" chmod 600 "$dump"
 docker exec "$container" createdb -U postgres -T template0 "$clone"
@@ -34,6 +33,10 @@ CREATE FUNCTION realtime.send(payload jsonb,event text,topic text,is_private boo
 RETURNS void LANGUAGE plpgsql AS $$ BEGIN RETURN; END $$;
 SQL
 echo "PASS: isolated local PostgreSQL CRM schema and fixture restore"
+# These compatibility tests create TEMP tables only; live profiles are unchanged.
+docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 -U postgres -d "$clone" \
+  -f /dev/stdin < "$repository/sql/acceptance/cp-native-app-autosync-11-profile-compatibility.sql" >/dev/null
+echo "PASS: staging-shaped profile DDL addition and synthetic row preservation"
 if [[ "$(docker exec "$container" psql -X -U postgres -d "$clone" -Atqc "SELECT count(*) FROM public.module_role_assignments")" != "0" ]]; then
  echo "BLOCKED: clone contains prior module assignment rows" >&2; exit 2
 fi
