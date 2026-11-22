@@ -175,13 +175,7 @@ export class TimeTrackerNativeClient{
  }
  async snapshot(boardId,{clockOnly=false}={}){
   const access=await this.access(boardId);
-  const moduleAdmin=['System Admin','IT Administrator'].includes(access.moduleRole);
-  let bootstrapAdmin=false;
-  if(!clockOnly&&!moduleAdmin){
-   try{bootstrapAdmin=await this.api.rpc('apsyntra_role_is_bootstrap')===true;}
-   catch{/* A failed bootstrap probe never grants OJT administration. */}
-  }
-  const canManageOjt=moduleAdmin||bootstrapAdmin;
+  const canManageOjt=['System Admin','IT Administrator'].includes(access.moduleRole);
   // Issue independent, read-only RPCs together AFTER signed access verification.
   // Backend scope checks remain authoritative; identity is checked again below.
   const otRead=clockOnly?Promise.resolve(null):
