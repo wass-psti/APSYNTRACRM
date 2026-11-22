@@ -1060,81 +1060,81 @@ function overview(){
  const total=visibleBoards.reduce((a,b)=>a+(Number(b.item_count)||0),0);
  const recent=overviewBoardPreview(visibleBoards);
  const countLabel=value=>Number(value).toLocaleString('en-US');
- return `<div class="aps-overview overview-dashboard">
+ return `<div class="aps-overview">
  <section class="page-head overview-hero overview-entrance" aria-labelledby="overview-title">
   <div class="overview-hero-copy">
-   <span class="label-top overview-hero-kicker"><span class="overview-hero-dot" aria-hidden="true"></span> Workspace / Overview</span>
-   <h1 id="overview-title">Good to see you, `+e(name().split(' ')[0])+`</h1>
+   <span class="label-top"><span class="overview-hero-dot" aria-hidden="true"></span> Workspace / Overview</span>
+   <h1 id="overview-title">Good to see you, `+e(name().split(' ')[0])+` <span class="overview-wave" aria-hidden="true">👋</span></h1>
    <p>Here's what your workspace looks like today.</p>
   </div>
-  <div class="head-actions overview-header-actions">
+  <div class="head-actions">
    <button type="button" class="secondary overview-refresh" data-action="refresh">`+overviewIcon('refresh')+`<span>Refresh</span></button>
    <button type="button" class="primary overview-create" data-action="new-board">`+overviewIcon('plus')+`<span>New board</span></button>
   </div>
+  <svg class="overview-hero-art" viewBox="0 0 430 230" aria-hidden="true" focusable="false" fill="none">
+   <circle cx="358" cy="49" r="112" stroke="currentColor" stroke-opacity=".12"/>
+   <circle cx="358" cy="49" r="163" stroke="currentColor" stroke-opacity=".07"/>
+   <path d="M133 222C190 87 287 73 451 118" stroke="currentColor" stroke-opacity=".13"/>
+   <circle cx="299" cy="73" r="4" fill="#9af2e5" fill-opacity=".75"/>
+   <circle cx="145" cy="185" r="3" fill="#dce0ff" fill-opacity=".7"/>
+  </svg>
  </section>
- ` +(state.boardCatalogError?'<div class="overview-catalog-alert" role="alert"><div><strong>Board catalog temporarily unavailable</strong><p>'+e(state.boardCatalogError)+'</p><p>Native applications remain available. Retry workspace refresh to restore generic board discovery.</p></div><button type="button" class="secondary" data-action="refresh">Retry workspace refresh</button></div>':'')+ `
- <section class="overview-metrics-section" aria-labelledby="overview-metrics-title">
-  <div class="section-header overview-section-heading overview-metrics-heading">
-   <div class="overview-heading-copy"><span class="overview-section-eyebrow">AT A GLANCE</span><h2 id="overview-metrics-title" class="section-title">Workspace snapshot</h2></div>
+ ` +(state.boardCatalogError?'<div class="panel boards-empty-state" role="alert"><strong>Board catalog temporarily unavailable</strong><p>'+e(state.boardCatalogError)+'</p><p>Native applications remain available. Retry workspace refresh to restore generic board discovery.</p><button type="button" class="secondary" data-action="refresh">Retry workspace refresh</button></div>':'')+ `
+ <section class="stat-grid overview-stat-grid overview-entrance" aria-label="Workspace statistics">
+  <div class="stat-card" role="group" aria-label="Active boards: `+countLabel(visibleBoards.length)+`">
+   <span class="stat-icon">`+overviewIcon('grid')+`</span>
+   <div class="stat-label">Active boards</div>
+   <div class="stat-value">`+countLabel(visibleBoards.length)+`</div>
+   <div class="stat-footer">Available to your account</div>
   </div>
-  <div class="stat-grid overview-stat-grid overview-entrance" aria-label="Workspace statistics">
-   <div class="stat-card" role="group" aria-label="Active boards: `+countLabel(visibleBoards.length)+`">
-    <span class="stat-icon">`+overviewIcon('grid')+`</span>
-    <div class="stat-label">Active boards</div>
-    <div class="stat-value">`+countLabel(visibleBoards.length)+`</div>
-    <div class="stat-footer">Available to your account</div>
-   </div>
-   <div class="stat-card" role="group" aria-label="Board items: `+countLabel(total)+`">
-    <span class="stat-icon">`+overviewIcon('items')+`</span>
-    <div class="stat-label">Board items</div>
-    <div class="stat-value">`+countLabel(total)+`</div>
-    <div class="stat-footer">Across your active boards</div>
-   </div>
-   <div class="stat-card" role="group" aria-label="Workspace status">
-    <span class="stat-icon">`+overviewIcon('pulse')+`</span>
-    <div class="stat-label">Workspace status</div>
-    <div class="stat-value csp-u042">Active</div>
-    <div class="stat-footer">Access context verified</div>
-   </div>
-   <div class="stat-card" role="group" aria-label="Your access">
-    <span class="stat-icon">`+overviewIcon('shield')+`</span>
-    <div class="stat-label">Your access</div>
-    <div class="stat-value csp-u041" title="Verified CRM tier in the active workspace">`+e(signedCrmRoleLabel(state.crmRoleSnapshot,state.context))+`</div>
-    <div class="stat-footer overview-access-footer"><span class="overview-access-relation">`+e(workspaceRelationLabel(state.workspaceRelationSnapshot,state.context))+`</span><span class="overview-access-identity">`+e(signedCrmIdentityLabel(state.context))+`</span></div>
-   </div>
+  <div class="stat-card" role="group" aria-label="Board items: `+countLabel(total)+`">
+   <span class="stat-icon green">`+overviewIcon('items')+`</span>
+   <div class="stat-label">Board items</div>
+   <div class="stat-value">`+countLabel(total)+`</div>
+   <div class="stat-footer">Across your active boards</div>
+  </div>
+  <div class="stat-card" role="group" aria-label="Workspace status">
+   <span class="stat-icon orange">`+overviewIcon('pulse')+`</span>
+   <div class="stat-label">Workspace status</div>
+   <div class="stat-value csp-u042">Active</div>
+   <div class="stat-footer">Access context verified</div>
+  </div>
+  <div class="stat-card" role="group" aria-label="Your access">
+   <span class="stat-icon pink">`+overviewIcon('shield')+`</span>
+   <div class="stat-label">Your access</div>
+   <div class="stat-value csp-u041" title="Verified CRM tier in the active workspace">`+e(signedCrmRoleLabel(state.crmRoleSnapshot,state.context))+`</div>
+   <div class="stat-footer">`+e(workspaceRelationLabel(state.workspaceRelationSnapshot,state.context))+` · `+e(signedCrmIdentityLabel(state.context))+`</div>
   </div>
  </section>
  <section class="overview-board-section" aria-labelledby="overview-boards-title">
-  <div class="section-header overview-section-heading overview-board-heading overview-entrance">
-   <div class="overview-heading-copy"><span class="overview-section-eyebrow">YOUR WORKSPACE</span><h2 id="overview-boards-title" class="section-title">Your boards</h2><p class="overview-board-count">Showing `+recent.length+` of `+countLabel(visibleBoards.length)+` available boards</p></div>
-   <a class="inline-link" href="#/boards"><span>View all boards</span>`+overviewIcon('arrow')+`</a>
-  </div>
-  `+(recent.length?
-   '<div class="card-grid overview-board-grid overview-board-list overview-entrance" aria-label="Recent workspace boards">'+recent.map(boardCard).join('')+'</div>':
-   '<div class="overview-empty">'+empty('Start with your first board',
-    'Create a board to organize tasks and updates.',
-    '<button class="primary" data-action="new-board">＋ Create board</button>')+'</div>')+'</section>'+(state.roleVerified===true?`
- <section class="overview-foundation-section" aria-labelledby="overview-foundation-title">
-  <div class="section-header overview-section-heading overview-essentials-heading overview-entrance">
-   <div class="overview-heading-copy"><span class="overview-section-eyebrow">FOUNDATION</span><h2 id="overview-foundation-title" class="section-title">Workspace essentials</h2></div>
-  </div>
-  <div class="overview-essentials overview-entrance" aria-label="Workspace essentials">
-   <div class="panel-body">
-    <div class="activity-item">
-     <span class="activity-avatar" aria-hidden="true">`+overviewIcon('lock')+`</span>
-     <div><b>Supabase Auth connected</b><small>Your session is verified against the existing identity system.</small></div>
-     <span class="overview-essentials-indicator" aria-hidden="true">`+overviewIcon('check')+`</span>
-    </div>
-    <div class="activity-item">
-     <span class="activity-avatar" aria-hidden="true">`+overviewIcon('shield')+`</span>
-     <div><b>Board permissions are centralized</b><small>Each board and action is checked against the authoritative workspace permissions.</small></div>
-     <span class="overview-essentials-indicator" aria-hidden="true">`+overviewIcon('check')+`</span>
-    </div>
-    <div class="activity-item">
-     <span class="activity-avatar" aria-hidden="true">`+overviewIcon('items')+`</span>
-     <div><b>Native issue transactions</b><small>Issue records use the existing RLS view and atomic Supabase transaction RPC.</small></div>
-     <span class="overview-essentials-indicator" aria-hidden="true">`+overviewIcon('check')+`</span>
-    </div>
+ <div class="section-header overview-section-heading overview-entrance">
+  <div class="overview-heading-copy"><span class="overview-section-eyebrow">YOUR WORKSPACE</span><h2 id="overview-boards-title" class="section-title">Your boards</h2><p class="overview-board-count">Showing `+recent.length+` of `+countLabel(visibleBoards.length)+` available boards</p></div>
+  <a class="inline-link" href="#/boards"><span>View all boards</span>`+overviewIcon('arrow')+`</a>
+ </div>
+ `+(recent.length?
+  '<div class="card-grid overview-board-grid overview-entrance">'+recent.map(boardCard).join('')+'</div>':
+  '<div class="panel overview-empty">'+empty('Start with your first board',
+   'Create a board to organize tasks and updates.',
+   '<button class="primary" data-action="new-board">＋ Create board</button>')+'</div>')+'</section>'+(state.roleVerified===true?`
+ <div class="section-header overview-section-heading overview-essentials-heading overview-entrance">
+  <div class="overview-heading-copy"><span class="overview-section-eyebrow">FOUNDATION</span><h2 class="section-title">Workspace essentials</h2></div>
+ </div>
+ <section class="panel overview-essentials overview-entrance" aria-label="Workspace essentials">
+  <div class="panel-body">
+   <div class="activity-item">
+    <span class="activity-avatar" aria-hidden="true">`+overviewIcon('lock')+`</span>
+    <div><b>Supabase Auth connected</b><small>Your session is verified against the existing identity system.</small></div>
+    <span class="overview-essentials-indicator" aria-hidden="true">`+overviewIcon('check')+`</span>
+   </div>
+   <div class="activity-item">
+    <span class="activity-avatar" aria-hidden="true">`+overviewIcon('shield')+`</span>
+    <div><b>Board permissions are centralized</b><small>Each board and action is checked against the authoritative workspace permissions.</small></div>
+    <span class="overview-essentials-indicator" aria-hidden="true">`+overviewIcon('check')+`</span>
+   </div>
+   <div class="activity-item">
+    <span class="activity-avatar" aria-hidden="true">`+overviewIcon('items')+`</span>
+    <div><b>Native issue transactions</b><small>Issue records use the existing RLS view and atomic Supabase transaction RPC.</small></div>
+    <span class="overview-essentials-indicator" aria-hidden="true">`+overviewIcon('check')+`</span>
    </div>
   </div>
  </section>`:'')+`

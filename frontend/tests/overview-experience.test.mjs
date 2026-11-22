@@ -17,7 +17,7 @@ const card=app.slice(app.indexOf('function boardCard(board,index){'),app.indexOf
 
 test('overview is isolated from signed sidebar and other board views',()=>{
  assert.ok(start>0&&end>start);
- assert.match(view,/return \`<div class="aps-overview overview-dashboard">/);
+ assert.match(view,/return \`<div class="aps-overview">/);
  assert.match(app,/root\.querySelector\('\.main'\)\?\.classList\.toggle\('aps-overview-shell',state\.view==='overview'\)/);
  assert.match(app,/mountOverviewMotion\(root\.querySelector\('\.aps-overview'\),state\.view\)/);
  assert.match(app,/stopOverviewMotion\(\)/);
