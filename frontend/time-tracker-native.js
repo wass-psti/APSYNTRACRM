@@ -175,6 +175,7 @@ export class TimeTrackerNativeClient{
  }
  async snapshot(boardId,{clockOnly=false}={}){
   const access=await this.access(boardId);
+  const canManageOjt=['System Admin','IT Administrator'].includes(access.moduleRole);
   // Issue independent, read-only RPCs together AFTER signed access verification.
   // Backend scope checks remain authoritative; identity is checked again below.
   const otRead=clockOnly?Promise.resolve(null):
@@ -185,10 +186,10 @@ export class TimeTrackerNativeClient{
   const clockRead=this.attendanceCapability(boardId,access);
   // Department is a signed, workspace-scoped employee record, not a browser field.
   // A missing deployment leaves Clock In unavailable rather than guessing.
-  const catalogRead=!clockOnly&&['System Admin','IT Administrator'].includes(access.moduleRole)?
+  const catalogRead=!clockOnly&&canManageOjt?
    this.api.rpc('timetracker_department_catalog_snapshot',{p_board_id:boardId})
     .then(response=>({response}),error=>({error})):Promise.resolve(null);
-  const employeeDepartmentsRead=!clockOnly&&['System Admin','IT Administrator'].includes(access.moduleRole)?
+  const employeeDepartmentsRead=!clockOnly&&canManageOjt?
    this.api.rpc('timetracker_employee_department_directory_snapshot',{p_board_id:boardId})
     .then(response=>({response}),error=>({error})):Promise.resolve(null);
   const departmentRead=this.api.rpc('timetracker_employee_department_for_clock',{
@@ -322,7 +323,7 @@ export class TimeTrackerNativeClient{
     ojtRoster={mode:'SERVICE_UNAVAILABLE',interns:[]};
    }
   }
-  if(!clockOnly&&['System Admin','IT Administrator'].includes(access.moduleRole)){
+  if(!clockOnly&&canManageOjt){
    try{
     ojtAdmin=projectOjtAdmin(
      await this.api.rpc('timetracker_ojt_admin_snapshot',{p_board_id:boardId}),access);

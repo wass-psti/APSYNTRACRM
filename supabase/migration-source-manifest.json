@@ -1953,6 +1953,13 @@
       "file": "20261123130000_cp_tt_ojt_employee_department_identity.sql",
       "bytes": 6925,
       "sha256": "ede421f8f471d0af0952c467e72bc39e5e2584348d79641c79939885f3d0a68b"
+    },
+    {
+      "version": "20261123140000",
+      "name": "cp_tt_ojt_dropdown_identity",
+      "file": "20261123140000_cp_tt_ojt_dropdown_identity.sql",
+      "bytes": 13072,
+      "sha256": "eaaa76bbd2174a8f883667e22ffb8468444fcac00e022097104a0bae27bdfcf6"
     }
   ]
 }

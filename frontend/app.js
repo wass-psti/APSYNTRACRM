@@ -4354,11 +4354,11 @@ async function loadTimeTracker(seq=routeSerial){
      clearTimeTrackerOjtSelection();
     }else{
      try{
-      state.ttOjtSnapshot=await timeTrackerOjt.snapshot(ojtScope,state.ttOjtSelected);
+      state.ttOjtSnapshot=await timeTrackerOjt.snapshot(ojtScope,state.ttOjtSelected.id);
       state.ttOjtPending=false;
      }catch{
       clearTimeTrackerOjtSelection();
-      state.ttOjtError='Intern identity expired or revoked. Select your name and verify again.';
+      state.ttOjtError='The selected intern is no longer active. Select your name again.';
      }
     }
     if(state.ttView==='clock')ttClockLastCheckAt=Date.now();
@@ -9237,38 +9237,13 @@ async function action(name,button){
   });break;
  }
  case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
- case 'tt-ojt-choose':{
-  const scope=timeTrackerOjtScope(),roster=state.ttAttendance?.ojtRoster;
-  const id=button.dataset.ojtId;
-  if(!scope||state.ttOjtBusy||state.ttOjtPending||
-    !roster?.interns?.some(i=>i.id===id))break;
-  const intern=roster.interns.find(i=>i.id===id);
-  openModal('Confirm intern identity',
-   '<p class="note">Verify '+e(intern.name)+' with your own PIN. '+
-   'Do not share this PIN with other interns.</p>'+
-   '<label>Individual PIN<input name="ojtPin" type="password" inputmode="numeric" '+
-   'pattern="[0-9]{8,12}" minlength="8" maxlength="12" autocomplete="off" required></label>',
-   async fd=>{
-    state.ttOjtBusy=true;state.ttOjtError='';render();
-    try{
-     const chosen=await timeTrackerOjt.select(scope,id,String(fd.get('ojtPin')||''));
-     if(!timeTrackerOjtScope()||state.context?.user_id!==scope.userId)
-      throw Error('Your account changed during identity verification');
-     const attendance=await timeTrackerOjt.snapshot(scope,chosen);
-     state.ttOjtSelected=chosen;state.ttOjtSnapshot=attendance;
-     state.ttOjtSuccess='Identity confirmed. Your attendance is recorded separately.';
-    }catch(err){state.ttOjtError=errorMessage(err);throw err;}
-    finally{state.ttOjtBusy=false;render();}
-   },{submitLabel:'Verify identity'});
-  break;
- }
  case 'tt-ojt-leave':{
   const scope=timeTrackerOjtScope(),selected=state.ttOjtSelected;
-  if(!scope||!selected||state.ttOjtBusy||state.ttOjtPending)break;
-  state.ttOjtBusy=true;render();
-  try{await timeTrackerOjt.leave(scope,selected);}
-  catch{toast('Identity was cleared locally; server token will expire automatically.',true);}
-  finally{clearTimeTrackerOjtSelection();render();}
+  if(!scope||!selected||state.ttOjtBusy||state.ttOjtPending||
+    state.ttOjtSnapshot?.active)break;
+  // Dropdown identity is a TimeTracker attribution choice, not a second login.
+  // Clearing it locally does not sign out the shared Supabase Auth account.
+  clearTimeTrackerOjtSelection();render();
   break;
  }
  case 'tt-ojt-clock':{
@@ -9291,10 +9266,10 @@ async function action(name,button){
     throw Error('Identity changed before location capture');
    // Unknown write outcomes require a fresh signed snapshot, never replay.
    state.ttOjtPending=true;
-   await timeTrackerOjt.commit(scope,selected,{
+   await timeTrackerOjt.commit(scope,selected.id,{
     action,recordId:active?.id||null,location:locationValue,geo,workNote:note
    });
-   state.ttOjtSnapshot=await timeTrackerOjt.snapshot(scope,selected);
+   state.ttOjtSnapshot=await timeTrackerOjt.snapshot(scope,selected.id);
    state.ttOjtPending=false;
    if(action==='clock-in')ttWorkNoteDraft.clear(timeTrackerWorkNoteScope(selected.id));
    state.ttOjtSuccess=action==='clock-in'?
@@ -9316,7 +9291,7 @@ async function action(name,button){
   const configured=state.ttAttendance?.ojtAdmin?.groups?.some(g=>g.userId===id);
   if(!scope||state.ttOjtBusy||id!==TIMETRACKER_SHARED_OJT_USER_ID||
     (enabled?!eligible:!configured))break;
-  if(!enabled&&!confirm('Disable shared login and revoke all intern identity sessions? Attendance history will be preserved.'))break;
+  if(!enabled&&!confirm('Disable the shared OJT login? All active intern sessions must be ended first. Attendance history will be preserved.'))break;
   state.ttOjtBusy=true;render();
   try{await timeTrackerOjt.setGroup(scope,id,enabled);
    await loadTimeTracker();toast(enabled?'Shared OJT login enabled.':'Shared OJT login disabled.');}
@@ -9332,22 +9307,17 @@ async function action(name,button){
    group?.interns?.find(i=>i.id===button.dataset.ojtId):null;
   if(!scope||!group||(name==='tt-ojt-intern-edit'&&!existing)||state.ttOjtBusy)break;
   openModal(existing?'Edit OJT intern':'Add OJT intern',
-   '<p class="note">Interns share the company login but must use their own private PIN. '+
-   'Changing the PIN or deactivating a profile revokes its current identity session.</p>'+
+   '<p class="note">Interns use the existing shared company login and select their own name from the TimeTracker dropdown. No separate password or PIN is created.</p>'+
    '<label>Intern name<input name="name" maxlength="100" minlength="2" required value="'+e(existing?.name||'')+'"></label>'+
-   '<label>'+ (existing?'New PIN (leave empty to keep current)':'Individual PIN (required)')+
-   '<input name="pin" type="password" inputmode="numeric" pattern="[0-9]{8,12}" '+
-   'minlength="8" maxlength="12" autocomplete="new-password" '+(existing?'':'required')+'></label>'+
    (existing?select('Profile status','active',[['true','Active'],['false','Inactive']],
       String(existing.active)):''),
    async fd=>{
-    const nameValue=String(fd.get('name')||'').trim(),pin=String(fd.get('pin')||'');
-    if(pin&&(!/^[0-9]{8,12}$/.test(pin)||/^(\d)\1+$/.test(pin)))
-     throw Error('PIN must contain 8–12 digits and not repeat a single digit.');
+    const nameValue=String(fd.get('name')||'').trim();
+    const active=existing?String(fd.get('active'))==='true':true;
     state.ttOjtBusy=true;render();
     try{
-     await timeTrackerOjt.setIntern(scope,{userId,id:existing?.id||null,name:nameValue,
-       pin:pin||null,active:existing?String(fd.get('active'))==='true':true});
+     await timeTrackerOjt.setIntern(scope,{userId,id:existing?.id||null,
+       name:nameValue,active});
      await loadTimeTracker();toast(existing?'Intern updated.':'Intern profile added.');
     }finally{state.ttOjtBusy=false;render();}
    },{submitLabel:existing?'Save intern':'Add intern'});
@@ -12990,6 +12960,34 @@ root.addEventListener('drop',event=>{
  if(form)captureTradeLinkDraftFields({target:dragged.querySelector('[name="lineDescription"]')});
 });
 root.addEventListener('dragend',()=>{tradeLinkDraggedLine=null;});
+root.addEventListener('change',async event=>{
+ if(event.target?.id!=='tt-ojt-intern-select')return;
+ const scope=timeTrackerOjtScope();
+ const id=String(event.target.value||'');
+ const intern=state.ttAttendance?.ojtRoster?.interns?.find(row=>row.id===id);
+ if(!scope||!id||!intern){
+  state.ttOjtError='Select your name from the list before starting.';
+  render();return;
+ }
+ if(state.ttOjtBusy||state.ttOjtPending)return;
+ state.ttOjtBusy=true;state.ttOjtError='';state.ttOjtSuccess='';render();
+ try{
+  // A dropdown selection only loads that intern's signed attendance snapshot.
+  // GPS and attendance writes remain behind the explicit Start Session action.
+  const attendance=await timeTrackerOjt.snapshot(scope,id);
+  if(!timeTrackerOjtScope()||state.context?.user_id!==scope.userId||
+    state.boardId!==scope.boardId||
+    !state.ttAttendance?.ojtRoster?.interns?.some(row=>row.id===id))
+   throw Error('The signed OJT account or selected intern changed. Select again.');
+  state.ttOjtSelected={id:intern.id,name:intern.name,scope:{...scope}};
+  state.ttOjtSnapshot=attendance;
+  state.ttOjtSuccess='Selected '+intern.name+'. Your attendance history is ready.';
+ }catch(err){
+  state.ttOjtError=errorMessage(err);
+ }finally{
+  state.ttOjtBusy=false;render();
+ }
+});
 root.addEventListener('input',event=>{
  if(syncTradeLinkFinanceInput(event))return;
  if(event.target.id==='tt-note'&&event.target.closest('#tt-clock-form')){
