@@ -63,5 +63,6 @@ test('UI CSS is scoped, responsive, dark mode and reduced-motion aware', () => {
  assert.match(styles, /\/\* frontend\/dark-workspace-account-completion\.css \*\//);
  assert.ok(styles.includes('/* frontend/dark-workspace-account-completion.css */'), 'existing workspace/account dark layer remains bundled');
  assert.ok(styles.includes('/* frontend/dark-simplified-system.css */\n'+simplifiedCss.trimEnd()), 'final simplification layer remains delivered without alteration');
- assert.ok(styles.endsWith('/* frontend/board-overhaul-experience.css */\n'+readFileSync('frontend/board-overhaul-experience.css','utf8').trimEnd()+'\n'), 'board overhaul remains the final deterministic CSS layer');
+ assert.ok(styles.includes('/* frontend/board-overhaul-experience.css */\n'+readFileSync('frontend/board-overhaul-experience.css','utf8').trimEnd()), 'existing board overhaul layer remains delivered');
+ assert.ok(styles.endsWith('/* frontend/board-uiverse-overhaul.css */\n'+readFileSync('frontend/board-uiverse-overhaul.css','utf8').trimEnd()+'\n'), 'Uiverse board layer is the final deterministic CSS layer');
 });

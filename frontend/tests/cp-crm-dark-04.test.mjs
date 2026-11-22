@@ -5,9 +5,9 @@ import {STYLE_SOURCES,STYLE_BUNDLE} from '../../scripts/priority5-style-manifest
 import {generateStyleBundle} from '../../scripts/build-priority5-styles.mjs';
 const css=readFileSync('frontend/dark-overview-legibility.css','utf8');
 test('Overview legibility stylesheet is last and published in deterministic bundle',()=>{
- assert.equal(STYLE_SOURCES.at(-9),'frontend/dark-overview-legibility.css');
+ assert.equal(STYLE_SOURCES.at(-10),'frontend/dark-overview-legibility.css');
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());
- assert.match(readFileSync('index.html','utf8'),/bundle\.css\?v=(?:cp-crm-dark-invite-01|(?:cp-crm-dark-05|(?:cp-crm-dark-06|(?:cp-crm-dark-07|(?:cp-crm-dark-08|(?:cp-crm-dark-09|cp-crm-item-details-overlay-01))))))/);
+ assert.match(readFileSync('index.html','utf8'),/bundle\.css\?v=(?:cp-crm-dark-invite-01|(?:cp-crm-dark-05|(?:cp-crm-dark-06|(?:cp-crm-dark-07|(?:cp-crm-dark-08|(?:cp-crm-dark-09|cp-crm-boards-uiverse-overhaul-02))))))/);
 });
 test('board initials use readable dark color variants and no new privileges',()=>{
  for(const cls of ['.board-symbol.green','.board-symbol.blue','.board-symbol.orange','.board-symbol.pink','.sidebar-board-initial']){

@@ -6,11 +6,11 @@ import {generateStyleBundle} from '../../scripts/build-priority5-styles.mjs';
 const css=readFileSync('frontend/uiverse-native-workflows.css','utf8');
 
 test('native visual layer follows original shared tokens and retains one CSS bundle',()=>{
- assert.deepEqual(STYLE_SOURCES.slice(-15, -13),[
+ assert.deepEqual(STYLE_SOURCES.slice(-16, -14),[
   'frontend/uiverse-design-system.css','frontend/uiverse-native-workflows.css']);
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());
  const html=readFileSync('index.html','utf8');
- assert.match(html,/apsyntra-styles\.bundle\.css\?v=(?:cp-crm-ui-redesign-02|(?:cp-crm-dark-0[1234]|(?:cp-crm-dark-invite-01|(?:cp-crm-dark-05|(?:cp-crm-dark-06|(?:cp-crm-dark-07|(?:cp-crm-dark-08|(?:cp-crm-dark-09|cp-crm-item-details-overlay-01))))))))/);
+ assert.match(html,/apsyntra-styles\.bundle\.css\?v=(?:cp-crm-ui-redesign-02|(?:cp-crm-dark-0[1234]|(?:cp-crm-dark-invite-01|(?:cp-crm-dark-05|(?:cp-crm-dark-06|(?:cp-crm-dark-07|(?:cp-crm-dark-08|(?:cp-crm-dark-09|cp-crm-boards-uiverse-overhaul-02))))))))/);
  assert.match(html,/frontend\/uiverse-native-workflows\.css/);
  assert.equal((html.match(/<link rel="stylesheet"/g)||[]).length,1);
 });
