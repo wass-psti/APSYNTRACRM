@@ -189,8 +189,15 @@ try{
  modules.on('pageerror',error=>moduleErrors.push(error.message));
  await modules.addInitScript(()=>sessionStorage.setItem('pdl-booking-admin-access-token','SYNTHETIC_TEST_ONLY'));
  const courtState={courtId:'court-1',name:'Court 1',enabled:false,openMinute:480,closeMinute:1320,rates:[]};
+ const courtStates=[courtState,
+   {courtId:'court-2',name:'Court 2',enabled:false,openMinute:480,closeMinute:1320,rates:[]},
+   {courtId:'court-3',name:'Court 3',enabled:false,openMinute:480,closeMinute:1320,rates:[]},
+ ];
  const policyState={reservationLeadHours:0,arrivalGraceMinutes:15,publicNotice:''};
- const calendarState={weekdays:[],blocks:[]};
+ const calendarState={weekdays:[
+   {courtId:'court-1',weekday:0,enabled:true,openMinute:480,closeMinute:1320},
+   {courtId:'court-2',weekday:2,enabled:false,openMinute:600,closeMinute:1200},
+ ],blocks:[]};
  const bookingState={
    id:'33333333-3333-4333-8333-333333333333',court_code:'court-1',
    reservation_date:'2026-11-23',start_minute:480,duration_minutes:60,
@@ -214,7 +221,7 @@ try{
    const send=(json,status=200)=>route.fulfill({status,json});
    if(path.endsWith('/v1/admin/session'))return send({authenticated:true});
    if(request.method()!=='GET')writeCalls.push(path);
-   if(path.endsWith('/v1/admin/courts'))return send({courts:[courtState]});
+   if(path.endsWith('/v1/admin/courts'))return send({courts:courtStates});
    if(path.endsWith('/v1/admin/courts/court-1')&&request.method()==='PUT'){
      if(persistWrites)Object.assign(courtState,request.postDataJSON());
      return send({updated:true});
@@ -235,7 +242,13 @@ try{
    if(path.endsWith('/v1/admin/calendar')&&request.method()==='GET')return send(calendarState);
    if(path.includes('/v1/admin/calendar/')&&path.includes('/weekdays/')&&request.method()==='PUT'){
      const data=request.postDataJSON();
-     if(persistWrites)calendarState.weekdays=[{courtId:'court-1',weekday:1,...data}];
+     const match=path.match(/calendar\/(court-[1-9][0-9]*)\/weekdays\/([0-6])$/);
+     assert.ok(match,'weekday update must identify its court and weekday');
+     if(persistWrites){
+       const existing=calendarState.weekdays.find(item=>item.courtId===match[1]&&item.weekday===Number(match[2]));
+       if(existing)Object.assign(existing,data);
+       else calendarState.weekdays.push({courtId:match[1],weekday:Number(match[2]),...data});
+     }
      return send({updated:true});
    }
    if(path.endsWith('/v1/admin/calendar/maintenance')&&request.method()==='POST'){
@@ -265,7 +278,7 @@ try{
  await modules.route('**/functions/v1/pdl-guest-api/v1/payment-methods',async route=>
    route.fulfill({status:200,json:{methods}}));
  const routes=[
-   ['courts','Court schedule'],['calendar','Weekly operating hours'],
+   ['courts','Court schedule'],['calendar','Weekly operating hours · Court 1'],
    ['bookings','Booking queue'],['pricing','Approved booking rate'],
    ['payments','Admin-managed QR payment settings'],['customers','Customer directory.'],
    ['settings','Save operational policies'],
@@ -281,11 +294,11 @@ try{
  await modules.getByRole('link',{name:'Court settings'}).click();
  await modules.getByText('Court schedule',{exact:true}).waitFor();
  await modules.getByRole('link',{name:'Court calendar'}).click();
- await modules.getByText('Weekly operating hours',{exact:true}).waitFor();
+ await modules.getByText('Weekly operating hours · Court 1',{exact:true}).waitFor();
  await modules.goBack();
  await modules.getByText('Court schedule',{exact:true}).waitFor();
  await modules.goForward();
- await modules.getByText('Weekly operating hours',{exact:true}).waitFor();
+ await modules.getByText('Weekly operating hours · Court 1',{exact:true}).waitFor();
  // Stateful, isolated HTTP fixtures verify genuine UI save -> GET -> reload flows.
  await modules.goto(base+'paseo/admin/courts');
  await modules.locator('#pdl-open-minute').fill('540');
@@ -305,6 +318,29 @@ try{
  console.log('PASS rate configuration write and persisted fixture readback after refresh');
 
  await modules.goto(base+'paseo/admin/calendar');
+ const courtTabs=modules.getByRole('tablist',{name:'Court schedule tabs'});
+ await courtTabs.waitFor();
+ await courtTabs.getByRole('tab',{name:'Court 1 schedules, 1 saved'}).waitFor();
+ assert.equal(await courtTabs.getByRole('tab').count(),3);
+ let weeklyList=modules.getByRole('list',{name:'Saved weekly schedules'});
+ await weeklyList.getByText('Sunday').waitFor();
+ assert.equal(await weeklyList.getByText('Tuesday').count(),0);
+ await courtTabs.getByRole('tab',{name:'Court 2 schedules, 1 saved'}).click();
+ weeklyList=modules.getByRole('list',{name:'Saved weekly schedules'});
+ await weeklyList.getByText('Tuesday').waitFor();
+ assert.equal(await weeklyList.getByText('Sunday').count(),0);
+ assert.equal(await weeklyList.getByText('Closed').count(),1);
+ await courtTabs.getByRole('tab',{name:'Court 3 schedules, 0 saved'}).click();
+ await modules.getByText('No weekly operating schedules have been saved for Court 3.').waitFor();
+ assert.equal(await modules.getByRole('combobox',{name:'Maintenance court'}).inputValue(),'court-1');
+ for(const width of [390,768,1440]){
+   await modules.setViewportSize({width,height:950});
+   const columns=await modules.locator('.admin-calendar-court-tabs').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length);
+   assert.equal(columns,3,`three court tabs remain visible at ${width}px`);
+   assert.equal(await modules.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,`no horizontal overflow at ${width}px`);
+ }
+ await modules.setViewportSize({width:900,height:950});
+ await courtTabs.getByRole('tab',{name:'Court 1 schedules, 1 saved'}).click();
  await modules.getByRole('combobox',{name:'Opening time'}).selectOption('540');
  await modules.getByRole('button',{name:'Save weekday schedule'}).click();
  await modules.getByText('Changes saved.').waitFor();
@@ -324,6 +360,21 @@ try{
  await modules.waitForFunction(() => document.querySelector('[aria-label=\"Opening time\"]')?.value==='570');
  await modules.getByRole('list',{name:'Saved weekly schedules'}).getByText('9:30 AM – 10:00 PM').waitFor();
  console.log('PASS Edit Schedule restores saved values, updates the existing row, and persists after refresh');
+ await modules.getByRole('tablist',{name:'Court schedule tabs'}).getByRole('tab',{name:'Court 2 schedules, 1 saved'}).click();
+ const courtTwoList=modules.getByRole('list',{name:'Saved weekly schedules'});
+ await courtTwoList.getByRole('button',{name:'Edit Court 2 Tuesday schedule'}).click();
+ await modules.waitForFunction(() => document.querySelector('[aria-label=\"Opening time\"]')?.value==='600' && document.querySelector('[aria-label=\"Closing time\"]')?.value==='1200');
+ await modules.locator('[aria-label=\"Opening time\"]').selectOption('630');
+ await modules.getByRole('checkbox',{name:'Open on this weekday'}).check();
+ await modules.getByRole('button',{name:'Update weekday schedule'}).click();
+ await modules.getByText('Changes saved.').waitFor();
+ await modules.reload();
+ const refreshedCourtTabs=modules.getByRole('tablist',{name:'Court schedule tabs'});
+ await refreshedCourtTabs.getByRole('tab',{name:'Court 2 schedules, 1 saved'}).click();
+ await modules.getByRole('list',{name:'Saved weekly schedules'}).getByText('10:30 AM – 8:00 PM').waitFor();
+ await refreshedCourtTabs.getByRole('tab',{name:'Court 1 schedules, 2 saved'}).click();
+ await modules.getByRole('list',{name:'Saved weekly schedules'}).getByText('9:30 AM – 10:00 PM').waitFor();
+ console.log('PASS independent Court 2 update persists without changing Court 1 schedules');
  await modules.getByRole('button',{name:'Add maintenance block'}).click();
  const savedBlocks=modules.getByRole('list',{name:'Saved maintenance blocks'});
  const removeBlock=savedBlocks.getByRole('button',{name:/Remove Court 1 maintenance on/});
