@@ -6,6 +6,8 @@ import {Script} from 'node:vm';
 const entry = readFileSync('index.html', 'utf8');
 const script = readFileSync('frontend/mobile-home.js', 'utf8');
 const css = readFileSync('frontend/mobile-home.css', 'utf8');
+const app = readFileSync('frontend/app.js', 'utf8');
+const globalSearch = readFileSync('frontend/global-search.js', 'utf8');
 
 test('mobile shell loads after existing frontend scripts and built styles', () => {
   assert.equal((entry.match(/<link rel="stylesheet"/g) || []).length, 1);
@@ -21,7 +23,7 @@ test('mobile shell JavaScript parses and uses the signed rendered navigation cat
   assert.match(script, /nav\[aria-label="Primary"\] a\.nav-link/);
   assert.match(script, /sidebar-recent-list a\.sidebar-recent-link/);
   assert.match(script, /safeRoute\(href\)/);
-  assert.match(script, /if \(!catalog\(shell\)\.all\.some/);
+  assert.match(script, /if \(!shell \|\| !catalog\(shell\)\.all\.some/);
   assert.match(script, /root\.querySelector\(':scope > \.shell'\)/);
 });
 
@@ -55,6 +57,12 @@ test('bottom navigation reaches real CRM sections and opens the existing global 
   assert.match(script, /if \(location\.hash !== href\) location\.hash = href/);
   assert.match(script, /const homeSection = \(\) =>/);
   assert.match(script, /favoritesOnly/);
+  assert.match(app, /sidebarNav\('#\/boards','My boards'/);
+  assert.match(app, /sidebarNav\('#\/settings','Settings'/);
+  assert.match(app, /parts\[0\]==='boards'\?'boards'/);
+  assert.match(app, /parts\[0\]==='settings'\?'settings'/);
+  assert.match(app, /data-global-search-open/);
+  assert.match(globalSearch, /function startGlobalSearch/);
   assert.doesNotMatch(script, /data-apsm-focus-search|data-apsm-scroll-favorites/);
 });
 
