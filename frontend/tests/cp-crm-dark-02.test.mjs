@@ -8,7 +8,7 @@ const source=readFileSync('frontend/dark-native-applications.css','utf8');
 test('the native dark palette is last and the CSS bundle remains deterministic',()=>{
  assert.deepEqual(STYLE_SOURCES.slice(-13, -11),['frontend/dark-theme-foundation.css','frontend/dark-native-applications.css']);
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());
- assert.match(readFileSync('index.html','utf8'),/apsyntra-styles\.bundle\.css\?v=(?:cp-crm-dark-0[234]|(?:cp-crm-dark-invite-01|(?:cp-crm-dark-05|(?:cp-crm-dark-06|(?:cp-crm-dark-07|(?:cp-crm-dark-08|(?:cp-crm-dark-09|cp-crm-boards-overhaul-01)))))))/);
+ assert.match(readFileSync('index.html','utf8'),/apsyntra-styles\.bundle\.css\?v=(?:cp-crm-dark-0[234]|(?:cp-crm-dark-invite-01|(?:cp-crm-dark-05|(?:cp-crm-dark-06|(?:cp-crm-dark-07|(?:cp-crm-dark-08|(?:cp-crm-dark-09|cp-crm-item-details-overlay-01)))))))/);
 });
 test('TradeLink, Fund Tracker and additional native modules receive dark coverage',()=>{
  for(const target of ['.tl-reference-portal','.tl-draft-panel','.tl-reference-document-topcard',

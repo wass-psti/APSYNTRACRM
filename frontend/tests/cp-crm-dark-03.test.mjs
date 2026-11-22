@@ -9,7 +9,7 @@ test('reference-inspired dark layer follows the existing native dark layer',()=>
   'frontend/dark-theme-foundation.css','frontend/dark-native-applications.css',
   'frontend/dark-enterprise-monday.css']);
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());
- assert.match(readFileSync('index.html','utf8'),/apsyntra-styles\.bundle\.css\?v=(?:cp-crm-dark-0[34]|(?:cp-crm-dark-invite-01|(?:cp-crm-dark-05|(?:cp-crm-dark-06|(?:cp-crm-dark-07|(?:cp-crm-dark-08|(?:cp-crm-dark-09|cp-crm-boards-overhaul-01)))))))/);
+ assert.match(readFileSync('index.html','utf8'),/apsyntra-styles\.bundle\.css\?v=(?:cp-crm-dark-0[34]|(?:cp-crm-dark-invite-01|(?:cp-crm-dark-05|(?:cp-crm-dark-06|(?:cp-crm-dark-07|(?:cp-crm-dark-08|(?:cp-crm-dark-09|cp-crm-item-details-overlay-01)))))))/);
 });
 test('compact, restrained enterprise palette covers existing shell and modules',()=>{
  for(const item of ['--crm-dark-canvas:#121212','--crm-dark-sidebar:#181818',
