@@ -45,11 +45,24 @@ test('mobile home and immersive destinations never replace native application co
   assert.doesNotMatch(script, /main-content'\)\.innerHTML|main-content"\)\.innerHTML/);
 });
 
+test('bottom navigation reaches real CRM sections and opens the existing global search', () => {
+  assert.match(script, /href="#\\/boards" aria-label="My Boards"/);
+  assert.match(script, /href="#\\/settings"/);
+  assert.match(script, /href="#\\/overview\\?section=favorites"/);
+  assert.match(script, /data-apsm-open-search/);
+  assert.match(script, /globalSearchTrigger = root\\.querySelector\\('\[data-global-search-open\]'\)/);
+  assert.match(script, /globalSearchTrigger\\.click\\(\\)/);
+  assert.match(script, /if \\(location\\.hash !== href\\) location\\.hash = href/);
+  assert.match(script, /function homeSection/);
+  assert.match(script, /favoritesOnly/);
+  assert.doesNotMatch(script, /data-apsm-focus-search|data-apsm-scroll-favorites/);
+});
+
 test('mobile search, favorite toggle, keyboard focus and dark theme are supported', () => {
   assert.match(script, /data-apsm-search/);
   assert.match(script, /id="apsm-home-search" name="apsm-home-search"/);
   assert.match(script, /data-apsm-favorite/);
-  assert.match(script, /data-apsm-focus-search/);
+  assert.match(script, /data-apsm-open-search/);
   assert.match(script, /aria-pressed/);
   assert.match(css, /focus-visible/);
   assert.match(css, /html\[data-aps-monday-theme="dark"\]/);
