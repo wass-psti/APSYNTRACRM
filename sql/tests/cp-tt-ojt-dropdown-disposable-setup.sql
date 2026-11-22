@@ -44,6 +44,7 @@ CREATE TABLE public.module_state_entries(
  module_id text NOT NULL,
  state_key text NOT NULL,
  scope text NOT NULL,
+ owner_key text NOT NULL DEFAULT '*',
  value jsonb NOT NULL
 );
 
