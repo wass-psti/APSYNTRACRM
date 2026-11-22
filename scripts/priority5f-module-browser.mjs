@@ -81,6 +81,12 @@ async function run(){
    {method:'PUT',signal:AbortSignal.timeout(5000)})).json();
   page=new CdpPage(target.webSocketDebuggerUrl);await page.ready;
   await page.call('Runtime.enable');await page.call('Page.enable');
+  // The eager baseline loads >250 resources. Chromium's default resource
+  // timing buffer silently drops entries, understating the module reduction.
+  // Raise the buffer BEFORE navigation for both variants without changing the gate.
+  await page.call('Page.addScriptToEvaluateOnNewDocument',{
+   source:'performance.setResourceTimingBufferSize(2048);'
+  });
   await page.call('Network.enable');await page.call('Network.setCacheDisabled',{cacheDisabled:true});
   await page.call('Network.setBypassServiceWorker',{bypass:true});
   await page.call('Emulation.setEmulatedMedia',{
