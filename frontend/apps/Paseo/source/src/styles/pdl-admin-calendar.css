@@ -110,3 +110,110 @@
     width: 100%;
   }
 }
+
+.admin-calendar-court-management {
+  min-width: 0;
+}
+
+.admin-calendar-court-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 24px;
+}
+
+.admin-calendar-court-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 54px;
+  padding: 10px 16px;
+  border: 1px solid #d2dfd4;
+  border-radius: 10px;
+  background: #f8fbf7;
+  color: #385747;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.admin-calendar-court-tab:hover {
+  border-color: #789c7c;
+  background: #eff6ed;
+}
+
+.admin-calendar-court-tab.is-active {
+  border-color: #527b5d;
+  background: #e8f2e3;
+  color: #183f30;
+  box-shadow: inset 0 -3px 0 #527b5d;
+}
+
+.admin-calendar-court-tab:focus-visible {
+  outline: 3px solid var(--ds-focus-ring, #4b8b64);
+  outline-offset: 3px;
+}
+
+.admin-calendar-court-tab-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 25px;
+  min-height: 25px;
+  padding: 0 7px;
+  border: 1px solid #d2dfd4;
+  border-radius: 999px;
+  background: #fff;
+  color: #45624f;
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-calendar-court-tab.is-active .admin-calendar-court-tab-count {
+  border-color: #c4d8c5;
+  background: #fff;
+  color: #244b36;
+}
+
+.admin-calendar-court-panel {
+  min-width: 0;
+}
+
+.admin-calendar-court-panel > .review-heading {
+  margin-bottom: 18px;
+}
+
+@media (max-width: 600px) {
+  .admin-calendar-court-tabs {
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+
+  .admin-calendar-court-tab {
+    min-height: 48px;
+    gap: 6px;
+    padding: 8px 5px;
+    font-size: 12px;
+  }
+
+  .admin-calendar-court-tab-count {
+    min-width: 21px;
+    min-height: 21px;
+    padding: 0 5px;
+    font-size: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-calendar-court-tab {
+    transition: none;
+  }
+}

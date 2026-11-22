@@ -1,4 +1,10 @@
-import { useEffect, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import { AdminShell } from "../components/admin/AdminShell";
 import {
   backendAdminFetch,
@@ -58,6 +64,7 @@ export function AdminCalendarPage() {
   const [weekdaysData, setWeekdaysData] = useState<WeekdayHours[]>([]);
   const [blocks, setBlocks] = useState<MaintenanceBlock[]>([]);
   const [courtId, setCourtId] = useState("court-1");
+  const [maintenanceCourtId, setMaintenanceCourtId] = useState("court-1");
   const [weekday, setWeekday] = useState(1);
   const [editingScheduleKey, setEditingScheduleKey] = useState<string | null>(
     null,
@@ -72,10 +79,17 @@ export function AdminCalendarPage() {
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const courtTabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
+  const courtTabs = [...courts].sort((a, b) =>
+    a.courtId.localeCompare(b.courtId),
+  );
   const court = courts.find((item) => item.courtId === courtId);
   const savedWeekdays = [...weekdaysData].sort(
     (a, b) => a.courtId.localeCompare(b.courtId) || a.weekday - b.weekday,
+  );
+  const courtWeekdays = savedWeekdays.filter(
+    (item) => item.courtId === courtId,
   );
   const savedBlocks = [...blocks].sort(
     (a, b) =>
@@ -112,6 +126,16 @@ export function AdminCalendarPage() {
     setWeekdaysData(calendar.weekdays);
     setBlocks(calendar.blocks);
     setCourts(courtData.courts);
+    setCourtId((current) =>
+      courtData.courts.some((item) => item.courtId === current)
+        ? current
+        : (courtData.courts[0]?.courtId ?? current),
+    );
+    setMaintenanceCourtId((current) =>
+      courtData.courts.some((item) => item.courtId === current)
+        ? current
+        : (courtData.courts[0]?.courtId ?? current),
+    );
     setLoaded(true);
     return calendar;
   }
@@ -257,8 +281,39 @@ export function AdminCalendarPage() {
     }
   }
 
+  function selectCourt(nextCourtId: string) {
+    if (nextCourtId === courtId) return;
+    setEditingScheduleKey(null);
+    setCourtId(nextCourtId);
+  }
+
+  function handleCourtTabKeyDown(
+    event: KeyboardEvent<HTMLButtonElement>,
+    currentIndex: number,
+  ) {
+    let nextIndex = currentIndex;
+    if (event.key === "ArrowRight") {
+      nextIndex = (currentIndex + 1) % courtTabs.length;
+    } else if (event.key === "ArrowLeft") {
+      nextIndex = (currentIndex - 1 + courtTabs.length) % courtTabs.length;
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = courtTabs.length - 1;
+    } else {
+      return;
+    }
+
+    event.preventDefault();
+    const nextCourt = courtTabs[nextIndex];
+    if (nextCourt) {
+      selectCourt(nextCourt.courtId);
+      courtTabRefs.current[nextIndex]?.focus();
+    }
+  }
+
   function editSchedule(item: WeekdayHours) {
-    setCourtId(item.courtId);
+    selectCourt(item.courtId);
     setWeekday(item.weekday);
     setEnabled(item.enabled);
     setOpening(item.openMinute);
@@ -282,7 +337,7 @@ export function AdminCalendarPage() {
   function submitMaintenance(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void save("/v1/admin/calendar/maintenance", "POST", {
-      courtId,
+      courtId: maintenanceCourtId,
       date,
       startMinute,
       endMinute,
@@ -319,161 +374,202 @@ export function AdminCalendarPage() {
           </div>
 
           <div className="booking-panel">
-            <label className="form-field">
-              Court
-              <select
-                aria-label="Calendar court"
-                value={courtId}
-                onChange={(event) => {
-                  setEditingScheduleKey(null);
-                  setCourtId(event.target.value);
-                }}
-              >
-                {courts.map((item) => (
-                  <option key={item.courtId} value={item.courtId}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <h2 className="review-heading">Weekly operating hours</h2>
-            <form className="admin-maintenance-form" onSubmit={submitWeekday}>
-              <label>
-                Weekday
-                <select
-                  aria-label="Operating weekday"
-                  value={weekday}
-                  onChange={(event) => {
-                    setEditingScheduleKey(null);
-                    setWeekday(Number(event.target.value));
-                  }}
-                >
-                  {weekdays.map((day, index) => (
-                    <option key={day} value={index}>
-                      {day}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Opens
-                <select
-                  aria-label="Opening time"
-                  value={opening}
-                  onChange={(event) => setOpening(Number(event.target.value))}
-                >
-                  {times
-                    .filter((time) => time < 1440)
-                    .map((time) => (
-                      <option key={time} value={time}>
-                        {formatTime(time)}
-                      </option>
-                    ))}
-                </select>
-              </label>
-              <label>
-                Closes
-                <select
-                  aria-label="Closing time"
-                  value={closing}
-                  onChange={(event) => setClosing(Number(event.target.value))}
-                >
-                  {times
-                    .filter((time) => time > 0)
-                    .map((time) => (
-                      <option key={time} value={time}>
-                        {formatTime(time)}
-                      </option>
-                    ))}
-                </select>
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={enabled}
-                  onChange={(event) => setEnabled(event.target.checked)}
-                />
-                Open on this weekday
-              </label>
-              {opening >= closing ? (
-                <p className="booking-help" role="alert">
-                  Closing time must be later than opening time.
-                </p>
-              ) : null}
-              <button
-                className="button button-primary"
-                disabled={busy || refreshing || !loaded || opening >= closing}
-                type="submit"
-              >
-                {editingScheduleKey === `${courtId}:${weekday}`
-                  ? "Update weekday schedule"
-                  : "Save weekday schedule"}
-              </button>
-            </form>
-
             <section
-              className="admin-calendar-record-section"
-              aria-labelledby="saved-weekly-heading"
+              className="admin-calendar-court-management"
+              aria-label="Court-specific weekly schedule management"
             >
-              <div className="admin-calendar-record-header">
-                <div>
-                  <h2 className="review-heading" id="saved-weekly-heading">
-                    Saved weekly schedules
-                  </h2>
-                  <p className="booking-help">
-                    Every configured court and weekday schedule is listed here.
-                  </p>
-                </div>
-                <span className="admin-calendar-record-count">
-                  {weekdaysData.length} saved
-                </span>
+              <div
+                className="admin-calendar-court-tabs"
+                role="tablist"
+                aria-label="Court schedule tabs"
+                aria-orientation="horizontal"
+              >
+                {courtTabs.map((item, index) => {
+                  const selected = item.courtId === courtId;
+                  const scheduleCount = weekdaysData.filter(
+                    (schedule) => schedule.courtId === item.courtId,
+                  ).length;
+                  return (
+                    <button
+                      key={item.courtId}
+                      ref={(element) => {
+                        courtTabRefs.current[index] = element;
+                      }}
+                      className={`admin-calendar-court-tab${selected ? " is-active" : ""}`}
+                      id={`court-schedule-tab-${item.courtId}`}
+                      type="button"
+                      role="tab"
+                      aria-selected={selected}
+                      aria-controls="court-weekly-schedules-panel"
+                      aria-label={`${item.name} schedules, ${scheduleCount} saved`}
+                      tabIndex={selected ? 0 : -1}
+                      onClick={() => selectCourt(item.courtId)}
+                      onKeyDown={(event) => handleCourtTabKeyDown(event, index)}
+                    >
+                      <span>{item.name}</span>
+                      <span className="admin-calendar-court-tab-count">
+                        {scheduleCount}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-              {!loaded ? (
-                <p className="admin-calendar-empty" role="status">
-                  {message
-                    ? "Saved schedules could not be loaded. Refresh to try again."
-                    : "Loading saved weekly schedules…"}
-                </p>
-              ) : savedWeekdays.length === 0 ? (
-                <p className="admin-calendar-empty">
-                  No weekly operating schedules have been saved.
-                </p>
-              ) : (
-                <ul
-                  className="admin-calendar-record-list"
-                  aria-label="Saved weekly schedules"
+
+              <section
+                className="admin-calendar-court-panel"
+                id="court-weekly-schedules-panel"
+                role="tabpanel"
+                aria-labelledby={`court-schedule-tab-${courtId}`}
+                tabIndex={0}
+              >
+                <h2 className="review-heading">
+                  Weekly operating hours · {court?.name ?? courtId}
+                </h2>
+                <form
+                  className="admin-maintenance-form"
+                  onSubmit={submitWeekday}
                 >
-                  {savedWeekdays.map((item) => {
-                    const itemCourt = courts.find(
-                      (value) => value.courtId === item.courtId,
-                    );
-                    const day = weekdays[item.weekday] ?? "Unknown weekday";
-                    return (
-                      <li key={item.courtId + "-" + item.weekday}>
-                        <div className="admin-calendar-record-copy">
-                          <strong>{itemCourt?.name ?? item.courtId}</strong>
-                          <span>{day}</span>
-                          <small>
-                            {item.enabled
-                              ? `${formatTime(item.openMinute)} – ${formatTime(item.closeMinute)}`
-                              : "Closed"}
-                          </small>
-                        </div>
-                        <button
-                          className="button button-secondary"
-                          type="button"
-                          disabled={busy || refreshing}
-                          aria-label={`Edit ${itemCourt?.name ?? item.courtId} ${day} schedule`}
-                          onClick={() => editSchedule(item)}
-                        >
-                          Edit schedule
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+                  <label>
+                    Weekday
+                    <select
+                      aria-label="Operating weekday"
+                      value={weekday}
+                      onChange={(event) => {
+                        setEditingScheduleKey(null);
+                        setWeekday(Number(event.target.value));
+                      }}
+                    >
+                      {weekdays.map((day, index) => (
+                        <option key={day} value={index}>
+                          {day}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Opens
+                    <select
+                      aria-label="Opening time"
+                      value={opening}
+                      onChange={(event) =>
+                        setOpening(Number(event.target.value))
+                      }
+                    >
+                      {times
+                        .filter((time) => time < 1440)
+                        .map((time) => (
+                          <option key={time} value={time}>
+                            {formatTime(time)}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <label>
+                    Closes
+                    <select
+                      aria-label="Closing time"
+                      value={closing}
+                      onChange={(event) =>
+                        setClosing(Number(event.target.value))
+                      }
+                    >
+                      {times
+                        .filter((time) => time > 0)
+                        .map((time) => (
+                          <option key={time} value={time}>
+                            {formatTime(time)}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={enabled}
+                      onChange={(event) => setEnabled(event.target.checked)}
+                    />
+                    Open on this weekday
+                  </label>
+                  {opening >= closing ? (
+                    <p className="booking-help" role="alert">
+                      Closing time must be later than opening time.
+                    </p>
+                  ) : null}
+                  <button
+                    className="button button-primary"
+                    disabled={
+                      busy || refreshing || !loaded || opening >= closing
+                    }
+                    type="submit"
+                  >
+                    {editingScheduleKey === `${courtId}:${weekday}`
+                      ? "Update weekday schedule"
+                      : "Save weekday schedule"}
+                  </button>
+                </form>
+
+                <section
+                  className="admin-calendar-record-section"
+                  aria-labelledby="saved-weekly-heading"
+                >
+                  <div className="admin-calendar-record-header">
+                    <div>
+                      <h2 className="review-heading" id="saved-weekly-heading">
+                        Saved weekly schedules
+                      </h2>
+                      <p className="booking-help">
+                        Operating hours saved for {court?.name ?? courtId}.
+                      </p>
+                    </div>
+                    <span className="admin-calendar-record-count">
+                      {courtWeekdays.length} saved
+                    </span>
+                  </div>
+                  {!loaded ? (
+                    <p className="admin-calendar-empty" role="status">
+                      {message
+                        ? "Saved schedules could not be loaded. Refresh to try again."
+                        : "Loading saved weekly schedules…"}
+                    </p>
+                  ) : courtWeekdays.length === 0 ? (
+                    <p className="admin-calendar-empty">
+                      No weekly operating schedules have been saved for{" "}
+                      {court?.name ?? courtId}.
+                    </p>
+                  ) : (
+                    <ul
+                      className="admin-calendar-record-list"
+                      aria-label="Saved weekly schedules"
+                    >
+                      {courtWeekdays.map((item) => {
+                        const day = weekdays[item.weekday] ?? "Unknown weekday";
+                        return (
+                          <li key={item.courtId + "-" + item.weekday}>
+                            <div className="admin-calendar-record-copy">
+                              <strong>{court?.name ?? item.courtId}</strong>
+                              <span>{day}</span>
+                              <small>
+                                {item.enabled
+                                  ? `${formatTime(item.openMinute)} – ${formatTime(item.closeMinute)}`
+                                  : "Closed"}
+                              </small>
+                            </div>
+                            <button
+                              className="button button-secondary"
+                              type="button"
+                              disabled={busy || refreshing}
+                              aria-label={`Edit ${court?.name ?? item.courtId} ${day} schedule`}
+                              onClick={() => editSchedule(item)}
+                            >
+                              Edit schedule
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </section>
+              </section>
             </section>
 
             <h2 className="review-heading">Maintenance blocks</h2>
@@ -481,6 +577,22 @@ export function AdminCalendarPage() {
               className="admin-maintenance-form"
               onSubmit={submitMaintenance}
             >
+              <label>
+                Court
+                <select
+                  aria-label="Maintenance court"
+                  value={maintenanceCourtId}
+                  onChange={(event) =>
+                    setMaintenanceCourtId(event.target.value)
+                  }
+                >
+                  {courts.map((item) => (
+                    <option key={item.courtId} value={item.courtId}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label>
                 Date
                 <input
