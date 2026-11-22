@@ -59,6 +59,9 @@ export function AdminCalendarPage() {
   const [blocks, setBlocks] = useState<MaintenanceBlock[]>([]);
   const [courtId, setCourtId] = useState("court-1");
   const [weekday, setWeekday] = useState(1);
+  const [editingScheduleKey, setEditingScheduleKey] = useState<string | null>(
+    null,
+  );
   const [date, setDate] = useState(today);
   const [enabled, setEnabled] = useState(true);
   const [opening, setOpening] = useState(480);
@@ -160,14 +163,29 @@ export function AdminCalendarPage() {
         options.body = JSON.stringify(body);
       }
       const response = await backendAdminFetch(path, options);
-      const result = (await response.json()) as {
+      let result: {
         error?: string;
         updated?: boolean;
         created?: boolean;
         removed?: boolean;
         id?: string;
-      };
+      } = {};
+      try {
+        result = (await response.json()) as typeof result;
+      } catch {
+        // A failed or empty response is handled below without hiding the save error.
+      }
       if (!response.ok) {
+        if (result.error === "invalid_weekday_schedule") {
+          throw new Error(
+            "Choose an opening time earlier than the closing time.",
+          );
+        }
+        if (result.error === "weekday_booking_conflict") {
+          throw new Error(
+            "This change conflicts with an existing pending or confirmed booking. Choose hours that keep the booking within the schedule.",
+          );
+        }
         throw new Error(
           response.status === 409
             ? "The calendar changed in another session. Refresh before retrying."
@@ -239,8 +257,21 @@ export function AdminCalendarPage() {
     }
   }
 
+  function editSchedule(item: WeekdayHours) {
+    setCourtId(item.courtId);
+    setWeekday(item.weekday);
+    setEnabled(item.enabled);
+    setOpening(item.openMinute);
+    setClosing(item.closeMinute);
+    setEditingScheduleKey(`${item.courtId}:${item.weekday}`);
+  }
+
   function submitWeekday(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (opening >= closing) {
+      setMessage("Closing time must be later than opening time.");
+      return;
+    }
     void save(`/v1/admin/calendar/${courtId}/weekdays/${weekday}`, "PUT", {
       enabled,
       openMinute: opening,
@@ -293,7 +324,10 @@ export function AdminCalendarPage() {
               <select
                 aria-label="Calendar court"
                 value={courtId}
-                onChange={(event) => setCourtId(event.target.value)}
+                onChange={(event) => {
+                  setEditingScheduleKey(null);
+                  setCourtId(event.target.value);
+                }}
               >
                 {courts.map((item) => (
                   <option key={item.courtId} value={item.courtId}>
@@ -310,7 +344,10 @@ export function AdminCalendarPage() {
                 <select
                   aria-label="Operating weekday"
                   value={weekday}
-                  onChange={(event) => setWeekday(Number(event.target.value))}
+                  onChange={(event) => {
+                    setEditingScheduleKey(null);
+                    setWeekday(Number(event.target.value));
+                  }}
                 >
                   {weekdays.map((day, index) => (
                     <option key={day} value={index}>
@@ -359,12 +396,19 @@ export function AdminCalendarPage() {
                 />
                 Open on this weekday
               </label>
+              {opening >= closing ? (
+                <p className="booking-help" role="alert">
+                  Closing time must be later than opening time.
+                </p>
+              ) : null}
               <button
                 className="button button-primary"
                 disabled={busy || refreshing || !loaded || opening >= closing}
                 type="submit"
               >
-                Save weekday schedule
+                {editingScheduleKey === `${courtId}:${weekday}`
+                  ? "Update weekday schedule"
+                  : "Save weekday schedule"}
               </button>
             </form>
 
@@ -421,10 +465,7 @@ export function AdminCalendarPage() {
                           type="button"
                           disabled={busy || refreshing}
                           aria-label={`Edit ${itemCourt?.name ?? item.courtId} ${day} schedule`}
-                          onClick={() => {
-                            setCourtId(item.courtId);
-                            setWeekday(item.weekday);
-                          }}
+                          onClick={() => editSchedule(item)}
                         >
                           Edit schedule
                         </button>

@@ -91,7 +91,7 @@ function response(body: unknown, status = 200) {
 }
 
 function renderCalendar() {
-  render(
+  return render(
     <MemoryRouter>
       <AdminCalendarPage />
     </MemoryRouter>,
@@ -174,8 +174,8 @@ describe("Paseo saved court calendar", () => {
     ).toBeInTheDocument();
   });
 
-  it("loads a saved weekday into the editor and verifies the saved update by readback", async () => {
-    renderCalendar();
+  it("loads, updates, and retrieves a saved weekday after a page refresh", async () => {
+    const view = renderCalendar();
 
     fireEvent.click(
       await screen.findByRole("button", {
@@ -195,7 +195,7 @@ describe("Paseo saved court calendar", () => {
       target: { value: "540" },
     });
     fireEvent.click(
-      screen.getByRole("button", { name: "Save weekday schedule" }),
+      screen.getByRole("button", { name: "Update weekday schedule" }),
     );
 
     await screen.findByText("Changes saved.");
@@ -213,6 +213,158 @@ describe("Paseo saved court calendar", () => {
       "/v1/admin/calendar",
       expect.objectContaining({ cache: "no-store" }),
     );
+
+    view.unmount();
+    renderCalendar();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Edit Court 1 Sunday schedule",
+      }),
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByRole("combobox", { name: "Opening time" }),
+      ).toHaveValue("540");
+      expect(
+        screen.getByRole("combobox", { name: "Closing time" }),
+      ).toHaveValue("1320");
+    });
+  });
+
+  it("reloads persisted values when editing the already selected schedule again", async () => {
+    renderCalendar();
+
+    const editButton = await screen.findByRole("button", {
+      name: "Edit Court 1 Sunday schedule",
+    });
+    fireEvent.click(editButton);
+    await waitFor(() => {
+      expect(
+        screen.getByRole("combobox", { name: "Opening time" }),
+      ).toHaveValue("480");
+      expect(
+        screen.getByRole("combobox", { name: "Closing time" }),
+      ).toHaveValue("1320");
+    });
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Opening time" }), {
+      target: { value: "540" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "Closing time" }), {
+      target: { value: "1260" },
+    });
+
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("combobox", { name: "Opening time" }),
+      ).toHaveValue("480");
+      expect(
+        screen.getByRole("combobox", { name: "Closing time" }),
+      ).toHaveValue("1320");
+    });
+  });
+
+  it("rejects an invalid opening and closing range before sending an update", async () => {
+    renderCalendar();
+    await screen.findByRole("list", { name: "Saved weekly schedules" });
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Opening time" }), {
+      target: { value: "780" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "Closing time" }), {
+      target: { value: "720" },
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Closing time must be later than opening time.",
+    );
+    expect(
+      screen.getByRole("button", { name: "Save weekday schedule" }),
+    ).toBeDisabled();
+    expect(
+      backendAdminFetch.mock.calls.some(
+        ([, options]) => options?.method === "PUT",
+      ),
+    ).toBe(false);
+    expect(
+      within(
+        screen.getByRole("list", { name: "Saved weekly schedules" }),
+      ).getByText("8:00 AM – 10:00 PM"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the backend validation reason without changing the saved schedule", async () => {
+    const originalFetch = backendAdminFetch.getMockImplementation();
+    if (!originalFetch)
+      throw new Error("Calendar test fetch was not configured.");
+    backendAdminFetch.mockImplementation(
+      async (path: string, options: RequestInit = {}) => {
+        if (options.method === "PUT") {
+          return response({ error: "invalid_weekday_schedule" }, 422);
+        }
+        return originalFetch(path, options);
+      },
+    );
+
+    renderCalendar();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Edit Court 1 Sunday schedule",
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Update weekday schedule" }),
+    );
+
+    expect(
+      await screen.findByText(
+        "Choose an opening time earlier than the closing time.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole("list", { name: "Saved weekly schedules" }),
+      ).getByText("8:00 AM – 10:00 PM"),
+    ).toBeInTheDocument();
+  });
+
+  it("explains a backend booking conflict and keeps the saved schedule visible", async () => {
+    const originalFetch = backendAdminFetch.getMockImplementation();
+    if (!originalFetch)
+      throw new Error("Calendar test fetch was not configured.");
+    backendAdminFetch.mockImplementation(
+      async (path: string, options: RequestInit = {}) => {
+        if (options.method === "PUT") {
+          return response({ error: "weekday_booking_conflict" }, 422);
+        }
+        return originalFetch(path, options);
+      },
+    );
+
+    renderCalendar();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Edit Court 1 Sunday schedule",
+      }),
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: "Opening time" }), {
+      target: { value: "540" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Update weekday schedule" }),
+    );
+
+    expect(
+      await screen.findByText(
+        "This change conflicts with an existing pending or confirmed booking. Choose hours that keep the booking within the schedule.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole("list", { name: "Saved weekly schedules" }),
+      ).getByText("8:00 AM – 10:00 PM"),
+    ).toBeInTheDocument();
   });
 
   it("allows a refresh retry after the initial calendar readback fails", async () => {
@@ -234,10 +386,14 @@ describe("Paseo saved court calendar", () => {
 
     await screen.findByText("Calendar could not be loaded. Please refresh.");
     expect(
-      screen.getByText("Saved schedules could not be loaded. Refresh to try again."),
+      screen.getByText(
+        "Saved schedules could not be loaded. Refresh to try again.",
+      ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Maintenance blocks could not be loaded. Refresh to try again."),
+      screen.getByText(
+        "Maintenance blocks could not be loaded. Refresh to try again.",
+      ),
     ).toBeInTheDocument();
     expect(
       screen.queryByText("No weekly operating schedules have been saved."),

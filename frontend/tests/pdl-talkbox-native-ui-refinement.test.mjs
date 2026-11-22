@@ -62,5 +62,6 @@ test('UI CSS is scoped, responsive, dark mode and reduced-motion aware', () => {
  assert.match(manifest, /frontend\/dark-workspace-account-completion\.css/);
  assert.match(styles, /\/\* frontend\/dark-workspace-account-completion\.css \*\//);
  assert.ok(styles.includes('/* frontend/dark-workspace-account-completion.css */'), 'existing workspace/account dark layer remains bundled');
- assert.ok(styles.endsWith(simplifiedCss.trimEnd()+'\n'), 'final simplification layer is delivered without alteration');
+ assert.ok(styles.includes('/* frontend/dark-simplified-system.css */\n'+simplifiedCss.trimEnd()), 'final simplification layer remains delivered without alteration');
+ assert.ok(styles.endsWith('/* frontend/board-overhaul-experience.css */\n'+readFileSync('frontend/board-overhaul-experience.css','utf8').trimEnd()+'\n'), 'board overhaul remains the final deterministic CSS layer');
 });
