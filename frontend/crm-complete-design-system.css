@@ -1,0 +1,2745 @@
+/*
+ * CP-CRM-BOARDS-UIVERSE-OVERHAUL-03
+ * Complete APSYNTRA CRM shell and Boards visual system.
+ * Uiverse is used as a curated reference for navigation, cards, controls,
+ * inputs, menus and interaction states; application behavior stays native.
+ */
+
+#app .shell {
+  --crm-canvas: #f3f5f9;
+  --crm-surface: #ffffff;
+  --crm-surface-raised: #ffffff;
+  --crm-surface-soft: #f7f8fb;
+  --crm-surface-hover: #f0f3f8;
+  --crm-ink: #172235;
+  --crm-text: #39475c;
+  --crm-muted: #758297;
+  --crm-subtle: #98a3b3;
+  --crm-line: #e4e8ef;
+  --crm-line-strong: #d4dbe6;
+  --crm-accent: #5268c9;
+  --crm-accent-hover: #4055b4;
+  --crm-accent-soft: #edf1ff;
+  --crm-accent-line: #d8e0ff;
+  --crm-focus: #6178dc;
+  --crm-success: #23845f;
+  --crm-warning: #a46b25;
+  --crm-danger: #b84e5c;
+  --crm-sidebar: #172235;
+  --crm-sidebar-raised: #202e44;
+  --crm-sidebar-line: #2d3b50;
+  --crm-sidebar-text: #d8e0ec;
+  --crm-sidebar-muted: #91a0b5;
+  --crm-radius-control: 9px;
+  --crm-radius-card: 14px;
+  --crm-radius-panel: 17px;
+  --crm-shadow-card: 0 1px 2px #17223508, 0 8px 24px #1722350a;
+  --crm-shadow-popover: 0 16px 42px #14213a20, 0 2px 8px #14213a0b;
+  --crm-motion-fast: 140ms;
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  grid-template-columns: 264px minmax(0, 1fr);
+  background: var(--crm-canvas);
+  color: var(--crm-ink);
+}
+
+html[data-aps-monday-theme="dark"] #app .shell {
+  --crm-canvas: #111925;
+  --crm-surface: #1b2635;
+  --crm-surface-raised: #202c3d;
+  --crm-surface-soft: #202c3b;
+  --crm-surface-hover: #29384c;
+  --crm-ink: #edf2f8;
+  --crm-text: #d4deeb;
+  --crm-muted: #a1aec0;
+  --crm-subtle: #8493a8;
+  --crm-line: #344255;
+  --crm-line-strong: #46566d;
+  --crm-accent: #aebcff;
+  --crm-accent-hover: #c8d1ff;
+  --crm-accent-soft: #303d5a;
+  --crm-accent-line: #4b5c80;
+  --crm-focus: #b5c2ff;
+  --crm-success: #8bd7b5;
+  --crm-warning: #e5c184;
+  --crm-danger: #f1a2ac;
+  --crm-sidebar: #111a28;
+  --crm-sidebar-raised: #1a2637;
+  --crm-sidebar-line: #2b394d;
+  --crm-sidebar-text: #e3eaf3;
+  --crm-sidebar-muted: #95a4b8;
+  --crm-shadow-card: 0 2px 14px #00000020;
+  --crm-shadow-popover: 0 18px 46px #00000058;
+  color-scheme: dark;
+}
+
+#app .shell > .aps-sidebar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  flex-direction: column;
+  border-right: 1px solid var(--crm-sidebar-line);
+  background: var(--crm-sidebar);
+  box-shadow: 8px 0 28px #0c17270a;
+  color: var(--crm-sidebar-text);
+  scrollbar-width: thin;
+  scrollbar-color: #45546b transparent;
+}
+
+#app .aps-sidebar .sidebar-brand-wrap {
+  position: relative;
+  flex: none;
+  padding: 22px 48px 20px 20px;
+  border-bottom: 1px solid var(--crm-sidebar-line);
+  background: var(--crm-sidebar);
+}
+
+#app .aps-sidebar .brand {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 11px;
+  padding: 0;
+  color: #f6f8fc;
+  font-size: 16px;
+  font-weight: 780;
+  letter-spacing: -0.45px;
+}
+
+#app .aps-sidebar .brand:hover {
+  color: #ffffff;
+}
+
+#app .aps-sidebar .brand-mark {
+  width: 39px;
+  height: 39px;
+  border: 1px solid #ffffff24;
+  border-radius: 11px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+#app .aps-sidebar .brand-text .csp-u043 {
+  color: #aebfff;
+}
+
+#app .aps-sidebar .sidebar-brand-subtitle {
+  margin-top: 7px;
+  padding-left: 50px;
+  color: #8292a9;
+  font-size: 8px;
+  font-weight: 720;
+  letter-spacing: 1.35px;
+}
+
+#app .aps-sidebar .sidebar-layout-toggle {
+  top: 25px;
+  right: 11px;
+  width: 31px;
+  height: 31px;
+  border: 1px solid #3a4960;
+  border-radius: 8px;
+  background: #202e44;
+  color: #c7d2e2;
+}
+
+#app .aps-sidebar .sidebar-layout-toggle:hover {
+  border-color: #60728d;
+  background: #293a53;
+  color: #ffffff;
+}
+
+#app .aps-sidebar .sidebar-layout-toggle:focus-visible {
+  outline: 2px solid #aebfff;
+  outline-offset: 2px;
+}
+
+#app .aps-sidebar .workspace-switcher {
+  min-width: 0;
+  margin: 15px 12px 8px;
+  padding: 11px;
+  border: 1px solid #35455c;
+  border-radius: 11px;
+  background: var(--crm-sidebar-raised);
+  box-shadow: none;
+}
+
+#app .aps-sidebar .workspace-switcher::after {
+  display: none;
+}
+
+#app .aps-sidebar .workspace-icon {
+  width: 35px;
+  height: 35px;
+  border: 1px solid #52627a;
+  border-radius: 9px;
+  background: #34445d;
+  color: #e5ebf5;
+  box-shadow: none;
+}
+
+#app .aps-sidebar .workspace-name {
+  color: #f0f4fa;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+#app .aps-sidebar .workspace-sub {
+  color: #9cabc0;
+  font-size: 9px;
+}
+
+#app .aps-sidebar .sidebar-workspace-dot {
+  background: #53c69c;
+  box-shadow: none;
+}
+
+#app .aps-sidebar .ws01-context-relation {
+  padding: 3px 17px 8px;
+  color: #8797ad;
+  font-size: 9px;
+}
+
+#app .aps-sidebar .sidebar-nav-scroll {
+  min-height: 0;
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 5px 0 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #45546b transparent;
+}
+
+#app .aps-sidebar .sidebar-nav-scroll::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  background: #45546b;
+}
+
+#app .aps-sidebar .side-section {
+  margin: 19px 19px 8px;
+  color: #8191a8;
+  font-size: 9px;
+  font-weight: 760;
+  letter-spacing: 1.35px;
+}
+
+#app .aps-sidebar .nav-list {
+  display: grid;
+  gap: 3px;
+  padding: 0 10px;
+}
+
+#app .aps-sidebar .nav-link {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 40px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--crm-sidebar-muted);
+  font-size: 11px;
+  font-weight: 570;
+  transition:
+    background-color var(--crm-motion-fast) ease,
+    border-color var(--crm-motion-fast) ease,
+    color var(--crm-motion-fast) ease;
+}
+
+#app .aps-sidebar .nav-link::before {
+  left: -1px;
+  width: 3px;
+  height: 18px;
+  border-radius: 0 3px 3px 0;
+  background: #aebfff;
+}
+
+#app .aps-sidebar .nav-link:hover {
+  transform: none;
+  border-color: #35455c;
+  background: #202e43;
+  color: #f3f6fb;
+}
+
+#app .aps-sidebar .nav-link.active,
+#app .aps-sidebar .nav-link[aria-current="page"] {
+  border-color: #405574;
+  background: #2b3e5c;
+  color: #ffffff;
+  box-shadow: none;
+  font-weight: 690;
+}
+
+#app .aps-sidebar .nav-link.active::before,
+#app .aps-sidebar .nav-link[aria-current="page"]::before {
+  background: #b9c7ff;
+}
+
+#app .aps-sidebar .nav-ico {
+  width: 27px;
+  height: 27px;
+  border-radius: 7px;
+  background: transparent;
+  color: #9aa9bd;
+}
+
+#app .aps-sidebar .nav-link:hover .nav-ico,
+#app .aps-sidebar .nav-link.active .nav-ico,
+#app .aps-sidebar .nav-link[aria-current="page"] .nav-ico {
+  background: transparent;
+  color: #e4eaff;
+}
+
+#app .aps-sidebar .sidebar-svg-icon {
+  width: 17px;
+  height: 17px;
+}
+
+#app .aps-sidebar .nav-count,
+#app .aps-sidebar .sidebar-recent-count {
+  border: 1px solid #3a4a60;
+  border-radius: 6px;
+  background: #25344a;
+  color: #c0cbda;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+#app .aps-sidebar .nav-link.active .nav-count {
+  border-color: #5c7192;
+  background: #3b5275;
+  color: #ffffff;
+}
+
+#app .aps-sidebar .sidebar-nav-section:not(:first-child),
+#app .aps-sidebar .sidebar-recent-heading {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--crm-sidebar-line);
+}
+
+#app .aps-sidebar .sidebar-recent-link {
+  min-height: 36px;
+  padding-block: 4px;
+}
+
+#app .aps-sidebar .sidebar-board-initial {
+  width: 25px;
+  height: 25px;
+  border: 1px solid #3c4d64;
+  border-radius: 7px;
+  background: #26374d;
+  color: #d7e0ed;
+  font-size: 10px;
+  font-weight: 680;
+}
+
+#app
+  .aps-sidebar
+  :is(
+    .sidebar-tone-teal,
+    .sidebar-tone-amber,
+    .sidebar-tone-rose,
+    .sidebar-tone-blue,
+    .sidebar-tone-indigo
+  ) {
+  border-color: #3c4d64;
+  background: #26374d;
+  color: #d7e0ed;
+}
+
+#app .aps-sidebar .sidebar-empty-recent {
+  color: #9aa9bd;
+}
+
+#app .aps-sidebar .side-bottom {
+  flex: none;
+  margin-top: auto;
+  padding: 13px 13px 15px;
+  border-top: 1px solid var(--crm-sidebar-line);
+  background: #141f30;
+}
+
+#app .aps-sidebar .profile {
+  gap: 9px;
+  padding: 3px 2px 11px;
+  border-bottom-color: #2d3b50;
+}
+
+#app .aps-sidebar .avatar {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #65799b;
+  border-radius: 9px;
+  background: #3a4e6c;
+  color: #f3f6fb;
+  box-shadow: none;
+}
+
+#app .aps-sidebar .profile .name {
+  color: #f1f4f9;
+  font-size: 10px;
+  font-weight: 680;
+}
+
+#app .aps-sidebar .profile .role {
+  color: #94a3b8;
+  font-size: 9px;
+}
+
+#app .aps-sidebar .sign-out {
+  min-height: 36px;
+  border-radius: 7px;
+  color: #a6b3c5;
+  font-size: 10px;
+}
+
+#app .aps-sidebar .sign-out:hover {
+  transform: none;
+  border-color: #593e4b;
+  background: #382b39;
+  color: #ffc0c7;
+}
+
+#app .shell > .main {
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--crm-canvas);
+  color: var(--crm-ink);
+}
+
+#app .shell > .main > .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  min-height: 66px;
+  height: auto;
+  align-items: center;
+  gap: 18px;
+  padding: 10px clamp(18px, 2.8vw, 42px);
+  border-bottom: 1px solid var(--crm-line);
+  background: color-mix(in srgb, var(--crm-surface) 94%, transparent);
+  box-shadow: 0 3px 16px #17223506;
+  backdrop-filter: blur(14px);
+}
+
+#app .shell .breadcrumb {
+  min-width: 0;
+  gap: 9px;
+  color: var(--crm-muted);
+  font-size: 11px;
+}
+
+#app .shell .breadcrumb strong {
+  overflow: hidden;
+  color: var(--crm-ink);
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#app .shell .top-actions {
+  min-width: 0;
+  gap: 8px;
+}
+
+#app .shell .top-pill {
+  min-height: 33px;
+  padding: 7px 10px;
+  border: 1px solid var(--crm-line);
+  border-radius: 8px;
+  background: var(--crm-surface-soft);
+  color: var(--crm-muted);
+  font-size: 10px;
+  font-weight: 620;
+}
+
+#app .shell .online-dot {
+  width: 7px;
+  height: 7px;
+  box-shadow: none;
+}
+
+#app .shell .top-avatar {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--crm-line-strong);
+  border-radius: 10px;
+  background: #5268c9;
+  color: #ffffff;
+}
+
+#app .shell .topbar-signout,
+#app .shell .ws01-topbar-launch,
+#app .shell .aps-global-search-trigger,
+#app .shell .top-actions > .secondary {
+  min-height: 35px;
+  border: 1px solid var(--crm-line-strong);
+  border-radius: 8px;
+  background: var(--crm-surface);
+  color: var(--crm-text);
+  box-shadow: none;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+#app .shell .aps-global-search-trigger {
+  min-width: 145px;
+  justify-content: flex-start;
+  gap: 8px;
+  padding-inline: 10px;
+  background: var(--crm-surface-soft);
+}
+
+#app .shell .aps-global-search-trigger kbd {
+  margin-left: auto;
+  border-color: var(--crm-line-strong);
+  background: var(--crm-surface);
+  color: var(--crm-muted);
+}
+
+#app .shell .aps-global-search-trigger:hover,
+#app .shell .topbar-signout:hover,
+#app .shell .ws01-topbar-launch:hover,
+#app .shell .top-actions > .secondary:hover {
+  border-color: var(--crm-accent-line);
+  background: var(--crm-accent-soft);
+  color: var(--crm-accent-hover);
+}
+
+#app .shell .aps-sync {
+  min-height: 34px;
+  border: 1px solid var(--crm-line);
+  border-radius: 8px;
+  background: var(--crm-surface-soft);
+  color: var(--crm-muted);
+  box-shadow: none;
+  font-size: 10px;
+}
+
+#app .shell .aps-sync[data-sync-state="synced"],
+#app .shell .aps-sync[data-sync-state="connected"] {
+  border-color: color-mix(in srgb, var(--crm-success) 24%, var(--crm-line));
+  background: color-mix(in srgb, var(--crm-success) 8%, var(--crm-surface));
+  color: var(--crm-success);
+}
+
+#app .shell > .main > .main-content {
+  width: 100%;
+  max-width: 1840px;
+  min-width: 0;
+  margin-inline: auto;
+  padding: clamp(22px, 2.6vw, 38px) clamp(16px, 2.8vw, 42px) 72px;
+  color: var(--crm-ink);
+}
+
+/* The catalog gets a distinct workspace landing surface, not another card stack. */
+#app .aps-boards-shell {
+  background: var(--crm-canvas);
+  color: var(--crm-ink);
+}
+
+#app .aps-boards-shell .aps-boards {
+  width: 100%;
+  max-width: 1720px;
+  margin-inline: auto;
+}
+
+#app .aps-boards-shell .aps-boards .boards-hero {
+  position: relative;
+  display: flex;
+  min-height: 176px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 26px;
+  margin: 0 0 22px;
+  padding: 28px 32px;
+  overflow: hidden;
+  border: 1px solid var(--crm-line);
+  border-radius: 18px;
+  background: linear-gradient(
+    115deg,
+    var(--crm-surface) 0%,
+    var(--crm-surface-soft) 72%,
+    var(--crm-accent-soft) 100%
+  );
+  box-shadow: var(--crm-shadow-card);
+}
+
+#app .aps-boards-shell .aps-boards .boards-hero::before {
+  position: absolute;
+  top: -90px;
+  right: 11%;
+  width: 260px;
+  height: 260px;
+  border: 1px solid color-mix(in srgb, var(--crm-accent) 12%, transparent);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+
+#app .aps-boards-shell .aps-boards .boards-hero::after {
+  position: absolute;
+  top: -42px;
+  right: 16%;
+  width: 165px;
+  height: 165px;
+  border: 1px solid color-mix(in srgb, var(--crm-accent) 10%, transparent);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+
+#app .aps-boards-shell .aps-boards .boards-hero-copy {
+  position: relative;
+  z-index: 1;
+}
+
+#app .aps-boards-shell .aps-boards .boards-hero .label-top {
+  color: var(--crm-accent);
+  font-size: 9px;
+  font-weight: 760;
+  letter-spacing: 1.35px;
+}
+
+#app .aps-boards-shell .aps-boards .boards-hero h1 {
+  margin: 9px 0 7px;
+  color: var(--crm-ink);
+  font-size: clamp(30px, 2.8vw, 40px);
+  font-weight: 770;
+  letter-spacing: -1.55px;
+  line-height: 1.08;
+}
+
+#app .aps-boards-shell .aps-boards .boards-heading-stop {
+  color: var(--crm-accent);
+}
+
+#app .aps-boards-shell .aps-boards .boards-hero p {
+  max-width: 520px;
+  margin: 0;
+  color: var(--crm-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+#app .aps-boards-shell .aps-boards .boards-hero-decor {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: block;
+  width: min(42%, 460px);
+  height: 100%;
+  color: var(--crm-accent);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+#app .aps-boards-shell .aps-boards .boards-create-button {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  min-height: 43px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 10px 17px;
+  border: 1px solid var(--crm-accent);
+  border-radius: 9px;
+  background: var(--crm-accent);
+  color: #ffffff;
+  box-shadow: 0 5px 13px color-mix(in srgb, var(--crm-accent) 18%, transparent);
+  font-size: 11px;
+  font-weight: 710;
+  transition:
+    background-color var(--crm-motion-fast) ease,
+    border-color var(--crm-motion-fast) ease,
+    box-shadow var(--crm-motion-fast) ease;
+}
+
+#app .aps-boards-shell .aps-boards .boards-create-button:hover:not(:disabled) {
+  transform: none;
+  border-color: var(--crm-accent-hover);
+  background: var(--crm-accent-hover);
+  box-shadow: 0 7px 16px color-mix(in srgb, var(--crm-accent) 22%, transparent);
+}
+
+#app .aps-boards-shell .aps-boards .boards-filter-panel {
+  display: block;
+  margin: 0 0 20px;
+  padding: 17px 19px 13px;
+  border: 1px solid var(--crm-line);
+  border-radius: 14px;
+  background: var(--crm-surface);
+  box-shadow: var(--crm-shadow-card);
+}
+
+#app .aps-boards-shell .aps-boards .boards-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 370px);
+  align-items: end;
+  gap: 24px;
+  margin: 0;
+}
+
+#app .aps-boards-shell .aps-boards .boards-control-label {
+  display: block;
+  margin: 0 0 8px;
+  color: var(--crm-muted);
+  font-size: 9px;
+  font-weight: 740;
+  letter-spacing: 1px;
+}
+
+#app .aps-boards-shell .aps-boards .boards-status-segments {
+  display: inline-flex;
+  min-height: 41px;
+  align-items: center;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid var(--crm-line);
+  border-radius: 9px;
+  background: var(--crm-surface-soft);
+}
+
+#app .aps-boards-shell .aps-boards .boards-status-segments .segment {
+  min-height: 31px;
+  padding: 7px 13px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--crm-muted);
+  box-shadow: none;
+  font-size: 10px;
+  font-weight: 650;
+  transition:
+    background-color var(--crm-motion-fast) ease,
+    border-color var(--crm-motion-fast) ease,
+    color var(--crm-motion-fast) ease;
+}
+
+#app
+  .aps-boards-shell
+  .aps-boards
+  .boards-status-segments
+  .segment:hover:not(.active) {
+  background: var(--crm-surface-hover);
+  color: var(--crm-ink);
+}
+
+#app .aps-boards-shell .aps-boards .boards-status-segments .segment.active,
+#app
+  .aps-boards-shell
+  .aps-boards
+  .boards-status-segments
+  .segment[aria-pressed="true"] {
+  border-color: var(--crm-line);
+  background: var(--crm-surface);
+  color: var(--crm-accent);
+  box-shadow: 0 1px 3px #1722350d;
+}
+
+#app .aps-boards-shell .aps-boards .boards-search-wrap .search-wrap {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+#app .aps-boards-shell .aps-boards .boards-search-icon {
+  z-index: 1;
+  left: 13px;
+  color: var(--crm-subtle);
+}
+
+#app .aps-boards-shell .aps-boards #board-search {
+  width: 100%;
+  min-height: 41px;
+  padding: 9px 13px 9px 39px;
+  border: 1px solid var(--crm-line-strong);
+  border-radius: 8px;
+  background: var(--crm-surface-soft);
+  color: var(--crm-ink);
+  box-shadow: none;
+  font-size: 11px;
+}
+
+#app .aps-boards-shell .aps-boards #board-search::placeholder {
+  color: var(--crm-subtle);
+}
+
+#app .aps-boards-shell .aps-boards #board-search:hover {
+  border-color: var(--crm-accent-line);
+  background: var(--crm-surface);
+}
+
+#app .aps-boards-shell .aps-boards #board-search:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--crm-focus) 28%, transparent);
+  outline-offset: 1px;
+  border-color: var(--crm-focus);
+  background: var(--crm-surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--crm-focus) 12%, transparent);
+}
+
+#app .aps-boards-shell .aps-boards .boards-filter-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 13px;
+  padding-top: 11px;
+  border-top: 1px solid var(--crm-line);
+}
+
+#app .aps-boards-shell .aps-boards .board-search-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--crm-muted);
+  font-size: 10px;
+  font-weight: 640;
+}
+
+#app .aps-boards-shell .aps-boards .board-search-result::before {
+  width: 7px;
+  height: 7px;
+  margin-right: 0;
+  border-radius: 50%;
+  background: var(--crm-success);
+  box-shadow: none;
+}
+
+#app .aps-boards-shell .aps-boards .boards-selected-filter {
+  padding: 4px 8px;
+  border: 1px solid var(--crm-line);
+  border-radius: 6px;
+  background: var(--crm-surface-soft);
+  color: var(--crm-muted);
+  font-size: 9px;
+  font-weight: 640;
+}
+
+#app .aps-boards-shell .aps-boards .boards-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 16px;
+}
+
+#app .aps-boards-shell .aps-boards .boards-catalog-grid .board-card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 188px;
+  flex-direction: column;
+  padding: 18px 19px 15px;
+  overflow: visible;
+  border: 1px solid var(--crm-line);
+  border-radius: var(--crm-radius-card);
+  background: var(--crm-surface);
+  box-shadow: var(--crm-shadow-card);
+  transition:
+    border-color var(--crm-motion-fast) ease,
+    box-shadow var(--crm-motion-fast) ease,
+    background-color var(--crm-motion-fast) ease;
+}
+
+#app .aps-boards-shell .aps-boards .boards-catalog-grid .board-card::before {
+  position: absolute;
+  top: 0;
+  right: 18px;
+  left: 18px;
+  height: 2px;
+  border-radius: 0 0 3px 3px;
+  background: var(--crm-accent);
+  opacity: 0.3;
+  content: "";
+  pointer-events: none;
+}
+
+#app .aps-boards-shell .aps-boards .boards-catalog-grid .board-card[hidden] {
+  display: none !important;
+}
+
+#app .aps-boards-shell .aps-boards .boards-catalog-grid .board-card:hover,
+#app
+  .aps-boards-shell
+  .aps-boards
+  .boards-catalog-grid
+  .board-card:focus-within {
+  transform: none;
+  border-color: var(--crm-accent-line);
+  background: var(--crm-surface);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--crm-ink) 8%, transparent);
+}
+
+#app .aps-boards-shell .aps-boards .boards-catalog-grid .board-card-top {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+#app .aps-boards-shell .aps-boards .boards-catalog-grid .board-symbol {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid var(--crm-accent-line);
+  border-radius: 10px;
+  background: var(--crm-accent-soft);
+  color: var(--crm-accent);
+  font-size: 14px;
+  font-weight: 760;
+  box-shadow: none;
+}
+
+#app
+  .aps-boards-shell
+  .boards-catalog-grid
+  .board-symbol:is(.green, .orange, .pink, .blue) {
+  border-color: var(--crm-line);
+  background: var(--crm-surface-soft);
+  color: var(--crm-text);
+}
+
+#app
+  .aps-boards-shell
+  .aps-boards
+  .boards-catalog-grid
+  .board-card-actions
+  > summary {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--crm-muted);
+  transition:
+    background-color var(--crm-motion-fast) ease,
+    border-color var(--crm-motion-fast) ease,
+    color var(--crm-motion-fast) ease;
+}
+
+#app
+  .aps-boards-shell
+  .aps-boards
+  .boards-catalog-grid
+  .board-card-actions
+  > summary:hover,
+#app
+  .aps-boards-shell
+  .boards-catalog-grid
+  .board-card-actions[open]
+  > summary {
+  border-color: var(--crm-line);
+  background: var(--crm-surface-soft);
+  color: var(--crm-ink);
+}
+
+#app .aps-boards-shell .aps-boards .boards-catalog-grid .board-card-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  color: inherit;
+  text-decoration: none;
+}
+
+#app .aps-boards-shell .aps-boards .boards-catalog-grid .board-card h3 {
+  margin: 0 0 6px;
+  color: var(--crm-ink);
+  font-size: 13px;
+  font-weight: 730;
+  letter-spacing: -0.15px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+#app .aps-boards-shell .aps-boards .boards-catalog-grid .board-card p {
+  display: -webkit-box;
+  min-height: 34px;
+  margin: 0 0 13px;
+  overflow: hidden;
+  color: var(--crm-muted);
+  font-size: 10px;
+  line-height: 1.6;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+#app .aps-boards-shell .aps-boards .boards-catalog-grid .board-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  margin-top: auto;
+  padding-top: 11px;
+  border-top: 1px solid var(--crm-line);
+  color: var(--crm-subtle);
+  font-size: 9px;
+}
+
+#app
+  .aps-boards-shell
+  .boards-catalog-grid
+  .board-card-footer
+  span:first-child {
+  padding: 4px 7px;
+  border: 1px solid var(--crm-line);
+  border-radius: 6px;
+  background: var(--crm-surface-soft);
+  color: var(--crm-muted);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+#app .aps-boards-shell .aps-boards .board-card-actions-list {
+  z-index: 60;
+  min-width: 180px;
+  padding: 5px;
+  border: 1px solid var(--crm-line);
+  border-radius: 10px;
+  background: var(--crm-surface-raised);
+  box-shadow: var(--crm-shadow-popover);
+}
+
+#app .aps-boards-shell .aps-boards .board-card-actions-list button {
+  min-height: 35px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--crm-text);
+  font-size: 10px;
+  text-align: left;
+}
+
+#app .aps-boards-shell .aps-boards .board-card-actions-list button:hover {
+  background: var(--crm-surface-hover);
+  color: var(--crm-ink);
+}
+
+/* Board workspace: toolbar, tabs, groups and data table share one visual language. */
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell) {
+  background: var(--crm-canvas);
+  color: var(--crm-ink);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  > .main-content
+  > .page-head {
+  display: flex;
+  min-height: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 0 16px;
+  padding: 3px 0 18px;
+  border-bottom: 1px solid var(--crm-line);
+  background: transparent;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  > .main-content
+  > .page-head
+  h1 {
+  margin: 7px 0 5px;
+  color: var(--crm-ink);
+  font-size: clamp(24px, 2.1vw, 32px);
+  font-weight: 760;
+  letter-spacing: -1.1px;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  > .main-content
+  > .page-head
+  p {
+  margin: 0;
+  color: var(--crm-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .label-top {
+  color: var(--crm-accent);
+  font-size: 9px;
+  font-weight: 740;
+  letter-spacing: 1.15px;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .head-actions
+  > :is(.primary, .secondary),
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .head-actions
+  .board-actions-menu
+  > summary {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 11px;
+  border: 1px solid var(--crm-line-strong);
+  border-radius: 8px;
+  background: var(--crm-surface);
+  color: var(--crm-text);
+  box-shadow: none;
+  font-size: 10px;
+  font-weight: 660;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .head-actions
+  > .primary {
+  border-color: var(--crm-accent);
+  background: var(--crm-accent);
+  color: #ffffff;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .head-actions
+  > :is(.primary, .secondary):hover:not(:disabled),
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .head-actions
+  .board-actions-menu
+  > summary:hover {
+  transform: none;
+  border-color: var(--crm-accent-line);
+  background: var(--crm-accent-soft);
+  color: var(--crm-accent-hover);
+  box-shadow: none;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-draggable-tabs {
+  display: flex;
+  min-height: 43px;
+  align-items: stretch;
+  gap: 5px;
+  margin: 0 0 16px;
+  padding: 0 2px;
+  border-bottom: 1px solid var(--crm-line);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-tab-slot
+  > .tab {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  padding: 0 13px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--crm-muted);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-tab-slot
+  > .tab:hover {
+  background: var(--crm-surface-hover);
+  color: var(--crm-ink);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-tab-slot
+  > .tab.active,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-tab-slot
+  > .tab[aria-selected="true"] {
+  border-bottom-color: var(--crm-accent);
+  background: transparent;
+  color: var(--crm-accent);
+  box-shadow: none;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .toolbar.board-customize-toolbar {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 11px;
+  border: 1px solid var(--crm-line);
+  border-radius: 12px;
+  background: var(--crm-surface);
+  box-shadow: var(--crm-shadow-card);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-customize-toolbar
+  > .primary,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-customize-toolbar
+  > .secondary,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-customize-toolbar
+  .board-tool-menu
+  > summary,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-customize-toolbar
+  .board-column-menu
+  > summary {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--crm-line-strong);
+  border-radius: 7px;
+  background: var(--crm-surface);
+  color: var(--crm-text);
+  box-shadow: none;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-customize-toolbar
+  > .primary {
+  border-color: var(--crm-accent);
+  background: var(--crm-accent);
+  color: #ffffff;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-customize-toolbar
+  :is(button, summary):hover:not(:disabled) {
+  transform: none;
+  border-color: var(--crm-accent-line);
+  background: var(--crm-accent-soft);
+  color: var(--crm-accent-hover);
+  box-shadow: none;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-toolbar-search {
+  min-width: 180px;
+  max-width: 270px;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-toolbar-search
+  .search-input {
+  min-height: 36px;
+  padding: 8px 11px 8px 34px;
+  border: 1px solid var(--crm-line-strong);
+  border-radius: 7px;
+  background: var(--crm-surface-soft);
+  color: var(--crm-ink);
+  box-shadow: none;
+  font-size: 10px;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-toolbar-search
+  .board-toolbar-search-icon {
+  left: 11px;
+  color: var(--crm-subtle);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-tool-menu,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-column-menu {
+  min-width: 0;
+  color: var(--crm-text);
+  font-size: 10px;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-tool-menu-panel,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-column-menu-content,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-actions-popover {
+  border: 1px solid var(--crm-line);
+  border-radius: 10px;
+  background: var(--crm-surface-raised);
+  box-shadow: var(--crm-shadow-popover);
+  color: var(--crm-text);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-tool-menu-panel
+  :is(label, strong),
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-column-menu-content
+  > strong {
+  color: var(--crm-ink);
+  font-size: 10px;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-tool-menu-panel
+  :is(input, select),
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-column-menu-content
+  :is(input, select) {
+  min-height: 36px;
+  border: 1px solid var(--crm-line-strong);
+  border-radius: 7px;
+  background: var(--crm-surface);
+  color: var(--crm-ink);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .group-heading {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 9px;
+  margin: 20px 0 10px;
+  padding: 0 10px;
+  border-left: 3px solid var(--crm-accent);
+  color: var(--crm-ink);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .group-heading::before {
+  display: none;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .group-heading
+  h3 {
+  margin: 0;
+  color: var(--crm-ink);
+  font-size: 12px;
+  font-weight: 720;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .group-heading
+  small {
+  color: var(--crm-muted);
+  font-size: 10px;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-group-panel {
+  min-width: 0;
+  margin: 0 0 15px;
+  overflow: visible;
+  border: 1px solid var(--crm-line);
+  border-radius: 12px;
+  background: var(--crm-surface);
+  box-shadow: var(--crm-shadow-card);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-group-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  border-radius: inherit;
+  scrollbar-color: var(--crm-line-strong) transparent;
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--crm-surface);
+  color: var(--crm-text);
+  font-size: 10px;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  th,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  td {
+  max-width: 520px;
+  padding: 12px 14px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--crm-line);
+  color: var(--crm-text);
+  font-size: 10px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  thead
+  th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  min-height: 42px;
+  background: var(--crm-surface-soft);
+  color: var(--crm-muted);
+  font-size: 9px;
+  font-weight: 740;
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  tbody
+  td {
+  min-height: 45px;
+  background: var(--crm-surface);
+  color: var(--crm-text);
+  font-size: 10px;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  tbody
+  tr:hover
+  td {
+  background: var(--crm-surface-hover);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  tbody
+  td:first-child {
+  color: var(--crm-ink);
+  font-weight: 670;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  th.board-frozen-column,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  td.board-frozen-column {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: var(--crm-surface);
+  box-shadow: 1px 0 0 var(--crm-line);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  thead
+  th.board-frozen-column {
+  z-index: 4;
+  background: var(--crm-surface-soft);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  tbody
+  tr:hover
+  td.board-frozen-column {
+  background: var(--crm-surface-hover);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  tbody
+  tr.board-row-selected
+  td,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  tbody
+  tr.board-row-selected
+  td.board-frozen-column {
+  background: var(--crm-accent-soft);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-row-select,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-select-all {
+  width: 15px;
+  height: 15px;
+  margin-right: 8px;
+  accent-color: var(--crm-accent);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-configured-status,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .status {
+  display: inline-flex;
+  min-height: 23px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border: 1px solid var(--crm-line);
+  border-radius: 6px;
+  background: var(--crm-surface-soft);
+  color: var(--crm-text);
+  font-size: 9px;
+  font-weight: 670;
+  white-space: nowrap;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-bulk-toolbar {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--crm-accent-line);
+  border-radius: 10px;
+  background: var(--crm-accent-soft);
+  color: var(--crm-text);
+  box-shadow: none;
+  font-size: 10px;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-bulk-toolbar
+  strong {
+  color: var(--crm-ink);
+  font-size: 10px;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 2px;
+  color: var(--crm-muted);
+  font-size: 10px;
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-pagination
+  button {
+  min-height: 34px;
+  border: 1px solid var(--crm-line-strong);
+  border-radius: 7px;
+  background: var(--crm-surface);
+  color: var(--crm-text);
+  font-size: 10px;
+}
+
+/* Shared board controls and dialog surfaces. Native product modules keep their own UI. */
+#app .aps-boards-shell :is(button, input, select, textarea),
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  :is(button, input, select, textarea) {
+  font-family: inherit;
+}
+
+#app .aps-boards-shell :is(input, select, textarea),
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  :is(input, select, textarea) {
+  border-color: var(--crm-line-strong);
+  border-radius: 8px;
+  background: var(--crm-surface);
+  color: var(--crm-ink);
+  box-shadow: none;
+}
+
+#app .aps-boards-shell :is(input, select, textarea):focus-visible,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  :is(input, select, textarea):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--crm-focus) 26%, transparent);
+  outline-offset: 1px;
+  border-color: var(--crm-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--crm-focus) 11%, transparent);
+}
+
+#app .aps-boards-shell :is(button, .primary, .secondary),
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  :is(button, .primary, .secondary) {
+  transition:
+    background-color var(--crm-motion-fast) ease,
+    border-color var(--crm-motion-fast) ease,
+    color var(--crm-motion-fast) ease,
+    box-shadow var(--crm-motion-fast) ease;
+}
+
+#app .aps-boards-shell :is(button, .primary, .secondary):disabled,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  :is(button, .primary, .secondary):disabled {
+  transform: none;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+body:has(#app .aps-boards-shell)
+  .modal-backdrop:not(.board-detail-backdrop):not(
+    .native-search-detail-backdrop
+  )
+  .modal,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .modal-backdrop:not(.board-detail-backdrop):not(
+    .native-search-detail-backdrop
+  )
+  .modal {
+  border: 1px solid var(--crm-line);
+  border-radius: 15px;
+  background: var(--crm-surface);
+  color: var(--crm-ink);
+  box-shadow: var(--crm-shadow-popover);
+}
+
+body:has(#app .aps-boards-shell) .modal-head,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .modal-head {
+  border-bottom-color: var(--crm-line);
+}
+
+body:has(#app .aps-boards-shell) .modal-actions,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .modal-actions {
+  border-top-color: var(--crm-line);
+}
+
+/* Responsive shell and board layouts. Preserve the existing icon-rail behavior. */
+@media (max-width: 1180px) {
+  #app .shell:not(.sidebar-user-collapsed) {
+    grid-template-columns: 238px minmax(0, 1fr);
+  }
+  #app .aps-boards-shell .aps-boards .boards-catalog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #app .aps-boards-shell .aps-boards .boards-toolbar {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 330px);
+    gap: 16px;
+  }
+}
+
+@media (max-width: 810px) {
+  #app .shell,
+  #app .shell:not(.sidebar-user-collapsed) {
+    grid-template-columns: 69px minmax(0, 1fr);
+  }
+  #app .shell > .aps-sidebar {
+    width: 100%;
+  }
+  #app .shell.sidebar-mobile-open > .aps-sidebar {
+    width: min(285px, calc(100vw - 65px));
+  }
+  #app .shell > .main > .topbar {
+    min-height: 58px;
+    gap: 8px;
+    padding: 8px 13px;
+  }
+  #app .shell > .main > .main-content {
+    padding: 20px 15px 58px;
+  }
+  #app .shell .breadcrumb {
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+  #app .shell .breadcrumb > span {
+    display: none;
+  }
+  #app .shell .breadcrumb strong {
+    min-width: 0;
+    max-width: 100%;
+    flex: 1 1 auto;
+  }
+  #app .shell .top-actions {
+    min-width: 0;
+    flex: 0 1 auto;
+    gap: 5px;
+  }
+  #app .shell .ws02-invite-topbar {
+    width: 35px;
+    min-width: 35px;
+    min-height: 35px;
+    justify-content: center;
+    padding: 0;
+  }
+  #app .shell .ws02-invite-topbar > span:not(.ws02-invite-glyph) {
+    display: none;
+  }
+  #app .shell .aps-sync {
+    width: 35px;
+    min-width: 35px;
+    min-height: 35px;
+    justify-content: center;
+    padding: 0;
+  }
+  #app .shell .aps-sync-caption {
+    display: none;
+  }
+  #app .shell .top-pill,
+  #app .shell .topbar-signout,
+  #app .shell .ws01-topbar-launch,
+  #app .shell .aps-global-search-trigger-label,
+  #app .shell .aps-global-search-trigger kbd,
+  #app .shell .ws02-invite-launch-label {
+    display: none;
+  }
+  #app .shell .aps-global-search-trigger {
+    min-width: 35px;
+    width: 35px;
+    justify-content: center;
+    padding: 0;
+  }
+  #app .aps-boards-shell .aps-boards .boards-hero {
+    min-height: 148px;
+    gap: 14px;
+    padding: 22px;
+  }
+  #app .aps-boards-shell .aps-boards .boards-hero h1 {
+    font-size: 30px;
+  }
+  #app .aps-boards-shell .aps-boards .boards-toolbar {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  #app .aps-boards-shell .aps-boards .boards-search-wrap {
+    width: 100%;
+  }
+  #app
+    .aps-board-shell:not(.aps-time-tracker-shell):not(
+      .aps-fund-tracker-shell
+    ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+    .board-customize-toolbar {
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 600px) {
+  #app .aps-boards-shell .aps-boards .boards-hero {
+    min-height: 0;
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 20px 18px;
+  }
+  #app .aps-boards-shell .aps-boards .boards-hero-decor {
+    width: 48%;
+    opacity: 0.25;
+  }
+  #app .aps-boards-shell .aps-boards .boards-create-button {
+    min-height: 40px;
+  }
+  #app .aps-boards-shell .aps-boards .boards-filter-panel {
+    padding: 13px;
+  }
+  #app .aps-boards-shell .aps-boards .boards-status-segments {
+    width: 100%;
+  }
+  #app .aps-boards-shell .aps-boards .boards-status-segments .segment {
+    flex: 1;
+    padding-inline: 7px;
+  }
+  #app .aps-boards-shell .aps-boards .boards-catalog-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 11px;
+  }
+  #app .aps-boards-shell .aps-boards .boards-catalog-grid .board-card {
+    min-height: 166px;
+  }
+  #app .aps-boards-shell .aps-boards .boards-filter-footer {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  #app
+    .aps-board-shell:not(.aps-time-tracker-shell):not(
+      .aps-fund-tracker-shell
+    ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+    > .main-content
+    > .page-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  #app
+    .aps-board-shell:not(.aps-time-tracker-shell):not(
+      .aps-fund-tracker-shell
+    ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+    .head-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  #app
+    .aps-board-shell:not(.aps-time-tracker-shell):not(
+      .aps-fund-tracker-shell
+    ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+    .board-customize-toolbar {
+    gap: 7px;
+    padding: 9px;
+  }
+  #app
+    .aps-board-shell:not(.aps-time-tracker-shell):not(
+      .aps-fund-tracker-shell
+    ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+    .board-toolbar-search {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+  #app
+    .aps-board-shell:not(.aps-time-tracker-shell):not(
+      .aps-fund-tracker-shell
+    ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+    .board-group-panel {
+    border-radius: 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app .shell :is(button, a, summary, input, select, textarea, .board-card),
+  #app
+    .shell
+    :is(button, a, summary, input, select, textarea, .board-card)::before,
+  #app
+    .shell
+    :is(button, a, summary, input, select, textarea, .board-card)::after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* The historical board shell contains several more-specific legacy panel rules. */
+#app
+  .shell
+  > .main.aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .panel.board-group-panel {
+  border: 1px solid var(--crm-line);
+  border-radius: 12px;
+  background: var(--crm-surface);
+  box-shadow: var(--crm-shadow-card);
+}
+
+@media (max-width: 600px) {
+  #app
+    .shell
+    > .main.aps-board-shell:not(.aps-time-tracker-shell):not(
+      .aps-fund-tracker-shell
+    ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+    .panel.board-group-panel {
+    border-radius: 9px;
+  }
+}
+
+/* Keep the selected destination obvious in the compact icon rail and expanded sidebar. */
+#app .shell > .aps-sidebar .nav-list > .nav-link.active[aria-current="page"],
+#app .shell > .aps-sidebar .nav-list > .nav-link[aria-current="page"] {
+  border-color: #405574;
+  background: #2b3e5c;
+  color: #ffffff;
+  box-shadow: none;
+  font-weight: 690;
+}
+
+#app
+  .shell
+  > .aps-sidebar
+  .nav-list
+  > .nav-link.active[aria-current="page"]
+  .nav-ico,
+#app .shell > .aps-sidebar .nav-list > .nav-link[aria-current="page"] .nav-ico {
+  background: transparent;
+  color: #e4eaff;
+}
+
+#app
+  .shell
+  > .aps-sidebar
+  .nav-list
+  > .nav-link.active[aria-current="page"]
+  .nav-count,
+#app
+  .shell
+  > .aps-sidebar
+  .nav-list
+  > .nav-link[aria-current="page"]
+  .nav-count {
+  border-color: #5c7192;
+  background: #3b5275;
+  color: #ffffff;
+}
+
+/* Retain meaning-bearing status accents while keeping the pills compact. */
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-configured-status.board-status-color-green,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-configured-status.board-status-color-tealgreen {
+  border-color: color-mix(in srgb, var(--crm-success) 28%, var(--crm-line));
+  border-left: 3px solid var(--crm-success);
+  background: color-mix(in srgb, var(--crm-success) 9%, var(--crm-surface));
+  color: var(--crm-success);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-configured-status.board-status-color-blue,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-configured-status.board-status-color-indigo {
+  border-color: color-mix(in srgb, var(--crm-accent) 28%, var(--crm-line));
+  border-left: 3px solid var(--crm-accent);
+  background: color-mix(in srgb, var(--crm-accent) 9%, var(--crm-surface));
+  color: var(--crm-accent);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-configured-status.board-status-color-amber,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-configured-status.board-status-color-gold {
+  border-color: color-mix(in srgb, var(--crm-warning) 30%, var(--crm-line));
+  border-left: 3px solid var(--crm-warning);
+  background: color-mix(in srgb, var(--crm-warning) 10%, var(--crm-surface));
+  color: var(--crm-warning);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-configured-status.board-status-color-rose,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-configured-status.board-status-color-red {
+  border-color: color-mix(in srgb, var(--crm-danger) 28%, var(--crm-line));
+  border-left: 3px solid var(--crm-danger);
+  background: color-mix(in srgb, var(--crm-danger) 9%, var(--crm-surface));
+  color: var(--crm-danger);
+}
+
+#app .shell .ws02-invite-topbar {
+  min-height: 35px;
+  padding: 7px 11px;
+  border: 1px solid var(--crm-line-strong);
+  border-radius: 8px;
+  background: var(--crm-surface);
+  color: var(--crm-text);
+  box-shadow: none;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+#app .shell .ws02-invite-topbar:hover {
+  border-color: var(--crm-accent-line);
+  background: var(--crm-accent-soft);
+  color: var(--crm-accent-hover);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-configured-status {
+  width: fit-content;
+  max-width: 100%;
+}
+
+/* App-level dialogs are mounted on document.body, so expose the same tokens there. */
+body:has(#app .aps-boards-shell),
+body:has(
+  #app
+    .aps-board-shell:not(.aps-time-tracker-shell):not(
+      .aps-fund-tracker-shell
+    ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+) {
+  --crm-surface: #ffffff;
+  --crm-surface-soft: #f7f8fb;
+  --crm-line: #e4e8ef;
+  --crm-line-strong: #d4dbe6;
+  --crm-ink: #172235;
+  --crm-text: #39475c;
+  --crm-muted: #758297;
+  --crm-accent: #5268c9;
+  --crm-accent-hover: #4055b4;
+  --crm-accent-soft: #edf1ff;
+  --crm-accent-line: #d8e0ff;
+  --crm-focus: #6178dc;
+  --crm-shadow-popover: 0 16px 42px #14213a20, 0 2px 8px #14213a0b;
+}
+
+html[data-aps-monday-theme="dark"] body:has(#app .aps-boards-shell),
+html[data-aps-monday-theme="dark"]
+  body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  ) {
+  --crm-surface: #1b2635;
+  --crm-surface-soft: #202c3b;
+  --crm-line: #344255;
+  --crm-line-strong: #46566d;
+  --crm-ink: #edf2f8;
+  --crm-text: #d4deeb;
+  --crm-muted: #a1aec0;
+  --crm-accent: #aebcff;
+  --crm-accent-hover: #c8d1ff;
+  --crm-accent-soft: #303d5a;
+  --crm-accent-line: #4b5c80;
+  --crm-focus: #b5c2ff;
+  --crm-shadow-popover: 0 18px 46px #00000058;
+}
+
+/* Uiverse-inspired command search: one compact surface with clear keyboard flow. */
+body:has(#app .aps-boards-shell) .aps-global-search-backdrop,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-backdrop {
+  z-index: 1200;
+  background: #101b2d70;
+  backdrop-filter: blur(5px);
+}
+
+body:has(#app .aps-boards-shell) .aps-global-search-dialog,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-dialog {
+  width: min(620px, calc(100vw - 30px));
+  max-height: min(76dvh, 720px);
+  padding: 18px;
+  border: 1px solid var(--crm-line);
+  border-radius: 16px;
+  background: var(--crm-surface);
+  color: var(--crm-ink);
+  box-shadow: var(--crm-shadow-popover);
+}
+
+body:has(#app .aps-boards-shell) .aps-global-search-heading,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-heading {
+  margin-bottom: 14px;
+  padding-bottom: 13px;
+  border-bottom: 1px solid var(--crm-line);
+}
+
+body:has(#app .aps-boards-shell) .aps-global-search-heading h2,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-heading
+  h2 {
+  color: var(--crm-ink);
+  font-size: 15px;
+  font-weight: 730;
+  letter-spacing: -0.3px;
+}
+
+body:has(#app .aps-boards-shell) .aps-global-search-heading p,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-heading
+  p {
+  margin-top: 4px;
+  color: var(--crm-muted);
+  font-size: 10px;
+}
+
+body:has(#app .aps-boards-shell) .aps-global-search-close,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-close {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--crm-line);
+  border-radius: 8px;
+  background: var(--crm-surface-soft);
+  color: var(--crm-muted);
+}
+
+body:has(#app .aps-boards-shell) .aps-global-search-input-wrap,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-input-wrap {
+  min-height: 47px;
+  padding: 0 12px;
+  border: 1px solid var(--crm-line-strong);
+  border-radius: 9px;
+  background: var(--crm-surface-soft);
+  color: var(--crm-muted);
+}
+
+body:has(#app .aps-boards-shell) .aps-global-search-input-wrap:focus-within,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-input-wrap:focus-within {
+  border-color: var(--crm-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--crm-focus) 12%, transparent);
+}
+
+body:has(#app .aps-boards-shell) .aps-global-search-input,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--crm-ink);
+  box-shadow: none;
+  font-size: 12px;
+}
+
+body:has(#app .aps-boards-shell) .aps-global-search-input:focus,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-input:focus {
+  outline: 0;
+  box-shadow: none;
+}
+
+body:has(#app .aps-boards-shell) .aps-global-search-shortcut,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-shortcut {
+  padding: 4px 6px;
+  border: 1px solid var(--crm-line-strong);
+  border-radius: 6px;
+  background: var(--crm-surface);
+  color: var(--crm-muted);
+  font-size: 9px;
+}
+
+body:has(#app .aps-boards-shell) .aps-global-search-results,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-results {
+  gap: 4px;
+  padding: 8px 0;
+}
+
+body:has(#app .aps-boards-shell) .aps-global-search-option,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-option {
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--crm-text);
+}
+
+body:has(#app .aps-boards-shell) .aps-global-search-option:hover,
+body:has(#app .aps-boards-shell)
+  .aps-global-search-option[aria-selected="true"],
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-option:hover,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-option[aria-selected="true"] {
+  border-color: var(--crm-accent-line);
+  background: var(--crm-accent-soft);
+  color: var(--crm-ink);
+}
+
+body:has(#app .aps-boards-shell) .aps-global-search-option-title,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-option-title {
+  color: var(--crm-ink);
+  font-size: 11px;
+  font-weight: 690;
+}
+
+body:has(#app .aps-boards-shell) .aps-global-search-option-subtitle,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-option-subtitle {
+  color: var(--crm-muted);
+  font-size: 9px;
+}
+
+body:has(#app .aps-boards-shell) .aps-global-search-footer,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-footer {
+  padding-top: 11px;
+  border-top: 1px solid var(--crm-line);
+  color: var(--crm-muted);
+  font-size: 9px;
+}
+
+body:has(#app .aps-boards-shell) .aps-global-search-footer kbd,
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  .aps-global-search-footer
+  kbd {
+  border: 1px solid var(--crm-line-strong);
+  border-radius: 5px;
+  background: var(--crm-surface-soft);
+  color: var(--crm-text);
+}
+
+/* Item detail drawer and activity history use the same surfaces as the board. */
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  > .board-detail-backdrop {
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  padding: 0;
+  background: #101b2d70;
+  backdrop-filter: blur(4px);
+}
+
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  > .board-detail-backdrop
+  .board-item-drawer {
+  width: min(540px, 100vw);
+  max-width: 540px;
+  min-height: 100dvh;
+  margin: 0;
+  overflow-y: auto;
+  border: 1px solid var(--crm-line);
+  border-right: 0;
+  border-radius: 15px 0 0 15px;
+  background: var(--crm-surface);
+  color: var(--crm-ink);
+  box-shadow: var(--crm-shadow-popover);
+}
+
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  > .board-detail-backdrop
+  .board-item-drawer-header {
+  padding: 19px 22px 13px;
+  border-bottom: 1px solid var(--crm-line);
+}
+
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  > .board-detail-backdrop
+  .board-item-drawer
+  .label-top {
+  color: var(--crm-accent);
+  font-size: 9px;
+  font-weight: 740;
+  letter-spacing: 1px;
+}
+
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  > .board-detail-backdrop
+  .mrh-detail-identity {
+  padding: 19px 22px 12px;
+}
+
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  > .board-detail-backdrop
+  .mrh-detail-identity
+  h2 {
+  color: var(--crm-ink);
+  font-size: 20px;
+  font-weight: 740;
+  letter-spacing: -0.55px;
+}
+
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  > .board-detail-backdrop
+  .board-item-drawer
+  .muted {
+  padding-inline: 22px;
+  color: var(--crm-muted);
+  font-size: 10px;
+}
+
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  > .board-history-backdrop
+  .board-history-modal {
+  border: 1px solid var(--crm-line);
+  border-left: 1px solid var(--crm-line);
+  background: var(--crm-surface);
+  color: var(--crm-ink);
+  box-shadow: var(--crm-shadow-popover);
+}
+
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  > .board-history-backdrop
+  .board-history-modal
+  .modal-head {
+  border-bottom-color: var(--crm-line);
+}
+
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  > .board-history-backdrop
+  .board-history-modal
+  :is(input, select, textarea) {
+  border: 1px solid var(--crm-line-strong);
+  border-radius: 7px;
+  background: var(--crm-surface-soft);
+  color: var(--crm-ink);
+}
+
+/* Existing board status labels carry semantic class names, not decorative colors. */
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  .status.done,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  .status.completed {
+  border-color: color-mix(in srgb, var(--crm-success) 28%, var(--crm-line));
+  border-left: 3px solid var(--crm-success);
+  background: color-mix(in srgb, var(--crm-success) 9%, var(--crm-surface));
+  color: var(--crm-success);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  .status.working,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  .status.in-progress {
+  border-color: color-mix(in srgb, var(--crm-accent) 28%, var(--crm-line));
+  border-left: 3px solid var(--crm-accent);
+  background: color-mix(in srgb, var(--crm-accent) 9%, var(--crm-surface));
+  color: var(--crm-accent);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  .status.stuck,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  .status.blocked {
+  border-color: color-mix(in srgb, var(--crm-danger) 28%, var(--crm-line));
+  border-left: 3px solid var(--crm-danger);
+  background: color-mix(in srgb, var(--crm-danger) 9%, var(--crm-surface));
+  color: var(--crm-danger);
+}
+
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  .status.todo,
+#app
+  .aps-board-shell:not(.aps-time-tracker-shell):not(
+    .aps-fund-tracker-shell
+  ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  .board-table-custom
+  .status.planned {
+  border-color: var(--crm-line);
+  border-left: 3px solid var(--crm-line-strong);
+  background: var(--crm-surface-soft);
+  color: var(--crm-muted);
+}
+
+body:has(#app .aps-boards-shell)
+  :is(.aps-global-search-backdrop, .board-detail-backdrop)[hidden],
+body:has(
+    #app
+      .aps-board-shell:not(.aps-time-tracker-shell):not(
+        .aps-fund-tracker-shell
+      ):not(.aps-tradelink-shell):not(.aps-fueltrack-shell)
+  )
+  :is(.aps-global-search-backdrop, .board-detail-backdrop)[hidden] {
+  display: none !important;
+}

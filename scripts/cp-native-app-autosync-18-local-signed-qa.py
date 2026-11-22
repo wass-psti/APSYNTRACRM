@@ -5,11 +5,11 @@ Never touches the connected staging/production project. Creates exactly three
 random QA identities through the local GoTrue API and removes only those identities.
 """
 import json
+import os
 import secrets
 import subprocess
 import sys
 import urllib.error
-import urllib.parse
 import urllib.request
 
 DATABASE = "supabase_db_cp16019-disposable-local"
@@ -67,7 +67,7 @@ def run():
     if inspected["Config"]["Labels"].get("com.supabase.cli.project") != "cp16019-disposable-local":
         raise RuntimeError("Unexpected Auth container target")
     workdir = inspected["Config"]["Labels"].get("com.supabase.cli.workdir")
-    if not workdir or not workdir.startswith("/") or not __import__("os").path.isdir(workdir):
+    if not workdir or not workdir.startswith("/") or not os.path.isdir(workdir):
         raise RuntimeError("Verified disposable Supabase workdir unavailable")
     # Run only the read-only migration fingerprint check; never transplant
     # this ledger into a newer Auth instance as if it were a migration.

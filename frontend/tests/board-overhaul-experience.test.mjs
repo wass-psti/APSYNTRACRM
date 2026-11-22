@@ -14,12 +14,12 @@ const table = readFileSync(
 const catalog = readFileSync("frontend/board-catalog-experience.css", "utf8");
 const smoke = readFileSync("scripts/pages-smoke.mjs", "utf8");
 
-test("board overhaul is the final deterministic stylesheet and has a fresh production cache key", () => {
-  assert.equal(STYLE_SOURCES.at(-2), "frontend/board-overhaul-experience.css");
-  assert.equal(STYLE_SOURCES.at(-3), "frontend/dark-simplified-system.css");
+test("base board overhaul remains ordered before the Uiverse and complete design layers", () => {
+  assert.equal(STYLE_SOURCES.at(-3), "frontend/board-overhaul-experience.css");
+  assert.equal(STYLE_SOURCES.at(-4), "frontend/dark-simplified-system.css");
   assert.match(
     page,
-    /apsyntra-styles\.bundle\.css\?v=cp-crm-boards-uiverse-overhaul-02/,
+    /apsyntra-styles\.bundle\.css\?v=cp-crm-boards-uiverse-overhaul-03/,
   );
   assert.ok(page.includes("frontend/board-overhaul-experience.css"));
   assert.ok(smoke.includes("frontend/board-overhaul-experience.css"));
