@@ -7,7 +7,7 @@ const css=readFileSync('frontend/dark-board-sharing.css','utf8');
 test('board sharing dark layer is final and bundle is deterministic',()=>{
  assert.equal(STYLE_SOURCES.at(-9),'frontend/dark-board-sharing.css');
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());
- assert.match(readFileSync('index.html','utf8'),/bundle\.css\?v=(?:cp-crm-dark-05|(?:cp-crm-dark-06|(?:cp-crm-dark-07|(?:cp-crm-dark-08|(?:cp-crm-dark-09|cp-crm-boards-uiverse-overhaul-03)))))/);
+ assert.match(readFileSync('index.html','utf8'),/bundle\.css\?v=(?:cp-crm-dark-05|(?:cp-crm-dark-06|(?:cp-crm-dark-07|(?:cp-crm-dark-08|(?:cp-crm-dark-09|(?:cp-crm-boards-uiverse-overhaul-03|cp-crm-overview-redesign-01))))))/);
 });
 test('board share and people/group picker are covered only in dark mode',()=>{
  for(const token of ['.board-share-stage-frame','.board-share-stage-secondary',

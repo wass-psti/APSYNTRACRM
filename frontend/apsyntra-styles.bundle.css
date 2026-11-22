@@ -40525,3 +40525,1625 @@ body:has(
   :is(.aps-global-search-backdrop, .board-detail-backdrop)[hidden] {
   display: none !important;
 }
+
+/* CP-CRM-OVERVIEW-REDESIGN-01
+ * Rebuild the Overview as one calm workspace dashboard. The layout uses the
+ * shared Uiverse-informed controls and CRM tokens without nested card stacks.
+ * All selectors remain scoped to the signed Overview route.
+ */
+#app .aps-overview-shell .aps-overview.overview-dashboard {
+  width: 100%;
+  max-width: 1680px;
+  min-width: 0;
+  margin-inline: auto;
+  color: var(--crm-ink);
+}
+
+#app .aps-overview-shell .aps-overview.overview-dashboard .overview-hero {
+  display: flex;
+  min-height: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0 0 25px;
+  padding: 8px 0 24px;
+  overflow: visible;
+  border: 0;
+  border-bottom: 1px solid var(--crm-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#app .aps-overview-shell .aps-overview.overview-dashboard .overview-hero-copy {
+  min-width: 0;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-hero
+  .label-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--crm-accent);
+  font-size: 9px;
+  font-weight: 760;
+  letter-spacing: 1.25px;
+}
+
+#app .aps-overview-shell .aps-overview.overview-dashboard .overview-hero-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--crm-accent);
+  box-shadow: none;
+}
+
+#app .aps-overview-shell .aps-overview.overview-dashboard .overview-hero h1 {
+  margin: 11px 0 7px;
+  color: var(--crm-ink);
+  font-size: clamp(28px, 2.55vw, 37px);
+  font-weight: 760;
+  letter-spacing: -1.35px;
+  line-height: 1.12;
+}
+
+#app .aps-overview-shell .aps-overview.overview-dashboard .overview-hero p {
+  max-width: 560px;
+  margin: 0;
+  color: var(--crm-text);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+#app .aps-overview-shell .aps-overview.overview-dashboard .overview-hero-art,
+#app .aps-overview-shell .aps-overview.overview-dashboard .overview-wave {
+  display: none;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-header-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-header-actions
+  button {
+  display: inline-flex;
+  min-height: 43px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 15px;
+  border: 1px solid var(--crm-line-strong);
+  border-radius: 9px;
+  background: var(--crm-surface);
+  color: var(--crm-text);
+  box-shadow: none;
+  font-size: 11px;
+  font-weight: 700;
+  transition:
+    background-color var(--crm-motion-fast) ease,
+    border-color var(--crm-motion-fast) ease,
+    color var(--crm-motion-fast) ease;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-header-actions
+  button
+  .overview-svg-icon {
+  width: 15px;
+  height: 15px;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-header-actions
+  .overview-create {
+  border-color: var(--crm-accent);
+  background: var(--crm-accent);
+  color: #ffffff;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-header-actions
+  .overview-create:hover:not(:disabled) {
+  border-color: var(--crm-accent-hover);
+  background: var(--crm-accent-hover);
+  color: #ffffff;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-header-actions
+  .overview-refresh:hover:not(:disabled) {
+  border-color: var(--crm-line-strong);
+  background: var(--crm-surface-hover);
+  color: var(--crm-ink);
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-header-actions
+  button:focus-visible,
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-section-heading
+  .inline-link:focus-visible,
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .board-card-main:focus-visible,
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .board-card-actions
+  > summary:focus-visible {
+  outline: 2px solid var(--crm-focus);
+  outline-offset: 3px;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-catalog-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 0 22px;
+  padding: 15px 17px;
+  border: 1px solid color-mix(in srgb, var(--crm-warning) 35%, var(--crm-line));
+  border-left: 3px solid var(--crm-warning);
+  border-radius: 10px;
+  background: var(--crm-surface);
+  color: var(--crm-text);
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-catalog-alert
+  strong {
+  color: var(--crm-ink);
+  font-size: 12px;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-catalog-alert
+  p {
+  margin: 5px 0 0;
+  color: var(--crm-text);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-catalog-alert
+  button {
+  min-height: 40px;
+  flex: none;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-metrics-section {
+  min-width: 0;
+  margin: 0 0 29px;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-metrics-heading {
+  align-items: center;
+  margin: 0 0 11px;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-section-heading
+  .overview-section-eyebrow {
+  display: block;
+  margin: 0 0 5px;
+  color: var(--crm-accent);
+  font-size: 9px;
+  font-weight: 760;
+  letter-spacing: 1.1px;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-section-heading
+  .section-title {
+  margin: 0;
+  color: var(--crm-ink);
+  font-size: 17px;
+  font-weight: 740;
+  letter-spacing: -0.45px;
+  line-height: 1.3;
+}
+
+#app .aps-overview-shell .aps-overview.overview-dashboard .overview-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--crm-line);
+  border-radius: 13px;
+  background: var(--crm-surface);
+  box-shadow: var(--crm-shadow-card);
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-stat-grid
+  .stat-card {
+  display: grid;
+  min-width: 0;
+  min-height: 126px !important;
+  grid-template-areas:
+    "label icon"
+    "value value"
+    "footer footer";
+  grid-template-columns: minmax(0, 1fr) 29px;
+  grid-template-rows: auto auto auto;
+  align-content: center;
+  gap: 7px 10px;
+  padding: 17px 19px !important;
+  border: 0;
+  border-right: 1px solid var(--crm-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transition: background-color var(--crm-motion-fast) ease;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-stat-grid
+  .stat-card:last-child {
+  border-right: 0;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-stat-grid
+  .stat-card::before {
+  content: none;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-stat-grid
+  .stat-card:hover {
+  transform: none;
+  border-color: var(--crm-line);
+  background: var(--crm-surface-hover);
+  box-shadow: none;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-stat-grid
+  .stat-label {
+  grid-area: label;
+  align-self: center;
+  padding: 0;
+  color: var(--crm-text);
+  font-size: 10px;
+  font-weight: 680;
+  line-height: 1.4;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-stat-grid
+  .stat-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  grid-area: icon;
+  place-items: center;
+  justify-self: end;
+  float: none;
+  border: 0;
+  border-radius: 8px;
+  background: var(--crm-accent-soft);
+  color: var(--crm-accent);
+  box-shadow: none;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-stat-grid
+  .stat-icon
+  .overview-svg-icon {
+  width: 15px;
+  height: 15px;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-stat-grid
+  .stat-value {
+  grid-area: value;
+  max-width: 100%;
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--crm-ink);
+  font-size: clamp(21px, 2vw, 27px);
+  font-weight: 760;
+  letter-spacing: -0.85px;
+  line-height: 1.2;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-stat-grid
+  .stat-card:nth-child(n + 3)
+  .stat-value {
+  margin-top: 2px;
+  font-size: clamp(16px, 1.45vw, 20px);
+  letter-spacing: -0.45px;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-stat-grid
+  .stat-footer {
+  grid-area: footer;
+  color: var(--crm-text);
+  font-size: 10px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-access-footer {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 4px;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-access-identity {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-section {
+  min-width: 0;
+  margin: 0;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-heading {
+  align-items: end;
+  margin: 0 0 11px;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-count {
+  margin: 5px 0 0;
+  color: var(--crm-text);
+  font-size: 11px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-section-heading
+  .inline-link {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 2px 8px 9px;
+  border-radius: 7px;
+  color: var(--crm-accent);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--crm-motion-fast) ease;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-section-heading
+  .inline-link:hover {
+  color: var(--crm-accent-hover);
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-section-heading
+  .inline-link
+  .overview-svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+#app .aps-overview-shell .aps-overview.overview-dashboard .overview-board-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 28px;
+  margin: 0;
+  border-top: 1px solid var(--crm-line);
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 106px;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: start;
+  gap: 0 12px;
+  padding: 15px 34px 15px 0;
+  overflow: visible;
+  border: 0;
+  border-bottom: 1px solid var(--crm-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transition: background-color var(--crm-motion-fast) ease;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card::before {
+  content: none;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card:hover,
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card:focus-within {
+  transform: none;
+  border-color: var(--crm-line);
+  border-radius: 8px;
+  background: var(--crm-surface-hover);
+  box-shadow: none;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card.board-card-menu-open {
+  z-index: 40;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card-top {
+  position: static;
+  z-index: 1;
+  display: flex;
+  grid-column: 1;
+  grid-row: 1;
+  align-items: flex-start;
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-symbol {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid var(--crm-line);
+  border-radius: 8px;
+  background: var(--crm-surface-soft);
+  color: var(--crm-text);
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 740;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card-actions {
+  position: absolute;
+  top: 11px;
+  right: 0;
+  z-index: 4;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card-actions
+  > summary {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--crm-muted);
+  font-size: 17px;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card-actions
+  > summary:hover,
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card-actions[open]
+  > summary {
+  border-color: var(--crm-line);
+  background: var(--crm-surface);
+  color: var(--crm-ink);
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card-main {
+  display: grid;
+  min-width: 0;
+  grid-column: 2;
+  grid-row: 1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 1px 0 0;
+  border-radius: 5px;
+  color: var(--crm-ink);
+  text-decoration: none;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card
+  h3 {
+  min-width: 0;
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
+  color: var(--crm-ink);
+  font-size: 12px;
+  font-weight: 720;
+  letter-spacing: -0.1px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card
+  p {
+  min-width: 0;
+  min-height: 0;
+  grid-column: 1;
+  grid-row: 2;
+  margin: 0;
+  overflow: hidden;
+  color: var(--crm-text);
+  font-size: 10px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card-footer {
+  display: flex;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-items: flex-end;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--crm-text);
+  font-size: 9px;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card-footer
+  span:first-child {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--crm-text);
+  font-weight: 690;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card-footer
+  span:last-child {
+  color: var(--crm-text);
+}
+
+#app .aps-overview-shell .aps-overview.overview-dashboard .overview-empty {
+  padding: 22px;
+  border: 1px solid var(--crm-line);
+  border-radius: 12px;
+  background: var(--crm-surface);
+  color: var(--crm-text);
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-foundation-section {
+  margin-top: 30px;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials-heading {
+  margin: 0 0 11px;
+}
+
+#app .aps-overview-shell .aps-overview.overview-dashboard .overview-essentials {
+  overflow: visible;
+  border-top: 1px solid var(--crm-line);
+  border-bottom: 1px solid var(--crm-line);
+  background: transparent;
+  box-shadow: none;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials
+  .panel-body {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  padding: 12px 0;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials
+  .activity-item {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 29px minmax(0, 1fr) 18px;
+  align-items: start;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 15px;
+  border: 0;
+  border-right: 1px solid var(--crm-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--crm-text);
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials
+  .activity-item:last-child {
+  border-right: 0;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials
+  .activity-avatar {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--crm-accent-soft);
+  color: var(--crm-accent);
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials
+  .activity-avatar
+  .overview-svg-icon {
+  width: 15px;
+  height: 15px;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials
+  .activity-item
+  > div {
+  min-width: 0;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials
+  .activity-item
+  b {
+  display: block;
+  margin: 1px 0 5px;
+  color: var(--crm-ink);
+  font-size: 11px;
+  font-weight: 720;
+  line-height: 1.45;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials
+  .activity-item
+  small {
+  display: block;
+  color: var(--crm-text);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials-indicator {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--crm-surface-soft);
+  color: var(--crm-success);
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials-indicator
+  .overview-svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-svg-icon
+  .icon-outline {
+  display: none;
+}
+
+#app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-svg-icon
+  .icon-solid {
+  display: inline;
+  opacity: 1;
+}
+
+@media (max-width: 1180px) {
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-stat-grid
+    .stat-card:nth-child(2) {
+    border-right: 0;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-stat-grid
+    .stat-card:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--crm-line);
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-stat-grid
+    .stat-card:nth-child(n + 3) {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 810px) {
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-board-list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-board-list
+    .board-card {
+    padding-right: 48px;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-board-list
+    .board-card-actions
+    > summary {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-essentials
+    .panel-body {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 7px 0;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-essentials
+    .activity-item {
+    border-right: 0;
+    border-bottom: 1px solid var(--crm-line);
+    padding: 12px 5px;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-essentials
+    .activity-item:last-child {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  #app .aps-overview-shell .aps-overview.overview-dashboard .overview-hero {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 17px;
+    margin-bottom: 22px;
+    padding: 4px 0 19px;
+  }
+
+  #app .aps-overview-shell .aps-overview.overview-dashboard .overview-hero h1 {
+    margin-top: 9px;
+    font-size: clamp(25px, 7vw, 30px);
+    letter-spacing: -0.9px;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-header-actions {
+    width: 100%;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-header-actions
+    button {
+    min-width: 0;
+    min-height: 44px;
+    flex: 1 1 120px;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-metrics-section {
+    margin-bottom: 24px;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-stat-grid
+    .stat-card {
+    min-height: 112px !important;
+    padding: 13px 14px !important;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-stat-grid
+    .stat-value {
+    font-size: 22px;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-stat-grid
+    .stat-card:nth-child(n + 3)
+    .stat-value {
+    font-size: 17px;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-board-heading {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-board-list
+    .board-card {
+    min-height: 100px;
+    grid-template-columns: 33px minmax(0, 1fr);
+    gap: 0 10px;
+    padding: 13px 33px 13px 0;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-board-list
+    .board-card-main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    gap: 3px;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-board-list
+    .board-card-footer {
+    grid-column: 1;
+    grid-row: 3;
+    align-items: flex-start;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    margin-top: 5px;
+    white-space: normal;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-catalog-alert {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-catalog-alert
+    button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-stat-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-stat-grid
+    .stat-card {
+    border-right: 0;
+    border-bottom: 1px solid var(--crm-line);
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-stat-grid
+    .stat-card:nth-child(n + 3) {
+    border-bottom: 1px solid var(--crm-line);
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-stat-grid
+    .stat-card:last-child {
+    border-bottom: 0;
+  }
+
+  #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-board-heading {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app .aps-overview-shell .aps-overview.overview-dashboard *,
+  #app .aps-overview-shell .aps-overview.overview-dashboard *::before,
+  #app .aps-overview-shell .aps-overview.overview-dashboard *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Dark theme uses the same dashboard geometry and the shared CRM tokens. */
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-hero {
+  border: 0;
+  border-bottom: 1px solid var(--crm-line);
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-hero
+  :is(h1, p, .label-top) {
+  color: var(--crm-ink);
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-hero-dot {
+  background: var(--crm-accent);
+  box-shadow: none;
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-header-actions
+  .overview-refresh {
+  border-color: var(--crm-line-strong);
+  background: var(--crm-surface-soft);
+  color: var(--crm-ink);
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-header-actions
+  .overview-create {
+  border-color: var(--crm-accent);
+  background: var(--crm-accent);
+  color: #111925;
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-stat-grid {
+  border-color: var(--crm-line);
+  background: var(--crm-surface);
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-stat-grid
+  .stat-card {
+  border: 0;
+  border-right: 1px solid var(--crm-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-stat-grid
+  .stat-card:last-child {
+  border-right: 0;
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-stat-grid
+  .stat-card:nth-child(2) {
+  border-right: 0;
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-stat-grid
+  .stat-icon {
+  border: 0;
+  background: var(--crm-accent-soft);
+  color: var(--crm-accent);
+  box-shadow: none;
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list {
+  border-top-color: var(--crm-line);
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card {
+  border: 0;
+  border-bottom: 1px solid var(--crm-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card:hover,
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card:focus-within {
+  border-color: var(--crm-line);
+  border-radius: 8px;
+  background: var(--crm-surface-hover);
+  box-shadow: none;
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card
+  h3 {
+  color: var(--crm-ink);
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card
+  p,
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card-footer {
+  color: var(--crm-text);
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-symbol {
+  border-color: var(--crm-line);
+  background: var(--crm-surface-soft);
+  color: var(--crm-text);
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card-actions
+  > summary {
+  border-color: transparent;
+  background: transparent;
+  color: var(--crm-muted);
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card-actions
+  > summary:hover,
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card-actions[open]
+  > summary {
+  border-color: var(--crm-line);
+  background: var(--crm-surface-soft);
+  color: var(--crm-ink);
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials {
+  border-top-color: var(--crm-line);
+  border-bottom-color: var(--crm-line);
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials
+  .activity-item {
+  border-right-color: var(--crm-line);
+  border-bottom-color: var(--crm-line);
+  background: transparent;
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials
+  .activity-avatar {
+  background: var(--crm-accent-soft);
+  color: var(--crm-accent);
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials
+  .activity-item
+  :is(b, small) {
+  color: var(--crm-text);
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials-indicator {
+  background: var(--crm-surface-soft);
+  color: var(--crm-success);
+}
+
+@media (max-width: 1180px) {
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-stat-grid
+    .stat-card:nth-child(2) {
+    border-right: 0;
+  }
+
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-stat-grid
+    .stat-card:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--crm-line);
+  }
+
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-stat-grid
+    .stat-card:nth-child(n + 3) {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 810px) {
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-essentials
+    .activity-item {
+    border-right: 0;
+    border-bottom: 1px solid var(--crm-line);
+  }
+}
+
+@media (max-width: 360px) {
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-stat-grid
+    .stat-card {
+    border-right: 0;
+    border-bottom: 1px solid var(--crm-line);
+  }
+
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-stat-grid
+    .stat-card:nth-child(n + 3) {
+    border-bottom: 1px solid var(--crm-line);
+  }
+
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-stat-grid
+    .stat-card:last-child {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-header-actions {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  html[data-aps-monday-theme="dark"]
+    #app
+    .aps-overview-shell
+    .aps-overview.overview-dashboard
+    .overview-header-actions
+    button {
+    min-height: 44px;
+    max-height: none;
+    flex: 1 1 120px;
+  }
+}
+
+/* Legacy dark-card declarations use !important. Override them only inside the
+   redesigned Overview so its board directory stays a quiet row list. */
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--crm-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: var(--crm-ink) !important;
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card:hover,
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card:focus-within {
+  background: var(--crm-surface-hover) !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--crm-line) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card-footer {
+  border: 0 !important;
+  color: var(--crm-text) !important;
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card-footer
+  span:first-child {
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--crm-text) !important;
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-board-list
+  .board-card-footer
+  span:last-child {
+  color: var(--crm-text) !important;
+}
+
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials
+  .activity-item:nth-child(2)
+  .activity-avatar,
+html[data-aps-monday-theme="dark"]
+  #app
+  .aps-overview-shell
+  .aps-overview.overview-dashboard
+  .overview-essentials
+  .activity-item:nth-child(3)
+  .activity-avatar {
+  background: var(--crm-accent-soft);
+  color: var(--crm-accent);
+}
