@@ -17,6 +17,7 @@ DECLARE
  v_admin_roster jsonb;
  v_record uuid;
  v_beta_record uuid;
+ v_legacy_record uuid:='22222222-2222-4222-8222-222222222222';
  v_geo jsonb;
 BEGIN
  PERFORM set_config('request.jwt.claim.sub',v_admin::text,false);
@@ -140,13 +141,6 @@ BEGIN
  PERFORM set_config('request.jwt.claim.sub',v_admin::text,false);
  PERFORM public.timetracker_ojt_intern_set(
   v_board,v_ojt,v_beta,'Intern Beta',false);
- BEGIN
-  PERFORM public.timetracker_ojt_intern_set(
-   v_board,v_ojt,v_beta,'Intern Beta',true);
-  -- Re-enable only to verify the inactive profile is rejected at selection.
- EXCEPTION WHEN OTHERS THEN
-  RAISE;
- END;
 
  PERFORM set_config('request.jwt.claim.sub',v_ojt::text,false);
  BEGIN
