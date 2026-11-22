@@ -1946,6 +1946,13 @@
       "file": "20261123100000_cp_tt_ojt_shared_identities.sql",
       "bytes": 24567,
       "sha256": "4fb0df7d5746cf9d222c8c569e8a5824d6b1b86477d2728e842e5955bbb178fc"
+    },
+    {
+      "version": "20261123130000",
+      "name": "cp_tt_ojt_employee_department_identity",
+      "file": "20261123130000_cp_tt_ojt_employee_department_identity.sql",
+      "bytes": 6925,
+      "sha256": "ede421f8f471d0af0952c467e72bc39e5e2584348d79641c79939885f3d0a68b"
     }
   ]
 }

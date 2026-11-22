@@ -3,13 +3,16 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
  projectOjtRoster,projectOjtAdmin,projectOjtAttendance,
- projectOjtAdminAttendance,TimeTrackerOjtClient
+ projectOjtAdminAttendance,TimeTrackerOjtClient,
+ TIMETRACKER_SHARED_OJT_USER_ID,isEligibleTimeTrackerSharedOjtAccount,
+ renderTimeTrackerOjtAdmin,renderTimeTrackerOjtClock
 } from '../apps/TimeTracker/time-tracker-ojt.js';
 const root='frontend/';
 const app=readFileSync(root+'app.js','utf8');
 const ui=readFileSync(root+'time-tracker-ui.js','utf8');
 const native=readFileSync(root+'time-tracker-native.js','utf8');
 const sql=readFileSync('supabase/migrations/20261123100000_cp_tt_ojt_shared_identities.sql','utf8');
+const correction=readFileSync('supabase/migrations/20261123130000_cp_tt_ojt_employee_department_identity.sql','utf8');
 const css=readFileSync(root+'apps/TimeTracker/time-tracker-ojt.css','utf8');
 const bundle=readFileSync(root+'apsyntra-styles.bundle.css','utf8');
 const manifest=readFileSync('scripts/priority5-style-manifest.mjs','utf8');
@@ -119,10 +122,54 @@ test('UI allows OJT roster selection but prevents legacy shared-account Clock',(
   "renderTimeTrackerOjtClock","renderTimeTrackerOjtAdmin",
   "const sharedOjt=verified","if(sharedOjt)","return html;"
  ])assert.ok(ui.includes(part),part);
- assert.match(native,/ojtRoster\?\.mode==='SHARED_LOGIN'\?false/);
+ assert.match(native,/attendanceWritesAccepted:designatedSharedOjt\?false/);
  assert.match(index,/frontend\/apps\/TimeTracker\/time-tracker-ojt\.css/);
  assert.equal((index.match(/<link rel="stylesheet"/g)||[]).length,1);
  assert.match(manifest,/frontend\/apps\/TimeTracker\/time-tracker-ojt\.css/);
  assert.match(bundle,/\/\* frontend\/apps\/TimeTracker\/time-tracker-ojt\.css \*\//);
  assert.match(css,/\.tt-native \.tt-ojt/);
+});
+
+test('only the designated Employee in OJT department qualifies for shared login',()=>{
+ const approved={id:TIMETRACKER_SHARED_OJT_USER_ID,role:'Employee',department:'OJT',name:'OJT Account'};
+ assert.equal(TIMETRACKER_SHARED_OJT_USER_ID,'d613280d-907b-418f-b872-c0f6dd53e580');
+ assert.equal(isEligibleTimeTrackerSharedOjtAccount(approved),true);
+ assert.equal(isEligibleTimeTrackerSharedOjtAccount({...approved,role:'OJT'}),false);
+ assert.equal(isEligibleTimeTrackerSharedOjtAccount({...approved,department:'HR'}),false);
+ assert.equal(isEligibleTimeTrackerSharedOjtAccount({...approved,id:scope.userId}),false);
+ assert.equal(isEligibleTimeTrackerSharedOjtAccount({...approved,department:null}),false);
+ const roster=renderTimeTrackerOjtAdmin({admin:{groups:[]},employees:[
+  approved,{...approved,id:scope.userId,name:'Other intern'}]});
+ assert.match(roster,/data-action="tt-ojt-group-enable"/);
+ assert.match(roster,/OJT Account/);
+ assert.doesNotMatch(roster,/Other intern/);
+});
+test('unconfigured and missing OJT service fail closed to ordinary Employee Clock',()=>{
+ for(const mode of ['SETUP_REQUIRED','SERVICE_UNAVAILABLE','SHARED_DISABLED']){
+  const view=renderTimeTrackerOjtClock({roster:{mode,interns:[]}});
+  assert.doesNotMatch(view,/data-action="tt-ojt-clock"/);
+  assert.doesNotMatch(view,/data-action="tt-ojt-choose"/);
+ }
+ assert.match(native,/const designatedSharedOjt=access.userId===TIMETRACKER_SHARED_OJT_USER_ID/);
+ assert.match(native,/ojtRoster=\{mode:'SERVICE_UNAVAILABLE',interns:\[\]\}/);
+ assert.match(native,/mode:'SETUP_REQUIRED'/);
+ assert.match(ui,/SERVICE_UNAVAILABLE','SETUP_REQUIRED/);
+ assert.match(app,/isEligibleTimeTrackerSharedOjtAccount\(u\)/);
+});
+test('corrective SQL validates Employee, OJT, exact user and legacy trigger',()=>{
+ for(const fragment of [
+  'd613280d-907b-418f-b872-c0f6dd53e580',
+  'ojt@watchdogautomation.com.ph',
+  "m.active","p.status='active'","d.department='OJT'",
+  "public.module_role_for('time-tracker',p_user_id)='Employee'",
+  'private.tt_ojt_eligible_shared(v_ws,p_shared_user_id)',
+  'CREATE OR REPLACE FUNCTION private.tt_ojt_shared',
+  'CREATE OR REPLACE FUNCTION public.timetracker_ojt_group_set',
+  'CREATE OR REPLACE FUNCTION private.tt_ojt_block_legacy_clock',
+  'g.workspace_id=NEW.workspace_id','g.shared_user_id=auth.uid()'
+ ])assert.ok(correction.includes(fragment),fragment);
+ const guard=correction.split('CREATE OR REPLACE FUNCTION private.tt_ojt_block_legacy_clock')[1].split('-- A previously enabled')[0];
+ assert.doesNotMatch(guard,/46bf4ee7-368a-4c35-842c-8593ea1f6ac3/);
+ assert.doesNotMatch(correction,/CREATE\s+USER|INSERT INTO auth\.users/i);
+ assert.match(correction,/WHERE revoked_at IS NULL/);
 });

@@ -8,12 +8,15 @@ auth-generated verification/password-reset emails. It does **not** itself
 reduce all SMTP service traffic or replace staff email addresses.
 
 ## Activation (staging before production)
-1. Apply \`20261123100000_cp_tt_ojt_shared_identities.sql\` in a reviewed
-   Supabase staging environment (pgcrypto and existing TimeTracker migrations
-   required). This PR does **not** automatically deploy the migration.
-2. Confirm the existing shared email account is an **active workspace member**
-   with the centralized TimeTracker module role **OJT**. Do not give it
-   System Admin or IT Administrator roles.
+1. Apply `20261123100000_cp_tt_ojt_shared_identities.sql` and then
+   `20261123130000_cp_tt_ojt_employee_department_identity.sql` in order,
+   in a reviewed Supabase staging environment (pgcrypto and existing TimeTracker
+   migrations required). GitHub merging does **not** deploy SQL.
+2. Confirm the registered, email-verified account
+   `ojt@watchdogautomation.com.ph` (`d613280d-907b-418f-b872-c0f6dd53e580`)
+   is an active member of **Work Management**, has the **Employee** TimeTracker
+   application role, and belongs to the **OJT** department. Do not give the
+   shared account System Admin or IT Administrator roles.
 3. As a signed TimeTracker System Admin or IT Administrator, open
    **TimeTracker → Employees → OJT shared login & intern profiles**.
    Choose the existing OJT account and enable shared login.
@@ -26,6 +29,11 @@ reduce all SMTP service traffic or replace staff email addresses.
    Disable departed interns; rotate a PIN when necessary.
 
 ## Security and data rules
+- The backend independently verifies the designated account ID, company
+  email, active membership, **Employee** module role, and **OJT** department.
+  Other members of the OJT department never gain shared-identity access.
+- The corrective migration removes the hard-coded board UUID from the
+  legacy attendance guard and verifies the signed actor and workspace.
 - One Supabase auth identity is shared; intern profiles are *subidentities*,
   not new \`auth.users\`, \`profiles\` or full APSYNTRA accounts.
 - Selecting a name does not authorize attendance. The backend verifies a

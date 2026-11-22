@@ -2,6 +2,17 @@
  * This module never persists a PIN or bearer identity token to storage.
  */
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+/** Existing verified company login: ojt@watchdogautomation.com.ph.
+ * TimeTracker application role remains Employee; department is OJT.
+ * The backend separately verifies these attributes and active membership.
+ */
+export const TIMETRACKER_SHARED_OJT_USER_ID='d613280d-907b-418f-b872-c0f6dd53e580';
+export function isEligibleTimeTrackerSharedOjtAccount(member){
+ return member?.id===TIMETRACKER_SHARED_OJT_USER_ID &&
+  member?.role==='Employee' &&
+  member?.department?.trim().toLocaleLowerCase()==='ojt';
+}
+
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[c]));
@@ -173,7 +184,11 @@ export function renderTimeTrackerOjtClock({
  if(error)html+='<p class="tt-ojt-error" role="alert">'+esc(error)+'</p>';
  if(success)html+='<p class="tt-ojt-success" role="status">'+esc(success)+'</p>';
  if(roster?.mode==='SHARED_DISABLED')
-  return html+'<p role="status">This shared OJT login is disabled. Contact a TimeTracker administrator.</p></section>';
+  return html+'<p role="status">This shared OJT login is disabled or no longer eligible. Contact a TimeTracker administrator.</p></section>';
+ if(roster?.mode==='SERVICE_UNAVAILABLE')
+  return html+'<p role="alert">Individual OJT attendance requires the signed Supabase service. Standard attendance is disabled for this shared account until deployment.</p></section>';
+ if(roster?.mode==='SETUP_REQUIRED')
+  return html+'<p role="status">This account is ready, but the shared OJT roster has not been enabled yet. Ask an administrator to activate the shared login and add intern profiles.</p></section>';
  if(!selected){
   html+='<h4>Who is clocking in?</h4><p>Choose your name and enter your private PIN before using attendance.</p>';
   html+='<div class="tt-ojt-roster">'+(roster?.interns?.length?
@@ -212,7 +227,7 @@ export function renderTimeTrackerOjtClock({
 export function renderTimeTrackerOjtAdmin({admin=null,attendance=null,employees=[]}={}){
  if(!admin)return '<section class="tt-ojt-admin"><h4>OJT shared identities</h4>'+
   '<p>Administrator roster management is unavailable until the signed OJT service is deployed.</p></section>';
- const users=employees.filter(x=>x.role==='OJT');
+ const users=employees.filter(isEligibleTimeTrackerSharedOjtAccount);
  const configured=new Set(admin.groups.map(x=>x.userId));
  return '<section class="tt-ojt-admin" aria-label="OJT shared login management">'+
   '<div class="tt-ojt-admin-head"><h4>OJT shared login &amp; intern profiles</h4>'+
