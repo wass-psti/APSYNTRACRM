@@ -26164,6 +26164,56 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
  }
 }
 
+/* frontend/apps/TimeTracker/time-tracker-ojt.css */
+/* OJT shared-login identity controls — scoped to TimeTracker only. */
+.tt-native .tt-ojt,.tt-native .tt-ojt-admin{max-width:900px;margin:24px auto;color:var(--ink,#242c42)}
+.tt-native .tt-ojt{background:var(--card,#fff);border:1px solid var(--line,#dce2ef);border-radius:16px;padding:24px}
+.tt-native .tt-ojt-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 24px}
+.tt-native .tt-ojt-header p{margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--muted,#76809a)}
+.tt-native .tt-ojt-header h3{font-size:24px;font-weight:700;margin:0 0 6px}
+.tt-native .tt-ojt-header span{font-size:14px;color:var(--muted,#66738e)}
+.tt-native .tt-ojt-navigation{padding:13px 24px;border-bottom:1px solid var(--line,#e0e4ed)}
+.tt-native .tt-ojt h4,.tt-native .tt-ojt-admin h4{font-size:17px;font-weight:700;margin:0 0 10px}
+.tt-native .tt-ojt > p{font-size:14px;color:var(--muted,#68748a)}
+.tt-native .tt-ojt-roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin:18px 0}
+.tt-native .tt-ojt-roster button{min-height:130px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:7px;padding:14px;border:1px solid var(--line,#d7deeb);border-radius:12px;background:var(--card,#fff);color:var(--ink,#242c42);text-align:center;cursor:pointer}
+.tt-native .tt-ojt-roster button:hover{border-color:var(--purple,#5d61e8);background:var(--purple-soft,#f2f2ff)}
+.tt-native .tt-ojt-roster button:focus-visible,.tt-native .tt-ojt button:focus-visible,.tt-native .tt-ojt-admin button:focus-visible{outline:3px solid #5d61e877;outline-offset:2px}
+.tt-native .tt-ojt-roster button:disabled,.tt-native .tt-ojt button:disabled{opacity:.5;cursor:not-allowed}
+.tt-native .tt-ojt-roster button strong{font-size:14px}
+.tt-native .tt-ojt-roster button small{font-size:12px;color:var(--muted,#69758c)}
+.tt-native .tt-ojt-avatar{width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex:none;background:var(--purple-soft,#e8e9ff);color:var(--purple,#5d61e8);font-size:14px;font-weight:700}
+.tt-native .tt-ojt-selected{display:flex;align-items:center;gap:14px;padding:16px;border:1px solid var(--line,#d7deeb);border-radius:12px;margin:0 0 20px}
+.tt-native .tt-ojt-selected div{display:flex;flex-direction:column;gap:4px}
+.tt-native .tt-ojt-selected small{font-size:12px;color:var(--muted,#69758c)}
+.tt-native .tt-ojt-session{padding:20px;border:1px solid var(--line,#dde2ee);border-radius:12px}
+.tt-native .tt-ojt-session strong{font-size:17px}
+.tt-native .tt-ojt-session p{margin:8px 0 20px;font-size:14px;color:var(--muted,#67758d)}
+.tt-native .tt-ojt-session label{display:block;font-size:14px;font-weight:600;margin:12px 0 8px}
+.tt-native .tt-ojt-session select,.tt-native .tt-ojt-session textarea{display:block;box-sizing:border-box;width:100%;min-height:44px;padding:10px 14px;border:1px solid var(--line,#ced5e4);border-radius:10px;background:var(--card,#fff);color:var(--ink,#24304a);font-size:15px}
+.tt-native .tt-ojt-session :is(select,textarea):focus{outline:3px solid #5d61e833;border-color:var(--purple,#5d61e8)}
+.tt-native .tt-ojt-session .tt-ojt-clock-button{display:block;width:100%;min-height:44px;margin-top:20px;background:var(--purple,#5d61e8);border:0;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer}
+.tt-native .tt-ojt-error,.tt-native .tt-ojt-success{padding:12px 16px;border-radius:10px;font-size:13px;line-height:1.5}
+.tt-native .tt-ojt-error{color:#a2263e;background:#fcebf0}
+.tt-native .tt-ojt-success{color:#155d38;background:#e9f8ef}
+.tt-native .tt-ojt-history{margin-top:28px;overflow:auto}
+.tt-native .tt-ojt-history table,.tt-native .tt-ojt-admin-records table{width:100%;border-collapse:collapse;text-align:left;font-size:13px}
+.tt-native .tt-ojt-history th,.tt-native .tt-ojt-history td,.tt-native .tt-ojt-admin-records th,.tt-native .tt-ojt-admin-records td{padding:12px;border-bottom:1px solid var(--line,#e3e7ee)}
+.tt-native .tt-ojt-admin{border:1px solid var(--line,#dce2ee);border-radius:14px;padding:20px;background:var(--card,#fff)}
+.tt-native .tt-ojt-admin-head p{font-size:13px;color:var(--muted,#77849b);margin:0 0 20px}
+.tt-native .tt-ojt-unconfigured>div,.tt-native .tt-ojt-admin-group header,.tt-native .tt-ojt-admin-people>div{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;padding:12px 0}
+.tt-native .tt-ojt-admin :is(.tt-ojt-unconfigured button,.tt-ojt-admin-group button){border:1px solid var(--line,#d4d9e5);border-radius:9px;padding:9px 14px;min-height:36px;font-size:13px;font-weight:600;background:var(--card,#fff);color:var(--ink,#232b43);cursor:pointer}
+.tt-native .tt-ojt-admin button:hover{border-color:var(--purple,#5d61e8)}
+.tt-native .tt-ojt-admin-group{padding:16px;margin:16px 0;border:1px solid var(--line,#d8deeb);border-radius:12px}
+.tt-native .tt-ojt-admin-group header strong{display:block}
+.tt-native .tt-ojt-admin-group small{font-size:12px;color:var(--muted,#69758c)}
+.tt-native .tt-ojt-admin-people>div{justify-content:flex-start;border-top:1px solid var(--line,#e6e9f2)}
+.tt-native .tt-ojt-admin-people>div button{margin-left:auto}
+.tt-native .tt-ojt-admin .tt-ojt-add{margin-top:12px;color:var(--purple,#5d61e8)!important}
+.tt-native .tt-ojt-admin-records{overflow:auto;margin-top:24px}
+@media(max-width:600px){.tt-native .tt-ojt,.tt-native .tt-ojt-admin{margin:12px 8px;padding:16px}.tt-native .tt-ojt-header{align-items:flex-start}.tt-native .tt-ojt-roster{grid-template-columns:1fr}.tt-native .tt-ojt-header h3{font-size:21px}}
+@media(prefers-reduced-motion:reduce){.tt-native .tt-ojt *{animation:none!important;transition:none!important}}
+
 /* frontend/apps/TimeTracker/time-tracker-refined.css */
 /* TimeTracker reference-led interface.
  * Scope: CRM-native TimeTracker only; no board, role, or attendance behavior is changed.

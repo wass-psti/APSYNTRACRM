@@ -1939,6 +1939,13 @@
       "file": "20261121061831_cp_tt_offsite_home_note_account_exemptions.sql",
       "bytes": 7307,
       "sha256": "238b4a965ec52a12a573304ec3203dd122f03d25aa2ed3273f3ac3c0ce240667"
+    },
+    {
+      "version": "20261123100000",
+      "name": "cp_tt_ojt_shared_identities",
+      "file": "20261123100000_cp_tt_ojt_shared_identities.sql",
+      "bytes": 24567,
+      "sha256": "4fb0df7d5746cf9d222c8c569e8a5824d6b1b86477d2728e842e5955bbb178fc"
     }
   ]
 }
