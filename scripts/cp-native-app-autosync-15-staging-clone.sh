@@ -153,4 +153,7 @@ for stage in fixture update readback; do
     >"$restore_log"
   echo "PASS: actual staging-schema $stage SQL connection"
 done
+if [[ "${CP16_LOCAL_WRITER_PROBE:-}" == 1 ]]; then
+  bash "$root/scripts/cp-native-app-autosync-16-canonical-writer.sh" "$container" "$clone"
+fi
 echo 'NOT VERIFIED: signed Auth sessions, CRM new-module writer, browser persistence'
