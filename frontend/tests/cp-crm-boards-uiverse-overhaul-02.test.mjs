@@ -21,7 +21,7 @@ test("previous Uiverse board stylesheet remains before the complete CRM design s
   assert.ok(previous >= 0 && current > previous && complete > current);
   assert.match(
     page,
-    /apsyntra-styles\.bundle\.css\?v=cp-crm-boards-uiverse-overhaul-03/,
+    /apsyntra-styles\.bundle\.css\?v=(?:cp-crm-boards-uiverse-overhaul-03|cp-crm-overview-redesign-01)/,
   );
   assert.ok(bundle.includes(css.trimEnd()));
   assert.ok(

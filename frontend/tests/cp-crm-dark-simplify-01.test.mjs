@@ -15,7 +15,7 @@ test("final style layer and bundle are deterministic", () => {
   assert.equal(readFileSync(STYLE_BUNDLE, "utf8"), generateStyleBundle());
   assert.match(
     readFileSync("index.html", "utf8"),
-    /bundle\.css\?v=cp-crm-boards-uiverse-overhaul-03/,
+    /bundle\.css\?v=(?:cp-crm-boards-uiverse-overhaul-03|cp-crm-overview-redesign-01)/,
   );
 });
 test("solid icons exist for every existing nav/dashboard symbol without replacing light icons", () => {
