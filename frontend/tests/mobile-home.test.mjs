@@ -5,12 +5,12 @@ import {Script} from 'node:vm';
 
 const entry = readFileSync('index.html', 'utf8');
 const script = readFileSync('frontend/mobile-home.js', 'utf8');
-const css = readFileSync('frontend/crm-complete-design-system.css', 'utf8');
+const css = readFileSync('frontend/mobile-home.css', 'utf8');
 
 test('mobile shell loads after existing frontend scripts and built styles', () => {
   assert.equal((entry.match(/<link rel="stylesheet"/g) || []).length, 1);
-  assert.ok(entry.includes('frontend/crm-complete-design-system.css'));
-  assert.ok(css.includes('APSYNTRA Mobile Home — responsive signed shell'));
+  assert.ok(entry.includes('frontend/mobile-home.css'));
+  assert.ok(css.includes('APSYNTRA CRM mobile home / immersive application routes'));
   assert.ok(entry.indexOf('frontend/mobile-home.js') > entry.indexOf('frontend/monday-inspired-ui.js'));
   assert.ok(entry.indexOf('frontend/mobile-home.js') > entry.indexOf('frontend/app.js'));
   assert.doesNotMatch(script, /\bfetch\s*\(|\bDomainApi\b|\bsupabase\b|\bAuthClient\b/);
