@@ -10260,7 +10260,16 @@ async function action(name,button){
    const tab=button.dataset.tab;
    if(['roles','users','matrix','application-access','workspace','audit'].includes(tab)&&tab!==state.roleTab){
     state.roleTab=tab;
-    if(tab==='application-access')state.userRoleBatchScope='module';
+    if(tab==='application-access'){
+     state.userRoleBatchScope='module';
+     // A tab switch is a discovery boundary, even if another role tab already
+     // loaded a snapshot without the optional registered-application catalog.
+     state.userRoleBusy=true;
+     render();
+     try{await loadUserRoleManagement();}
+     catch(error){state.userRoleError=errorMessage(error);notice(error);}
+     finally{state.userRoleBusy=false;}
+    }
     render();
     animateTabContent('.aps-role-configuration');
    }
