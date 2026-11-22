@@ -310,13 +310,20 @@ try{
  await modules.getByText('Changes saved.').waitFor();
  await modules.reload();
  await modules.waitForFunction(() => document.querySelector('[aria-label=\"Opening time\"]')?.value==='540');
+ const savedWeekdays=modules.getByRole('list',{name:'Saved weekly schedules'});
+ await savedWeekdays.getByText('Monday').waitFor();
+ await savedWeekdays.getByText('9:00 AM – 10:00 PM').waitFor();
  await modules.getByRole('button',{name:'Add maintenance block'}).click();
- await modules.getByRole('button',{name:'Remove block'}).waitFor();
+ const savedBlocks=modules.getByRole('list',{name:'Saved maintenance blocks'});
+ const removeBlock=savedBlocks.getByRole('button',{name:/Remove Court 1 maintenance on/});
+ await removeBlock.waitFor();
  await modules.reload();
- await modules.getByRole('button',{name:'Remove block'}).waitFor();
- await modules.getByRole('button',{name:'Remove block'}).click();
- await modules.getByText('No maintenance blocks stored for this court and date.').waitFor();
- console.log('PASS calendar weekday and maintenance create/read/delete persistence fixtures');
+ const refreshedBlocks=modules.getByRole('list',{name:'Saved maintenance blocks'});
+ const refreshedRemove=refreshedBlocks.getByRole('button',{name:/Remove Court 1 maintenance on/});
+ await refreshedRemove.waitFor();
+ await refreshedRemove.click();
+ await modules.getByText('No maintenance blocks have been saved.').waitFor();
+ console.log('PASS saved weekly schedule and all-maintenance readback across save, reload, and removal');
 
  await modules.goto(base+'paseo/admin/settings');
  await modules.locator('.fe08-settings-form input').first().fill('3');

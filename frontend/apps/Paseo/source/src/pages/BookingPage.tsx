@@ -30,36 +30,98 @@ export function BookingPage() {
   const stagingAvailability = guestSubmissionConfigured;
   const localStaging = import.meta.env.DEV && import.meta.env.VITE_STAGING_ONLY === '1';
   const availabilityKey = selectedCourt ? `${selectedCourt.id}:${selectedDate}:${durationMinutes}` : '';
-  const [availability, setAvailability] = useState<{key: string; slots: Record<number, 'available'|'unavailable'>} | null>(null);
+  const [availability, setAvailability] = useState<{
+    key: string;
+    slots: Record<number, 'available'|'unavailable'>;
+    bookingEnabled: boolean;
+    reason: 'court_not_enabled'|'weekday_closed'|'rates_not_configured'|null;
+  } | null>(null);
   const [availabilityError, setAvailabilityError] = useState('');
+  const [availabilityRetry, setAvailabilityRetry] = useState(0);
+  const serverAvailability = availability?.key === availabilityKey ? availability : null;
+  const serverStatuses = stagingAvailability ? (serverAvailability?.slots ?? null) : undefined;
   useEffect(() => {
     if (!stagingAvailability || !selectedCourt) return;
     const controller = new AbortController();
     const params = new URLSearchParams({
       courtId:selectedCourt.id,date:selectedDate,durationMinutes:String(durationMinutes),
     });
+    setAvailabilityError('');
     void fetch(`${configuredGuestApiBase}/v1/availability?${params}`, { signal:controller.signal })
       .then(async response => {
-        if (!response.ok) throw new Error('Could not check available times. Please refresh before choosing a time.');
-        const data: {source: string; slots: {startMinute: number; status: 'available'|'unavailable'}[]} = await response.json();
-        if (data.source !== 'server') throw new Error('Available times could not be confirmed. Please refresh.');
-        return Object.fromEntries(data.slots.map(slot => [slot.startMinute, slot.status])) as Record<number,'available'|'unavailable'>;
+        const data: {
+          source?: string;
+          slots?: {startMinute: number; status: 'available'|'unavailable'}[];
+          bookingEnabled?: boolean;
+          availabilityReason?: 'court_not_enabled'|'weekday_closed'|'rates_not_configured'|null;
+          error?: string;
+        } = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error === 'invalid_schedule'
+            ? 'No operating schedule is available for this court and date.'
+            : 'Could not check available times. Please retry.');
+        }
+        if (data.source !== 'server' || !Array.isArray(data.slots)) {
+          throw new Error('Available times could not be confirmed. Please retry.');
+        }
+        const slots = Object.fromEntries(data.slots
+          .filter(slot => Number.isInteger(slot.startMinute) &&
+            slot.startMinute >= 0 && slot.startMinute + durationMinutes <= 1440 &&
+            ['available','unavailable'].includes(slot.status))
+          .map(slot => [slot.startMinute, slot.status])) as Record<number,'available'|'unavailable'>;
+        return {
+          slots,
+          // Older successful API responses imply the court and its rate were enabled.
+          bookingEnabled: data.bookingEnabled ?? true,
+          reason: data.availabilityReason ?? null,
+        };
       })
-      .then(slots => {
-        if (!controller.signal.aborted) { setAvailability({key: availabilityKey,slots}); setAvailabilityError(''); }
+      .then(result => {
+        if (!controller.signal.aborted) {
+          setAvailability({key: availabilityKey, ...result});
+          setAvailabilityError('');
+        }
       })
       .catch((reason: unknown) => {
-        if (!controller.signal.aborted) setAvailabilityError(reason instanceof Error ? reason.message : 'Availability lookup failed.');
+        if (!controller.signal.aborted) {
+          setAvailability({key: availabilityKey, slots: {}, bookingEnabled: false, reason: null});
+          setAvailabilityError(reason instanceof Error ? reason.message : 'Availability lookup failed.');
+        }
       });
     return () => controller.abort();
-  }, [stagingAvailability, selectedCourt?.id, selectedDate, durationMinutes, availabilityKey]);
-  const serverStatuses = stagingAvailability ? (availability?.key === availabilityKey ? availability.slots : null) : undefined;
+  }, [stagingAvailability, selectedCourt?.id, selectedDate, durationMinutes, availabilityKey, availabilityRetry]);
+  const availabilityNotice = serverAvailability?.reason === 'court_not_enabled'
+    ? 'This court is not enabled for booking. Its saved operating hours are shown, but booking remains unavailable.'
+    : serverAvailability?.reason === 'rates_not_configured'
+      ? 'Saved operating hours are shown. Booking remains unavailable until rates are configured.'
+      : serverAvailability?.reason === 'weekday_closed'
+        ? 'This court is closed on the selected weekday.'
+        : serverAvailability?.bookingEnabled
+          ? 'Available times updated.'
+          : '';
 
   const proposedChoice = selectedCourt && selectedMinute !== null
     ? { courtId: selectedCourt.id, date: selectedDate, startMinute: selectedMinute, durationMinutes }
     : null;
   const validSelection = isValidScheduleChoice(proposedChoice) &&
     (!stagingAvailability || (selectedMinute !== null && serverStatuses?.[selectedMinute] === 'available'));
+  const bookingStatus = validSelection
+    ? (stagingAvailability ? 'Available selection — not yet reserved' : 'Sample selection — not reserved')
+    : stagingAvailability
+      ? !selectedCourt
+        ? 'Select a court'
+        : availabilityError
+          ? 'Availability could not be confirmed'
+          : !serverAvailability
+            ? 'Checking available times'
+            : serverAvailability.reason === 'court_not_enabled'
+              ? 'Court not enabled for booking'
+              : serverAvailability.reason === 'rates_not_configured'
+                ? 'Rates not configured'
+                : serverAvailability.reason === 'weekday_closed'
+                  ? 'Closed on the selected weekday'
+                  : 'Choose an available time'
+      : 'Time not selected';
 
   function proceedToDetails() {
     if (!validSelection || !proposedChoice) return;
@@ -148,12 +210,29 @@ export function BookingPage() {
         </div>
         <p className="booking-help">{stagingAvailability ? 'Unavailable or unapproved time slots cannot be selected.' : 'Example operating hours are 8:00 AM–10:00 PM. Unavailable periods cannot be selected.'}</p>
         {stagingAvailability && selectedCourt && (
-          <p className="booking-help" role="status">{availabilityError || (serverStatuses ? 'Available times updated.' : 'Checking available times…')}</p>
+          <>
+            <p className="booking-help" role="status">
+              {availabilityError || availabilityNotice || (serverAvailability ? 'Operating hours loaded.' : 'Checking available times…')}
+            </p>
+            {availabilityError && (
+              <button className="button button-secondary" type="button"
+                onClick={() => setAvailabilityRetry(value => value + 1)}>
+                Retry availability
+              </button>
+            )}
+          </>
         )}
         {selectedCourt ? (
           <TimeSlotSelector courtId={selectedCourt.id} dayIndex={dayIndex}
             durationMinutes={durationMinutes} selectedMinute={selectedMinute}
-            {...(stagingAvailability ? { serverStatuses: serverStatuses ?? null } : {})}
+            {...(stagingAvailability ? {
+              serverStatuses: serverStatuses ?? null,
+              ...(availabilityError ? {
+                emptyMessage: 'Start times could not be loaded. Retry the availability check.',
+              } : serverAvailability?.reason === 'weekday_closed' ? {
+                emptyMessage: 'This court is closed on the selected weekday.',
+              } : {}),
+            } : {})}
             onSelect={(minute) => { setSelectedMinute(minute); clearDraft(); }} />
         ) : <p className="booking-empty" role="status">Select a court to view its available times.</p>}
 
@@ -167,7 +246,7 @@ export function BookingPage() {
             ? `${formatTime(selectedMinute)} – ${formatTime(selectedMinute + durationMinutes)}`
             : (stagingAvailability ? 'Choose an available time' : 'Time not selected')}</p>
           <p><strong>Price:</strong> Not configured</p>
-          <p><strong>Status:</strong> {validSelection ? (stagingAvailability ? 'Available selection — not yet reserved' : 'Sample selection — not reserved') : (stagingAvailability ? 'Checking available times' : 'Time not selected')}</p>
+          <p><strong>Status:</strong> {bookingStatus}</p>
         </div>
         <div className="booking-continue-section"><p className="booking-help">Add your contact details to review the booking. Your time is not reserved until the booking is accepted.</p>
         <button className="button button-primary" type="button"
