@@ -35,4 +35,5 @@ import './styles/pdl-how-it-works.css';
 import './styles/pdl-reservations-ui.css';
 import './styles/pdl-booking-ui.css';
 import './styles/pdl-app-ui.css';
+import './styles/pdl-admin-calendar.css';
 import './styles/pdl-admin-signin-ui.css';

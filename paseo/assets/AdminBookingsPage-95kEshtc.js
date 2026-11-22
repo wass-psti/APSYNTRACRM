@@ -1,0 +1,1 @@
+import{j as o}from"./index-bSo25DYu.js";import{StagingAdminReservationsPage as i}from"./StagingAdminReservationsPage-B_VBEsVo.js";import"./AdminShell-C87sre3D.js";import"./StagingAdminGate-97GteLBr.js";import"./guestReservation-BABkyp7X.js";import"./schemas-noyL-ESB.js";function s(){return o.jsx(i,{view:"bookings"})}export{s as AdminBookingsPage};
