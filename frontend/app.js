@@ -12991,6 +12991,7 @@ root.addEventListener('drop',event=>{
 });
 root.addEventListener('dragend',()=>{tradeLinkDraggedLine=null;});
 root.addEventListener('input',event=>{
+ if(syncTradeLinkFinanceInput(event))return;
  if(event.target.id==='tt-note'&&event.target.closest('#tt-clock-form')){
   ttWorkNoteDraft.write(timeTrackerWorkNoteScope(),event.target.value);
   return;
@@ -12999,7 +13000,6 @@ root.addEventListener('input',event=>{
   ttWorkNoteDraft.write(timeTrackerWorkNoteScope(state.ttOjtSelected.id),event.target.value);
   return;
  }
- if(syncTradeLinkFinanceInput(event))return;
  if(event.target.matches('[data-board-hide-search]')){
   const query=String(event.target.value||'').trim().toLocaleLowerCase();
   for(const row of root.querySelectorAll('[data-board-hide-option]'))
