@@ -116,7 +116,7 @@ export function InteractiveCourtMap() {
               <span className="interactive-court-selected-tag">SELECTED / DEMONSTRATION</span>
               <h3>{selectedCourt.name}</h3>
               <p>{selectedCourt.description}</p>
-              <small>Price: Not configured · Availability: Not connected</small>
+              <small>Price: Confirm at booking · Availability: Check schedule</small>
             </div>
             <div className="interactive-court-actions">
               <Link className="button button-secondary" to={`/courts/${selectedCourt.id}`}>View court details</Link>
