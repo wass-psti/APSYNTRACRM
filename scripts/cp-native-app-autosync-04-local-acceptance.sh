@@ -3,6 +3,11 @@
 set -euo pipefail
 
 container_name="${1:-supabase_db_cp16019-disposable-local}"
+database_name="${2:-postgres}"
+case "$database_name" in
+  postgres|cp_native10_disposable) ;;
+  *) echo "Refusing unapproved database name" >&2; exit 2 ;;
+esac
 case "$container_name" in
   *disposable-local*) ;;
   *) echo "Refusing to run outside a disposable-local database container" >&2; exit 2 ;;
@@ -139,4 +144,4 @@ $check$;
 SELECT 'PASS: two local identity claims, registration, rename, duplicate, deactivation, unrelated identity denial' AS result;
 ROLLBACK;
 SQL
-} | docker exec -i "$container_name" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres
+} | docker exec -i "$container_name" psql -X -v ON_ERROR_STOP=1 -U postgres -d "$database_name"
