@@ -172,7 +172,7 @@ const stamp=x=>x?new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',
 const locationOptions=['Office-Base Duty','Offsite (Home)','Local Field Works',
  'Out of Town Assignment','International Field Assignments'];
 export function renderTimeTrackerOjtClock({
- roster=null,selected=null,attendance=null,busy=false,error='',success=''
+ roster=null,selected=null,attendance=null,busy=false,error='',success='',workPlanDraft=''
 }={}){
  const disabled=busy?' disabled':'';
  let html='<section class="tt-ojt" aria-label="Individual OJT attendance">'+
@@ -212,7 +212,7 @@ export function renderTimeTrackerOjtClock({
      locationOptions.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('')+
      '</select>')+
    (active?'':'<label for="tt-ojt-note">Work note (required when working from home)</label>'+
-    '<textarea id="tt-ojt-note" maxlength="500" rows="3" placeholder="Optional work details…"></textarea>')+
+    '<textarea id="tt-ojt-note" maxlength="500" rows="3" placeholder="Optional work details…">'+esc(workPlanDraft)+'</textarea>')+
    '<button type="button" class="tt-ojt-clock-button" data-action="tt-ojt-clock"'+disabled+'>'+
      (busy?'Saving…':active?'End session':'Start session')+'</button></div>';
  html+='<div class="tt-ojt-history"><h4>My attendance</h4>'+
