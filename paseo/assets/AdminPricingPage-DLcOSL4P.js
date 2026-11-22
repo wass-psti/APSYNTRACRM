@@ -1,1 +1,0 @@
-import{j as i}from"./index-D4R7vsv8.js";import{StagingAdminReservationsPage as r}from"./StagingAdminReservationsPage-CorQNNtZ.js";import"./AdminShell-zArcEmSt.js";import"./StagingAdminGate-NgzMMUHf.js";import"./guestReservation-BABkyp7X.js";import"./schemas-noyL-ESB.js";function g(){return i.jsx(r,{view:"pricing"})}export{g as AdminPricingPage};

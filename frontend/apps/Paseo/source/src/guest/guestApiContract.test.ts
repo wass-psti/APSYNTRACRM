@@ -39,6 +39,34 @@ describe('guest API request contract — fake server only', () => {
     expect(url.searchParams.get('durationMinutes')).toBe('60');
   });
 
+  it.each([
+    [60, '1 hour'],
+    [90, '1.5 hours'],
+    [120, '2 hours'],
+  ])('preserves the exact %i-minute value in quote and reservation API contracts (%s)', async (durationMinutes) => {
+    const selectedSchedule = { ...schedule, durationMinutes };
+    const selectedQuote = { ...quote, ...selectedSchedule };
+    const selectedReceipt = { ...serverReceipt, ...selectedSchedule };
+    const fakeFetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => selectedQuote })
+      .mockResolvedValueOnce({ ok: true, json: async () => selectedReceipt });
+    vi.stubGlobal('fetch', fakeFetch);
+    const confirmedQuote = await requestReservationQuote(selectedSchedule, undefined, base);
+    expect(confirmedQuote.durationMinutes).toBe(durationMinutes);
+    expect(new URL(fakeFetch.mock.calls[0]![0] as string).searchParams.get('durationMinutes')).toBe(String(durationMinutes));
+    await submitGuestReservation({
+      schedule: selectedSchedule,
+      customer: { fullName: 'Sample Guest', email: 'guest@example.com', phone: '09171234567' },
+      paymentMethod: 'gcash',
+      proof: new File(['%PDF-1.4'], 'receipt.pdf', { type: 'application/pdf' }),
+      idempotencyKey: 'aabbccdd-1234-4444-8888-123456789abc',
+      quote: confirmedQuote,
+    }, base);
+    const form = fakeFetch.mock.calls[1]![1].body as FormData;
+    expect(form.get('durationMinutes')).toBe(String(durationMinutes));
+    expect(selectedReceipt.durationMinutes).toBe(durationMinutes);
+  });
+
   it('sends idempotent multipart proof without claiming payment verification', async () => {
     const fakeFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => serverReceipt });
     vi.stubGlobal('fetch', fakeFetch);

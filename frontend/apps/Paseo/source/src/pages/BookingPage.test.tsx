@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { BookingPage } from './BookingPage';
@@ -41,12 +41,26 @@ describe('FE-03 interactive mock scheduling', () => {
     expect(screen.getByRole('note')).toHaveTextContent('Demonstration schedule only');
   });
 
+  it('shows hours first in the duration selector and updates the current summary dynamically', () => {
+    renderBooking('/book?court=court-1');
+    const durationGroup = screen.getByRole('group', { name: 'Booking duration' });
+    expect(within(durationGroup).getByRole('button', { name: '1 hour (60 minutes)' })).toBeInTheDocument();
+    expect(within(durationGroup).getByRole('button', { name: '1.5 hours (90 minutes)' })).toBeInTheDocument();
+    expect(within(durationGroup).getByRole('button', { name: '2 hours (120 minutes)' })).toBeInTheDocument();
+    expect(document.querySelector('.booking-page-summary')).toHaveTextContent('1 hour');
+    expect(document.querySelector('.booking-page-summary')).toHaveTextContent('60 minutes');
+    fireEvent.click(within(durationGroup).getByRole('button', { name: '1.5 hours (90 minutes)' }));
+    expect(document.querySelector('.booking-page-summary')).toHaveTextContent('1.5 hours');
+    expect(document.querySelector('.booking-page-summary')).toHaveTextContent('90 minutes');
+    expect(document.querySelector('.immersive-booking-summary')).toHaveTextContent('1.5 hours (90 minutes)');
+  });
+
   it('supports a mock selection and clears the selected time when duration changes', () => {
     renderBooking('/book?court=court-1');
     fireEvent.click(screen.getByRole('button', { name: '8:00 AM, sample available' }));
     expect(screen.getByText(/Sample selection — not reserved/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /continue to customer details/i })).toBeEnabled();
-    fireEvent.click(screen.getByRole('button', { name: '90 minutes' }));
+    fireEvent.click(screen.getByRole('button', { name: '1.5 hours (90 minutes)' }));
     expect(screen.getAllByText(/Time not selected/i).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /continue to customer details/i })).toBeDisabled();
   });

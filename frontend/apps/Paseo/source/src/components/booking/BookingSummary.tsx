@@ -1,6 +1,6 @@
 import type { ScheduleChoice } from '../../booking/bookingDraft';
 import { courts } from '../../mocks/courts';
-import { formatDemoDate, formatTime } from '../../utils/scheduleUtils';
+import { formatDurationHours, formatDemoDate, formatTime } from '../../utils/scheduleUtils';
 
 /** Existing draft semantics preserved; the premium treatment remains presentational. */
 export function BookingSummary({ schedule }: { schedule: ScheduleChoice }) {
@@ -15,7 +15,7 @@ export function BookingSummary({ schedule }: { schedule: ScheduleChoice }) {
         <p><strong>Court:</strong> {court?.name ?? 'Unknown court'}</p>
         <p><strong>Date:</strong> {formatDemoDate(schedule.date)}</p>
         <p><strong>Time:</strong> {formatTime(schedule.startMinute)} – {formatTime(schedule.startMinute + schedule.durationMinutes)}</p>
-        <p><strong>Duration:</strong> {schedule.durationMinutes} minutes</p>
+        <p><strong>Duration:</strong> <span className="booking-duration-value"><strong>{formatDurationHours(schedule.durationMinutes)}</strong> <small>({schedule.durationMinutes} minutes)</small></span></p>
         <p><strong>Price:</strong> Server quote at review</p>
         <p><strong>Status:</strong> Draft only — not yet reserved</p>
       </div>

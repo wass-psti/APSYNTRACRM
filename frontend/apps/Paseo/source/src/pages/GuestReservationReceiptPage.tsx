@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import {
   fetchGuestReceipt, formatPeso, guestSubmissionConfigured, type ServerReceipt,
 } from '../guest/guestReservation';
-import { formatTime } from '../utils/scheduleUtils';
+import { formatBookingDuration, formatDurationHours, formatTime } from '../utils/scheduleUtils';
 
 function downloadTextReceipt(receipt: ServerReceipt) {
   const content = [
@@ -15,7 +15,7 @@ function downloadTextReceipt(receipt: ServerReceipt) {
     `Contact: ${receipt.phone}`,
     `Court: ${receipt.courtId}`,
     `Schedule: ${receipt.date}, ${formatTime(receipt.startMinute)} – ${formatTime(receipt.startMinute + receipt.durationMinutes)}`,
-    `Duration: ${receipt.durationMinutes} minutes`,
+    `Duration: ${formatBookingDuration(receipt.durationMinutes)}`,
     `Amount: ${formatPeso(receipt.amountMinor)}`,
     `Method: ${receipt.paymentMethod.toUpperCase()}`,
     `Submitted: ${receipt.createdAt}`,
@@ -77,7 +77,7 @@ export function GuestReservationReceiptPage() {
             <div><dt>Contact</dt><dd>{receipt.phone} · {receipt.email}</dd></div>
             <div><dt>Court</dt><dd>{receipt.courtId}</dd></div>
             <div><dt>Schedule</dt><dd>{receipt.date}, {formatTime(receipt.startMinute)} – {formatTime(receipt.startMinute + receipt.durationMinutes)}</dd></div>
-            <div><dt>Duration</dt><dd>{receipt.durationMinutes} minutes</dd></div>
+            <div><dt>Duration</dt><dd><strong>{formatDurationHours(receipt.durationMinutes)}</strong> ({receipt.durationMinutes} minutes)</dd></div>
             <div><dt>Total amount</dt><dd>{formatPeso(receipt.amountMinor)}</dd></div>
             <div><dt>Payment method</dt><dd>{receipt.paymentMethod.toUpperCase()}</dd></div>
             <div><dt>Submission time</dt><dd>{new Date(receipt.createdAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} (Philippine time)</dd></div>
