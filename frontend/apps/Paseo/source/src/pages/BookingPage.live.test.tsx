@@ -71,6 +71,10 @@ describe("Paseo live operating-hour availability", () => {
         /saved operating hours are shown, but booking remains unavailable/i,
       ),
     ).toBeInTheDocument();
+    expect(screen.getByText("Court not enabled for booking")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Checking available times"),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /continue to customer details/i }),
     ).toBeDisabled();

@@ -105,6 +105,23 @@ export function BookingPage() {
     : null;
   const validSelection = isValidScheduleChoice(proposedChoice) &&
     (!stagingAvailability || (selectedMinute !== null && serverStatuses?.[selectedMinute] === 'available'));
+  const bookingStatus = validSelection
+    ? (stagingAvailability ? 'Available selection — not yet reserved' : 'Sample selection — not reserved')
+    : stagingAvailability
+      ? !selectedCourt
+        ? 'Select a court'
+        : availabilityError
+          ? 'Availability could not be confirmed'
+          : !serverAvailability
+            ? 'Checking available times'
+            : serverAvailability.reason === 'court_not_enabled'
+              ? 'Court not enabled for booking'
+              : serverAvailability.reason === 'rates_not_configured'
+                ? 'Rates not configured'
+                : serverAvailability.reason === 'weekday_closed'
+                  ? 'Closed on the selected weekday'
+                  : 'Choose an available time'
+      : 'Time not selected';
 
   function proceedToDetails() {
     if (!validSelection || !proposedChoice) return;
@@ -229,7 +246,7 @@ export function BookingPage() {
             ? `${formatTime(selectedMinute)} – ${formatTime(selectedMinute + durationMinutes)}`
             : (stagingAvailability ? 'Choose an available time' : 'Time not selected')}</p>
           <p><strong>Price:</strong> Not configured</p>
-          <p><strong>Status:</strong> {validSelection ? (stagingAvailability ? 'Available selection — not yet reserved' : 'Sample selection — not reserved') : (stagingAvailability ? 'Checking available times' : 'Time not selected')}</p>
+          <p><strong>Status:</strong> {bookingStatus}</p>
         </div>
         <div className="booking-continue-section"><p className="booking-help">Add your contact details to review the booking. Your time is not reserved until the booking is accepted.</p>
         <button className="button button-primary" type="button"
