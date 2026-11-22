@@ -15,8 +15,8 @@ export function nativeApplicationOptions(snapshot) {
     if (typeof id !== 'string' || !moduleIdPattern.test(id) || seen.has(id)) continue;
     seen.add(id);
     const suppliedName = typeof entry === 'object' && entry !== null ? entry.name : null;
-    const name = knownNames.get(id) ||
-      (typeof suppliedName === 'string' && suppliedName.trim() ? suppliedName.trim() : id);
+    const name = typeof suppliedName === 'string' && suppliedName.trim()
+      ? suppliedName.trim() : knownNames.get(id) || id;
     result.push([id, name]);
   }
   return result;

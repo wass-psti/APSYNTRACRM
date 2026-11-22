@@ -50,7 +50,7 @@ export const FUELTRANS_WORKSPACE_ROLES=Object.freeze([
 const delegatedModules=new Set(['time-tracker','fueltrack-plus','tradelink','fund-released-tracker','tool-traceability','material-request-hub','toolbox-issues']);
 export class UserRoleManagementClient {
  constructor(api){this.api=api;}
- async snapshot(workspaceId,{includeFuelTrans=false,includeFundTracker=false,includeScopedSix=false,includeCharter=false}={}){
+ async snapshot(workspaceId,{includeFuelTrans=false,includeFundTracker=false,includeScopedSix=false,includeCharter=false,includeNativeCatalog=false}={}){
   if(!UUID.test(workspaceId||''))throw Error('Invalid workspace');
   // Always verify the existing server-authorized workspace snapshot first. New optional
   // RPC availability must never bypass the central CRM Administrator scope guard.
@@ -58,6 +58,25 @@ export class UserRoleManagementClient {
   if(d?.adminVerified!==true||d.workspaceId!==workspaceId||
    !['users','modules','moduleAssignments','boards','boardAssignments'].every(x=>Array.isArray(d[x])))
    throw Error('Invalid server-authorized role management result');
+  // The canonical registered board metadata is the live module catalog. Older
+  // servers can still serve the existing snapshot until the read RPC is deployed.
+  let registeredModules=d.modules;
+  if(includeNativeCatalog){
+   try{
+    const catalog=await this.api.rpc('apsyntra_native_application_registry',{
+     p_workspace_id:workspaceId
+    });
+    if(catalog?.contract!=='cp-native-app-autosync-03-v1'||
+       catalog.workspaceId!==workspaceId||!Array.isArray(catalog.modules)||
+       !catalog.modules.every(m=>typeof m?.moduleId==='string'&&
+        typeof m.name==='string'&&UUID.test(m.boardId||'')))
+     throw Error('Invalid signed native application registration catalog');
+    registeredModules=catalog.modules;
+   }catch(error){
+    if(!(error?.status===404&&error?.code==='PGRST202'))throw error;
+   }
+  }
+  if(includeNativeCatalog)d.modules=registeredModules;
   const workspaceScopeCountsAvailable=d.users.every(u=>
     Number.isInteger(u.activeWorkspaceCount)&&u.activeWorkspaceCount>=1);
   const workspaceScopedMrhAvailable=d.roleManagementContract===

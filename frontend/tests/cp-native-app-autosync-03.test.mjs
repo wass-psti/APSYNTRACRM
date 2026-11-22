@@ -1,0 +1,85 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {UserRoleManagementClient,renderUserRoleManagement} from '../user-role-management.js';
+import {nativeApplicationOptions} from '../native-application-catalog.js';
+
+const workspace='10000000-0000-4000-8000-000000000001';
+const board='20000000-0000-4000-8000-000000000002';
+const user='30000000-0000-4000-8000-000000000003';
+const actor='40000000-0000-4000-8000-000000000004';
+const snapshot={adminVerified:true,workspaceId:workspace,
+ users:[{id:user,activeWorkspaceCount:1,protected:false,name:'QA',email:'qa@example.invalid'}],
+ modules:['time-tracker'],moduleAssignments:[{moduleId:'time-tracker',userId:user,role:'Employee',enabled:true}],
+ boards:[],boardAssignments:[]};
+const missing=()=>Object.assign(Error('RPC not installed'),{status:404,code:'PGRST202'});
+
+function service(registryResult){
+ const calls=[];
+ const client=new UserRoleManagementClient({rpc:async(name,args)=>{
+  calls.push([name,args]);
+  if(name==='apsyntra_role_user_management_snapshot')return structuredClone(snapshot);
+  if(name==='apsyntra_native_application_registry'){
+   if(registryResult instanceof Error)throw registryResult;
+   return registryResult;
+  }
+  if(name==='apsyntra_crm_platform_role_snapshot')return {
+   adminVerified:true,workspaceId:workspace,roles:[{userId:user,effectiveRole:'employee',assignedRole:null}]
+  };
+  if(name==='apsyntra_role_tooltrace_workspace_snapshot')throw missing();
+  throw Error('Unexpected RPC: '+name);
+ }});
+ return {client,calls};
+}
+const application=(moduleId,name)=>({moduleId,name,boardId:board,
+ updatedAt:'2026-11-22T00:00:00Z'});
+const registry=(modules)=>({contract:'cp-native-app-autosync-03-v1',workspaceId:workspace,modules});
+
+test('signed registry read replaces stale static list and preserves assignments',async()=>{
+ const {client,calls}=service(registry([application('time-tracker','Renamed Attendance'),application('new-portal','New Portal')]));
+ const actual=await client.snapshot(workspace,{includeNativeCatalog:true});
+ assert.deepEqual(nativeApplicationOptions(actual),[
+  ['time-tracker','Renamed Attendance'],['new-portal','New Portal']]);
+ assert.deepEqual(actual.moduleAssignments,snapshot.moduleAssignments);
+ assert.equal(calls[1][0],'apsyntra_native_application_registry');
+ assert.deepEqual(calls[1][1],{p_workspace_id:workspace});
+ const html=renderUserRoleManagement({verified:true,data:actual,
+  selectedUserId:user,actorUserId:actor,applicationAccessOnly:true});
+ assert.match(html,/Renamed Attendance/);
+ assert.match(html,/New Portal/);
+ assert.match(html,/data-resource="new-portal" disabled/);
+ const batch=renderUserRoleManagement({verified:true,data:actual,
+  selectedUserId:user,actorUserId:actor,applicationAccessOnly:true,batchMode:true});
+ assert.match(batch,/data-user-role-batch-app value="new-portal" disabled/);
+});
+
+test('deactivation or removal disappears after the next signed registry read',async()=>{
+ const enabled=await service(registry([application('new-portal','New Portal')])).client.snapshot(workspace,{includeNativeCatalog:true});
+ const disabled=await service(registry([])).client.snapshot(workspace,{includeNativeCatalog:true});
+ assert.equal(nativeApplicationOptions(enabled).length,1);
+ assert.deepEqual(nativeApplicationOptions(disabled),[]);
+ assert.deepEqual(disabled.moduleAssignments,snapshot.moduleAssignments);
+});
+
+test('older server uses existing snapshot only when RPC is genuinely missing',async()=>{
+ const actual=await service(missing()).client.snapshot(workspace,{includeNativeCatalog:true});
+ assert.deepEqual(nativeApplicationOptions(actual),[['time-tracker','TimeTracker Attendance']]);
+});
+
+test('bad contract and transient connectivity errors do not masquerade as an empty catalog',async()=>{
+ await assert.rejects(
+  service(registry([{moduleId:'new-portal',name:'Broken',boardId:'not-a-uuid'}])).client.snapshot(workspace,{includeNativeCatalog:true}),
+  /Invalid signed native application registration catalog/);
+ await assert.rejects(
+  service(Object.assign(Error('503 unavailable'),{status:503})).client.snapshot(workspace,{includeNativeCatalog:true}),
+  /503 unavailable/);
+});
+
+test('migration is a read-only projection and does not change assignment or RLS contracts',()=>{
+ const sql=readFileSync('supabase/migrations/20261122010413_cp_native_app_autosync_03_registry_projection.sql','utf8');
+ assert.match(sql,/FROM public\.work_boards b/);
+ assert.match(sql,/public\.apsyntra_role_require_scope\(p_workspace_id\)/);
+ assert.match(sql,/b\.status='active'/);
+ assert.match(sql,/b\.archived_at IS NULL AND b\.trashed_at IS NULL/);
+ assert.doesNotMatch(sql,/CREATE TABLE|CREATE POLICY|ALTER POLICY|INSERT INTO|UPDATE public\.|DELETE FROM/i);
+});

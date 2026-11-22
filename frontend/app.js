@@ -2658,7 +2658,7 @@ async function loadUserRoleManagement(){
  if(state.adminVerified!==true || !(await roleConfig.adminVerified()))throw new ApiError('CRM administrator role management access denied.',403);
  const ctx=await db.context();
  if(ctx.user_id!==state.context?.user_id||ctx.workspace_id!==state.context?.workspace_id)throw new ApiError('Authoritative workspace changed.',403);
- const roleSnapshot=await userRoleManager.snapshot(ctx.workspace_id,{includeFuelTrans:true,includeFundTracker:true,includeScopedSix:true,includeCharter:true});
+ const roleSnapshot=await userRoleManager.snapshot(ctx.workspace_id,{includeFuelTrans:true,includeFundTracker:true,includeScopedSix:true,includeCharter:true,includeNativeCatalog:state.view==='role-configuration'&&state.roleTab==='application-access'});
  if(!auth.isSignedIn||auth.userId!==ctx.user_id||
     state.context?.workspace_id!==ctx.workspace_id||state.context?.user_id!==ctx.user_id)
   throw new ApiError('Signed workspace changed during application discovery.',409);
@@ -12977,6 +12977,7 @@ document.addEventListener('visibilitychange',()=>{
  platformSync.visibilityChanged();
  setBoardLoadingVisibility(root,document.hidden);
  if(!document.hidden)void refreshCorrectedTimeTrackerClock({onFocus:true});
+ if(!document.hidden)refreshNativeCatalogOnFocus();
 });
 // Window focus is distinct from document visibility: switching between two
 // visible application windows may not emit visibilitychange in either one.
