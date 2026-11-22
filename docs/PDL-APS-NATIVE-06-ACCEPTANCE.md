@@ -70,22 +70,22 @@ This is real PostgreSQL function/persistence acceptance. It is not represented a
 
 ## Verification
 
-| Check                                       | Result                                                                             |
-| ------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Paseo TypeScript typecheck                  | PASS                                                                               |
-| Paseo unit suite                            | 67/67 PASS (13 files)                                                              |
-| CP-PDL-03 migration/source contracts        | 5/5 PASS                                                                           |
-| Native PDL contract suite                   | 25/25 PASS                                                                         |
-| Native Pages browser acceptance             | PASS at 390, 768 and 1440 px; all nine rate-matrix values and admin/readback/lifecycle paths PASS |
-| Disposable PostgreSQL E2E                   | PASS; full rollback verified                                                       |
-| Live production availability                | 9/9 PASS                                                                           |
-| Live same-day past-slot and quote rejection | PASS                                                                               |
-| Root CRM syntax check                       | PASS                                                                               |
-| Root CRM tests                              | 3,341/3,341 PASS                                                                   |
-| Root CRM production build                   | PASS (existing large-chunk advisory only)                                          |
-| Paseo native bundle build                   | PASS (existing Rollup annotation and static restore-script advisories only)        |
-| Pages source verification                   | PASS                                                                               |
-| `git diff --check`                          | PASS                                                                               |
+| Check                                       | Result                                                                                                      |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Paseo TypeScript typecheck                  | PASS                                                                                                        |
+| Paseo unit suite                            | 67/67 PASS (13 files)                                                                                       |
+| CP-PDL-03 migration/source contracts        | 5/5 PASS                                                                                                    |
+| Native PDL contract suite                   | 25/25 PASS                                                                                                  |
+| Native Pages browser acceptance             | PASS at 390, 768 and 1440 px; all nine rate-matrix values, refresh, admin/readback and lifecycle paths PASS |
+| Disposable PostgreSQL E2E                   | PASS; full rollback verified                                                                                |
+| Live production availability                | 9/9 PASS                                                                                                    |
+| Live same-day past-slot and quote rejection | PASS                                                                                                        |
+| Root CRM syntax check                       | PASS                                                                                                        |
+| Root CRM tests                              | 3,341/3,341 PASS                                                                                            |
+| Root CRM production build                   | PASS (existing large-chunk advisory only)                                                                   |
+| Paseo native bundle build                   | PASS (existing Rollup annotation and static restore-script advisories only)                                 |
+| Pages source verification                   | PASS                                                                                                        |
+| `git diff --check`                          | PASS                                                                                                        |
 
 Prettier check on several existing compact source/workflow files reports pre-existing formatting differences; those files were not wholesale reformatted to avoid unrelated churn. The new contract test was formatted and checked independently.
 
@@ -93,8 +93,8 @@ Prettier check on several existing compact source/workflow files reports pre-exi
 
 The production database migration and first public booking correction were merged in PR #768 and deployed through the canonical Pages workflow. The deployed bundle is `assets/index-BU7Wg1lN.js`. Live production browser smoke passed at 390, 768 and 1440 px: same-day past starts remain hidden, future-date 60/90/120-minute availability loads from the server, four live availability requests per viewport completed without failed requests or page errors, and the booking summary shows server quote pricing.
 
-The additional consolidated admin rate-readiness matrix is a follow-up frontend change on `feat/cp-pdl-booking-availability-03b-rate-readiness`; it is not yet deployed. It uses the existing read-only court configuration endpoint and does not modify production rate values.
+The consolidated admin rate-readiness matrix was merged in PR #769 and deployed in the same Pages release. The deployed lazy-loaded admin module is `assets/StagingAdminReservationsPage-CorQNNtZ.js`; the live asset was fetched and verified to contain the matrix. The matrix reads the existing court configuration endpoint and does not modify production rate values. GitHub Pages deployment run `45035613239` and main frontend validation run `45035614013` both completed successfully. The main frontend validation included a live-Pages asset-to-commit check.
 
 The existing browser acceptance uses isolated synthetic fixtures for UI and administrator lifecycle flows. The disposable PostgreSQL test proves the real SQL quote-to-reservation persistence path. A production reservation was deliberately not created using synthetic guest/payment-proof data, because that would create a live pending-payment record in the operational reservation queue.
 
-**Status:** `IMPLEMENTED` for production rate/configuration readback, live availability, same-day correction, the first public Pages release, and disposable quote-to-reservation database acceptance. `PENDING` for deployment of the consolidated admin rate-readiness matrix and a controlled production reservation acceptance using an explicitly designated test booking/cleanup procedure. No payment was initiated or marked verified.
+**Status:** `IMPLEMENTED` for production rate/configuration readback, live availability, same-day correction, the first public Pages release, and disposable quote-to-reservation database acceptance. `PENDING` only for a controlled production reservation acceptance using an explicitly designated test booking/cleanup procedure. No payment was initiated or marked verified.
