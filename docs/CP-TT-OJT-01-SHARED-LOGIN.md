@@ -19,7 +19,7 @@ TimeTracker-only attendance subidentity, not a separate APSYNTRA user.
    account, workspace and TimeTracker board. Clock-in and clock-out records
    store that intern ID, while the signed OJT account remains the actor.
 6. An active session must be ended before its intern profile or the shared
-   login can be deactivated. Historical attendance is retained. The intern name is captured on each clock-in record, so later roster renames do not rewrite historical attendance.
+   login can be deactivated. Historical attendance is retained. New clock-ins capture the intern name on the attendance row, so later roster renames do not rewrite those records. Existing rows are backfilled from the intern's current roster name; an older name that was changed before this migration cannot be reconstructed.
 
 ## Database deployment
 Apply these migrations in order:
