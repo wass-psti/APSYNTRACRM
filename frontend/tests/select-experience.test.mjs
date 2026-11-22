@@ -204,31 +204,39 @@ class ElementFake{
  emit(type,props={}){
   const e={type,target:this,preventDefault(){this.prevented=true;},
    stopPropagation(){this.stopped=true;},...props};
-  for(const callback of this.handlers.get(type)||[])callback(e);
+  // Retain the click path even when an option handler removes its popup.
+  const path=[];for(let node=this;node;node=node.parentElement)path.push(node);
+  for(const node of path){
+   for(const callback of node.handlers.get(type)||[])callback(e);
+   if(e.stopped||!props.bubbles)break;
+  }
   return e;
  }
  focus(){this.doc.focused=this;}
  getBoundingClientRect(){return {left:16,right:256,width:240,top:32,bottom:74,height:42};}
  scrollIntoView(){}
 }
-test('mock DOM: popup opens, chooses native value, dispatches change, and disposes',async()=>{
+test('mock DOM: TimeTracker Location choice closes without reopening via the form label',async()=>{
  const saved={document:globalThis.document,window:globalThis.window,
   MutationObserver:globalThis.MutationObserver};
  let observer;
  const doc={events:[],addEventListener(){},removeEventListener(){}};
  doc.createElement=tag=>new ElementFake(tag,doc);
  doc.body=doc.createElement('body');
+ const label=doc.createElement('label');
  const select=doc.createElement('select');
- select.options=[{value:'',textContent:'Choose'},
-  {value:'valid-id',textContent:'Verified Member'}];
- select.name='member';select.labels=[];
+ select.options=[{value:'',textContent:'Select location…'},
+  {value:'Office-Base Duty',textContent:'Office-Base Duty'},
+  {value:'Offsite (Home)',textContent:'Offsite (Home)'}];
+ select.name='tt-location';select.labels=[label];
  select.selectedIndex=0;select.disabled=false;select.required=true;
  select.validity={valueMissing:false};
  Object.defineProperty(select,'value',{
   get(){return this.options[this.selectedIndex].value;},
   set(value){this.selectedIndex=this.options.findIndex(opt=>opt.value===value);}
  });
- doc.body.append(select);
+ label.append(select);
+ doc.body.append(label);
  doc.activeElement=select;
  const win={innerWidth:950,requestAnimationFrame:fn=>fn(),
   matchMedia:()=>({matches:false})};
@@ -257,17 +265,25 @@ test('mock DOM: popup opens, chooses native value, dispatches change, and dispos
   doc.focused=null;
   select.emit('focus');
   assert.equal(doc.focused,trigger,'legacy programmatic select.focus() is proxied');
-  trigger.emit('click');
+  trigger.emit('click',{bubbles:true});
   const list=anchor.children.find(n=>n.getAttribute('role')==='listbox');
   assert.ok(list,'a popup listbox is positioned in the select anchor');
   assert.equal(trigger.getAttribute('aria-expanded'),'true');
   assert.equal(trigger.getAttribute('aria-controls'),list.id);
-  const option=list.children.find(n=>n.getAttribute('data-option-index')==='1');
-  list.emit('click',{target:option});
-  assert.equal(select.value,'valid-id');
+  const option=list.children.find(n=>n.getAttribute('data-option-index')==='2');
+  const choice=list.emit('click',{target:option,bubbles:true});
+  assert.equal(choice.stopped,true,'option click cannot reach the label open handler');
+  assert.equal(choice.prevented,true,'native label activation is suppressed');
+  assert.equal(select.value,'Offsite (Home)');
   assert.deepEqual(doc.events.filter(x=>x==='input'||x==='change'),['input','change']);
   assert.equal(trigger.getAttribute('aria-expanded'),'false');
   assert.ok(!anchor.children.find(n=>n.getAttribute('role')==='listbox'));
+  assert.equal(trigger.children[0].textContent,'Offsite (Home)');
+  label.emit('click',{bubbles:true});
+  assert.equal(trigger.getAttribute('aria-expanded'),'true','label can intentionally reopen');
+  trigger.emit('keydown',{key:'Escape'});
+  assert.equal(trigger.getAttribute('aria-expanded'),'false','Escape dismisses the list');
+  assert.equal(select.value,'Offsite (Home)','dismissing retains the choice');
   select.remove();
   observer.callback([{type:'childList',target:doc.body,addedNodes:[]}]);
   assert.equal(trigger.isConnected,false);
