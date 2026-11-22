@@ -11,11 +11,11 @@ import { sidebarIcon } from "../sidebar-visuals.js";
 const css = readFileSync("frontend/dark-simplified-system.css", "utf8");
 const legacy = readFileSync("frontend/monday-inspired-ui.css", "utf8");
 test("final style layer and bundle are deterministic", () => {
-  assert.equal(STYLE_SOURCES.at(-3), "frontend/dark-simplified-system.css");
+  assert.equal(STYLE_SOURCES.at(-4), "frontend/dark-simplified-system.css");
   assert.equal(readFileSync(STYLE_BUNDLE, "utf8"), generateStyleBundle());
   assert.match(
     readFileSync("index.html", "utf8"),
-    /bundle\.css\?v=cp-crm-boards-uiverse-overhaul-02/,
+    /bundle\.css\?v=cp-crm-boards-uiverse-overhaul-03/,
   );
 });
 test("solid icons exist for every existing nav/dashboard symbol without replacing light icons", () => {
