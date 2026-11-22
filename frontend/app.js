@@ -211,6 +211,7 @@ import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-
 import {mountRoleConfigurationMotion,stopRoleConfigurationMotion} from './role-configuration-visuals.js';
 import {mountUserRoleMotion,stopUserRoleMotion} from './user-role-visuals.js';
 import {settingsIcon,mountSettingsMotion,stopSettingsMotion} from './settings-visuals.js';
+import {shouldRefreshNativeCatalogOnSync} from './native-application-catalog.js';
 import {crmPlatformRoleChangeNeeded,FUELTRANS_WORKSPACE_ROLES,SCOPED_SIX_MODULE_IDS,UserRoleManagementClient,renderUserRoleManagement,selectDefaultUserRoleTarget,defaultModuleRoleForAssignment,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
 import {parseSignedCrmRole,signedCrmRoleLabel,signedCrmIdentityLabel,currentSignedCrmRole} from './crm-role-context.js';
 import {workspaceRelationFromCatalog,workspaceRelationLabel} from './workspace-relation-context.js';
@@ -2290,6 +2291,8 @@ function invalidateSignedSyncView(){
  boardCacheChannel.stop();db.invalidateBoardCache();state.context=null;auth.clear();
  renderLogin('Your signed workspace access changed. Sign in again to continue.');
 }
+// Bound registry refresh work when multiple board broadcasts arrive together.
+let nativeRegistryBroadcastReadAt=0;
 async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  if(!state.context||state.context.user_id!==userId||
   state.context.workspace_id!==workspaceId||!auth.isSignedIn)return false;
@@ -2530,8 +2533,19 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   return true;
  }
  if(view==='user-role-management'&&teamsController)await teamsController.load();
- if(view==='role-configuration'&&state.adminVerified===true)
+ if(view==='role-configuration'&&state.adminVerified===true){
   await loadRoleConfiguration();
+  // Board registry changes arrive as invalidation hints. Re-read the signed
+  // catalog only on the Native Application Access tab; never trust event data.
+  const now=Date.now();
+  if(shouldRefreshNativeCatalogOnSync({
+   reason,view,tab:state.roleTab,adminVerified:state.adminVerified,
+   busy:state.userRoleBusy,now,lastReadAt:nativeRegistryBroadcastReadAt
+  })){
+   nativeRegistryBroadcastReadAt=now;
+   await loadUserRoleManagement();
+  }
+ }
  if(view==='foundation'&&sensitive)await refreshFoundation();
  if(view==='boards'&&state.showArchived)state.archived=await db.boards('archived');
  if(view==='boards'&&state.showTrash)state.trashed=await db.boards('trashed');

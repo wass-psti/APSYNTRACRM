@@ -21,3 +21,14 @@ export function nativeApplicationOptions(snapshot) {
   }
   return result;
 }
+
+/** Revalidate on authoritative board registry hints without request storms. */
+export function shouldRefreshNativeCatalogOnSync({
+ reason,view,tab,adminVerified=false,busy=false,now=0,lastReadAt=0,
+ cooldownMs=15000
+}={}){
+ return reason==='broadcast'&&view==='role-configuration'&&
+  tab==='application-access'&&adminVerified===true&&busy!==true&&
+  Number.isFinite(now)&&now>0&&
+  (!Number.isFinite(lastReadAt)||lastReadAt<=0||now-lastReadAt>=cooldownMs);
+}
