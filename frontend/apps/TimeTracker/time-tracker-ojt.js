@@ -1,10 +1,10 @@
-/** Shared OJT login: one GoTrue actor, independent PIN-verified intern attendance.
- * This module never persists a PIN or bearer identity token to storage.
+/** Shared OJT login: one existing GoTrue actor, dropdown-selected TimeTracker subidentities.
+ * Selecting a name attributes attendance; it does not create another Auth account.
+ * The signed PostgreSQL RPCs independently validate the shared account and intern roster.
  */
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 /** Existing verified company login: ojt@watchdogautomation.com.ph.
  * TimeTracker application role remains Employee; department is OJT.
- * The backend separately verifies these attributes and active membership.
  */
 export const TIMETRACKER_SHARED_OJT_USER_ID='d613280d-907b-418f-b872-c0f6dd53e580';
 export function isEligibleTimeTrackerSharedOjtAccount(member){
@@ -12,7 +12,6 @@ export function isEligibleTimeTrackerSharedOjtAccount(member){
   member?.role==='Employee' &&
   member?.department?.trim().toLocaleLowerCase()==='ojt';
 }
-
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[c]));
@@ -20,12 +19,13 @@ const fail=m=>{throw Error(m)};
 const validTime=v=>typeof v==='string'&&Number.isFinite(Date.parse(v));
 const same=(r,s)=>r?.actorId===s.userId&&r?.workspaceId===s.workspaceId&&
  r?.boardId===s.boardId;
-const scoped=(a)=>a&&uuid.test(a.userId||'')&&uuid.test(a.workspaceId||'')&&uuid.test(a.boardId||'');
+const scoped=a=>a&&uuid.test(a.userId||'')&&uuid.test(a.workspaceId||'')&&uuid.test(a.boardId||'');
 const safeName=n=>typeof n==='string'&&n.trim().length>=2&&n.trim().length<=100;
 const sharedModes=['PERSONAL','SHARED_LOGIN','SHARED_DISABLED'];
 export function projectOjtRoster(raw,scope){
  if(!scoped(scope)||raw?.contract!=='tt-ojt-roster-1'||!same(raw,scope)||
-  !sharedModes.includes(raw.mode)||!Array.isArray(raw.interns)||raw.interns.length>300)fail('Verified OJT roster unavailable');
+  !sharedModes.includes(raw.mode)||!Array.isArray(raw.interns)||raw.interns.length>300)
+  fail('Verified OJT roster unavailable');
  const seen=new Set(),names=new Set();
  const interns=raw.interns.map(i=>{
   if(!uuid.test(i?.id||'')||!safeName(i.name)||seen.has(i.id)||
@@ -54,7 +54,7 @@ export function projectOjtAdmin(raw,scope){
  }))});
 }
 export function projectOjtAttendance(raw,scope,internId){
- if(!scoped(scope)||raw?.contract!=='tt-ojt-attendance-1'||
+ if(!scoped(scope)||!uuid.test(internId||'')||raw?.contract!=='tt-ojt-attendance-1'||
   !same(raw,scope)||raw?.internId!==internId||!safeName(raw.name)||
   !Array.isArray(raw.records)||raw.records.length>50)
   fail('Verified intern attendance unavailable');
@@ -69,7 +69,8 @@ export function projectOjtAttendance(raw,scope,internId){
   return Object.freeze({id:x.id,clockIn:x.clockIn,clockOut:x.clockOut,
    location:x.location,workNote:x.workNote||'',status:x.clockOut?'Completed':'Active'});
  });
- if(records.filter(x=>x.status==='Active').length>1)fail('Conflicting OJT sessions require administrator review');
+ if(records.filter(x=>x.status==='Active').length>1)
+  fail('Conflicting OJT sessions require administrator review');
  return Object.freeze({internId,name:raw.name,records:Object.freeze(records),
   active:records.find(x=>x.status==='Active')||null});
 }
@@ -83,10 +84,9 @@ export function projectOjtAdminAttendance(raw,scope){
     (x.clockOut!==null&&!validTime(x.clockOut)))fail('Invalid OJT admin attendance row');
   ids.add(x.id);
   return Object.freeze({id:x.id,internId:x.internId,name:x.name,
-    clockIn:x.clockIn,clockOut:x.clockOut,location:String(x.location||'')});
+   clockIn:x.clockIn,clockOut:x.clockOut,location:String(x.location||'')});
  }))});
 }
-
 export class TimeTrackerOjtClient{
  constructor({auth,api}){this.auth=auth;this.api=api;}
  async identity(scope){
@@ -105,9 +105,9 @@ export class TimeTrackerOjtClient{
  }
  roster(s){return this.perform(s,'timetracker_ojt_roster',{},v=>projectOjtRoster(v,s));}
  admin(s){return this.perform(s,'timetracker_ojt_admin_snapshot',{},v=>projectOjtAdmin(v,s));}
- async adminAttendance(s){
+ adminAttendance(s){
   return this.perform(s,'timetracker_ojt_admin_attendance',{},
-    v=>projectOjtAdminAttendance(v,s));
+   v=>projectOjtAdminAttendance(v,s));
  }
  async setGroup(s,userId,enabled){
   if(!uuid.test(userId||'')||typeof enabled!=='boolean')fail('OJT account required');
@@ -116,57 +116,36 @@ export class TimeTrackerOjtClient{
    v=>{if(v?.contract!=='tt-ojt-admin-write-1'||v.workspaceId!==s.workspaceId||
        v.userId!==userId||v.enabled!==enabled)fail('OJT group write unverified');return v});
  }
- async setIntern(s,{userId,id=null,name,pin=null,active=true}={}){
+ async setIntern(s,{userId,id=null,name,active=true}={}){
   name=String(name??'').trim();
   if(!uuid.test(userId||'')||(id!==null&&!uuid.test(id))||!safeName(name)||
-    (pin!==null&&!/^[0-9]{8,12}$/.test(pin))||
-    (id===null&&pin===null))fail('Intern name and individual 8–12 digit PIN required');
+    typeof active!=='boolean')fail('A valid intern name and status are required');
   return this.perform(s,'timetracker_ojt_intern_set',
-   {p_shared_user_id:userId,p_intern_id:id,p_name:name,p_pin:pin,p_active:active},
+   {p_shared_user_id:userId,p_intern_id:id,p_name:name,p_active:active},
    v=>{if(v?.contract!=='tt-ojt-admin-write-1'||v.workspaceId!==s.workspaceId||
       !uuid.test(v.internId||'')||v.active!==active)fail('OJT identity write unverified');return v});
  }
- async select(s,id,pin){
-  if(!uuid.test(id||'')||!/^[0-9]{8,12}$/.test(pin||''))fail('Select an intern and enter the individual PIN');
-  return this.perform(s,'timetracker_ojt_select',{p_intern_id:id,p_pin:pin},
-   v=>{
-    if(v?.contract!=='tt-ojt-select-1')fail('OJT verification response invalid');
-    if(v.ok!==true)fail('Incorrect PIN or temporarily locked identity');
-    if(!same(v,s)||v.internId!==id||!safeName(v.name)||
-      !/^[0-9a-f]{64}$/.test(v.token||'')||!validTime(v.expiresAt))
-     fail('OJT verification identity mismatch');
-    return Object.freeze({id,name:v.name,token:v.token,
-      expiresAt:v.expiresAt,scope:{...s}});
-   });
- }
- snapshot(s,selected){
-  if(selected?.scope?.userId!==s.userId||selected?.scope?.workspaceId!==s.workspaceId||
-   selected?.scope?.boardId!==s.boardId)fail('Selected intern session changed');
+ snapshot(s,internId){
+  if(!uuid.test(internId||''))fail('Select an active intern');
   return this.perform(s,'timetracker_ojt_snapshot',
-   {p_token:selected.token},v=>projectOjtAttendance(v,s,selected.id));
+   {p_intern_id:internId},v=>projectOjtAttendance(v,s,internId));
  }
- async commit(s,selected,{action,recordId=null,location,geo,workNote=''}={}){
-  if(!['clock-in','clock-out'].includes(action)||
-    (recordId!==null&&!uuid.test(recordId))||
-    !geo||geo.status!=='captured')fail('Verified OJT attendance action and fresh GPS fix required');
+ async commit(s,internId,{action,recordId=null,location,geo,workNote=''}={}){
+  if(!uuid.test(internId||'')||!['clock-in','clock-out'].includes(action)||
+    (recordId!==null&&!uuid.test(recordId))||!geo||geo.status!=='captured')
+   fail('Select an intern and provide a fresh GPS fix');
   return this.perform(s,'timetracker_ojt_commit',
-   {p_token:selected.token,p_action:action,p_record_id:recordId,
+   {p_intern_id:internId,p_action:action,p_record_id:recordId,
     p_location:location,p_geo:geo,p_work_note:String(workNote||'').trim()},
    v=>{
     if(v?.contract!=='tt-ojt-commit-1'||v.mode!=='COMMITTED'||
-       !same(v,s)||v.internId!==selected.id||v.action!==action||
+       !same(v,s)||v.internId!==internId||v.action!==action||
        !uuid.test(v.recordId||'')||!validTime(v.committedAt))
      fail('OJT attendance receipt could not be verified');
     return Object.freeze(v);
    });
  }
- leave(s,selected){
-  if(!selected?.token)return Promise.resolve();
-  return this.perform(s,'timetracker_ojt_leave',{p_token:selected.token},
-   v=>{if(v?.contract!=='tt-ojt-leave-1'||v.ok!==true)fail('OJT identity release failed');return v});
- }
 }
-
 const stamp=x=>x?new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',
  month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(x)):'—';
 const locationOptions=['Office-Base Duty','Offsite (Home)','Local Field Works',
@@ -177,8 +156,8 @@ export function renderTimeTrackerOjtClock({
  const disabled=busy?' disabled':'';
  let html='<section class="tt-ojt" aria-label="Individual OJT attendance">'+
   '<div class="tt-ojt-header"><div><p>TIME TRACKER / OJT</p>'+
-  '<h3>Intern attendance</h3><span>One company login, individually verified records.</span></div>';
- if(selected)html+='<button type="button" class="secondary" data-action="tt-ojt-leave"'+disabled+
+  '<h3>Intern attendance</h3><span>Use the existing company login and select your name.</span></div>';
+ if(selected&&!attendance?.active)html+='<button type="button" class="secondary" data-action="tt-ojt-leave"'+disabled+
   '>Switch intern</button>';
  html+='</div>';
  if(error)html+='<p class="tt-ojt-error" role="alert">'+esc(error)+'</p>';
@@ -186,24 +165,28 @@ export function renderTimeTrackerOjtClock({
  if(roster?.mode==='SHARED_DISABLED')
   return html+'<p role="status">This shared OJT login is disabled or no longer eligible. Contact a TimeTracker administrator.</p></section>';
  if(roster?.mode==='SERVICE_UNAVAILABLE')
-  return html+'<p role="alert">Individual OJT attendance requires the signed Supabase service. Standard attendance is disabled for this shared account until deployment.</p></section>';
+  return html+'<p role="alert">The signed OJT attendance service is unavailable. Standard attendance remains disabled for this shared account.</p></section>';
  if(roster?.mode==='SETUP_REQUIRED')
-  return html+'<p role="status">This account is ready, but the shared OJT roster has not been enabled yet. Ask an administrator to activate the shared login and add intern profiles.</p></section>';
+  return html+'<p role="status">The shared OJT roster has not been enabled yet. Ask a TimeTracker administrator to enable the existing company login and add intern names.</p></section>';
  if(!selected){
-  html+='<h4>Who is clocking in?</h4><p>Choose your name and enter your private PIN before using attendance.</p>';
-  html+='<div class="tt-ojt-roster">'+(roster?.interns?.length?
-   roster.interns.map(i=>'<button type="button" data-action="tt-ojt-choose" data-ojt-id="'+
-     esc(i.id)+'"'+disabled+'><span class="tt-ojt-avatar">'+
-     esc(i.name.slice(0,1).toUpperCase())+'</span><strong>'+esc(i.name)+
-     '</strong><small>Verify identity</small></button>').join(''):
-   '<p>No active interns are registered yet. Ask the TimeTracker administrator to add your profile.</p>')+'</div>';
+  html+='<div class="tt-ojt-session"><h4>Start your session</h4>'+
+   '<label for="tt-ojt-intern-select">Select your name</label>'+
+   '<select id="tt-ojt-intern-select"'+disabled+' required>'+
+    '<option value="">Choose an intern</option>'+
+    (roster?.interns||[]).map(i=>'<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('')+
+   '</select>'+
+   ((roster?.interns||[]).length?
+    '<p>Choose your name from the list. Your attendance will be recorded under that intern.</p>':
+    '<p>No active interns are registered yet. Ask the TimeTracker administrator to add your name.</p>')+
+   '<button type="button" class="tt-ojt-clock-button" data-action="tt-ojt-clock"'+
+    (busy||!(roster?.interns||[]).length?' disabled':'')+'>Start Session</button></div>';
   return html+'</section>';
  }
  const active=attendance?.active||null;
  html+='<div class="tt-ojt-selected"><span class="tt-ojt-avatar">'+
    esc(selected.name[0]?.toUpperCase()||'O')+'</span><div><strong>'+
-   esc(selected.name)+'</strong><small>Identity verified for this session</small></div></div>'+
-   '<div class="tt-ojt-session"><strong>'+ (active?'Active session':'Ready to clock in')+
+   esc(selected.name)+'</strong><small>Selected intern</small></div></div>'+
+   '<div class="tt-ojt-session"><strong>'+ (active?'Active session':'Ready to start')+
    '</strong><p>'+(active?'Clocked in '+esc(stamp(active.clockIn))+
     ' · '+esc(active.location):'GPS is requested only when starting or ending a session.')+'</p>'+
    '<label for="tt-ojt-location">Work location</label>'+
@@ -214,7 +197,7 @@ export function renderTimeTrackerOjtClock({
    (active?'':'<label for="tt-ojt-note">Work note (required when working from home)</label>'+
     '<textarea id="tt-ojt-note" maxlength="500" rows="3" placeholder="Optional work details…">'+esc(workPlanDraft)+'</textarea>')+
    '<button type="button" class="tt-ojt-clock-button" data-action="tt-ojt-clock"'+disabled+'>'+
-     (busy?'Saving…':active?'End session':'Start session')+'</button></div>';
+     (busy?'Saving…':active?'End Session':'Start Session')+'</button></div>';
  html+='<div class="tt-ojt-history"><h4>My attendance</h4>'+
   '<table><thead><tr><th>Clock in</th><th>Clock out</th><th>Location</th></tr></thead><tbody>'+
   (attendance?.records?.length?
@@ -225,18 +208,18 @@ export function renderTimeTrackerOjtClock({
  return html;
 }
 export function renderTimeTrackerOjtAdmin({admin=null,attendance=null,employees=[]}={}){
- if(!admin)return '<section class="tt-ojt-admin"><h4>OJT shared identities</h4>'+
-  '<p>Administrator roster management is unavailable until the signed OJT service is deployed.</p></section>';
+ if(!admin)return '<section class="tt-ojt-admin"><h4>OJT Interns</h4>'+
+  '<p>Intern roster management is unavailable until the signed OJT service is deployed.</p></section>';
  const users=employees.filter(isEligibleTimeTrackerSharedOjtAccount);
  const configured=new Set(admin.groups.map(x=>x.userId));
- return '<section class="tt-ojt-admin" aria-label="OJT shared login management">'+
-  '<div class="tt-ojt-admin-head"><h4>OJT shared login &amp; intern profiles</h4>'+
-   '<p>Choose an existing OJT login account. Each intern receives a private PIN and distinct attendance history.</p></div>'+
+ return '<section class="tt-ojt-admin" aria-label="OJT intern roster management">'+
+  '<div class="tt-ojt-admin-head"><h4>OJT Interns</h4>'+
+   '<p>Manage the names available in the shared OJT TimeTracker login. Interns select their name from a dropdown before starting attendance.</p></div>'+
   '<div class="tt-ojt-unconfigured">'+
    users.filter(x=>!configured.has(x.id)).map(x=>
     '<div><strong>'+esc(x.name)+'</strong>'+
     '<button type="button" data-action="tt-ojt-group-enable" data-ojt-user="'+esc(x.id)+
-    '">Enable shared login</button></div>').join('')+'</div>'+
+    '">Enable OJT login</button></div>').join('')+'</div>'+
   admin.groups.map(g=>{
    const user=users.find(x=>x.id===g.userId);
    return '<article class="tt-ojt-admin-group"><header><div><strong>'+
@@ -244,12 +227,12 @@ export function renderTimeTrackerOjtAdmin({admin=null,attendance=null,employees=
     (g.enabled?'Shared login enabled':'Shared login disabled')+'</small></div>'+
     '<button type="button" data-action="tt-ojt-group-toggle" data-ojt-user="'+
     esc(g.userId)+'" data-ojt-enabled="'+String(!g.enabled)+'">'+
-    (g.enabled?'Disable shared login':'Enable shared login')+'</button></header>'+
+    (g.enabled?'Disable OJT login':'Enable OJT login')+'</button></header>'+
     '<div class="tt-ojt-admin-people">'+
      g.interns.map(i=>'<div><span class="tt-ojt-avatar">'+esc(i.name[0]?.toUpperCase()||'O')+
       '</span><strong>'+esc(i.name)+'</strong><small>'+ (i.active?'Active':'Inactive')+
       '</small><button type="button" data-action="tt-ojt-intern-edit" data-ojt-user="'+
-      esc(g.userId)+'" data-ojt-id="'+esc(i.id)+'">Edit / PIN</button></div>').join('')+
+      esc(g.userId)+'" data-ojt-id="'+esc(i.id)+'">Edit</button></div>').join('')+
     '</div><button type="button" class="tt-ojt-add" data-action="tt-ojt-intern-add" data-ojt-user="'+
     esc(g.userId)+'">+ Add intern</button></article>';
   }).join('')+
