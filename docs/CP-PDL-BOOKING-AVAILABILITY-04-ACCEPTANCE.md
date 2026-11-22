@@ -30,12 +30,16 @@
 | Receipt readback / replay / changed-key payload / conflict / expired quote | PASS in disposable PostgreSQL transaction            |
 | Post-rollback PDL schema and fixture check                                 | `ROLLBACK_CONFIRMED`, `CLEAN`                        |
 
-The responsive browser test serves the committed Pages build locally and uses deterministic API fixtures to exercise the complete court-selection → duration-selection → customer-details → review flow at all three viewport sizes. The separate production smoke test calls the live guest API for all nine court/duration combinations. It created short-lived quote records only; each quote expires automatically. No production reservation, payment submission, payment proof object, or customer record was created.
+The responsive browser test passed against the live GitHub Pages deployment at 390, 768 and 1440 px. It uses deterministic API fixtures to exercise the complete court-selection → duration-selection → customer-details → review flow and confirms no reservation POST is submitted. The separate production smoke test calls the live guest API for all nine court/duration combinations. It created short-lived quote records only; each quote expires automatically. No production reservation, payment submission, payment proof object, or customer record was created.
 
 The disposable PostgreSQL acceptance applied the complete Paseo migration set and exercised the full SQL quote → reservation → token receipt path, idempotent replay, changed-payload conflict, overlapping reservation, maintenance conflict, changed-rate quote and expired quote. All operations ran inside a single transaction and rolled back. The runner verifies the target is the local `supabase_db_cp16019-disposable-local` PostgreSQL 17 container and checks that the PDL schema is absent afterward.
+
+## Production deployment
+
+The deployed public bundle is `assets/index-B7JvIaHa.js` and the deployed stylesheet is `assets/index-BnBeAX06.css`. The GitHub Pages deployment completed successfully in run `45039182185`. Main frontend validation run `45039183313` passed, including the live Pages asset-to-commit verification. The deployed UI was then exercised directly at all three viewport widths.
 
 ## Production submission boundary
 
 The production reservation endpoint requires a genuine payment receipt file, validates its signature, stores it in private storage, and records the payment as `submitted` pending staff review. A synthetic fixture is therefore not used against production. No funds were transferred and no false payment evidence was uploaded.
 
-**Status:** `IMPLEMENTED` for hour-first duration display, exact minute-value preservation, production availability and quote acceptance, and disposable end-to-end reservation/receipt/idempotency/conflict acceptance. `PENDING` for a genuine production reservation submission and independent live receipt retrieval using an actual, explicitly designated test booking with valid payment evidence or a venue-approved no-payment test process. Production deployment and post-deployment browser acceptance remain release gates.
+**Status:** `IMPLEMENTED` for hour-first duration display, exact minute-value preservation, production availability and quote acceptance, and disposable end-to-end reservation/receipt/idempotency/conflict acceptance. `PENDING` only for a genuine production reservation submission and independent live receipt retrieval using an explicitly designated test booking with valid payment evidence or a venue-approved no-payment test process. The frontend implementation, CI, Pages deployment, deployed UI, live quote acceptance and disposable full-lifecycle acceptance are complete.
