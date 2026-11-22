@@ -77,7 +77,7 @@ test('clears only for a confirmed clock-in or explicit identity teardown, not be
  assert.match(app,/if\(action==='clock-in'\)ttWorkNoteDraft\.clear\(timeTrackerWorkNoteScope\(\)\)/);
  assert.match(app,/if\(actionName==='clock-in'\)ttWorkNoteDraft\.clear\(timeTrackerWorkNoteScope\(\)\)/);
  assert.match(app,/if\(action==='clock-in'\)ttWorkNoteDraft\.clear\(timeTrackerWorkNoteScope\(selected\.id\)\)/);
- assert.match(app,/auth\.onExpired=\(\)=>\{ttWorkNoteDraft\.clear\(\)/);
+ assert.match(app,/auth\.onExpired=\(\)=>\{boardCacheChannel\.stop\(\);ttWorkNoteDraft\.clear\(\)/);
  draft.clear(scope);
  assert.equal(draft.read(scope),'');
  draft.write(scope,text);
