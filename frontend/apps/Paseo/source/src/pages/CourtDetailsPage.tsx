@@ -52,9 +52,9 @@ export function CourtDetailsPage() {
             {court.features.map((feature) => <li key={feature}>{feature}</li>)}
           </ul>
           <div className="detail-information" aria-label="Court information">
-            <div><span>RATE</span><strong>Not configured</strong></div>
+            <div><span>RATE</span><strong>Server quote at booking</strong></div>
             <div><span>LIVE AVAILABILITY</span><strong>Check booking schedule</strong></div>
-            <div><span>OPERATING HOURS</span><strong>Subject to venue approval</strong></div>
+            <div><span>OPERATING HOURS</span><strong>Check live booking schedule</strong></div>
           </div>
           <ButtonLink to={`/book?court=${encodeURIComponent(court.id)}`}>
             Select {court.name} <span aria-hidden="true">↗</span>

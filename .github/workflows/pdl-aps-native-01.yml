@@ -45,7 +45,7 @@ jobs:
         run: |
           npm run check
           node scripts/verify-pages-source.mjs
-          node --test frontend/tests/pdl-aps-native.test.mjs frontend/tests/pdl-aps-native-02-readiness.test.mjs frontend/tests/pdl-aps-native-05-contract.test.mjs
+          node --test frontend/tests/pdl-aps-native.test.mjs frontend/tests/pdl-aps-native-02-readiness.test.mjs frontend/tests/pdl-aps-native-05-contract.test.mjs frontend/tests/pdl-aps-native-06-availability.test.mjs
           npm test
           npm run build
       - name: Public/CRM browser isolation and direct-link acceptance
