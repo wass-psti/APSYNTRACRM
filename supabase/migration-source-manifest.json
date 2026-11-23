@@ -2093,6 +2093,13 @@
       "file": "20261123140000_cp_tt_ojt_dropdown_identity.sql",
       "bytes": 13072,
       "sha256": "eaaa76bbd2174a8f883667e22ffb8468444fcac00e022097104a0bae27bdfcf6"
+    },
+    {
+      "version": "20261123150000",
+      "name": "cp_tt_ojt_admin_record_management",
+      "file": "20261123150000_cp_tt_ojt_admin_record_management.sql",
+      "bytes": 8323,
+      "sha256": "94ed1c8509c89923b0dfe3ec2c80e3e7ed45b2f2e6c7ac2931d3e233683750a7"
     }
   ]
 }
