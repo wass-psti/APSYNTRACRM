@@ -657,8 +657,11 @@ export class TimeTrackerNativeClient{
    recordId:result.recordId});
  }
 }
-/** Acquire a real browser fix within the existing 12-second sensor budget.
- * Retry sensor acquisition only; never retry an attendance write here.
+/** Obtain a genuine, recent browser-provided attendance position.
+ * Give the high-accuracy provider time to lock, then retry using network
+ * positioning. Browser-managed cached fixes are accepted only if fresh;
+ * never invent a coordinate or reuse application-stored locations.
+ * Only called as part of an explicit Start/End Session action.
  */
 function geolocationRequest(geolocation,options){
  return new Promise((resolve,reject)=>{
@@ -667,35 +670,54 @@ function geolocationRequest(geolocation,options){
  });
 }
 function locationError(reason){
- const denied=Number(reason?.code)===1;
- const error=new Error(denied?'Browser location permission denied':'Current browser GPS fix unavailable');
- error.code=denied?'TT_GEO_DENIED':'TT_GEO_UNAVAILABLE';
+ const code=Number(reason?.code);
+ const kind=code===1?'TT_GEO_DENIED':code===3?'TT_GEO_TIMEOUT':'TT_GEO_UNAVAILABLE';
+ const message=code===1?'Browser location permission denied':
+  code===3?'Browser GPS acquisition timed out':'Current browser GPS fix unavailable';
+ const error=new Error(message);
+ error.code=kind;
  return error;
 }
-export async function captureAttendanceGeo(geolocation){
- if(!geolocation||typeof geolocation.getCurrentPosition!=='function')
-  throw locationError({code:2});
- let position;
- try{
-  position=await geolocationRequest(geolocation,{
-   enableHighAccuracy:true,timeout:5000,maximumAge:0
-  });
- }catch(first){
-  if(Number(first?.code)===1)throw locationError(first);
-  if(![2,3].includes(Number(first?.code)))throw locationError(first);
-  try{
-   position=await geolocationRequest(geolocation,{
-    enableHighAccuracy:false,timeout:7000,maximumAge:0
-   });
-  }catch(second){throw locationError(second);}
- }
+function capturePosition(position){
  const {latitude,longitude,accuracy}=position?.coords||{};
  const capturedAt=Number(position?.timestamp);
+ const now=Date.now();
  if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||!Number.isFinite(accuracy)||
    latitude < -90||latitude>90||longitude < -180||longitude>180||
    accuracy<0||accuracy>100000||!Number.isFinite(capturedAt)||
-   Date.now()-capturedAt>60000||capturedAt-Date.now()>120000)
-  throw locationError({code:2});
+   now-capturedAt>60000||capturedAt-now>120000)
+  return null;
  return {status:'captured',latitude,longitude,accuracy,
   capturedAt:new Date(capturedAt).toISOString(),source:'browser-geolocation'};
+}
+export async function captureAttendanceGeo(geolocation,{onProgress}={}){
+ if(globalThis.isSecureContext===false){
+  const error=new Error('Location requires a secure HTTPS connection');
+  error.code='TT_GEO_INSECURE';
+  throw error;
+ }
+ if(!geolocation||typeof geolocation.getCurrentPosition!=='function')
+  throw locationError({code:2});
+ const progress=message=>{if(typeof onProgress==='function'){
+  try{onProgress(message);}catch{/* A UI update must not interrupt GPS acquisition. */}
+ }};
+ const attempts=[
+  {options:{enableHighAccuracy:true,timeout:10000,maximumAge:25000},
+   message:'Finding your GPS location…'},
+  {options:{enableHighAccuracy:false,timeout:12000,maximumAge:45000},
+   message:'GPS is taking longer; trying network-assisted location…'}
+ ];
+ let lastError={code:2};
+ for(const attempt of attempts){
+  progress(attempt.message);
+  try{
+   const fix=capturePosition(await geolocationRequest(geolocation,attempt.options));
+   if(fix)return fix;
+   lastError={code:2};
+  }catch(error){
+   if(Number(error?.code)===1)throw locationError(error);
+   lastError=error;
+  }
+ }
+ throw locationError(lastError);
 }
