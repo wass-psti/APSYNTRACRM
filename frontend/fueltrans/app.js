@@ -14,6 +14,7 @@ import {IMPACTS,CHANNELS,SOURCE_CREATE_STEPS,sourceOperationalInfo,validateSourc
 import {makeTicketDraft,normalizeTicketDraftState,isMeaningfulTicketDraft,sanitizeTicketDraft} from './ticket-draft17.js';
 import {validateCreateEvidence,uploadCreatedTicketEvidence,creationEvidenceMessage} from './create-evidence18.js';
 import {buildStationHistoryQuery,projectStationHistory} from './station-lookup18.js';
+import {buildRecordedStationsQuery,projectRecordedStations,STATION_HISTORY_PAGE_SIZE} from './station-history03.js';
 import {MAX_BATCH_STATIONS,validateBatchStations,stationTicketTitle,runSequentialTicketBatch,batchOutcomeMessage} from './batch-create19.js';
 import {reconcileUncertainTicket,validateUncertainReceipt} from './ticket-reconcile21.js';
 import {TICKET_DELETION_ROLES,executeSoftDelete,executeRestore} from './ticket-delete23.js';
@@ -85,8 +86,8 @@ const refreshFromHost=()=>{
  void go(state.route,{preserveNotice:true});
 };
 root.addEventListener('apsyntra:refresh',refreshFromHost);
-let state={user:null,memberships:[],active:null,route:'dashboard',tickets:[],total:0,page:0,filter:'',status:'all',archived:false,clientFilter:'all',priorityFilter:'all',systemFilter:'all',queueFrom:'',queueTo:'',queueSort:'recent',detail:null,stats:null,busy:false,notice:'',workflowPage:0,viewPage:0,workflowScope:'all',issuePage:0,reportTab:'executive',reportWindow:{from:'',to:''}};
-const val=(x)=>h(x);const knownRoutes=new Set(['dashboard','tickets','create-ticket','reports','l1-workspace','l2-dispatch','handover','notifications','admin','users','sessions','audit','report-bug','logo-files','disaster-recovery','it-issues']);
+let state={user:null,memberships:[],active:null,route:'dashboard',tickets:[],total:0,page:0,filter:'',status:'all',archived:false,clientFilter:'all',priorityFilter:'all',systemFilter:'all',queueFrom:'',queueTo:'',queueSort:'recent',detail:null,stats:null,busy:false,notice:'',workflowPage:0,viewPage:0,workflowScope:'all',issuePage:0,reportTab:'executive',reportWindow:{from:'',to:''},stationPage:0,stationClient:'all',stationIdSearch:''};
+const val=(x)=>h(x);const knownRoutes=new Set(['dashboard','tickets','create-ticket','reports','l1-workspace','l2-dispatch','handover','station-history','notifications','admin','users','sessions','audit','report-bug','logo-files','disaster-recovery','it-issues']);
 const escAttr=val;const role=()=>state.active?.role;
 function say(message){state.notice=message;const alert=document.getElementById('feedback');if(alert){alert.textContent=message;alert.hidden=!message;}}
 function pendingTicketReconciliationPanel(){
@@ -130,7 +131,7 @@ const navigation=[
  {label:'SUPPORT OPERATIONS',links:[
   ['create-ticket','Create Ticket','＋'],['tickets','Ticket Queue','▤'],
   ['l1-workspace','Global L1 Workspace','◉'],['l2-dispatch','Local L2 Dispatch','↗'],
-  ['handover','Shift Handover','⇄']]},
+  ['handover','Shift Handover','⇄'],['station-history','Recorded Stations','▣']]},
  {label:'INSIGHTS',links:[['reports','Analytics & Reports','▥'],['notifications','Notifications','♧'],['report-bug','Report Issue','⚑']]},
  {label:'SYSTEM',links:[['admin','Administration','⚙'],['users','User Directory','♙'],
   ['sessions','Sessions','◷'],['audit','Audit Events','☰'],
@@ -173,7 +174,7 @@ function layout(content){
  const button=document.getElementById('refresh');if(button)button.onclick=()=>go(state.route);
 }
 function skeleton(msg='Loading FuelTrans data…'){layout(`<div class="loading-inline">${h(msg)}</div>`);}
-async function go(route,{preserveNotice=false}={}){if(disposed||!state.active)return;if(autoRefreshHandle25!==null)clearTimeout(autoRefreshHandle25);autoRefreshHandle25=null;visibleTimerTickets.clear();if(route!=='reports'){reportRowsCache=null;reportScopeMeta=null;}const revision=++viewRevision;if(!preserveNotice)state.notice='';state.route=route;if(!allowRoute(route)){state.route='dashboard';route='dashboard';}try{if(route==='dashboard'){skeleton('Loading dashboard…');await dashboard(revision);}else if(route==='tickets'){skeleton('Loading ticket queue…');await tickets(revision);}else if(route.startsWith('ticket/')){skeleton('Loading ticket details…');await details(route.slice(7),revision);}else if(route==='create-ticket')createForm();else if(route==='report-bug'){skeleton('Loading your private issue drafts…');await bugReports(revision);}else if(route.startsWith('report-bug/')){skeleton('Loading issue draft…');await bugReportDetail(route.slice('report-bug/'.length),revision);}else if(route==='it-issues'){skeleton('Loading IT issue queue…');await sharedIssueQueue(revision);}else if(route==='logo-files')logoFiles();else if(route==='disaster-recovery')disasterRecovery();else if(route==='reports'){skeleton('Loading report counts…');await reports(revision);}else if(['l1-workspace','l2-dispatch','handover'].includes(route)){skeleton('Loading workflow queue…');await workflow(route,revision);}else if(['admin','users','sessions','audit','notifications'].includes(route)){skeleton('Loading authorized records…');await auxiliary(route,revision);}else{state.route='dashboard';await dashboard(revision);}}catch(e){if(revision!==viewRevision)return;layout(`<section class="error-panel"><h2>Unable to load this view</h2><p role="alert">${h(e.message)}</p><button id="try-again">Retry</button></section>`);document.getElementById('try-again').onclick=()=>go(route);}finally{if(revision===viewRevision)scheduleAutoRefresh25();}}
+async function go(route,{preserveNotice=false}={}){if(disposed||!state.active)return;if(autoRefreshHandle25!==null)clearTimeout(autoRefreshHandle25);autoRefreshHandle25=null;visibleTimerTickets.clear();if(route!=='reports'){reportRowsCache=null;reportScopeMeta=null;}const revision=++viewRevision;if(!preserveNotice)state.notice='';state.route=route;if(!allowRoute(route)){state.route='dashboard';route='dashboard';}try{if(route==='dashboard'){skeleton('Loading dashboard…');await dashboard(revision);}else if(route==='tickets'){skeleton('Loading ticket queue…');await tickets(revision);}else if(route.startsWith('ticket/')){skeleton('Loading ticket details…');await details(route.slice(7),revision);}else if(route==='create-ticket')createForm();else if(route==='station-history'){skeleton('Loading recorded station history…');await recordedStations(revision);}else if(route==='report-bug'){skeleton('Loading your private issue drafts…');await bugReports(revision);}else if(route.startsWith('report-bug/')){skeleton('Loading issue draft…');await bugReportDetail(route.slice('report-bug/'.length),revision);}else if(route==='it-issues'){skeleton('Loading IT issue queue…');await sharedIssueQueue(revision);}else if(route==='logo-files')logoFiles();else if(route==='disaster-recovery')disasterRecovery();else if(route==='reports'){skeleton('Loading report counts…');await reports(revision);}else if(['l1-workspace','l2-dispatch','handover'].includes(route)){skeleton('Loading workflow queue…');await workflow(route,revision);}else if(['admin','users','sessions','audit','notifications'].includes(route)){skeleton('Loading authorized records…');await auxiliary(route,revision);}else{state.route='dashboard';await dashboard(revision);}}catch(e){if(revision!==viewRevision)return;layout(`<section class="error-panel"><h2>Unable to load this view</h2><p role="alert">${h(e.message)}</p><button id="try-again">Retry</button></section>`);document.getElementById('try-again').onclick=()=>go(route);}finally{if(revision===viewRevision)scheduleAutoRefresh25();}}
 async function fetchPage(){const q=buildQueueFiltersQuery({workspaceId:state.active.workspace_id,member:state.active,archived:state.archived,status:state.status,search:state.filter,page:state.page,client:state.clientFilter,priority:state.priorityFilter,system:state.systemFilter,from:state.queueFrom,to:state.queueTo,sort:state.queueSort});const {rows,totalRange}=await listTickets(q);return {rows,total:parseTotal(totalRange,rows.length)};}
 const ticketTable=(rows,empty='No tickets in this result set.')=>`<div class="table-wrap"><table><thead><tr><th>Ticket</th><th>Subject / Station</th><th>Client</th><th>Priority</th><th>Status</th><th>Age</th><th>Updated</th></tr></thead><tbody>${rows.length?rows.map(t=>`<tr><td><a class="ticket-link" href="${host.base}/ticket/${encodeURIComponent(t.id)}">${h(t.ticket_number||t.payload?.ticketId||t.id)}</a></td><td><strong>${h(titleOf(t))}</strong><small>${h(t.payload?.stationName||t.payload?.stationId||'—')}</small></td><td>${h(t.client_code||'—')}</td><td>${h(priorityOf(t))}</td><td>${statusBadge(statusOf(t))}</td><td>${trackedTime(t,'age')}</td><td>${h(friendlyTime(t.updated_at))}</td></tr>`).join(''):`<tr><td colspan="7" class="empty">${h(empty)}</td></tr>`}</tbody></table></div>`;
 function ticketCards(rows,empty='No tickets in this result set.'){
@@ -419,6 +420,68 @@ function createForm(){
 
  }catch(err){say(err.message);}finally{state.busy=false;if(btn.isConnected)btn.disabled=draftSubmitted;}};
 }
+async function recordedStations(revision){
+ const member=state.active,workspaceId=member.workspace_id;
+ const assignedClient=clientForMembership(member);
+ const query=buildRecordedStationsQuery({
+  workspaceId,member,client:state.stationClient,stationId:state.stationIdSearch,page:state.stationPage
+ });
+ const result=await select('fueltrans_tickets',query);
+ if(revision!==viewRevision||state.active?.workspace_id!==workspaceId)return;
+ if(!Array.isArray(result)||result.length>STATION_HISTORY_PAGE_SIZE+1)throw Error('Invalid station-history page.');
+ const hasMore=result.length>STATION_HISTORY_PAGE_SIZE;
+ const rows=result.slice(0,STATION_HISTORY_PAGE_SIZE);
+ const stations=projectRecordedStations(rows,{workspaceId,member});
+ const firstIndex=state.stationPage*STATION_HISTORY_PAGE_SIZE;
+ const clientOptions=assignedClient
+  ?`<option value="${h(assignedClient)}">${h(assignedClient)} (membership)</option>`
+  :`<option value="all">All clients</option>${CLIENTS.map(c=>`<option value="${h(c)}" ${state.stationClient===c?'selected':''}>${h(c)}</option>`).join('')}`;
+ const cards=stations.length?stations.map(s=>`<article class="ft-station-card">
+  <div class="ft-station-card-head"><span class="ft-station-network">${h(s.client)}</span><span class="ft-station-id">${h(s.stationId)}</span></div>
+  <h2>${h(s.stationName)}</h2>
+  <dl class="ft-station-facts">
+   <div><dt>Last recorded ticket</dt><dd><a href="${host.base}/ticket/${encodeURIComponent(s.latestTicketId)}">${h(s.latestTicketNumber)}</a></dd></div>
+   <div><dt>Ticket status</dt><dd>${h(s.latestTicketStatus)}</dd></div>
+   <div><dt>Last ticket update</dt><dd>${h(friendlyTime(s.lastTicketUpdated))}</dd></div>
+   <div><dt>Tickets on this page</dt><dd>${s.pageTickets}</dd></div>
+  </dl>
+ </article>`).join(''):'<div class="ft-ticket-empty" role="status">No station names and IDs are recorded in this ticket page. Try another page or adjust the search.</div>';
+ layout(`${pageHeader('Recorded Stations','Read-only station information observed in existing FuelTrans tickets.')}
+  <section class="panel ft-station-history">
+   <div class="ft-station-contract" role="note"><strong>Ticket history, not a verified station directory.</strong>
+    <p>These entries come only from accessible, non-archived FuelTrans tickets. Names may be outdated, results are deduplicated on this page only, and no deployed station inventory, AnyDesk credentials or operational status is inferred.</p>
+   </div>
+   <form id="station-history-filter" class="ft-station-filters">
+    <label>Station ID search <input name="stationId" maxlength="60" autocomplete="off" value="${h(state.stationIdSearch)}" placeholder="e.g. 1013C" aria-describedby="station-history-search-help"></label>
+    <label>Client <select name="client" ${assignedClient?'disabled':''}>${clientOptions}</select></label>
+    <button type="submit">Search recorded stations</button><button type="button" class="secondary" id="station-clear">Clear</button>
+   </form>
+   <p class="muted" id="station-history-search-help">Station ID searches use server-side ticket filtering. Enter letters, numbers, spaces, hyphens or underscores; no full directory is available.</p>
+   <p class="ft-page-summary">Ticket page ${state.stationPage+1} · ${rows.length} ticket records loaded · ${stations.length} unique station IDs on this page. Counts are page-scoped, not a complete station inventory.</p>
+   <div class="ft-station-cards">${cards}</div>
+   <div class="pager"><button id="station-prev" type="button" class="secondary" ${state.stationPage===0?'disabled':''}>← Previous page</button>
+    <span>${rows.length?firstIndex+1:0}–${firstIndex+rows.length} visible ticket records</span>
+    <button id="station-next" type="button" class="secondary" ${hasMore?'':'disabled'}>Next page →</button></div>
+  </section>`);
+ document.getElementById('station-history-filter').onsubmit=e=>{
+  e.preventDefault();
+  const values=new FormData(e.currentTarget);
+  const stationId=String(values.get('stationId')||'').trim();
+  const client=assignedClient||String(values.get('client')||'all');
+  try{
+   buildRecordedStationsQuery({workspaceId,member,client,stationId,page:0});
+   state.stationClient=client;state.stationIdSearch=stationId;state.stationPage=0;
+   void go('station-history');
+  }catch(error){say(error.message);}
+ };
+ document.getElementById('station-clear').onclick=()=>{
+  state.stationIdSearch='';state.stationClient=assignedClient||'all';state.stationPage=0;
+  void go('station-history');
+ };
+ document.getElementById('station-prev').onclick=()=>{state.stationPage=Math.max(0,state.stationPage-1);void go('station-history');};
+ document.getElementById('station-next').onclick=()=>{if(hasMore){state.stationPage++;void go('station-history');}};
+}
+
 async function workflow(r,revision){
  const ws=state.active.workspace_id;
  const scope=r==='handover'?'all':state.workflowScope;

@@ -18,7 +18,9 @@ export function syncFuelTrans({container,auth,api,boardId,workspaceId,userId,rou
  referenceStyles.href=new URL('./fueltrans/reference-design.css',import.meta.url).href;
  const operationalStyles=document.createElement('link');operationalStyles.rel='stylesheet';
  operationalStyles.href=new URL('./fueltrans/operational-design02.css',import.meta.url).href;
- const root=document.createElement('div');shadow.append(stylesheet,referenceStyles,operationalStyles,root);container.append(element);
+ const stationStyles=document.createElement('link');stationStyles.rel='stylesheet';
+ stationStyles.href=new URL('./fueltrans/station-design03.css',import.meta.url).href;
+ const root=document.createElement('div');shadow.append(stylesheet,referenceStyles,operationalStyles,stationStyles,root);container.append(element);
  const context={auth,api,boardId,workspaceId,userId,onMutation,
   isCurrent:()=>element.isConnected&&auth.userId===userId&&
    location.hash.startsWith('#/boards/'+boardId+'/fueltrans')};

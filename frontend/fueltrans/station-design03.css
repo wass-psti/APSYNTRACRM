@@ -1,0 +1,95 @@
+/* CP-FT-UI-03 — history-derived stations, not a production station registry. */
+.ft-main .ft-station-history{padding:19px 18px;max-width:1180px}
+.ft-station-contract{
+ padding:15px 17px;
+ margin-bottom:17px;
+ border:1px solid #c8d8ee;
+ border-radius:9px;
+ background:#edf4ff;
+ color:#324c70;
+}
+.ft-station-contract strong{display:block;font-size:12px;color:#1e426e}
+.ft-station-contract p{margin:6px 0 0;line-height:1.6;font-size:11px}
+.ft-station-filters{
+ display:grid;
+ grid-template-columns:minmax(190px,2fr) minmax(125px,1fr) auto auto;
+ align-items:end;
+ gap:11px;
+ padding:14px;
+ background:#f1f5fc;
+ border:1px solid #dbe4f1;
+ border-radius:9px;
+}
+.ft-station-filters label{display:flex;flex-direction:column;min-width:0;gap:6px;color:#47607c;font-size:11px;font-weight:700}
+.ft-station-filters :is(input,select){
+ box-sizing:border-box;
+ min-height:38px;
+ border:1px solid #cad6e8;
+ border-radius:7px;
+ background:#fff;
+ padding:8px 10px;
+ width:100%;
+ font-size:12px;
+}
+.ft-station-filters button{white-space:nowrap;min-height:38px}
+.ft-station-history #station-history-search-help{margin:10px 0 12px;font-size:11px}
+.ft-station-cards{
+ display:grid;
+ grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+ gap:12px;
+ margin:15px 0 19px;
+}
+.ft-station-card{
+ min-width:0;
+ border:1px solid #d4dfed;
+ border-radius:10px;
+ background:#f8faff;
+ padding:16px;
+ box-shadow:0 1px 3px rgb(20 46 77 / 5%);
+}
+.ft-station-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ft-station-network{
+ display:inline-flex;
+ align-items:center;
+ min-height:21px;
+ border:1px solid #cde0ef;
+ border-radius:6px;
+ background:#e9f2ff;
+ padding:3px 9px;
+ font-size:10px;
+ font-weight:800;
+ color:#28578e;
+ letter-spacing:.3px;
+}
+.ft-station-id{font-size:11px;color:#71829c;font-weight:750}
+.ft-station-card h2{
+ margin:13px 0 16px;
+ color:#1c3152;
+ font-size:14px;
+ font-weight:760;
+ line-height:1.4;
+ overflow-wrap:anywhere;
+}
+.ft-station-facts{display:grid;grid-template-columns:1fr 1fr;gap:13px 10px;margin:0}
+.ft-station-facts>div{min-width:0}
+.ft-station-facts dt{font-size:9px;text-transform:uppercase;letter-spacing:.35px;color:#8190a5}
+.ft-station-facts dd{margin:5px 0 0;font-size:11px;font-weight:700;color:#31435b;overflow-wrap:anywhere}
+.ft-station-facts a{color:#2363ce;text-decoration:none}
+.ft-station-facts a:hover{text-decoration:underline}
+.ft-station-history>.pager{border-top:1px solid #e1e7f1;padding-top:15px}
+@container fueltrans (max-width:780px){
+ .ft-station-filters{grid-template-columns:1fr 1fr}
+ .ft-station-filters button{white-space:normal}
+}
+@container fueltrans (max-width:480px){
+ .ft-station-filters{grid-template-columns:1fr 1fr;gap:10px}
+ .ft-station-filters label{grid-column:1/-1}
+ .ft-station-cards{grid-template-columns:1fr}
+ .ft-station-facts{grid-template-columns:1fr 1fr}
+ .ft-main .ft-station-history{padding:14px}
+}
+@media print{
+ .ft-station-filters,.ft-station-history>.pager{display:none!important}
+ .ft-station-cards{display:block}
+ .ft-station-card{break-inside:avoid;margin-bottom:10px}
+}
