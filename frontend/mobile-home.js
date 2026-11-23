@@ -24,6 +24,18 @@ const svg = (kind, size = 22) =>
   ' stroke-linejoin="round" aria-hidden="true">' + (glyphs[kind] || glyphs.grid) + '</svg>';
 const escapeHtml = text => String(text ?? '').replace(/[&<>"']/g, char =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+function workspaceSwitchButton(workspace, placement) {
+  const label = 'Switch workspace';
+  const title = label + ' — ' + workspace;
+  const variant = placement === 'header' ? 'apsm-workspace-switch-header' :
+    'apsm-workspace-switch-home';
+  return '<button type="button" class="apsm-workspace-switch ' + variant +
+    '" data-action="ws01-open" aria-haspopup="dialog" aria-label="' +
+    label + '. Current workspace: ' + escapeHtml(workspace) + '" title="' +
+    escapeHtml(title) + '">' +
+    '<span class="apsm-workspace-switch-icon">' + svg('briefcase', 16) + '</span>' +
+    '<span class="apsm-workspace-switch-label">Switch</span></button>';
+}
 const safeRoute = href => typeof href === 'string' &&
   /^#\/[a-zA-Z0-9_+.%/?=&-]+$/.test(href) && href.length < 400;
 const path = () => (location.hash || HOME).split('?')[0].replace(/\/$/, '') || HOME;
@@ -134,6 +146,7 @@ function renderHome(shell, items) {
       escapeHtml(monogram) + '</span><div><span class="apsm-eyebrow">APSYNTRA CRM</span>' +
       '<h1>' + (homeSection() === 'favorites' ? 'My favorites' : 'Your workspace') +
       '</h1><p>' + escapeHtml(workspace) + '</p></div></div>' +
+      workspaceSwitchButton(workspace, 'home') +
       '<a href="#/settings" class="apsm-settings" aria-label="Open account settings">' +
       svg('settings') + '</a></div>' +
     '<div class="apsm-search" role="search">' + svg('search', 20) +
@@ -217,6 +230,7 @@ function synchronize() {
     header.className = 'apsm-app-header';
     header.innerHTML = '<a href="#/overview" aria-label="Back to mobile home" class="apsm-back">' +
       svg('arrow') + '<span>Home</span></a><strong data-apsm-route-title>APSYNTRA CRM</strong>' +
+      workspaceSwitchButton(workspace || 'Your workspace', 'header') +
       '<a href="#/overview" class="apsm-header-home" aria-label="Go to home">' + svg('home', 20) + '</a>';
     shell.insertBefore(header, shell.querySelector(':scope > .main'));
   }
@@ -233,6 +247,12 @@ function synchronize() {
   shell.classList.add('apsm-shell');
   shell.classList.toggle('apsm-home-route', homeRoute);
   shell.classList.toggle('apsm-destination-route', !homeRoute);
+  const workspaceButton = header.querySelector('[data-action="ws01-open"]');
+  if (workspaceButton) {
+    const label = 'Switch workspace. Current workspace: ' + (workspace || 'Your workspace');
+    workspaceButton.setAttribute('aria-label', label);
+    workspaceButton.title = label;
+  }
   const title = header.querySelector('[data-apsm-route-title]');
   const nextTitle = titleFor(path(), items, shell);
   if (title && title.textContent !== nextTitle) title.textContent = nextTitle;

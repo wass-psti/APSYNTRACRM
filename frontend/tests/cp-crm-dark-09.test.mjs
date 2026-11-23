@@ -7,7 +7,7 @@ const css=readFileSync('frontend/dark-workspace-account-completion.css','utf8');
 test('workspace and account completion CSS is final deterministic layer',()=>{
  assert.equal(STYLE_SOURCES.at(-3),'frontend/dark-workspace-account-completion.css');
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());
- assert.match(readFileSync('index.html','utf8'),/bundle\.css\?v=(?:cp-crm-dark-09|(?:cp-crm-ui-restore-01))/);
+ assert.match(readFileSync('index.html','utf8'),/bundle\.css\?v=(?:cp-crm-dark-09|(?:cp-crm-ui-restore-01|cp-mobile-workspace-switch-01))/);
 });
 test('dark-only workspace dialogs, workspace privacy and account controls are covered',()=>{
  for(const s of ['.ws01-menu-card','.ws01-browser-card','.ws01-create-card',

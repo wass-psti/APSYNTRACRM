@@ -19,7 +19,7 @@ test("approved board overhaul is the final active CRM visual layer", () => {
   assert.equal(STYLE_SOURCES.at(-2), "frontend/dark-simplified-system.css");
   assert.match(
     page,
-    /apsyntra-styles\.bundle\.css\?v=(?:cp-crm-ui-restore-01)/,
+    /apsyntra-styles\.bundle\.css\?v=(?:cp-crm-ui-restore-01|cp-mobile-workspace-switch-01)/,
   );
   assert.ok(page.includes("frontend/board-overhaul-experience.css"));
   assert.ok(smoke.includes("frontend/board-overhaul-experience.css"));
