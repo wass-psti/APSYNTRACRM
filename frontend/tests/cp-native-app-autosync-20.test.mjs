@@ -11,7 +11,8 @@ const selection=readFileSync('scripts/cp-native-app-autosync-20-registered-contr
 test('CP20 owner clone uses a separate, network-isolated and disposable PostgreSQL container',()=>{
  assert.match(runner,/name="cp_native20_pg_owner_qa"/);
  assert.match(runner,/image="postgres:17-alpine"/);
- assert.match(runner,/--network none/);
+ assert.match(runner,/network_arg="none"/);
+ assert.match(runner,/--network "\$network_arg"/);
  assert.match(runner,/--env-file/);
  assert.match(runner,/POSTGRES_PASSWORD/);
  assert.match(runner,/secrets\.token_urlsafe\(48\)/);

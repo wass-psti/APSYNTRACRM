@@ -15,6 +15,8 @@ if ! mkdir "$lock" 2>/dev/null; then
 fi
 tmp=""
 created=false
+network_created=false
+readonly network="cp_native23_internal_qa"
 phase="initialization"
 # Diagnostics report only the operation category and a redacted error class.
 # Do not print database passwords, connection strings or schema contents.
@@ -43,6 +45,9 @@ trap 'diagnose_failure "$?"' ERR
 cleanup() {
   if [[ "$created" == true ]]; then
     docker rm -f "$name" >/dev/null 2>&1 || true
+  fi
+  if [[ "$network_created" == true ]]; then
+    docker network rm "$network" >/dev/null 2>&1 || true
   fi
   if [[ -n "$tmp" && -d "$tmp" ]]; then
     rm -rf -- "$tmp"
@@ -87,9 +92,21 @@ path.write_text("POSTGRES_PASSWORD="+secrets.token_urlsafe(48)+"\n")
 path.chmod(0o600)
 PY
 
-# The new PG server is not published to the host or any Docker network.
+# Ordinary owner-only runs have no Docker networking. Runtime probes use
+# a private internal-only network from container creation (not reconnect).
+network_arg="none"
+if [[ "${CP23_DISPOSABLE_RUNTIME_PROBE:-}" == 1 ]]; then
+  if docker network ls --format '{{.Name}}' | grep -qx "$network"; then
+    echo 'BLOCKED: pre-existing isolated QA network; refusing overwrite' >&2
+    exit 2
+  fi
+  phase="isolated-internal-network"
+  docker network create --internal "$network" >/dev/null
+  network_created=true
+  network_arg="$network"
+fi
 phase="isolated-postgres-startup"
-docker run -d --name "$name" --network none --env-file "$envfile" "$image" >/dev/null
+docker run -d --name "$name" --network "$network_arg" --env-file "$envfile" "$image" >/dev/null
 created=true
 for attempt in $(seq 1 35); do
   if docker exec "$name" pg_isready -U postgres >/dev/null 2>&1; then break; fi
@@ -158,4 +175,9 @@ docker exec -i "$name" psql -X -At -U postgres -d cp_native20_owner_clone \
   < "$root/sql/acceptance/cp-native-app-autosync-20-owner-clone.sql"
 phase="complete"
 echo 'PASS: actual staging Auth schema/table/sequence ownership verified in isolated cluster'
+if [[ "${CP23_DISPOSABLE_RUNTIME_PROBE:-}" == 1 ]]; then
+  phase="disposable-auth-data-api"
+  python3 "$root/scripts/cp-native-app-autosync-23-disposable-runtime.py" \
+    --disposable "$envfile"
+fi
 echo 'NOT VERIFIED: staging GoTrue startup, signed new-module writer acceptance'
