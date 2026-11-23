@@ -74,6 +74,8 @@ The current CRM tab was inspected read-only. It has one authenticated CRM sessio
 
 The migration and frontend change are committed only in the local feature branch. The live Supabase migration ledger has not been changed, and the live app has not been deployed with the allocator. Production ticket numbering is therefore not yet certified.
 
+A read-only live database check found one existing UNIOIL ticket with the legacy reference `FT-20261022-EF60F251`; no existing client-prefixed sequence references were present. That historical reference will be preserved. Unless a verified historical sequence baseline is supplied before activation, the first new 2026 UNIOIL reference will be `UNI-2026-001` (and the first ARAMCO reference will be `ARA-2026-001`). The specification's `UNI-2026-038` example is not treated as a confirmed high-water mark without matching historical records.
+
 ### B. Genuine CRM-host two-account acceptance — pending
 
 The local GoTrue/PostgREST tests used independent reporter, L1, L2, administrator, and other-role sessions. The browser test's CRM host handshake was emulated. The current live CRM browser has only one authenticated account available, so a genuine second-account host handshake and simultaneous live CRM session acceptance cannot be certified yet.
