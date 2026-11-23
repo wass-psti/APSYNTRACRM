@@ -432,4 +432,64 @@ BEGIN
  EXCEPTION WHEN insufficient_privilege THEN NULL;
  END;
 END $$;
+-- Manual history remains visible after the owner leaves the active workspace.
+-- The same signed snapshot continues to require an active member for ordinary OT.
+UPDATE public.workspace_members SET active=false
+ WHERE workspace_id='10000000-0000-4000-8000-000000000001'
+   AND user_id='10000000-0000-4000-8000-000000000011';
+SELECT set_config('request.jwt.claims',
+ jsonb_build_object('sub','10000000-0000-4000-8000-000000000013',
+ 'session_id','10000000-0000-4000-8000-000000000033')::text,false);
+SET ROLE authenticated;
+DO $$
+DECLARE v jsonb;
+BEGIN
+ v:=public.timetracker_ot_snapshot('10000000-0000-4000-8000-000000000021');
+ IF v->>'scope'<>'AUTHORIZED_WORKSPACE_TEAM' OR
+    (SELECT count(*) FROM jsonb_array_elements(v->'rows') r
+      WHERE r->>'submissionSource'='manual_admin')<>3 OR
+    NOT EXISTS(SELECT 1 FROM jsonb_array_elements(v->'rows') r
+      WHERE r->>'ownerId'='cloud:10000000-0000-4000-8000-000000000011'
+       AND r->>'submissionSource'='manual_admin') THEN
+  RAISE EXCEPTION 'FAIL: manual OT history disappeared after owner membership ended %',v;
+ END IF;
+ IF EXISTS(SELECT 1 FROM jsonb_array_elements(v->'rows') r
+    WHERE r->>'ownerId'='cloud:10000000-0000-4000-8000-000000000011'
+      AND r->>'submissionSource'='employee') THEN
+  RAISE EXCEPTION 'FAIL: inactive owner regular OT escaped the active-member scope';
+ END IF;
+END $$;
+RESET ROLE;
+
+-- INSERT/UPDATE notifications are private, board-scoped and contain no OT data.
+DO $$
+DECLARE v_board uuid:='10000000-0000-4000-8000-000000000021';
+BEGIN
+ IF NOT EXISTS(
+  SELECT 1 FROM realtime.messages m
+  WHERE m.topic='board:'||v_board::text AND m.event='board-change'
+    AND m.private=true AND m.payload->>'board_id'=v_board::text
+    AND m.payload->>'entity'='board'
+    AND m.payload->>'action'='OT_INSERT'
+    AND m.payload ? 'occurred_at'
+ ) THEN
+  RAISE EXCEPTION 'FAIL: manual OT insert did not publish board invalidation';
+ END IF;
+ IF NOT EXISTS(
+  SELECT 1 FROM realtime.messages m
+  WHERE m.topic='board:'||v_board::text AND m.event='board-change'
+    AND m.private=true AND m.payload->>'board_id'=v_board::text
+    AND m.payload->>'action'='OT_UPDATE'
+ ) THEN
+  RAISE EXCEPTION 'FAIL: OT decision did not publish board invalidation';
+ END IF;
+ IF EXISTS(
+  SELECT 1 FROM realtime.messages m
+  WHERE m.topic='board:'||v_board::text AND m.event='board-change'
+    AND (m.payload ?| ARRAY['reason','owner_id','submitted_by','status','record','old_record'])
+ ) THEN
+  RAISE EXCEPTION 'FAIL: Realtime invalidation leaked OT record data';
+ END IF;
+END $$;
+
 \echo 'CP-TT-MANUAL-OT-01 disposable acceptance PASS (role simulation, NOT genuine sessions)'

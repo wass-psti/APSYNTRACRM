@@ -169,10 +169,13 @@ function requestForm({date,start='18:00',end='20:00',reason=''}={},now=new Date(
  '<footer><button type="button" data-action="tt-ot-close">Cancel</button>'+
  '<button type="submit"'+(!(TT_OT_WRITES_ACCEPTED&&otContractActive)?' disabled':'')+'>Submit Request</button></footer></form></section></div>';
 }
-function manualOtForm({employeeId='',date='',start='',end='',reason=''}={},access={},now=new Date(),busy=false,manualRows=[]){
+function manualOtForm({employeeId='',date='',start='',end='',reason=''}={},access={},now=new Date(),busy=false,manualRows=[],manualVisibleCount=50){
  const directory=Array.isArray(access.overviewDirectory)?access.overviewDirectory:[];
  const canManage=access.manualOtManager===true&&access.moduleRole==='System Admin';
  const enabled=TT_OT_WRITES_ACCEPTED&&canManage&&access.otContractActive===true&&!busy;
+ const visibleLimit=Number.isSafeInteger(manualVisibleCount)&&manualVisibleCount>0?
+  Math.min(manualVisibleCount,25000):50;
+ const visibleRows=manualRows.slice(0,visibleLimit);
  const options=directory.filter(user=>user&&user.status==='active'&&typeof user.id==='string')
   .map(user=>'<option value="'+esc(user.id)+'"'+(employeeId===user.id?' selected':'')+'>'+
    esc(user.display_name||'Workforce member')+'</option>').join('');
@@ -186,26 +189,29 @@ function manualOtForm({employeeId='',date='',start='',end='',reason=''}={},acces
    '<button type="submit"'+(enabled?'':' disabled')+'>＋ Submit Manual OT</button></div></form>':
    '<p class="tt-ot-manual-empty">No active TimeTracker employees are available in this workspace.</p>'):
    '<p class="tt-ot-manual-readonly-note">Read-only view. Manual overtime entry and review actions are available to System Admins only.</p>';
- const records=manualRows.length?manualRows.map(r=>'<article class="tt-ot-manual-record">'+
+ const records=visibleRows.length?visibleRows.map(r=>'<article class="tt-ot-manual-record">'+
   '<div class="tt-ot-manual-record-heading"><strong>'+esc(r.name)+'</strong>'+
    '<span class="tt-ot-pill tt-ot-'+r.status.toLowerCase()+'">'+esc(r.status==='Submitted'?'Pending':r.status)+'</span></div>'+
   '<div class="tt-ot-manual-record-meta"><span>'+esc(fmt(r.date))+'</span><span>'+esc(formatTimeTrackerWallClock(r.start))+' – '+esc(formatTimeTrackerWallClock(r.end))+'</span><strong>'+esc(minutesLabel(r.durationMinutes))+'</strong></div>'+
   '<p>'+esc(r.task||'No reason supplied')+'</p>'+
   (canManage&&r.submittedByName?'<small>Entered by '+esc(r.submittedByName)+'</small>':'')+
- '</article>').join(''):'<p class="tt-ot-manual-empty">No manual OT entries for this week.</p>';
+ '</article>').join(''):'<p class="tt-ot-manual-empty">No manual OT entries recorded.</p>';
+ const loadMore=visibleRows.length<manualRows.length?
+  '<button type="button" class="tt-ot-manual-more" data-action="tt-ot-manual-more" aria-label="Show more manual OT records">Show next 50 records</button>':'';
  return '<section class="tt-ot-manual-section" aria-labelledby="tt-ot-manual-title">'+
   '<div class="tt-ot-manual-heading"><div><span>'+(canManage?'ADMINISTRATIVE ENTRY':'READ-ONLY RECORDS')+'</span>'+
    '<h3 id="tt-ot-manual-title">Manual OT Submission</h3>'+
    '<p>Historical overtime records entered for employees.</p></div>'+
    '<span class="tt-ot-manual-chip">'+(canManage?'System Admin':'Read only')+'</span></div>'+
-  entry+'<div class="tt-ot-manual-records"><div class="tt-ot-manual-records-heading"><strong>Manual OT records</strong><span>'+manualRows.length+' this week</span></div>'+records+'</div>'+
+  entry+'<div class="tt-ot-manual-records"><div class="tt-ot-manual-records-heading"><strong>Manual OT records</strong><span>'+visibleRows.length+' of '+manualRows.length+' total</span></div>'+records+loadMore+'</div>'+
  '</section>';
 }
 export function renderTimeTrackerOvertime({
- requests=[],access={},filters={},expandedRequestIds=[],modalOpen=false,form={},manualForm={},now=new Date(),busy=false
+ requests=[],access={},filters={},expandedRequestIds=[],modalOpen=false,form={},manualForm={},now=new Date(),busy=false,manualVisibleCount=50
 }={}){
  const opts={...TT_OT_DEFAULT_FILTERS,...filters};
  const m=timeTrackerOtMetrics(requests,opts,now);
+ const manualRows=projectTimeTrackerOtRows(requests).filter(row=>row.isManual);
  const statuses=[['Submitted','Pending',m.submitted],
   ['Approved','Approved',m.approved],['Rejected','Rejected',m.rejected]];
  const high=Math.max(1,...m.byDay);
@@ -241,7 +247,7 @@ export function renderTimeTrackerOvertime({
   '<input id="tt-ot-week-jump" type="date" required max="'+esc(m.week.today)+'" value="'+esc(m.week.start)+'">'+
   '<button type="submit">View week</button></form>'+
  '<button type="button" class="tt-ot-submit" data-action="tt-ot-open">＋ Submit OT</button></div></div>'+
- manualOtForm(manualForm,access,now,busy,m.all.filter(r=>r.isManual))+
+ manualOtForm(manualForm,access,now,busy,manualRows,manualVisibleCount)+
  '<div class="tt-ot-metrics">'+metric('OT HOURS',minutesLabel(m.approvedMinutes))+
  metric('PENDING',m.submitted)+metric('APPROVED',m.approved)+
  metric('RATE',m.approvalRate===null?'—':m.approvalRate+'%')+'</div>'+

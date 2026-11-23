@@ -50,6 +50,32 @@ test('OT uses a distinct, data-driven command hero and one optional passive Pixi
  assert.match(markup,/>1<\/strong><span>Rejected<\/span>/);
  assert.doesNotMatch(markup,/Outside Member/);
 });
+test('manual OT history shows all dates independently of weekly analytics and paginates',()=>{
+ const history=Array.from({length:52},(_,index)=>({
+  id:'manual-history-'+index,name:'Manual Employee '+index,
+  ownerId:'cloud:manual-'+index,date:'2025-01-01',
+  status:['Submitted','Approved','Rejected'][index%3],
+  start:'18:00',end:'19:00',durationMinutes:60,
+  task:'Historical manual overtime record',submissionSource:'manual_admin'
+ }));
+ const firstPage=render({requests:[...rows,...history],
+  access:{moduleRole:'HR',manualOtManager:false},manualVisibleCount:50,
+  filters:{weekOffset:0}});
+ assert.match(firstPage,/Manual Employee 0/);
+ assert.match(firstPage,/Manual Employee 49/);
+ assert.doesNotMatch(firstPage,/Manual Employee 50/);
+ assert.match(firstPage,/50 of 52 total/);
+ assert.match(firstPage,/data-action="tt-ot-manual-more"/);
+ assert.match(firstPage,/READ-ONLY RECORDS/);
+ assert.doesNotMatch(firstPage,/tt-ot-manual-form/);
+ assert.match(firstPage,/3 authorized request\(s\) this week/);
+ const allRows=render({requests:[...rows,...history],
+  access:{moduleRole:'HR',manualOtManager:false},manualVisibleCount:100});
+ assert.match(allRows,/Manual Employee 51/);
+ assert.doesNotMatch(allRows,/data-action="tt-ot-manual-more"/);
+ assert.match(allRows,/52 of 52 total/);
+});
+
 test('existing OT navigation, role checks, search and staged write restrictions remain',()=>{
  const employee=render({modalOpen:true,filters:{status:'Approved'}});
  for(const token of ['tt-ot-prev','tt-ot-next','tt-ot-current','tt-ot-status',
