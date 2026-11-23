@@ -33,7 +33,9 @@ const saved={
    quantity:2,unitPrice:100,unit:'piece'}]}
 };
 const listed={documentId:id,boardItemId:item,documentNumber:saved.document_number,
- documentType:'quotation',workflowState:'draft',revision:1,archived:false};
+ clientName:'Example client',documentType:'quotation',workflowState:'draft',revision:1,
+ archived:false,createdAt:'2026-11-08T02:00:00Z',updatedAt:'2026-11-08T02:22:55Z',
+ createdByActor:true,assignedStage:null,primaryAt:null,secondaryAt:null};
 const archived={...listed,documentId:archivedId,boardItemId:archivedItem,
  documentNumber:'Q-OLD',revision:3,archived:true};
 const authorizedView={
@@ -43,20 +45,20 @@ const editPath=tradeLinkDraftEditHref(id);
 
 test('document time sorting compares instants across offsets and leaves unavailable times last',()=>{
  const times=['2026-11-08T10:00:00+08:00','2026-11-08T03:00:00Z',null,'invalid'];
- const rows=times.map((updatedAt,i)=>({...listed,documentNumber:'Q-'+i,updatedAt}));
+ const rows=times.map((createdAt,i)=>({...listed,documentNumber:'Q-'+i,createdAt}));
  for(const [sortDirection,expected] of [['asc',['Q-0','Q-1','Q-2','Q-3']],
   ['desc',['Q-1','Q-0','Q-2','Q-3']]]){
-  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{sortBy:'updatedAt',sortDirection})
+  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{sortBy:'createdAt',sortDirection})
    .map(row=>row.documentNumber),expected);
   const elements=rows.map(row=>({dataset:{...row,archived:'false'}}));
   const order=[];
   const container={querySelectorAll:()=>elements,
    querySelector:key=>key==='[data-tradelink-domain-list-body]'?
     {appendChild:el=>order.push(el.dataset.documentNumber)}:null};
-  assert.equal(updateTradeLinkDraftListUI(container,{sortBy:'updatedAt',sortDirection}),4);
+  assert.equal(updateTradeLinkDraftListUI(container,{sortBy:'createdAt',sortDirection}),4);
   assert.deepEqual(order,expected);
  }
- assert.deepEqual(rows.map(row=>row.updatedAt),times);
+ assert.deepEqual(rows.map(row=>row.createdAt),times);
 });
 
 test('authorized listing shows server update time and preview shows creation time',()=>{
@@ -65,13 +67,18 @@ test('authorized listing shows server update time and preview shows creation tim
   documentPreview:{documentId:id,record:{...saved,created_at:'2026-11-07T01:00:00Z'}}};
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:true});
  assert.ok(html.includes('<time datetime="'+updatedAt+'">Nov 08, 2026</time>'));
- assert.match(html,/<option value="updatedAt"[^>]*>Last updated<\/option>/);
+ assert.match(html,/<option value="createdAt"[^>]*>Date created<\/option>/);
+ assert.match(html,/<th scope="col">Document Number<\/th>/);
+ assert.match(html,/<th scope="col">Client Name<\/th>/);
+ assert.match(html,/Example client/);
  assert.match(html,/<dt>Created<\/dt><dd>2026-11-07T01:00:00Z<\/dd>/);
  const denied=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:false});
  assert.ok(!denied.includes(updatedAt));
  const malformed=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view:{...authorizedView,rows:[{...listed,updatedAt:'"><script>alert(1)</script>'}]},canManage:true});
- assert.doesNotMatch(malformed,/<script>|<time datetime=/);
+ assert.doesNotMatch(malformed,/<script>/);
+ assert.match(malformed,/data-created-at=\"2026-11-08T02:00:00Z\"/);
+ assert.match(malformed,/data-updated-at=\"\"/);
 });
 
 test('All Documents exposes signed edit, archive and restore for the matching Draft',()=>{

@@ -36,7 +36,9 @@ const row={id:docId,board_id:TRADELINK_BOARD_ID,workspace_id:ws,
  board_item_id:itemId,document_type:'quotation',document_number:'Q-2026-01',
  workflow_state:'draft',revision:2,content:draft};
 const listed={documentId:docId,boardItemId:itemId,documentType:'quotation',
- documentNumber:'Q-2026-01',workflowState:'draft',revision:2,archived:false,createdByActor:false};
+ documentNumber:'Q-2026-01',clientName:'Prospect',workflowState:'draft',revision:2,
+ archived:false,createdAt:'2026-11-08T01:00:00Z',
+ updatedAt:'2026-11-08T02:00:00Z',createdByActor:false};
 function entries(extra={}){
  const raw={documentType:'quotation',documentNumber:'Q-2026-01',
  customerName:'Prospect',customerEmail:'prospect@example.test',

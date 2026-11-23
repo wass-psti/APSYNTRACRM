@@ -46,7 +46,7 @@ const dateLabel=value=>{
   timeZone:'Asia/Manila',timeZoneName:'short'}).format(new Date(value)):safe(value);
 };
 const pdfTitle=type=>String(TYPE_LABELS[type]||type).toUpperCase();
-const partyLabel=type=>type==='po'?'SUPPLIER':type==='payment'?'PAYOR / CLIENT':'CLIENT';
+const partyLabel=type=>type==='po'?'SUPPLIER':type==='payment'?'PAYOR / CLIENT':type==='quotation'?'CLIENT NAME':'CLIENT';
 const moduleFields=Object.freeze({
  esi:[['customerTin','Customer TIN'],['dueDate','Due date'],
   ['verifiedBy','Assigned finance verifier'],['approvedBy','Assigned management approver']],

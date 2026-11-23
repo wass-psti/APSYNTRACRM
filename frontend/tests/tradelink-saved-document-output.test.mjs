@@ -53,6 +53,8 @@ test('all six saved TradeLink modules use the recovered official company templat
   assert.match(html,/data-tradelink-template-version="v1\.42\.0"/);
   assert.equal((html.match(/class="tl-official-footer"/g)||[]).length,1,type+' footer count');
   if(type==='quotation'){
+   assert.match(html,/CLIENT NAME:/);
+   assert.doesNotMatch(html,/PROSPECTIVE CLIENT/);
    assert.match(html,/tl-official-quotation-page-1/);
    assert.match(html,/tl-official-quotation-page-2/);
    assert.match(html,/tl-official-terms-page/);
