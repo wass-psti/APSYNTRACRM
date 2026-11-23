@@ -240,6 +240,27 @@ jobs:
       - name: Verify real GoTrue two-session FuelTrans REST lifecycle in disposable containers
         run: |
           sh scripts/cp-ft-ui06-gotrue-postgrest.sh
+      - name: Verify TradeLink creation-order pagination and reviewer merge in disposable PostgreSQL 17
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client
+          fi
+          createdb cp_tl_document_identity_order_01b
+          PGDATABASE=cp_tl_document_identity_order_01b psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-tl03-disposable-setup.sql \
+            -f sql/cp-tl03-staged-domain.sql \
+            -f sql/tradelink-documents-page-candidate.sql \
+            -f supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql \
+            -f sql/tests/cp-tl03-documents-page-preflight.sql \
+            -f supabase/migrations/20261123080322_cp_tl_document_identity_order_01.sql \
+            -f sql/tests/cp-tl03-documents-page-disposable.sql
   disposable-toolbox-postgres:
     runs-on: ubuntu-latest
     permissions:
