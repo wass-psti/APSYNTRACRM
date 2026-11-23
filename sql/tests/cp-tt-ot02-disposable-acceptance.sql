@@ -434,13 +434,15 @@ BEGIN
 END $$;
 -- Manual history remains visible after the owner leaves the active workspace.
 -- The same signed snapshot continues to require an active member for ordinary OT.
+-- Roll back the synthetic membership change so later acceptance tests start clean.
+BEGIN;
 UPDATE public.workspace_members SET active=false
  WHERE workspace_id='10000000-0000-4000-8000-000000000001'
    AND user_id='10000000-0000-4000-8000-000000000011';
 SELECT set_config('request.jwt.claims',
  jsonb_build_object('sub','10000000-0000-4000-8000-000000000013',
- 'session_id','10000000-0000-4000-8000-000000000033')::text,false);
-SET ROLE authenticated;
+ 'session_id','10000000-0000-4000-8000-000000000033')::text,true);
+SET LOCAL ROLE authenticated;
 DO $$
 DECLARE v jsonb;
 BEGIN
@@ -459,7 +461,7 @@ BEGIN
   RAISE EXCEPTION 'FAIL: inactive owner regular OT escaped the active-member scope';
  END IF;
 END $$;
-RESET ROLE;
+ROLLBACK;
 
 -- INSERT/UPDATE notifications are private, board-scoped and contain no OT data.
 DO $$
