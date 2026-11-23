@@ -12,8 +12,9 @@ const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
  name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'},
  groups:[],items:[],columns:[]};
 const row={documentId:id,boardItemId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
- documentNumber:'Q-001',documentType:'quotation',revision:2,workflowState:'draft',
- archived:false,updatedAt:'2026-11-08T22:12:00+08:00'};
+ documentNumber:'Q-001',clientName:'Reference Client',documentType:'quotation',
+ revision:2,workflowState:'draft',archived:false,
+ createdAt:'2026-11-08T20:00:00+08:00',updatedAt:'2026-11-08T22:12:00+08:00'};
 const render=(canManage=true)=>renderTradeLinkDocumentRepository({
  detail,workspaceId:workspace,canManage,
  view:{...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',rows:[row]}

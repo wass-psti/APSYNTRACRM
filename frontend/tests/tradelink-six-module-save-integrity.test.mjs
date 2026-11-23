@@ -12,7 +12,7 @@ const fields=data=>({
 const moduleInputs={
  esi:{customerName:'Invoice client',customerTin:'TIN-001',verifiedBy:'msenagan@watchdogautomation.com.ph',approvedBy:'asenagan@watchdogautomation.com.ph',
   currency:'USD',exchangeRate:'58',lineDescription:'Goods',lineQuantity:'2',lineUnitPrice:'150'},
- quotation:{customerName:'Prospective client',customerEmail:'client@example.com',
+ quotation:{customerName:'Example client',customerEmail:'client@example.com',
   validity:'30 days',deliveryCommitment:'Within 14 days',paymentTerms:'Net 30',
   approvedBy:'asenagan@watchdogautomation.com.ph',lineDescription:'Service',lineQuantity:'2',lineUnitPrice:'150'},
  packing:{customerName:'Consignee',referenceNumber:'SO-7',

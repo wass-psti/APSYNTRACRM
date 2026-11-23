@@ -26,8 +26,10 @@ const summary={
   taxable:10000,vat:1200,total:11200}],
  aging:{available:false,reason:'Aging requires invoice due dates and payment allocations.'}
 };
-const record={documentNumber:'Q-11131',documentType:'quotation',
- workflowState:'won',revision:3,updatedAt:'2026-11-16T05:00:00.000Z',archived:false};
+const record={documentNumber:'Q-11131',clientName:'Example Client',
+ documentType:'quotation',workflowState:'won',revision:3,
+ createdAt:'2026-11-16T04:00:00.000Z',
+ updatedAt:'2026-11-16T05:00:00.000Z',archived:false};
 
 test('legacy currencies include every currency named by the supplied workflow',()=>{
  for(const code of ['PHP','USD','EUR','JPY','SAR','SGD','AUD'])
@@ -148,8 +150,8 @@ test('TradeLink analytics route is available without changing document routes',(
 
 test('selected-document CSV is bounded, quoted and contains metadata only',()=>{
  const csv=serializeTradeLinkDocumentCsv([record]);
- assert.match(csv,/"Document Number","Document Type","Workflow Status","Revision","Last Updated","Archived"/);
- assert.match(csv,/"Q-11131","quotation","won","3"/);
+ assert.match(csv,/"Document Number","Client Name","Document Type","Created At","Workflow Status","Revision","Last Updated","Archived"/);
+ assert.match(csv,/"Q-11131","Example Client","quotation","2026-11-16T04:00:00.000Z","won","3"/);
  assert.ok(csv.endsWith('\r\n'));
  assert.doesNotMatch(csv,/customerName|customerEmail|content|workspace_id/);
  const escaped=serializeTradeLinkDocumentCsv([{...record,documentNumber:'Q,"11131'}]);
@@ -167,7 +169,7 @@ test('selected-document CSV covers every source document type with stable metada
  const csv=serializeTradeLinkDocumentCsv(records);
  const lines=csv.trimEnd().split('\r\n');
  assert.equal(lines.length,types.length+1);
- assert.equal(lines[0],'"Document Number","Document Type","Workflow Status","Revision","Last Updated","Archived"');
+ assert.equal(lines[0],'"Document Number","Client Name","Document Type","Created At","Workflow Status","Revision","Last Updated","Archived"');
  for(const type of types){
   assert.ok(lines.some(line=>line.includes('"'+type+'"')),type);
  }

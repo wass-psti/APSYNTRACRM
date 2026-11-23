@@ -57,20 +57,22 @@ export function mergeTradeLinkCreatedAndAssignedRows(createdRows,assignedRows){
  const merged=new Map();
  for(const row of assignedRows){
   if(!validUuid(row?.documentId)||!['primary','secondary'].includes(row?.assignedStage)||
+   typeof row?.createdAt!=='string'||!Number.isFinite(Date.parse(row.createdAt))||
    typeof row?.updatedAt!=='string'||!Number.isFinite(Date.parse(row.updatedAt)))
    throw new ApiError('Invalid assigned TradeLink document row.',409);
   merged.set(row.documentId,{...row,createdByActor:false});
  }
  for(const row of createdRows){
   if(!validUuid(row?.documentId)||row?.createdByActor!==true||
+   typeof row?.createdAt!=='string'||!Number.isFinite(Date.parse(row.createdAt))||
    typeof row?.updatedAt!=='string'||!Number.isFinite(Date.parse(row.updatedAt)))
    throw new ApiError('Invalid creator-owned TradeLink document row.',409);
   const previous=merged.get(row.documentId)||{};
   merged.set(row.documentId,{...previous,...row,createdByActor:true});
  }
  return [...merged.values()].sort((a,b)=>
-  Date.parse(b.updatedAt)-Date.parse(a.updatedAt)||
-  a.documentId.localeCompare(b.documentId));
+  Date.parse(b.createdAt)-Date.parse(a.createdAt)||
+  b.documentId.localeCompare(a.documentId));
 }
 
 export function initialTradeLinkDraftView(documentType=null){
@@ -366,7 +368,8 @@ export function prepareTradeLinkDraftCommand(view,fields,{
 export function serializeTradeLinkDocumentCsv(records){
  if(!Array.isArray(records)||records.length>50)
   throw new ApiError('Select no more than 50 visible TradeLink documents.',400);
- const columns=[['documentNumber','Document Number'],['documentType','Document Type'],
+ const columns=[['documentNumber','Document Number'],['clientName','Client Name'],
+  ['documentType','Document Type'],['createdAt','Created At'],
   ['workflowState','Workflow Status'],['revision','Revision'],
   ['updatedAt','Last Updated'],['archived','Archived']];
  const quote=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
@@ -375,6 +378,8 @@ export function serializeTradeLinkDocumentCsv(records){
    !typeLabels.some(([id])=>id===row.documentType)||
    typeof row.workflowState!=='string'||!Number.isSafeInteger(row.revision)||
    row.revision<1||typeof row.archived!=='boolean'||
+   (row.clientName!==null&&row.clientName!==undefined&&typeof row.clientName!=='string')||
+   typeof row.createdAt!=='string'||!Number.isFinite(Date.parse(row.createdAt))||
    typeof row.updatedAt!=='string'||!Number.isFinite(Date.parse(row.updatedAt)))
    throw new ApiError('Selected TradeLink document metadata is invalid.',409);
   return columns.map(([key])=>quote(row[key])).join(',');
@@ -389,20 +394,24 @@ export function reconcileTradeLinkSavedListing(list,record,receipt){
     !['draft','for-approval','revision-required'].includes(record.workflow_state)||
     record.archived_at!==null||
     typeof record.document_number!=='string'||
+    typeof record.created_at!=='string'||!Number.isFinite(Date.parse(record.created_at))||
     typeof record.updated_at!=='string'||
     !Number.isFinite(Date.parse(record.updated_at)))
   throw new ApiError('Signed TradeLink document listing reconciliation failed.',409);
  const summary={documentId:record.id,boardItemId:record.board_item_id,
-  documentNumber:record.document_number,documentType:record.document_type,
-  workflowState:record.workflow_state,revision:record.revision,
-  archived:false,updatedAt:record.updated_at};
+  documentNumber:record.document_number,clientName:record.content?.customerName??null,
+  documentType:record.document_type,workflowState:record.workflow_state,
+  revision:record.revision,archived:false,
+  createdAt:record.created_at,updatedAt:record.updated_at};
  const existing=list.rows.find(row=>row.documentId===record.id);
  if(existing&&(existing.boardItemId!==record.board_item_id||
     existing.documentType!==record.document_type||
     existing.documentNumber!==record.document_number))
   throw new ApiError('Signed TradeLink document listing conflicts with saved record.',409);
- return {...list,rows:[summary,...list.rows.filter(row=>
-   row.documentId!==record.id)].slice(0,50)};
+ const rows=[summary,...list.rows.filter(row=>row.documentId!==record.id)];
+ rows.sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt)||
+  b.documentId.localeCompare(a.documentId));
+ return {...list,rows:rows.slice(0,50)};
 }
 
 export class TradeLinkDraftWorkspace{
@@ -941,6 +950,9 @@ const commonSummaryRows=Object.freeze([
  ['documentNumber','Document number'],['customerName','Customer / supplier / recipient'],
  ['currency','Currency']
 ]);
+const commonSummaryRowsFor=type=>commonSummaryRows.map(([key,label])=>[
+ key,key==='customerName'&&type==='quotation'?'Client Name':label
+]);
 export function tradeLinkDraftLocalSummaryValues(draft){
  if(!draft||!Object.hasOwn(localSummaryRows,draft.documentType))return null;
  const item=Array.isArray(draft.items)?draft.items[0]||{}:{};
@@ -967,7 +979,7 @@ export function tradeLinkDraftLocalSummaryValues(draft){
  fields.localTotal=priced&&amount?formatTradeLinkAmount(amount.total)+' '+amount.currency:'';
  fields.localPhpEquivalent=priced&&amount&&amount.phpEquivalent!==null?
   formatTradeLinkAmount(amount.phpEquivalent)+' PHP':'';
- const rows=[...commonSummaryRows,...localSummaryRows[draft.documentType]];
+ const rows=[...commonSummaryRowsFor(draft.documentType),...localSummaryRows[draft.documentType]];
  return Object.fromEntries(rows.map(([key])=>[key,String(fields[key]??'').trim()||'—']));
 }
 /** No HTML construction from user input, browser storage, RPC, or document writes. */
@@ -995,7 +1007,7 @@ function renderTradeLinkDraftLocalSummary(type){
   '<p class="muted">Only the fields from this local form are shown. Names are '+
   'not verified identities. This is not a created document or approval.</p>'+
   '<dl class="tl-draft-summary-rows">'+
-  [...commonSummaryRows,...rows].map(([key,label])=>
+  [...commonSummaryRowsFor(type),...rows].map(([key,label])=>
    '<div><dt>'+escape(label)+'</dt><dd data-tradelink-draft-summary-value="'+
     escape(key)+'"></dd></div>').join('')+
   '</dl><p class="muted">Edit any input or switch modules to discard this '+
@@ -1181,7 +1193,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
     serialNumber:fieldValue('lineSerialNumber',line.serialNumber??'')}];
  const commonPartyLabel=type==='packing'?'Consignee':type==='delivery'?'Recipient / consignee':
   payment?'Payor':type==='po'?'Supplier':type==='esi'?'Invoice client':
-  type==='quotation'?'Prospective client':'Customer / supplier';
+  type==='quotation'?'Client Name':'Customer / supplier';
  const now=new Date();
  const localDateInput=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),
   String(now.getDate()).padStart(2,'0')].join('-');
@@ -1348,14 +1360,14 @@ const draftArchiveModes=Object.freeze([
  ['active','Active only'],['archived','Archived only'],['all','Active and archived']
 ]);
 const draftSortFields=Object.freeze([
- ['documentNumber','Document number'],['documentType','Document module'],
- ['revision','Revision'],['updatedAt','Last updated']
+ ['createdAt','Date created'],['documentNumber','Document number'],
+ ['documentType','Document module'],['revision','Revision'],['updatedAt','Last updated']
 ]);
 const draftSortDirections=Object.freeze([['asc','Ascending'],['desc','Descending']]);
 const matchAllowed=(list,value,fallback)=>list.some(([key])=>key===value)?value:fallback;
 export function initialTradeLinkDraftListFilters(){
  return {query:'',documentType:'all',workflowState:'all',archiveMode:'active',
-  sortBy:'documentNumber',sortDirection:'asc'};
+  sortBy:'createdAt',sortDirection:'desc'};
 }
 export function normalizeTradeLinkDraftListFilters(input={}){
  const f=input&&typeof input==='object'&&!Array.isArray(input)?input:{};
@@ -1364,8 +1376,8 @@ export function normalizeTradeLinkDraftListFilters(input={}){
   documentType:matchAllowed(draftListTypes,f.documentType,'all'),
   workflowState:matchAllowed(draftListStates,f.workflowState,'all'),
   archiveMode:matchAllowed(draftArchiveModes,f.archiveMode,'active'),
-  sortBy:matchAllowed(draftSortFields,f.sortBy,'documentNumber'),
-  sortDirection:matchAllowed(draftSortDirections,f.sortDirection,'asc')
+  sortBy:matchAllowed(draftSortFields,f.sortBy,'createdAt'),
+  sortDirection:matchAllowed(draftSortDirections,f.sortDirection,'desc')
  };
 }
 const tradeLinkDocumentLabel=value=>typeLabels.find(([id])=>id===value)?.[1]||String(value||'—');
@@ -1410,11 +1422,12 @@ function tradeLinkDraftRowMatches(row,filters){
 function sortTradeLinkDraftRows(rows,filters){
  const field=filters.sortBy,descending=filters.sortDirection==='desc';
  return [...rows].sort((left,right)=>{
-  if(field==='updatedAt'){
-   const a=tradeLinkTimestamp(left?.updatedAt),b=tradeLinkTimestamp(right?.updatedAt);
+  if(field==='createdAt'||field==='updatedAt'){
+   const a=tradeLinkTimestamp(left?.[field]),b=tradeLinkTimestamp(right?.[field]);
    // Missing times stay last in either direction; never invent a record date.
    if(a===null||b===null)return a===b?0:a===null?1:-1;
-   return descending?b-a:a-b;
+   const timeOrder=descending?b-a:a-b;
+   return timeOrder||String(right?.documentId||'').localeCompare(String(left?.documentId||''));
   }
   const a=field==='revision'?Number(left?.revision)||0:String(left?.[field]??'');
   const b=field==='revision'?Number(right?.revision)||0:String(right?.[field]??'');
@@ -1477,7 +1490,7 @@ export function updateTradeLinkDraftListUI(container,input={}){
   for(const row of sortTradeLinkDraftRows(rows.map(el=>({
    element:el,documentNumber:el.dataset?.documentNumber,
    documentType:el.dataset?.documentType,revision:el.dataset?.revision,
-   updatedAt:el.dataset?.updatedAt
+   createdAt:el.dataset?.createdAt,updatedAt:el.dataset?.updatedAt
   })),filters))body.appendChild(row.element);
  }
  const counter=container.querySelector('[data-tradelink-domain-count]');
@@ -1514,7 +1527,7 @@ export function renderTradeLinkSavedDocumentPreview(record,workspaceId,documentI
    formatTradeLinkAmount(amounts.phpEquivalent)+' PHP':'—';
  }
  const type=typeLabels.find(([id])=>id===row.document_type)?.[1]||row.document_type;
- const details=[...commonSummaryRows,...localSummaryRows[row.document_type],
+ const details=[...commonSummaryRowsFor(row.document_type),...localSummaryRows[row.document_type],
   ['remarks','Remarks'],['customerAddress','Party address'],['referenceNumber','Source reference'],
   ['customerTin','Tax identity'],['dueDate','Due date'],['paymentTerms','Payment terms'],
   ['verifiedBy','Intended verifier'],['approvedBy','Intended approver']]
@@ -1627,7 +1640,8 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
     '<caption>'+(canReview&&!creatorMode?'Documents assigned to the signed account':readOnly?'Authorized TradeLink documents':'Authorized TradeLink Draft records')+
      ' in current response</caption>'+
     '<thead><tr>'+(readOnly&&!canReview?'<th scope="col"><input id="tl-select-visible-documents" type="checkbox" data-tl-select-all aria-label="Select all visible documents" /></th>':'')+
-    '<th scope="col">No.</th><th scope="col">Document</th><th scope="col">Module</th>'+
+    '<th scope="col">No.</th><th scope="col">Document Number</th><th scope="col">Client Name</th>'+
+    '<th scope="col">Module</th><th scope="col">Created</th>'+
     '<th scope="col">Last updated</th><th scope="col">Workflow Status</th>'+
     '<th scope="col">Rev. No.</th><th scope="col">Actions</th>'+
     '</tr></thead><tbody data-tradelink-domain-list-body>'+
@@ -1638,14 +1652,18 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
      const canEditRow=ownerDraft||(canManage&&TL03_DOMAIN_WRITES_ENABLED&&
       !row.archived&&['draft','for-approval','revision-required','approved'].includes(row.workflowState));
      return '<tr data-tradelink-domain-record data-document-number="'+
-      escape(row.documentNumber)+'" data-document-type="'+escape(row.documentType)+
+      escape(row.documentNumber)+'" data-client-name="'+escape(row.clientName??'')+
+      '" data-document-type="'+escape(row.documentType)+
       '" data-workflow-state="'+escape(row.workflowState)+'" data-revision="'+
-      escape(row.revision)+'" data-updated-at="'+escape(tradeLinkTimestamp(row.updatedAt)===null?'':row.updatedAt)+'" data-archived="'+
+      escape(row.revision)+'" data-created-at="'+escape(tradeLinkTimestamp(row.createdAt)===null?'':row.createdAt)+
+      '" data-updated-at="'+escape(tradeLinkTimestamp(row.updatedAt)===null?'':row.updatedAt)+'" data-archived="'+
       (row.archived===true?'true':'false')+'"'+(match?'':' hidden')+'>'+
       (readOnly&&!canReview?'<td><input id="tl-select-'+escape(row.documentId)+'" type="checkbox" data-tl-select-document aria-label="Select document '+escape(row.documentNumber)+'" /></td>':'')+
       '<td class="tl-ref-row-number">'+escape(index+1)+'</td>'+
       '<td class="tl-ref-doc-number">'+escape(row.documentNumber)+'</td>'+
+      '<td>'+escape(typeof row.clientName==='string'&&row.clientName.trim()?row.clientName:'—')+'</td>'+
       '<td>'+escape(tradeLinkDocumentLabel(row.documentType))+'</td>'+
+      '<td>'+renderTradeLinkTimestamp(row.createdAt)+'</td>'+
       '<td>'+renderTradeLinkTimestamp(row.updatedAt)+'</td>'+
       '<td>'+renderTradeLinkWorkflowBadge(row.workflowState,row.archived)+'</td>'+
       '<td><span class="tl-ref-revision">'+escape(row.revision)+'</span></td>'+

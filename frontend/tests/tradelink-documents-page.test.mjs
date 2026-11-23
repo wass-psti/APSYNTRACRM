@@ -12,8 +12,10 @@ const boardItemId='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const timestamp='2026-11-08T06:23:14.478231+00:00';
 const row={documentId,boardItemId,documentType:'quotation',
  documentNumber:'Q-0001',revision:5,workflowState:'draft',
- archived:false,updatedAt:timestamp,createdByActor:false};
-const page={rows:[row],hasMore:true,nextCursor:{documentId,updatedAt:timestamp}};
+ archived:false,clientName:'Example Client',createdAt:timestamp,
+ updatedAt:timestamp,createdByActor:false,assignedStage:'primary',
+ primaryAt:null,secondaryAt:null};
+const page={rows:[row],hasMore:true,nextCursor:{documentId,createdAt:timestamp}};
 const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
  name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'},
  items:[],groups:[],columns:[]};
@@ -45,15 +47,35 @@ test('malformed inputs are blocked before the network and denied Board manager n
  const {client,calls}=signedClient();
  for(const input of [{query:'x'.repeat(121)},{documentType:'forged'},
   {workflowState:'forged'},{archiveMode:'untrusted'},{limit:0},{limit:51},
-  {cursor:{updatedAt:timestamp,documentId:'not-a-uuid'}},
-  {cursor:{updatedAt:'not-a-date',documentId}}]){
+  {cursor:{createdAt:timestamp,documentId:'not-a-uuid'}},
+  {cursor:{createdAt:'not-a-date',documentId}}]){
   await assert.rejects(()=>client.searchPage(input),/Invalid TradeLink server search request/);
  }
  assert.equal(calls.length,0);
  const denied=signedClient({allowed:false,rpc:()=>{throw Error('Denied client reached RPC');}});
- await assert.rejects(()=>denied.client.searchPage(),/manager scope required|Create New context is unavailable/);
+ await assert.rejects(()=>denied.client.searchPage(),/manager scope required|Create New context is unavailable|Signed TradeLink reviewer API unavailable/);
  assert.equal(denied.calls.length,0);
 });
+test('assigned reviewers use the paged RPC through their existing reviewer session',async()=>{
+ const calls=[];
+ const board=detail.board;
+ const client=new TradeLinkDomainClient({
+  auth:{userId:actor,getVerifiedUser:async()=>({id:actor})},
+  api:{
+   context:async()=>({user_id:actor,workspace_id:workspace,profile:{status:'active'}}),
+   board:async()=>detail,allowed:async()=>false,
+   nativeApplicationBoardContext:async moduleId=>({
+    moduleId,userId:actor,workspaceId:workspace,role:'Reviewer',board
+   }),
+   rpc:async(name,args)=>{calls.push([name,args]);return page;}
+  }
+ });
+ const result=await client.searchPage();
+ assert.equal(result.rows[0].documentId,documentId);
+ assert.equal(calls.length,1);
+ assert.equal(calls[0][0],'tl03_documents_page');
+});
+
 test('untrusted page envelopes, revisions, times, and cursors fail closed',async()=>{
  const invalid=[
   {...page,rows:[{...row,documentId:'bad'}]},
@@ -77,12 +99,12 @@ test('server-paged All Documents shows actionable search, previous and next with
  const view={...initialTradeLinkDraftView(),
   status:'AUTHORIZED_READ',rows:[row],
   listFilters:{query:'Q-',documentType:'quotation',workflowState:'draft',
-   archiveMode:'active',sortBy:'updatedAt',sortDirection:'desc'},
+   archiveMode:'active',sortBy:'createdAt',sortDirection:'desc'},
   listPage:{server:true,hasMore:true,nextCursor:page.nextCursor,
-   cursor:{documentId,updatedAt:timestamp},
+   cursor:{documentId,createdAt:timestamp},
    history:[null],pageIndex:1,
    appliedFilters:{query:'',documentType:'all',workflowState:'all',
-    archiveMode:'active',sortBy:'updatedAt',sortDirection:'desc'}}};
+    archiveMode:'active',sortBy:'createdAt',sortDirection:'desc'}}};
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view,canManage:true});
  assert.match(html,/Search documents/);
@@ -126,6 +148,20 @@ test('scoped RPC does not replace existing domain read API or expose unauthentic
  assert.doesNotMatch(sql,/SECURITY DEFINER|DROP TABLE|ALTER TABLE|CREATE ROLE|service_role/);
 });
 
+
+test('active TradeLink document RPCs use persisted created_at ordering and expose client identity',()=>{
+ const migration=readFileSync(new URL('../../supabase/migrations/20261123080322_cp_tl_document_identity_order_01.sql',import.meta.url),'utf8');
+ assert.match(migration,/ORDER BY s\.created_at DESC,s\.id DESC/);
+ assert.match(migration,/ORDER BY d\.created_at DESC,d\.id DESC/);
+ assert.match(migration,/ORDER BY a\.created_at DESC,a\.id DESC/);
+ assert.match(migration,/\(d\.created_at,d\.id\)<\(p_before_at,p_before_id\)/);
+ assert.match(migration,/'clientName',r\.content->>'customerName'/);
+ assert.match(migration,/'createdAt',r\.created_at/);
+ assert.match(migration,/private\.tl03_can_review\(p_board_id\)/);
+ assert.match(migration,/CREATE INDEX IF NOT EXISTS tl03_document_created/);
+ assert.doesNotMatch(migration,/ALTER TABLE public\.tradelink_documents\s+RENAME|UPDATE public\.tradelink_documents\s+SET content/i);
+ assert.doesNotMatch(migration,/gradient descent|backpropagation|fine.?tun|training loop/i);
+});
 
 test('All Documents distinguishes an authorized empty result from pending, failed, and loading reads',()=>{
  const renderState=(view,canReview=true)=>renderTradeLinkDocumentRepository({

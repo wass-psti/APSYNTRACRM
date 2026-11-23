@@ -2,7 +2,7 @@
 
 ## Status
 
-**PARTIAL — implementation and local verification pass; the sustained 30-minute CPU benchmark and the Supabase Database report's internal failure code remain outstanding.**
+**PARTIAL — CP-04 session-recovery code is merged into main and deployed to GitHub Pages; the sustained 30-minute CPU benchmark, complete host process attribution, four Pro/all-plan Database report panels, and post-deployment signed-browser acceptance remain outstanding.**
 
 Investigation date: 2026-11-23 (UTC).
 
@@ -219,14 +219,16 @@ No speculative SQL changes, permission changes, project-setting changes, or prod
 
 ## 11. Recommended next move
 
-# CP-CRM-SESSION-CPU-05 — Sustained CPU Benchmark Closure, Auth Log Correlation, and Supabase Database Report Failure Root-Cause Resolution
+The following recommendation was drafted before PR #804 merged. Section 14 supersedes its integration and deployment tasks; only the still-open acceptance items remain.
+
+# CP-CRM-SESSION-CPU-05 — Sustained CPU Benchmark, Database Report Diagnostics, and Post-Deployment Session Acceptance
 
 ### Objectives
 
-- Complete the 30-minute passive CPU benchmark using the existing credential only after the pending review action.
-- Reconcile Auth service and Edge gateway counts at request level.
+- Complete the 30-minute passive CPU benchmark through a supported secret-safe authenticated path; do not reveal or extract the existing Secret API key.
+- Preserve the already verified Auth/Edge request-ID reconciliation (154/154); repeat only if new evidence shows a discrepancy.
 - Determine whether the detailed Database report failure is a Supabase reporting-service issue or a project-specific report query failure.
-- Rebase CP-04 onto the latest `origin/main`, pass CI, and deploy the narrowly scoped session-recovery correction.
+- CP-04 is already merged into `main` and deployed to GitHub Pages; do not repeat integration or deployment.
 - Repeat genuine production refresh acceptance after deployment.
 
 ### Acceptance criteria
@@ -234,9 +236,9 @@ No speculative SQL changes, permission changes, project-setting changes, or prod
 - [ ] 31 authenticated Metrics API samples complete successfully across 30 minutes.
 - [ ] CPU average, p50, p95, maximum, I/O wait, and steal are calculated from elapsed-time counter deltas.
 - [ ] CPU remains approximately 3% active execution or all remaining host contributors are attributed.
-- [ ] Auth/Edge request counts reconcile or their telemetry gap is documented with evidence.
+- [x] Auth/Edge request IDs reconcile 154/154 in the documented 30-minute window.
 - [ ] Detailed Database report failure has a captured status/trace ID or an evidence-based external-service classification.
-- [ ] CP-04 is rebased onto current main and all required CI checks pass.
+- [x] CP-04 mainline merge and GitHub Pages deployment are verified; unrelated check failures are documented in section 14.2.
 - [ ] Deployed CRM preserves signed-in state on refresh while genuine Auth invalidation still returns to sign-in.
 - [ ] No attendance write occurs during acceptance.
 - [ ] No database, permission, role, or project-setting changes are introduced without a separate requirement.
@@ -390,4 +392,46 @@ The production Vite build completed. It emitted the existing main application ch
 
 ### Integration state
 
-Pull request [#804](https://github.com/wass-psti/APSYNTRACRM/pull/804) remains open. The merge commit has not yet been pushed to the PR branch at the time this section was recorded, so GitHub Actions and deployment acceptance are still pending.
+Pull request [#804](https://github.com/wass-psti/APSYNTRACRM/pull/804) was merged at 2026-11-23 07:40:44 UTC as `26d3ea06b632f1bb53e136716e77f5a916a73b96`. The merge commit is now `origin/main`. GitHub Pages build and deployment completed successfully in run [45132856353](https://github.com/wass-psti/APSYNTRACRM/actions/runs/45132856353). See section 14 for live-source verification and remaining acceptance.
+
+## 14. Post-merge and production deployment closeout — 2026-11-23
+
+This section supersedes earlier statements that PR #804, CI, or the CP-04 deployment were pending.
+
+### 14.1 Mainline merge and deployment
+
+- PR [#804](https://github.com/wass-psti/APSYNTRACRM/pull/804) merged at `2026-11-23T07:40:44Z`.
+- Main commit: `26d3ea06b632f1bb53e136716e77f5a916a73b96`.
+- The merged `frontend/app.js`, `frontend/platform-sync.js`, and CP-04 regression tests are present in `origin/main`.
+- GitHub Pages workflow [45132856353](https://github.com/wass-psti/APSYNTRACRM/actions/runs/45132856353) completed successfully. The build, deploy, and status-report jobs all concluded `success`.
+- The deployed production `frontend/platform-sync.js` SHA-256 is `6542e0de330096f4b53e70949957a8509aea1b392a91801822fc98046574eac6`, identical to the corresponding file in `origin/main` and the CP-04 branch.
+
+**Result: VERIFIED — CP-04 recovery code is deployed to GitHub Pages.**
+
+### 14.2 Main commit check-run summary
+
+The main commit reported 29 check runs: 26 successful, two failures, and no pending checks at inspection time. The failures are not CP-04 session-recovery test failures:
+
+1. `Supabase Preview` did not pass; the repository deploy target is GitHub Pages and the Pages deployment itself succeeded.
+2. The `disposable-ot-postgres` TimeTracker integration job passed its CP-TT-MANUAL-OT-01 disposable acceptance, then failed later in `sql/tests/cp-tt-live01-disposable-setup.sql:10`. PostgreSQL reported that `CREATE OR REPLACE FUNCTION` cannot remove parameter defaults from the existing `public.module_role_for(text,uuid)` function. This is a separate TimeTracker test-fixture defect, not a CP-04 source change. It was not modified under this scope.
+
+The CP-04 post-merge local verification remains: 3,506/3,506 frontend tests, 61/61 focused combined tests, `npm run check`, lint, format check, and production build all passed.
+
+### 14.3 Updated production evidence
+
+- The Supabase Database dashboard showed a 3.17% average CPU value over its Last 60 minutes window. This is near the approximately 3% target but is not a comparable 30-minute counter-delta benchmark and does not provide p50, p95, or maximum CPU values.
+- The corrected historical counter sample remains 3.25% active execution after excluding I/O wait and hypervisor steal.
+- Auth and Edge gateway logs reconciled exactly: 154/154 request IDs matched in the 06:45–07:15 UTC window.
+- Four Database report panels documented as available on Pro/all plans remain unavailable: Database Connections, Dedicated Pooler Client Connections, Shared Pooler Client Connections, and Disk Usage. Disk throughput is separately plan-gated on Pro. No internal failure status or trace ID was exposed.
+- The earlier genuine production TimeTracker refresh verified the existing signed-in baseline before the CP-04 deployment. The currently selected CRM tab reports that synchronization is paused while the tab is hidden and that the last authoritative check is not yet verified. This is not accepted as post-deployment session-rehydration evidence.
+
+### 14.4 Remaining CP-04 acceptance
+
+1. Obtain a comparable 30-minute CPU sample and calculate average, p50, p95, maximum, I/O wait, and steal. The earlier CLI sampling invocation was held by the client safety review because it would reveal the existing Secret API key. No bypass, secret display, rotation, or alternate credential extraction was attempted. Use only a supported secret-safe authenticated path.
+2. Attribute the remaining host CPU contributors if the provider exposes the necessary process counters. Current Metrics API evidence identifies PostgreSQL and GoTrue but not the remaining host services. If those counters are not exposed, record the provider telemetry limitation rather than inferring attribution.
+3. Capture an internal HTTP status, trace ID, or report-service error for the four unavailable Pro/all-plan Database panels, or establish an evidence-based Supabase reporting-service classification. Do not change project settings or database configuration to mask the reporting failure.
+4. Complete a genuine post-deployment signed-in browser acceptance: verify a workspace-context 401/403/42501 while Auth identity remains valid preserves the signed Auth session and presents retry; verify a genuine Auth identity 401/403 still follows the existing sign-in path. Do not perform attendance writes.
+
+### 14.5 CP-04 disposition
+
+**PARTIAL — IMPLEMENTED, MERGED, AND DEPLOYED; NOT CLOSED.** The session-recovery source is live and automated regressions pass. The remaining CPU benchmark/attribution, Database report diagnostics, and post-deployment signed-browser acceptance are not yet evidenced. The next scoped implementation is CP-CRM-SESSION-CPU-05, limited to those remaining acceptance items. No unrelated TimeTracker SQL fixture, role, permission, database schema, or project-setting changes are included.

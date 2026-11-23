@@ -79,7 +79,7 @@ import {TradeLinkAttachmentClient,TL03_ATTACHMENTS_ENABLED}
  from './tradelink-attachments.js';
 import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftForm,parseTradeLinkDraftForm,
  tradeLinkDraftValidationMessage,tradeLinkDraftReady,tradeLinkDraftSaveFailureMessage,
- tradeLinkDraftHasUnsavedChanges,reconcileTradeLinkSavedListing,mergeTradeLinkCreatedAndAssignedRows,
+ tradeLinkDraftHasUnsavedChanges,reconcileTradeLinkSavedListing,
  serializeTradeLinkDocumentCsv,
  prepareTradeLinkDraftCommand,
  renderTradeLinkDraftLineItem,snapshotTradeLinkDraftLineItems,updateTradeLinkDraftLocalAmounts,
@@ -273,7 +273,7 @@ const tradeLinkNativeSearchAdapter=createNativeSearchAdapter({
   try{
    const page=await tradeLinkDraftWorkspace.searchPage({
     filters:{query,documentType:'all',workflowState:'all',archiveMode:'active',
-     sortBy:'updatedAt',sortDirection:'desc'},limit:bounded
+     sortBy:'createdAt',sortDirection:'desc'},limit:bounded
    });
    return page.rows;
   }catch(error){
@@ -2575,12 +2575,17 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
         (!state.boardManage&&record.created_by!==auth.userId)||
         record.board_item_id==null||record.document_number!==record.content?.documentNumber||
         record.document_type!==record.content?.documentType)throw new ApiError('TradeLink document is unavailable.',404);
-       state.tradeLinkDraft.rows=[...state.tradeLinkDraft.rows,{
+       const recoveredRows=[...state.tradeLinkDraft.rows,{
         documentId:record.id,boardItemId:record.board_item_id,
-        documentNumber:record.document_number,documentType:record.document_type,
-        revision:record.revision,workflowState:record.workflow_state,
-        archived:false,updatedAt:record.updated_at,createdByActor:record.created_by===auth.userId
+        documentNumber:record.document_number,clientName:record.content?.customerName??null,
+        documentType:record.document_type,revision:record.revision,
+        workflowState:record.workflow_state,archived:false,
+        createdAt:record.created_at,updatedAt:record.updated_at,
+        createdByActor:record.created_by===auth.userId
        }];
+       recoveredRows.sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt)||
+        b.documentId.localeCompare(a.documentId));
+       state.tradeLinkDraft.rows=recoveredRows.slice(0,50);
       }catch(error){
        if(pendingSelection)pendingNativeSearchSelection=null;
        throw error;
@@ -3337,24 +3342,17 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
  try{
   let result;
   if(documents&&!state.boardManage){
-   if(tradeLinkCanCreate()){
-    const [created,assigned]=await Promise.all([
-     tradeLinkDraftWorkspace.searchPage({filters,cursor:pageRequest?.cursor??null}),
-     tradeLinkDraftWorkspace.assignedDocuments()
-    ]);
-    if(created.listPage){
-     created.listPage={...created.listPage,history:pageRequest?.history??[],
-      pageIndex:pageRequest?.pageIndex??0};
-    }
-    result={...created,rows:mergeTradeLinkCreatedAndAssignedRows(created.rows,assigned),
-     message:'Showing documents you created and documents assigned to your signed TradeLink account.',
-     assignedOnly:false};
-   }else{
-    result={status:'AUTHORIZED_READ',rows:await tradeLinkDraftWorkspace.assignedDocuments(),
-     message:'Showing only documents assigned to your signed TradeLink account.'};
-    result.listPage=null;
-    result.assignedOnly=true;
+   result=await tradeLinkDraftWorkspace.searchPage({
+    filters,cursor:pageRequest?.cursor??null});
+   if(result.listPage){
+    result.listPage={...result.listPage,history:pageRequest?.history??[],
+     pageIndex:pageRequest?.pageIndex??0};
    }
+   result={...result,
+    message:tradeLinkCanCreate()?
+     'Showing documents you created and documents assigned to your signed TradeLink account.':
+     'Showing documents assigned to your signed TradeLink account.',
+    assignedOnly:!tradeLinkCanCreate()};
   }else if(documents){
    if(!tradeLinkDocumentsPageRpcUnavailable){
     try{
@@ -3395,13 +3393,17 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
        record.document_number!==record.content?.documentNumber||
        record.document_type!==record.content?.documentType)
        throw new ApiError('Saved Draft not editable.',409);
-      state.tradeLinkDraft.rows=[...state.tradeLinkDraft.rows,{
+      const recoveredRows=[...state.tradeLinkDraft.rows,{
        documentId:record.id,boardItemId:record.board_item_id,
-       documentNumber:record.document_number,documentType:record.document_type,
-       revision:record.revision,workflowState:record.workflow_state,
-       archived:false,updatedAt:record.updated_at,
+       documentNumber:record.document_number,clientName:record.content?.customerName??null,
+       documentType:record.document_type,revision:record.revision,
+       workflowState:record.workflow_state,archived:false,
+       createdAt:record.created_at,updatedAt:record.updated_at,
        createdByActor:record.created_by===actor
       }];
+      recoveredRows.sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt)||
+       b.documentId.localeCompare(a.documentId));
+      state.tradeLinkDraft.rows=recoveredRows.slice(0,50);
      }catch{
       if(same())state.tradeLinkDraft.error=
        'This Draft could not be verified by signed server read. Return to All Documents.';
@@ -8296,20 +8298,29 @@ async function action(name,button){
      location.hash=tradeLinkApplicationHref('documents');
     }else toast('Validation recorded. Awaiting the second reviewer.');
    }else{
-    const [board,rows]=await Promise.all([
-     tradeLinkDraftWorkspace.boardProjection(documentId),tradeLinkDraftWorkspace.assignedDocuments()
+    const currentPage=state.tradeLinkDraft.listPage;
+    const currentFilters=currentPage?.appliedFilters??state.tradeLinkDraft.listFilters;
+    const [board,refreshed,page]=await Promise.all([
+     tradeLinkDraftWorkspace.boardProjection(documentId),
+     tradeLinkDraftWorkspace.readAssigned(documentId),
+     tradeLinkDraftWorkspace.searchPage({
+      filters:currentFilters,cursor:currentPage?.cursor??null
+     })
     ]);
     if(!same())break;
-    const refreshed=rows.find(row=>row.documentId===documentId);
     const boardItem=board?.items?.find(item=>item.id===listed.boardItemId);
     if(!refreshed||refreshed.revision!==receipt.revision||
-       refreshed.workflowState!==receipt.state||
+       refreshed.workflow_state!==receipt.state||
        !tradeLinkBoardProjectionMatches(boardItem,{
-        boardItemId:refreshed.boardItemId,documentNumber:refreshed.documentNumber,
-        updatedAt:refreshed.updatedAt}))
+        boardItemId:refreshed.board_item_id,documentNumber:refreshed.document_number,
+        updatedAt:refreshed.updated_at}))
      throw new ApiError('Review was recorded, but the refreshed Board/list projection could not be verified. Refresh before retrying.',409);
     state.tradeLinkDraft={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',
-     assignedOnly:true,rows,message:receipt.state==='approved'?
+     assignedOnly:!tradeLinkCanCreate(),rows:page.rows,
+     listFilters:currentFilters,
+     listPage:{...page.listPage,history:currentPage?.history??[],
+      pageIndex:currentPage?.pageIndex??0},
+     message:receipt.state==='approved'?
       'Both assigned reviewers have validated this document. Status is now Approved.':
       'Your signed validation time was recorded. The document remains For Approval until the second reviewer validates.'};
     toast(receipt.state==='approved'?'Both validations complete. Document Approved.':
@@ -12553,8 +12564,9 @@ function exportTradeLinkDocumentSelection(panel){
   .filter(row=>!row.hidden&&row.querySelector('[data-tl-select-document]')?.checked);
  if(!rows.length)return false;
  const records=rows.map(row=>({documentNumber:row.dataset.documentNumber,
-  documentType:row.dataset.documentType,workflowState:row.dataset.workflowState,
-  revision:Number(row.dataset.revision),updatedAt:row.dataset.updatedAt,
+  clientName:row.dataset.clientName||null,documentType:row.dataset.documentType,
+  workflowState:row.dataset.workflowState,revision:Number(row.dataset.revision),
+  createdAt:row.dataset.createdAt,updatedAt:row.dataset.updatedAt,
   archived:row.dataset.archived==='true'}));
  const csv=serializeTradeLinkDocumentCsv(records);
  const url=URL.createObjectURL(new Blob(['\ufeff',csv],{type:'text/csv;charset=utf-8'}));
