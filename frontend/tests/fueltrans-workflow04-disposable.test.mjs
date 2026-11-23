@@ -19,7 +19,7 @@ function startTicket(){
  const draft=validateSourceTicketDraft({
   client:'UNIOIL',title:'Reproducible POS terminal failure',
   description:'POS terminal cannot finish station transactions after an application restart.',
-  priority:'High',stationId:'1013C',stationName:'UNIOIL AIRPORT ROAD',
+  priority:'High',stationId:'1013C',stationName:'UNIOIL AIRPORT ROAD',category:'POS Software Issue',
   systemType:SYSTEM_TYPES[0],impactLevel:IMPACTS[1],
   reportingChannel:CHANNELS[0],handoverFlag:false
  },reporter.member);
@@ -43,9 +43,9 @@ function disposableRepository(original){
  };
 }
 
-function apply(repo,identity,action,now){
+function apply(repo,identity,action,now,note=''){
  const previous=repo.read();
- const change=buildChange(previous,identity.member,identity.user,action,{now});
+ const change=buildChange(previous,identity.member,identity.user,action,{now,note});
  return repo.save(change,previous.updated_at);
 }
 
@@ -56,14 +56,16 @@ test('disposable two-actor lifecycle creation → claim L1 → escalate → clai
  const claimed=apply(repo,l1,'claim-l1','2026-11-23T02:01:00.000Z');
  assert.equal(claimed.status,'Under L1 Review');
  assert.equal(claimed.assigned_l1,l1Id);
- const escalated=apply(repo,l1,'status:Escalated to L2','2026-11-23T02:02:00.000Z');
+ const escalated=apply(repo,l1,'status:Escalated to L2','2026-11-23T02:02:00.000Z','POS service unavailable after terminal restart.');
  assert.equal(escalated.status,'Escalated to L2');
  const accepted=apply(repo,l2,'claim-l2','2026-11-23T02:03:00.000Z');
  assert.equal(accepted.status,'Under L2 Review');
  assert.equal(accepted.assigned_l2,l2Id);
- const finished=apply(repo,l2,'status:Resolved','2026-11-23T02:04:00.000Z');
+ const finished=apply(repo,l2,'status:Resolved','2026-11-23T02:04:00.000Z','Replaced the failed terminal cable and verified successful station transactions.');
  assert.equal(finished.status,'Resolved');
  assert.equal(finished.payload.closureDate,'2026-11-23T02:04:00.000Z');
+ assert.equal(finished.payload.escalationReason,'POS service unavailable after terminal restart.');
+ assert.equal(finished.payload.resolutionDetails,'Replaced the failed terminal cable and verified successful station transactions.');
  assert.equal(finished.payload.activity.length,5);
  assert.equal(repo.count(),4);
  assert.deepEqual(JSON.parse(JSON.stringify(repo.read())),finished);
@@ -74,6 +76,9 @@ test('invalid direct resolution, premature L2 claim and wrong workspace are deni
  const opened=startTicket(),l1=actor(l1Id,'global_l1_support'),l2=actor(l2Id,'local_l2_support');
  assert.equal(canTransition(l1.member,opened,'Resolved'),false);
  assert.throws(()=>buildChange(opened,l1.member,l1.user,'status:Resolved',{now:timestamp}),/transition/);
+ const claimed=buildChange(opened,l1.member,l1.user,'claim-l1',{now:timestamp});
+ assert.throws(()=>buildChange(claimed,l1.member,l1.user,'status:Resolved',{now:timestamp}),/15–4,000/);
+ assert.throws(()=>buildChange(claimed,l1.member,l1.user,'status:Escalated to L2',{now:timestamp}),/3–500/);
  assert.throws(()=>buildChange(opened,l2.member,l2.user,'claim-l2',{now:timestamp}),/claim/);
  const foreign={...l1.member,workspace_id:'99999999-9999-4999-8999-999999999999'};
  assert.throws(()=>buildChange(opened,foreign,l1.user,'claim-l1',{now:timestamp}),/mismatch/);

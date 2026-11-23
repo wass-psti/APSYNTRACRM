@@ -9,8 +9,10 @@ import {buildWorkflowQuery,QUEUE_SCOPES} from './queue-domain.js';
 import {auditFieldChanges,auditActorLabel} from './history-domain.js';
 import {REPORTS,collectReportRows,summarizeReports,reportCsv,canReadReports} from './analytics-domain.js';
 import {parseReportWindow,applyReportWindow,reportWindowLabel} from './report-window-domain.js';
+import {buildLifecycleExportWorkbook} from './lifecycle-export.js';
+import {buildClientSummaryPdfDefinition} from './report-pdf.js';
 import {SYSTEM_TYPES,normalizeQueueFilters,buildQueueFiltersQuery} from './queue-filters15.js';
-import {IMPACTS,CHANNELS,SOURCE_CREATE_STEPS,sourceOperationalInfo,validateSourceTicketDraft,buildSourceTicketRecord} from './ticket-create16.js';
+import {CATEGORIES,IMPACTS,CHANNELS,SOURCE_CREATE_STEPS,sourceOperationalInfo,validateSourceTicketDraft,buildSourceTicketRecord} from './ticket-create16.js';
 import {makeTicketDraft,normalizeTicketDraftState,isMeaningfulTicketDraft,sanitizeTicketDraft} from './ticket-draft17.js';
 import {validateCreateEvidence,uploadCreatedTicketEvidence,creationEvidenceMessage} from './create-evidence18.js';
 import {buildStationHistoryQuery,projectStationHistory} from './station-lookup18.js';
@@ -91,7 +93,7 @@ const refreshFromHost=()=>{
  void go(state.route,{preserveNotice:true});
 };
 root.addEventListener('apsyntra:refresh',refreshFromHost);
-let state={user:null,memberships:[],active:null,route:'dashboard',tickets:[],total:0,page:0,filter:'',status:'all',archived:false,clientFilter:'all',priorityFilter:'all',systemFilter:'all',queueFrom:'',queueTo:'',queueSort:'recent',detail:null,stats:null,busy:false,notice:'',workflowPage:0,viewPage:0,workflowScope:'all',issuePage:0,reportTab:'executive',reportWindow:{from:'',to:''},stationPage:0,stationClient:'all',stationIdSearch:''};
+let state={user:null,memberships:[],active:null,route:'dashboard',tickets:[],total:0,page:0,filter:'',status:'all',archived:false,clientFilter:'all',priorityFilter:'all',systemFilter:'all',queueFrom:'',queueTo:'',queueSort:'recent',detail:null,stats:null,busy:false,notice:'',workflowPage:0,viewPage:0,workflowScope:'all',issuePage:0,reportTab:'executive',reportWindow:{from:'',to:''},reportClient:'all',stationPage:0,stationClient:'all',stationIdSearch:''};
 const val=(x)=>h(x);const knownRoutes=new Set(['dashboard','tickets','create-ticket','reports','l1-workspace','l2-dispatch','handover','station-history','notifications','admin','users','sessions','audit','report-bug','logo-files','disaster-recovery','it-issues']);
 const escAttr=val;const role=()=>state.active?.role;
 function say(message){state.notice=message;const alert=document.getElementById('feedback');if(alert){alert.textContent=message;alert.hidden=!message;}}
@@ -243,12 +245,13 @@ async function details(id,revision){
  const payload=ticket.payload||{};
  const fields=[
   ['Client',ticket.client_code],['Station',payload.stationName],
-  ['Site ID',payload.stationId],['System Type',payload.systemType],
+  ['Site ID',payload.stationId],['Category',payload.category],['System Type',payload.systemType],
   ['Impact Level',payload.impactLevel],['Priority',priorityOf(ticket)],
   ['Reporting Channel',payload.reportingChannel],
   ['Reporting Shift',payload.reportingShift],
   ['Operational Date',payload.operationalDate],
-  ['Assigned L1 ID',ticket.assigned_l1],['Assigned L2 ID',ticket.assigned_l2]
+  ['Assigned L1 ID',ticket.assigned_l1],['Assigned L2 ID',ticket.assigned_l2],
+  ['Escalation Reason',payload.escalationReason],['Resolution Details',payload.resolutionDetails]
  ];
  const ticketActivity=Array.isArray(payload.activity)?payload.activity:[];
  const activityItems=ticketActivity.length?ticketActivity.slice(-20).reverse().map(activity=>`<li>
@@ -309,7 +312,7 @@ function createForm(){
   ${(forced?[forced]:CLIENTS).map(client=>`<button type="button" class="source-client-card" data-client-choice="${h(client)}" aria-pressed="${forced===client?'true':'false'}" ${forced?'disabled':''}><span class="source-client-symbol" aria-hidden="true">${h(client.slice(0,1))}</span><strong>${h(client)}</strong></button>`).join('')}
  </div><p class="muted source-client-help">Select the client here or use the client dropdown below. Station names remain unverified until confirmed against an approved directory.</p>
  <div class="form-grid"><label>Client *<select name="client" ${forced?'disabled':''} required>${forced?`<option value="${h(forced)}">${h(forced)}</option>`:options(CLIENTS,'Select client')}</select></label><label>Station ID *<input name="stationId" minlength="3" maxlength="120" required autocomplete="off"></label><label>Station Name *<input name="stationName" minlength="3" maxlength="160" required></label><div class="full source-station-history"><button type="button" class="secondary" id="find-station-history">Find previous station entries</button><p class="muted" id="station-history-status" role="status">Uses matching tickets visible to this account. Historical names are suggestions, not a verified station registry.</p><div id="station-history-suggestions" class="source-station-suggestions"></div></div></div><div class="full source-batch-stations" aria-label="Additional batch stations"><h3>Additional stations (optional)</h3><p class="muted">Create one ticket per station, up to 10 total. Each station is submitted separately. Any incomplete submissions are clearly reported.</p><div id="batch-station-list"></div><button type="button" class="secondary" id="batch-add-station">+ Add Another Station</button><p class="muted" id="batch-station-feedback" role="status">1 station selected.</p></div></section>
- <section data-create-stage="1" class="source-create-stage" hidden><h2>2. Classification</h2><div class="form-grid"><label>System Type *<select name="systemType" required>${options(SYSTEM_TYPES,'Select system')}</select></label><label>Priority Level *<select name="priority" required>${options(PRIORITIES,'Select priority')}</select></label><label>Impact Level *<select name="impactLevel" required>${options(IMPACTS,'Select impact')}</select></label><label>Estimated Downtime (minutes)<input type="number" name="downtimeMinutes" min="0" max="525600" step="any"></label><label>Affected Terminals / Lanes<input type="number" name="affectedTerminals" min="0" max="10000" step="1"></label></div></section>
+ <section data-create-stage="1" class="source-create-stage" hidden><h2>2. Classification</h2><div class="form-grid"><label>Ticket Category *<select name="category" required>${options(CATEGORIES,'Select category')}</select></label><label>System Type *<select name="systemType" required>${options(SYSTEM_TYPES,'Select system')}</select></label><label>Priority Level *<select name="priority" required>${options(PRIORITIES,'Select priority')}</select></label><label>Impact Level *<select name="impactLevel" required>${options(IMPACTS,'Select impact')}</select></label><label>Estimated Downtime (minutes)<input type="number" name="downtimeMinutes" min="0" max="525600" step="any"></label><label>Affected Terminals / Lanes<input type="number" name="affectedTerminals" min="0" max="10000" step="1"></label></div></section>
  <section data-create-stage="2" class="source-create-stage" hidden><h2>3. Issue Details</h2><div class="form-grid"><label class="full">Ticket Title *<input name="title" minlength="5" maxlength="160" required></label><label class="full">Issue Description *<textarea name="description" minlength="20" maxlength="10000" rows="7" required></textarea></label><label>Error Code / Reference<input name="errorCode" maxlength="50"></label><div class="full" id="critical-create-fields" hidden><div class="source-critical"><h3>Critical priority — additional information required</h3><label>Escalation Justification *<textarea name="escalationJustification" maxlength="500" minlength="10" rows="3"></textarea></label><label>Estimated Affected Transactions *<input name="affectedTransactions" type="number" min="1" max="100000000" step="1"></label></div></div></div></section>
  <section data-create-stage="3" class="source-create-stage" hidden><h2>4. Contact &amp; Handover</h2><div class="form-grid"><label>Reporting Channel *<select name="reportingChannel" required>${options(CHANNELS,'Select channel')}</select></label><label>Reporter Contact Name<input name="contactName" maxlength="120"></label><label>Reporter Phone<input name="contactPhone" maxlength="50" autocomplete="off"></label><label class="full source-evidence-picker">Attach evidence at creation (optional, up to 5 files)<input id="create-evidence-files" type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf,text/plain" aria-describedby="create-evidence-help create-evidence-status"></label><p id="create-evidence-help" class="muted full">Allowed: JPEG, PNG, WebP, PDF, text. Maximum 10 MB per file, 25 MB total. Files are uploaded only after the ticket is created and will not be included in the saved draft.</p><p id="create-evidence-status" role="status" class="muted full">No attachments selected.</p><label class="source-checkbox">Flag for shift handover <input type="checkbox" name="handoverFlag" ${localInfo.nearBoundary?'checked':''}></label></div><p class="muted">Handover is suggested only near the original 05:00–07:00 or 17:00–19:00 boundary; you control the flag.</p></section>
  <section data-create-stage="4" class="source-create-stage" hidden><h2>5. Review &amp; Submit</h2><div id="source-create-review" class="source-create-review" role="status"></div><div id="create-duplicate-warning" class="source-duplicate-warning" role="status"></div><p class="muted">Drafts are private and revision-checked; duplicate lookup inspects only RLS-visible active tickets and cannot guarantee uniqueness under concurrency. Sequential FTS numbering and personnel suggestions remain unverified. Batch station submits are sequential and non-atomic; check each confirmed ticket before any retry. Creation-time attachments use a non-atomic confirmed-ticket-then-private-storage upload; failures must be retried from Ticket Details. Tickets use UUID-based identifiers.</p></section>
@@ -687,15 +690,45 @@ function ticketActions(t){
   ...(canClaim(state.active,t,'L2')?[['claim-l2','Claim for L2']]:[]),
   ...(canAcceptAssigned(state.active,t,'L1',state.user.id)?[['accept-l1','Accept my L1 assignment']]:[]),
   ...(canAcceptAssigned(state.active,t,'L2',state.user.id)?[['accept-l2','Accept my L2 assignment']]:[]),
-  ...transitions.map(s=>[`status:${s}`,`Move to ${s}`]),
+  ...transitions.map(s=>[`status:${s}`,s==='Resolved'?'Resolve Ticket':s==='Escalated to L2'?'Escalate to L2':`Move to ${s}`]),
   ...(canHandover(state.active,t)?[['handover',t.payload?.handoverFlag?'Clear handover flag':'Flag handover']]:[]),
   ...(canArchive(state.active,t)?[['archive','Archive resolved ticket']]:[]),
   ...(permitted(state.active)&&TICKET_DELETION_ROLES.includes(state.active.role)?[['delete-recoverable','Delete ticket (recoverable)']]:[])
  ];
- return `<section class="panel ft-ticket-actions"><h2>Ticket Operations</h2><p class="muted">Changes are restricted by membership and Supabase RLS. Concurrent changes require a refresh.</p><div class="operation-buttons">${commands.map(([code,label])=>`<button type="button" class="${code.startsWith('claim-')?'':'secondary'}" data-ticket-action="${h(code)}">${h(label)}</button>`).join('')||'<span class="muted">No state transitions available for this ticket.</span>'}</div>${canOperate(state.active)?`<form id="ticket-note" class="note-form"><label>Operator work update<textarea name="note" required minlength="3" maxlength="2000" rows="3" placeholder="Record an operational update"></textarea></label><button type="submit">Add update</button></form>`:''}<h2>Work updates</h2><ol class="activity-list">${Array.isArray(t.payload?.updates)&&t.payload.updates.length?t.payload.updates.slice(-30).reverse().map(a=>`<li><strong>${h(a.author?.name||'Operator')}</strong><span>${h(friendlyTime(a.timestamp))}</span><p>${h(a.message||'')}</p></li>`).join(''):'<li>No work updates.</li>'}</ol></section>`;
+ return `<section class="panel ft-ticket-actions"><h2>Ticket Operations</h2><p class="muted">Changes are checked against the latest ticket revision. Escalations require a reason; resolution requires documented corrective action.</p><div class="operation-buttons">${commands.map(([code,label])=>`<button type="button" class="${code.startsWith('claim-')?'':'secondary'}" data-ticket-action="${h(code)}">${h(label)}</button>`).join('')||'<span class="muted">No state transitions available for this ticket.</span>'}</div>${transitions.some(s=>s==='Resolved'||s==='Escalated to L2')?`<dialog id="workflow-reason-dialog" class="ft-workflow-reason-dialog" aria-labelledby="workflow-reason-title" aria-describedby="workflow-reason-help"><form id="workflow-reason-form"><h2 id="workflow-reason-title">Ticket workflow details</h2><p id="workflow-reason-help" class="muted">Provide the information required to continue this ticket.</p><label id="workflow-reason-label"><span id="workflow-reason-label-text">Details</span><textarea id="workflow-reason-text" name="reason" required rows="5" maxlength="4000"></textarea></label><p id="workflow-reason-error" role="alert"></p><div class="button-row"><button type="button" class="secondary" id="workflow-reason-cancel">Cancel</button><button type="submit" id="workflow-reason-submit">Continue</button></div></form></dialog>`:''}${canOperate(state.active)?`<form id="ticket-note" class="note-form"><label>Operator work update<textarea name="note" required minlength="3" maxlength="2000" rows="3" placeholder="Record an operational update"></textarea></label><button type="submit">Add update</button></form>`:''}<h2>Work updates</h2><ol class="activity-list">${Array.isArray(t.payload?.updates)&&t.payload.updates.length?t.payload.updates.slice(-30).reverse().map(a=>`<li><strong>${h(a.author?.name||'Operator')}</strong><span>${h(friendlyTime(a.timestamp))}</span><p>${h(a.message||'')}</p></li>`).join(''):'<li>No work updates.</li>'}</ol></section>`;
+}
+function openWorkflowReasonDialog(status){
+ const dialog=document.getElementById('workflow-reason-dialog');
+ const form=document.getElementById('workflow-reason-form');
+ const textarea=document.getElementById('workflow-reason-text');
+ const isResolution=status==='Resolved';
+ if(!dialog||!form||!textarea)return;
+ dialog.dataset.status=status;textarea.value='';textarea.minLength=isResolution?15:3;textarea.maxLength=isResolution?4000:500;
+ document.getElementById('workflow-reason-title').textContent=isResolution?'Resolve Ticket':'Escalate Ticket to L2';
+ document.getElementById('workflow-reason-help').textContent=isResolution?'Document the root cause and corrective action. At least 15 characters are required.':'Explain why this ticket needs L2 support. Provide a reason of at least 3 characters.';
+ document.getElementById('workflow-reason-label-text').textContent=isResolution?'Resolution Details *':'Escalation Reason *';
+ document.getElementById('workflow-reason-submit').textContent=isResolution?'Resolve Ticket':'Escalate to L2';
+ document.getElementById('workflow-reason-error').textContent='';
+ dialog.showModal();textarea.focus();
 }
 function bindTicketActions(t){
- for(const btn of document.querySelectorAll('[data-ticket-action]'))btn.onclick=()=>submitTicketAction(t,btn.dataset.ticketAction);
+ for(const btn of document.querySelectorAll('[data-ticket-action]'))btn.onclick=()=>{
+  const action=btn.dataset.ticketAction;
+  if(action==='status:Resolved'||action==='status:Escalated to L2')openWorkflowReasonDialog(action.slice(7));
+  else submitTicketAction(t,action);
+ };
+ const dialog=document.getElementById('workflow-reason-dialog');
+ const form=document.getElementById('workflow-reason-form');
+ if(dialog&&form){
+  document.getElementById('workflow-reason-cancel').onclick=()=>dialog.close();
+  form.onsubmit=e=>{
+   e.preventDefault();const status=dialog.dataset.status;
+   const text=String(new FormData(form).get('reason')||'').trim();
+   const minimum=status==='Resolved'?15:3,maximum=status==='Resolved'?4000:500;
+   if(text.length<minimum||text.length>maximum){document.getElementById('workflow-reason-error').textContent=status==='Resolved'?'Resolution details must contain 15–4,000 characters.':'Escalation reason must contain 3–500 characters.';return;}
+   dialog.close();submitTicketAction(t,'status:'+status,text);
+  };
+ }
  const f=document.getElementById('ticket-note');if(f)f.onsubmit=e=>{e.preventDefault();const text=String(new FormData(f).get('note')||'');submitTicketAction(t,'note',text);};
 }
 async function submitTicketAction(t,action,note=''){
@@ -833,40 +866,94 @@ function reportRowsTable(head,rows,empty='No matching records in the visible wor
  return `<div class="table-wrap"><table><thead><tr>${head.map(x=>`<th scope="col">${h(x)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${row.map(cell=>`<td>${h(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 function reportBars(entries){const maximum=Math.max(1,...entries.map(x=>x[1]));return `<div class="report-bars">${entries.map(([label,count])=>`<div class="report-line"><span>${h(label)}</span><progress max="${maximum}" value="${Number(count)||0}" aria-label="${h(label)}"></progress><strong>${Number(count)||0}</strong></div>`).join('')}</div>`;}
-function renderReportTab(summary,tab){
+function renderReportTab(summary,tab,rows=[]){
  const cfg=REPORTS.find(x=>x.id===tab)||REPORTS[0];state.reportTab=cfg.id;
- const tabs=REPORTS.map(x=>`<button type="button" role="tab" data-report-tab="${h(x.id)}" aria-selected="${x.id===cfg.id}" class="${x.id===cfg.id?'':'secondary'}">${h(x.name)}</button>`).join('');
+ const selectedClient=CLIENTS.includes(state.reportClient)?state.reportClient:'all';
+ const exportAllowed=CLIENTS.includes(selectedClient);
+ const tabs=REPORTS.map(x=>'<button type="button" role="tab" data-report-tab="'+h(x.id)+'" aria-selected="'+String(x.id===cfg.id)+'" class="'+(x.id===cfg.id?'':'secondary')+'">'+h(x.name)+'</button>').join('');
  let content='';
  if(cfg.id==='executive'){
-  content=`<section class="report-kpis"><div class="stat-card"><small>Non-archived tickets</small><strong>${summary.unarchived}</strong></div><div class="stat-card"><small>Active workload</small><strong>${summary.active}</strong></div><div class="stat-card"><small>Resolved</small><strong>${summary.resolved}</strong></div><div class="stat-card"><small>Archived (excluded)</small><strong>${summary.archived}</strong></div></section><h2>Status breakdown</h2>${reportBars(Object.entries(summary.statuses))}`;
- } else if(cfg.id==='client-performance'){
-  content=`<h2>Client Performance</h2>${reportRowsTable(['Client','Visible tickets','Active','Resolved','Unknown status','Downtime minutes (recorded)'],summary.clients.map(v=>[v.name,v.tickets,v.active,v.resolved,v.unknownStatus,v.downtimeMinutes]))}`;
- } else if(cfg.id==='technician-productivity'){
-  content=`<h2>Technician Productivity</h2><p class="muted">Assignment counts are not time worked or quality scores. UUIDs are shown where profile names are unavailable.</p>${reportRowsTable(['Assigned technician','Level','Assigned tickets','Resolved tickets'],summary.technicians.slice(0,50).map(v=>[v.name,v.level,v.tickets,v.resolved]))}${summary.technicians.length>50?'<p class="muted">Showing first 50 technicians; CSV includes all authorized summary rows.</p>':''}`;
- } else {
-  content=`<section class="report-kpis"><div class="stat-card"><small>Recorded downtime (minutes)</small><strong>${summary.downtimeMinutes}</strong></div><div class="stat-card"><small>Tickets with recorded downtime</small><strong>${summary.knownDowntimeTickets}</strong></div><div class="stat-card"><small>Unknown downtime tickets</small><strong>${summary.unknownDowntimeTickets}</strong></div></section><h2>Downtime by system</h2><p class="muted">Only explicitly recorded numeric downtime contributes. No downtime cost is calculated from assumed hourly rates.</p>${reportRowsTable(['System','Tickets with data','Minutes'],summary.systems.map(v=>[v.name,v.tickets,v.minutes]))}`;
+  content='<section class="report-kpis"><div class="stat-card"><small>Non-archived tickets</small><strong>'+summary.unarchived+'</strong></div><div class="stat-card"><small>Active workload</small><strong>'+summary.active+'</strong></div><div class="stat-card"><small>Resolved</small><strong>'+summary.resolved+'</strong></div><div class="stat-card"><small>Archived (excluded)</small><strong>'+summary.archived+'</strong></div></section><h2>Status breakdown</h2>'+reportBars(Object.entries(summary.statuses));
+ }else if(cfg.id==='client-performance'){
+  content='<h2>Client Performance</h2>'+reportRowsTable(['Client','Visible tickets','Active','Resolved','Unknown status','Downtime minutes (recorded)'],summary.clients.map(v=>[v.name,v.tickets,v.active,v.resolved,v.unknownStatus,v.downtimeMinutes]));
+ }else if(cfg.id==='technician-productivity'){
+  content='<h2>Technician Productivity</h2><p class="muted">Assignment counts are not time worked or quality scores. UUIDs are shown where profile names are unavailable.</p>'+reportRowsTable(['Assigned technician','Level','Assigned tickets','Resolved tickets'],summary.technicians.slice(0,50).map(v=>[v.name,v.level,v.tickets,v.resolved]))+(summary.technicians.length>50?'<p class="muted">Showing first 50 technicians; CSV includes all authorized summary rows.</p>':'');
+ }else{
+  content='<section class="report-kpis"><div class="stat-card"><small>Recorded downtime (minutes)</small><strong>'+summary.downtimeMinutes+'</strong></div><div class="stat-card"><small>Tickets with recorded downtime</small><strong>'+summary.knownDowntimeTickets+'</strong></div><div class="stat-card"><small>Unknown downtime tickets</small><strong>'+summary.unknownDowntimeTickets+'</strong></div></section><h2>Downtime by system</h2><p class="muted">Only explicitly recorded numeric downtime contributes. No downtime cost is calculated from assumed hourly rates.</p>'+reportRowsTable(['System','Tickets with data','Minutes'],summary.systems.map(v=>[v.name,v.tickets,v.minutes]));
  }
  const reportWindow=reportScopeMeta||{excludedMissingOperationalDate:0,excludedOutOfWindow:0,range:{from:'',to:'',filtered:false}};
  const from=state.reportWindow.from,to=state.reportWindow.to;
  const windowDescription=reportWindowLabel(reportWindow.range);
- const exclusion=reportWindow.range.filtered?` · ${reportWindow.excludedMissingOperationalDate} ticket(s) excluded without valid operationalDate; ${reportWindow.excludedOutOfWindow} outside range.`:'';
- layout(`${pageHeader('Analytics & Reports','Operational reporting for the tickets you can access.')}<section class="panel"><form id="report-window" class="report-window-controls"><label>Operational date from <input type="date" name="from" value="${h(from)}"></label><label>Through <input type="date" name="to" value="${h(to)}"></label><button type="submit">Apply date filter</button><button id="clear-report-window" type="button" class="secondary">Clear</button></form><p class="muted" id="report-scope-note">${h(windowDescription)}${h(exclusion)}</p><p class="muted">Date filters use the operational date recorded on each ticket.</p><div role="tablist" aria-label="FuelTrans reports" class="report-tabs">${tabs}</div><div id="report-print-area" class="report-print-area"><header class="print-only"><h1>FuelTrans · ${h(cfg.name)}</h1><p>${h(windowDescription)} · workspace ${h(state.active.workspace_id)} · ${h(summary.totalRows)} records · ${h(reportScopeMeta?.snapshotAt||'')}</p></header><div role="tabpanel" aria-label="${h(cfg.name)}"><p class="muted">${h(cfg.description)} · ${summary.totalRows} selected accessible records · including ${summary.archived} archived.</p>${content}</div></div><div class="report-footer"><p class="muted">Reports include up to 10,000 accessible tickets. Use your browser’s print options to save a PDF.</p><div class="report-export-actions"><button id="print-report" type="button" class="secondary">Print / Save as PDF</button><button id="export" type="button" class="secondary">Export ${h(cfg.name)} CSV</button></div></div></section>`);
- for(const btn of document.querySelectorAll('[data-report-tab]'))btn.onclick=()=>renderReportTab(summary,btn.dataset.reportTab);
- document.getElementById('report-window').onsubmit=e=>{e.preventDefault();const fields=new FormData(e.currentTarget);const choice={from:String(fields.get('from')||''),to:String(fields.get('to')||'')};try{parseReportWindow(choice);state.reportWindow=choice;recalculateReportView();}catch(err){say(err.message);}};
+ const clientDescription=exportAllowed?'Client export scope: '+selectedClient+'.':'All clients are shown for on-screen review. Select one client to enable exports.';
+ const exclusion=reportWindow.range.filtered?' · '+reportWindow.excludedMissingOperationalDate+' ticket(s) excluded without valid operationalDate; '+reportWindow.excludedOutOfWindow+' outside range.':'';
+ const clientOptions='<option value="all" '+(selectedClient==='all'?'selected':'')+'>All clients · view only</option>'+CLIENTS.map(client=>'<option value="'+h(client)+'" '+(selectedClient===client?'selected':'')+'>'+h(client)+'</option>').join('');
+ const printHeader='<header class="print-only"><h1>FuelTrans · '+h(cfg.name)+'</h1><p>'+h(selectedClient==='all'?'All clients':selectedClient)+' · '+h(windowDescription)+' · '+h(summary.totalRows)+' records · '+h(reportScopeMeta?.snapshotAt||'')+'</p></header>';
+ const page=pageHeader('Analytics & Reports','Operational reporting for the tickets you can access.')+
+  '<section class="panel"><form id="report-window" class="report-window-controls">'+
+  '<label>Client scope <select id="report-client" name="client">'+clientOptions+'</select></label>'+
+  '<label>Operational date from <input type="date" name="from" value="'+h(from)+'"></label>'+
+  '<label>Through <input type="date" name="to" value="'+h(to)+'"></label>'+
+  '<button type="submit">Apply filters</button><button id="clear-report-window" type="button" class="secondary">Clear dates</button></form>'+
+  '<p class="muted" id="report-scope-note">'+h(windowDescription)+' · '+h(clientDescription)+h(exclusion)+'</p>'+
+  '<p class="muted">Date filters use the operational date recorded on each ticket. Exports are restricted to one selected client.</p>'+
+  '<div role="tablist" aria-label="FuelTrans reports" class="report-tabs">'+tabs+'</div>'+
+  '<div id="report-print-area" class="report-print-area">'+printHeader+
+  '<div role="tabpanel" aria-label="'+h(cfg.name)+'"><p class="muted">'+h(cfg.description)+' · '+summary.totalRows+' selected accessible records · including '+summary.archived+' archived.</p>'+content+'</div></div>'+
+  '<div class="report-footer"><p class="muted">Select one client before generating a CSV, lifecycle Excel workbook, or client PDF. Exports use the current date window and this read-only workspace snapshot.</p>'+
+  '<div class="report-export-actions"><button id="print-report" type="button" class="secondary" '+(exportAllowed?'':'disabled')+'>Print / Save selected client PDF</button>'+
+  '<button id="export" type="button" class="secondary" '+(exportAllowed?'':'disabled')+'>Export current report CSV</button>'+
+  '<button id="export-lifecycle-xlsx" type="button" class="secondary" '+(exportAllowed?'':'disabled')+'>Export lifecycle XLSX</button>'+
+  '<button id="export-client-pdf" type="button" class="secondary" '+(exportAllowed?'':'disabled')+'>Generate client summary PDF</button></div></div></section>';
+ layout(page);
+ for(const btn of document.querySelectorAll('[data-report-tab]'))btn.onclick=()=>renderReportTab(summary,btn.dataset.reportTab,rows);
+ document.getElementById('report-client').onchange=e=>{state.reportClient=e.target.value;recalculateReportView();};
+ document.getElementById('report-window').onsubmit=e=>{
+  e.preventDefault();const fields=new FormData(e.currentTarget);
+  const choice={from:String(fields.get('from')||''),to:String(fields.get('to')||'')};
+  try{parseReportWindow(choice);state.reportWindow=choice;recalculateReportView();}catch(err){say(err.message);}
+ };
  document.getElementById('clear-report-window').onclick=()=>{state.reportWindow={from:'',to:''};recalculateReportView();};
- document.getElementById('print-report').onclick=()=>window.print();
- document.getElementById('export').onclick=()=>{const csv=reportCsv(summary,cfg.id);const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=`fueltrans-${cfg.id}-summary.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+ const download=(filename,blob)=>{
+  const url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download=filename;document.body.append(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+ };
+ const requireClient=()=>{if(!exportAllowed)throw Error('Select exactly one client before exporting.');return selectedClient;};
+ document.getElementById('print-report').onclick=()=>{try{requireClient();window.print();}catch(error){say(error.message);}};
+ document.getElementById('export').onclick=()=>{
+  try{const client=requireClient();download('fueltrans-'+client.toLowerCase()+'-'+cfg.id+'.csv',new Blob([reportCsv(summary,cfg.id)],{type:'text/csv;charset=utf-8'}));}
+  catch(error){say(error.message);}
+ };
+ document.getElementById('export-lifecycle-xlsx').onclick=()=>{
+  try{const client=requireClient();const workbook=buildLifecycleExportWorkbook(rows,{client,workspaceId:state.active.workspace_id,now:Date.now()});download('fueltrans-'+client.toLowerCase()+'-lifecycle.xlsx',workbook);say('Single-client lifecycle workbook generated.');}
+  catch(error){say(error.message);}
+ };
+ document.getElementById('export-client-pdf').onclick=async()=>{
+  try{
+   const client=requireClient();
+   const definition=buildClientSummaryPdfDefinition({client,summary,generatedAt:new Date().toISOString(),range:windowDescription});
+   const {default:pdfMake}=await import('../vendor/frt-pdf-engine.js');
+   pdfMake.createPdf(definition).download('fueltrans-'+client.toLowerCase()+'-summary.pdf');
+   say('Single-client PDF summary generated.');
+  }catch(error){say(error.message);}
+ };
 }
+
 function recalculateReportView(){
  if(!reportRowsCache||!state.active||reportScopeMeta?.workspaceId!==state.active.workspace_id)throw Error('Report snapshot is stale; refresh reports.');
  const projection=applyReportWindow(reportRowsCache,state.reportWindow);
- reportScopeMeta={...reportScopeMeta,range:projection.range,excludedMissingOperationalDate:projection.excludedMissingOperationalDate,excludedOutOfWindow:projection.excludedOutOfWindow};
- const summary=summarizeReports(projection.rows,{workspaceId:state.active.workspace_id});
- renderReportTab(summary,state.reportTab);
+ const client=CLIENTS.includes(state.reportClient)?state.reportClient:'all';
+ const rows=client==='all'?projection.rows:projection.rows.filter(row=>String(row.client_code||'').toUpperCase()===client);
+ reportScopeMeta={...reportScopeMeta,range:projection.range,excludedMissingOperationalDate:projection.excludedMissingOperationalDate,excludedOutOfWindow:projection.excludedOutOfWindow,excludedOtherClients:projection.rows.length-rows.length};
+ const summary=summarizeReports(rows,{workspaceId:state.active.workspace_id});
+ renderReportTab(summary,state.reportTab,rows);
 }
+
 async function reports(revision){
  if(!canReadReports(state.active))throw Error('Reports require an active authorized FuelTrans membership.');
  const workspaceId=state.active.workspace_id;
+ const assignedClient=clientForMembership(state.active)||String(state.active.client_code||'').toUpperCase();
+ if(CLIENTS.includes(assignedClient))state.reportClient=assignedClient;
  const records=await collectReportRows({workspaceId,member:state.active,readPage:readAllTicketsForSnapshot,readCount:countAllTicketsForSnapshot});
  if(revision!==viewRevision||state.active.workspace_id!==workspaceId)return;
  reportRowsCache=records;

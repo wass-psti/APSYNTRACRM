@@ -28,7 +28,7 @@ export function summarizeReports(rows,{workspaceId}={}){
  const seen=new Set();
  const statuses=Object.fromEntries([...STATUS,'Unknown'].map(s=>[s,0]));
  const clients=Object.fromEntries([...CLIENTS,'Unknown'].map(c=>[c,{name:c,tickets:0,resolved:0,active:0,unknownStatus:0,downtimeMinutes:0,knownDowntimeTickets:0}]));
- const technicians=new Map(),systems=new Map();
+ const technicians=new Map(),systems=new Map(),categories=new Map();
  let active=0,resolved=0,archived=0,unknownStatus=0,knownDowntimeTickets=0,downtimeMinutes=0;
  for(const row of rows){
   if(!row||row.workspace_id!==workspaceId||typeof row.id!=='string'||!row.id||seen.has(row.id))throw Error('Report contains a duplicate or out-of-scope ticket.');
@@ -37,6 +37,9 @@ export function summarizeReports(rows,{workspaceId}={}){
   const status=safeStatus(row),client=clients[normalizeClient(row)],down=validDuration(row.payload?.downtimeMinutes);
   statuses[status]++;if(status==='Resolved'){resolved++;client.resolved++;}else if(status==='Unknown'){unknownStatus++;client.unknownStatus++;}else {active++;client.active++;}
   client.tickets++;
+  const categoryName=String(row.payload?.category||'Unspecified').trim().slice(0,80)||'Unspecified';
+  const category=categories.get(categoryName)||{name:categoryName,tickets:0,resolved:0};
+  category.tickets++;if(status==='Resolved')category.resolved++;categories.set(categoryName,category);
   if(down!==null){client.knownDowntimeTickets++;client.downtimeMinutes+=down;knownDowntimeTickets++;downtimeMinutes+=down;
    const type=String(row.payload?.systemType||'Unspecified').trim().slice(0,80)||'Unspecified';const v=systems.get(type)||{name:type,tickets:0,minutes:0};v.tickets++;v.minutes+=down;systems.set(type,v);
   }
@@ -49,6 +52,7 @@ export function summarizeReports(rows,{workspaceId}={}){
   totalRows:rows.length,archived,active,resolved,unknownStatus,unarchived:rows.length-archived,
   statuses,clients:CLIENTS.map(c=>clients[c]).concat(clients.Unknown.tickets?[clients.Unknown]:[]),
   technicians:[...technicians.values()].sort((a,b)=>b.tickets-a.tickets||a.name.localeCompare(b.name)),
+  categories:[...categories.values()].sort((a,b)=>b.tickets-a.tickets||a.name.localeCompare(b.name)),
   systems:[...systems.values()].sort((a,b)=>b.minutes-a.minutes||a.name.localeCompare(b.name)),
   downtimeMinutes,knownDowntimeTickets,unknownDowntimeTickets:rows.length-archived-knownDowntimeTickets
  };

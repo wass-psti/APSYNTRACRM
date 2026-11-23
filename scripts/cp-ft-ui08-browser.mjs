@@ -115,6 +115,7 @@ await pick('input[name=stationId]').fill('1013C');
 await pick('input[name=stationName]').fill('UNIOIL AIRPORT ROAD');
 await pick('#create-next').click();
 assert.equal(await pick('[data-create-stage="1"]:visible').count(),1);
+await pick('select[name=category]').selectOption('POS Software Issue');
 await pick('select[name=systemType]').selectOption({index:1});
 await pick('select[name=priority]').selectOption('Medium');
 await pick('select[name=impactLevel]').selectOption({index:1});
@@ -143,7 +144,7 @@ await pick('.ft-ticket-number').first().click();
 await pick('.ft-detail-columns').waitFor();
 assert.equal(await pick('.ft-detail-timers>div').count(),4);
 assert.equal(await pick('.ft-detail-secondary').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
-assert.equal(await pick('.ft-incident-grid dt').count(),11);
+assert.equal(await pick('.ft-incident-grid dt').count(),14);
 assert.equal(await pick('.ft-detail-primary #trusted-history').count(),1);
 await page.screenshot({path:'/private/tmp/ft-ui08-detail.png',fullPage:true});
 

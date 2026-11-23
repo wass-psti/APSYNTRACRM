@@ -79,6 +79,7 @@ boardId:'${boardId}',workspaceId:'${workspaceId}',userId:u.id,route:${JSON.strin
   await reporter.pick('input[name=stationId]').fill('TEST07');
   await reporter.pick('input[name=stationName]').fill('SYNTHETIC TEST STATION');
   await reporter.pick('#create-next').click();
+  await reporter.pick('select[name=category]').selectOption('POS Software Issue');
   await reporter.pick('select[name=systemType]').selectOption({index:1});
   await reporter.pick('select[name=priority]').selectOption('Medium');
   await reporter.pick('select[name=impactLevel]').selectOption({index:1});
@@ -104,6 +105,13 @@ boardId:'${boardId}',workspaceId:'${workspaceId}',userId:u.id,route:${JSON.strin
   await l1.pick('[data-ticket-action="status:Escalated to L2"]').waitFor({timeout:12000});
   assert.match(await l1.pick('.ft-main').innerText(),/Under L1 Review/);
   await l1.pick('[data-ticket-action="status:Escalated to L2"]').click();
+  await l1.pick('#workflow-reason-dialog[open]').waitFor({timeout:5000});
+  await l1.pick('#workflow-reason-text').fill('x');
+  await l1.pick('#workflow-reason-submit').click();
+  assert.equal(await l1.pick('#workflow-reason-dialog').evaluate(el=>el.open),true,'short escalation reason must keep the dialog open');
+  assert.match(await l1.pick('.ft-main').innerText(),/Under L1 Review/);
+  await l1.pick('#workflow-reason-text').fill('POS transaction service unavailable after repeated terminal restart.');
+  await l1.pick('#workflow-reason-submit').click();
   await l1.pick('.ft-main').getByText('Escalated to L2').first().waitFor({timeout:12000});
   console.log('GOTRUE_L1_BROWSER_CLAIM_AND_ESCALATION PASS');
 
@@ -112,8 +120,16 @@ boardId:'${boardId}',workspaceId:'${workspaceId}',userId:u.id,route:${JSON.strin
   await l2.pick('[data-ticket-action="claim-l2"]').click();
   await l2.pick('[data-ticket-action="status:Resolved"]').waitFor({timeout:12000});
   await l2.pick('[data-ticket-action="status:Resolved"]').click();
+  await l2.pick('#workflow-reason-dialog[open]').waitFor({timeout:5000});
+  await l2.pick('#workflow-reason-text').fill('fixed');
+  await l2.pick('#workflow-reason-submit').click();
+  assert.equal(await l2.pick('#workflow-reason-dialog').evaluate(el=>el.open),true,'short resolution must keep the dialog open');
+  assert.match(await l2.pick('.ft-main').innerText(),/Under L2 Review/);
+  await l2.pick('#workflow-reason-text').fill('Replaced the failed terminal cable and verified successful station transactions.');
+  await l2.pick('#workflow-reason-submit').click();
   await l2.pick('[data-ticket-action="status:Resolved"]').waitFor({state:'detached',timeout:12000});
   await l2.pick('.ft-main').getByText('Resolved').first().waitFor({timeout:12000});
+  assert.match(await l2.pick('.ft-main').innerText(),/Replaced the failed terminal cable/);
   assert.equal(await l2.pick('[data-ticket-action="status:Resolved"]').count(),0,'Resolved ticket has no further resolve action');
   console.log('GOTRUE_L2_BROWSER_CLAIM_AND_RESOLUTION PASS');
 

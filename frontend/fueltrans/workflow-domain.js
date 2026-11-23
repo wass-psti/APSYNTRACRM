@@ -60,8 +60,16 @@ export function buildChange(t,m,user,action,{now=new Date().toISOString(),note='
    if(Number.isFinite(started)&&Number.isFinite(stopped))p.lastResponseDurationMs=Math.max(0,stopped-started);
    p.responseStartedAt=null;
   }
-  if(status==='Escalated to L2')p.l2EscalationDate=now;
-  if(status==='Resolved')p.closureDate=now;
+  if(status==='Escalated to L2'){
+   const reason=String(note??'').trim();
+   if(reason.length<3||reason.length>500)throw Error('Escalation reason must contain 3–500 characters.');
+   p.escalationReason=reason;p.l2EscalationDate=now;
+  }
+  if(status==='Resolved'){
+   const resolution=String(note??'').trim();
+   if(resolution.length<15||resolution.length>4000)throw Error('Resolution details must contain 15–4,000 characters.');
+   p.resolutionDetails=resolution;p.closureDate=now;
+  }
   event='status_changed';title=`Status: ${t.status} → ${status}`;
  }else if(action==='handover'){
   if(!canHandover(m,t))throw Error('Handover not permitted.');
@@ -77,7 +85,8 @@ export function buildChange(t,m,user,action,{now=new Date().toISOString(),note='
   next.archived=true;p.archived=true;p.archivedAt=now;event='ticket_archived';title='Ticket archived';
  }else throw Error('Unknown ticket mutation.');
  p.updatedAt=now;next.updated_at=now;
- p.activity=[...(Array.isArray(p.activity)?p.activity:[]),{id:crypto.randomUUID(),type:event,title,actor,timestamp:now,message:action==='note'?'Operator recorded a work update':title,visibility:'public'}];
+ const activityMessage=action==='note'?'Operator recorded a work update':action==='status:Resolved'?'Resolution details recorded.':action==='status:Escalated to L2'?'Escalation reason recorded.':title;
+ p.activity=[...(Array.isArray(p.activity)?p.activity:[]),{id:crypto.randomUUID(),type:event,title,actor,timestamp:now,message:activityMessage,visibility:'public'}];
  return {workspace_id:next.workspace_id,id:next.id,updated_at:next.updated_at,status:next.status,archived:next.archived,assigned_l1:next.assigned_l1,assigned_l2:next.assigned_l2,payload:p};
 }
 export function scopeFor(m){const client=clientForMembership(m);return client?client:String(m?.client_code||'').toUpperCase()||null;}
