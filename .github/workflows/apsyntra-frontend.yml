@@ -227,6 +227,9 @@ jobs:
             -f supabase/migrations/20260928041601_fueltrans_policy_hardening.sql \
             -f supabase/migrations/20260929005600_fueltrans_workspace_contract_guard.sql \
             -f sql/tests/cp-ft-ui05-disposable-lifecycle.sql
+      - name: Verify real GoTrue two-session FuelTrans REST lifecycle in disposable containers
+        run: |
+          sh scripts/cp-ft-ui06-gotrue-postgrest.sh
   disposable-toolbox-postgres:
     runs-on: ubuntu-latest
     permissions:
