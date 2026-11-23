@@ -15,6 +15,7 @@ import {makeTicketDraft,normalizeTicketDraftState,isMeaningfulTicketDraft,saniti
 import {validateCreateEvidence,uploadCreatedTicketEvidence,creationEvidenceMessage} from './create-evidence18.js';
 import {buildStationHistoryQuery,projectStationHistory} from './station-lookup18.js';
 import {buildRecordedStationsQuery,projectRecordedStations,STATION_HISTORY_PAGE_SIZE} from './station-history03.js';
+import {parseStationSourceCsv,reconcileStationSource,stationReconciliationCsv,STATION_SOURCE_MAX_BYTES} from './station-source04.js';
 import {MAX_BATCH_STATIONS,validateBatchStations,stationTicketTitle,runSequentialTicketBatch,batchOutcomeMessage} from './batch-create19.js';
 import {reconcileUncertainTicket,validateUncertainReceipt} from './ticket-reconcile21.js';
 import {TICKET_DELETION_ROLES,executeSoftDelete,executeRestore} from './ticket-delete23.js';
@@ -459,10 +460,76 @@ async function recordedStations(revision){
    <p class="muted" id="station-history-search-help">Station ID searches use server-side ticket filtering. Enter letters, numbers, spaces, hyphens or underscores; no full directory is available.</p>
    <p class="ft-page-summary">Ticket page ${state.stationPage+1} · ${rows.length} ticket records loaded · ${stations.length} unique station IDs on this page. Counts are page-scoped, not a complete station inventory.</p>
    <div class="ft-station-cards">${cards}</div>
+   <details class="ft-source-review" id="station-source-review">
+    <summary>Compare an existing station CSV with this ticket page</summary>
+    <p class="muted">Local preview only. CSV columns: Client, Station ID, Station Name (or Site ID / Site Name). Extra columns are ignored. No data is uploaded, saved, or designated authoritative. Comparisons cover the currently visible ticket page only.</p>
+    <form id="station-source-form" class="ft-source-form">
+     <label>Choose a local station CSV (not uploaded)
+      <input type="file" id="station-source-file" accept=".csv,text/csv" required aria-describedby="station-source-help">
+     </label>
+     <button type="submit">Validate and compare</button>
+     <button type="button" class="secondary" id="station-source-template">Download blank CSV template</button>
+    </form>
+    <p class="muted" id="station-source-help">Maximum 1 MB, 5,000 rows; exported reports contain only station metadata and page-scoped comparison outcomes.</p>
+    <section id="station-source-results" aria-live="polite" role="status"></section>
+   </details>
    <div class="pager"><button id="station-prev" type="button" class="secondary" ${state.stationPage===0?'disabled':''}>← Previous page</button>
     <span>${rows.length?firstIndex+1:0}–${firstIndex+rows.length} visible ticket records</span>
     <button id="station-next" type="button" class="secondary" ${hasMore?'':'disabled'}>Next page →</button></div>
   </section>`);
+ const sourceForm=document.getElementById('station-source-form');
+ document.getElementById('station-source-template').onclick=()=>{
+  browserDownload('fueltrans-station-template.csv','Client,Station ID,Station Name\r\n','text/csv;charset=utf-8');
+ };
+ sourceForm.onsubmit=async event=>{
+  event.preventDefault();
+  const output=document.getElementById('station-source-results');
+  const button=sourceForm.querySelector('button[type="submit"]');
+  const file=document.getElementById('station-source-file').files?.[0];
+  if(!file){output.textContent='Choose a CSV file to review.';return;}
+  if(file.size>STATION_SOURCE_MAX_BYTES){output.textContent='Station CSV must be smaller than 1 MB.';return;}
+  button.disabled=true;
+  output.textContent='Validating local station metadata…';
+  try{
+   const parsed=parseStationSourceCsv(await file.text(),{assignedClient});
+   if(revision!==viewRevision||state.active?.workspace_id!==workspaceId||!output.isConnected)return;
+   const compared=reconcileStationSource(parsed.rows,stations);
+   const labels={
+    matched_on_visible_page:'Matches ticket on this page',
+    name_difference_on_visible_page:'Name differs on this page',
+    not_on_visible_page:'Not observed on this page'
+   };
+   const counts={matched_on_visible_page:0,name_difference_on_visible_page:0,not_on_visible_page:0};
+   for(const row of compared)counts[row.status]++;
+   const issueList=parsed.issues.slice(0,10).map(issue=>`<li>CSV row ${issue.line}: ${h(issue.reason)}</li>`).join('');
+   const comparison=compared.slice(0,40).map(row=>`<tr>
+     <td>${h(row.client)}</td><td>${h(row.stationId)}</td>
+     <td>${h(row.stationName)}</td>
+     <td>${h(labels[row.status])}</td>
+     <td>${h(row.recordedStationName||'—')}</td>
+    </tr>`).join('');
+   output.innerHTML=`<div class="ft-source-results-head">
+     <strong>Local source review — no changes saved</strong>
+     <p>Validated: ${parsed.rows.length} unique station candidates · ${parsed.duplicates} identical duplicates · ${parsed.issues.length} validation issues · ${parsed.ignoredColumnCount} extra columns ignored.</p>
+     <p>Current ticket page only: ${counts.matched_on_visible_page} matching names · ${counts.name_difference_on_visible_page} differing names · ${counts.not_on_visible_page} not observed. A station not observed on this page may exist elsewhere.</p>
+    </div>
+    ${parsed.issues.length?`<div class="ft-source-issues" role="note"><strong>Resolve validation issues before exporting.</strong><ul>${issueList}</ul>${parsed.issues.length>10?`<p>Plus ${parsed.issues.length-10} additional issues.</p>`:''}</div>`:''}
+    ${compared.length?`<div class="table-wrap ft-source-table"><table>
+     <thead><tr><th>Client</th><th>Station ID</th><th>Candidate station name</th><th>Comparison</th><th>Name on ticket page</th></tr></thead>
+     <tbody>${comparison}</tbody></table></div>
+     ${compared.length>40?`<p class="muted">Showing the first 40 of ${compared.length} candidates.</p>`:''}
+     ${parsed.issues.length?'':`<button class="secondary" id="station-export-review" type="button">Export comparison CSV</button>`}`:
+     '<p class="muted">No valid station candidates to compare.</p>'}
+    <p class="muted">A CSV preview cannot establish station ownership or registry authority. Records remain local to this view until navigation.</p>`;
+   const exportButton=document.getElementById('station-export-review');
+   if(exportButton)exportButton.onclick=()=>{
+    browserDownload(`fueltrans-station-comparison-page-${state.stationPage+1}.csv`,
+     stationReconciliationCsv(compared,{ticketPage:state.stationPage+1}),'text/csv;charset=utf-8');
+   };
+  }catch(error){
+   if(revision===viewRevision&&output.isConnected)output.textContent='Could not review CSV: '+error.message;
+  }finally{if(button.isConnected)button.disabled=false;}
+ };
  document.getElementById('station-history-filter').onsubmit=e=>{
   e.preventDefault();
   const values=new FormData(e.currentTarget);
