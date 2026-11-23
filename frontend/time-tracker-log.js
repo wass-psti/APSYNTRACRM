@@ -400,7 +400,7 @@ export function renderTimeTrackerLog({
     ' authorized employee'+(summary.people===1?'':'s')+'</p></div>'+
     '<span class="tt-log-readonly">'+summary.historical+
     ' earlier · '+summary.today+' today</span></div>'+
-   (adminEligible?'<p class="tt-log-footnote">Click a record for details. Standard employee records support authorized editing and multi-selection; OJT intern records are read-only. Intern attendance is drawn from the latest signed OJT snapshot (up to 100 entries).</p>':'')+
+   (adminEligible?'<p class="tt-log-footnote">Click any record to view its details in a popup. Standard employee records support authorized editing and multi-selection; OJT intern records are read-only. Intern attendance is drawn from the latest signed OJT snapshot (up to 100 entries).</p>':'')+
    (adminFullAccess?'<div class="tt-log-admin-toolbar" role="region" aria-label="System Admin attendance record management">'+
     '<div class="tt-log-admin-toolbar-copy"><div class="tt-log-admin-toolbar-heading"><span class="tt-log-admin-toolbar-icon" aria-hidden="true">✦</span><div><strong>Manage attendance records</strong><span>Click a record to highlight it; no checkboxes required</span></div></div>'+
     '<div class="tt-log-admin-selection-status"><strong class="tt-log-admin-selected">'+selectedIds.length+'</strong><span>selected <i>·</i> up to '+TT_ADMIN_RECORD_LIMIT+'</span></div></div>'+
