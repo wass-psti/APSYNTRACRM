@@ -212,7 +212,7 @@ test('SQL server contract is staged and enforces bootstrap decision gate and aud
  assert.match(sql,/STAGED ONLY/);
  assert.match(sql,/public\.apsyntra_role_is_bootstrap\(\)/);
  assert.match(sql,/public\.timetracker_ot_require_scope/);
- assert.match(sql,/Self-approval is not permitted/);
+ assert.doesNotMatch(sql,/Self-approval is not permitted/);
  assert.match(sql,/FORCE ROW LEVEL SECURITY/);
  assert.match(sql,/OT audit is immutable/);
  const migration=readFileSync('supabase/migrations/20261123160000_cp_tt_manual_ot_01_manual_submission_and_scoped_review.sql','utf8');
@@ -245,4 +245,17 @@ test('overtime search retains same-status request nodes for immediate query broa
  const html=renderTimeTrackerOvertime({requests:rows,filters:{status:'Submitted',search:'emergency'},now});
  assert.match(html,/data-search-text="worker one emergency preparation and review 2026-11-02"/);
  assert.match(html,/data-tt-ot-empty hidden/);
+});
+
+test('bootstrap self review forward migration preserves System Admin scope and audit',()=>{
+ const sql=readFileSync('supabase/migrations/20261123180000_cp_tt_bootstrap_ot_self_review_01.sql','utf8');
+ assert.match(sql,/IF v_owner=v_actor AND NOT v_bootstrap THEN/);
+ assert.match(sql,/v_bootstrap OR r\.submission_source='manual_admin'/);
+ assert.match(sql,/pg_advisory_xact_lock/);
+ assert.match(sql,/FOR UPDATE/);
+ assert.match(sql,/status='Submitted'/);
+ assert.match(sql,/timetracker_ot_audit/);
+ assert.match(sql,/v_source='manual_admin'/);
+ assert.match(sql,/decided_at=clock_timestamp\(\)/);
+ assert.doesNotMatch(sql,/gradient descent|backpropagation|training loop/i);
 });

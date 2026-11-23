@@ -170,12 +170,28 @@ BEGIN
   (clock_timestamp() AT TIME ZONE 'Asia/Manila')::date,
   '18:00','20:00','Bootstrap personal overtime request not self-approved');
  PERFORM set_config('test.bootstrap_ot_id',v->>'id',false);
- BEGIN
-  PERFORM public.timetracker_ot_decide(
-   '10000000-0000-4000-8000-000000000021',(v->>'id')::uuid,'Approved');
-  RAISE EXCEPTION 'FAIL: bootstrap self approval allowed';
- EXCEPTION WHEN insufficient_privilege THEN NULL;
- END;
+ v:=public.timetracker_ot_decide(
+  '10000000-0000-4000-8000-000000000021',(v->>'id')::uuid,'Approved');
+ IF v->>'status'<>'Approved' OR
+    v->>'decidedBy'<>'10000000-0000-4000-8000-000000000013' THEN
+  RAISE EXCEPTION 'FAIL: bootstrap self approval %',v;
+ END IF;
+ v:=public.timetracker_ot_submit(
+  '10000000-0000-4000-8000-000000000021',
+  (clock_timestamp() AT TIME ZONE 'Asia/Manila')::date,
+  '20:00','21:00','Bootstrap self submitted request for decline');
+ v:=public.timetracker_ot_decide(
+  '10000000-0000-4000-8000-000000000021',(v->>'id')::uuid,'Rejected');
+ IF v->>'status'<>'Rejected' OR
+    v->>'decidedBy'<>'10000000-0000-4000-8000-000000000013' THEN
+  RAISE EXCEPTION 'FAIL: bootstrap self decline %',v;
+ END IF;
+ -- Retain a separate pending regular OT request for the System Admin denial check.
+ v:=public.timetracker_ot_submit(
+  '10000000-0000-4000-8000-000000000021',
+  (clock_timestamp() AT TIME ZONE 'Asia/Manila')::date,
+  '21:00','22:00','Bootstrap separate regular overtime for manual-only admin denial');
+ PERFORM set_config('test.bootstrap_ot_pending_id',v->>'id',false);
 END $$;
 RESET ROLE;
 
@@ -192,7 +208,7 @@ BEGIN
     v->>'bootstrapApprover'<>'false' OR jsonb_array_length(v->'rows')<>0 THEN
   RAISE EXCEPTION 'FAIL: System Admin manual-only initial scope %',v;
  END IF;
- v_regular:=current_setting('test.bootstrap_ot_id')::uuid;
+ v_regular:=current_setting('test.bootstrap_ot_pending_id')::uuid;
  BEGIN
   PERFORM public.timetracker_ot_decide(
    '10000000-0000-4000-8000-000000000021',v_regular,'Approved');
@@ -415,11 +431,11 @@ DO $$
 DECLARE v_count int;
 BEGIN
  SELECT count(*) INTO v_count FROM public.timetracker_ot_audit;
- IF v_count<>10 THEN
-  RAISE EXCEPTION 'FAIL: expected 10 audit events, got %',v_count;
+ IF v_count<>14 THEN
+  RAISE EXCEPTION 'FAIL: expected 14 audit events, got %',v_count;
  END IF;
- IF (SELECT count(*) FROM public.timetracker_ot_requests)<>6 THEN
-  RAISE EXCEPTION 'FAIL: expected 6 OT requests';
+ IF (SELECT count(*) FROM public.timetracker_ot_requests)<>8 THEN
+  RAISE EXCEPTION 'FAIL: expected 8 OT requests';
  END IF;
  BEGIN
   DELETE FROM public.timetracker_ot_audit;
@@ -433,7 +449,7 @@ BEGIN
  END;
 END $$;
 -- Manual history remains visible after the owner leaves the active workspace.
--- The same signed snapshot continues to require an active member for ordinary OT.
+-- Bootstrap review also retains historical employee OT; ordinary user scope is unchanged.
 -- Roll back the synthetic membership change so later acceptance tests start clean.
 BEGIN;
 UPDATE public.workspace_members SET active=false
@@ -455,10 +471,10 @@ BEGIN
        AND r->>'submissionSource'='manual_admin') THEN
   RAISE EXCEPTION 'FAIL: manual OT history disappeared after owner membership ended %',v;
  END IF;
- IF EXISTS(SELECT 1 FROM jsonb_array_elements(v->'rows') r
+ IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(v->'rows') r
     WHERE r->>'ownerId'='cloud:10000000-0000-4000-8000-000000000011'
       AND r->>'submissionSource'='employee') THEN
-  RAISE EXCEPTION 'FAIL: inactive owner regular OT escaped the active-member scope';
+  RAISE EXCEPTION 'FAIL: bootstrap lost regular OT from inactive member';
  END IF;
 END $$;
 ROLLBACK;

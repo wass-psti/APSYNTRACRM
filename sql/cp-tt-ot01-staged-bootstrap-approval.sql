@@ -161,9 +161,6 @@ BEGIN
  WHERE id=p_request_id AND workspace_id=v_ws AND status='Submitted'
  FOR UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'OT request changed or not found' USING ERRCODE='PT409'; END IF;
- IF v_owner=v_actor THEN
-  RAISE EXCEPTION 'Self-approval is not permitted' USING ERRCODE='42501';
- END IF;
  UPDATE public.timetracker_ot_requests SET status=p_decision,
   decided_by=v_actor,decided_at=clock_timestamp()
  WHERE id=p_request_id AND workspace_id=v_ws AND status='Submitted'
