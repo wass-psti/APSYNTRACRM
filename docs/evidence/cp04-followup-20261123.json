@@ -152,7 +152,17 @@
       "changedFileEslint": "PASS",
       "prettier": "PASS",
       "productionViteBuild": "PASS",
-      "buildWarning": "Existing main application chunk size advisory; build completed successfully"
+      "buildWarning": "Existing main application chunk size advisory; build completed successfully",
+      "githubCheckRuns": {
+        "total": 29,
+        "success": 26,
+        "failure": 2,
+        "pending": 0,
+        "failureNotes": [
+          "Supabase Preview status did not pass; GitHub Pages deployment succeeded.",
+          "TimeTracker disposable PostgreSQL integration failed in sql/tests/cp-tt-live01-disposable-setup.sql because CREATE OR REPLACE attempted to remove defaults from public.module_role_for(text,uuid). CP-TT-MANUAL-OT-01 disposable acceptance passed earlier in the same job."
+        ]
+      }
     }
   },
   "repository": {
@@ -164,18 +174,23 @@
     "remoteBranchPresentBeforePush": false,
     "latestMainCommit": "3fcced5744626b09815995d915e6fd457514f2be",
     "mergeCommit": "4ea2b04",
-    "headAfterMerge": "4ea2b04",
+    "headAfterMerge": "8431574d124baa156e0f01bc791ec2f1c549ca7c",
     "aheadOfMainAfterMerge": 4,
     "mainIntegration": "Merged CP-TT-MANUAL-OT-01 without conflicts; TimeTracker changes preserved",
-    "pullRequest": "https://github.com/wass-psti/APSYNTRACRM/pull/804"
+    "pullRequest": "https://github.com/wass-psti/APSYNTRACRM/pull/804",
+    "mainCommit": "26d3ea06b632f1bb53e136716e77f5a916a73b96",
+    "pullRequestState": "MERGED",
+    "mergedAtUtc": "2026-11-23T07:40:44Z",
+    "pullRequestMergeCommit": "26d3ea06b632f1bb53e136716e77f5a916a73b96"
   },
   "remaining": {
-    "directMetricsApi30MinuteSampling": "NOT RUN — prior CLI secret-reveal invocation is held by the local safety review; no attempt was made to bypass it",
-    "cpuPercentiles": "NOT AVAILABLE from the observed Dashboard summary; p50, p95, and maximum remain unmeasured",
-    "remainingHostProcessAttribution": "PARTIAL — available process counters identify PostgreSQL and GoTrue only; remaining host activity is not exposed as per-process series",
-    "dashboardCorePanelFailure": "OPEN — four Pro/all-plan panels remain unavailable without an exposed internal error or trace ID",
-    "cp04ProductionDeployment": "PENDING — no deployment performed",
-    "ci": "PENDING — merge commit must be pushed and GitHub Actions must complete"
+    "directMetricsApi30MinuteSampling": "NOT RUN — prior CLI sampling invocation was held because it would reveal the existing Secret API key; no bypass or secret extraction attempted.",
+    "cpuPercentiles": "PENDING — 30-minute counter-delta samples are not available; dashboard 3.17% is a 60-minute average only.",
+    "remainingHostProcessAttribution": "PARTIAL — Metrics API exposes PostgreSQL and GoTrue process counters, but not remaining host services.",
+    "dashboardCorePanelFailure": "OPEN — four Pro/all-plan panels remain unavailable without an exposed internal status, trace ID, or report-service error.",
+    "cp04ProductionDeployment": "VERIFIED — PR #804 merged and GitHub Pages deployment run 45132856353 succeeded; deployed platform-sync.js hash matches origin/main.",
+    "ci": "PARTIAL — 26/29 check runs successful; two unrelated check failures are documented in section 14.2; CP-04 focused and full frontend tests passed.",
+    "postDeploymentBrowserAcceptance": "PENDING — genuine signed-in browser acceptance after deployment has not been completed; the currently selected tab is paused while hidden and has no authoritative check."
   },
   "constraints": {
     "sourceCodeScope": [
@@ -192,5 +207,17 @@
     "newDependencies": false,
     "attendanceWritesPerformed": false,
     "gradientDescentOrModelTrainingIntroduced": false
+  },
+  "deployment": {
+    "provider": "GitHub Pages",
+    "workflowRunId": 45132856353,
+    "workflowRunUrl": "https://github.com/wass-psti/APSYNTRACRM/actions/runs/45132856353",
+    "status": "completed",
+    "conclusion": "success",
+    "updatedAtUtc": "2026-11-23T07:41:31Z",
+    "liveSourcePath": "frontend/platform-sync.js",
+    "liveSourceSha256": "6542e0de330096f4b53e70949957a8509aea1b392a91801822fc98046574eac6",
+    "mainSourceSha256": "6542e0de330096f4b53e70949957a8509aea1b392a91801822fc98046574eac6",
+    "sourceMatch": true
   }
 }
