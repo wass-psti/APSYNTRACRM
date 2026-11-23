@@ -25,7 +25,10 @@ test("superseded Uiverse board layer is retained for history but excluded from t
   assert.doesNotMatch(page, /frontend\/board-uiverse-overhaul\.css/);
   assert.doesNotMatch(manifest, /"frontend\/board-uiverse-overhaul\.css"/);
   assert.equal(existsSync("frontend/board-uiverse-overhaul.css"), true);
-  assert.match(page, /apsyntra-styles\.bundle\.css\?v=cp-crm-ui-restore-01/);
+  assert.match(
+    page,
+    /apsyntra-styles\.bundle\.css\?v=(?:cp-crm-ui-restore-01|cp-mobile-workspace-switch-01)/,
+  );
 });
 
 test("approved board presentation and native board renderer remain active", () => {

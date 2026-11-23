@@ -12,6 +12,8 @@ const globalSearch = readFileSync('frontend/global-search.js', 'utf8');
 test('mobile shell loads after existing frontend scripts and built styles', () => {
   assert.equal((entry.match(/<link rel="stylesheet"/g) || []).length, 1);
   assert.ok(entry.includes('frontend/mobile-home.css'));
+  assert.match(entry, /apsyntra-styles\.bundle\.css\?v=cp-mobile-workspace-switch-01/);
+  assert.match(entry, /mobile-home\.js\?v=cp-mobile-workspace-switch-01/);
   assert.ok(css.includes('APSYNTRA CRM mobile home / immersive application routes'));
   assert.ok(entry.indexOf('frontend/mobile-home.js') > entry.indexOf('frontend/monday-inspired-ui.js'));
   assert.ok(entry.indexOf('frontend/mobile-home.js') > entry.indexOf('frontend/app.js'));
@@ -76,4 +78,19 @@ test('mobile search, favorite toggle, keyboard focus and dark theme are supporte
   assert.match(css, /html\[data-aps-monday-theme="dark"\]/);
   assert.match(css, /env\(safe-area-inset-bottom\)/);
   assert.match(css, /prefers-reduced-motion: reduce/);
+});
+
+test('mobile workspace switching is reachable from home and application headers', () => {
+  assert.match(script, /function workspaceSwitchButton\(/);
+  assert.match(script, /workspaceSwitchButton\(workspace, 'home'\)/);
+  assert.match(script, /workspaceSwitchButton\(workspace \|\| 'Your workspace', 'header'\)/);
+  assert.match(script, /data-action="ws01-open"/);
+  assert.match(script, /aria-haspopup="dialog"/);
+  assert.match(script, /Switch workspace/);
+  assert.match(script, /setAttribute\('aria-label',[\s\S]*workspace/);
+  assert.match(css, /\.apsm-workspace-switch/);
+  assert.match(css, /min-height:\s*44px/);
+  assert.match(css, /\.apsm-app-header button:focus-visible/);
+  assert.match(app, /case 'ws01-open'/);
+  assert.match(app, /openWorkspaceSelector\(/);
 });

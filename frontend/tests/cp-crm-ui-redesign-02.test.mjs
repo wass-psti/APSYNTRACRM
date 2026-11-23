@@ -10,7 +10,7 @@ test('native visual layer follows original shared tokens and retains one CSS bun
   'frontend/uiverse-design-system.css','frontend/uiverse-native-workflows.css']);
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());
  const html=readFileSync('index.html','utf8');
- assert.match(html,/apsyntra-styles\.bundle\.css\?v=(?:cp-crm-ui-redesign-02|(?:cp-crm-dark-0[1234]|(?:cp-crm-dark-invite-01|(?:cp-crm-dark-05|(?:cp-crm-dark-06|(?:cp-crm-dark-07|(?:cp-crm-dark-08|(?:cp-crm-dark-09|(?:cp-crm-ui-restore-01)))))))))/);
+ assert.match(html,/apsyntra-styles\.bundle\.css\?v=(?:cp-crm-ui-redesign-02|(?:cp-crm-dark-0[1234]|(?:cp-crm-dark-invite-01|(?:cp-crm-dark-05|(?:cp-crm-dark-06|(?:cp-crm-dark-07|(?:cp-crm-dark-08|(?:cp-crm-dark-09|(?:cp-crm-ui-restore-01|cp-mobile-workspace-switch-01)))))))))/);
  assert.match(html,/frontend\/uiverse-native-workflows\.css/);
  assert.equal((html.match(/<link rel="stylesheet"/g)||[]).length,1);
 });

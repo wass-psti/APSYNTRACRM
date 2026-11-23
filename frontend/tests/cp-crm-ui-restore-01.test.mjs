@@ -22,7 +22,10 @@ test("restoration manifest is the approved baseline suffix with only additive fe
   assert.equal(STYLE_SOURCES.at(-1), "frontend/board-overhaul-experience.css");
   assert.equal(new Set(STYLE_SOURCES).size, STYLE_SOURCES.length);
   assert.equal(bundle, generateStyleBundle());
-  assert.match(index, /apsyntra-styles\.bundle\.css\?v=cp-crm-ui-restore-01/);
+  assert.match(
+    index,
+    /apsyntra-styles\.bundle\.css\?v=(?:cp-crm-ui-restore-01|cp-mobile-workspace-switch-01)/,
+  );
   assert.doesNotMatch(
     manifest,
     /"frontend\/(?:board-uiverse-overhaul|crm-complete-design-system)\.css"/,
@@ -30,7 +33,10 @@ test("restoration manifest is the approved baseline suffix with only additive fe
 });
 
 test("mobile navigation and current TimeTracker functions are preserved", () => {
-  assert.match(index, /frontend\/mobile-home\.js\?v=20261123-bottom-nav-1/);
+  assert.match(
+    index,
+    /frontend\/mobile-home\.js\?v=cp-mobile-workspace-switch-01/,
+  );
   assert.match(app, /openTimeTrackerAddDepartmentModal/);
   assert.match(app, /TimeTrackerOjtClient/);
   assert.match(app, /createTimeTrackerWorkNoteDraft/);

@@ -182,6 +182,29 @@
     border-radius: 13px;
     background: var(--apsm-panel);
   }
+  #app .apsm-workspace-switch {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px solid var(--apsm-stroke);
+    border-radius: 13px;
+    background: var(--apsm-panel);
+    color: var(--apsm-ink);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 720;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  #app .apsm-workspace-switch:hover { background: var(--apsm-bg); }
+  #app .apsm-workspace-switch-icon { display: inline-flex; flex: none; }
+  #app .apsm-workspace-switch-label { line-height: 1; }
+  #app .apsm-workspace-switch-header { border-radius: 12px; padding-inline: 9px; }
 
   #app .apsm-search {
     display: flex;
@@ -478,7 +501,8 @@
 
   #app .apsm-home a:focus-visible,
   #app .apsm-home button:focus-visible,
-  #app .apsm-app-header a:focus-visible {
+  #app .apsm-app-header a:focus-visible,
+  #app .apsm-app-header button:focus-visible {
     outline: 3px solid var(--apsm-accent);
     outline-offset: 2px;
   }
@@ -494,7 +518,9 @@
 
 @media (max-width: 360px) {
   #app .shell.apsm-home-route > .apsm-home { padding-inline: 12px; }
-  #app .apsm-identity { gap: 9px; }
+  #app .apsm-identity { gap: 9px; flex: 1; }
+  #app .apsm-workspace-switch-header .apsm-workspace-switch-label { display: none; }
+  #app .apsm-workspace-switch-header { padding-inline: 0; }
   #app .apsm-avatar { width: 43px; height: 43px; flex-basis: 43px; }
   #app .apsm-card { flex-basis: 84vw; }
   #app .apsm-bottom-nav { left: 7px; right: 7px; }

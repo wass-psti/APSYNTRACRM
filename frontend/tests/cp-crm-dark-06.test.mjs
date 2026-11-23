@@ -7,7 +7,7 @@ const css=readFileSync('frontend/dark-search-settings.css','utf8');
 test('settings and search dark CSS is final deterministic layer',()=>{
  assert.equal(STYLE_SOURCES.at(-6),'frontend/dark-search-settings.css');
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());
- assert.match(readFileSync('index.html','utf8'),/bundle\.css\?v=(?:cp-crm-dark-06|(?:cp-crm-dark-07|(?:cp-crm-dark-08|(?:cp-crm-dark-09|(?:cp-crm-ui-restore-01)))))/);
+ assert.match(readFileSync('index.html','utf8'),/bundle\.css\?v=(?:cp-crm-dark-06|(?:cp-crm-dark-07|(?:cp-crm-dark-08|(?:cp-crm-dark-09|(?:cp-crm-ui-restore-01|cp-mobile-workspace-switch-01)))))/);
 });
 test('search dialog, native details and settings receive scoped dark surfaces',()=>{
  for(const marker of ['.aps-global-search-dialog','.aps-global-search-option.is-active',
