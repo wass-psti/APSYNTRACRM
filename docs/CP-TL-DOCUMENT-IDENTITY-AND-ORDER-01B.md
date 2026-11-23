@@ -36,10 +36,10 @@ All synthetic documents, Board projections, and events are rolled back.
 
 ## Production signed-browser evidence
 
-- The active signed browser account is an assigned secondary reviewer on an existing TradeLink QA document.
-- The assigned QA document is already Approved and both review timestamps are recorded. Its preview is read-only and does not require or trigger a review mutation.
-- Production has 15 active documents and 27 total documents including archived records; neither reaches the 50-row page size.
-- A separate User-role reviewer session with a pending assigned document is not available in the connected browser. This is a remaining runtime acceptance dependency, not a demonstrated code defect.
+- The active signed browser account is an actual assigned secondary reviewer on `CP-TL-08C-QA-20261112-01`; the production review table records that account as the secondary reviewer, and the assigned Approved document is present in the signed All Documents list.
+- The same signed account also has the General Manager module role, so this is genuine assigned-reviewer readback but not an isolated reviewer-only account test. The assigned document is already Approved and both review timestamps are recorded; no pending production review action exists for this account, so no production mutation was attempted.
+- The live All Documents view contains 15 active records, reports 15 of 15, uses `createdAt DESC`, and its document-number sequence matches the authoritative production SQL query. The Next Page control is disabled because there is no second production page.
+- Reviewer-only visibility and the pending assigned-document page path are covered by the disposable PostgreSQL 17 `User`/reviewer fixture (52 rows across 50+2 pages). Production does not have 50+ records, and no production fixtures were created to force a second page.
 
 ## Production data integrity
 
@@ -53,8 +53,8 @@ No gradient descent, backpropagation, model training, retraining, fine-tuning, i
 
 ## Status
 
-Disposable pagination and edit-position acceptance: **VERIFIED**.
-
-Production reviewer-assigned readback: **VERIFIED for the current assigned Approved QA document**.
-
-Reviewer-only User browser acceptance and a production second-page observation: **PENDING** because no suitable signed session or 50+ production records are available. No production fixtures will be created to force those conditions.
+- Disposable reviewer-only, creator/reviewer merge, manager pagination, and edit-position acceptance: **VERIFIED**.
+- Genuine production assigned-reviewer readback: **VERIFIED** for the current signed reviewer account and its assigned Approved QA document.
+- Production list ordering: **VERIFIED** against the authoritative `created_at DESC, id DESC` query.
+- A pending review action and a second production page were not available in the live dataset. These are not code defects or reasons to create production fixtures; reviewer-only and 50+ pagination behavior are covered in the disposable PostgreSQL acceptance.
+- Mainline frontend validation, the dedicated CP-TL-03B disposable PostgreSQL workflow, and GitHub Pages deployment all passed after test-fixture isolation.

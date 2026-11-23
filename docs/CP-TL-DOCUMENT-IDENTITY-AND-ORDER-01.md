@@ -72,7 +72,7 @@ The existing assigned-document endpoint remains available and now also returns `
 - Disposable PostgreSQL 17 acceptance now creates 54 synthetic records, verifies reviewer-only 50+2, creator/reviewer 50+3, and manager 50+4 pages, creator/reviewer overlap without duplication, UUID tie-breaking for identical `created_at` values, and an edit that advances `updated_at` without changing `created_at` or list position. All fixture writes are rolled back.
 - Follow-up production audit: 27 documents; 26 have non-empty `customerName`, one (`Q-011133`) has no persisted client identity, and zero have missing `created_at`. The UI correctly displays an em dash for the missing value.
 
-A separate signed browser session for a TradeLink `User` reviewer with a pending assigned document remains outstanding. No production document creation or update was used as a test fixture.
+The live signed account is an actual assigned secondary reviewer, although it also has the General Manager module role; its assigned Approved QA document is visible in the production list and has both review timestamps recorded. Reviewer-only visibility and the pending reviewer list path are covered in the disposable PostgreSQL 17 fixture. No pending action or 50+ record production page was available, and no production document creation or update was used as a test fixture.
 
 ## Inference-only constraint
 
