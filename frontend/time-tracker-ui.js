@@ -11,7 +11,7 @@ import {
 import {timeTrackerManilaDay} from './time-tracker-policy.js';
 import {formatTimeTrackerAutoClockoutTime} from './time-tracker-auto-clockout.js';
 import {renderTimeTrackerOverview} from './time-tracker-overview.js';
-import {renderTimeTrackerLog} from './time-tracker-log.js';
+import {renderTimeTrackerLog,timeTrackerLogRowsForSnapshot} from './time-tracker-log.js';
 import {renderTimeTrackerReports} from './time-tracker-reports.js';
 import {renderTimeTrackerCalendar} from './time-tracker-calendar.js';
 import {renderTimeTrackerOvertime} from './time-tracker-overtime.js';
@@ -419,7 +419,7 @@ export function renderTimeTrackerNative({
     employees:result.access?.employees?.members||[]});
  }
  if(selected==='log')html+=renderTimeTrackerLog({
-  records:result.log?.rows||result.records,
+  records:timeTrackerLogRowsForSnapshot(result),
   scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
   filters:logFilters,now,busy,
   gpsEligible:logGpsEligible,gpsData:logGpsData,gpsBusy:logGpsBusy,gpsError:logGpsError,
