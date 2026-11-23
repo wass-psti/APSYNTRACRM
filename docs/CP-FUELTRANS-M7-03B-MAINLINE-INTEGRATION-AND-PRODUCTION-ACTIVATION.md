@@ -5,9 +5,9 @@
 | Date | 2026-11-23 |
 | Branch | `feat/fueltrans-m7-03b-20261123` |
 | Mainline base | `1e45b9c` — CP-TL migration manifest reconciliation (also includes CP-TL `bad1cd9`, CP-CRM `26d3ea0`, and CP-TT `3fcced5`) |
-| Integration commits | `6c3bcad`, `88622f1`, `66907da`, `683a40e`, `71b4206`, `629c99a` |
+| Integration commits | `6c3bcad`, `88622f1`, `66907da`, `683a40e`, `71b4206`, `629c99a`, `7d8cbba` |
 | M7 corrective commit | `40f87e0` |
-| Status | MAINLINE INTEGRATED — LOCAL/DISPOSABLE ACCEPTANCE PASS |
+| Status | MAINLINE INTEGRATED — CI PASS — PRODUCTION MIGRATION APPLIED — RELEASE PENDING |
 | Production migration | APPLIED — version `20261123081039` |
 | GitHub Pages release | PENDING |
 | Genuine two-account CRM-host acceptance | PENDING |
@@ -78,7 +78,7 @@ The post-application smoke-test transaction ended with `ROLLBACK`. The temporary
 | CP-TT GPS and atomic projection acceptance | PASS |
 | CP-TL client identity/order regression tests | PASS — included in full suite |
 | TimeTracker browser acceptance | PASS — desktop/tablet/mobile and axe checks |
-| GitHub Actions workflow-dispatch validation `45137783295` | PASS for the prior integrated head; latest manifest-only mainline sync is awaiting a fresh run |
+| GitHub Actions workflow-dispatch validation `45138350851` | PASS — all validation jobs; Pages deployment correctly skipped on feature branch |
 | Supabase health advisor | PASS — no health findings |
 | Supabase security advisor | INFO — private counter table has RLS with no policies; intentional because API grants are revoked and only the trigger accesses it |
 | Supabase performance advisor | No M7-specific issue; one unrelated existing duplicate index warning in Material Tracker |
