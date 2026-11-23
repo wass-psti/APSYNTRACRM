@@ -754,3 +754,24 @@
   color:#5B6673!important;
   font-size:12px!important;
 }
+/* Signed record dialogs must be readable against their flat light surfaces. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-admin-editor,.tt-log-details-dialog,.tt-admin-delete-dialog
+) :is(
+  .tt-admin-eyebrow,.tt-admin-mode-pill,.tt-admin-editor-head p,
+  .tt-admin-record-context small,.tt-admin-bulk-guidance p,
+  .tt-admin-field,.tt-admin-field-section > p,.tt-admin-gps p,
+  .tt-admin-gps legend,.tt-admin-editor-footnote,
+  .tt-admin-delete-dialog > p,.tt-admin-delete-records > span,
+  .tt-admin-delete-records ul,.tt-admin-delete-audit-note span
+) {
+  color:#5B6673!important;
+  font-size:12px!important;
+  line-height:1.5!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-admin-editor,.tt-log-details-dialog,.tt-admin-delete-dialog
+) .tt-admin-close {
+  color:#1F2933!important;
+  background:#FFFFFF!important;
+}
