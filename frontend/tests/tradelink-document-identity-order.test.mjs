@@ -69,7 +69,7 @@ test('All Documents displays Document Number and persisted Client Name columns',
 test('default ordering is created_at DESC with deterministic document ID tie-breaking',()=>{
  assert.deepEqual(initialTradeLinkDraftListFilters(),{
   query:'',documentType:'all',workflowState:'all',archiveMode:'active',
-  sortBy:'createdAt',sortDirection:'desc'
+  visibilityMode:'visible',sortBy:'createdAt',sortDirection:'desc'
  });
  const older={...listed,documentId:'11111111-1111-4111-8111-111111111111',
   documentNumber:'Q-OLDER',createdAt:'2026-11-20T00:00:00Z'};

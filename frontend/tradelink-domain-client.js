@@ -396,20 +396,22 @@ export class TradeLinkDomainClient{
       !STATES.has(r?.workflowState)||!Number.isSafeInteger(r?.revision)||r.revision<1||
       typeof r?.createdByActor!=='boolean'||
       typeof r?.documentNumber!=='string'||
+      (r?.hidden!==undefined&&typeof r.hidden!=='boolean')||
       (r?.clientName!==null&&r?.clientName!==undefined&&typeof r.clientName!=='string')||
       typeof r?.createdAt!=='string'||!Number.isFinite(Date.parse(r.createdAt))||
       typeof r?.updatedAt!=='string'||!Number.isFinite(Date.parse(r.updatedAt))))
    deny('Invalid TradeLink document list response.',409);
-  return rows;
+  return rows.map(row=>({...row,hidden:row.hidden===true}));
  }
  async searchPage({query='',documentType='all',workflowState='all',
-  archiveMode='active',cursor=null,limit=50}={}){
+  archiveMode='active',visibilityMode='visible',cursor=null,limit=50}={}){
   if(!TL03_DOMAIN_READS_ENABLED)
    deny('TradeLink domain reads await production activation.',503);
   if(typeof query!=='string'||query.length>120||
     !TYPES.has(documentType)&&documentType!=='all'||
     !STATES.has(workflowState)&&workflowState!=='all'||
     !['all','active','archived'].includes(archiveMode)||
+    !['all','visible','hidden'].includes(visibilityMode)||
     !Number.isSafeInteger(limit)||limit<1||limit>50||
     (cursor!==null&&(!cursor||typeof cursor.createdAt!=='string'||
       !Number.isFinite(Date.parse(cursor.createdAt))||
@@ -426,7 +428,8 @@ export class TradeLinkDomainClient{
   const response=await this.api.rpc('tl03_documents_page',{
    p_board_id:TRADELINK_BOARD_ID,p_search:query,
    p_document_type:documentType,p_workflow_state:workflowState,
-   p_archive_mode:archiveMode,p_before_at:cursor?.createdAt??null,
+   p_archive_mode:archiveMode,p_visibility_mode:visibilityMode,
+   p_before_at:cursor?.createdAt??null,
    p_before_id:cursor?.documentId??null,p_limit:limit
   });
   if(!response||typeof response!=='object'||Array.isArray(response)||
@@ -440,6 +443,7 @@ export class TradeLinkDomainClient{
     response.rows.some(r=>!validUuid(r?.documentId)||!validUuid(r?.boardItemId)||
       !TYPES.has(r?.documentType)||!STATES.has(r?.workflowState)||
       typeof r?.documentNumber!=='string'||typeof r?.archived!=='boolean'||
+      (r?.hidden!==undefined&&typeof r.hidden!=='boolean')||
       typeof r?.createdByActor!=='boolean'||
       (r?.clientName!==null&&r?.clientName!==undefined&&typeof r.clientName!=='string')||
       !['primary','secondary',null,undefined].includes(r?.assignedStage)||
@@ -453,7 +457,41 @@ export class TradeLinkDomainClient{
       Date.parse(response.nextCursor.createdAt)!==
         Date.parse(response.rows.at(-1).createdAt))))
     deny('Invalid authorized TradeLink server page response.',409);
-  return response;
+  return {...response,rows:response.rows.map(row=>({...row,hidden:row.hidden===true}))};
+ }
+ async bulkAction({action,documents}={}){
+  if(!TL03_DOMAIN_WRITES_ENABLED)
+   deny('TradeLink document bulk actions are not activated.',503);
+  if(!['hide','unhide','delete'].includes(action)||!Array.isArray(documents)||
+    documents.length<1||documents.length>50)
+   deny('Select between 1 and 50 TradeLink documents.',400);
+  const ids=new Set();
+  for(const row of documents){
+   if(!row||typeof row!=='object'||!validUuid(row.documentId)||
+    !Number.isSafeInteger(row.revision)||row.revision<1||ids.has(row.documentId))
+    deny('Invalid or duplicate selected TradeLink document.',400);
+   ids.add(row.documentId);
+  }
+  const session=await this.session();
+  if(!session.canManage)deny('TradeLink manager capability is required for bulk actions.',403);
+  const result=await this.api.rpc('tl03_documents_bulk_action',{
+   p_board_id:TRADELINK_BOARD_ID,p_action:action,
+   p_rows:documents.map(row=>({id:row.documentId,revision:row.revision}))
+  });
+  const expectedHidden=action==='hide';
+  const expectedDeleted=action==='delete';
+  if(!result||typeof result!=='object'||Array.isArray(result)||
+   result.boardId!==TRADELINK_BOARD_ID||result.action!==action||
+   result.applied!==documents.length||!Array.isArray(result.documents)||
+   result.documents.length!==documents.length)
+   deny('TradeLink bulk-action receipt mismatch.',409);
+  const receipts=new Map(result.documents.map(row=>[row?.documentId,row]));
+  if(receipts.size!==documents.length||documents.some(row=>{
+   const receipt=receipts.get(row.documentId);
+   return !receipt||receipt.revision!==row.revision||
+    receipt.hidden!==expectedHidden||receipt.deleted!==expectedDeleted;
+  }))deny('TradeLink bulk-action receipt does not match the selected documents.',409);
+  return {...result,actorId:session.actorId,workspaceId:session.workspaceId};
  }
  async assignedDocuments(limit=50){
   if(!TL03_DUAL_REVIEW_ENABLED)deny('Assigned TradeLink review is not activated.',503);

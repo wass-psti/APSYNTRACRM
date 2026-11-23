@@ -3352,7 +3352,8 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
  const documents=state.tradeLinkSection==='documents';
  const filters=normalizeTradeLinkDraftListFilters(
   pageRequest?.filters??state.tradeLinkDraft.listFilters);
- state.tradeLinkDraft={...state.tradeLinkDraft,busy:true,error:''};render();
+ state.tradeLinkDraft={...state.tradeLinkDraft,
+  selectedDocumentIds:[],busy:true,error:''};render();
  try{
   let result;
   if(documents&&!state.boardManage){
@@ -3384,6 +3385,8 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
     }
    }
    if(!result){
+    if(filters.visibilityMode!=='visible')
+     throw new ApiError('Hidden-document listing requires the TradeLink bulk-actions database update. Refresh after that update is deployed.',503);
     result=await tradeLinkDraftWorkspace.list();
     result.listPage=null;
     result.message='Server-wide search is not activated. Showing the current signed 50-record response.';
@@ -3393,7 +3396,7 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
    state.tradeLinkDraft={...state.tradeLinkDraft,...result,
     listFilters:filters,listPage:result.listPage??null,
     assignedOnly:result.assignedOnly===true,
-    documentPreview:null,busy:false};
+    selectedDocumentIds:[],documentPreview:null,busy:false};
    const target=state.tradeLinkDraft.editRequestId;
    if(target&&!state.tradeLinkDraft.selected&&tradeLinkDraftRoute()){
     if(!result.rows.some(row=>row.documentId===target)){
@@ -4130,6 +4133,59 @@ async function operateTradeLinkDocument(documentId,action){
     tradeLinkDraftSaveFailureMessage(err);
  }finally{
   if(same()){state.tradeLinkDraft.busy=false;render();}
+ }
+}
+async function applyTradeLinkDocumentBulkAction(operation){
+ if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
+  !state.boardManage||state.tradeLinkDraft?.status!=='AUTHORIZED_READ'||
+  state.tradeLinkDraft.busy||!['hide','unhide','delete'].includes(operation))return;
+ const selectedIds=[...new Set(state.tradeLinkDraft.selectedDocumentIds||[])];
+ if(!selectedIds.length||selectedIds.length>50)return;
+ const selectedSet=new Set(selectedIds);
+ const documents=state.tradeLinkDraft.rows.filter(row=>selectedSet.has(row.documentId));
+ if(documents.length!==selectedIds.length||documents.some(row=>
+  !Number.isSafeInteger(row.revision)||row.revision<1||
+  (operation==='hide'&&row.hidden===true)||
+  (operation==='unhide'&&row.hidden!==true))) {
+  state.tradeLinkDraft={...state.tradeLinkDraft,
+   error:'The selected documents changed or no longer match this view. Refresh All Documents before retrying.'};
+  render();return;
+ }
+ if(operation==='delete'&&!globalThis.confirm(
+  'Delete '+documents.length+' selected document(s)? They will be removed from All Documents and the linked Board view. Their immutable audit and revision history will be retained. This action cannot be undone from the interface.'
+ ))return;
+ const seq=routeSerial,actor=auth.userId,ws=state.context?.workspace_id;
+ const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
+  auth.userId===actor&&state.context?.workspace_id===ws&&
+  state.tradeLinkSection==='documents';
+ const pageFilters=state.tradeLinkDraft.listPage?.appliedFilters||
+  state.tradeLinkDraft.listFilters;
+ state.tradeLinkDraft={...state.tradeLinkDraft,busy:true,error:''};render();
+ let committed=false;
+ try{
+  await tradeLinkDraftWorkspace.bulkAction({action:operation,documents:documents.map(row=>({
+   documentId:row.documentId,revision:row.revision
+  }))});
+  committed=true;
+  if(!same())return;
+  state.tradeLinkDraft={...state.tradeLinkDraft,busy:false,selectedDocumentIds:[]};
+  await loadTradeLinkDrafts(seq,{cursor:null,history:[],pageIndex:0,filters:pageFilters});
+  if(!same())return;
+  if(state.tradeLinkDraft.status==='AUTHORIZED_READ'){
+   const label=operation==='hide'?'hidden':operation==='unhide'?'restored':'deleted';
+   toast(documents.length+' TradeLink document(s) '+label+'.');
+  }else{
+   state.tradeLinkDraft.error='The bulk action was committed, but All Documents could not be refreshed. Refresh the listing before continuing.';
+  }
+ }catch(error){
+  if(same())state.tradeLinkDraft={...state.tradeLinkDraft,
+   error:committed?
+    'The bulk action was committed, but its readback could not be verified. Refresh All Documents before retrying.':
+    tradeLinkDraftSaveFailureMessage(error)};
+ }finally{
+  if(same()&&state.tradeLinkDraft.busy){
+   state.tradeLinkDraft={...state.tradeLinkDraft,busy:false};render();
+  }else if(same())render();
  }
 }
 async function changeTradeLinkDraftState(documentId,operation){
@@ -8533,12 +8589,20 @@ async function action(name,button){
   exportTradeLinkDocumentSelection(button.closest('[data-tradelink-domain-list]'));
   break;
  }
+ case 'tradelink-documents-hide-selection':
+ case 'tradelink-documents-unhide-selection':
+ case 'tradelink-documents-delete-selection':{
+  const operation=name==='tradelink-documents-hide-selection'?'hide':
+   name==='tradelink-documents-unhide-selection'?'unhide':'delete';
+  await applyTradeLinkDocumentBulkAction(operation);break;
+ }
  case 'tradelink-documents-clear-selection':{
   if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
      !state.boardManage||state.tradeLinkDraft?.status!=='AUTHORIZED_READ')break;
   const panel=button.closest('[data-tradelink-domain-list]');
   for(const checkbox of panel?.querySelectorAll('[data-tl-select-document]')||[])
    checkbox.checked=false;
+  state.tradeLinkDraft={...state.tradeLinkDraft,selectedDocumentIds:[]};
   updateTradeLinkDocumentSelection(panel);
   break;
  }
@@ -12705,25 +12769,48 @@ root.addEventListener('click',event=>{
 function updateTradeLinkDocumentSelection(panel){
  if(!panel||!tradeLinkAuthorizedListRoute()||!state.boardManage||
     state.tradeLinkDraft?.status!=='AUTHORIZED_READ')return;
- const visible=[...panel.querySelectorAll('[data-tradelink-domain-record]')]
-   .filter(row=>!row.hidden);
- const inputs=visible.map(row=>row.querySelector('[data-tl-select-document]')).filter(Boolean);
- const selected=inputs.filter(input=>input.checked).length;
+ const selected=new Set(Array.isArray(state.tradeLinkDraft.selectedDocumentIds)?
+  state.tradeLinkDraft.selectedDocumentIds:[]);
+ const rows=[...panel.querySelectorAll('[data-tradelink-domain-record]')];
+ for(const row of rows){
+  const checkbox=row.querySelector('[data-tl-select-document]');
+  const id=checkbox?.dataset.documentId||'';
+  if(!id)continue;
+  if(!row.hidden&&checkbox.checked)selected.add(id);
+  else selected.delete(id);
+ }
+ const currentRows=state.tradeLinkDraft.rows.filter(row=>selected.has(row.documentId));
+ state.tradeLinkDraft={...state.tradeLinkDraft,
+  selectedDocumentIds:currentRows.map(row=>row.documentId)};
+ const selectedCount=currentRows.length;
+ const selectedHidden=currentRows.filter(row=>row.hidden===true).length;
  const heading=panel.querySelector('[data-tl-selected-count]');
- if(heading)heading.textContent=selected+' selected';
- const exportButton=panel.querySelector('[data-action="tradelink-documents-export-selection"]');
- if(exportButton)exportButton.disabled=selected===0;
+ if(heading)heading.textContent=selectedCount+' selected';
+ const setDisabled=(action,disabled)=>{
+  const button=panel.querySelector('[data-action="'+action+'"]');
+  if(button)button.disabled=disabled||state.tradeLinkDraft.busy===true;
+ };
+ setDisabled('tradelink-documents-export-selection',selectedCount===0);
+ setDisabled('tradelink-documents-delete-selection',selectedCount===0);
+ setDisabled('tradelink-documents-hide-selection',selectedCount===0||selectedHidden>0);
+ setDisabled('tradelink-documents-unhide-selection',selectedCount===0||selectedHidden!==selectedCount);
+ setDisabled('tradelink-documents-clear-selection',selectedCount===0);
  const selectAll=panel.querySelector('[data-tl-select-all]');
+ const visibleInputs=rows.filter(row=>!row.hidden)
+  .map(row=>row.querySelector('[data-tl-select-document]')).filter(Boolean);
+ const visibleSelected=visibleInputs.filter(input=>input.checked).length;
  if(selectAll){
-  selectAll.checked=inputs.length>0&&selected===inputs.length;
-  selectAll.indeterminate=selected>0&&selected<inputs.length;
+  selectAll.checked=visibleInputs.length>0&&visibleSelected===visibleInputs.length;
+  selectAll.indeterminate=visibleSelected>0&&visibleSelected<visibleInputs.length;
  }
 }
 function exportTradeLinkDocumentSelection(panel){
  if(!panel||!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
     !state.boardManage||state.tradeLinkDraft?.status!=='AUTHORIZED_READ')return false;
+ const selected=new Set(state.tradeLinkDraft.selectedDocumentIds||[]);
  const rows=[...panel.querySelectorAll('[data-tradelink-domain-record]')]
-  .filter(row=>!row.hidden&&row.querySelector('[data-tl-select-document]')?.checked);
+  .filter(row=>!row.hidden&&selected.has(row.dataset.documentId)&&
+   row.querySelector('[data-tl-select-document]')?.checked);
  if(!rows.length)return false;
  const records=rows.map(row=>({documentNumber:row.dataset.documentNumber,
   clientName:row.dataset.clientName||null,documentType:row.dataset.documentType,
@@ -12749,7 +12836,8 @@ function captureTradeLinkDraftListFilters(event){
  const filters=normalizeTradeLinkDraftListFilters({
   query:get('query'),documentType:get('documentType'),
   workflowState:get('workflowState'),archiveMode:get('archiveMode'),
-  sortBy:get('sortBy'),sortDirection:get('sortDirection')
+  visibilityMode:get('visibilityMode'),sortBy:get('sortBy'),
+  sortDirection:get('sortDirection')
  });
  state.tradeLinkDraft.listFilters=filters;
  if(!state.tradeLinkDraft.listPage?.server)

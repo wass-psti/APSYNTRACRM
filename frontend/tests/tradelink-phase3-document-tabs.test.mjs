@@ -13,7 +13,7 @@ const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
 test('authorized All Documents renders seven module filter tabs with selected state',()=>{
  const view={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',
   listFilters:{query:'',documentType:'quotation',workflowState:'all',archiveMode:'active',
-   sortBy:'documentNumber',sortDirection:'asc'}};
+   visibilityMode:'visible',sortBy:'documentNumber',sortDirection:'asc'}};
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view,canManage:true});
  assert.match(html,/aria-label="Filter documents by module"/);

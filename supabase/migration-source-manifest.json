@@ -2095,6 +2095,13 @@
       "sha256": "4fb0df7d5746cf9d222c8c569e8a5824d6b1b86477d2728e842e5955bbb178fc"
     },
     {
+      "version": "20261123103806",
+      "name": "cp_tl_document_bulk_actions",
+      "file": "20261123103806_cp_tl_document_bulk_actions.sql",
+      "bytes": 28220,
+      "sha256": "86c1141f04b0a0aedd23238fd407a6666caaa8efd401577ac68bd67dcc53dd0c"
+    },
+    {
       "version": "20261123130000",
       "name": "cp_tt_ojt_employee_department_identity",
       "file": "20261123130000_cp_tt_ojt_employee_department_identity.sql",

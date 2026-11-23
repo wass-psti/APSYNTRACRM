@@ -896,7 +896,7 @@ test('source-bound local document search filters only previously authorized page
  ];
  assert.deepEqual(initialTradeLinkDraftListFilters(),{
   query:'',documentType:'all',workflowState:'all',archiveMode:'active',
-  sortBy:'createdAt',sortDirection:'desc'});
+  visibilityMode:'visible',sortBy:'createdAt',sortDirection:'desc'});
  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows).map(x=>x.documentNumber),
   ['E-500','PL-400','Q-200','Q-100']);
  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{query:' q-',documentType:'quotation',
@@ -1025,7 +1025,7 @@ test('sortable authorized document view only reorders current DOM nodes and pres
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/function tradeLinkAuthorizedListRoute\(\)/);
  assert.match(app,/state\.boardManage/);
- assert.match(app,/sortBy:get\('sortBy'\),sortDirection:get\('sortDirection'\)/);
+ assert.match(app,/visibilityMode:get\('visibilityMode'\),sortBy:get\('sortBy'\)/);
  assert.match(app,/TL03_DOMAIN_READS_ENABLED&&state\.board\?\.board\?\.id===TRADELINK_BOARD_ID/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);

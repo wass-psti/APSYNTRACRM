@@ -12,7 +12,7 @@ const boardItemId='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const timestamp='2026-11-08T06:23:14.478231+00:00';
 const row={documentId,boardItemId,documentType:'quotation',
  documentNumber:'Q-0001',revision:5,workflowState:'draft',
- archived:false,clientName:'Example Client',createdAt:timestamp,
+ archived:false,hidden:false,clientName:'Example Client',createdAt:timestamp,
  updatedAt:timestamp,createdByActor:false,assignedStage:'primary',
  primaryAt:null,secondaryAt:null};
 const page={rows:[row],hasMore:true,nextCursor:{documentId,createdAt:timestamp}};
@@ -40,13 +40,60 @@ test('signed server page sends normalized bounded filters and an exact keyset cu
  assert.deepEqual(calls[0],{name:'tl03_documents_page',params:{
   p_board_id:TRADELINK_BOARD_ID,p_search:'Q-0',
   p_document_type:'quotation',p_workflow_state:'draft',
-  p_archive_mode:'active',p_before_at:timestamp,p_before_id:documentId,
-  p_limit:10}});
+  p_archive_mode:'active',p_visibility_mode:'visible',
+  p_before_at:timestamp,p_before_id:documentId,p_limit:10}});
 });
+
+test('bulk actions send only selected IDs and validate an exact atomic server receipt',async()=>{
+ const selected=[
+  {documentId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',revision:5},
+  {documentId:'dddddddd-dddd-4ddd-8ddd-dddddddddddd',revision:2}
+ ];
+ const receipt={boardId:TRADELINK_BOARD_ID,action:'hide',applied:2,documents:[
+  {documentId:selected[0].documentId,revision:5,hidden:true,deleted:false},
+  {documentId:selected[1].documentId,revision:2,hidden:true,deleted:false}
+ ]};
+ const {client,calls}=signedClient({rpc:async()=>receipt});
+ const result=await client.bulkAction({action:'hide',documents:selected});
+ assert.equal(result.applied,2);
+ assert.equal(result.actorId,actor);
+ assert.equal(result.workspaceId,workspace);
+ assert.deepEqual(calls,[{name:'tl03_documents_bulk_action',params:{
+  p_board_id:TRADELINK_BOARD_ID,p_action:'hide',
+  p_rows:selected.map(row=>({id:row.documentId,revision:row.revision}))
+ }}]);
+ for(const input of [
+  {action:'hide',documents:[]},
+  {action:'purge',documents:selected},
+  {action:'hide',documents:[selected[0],selected[0]]},
+  {action:'hide',documents:[{documentId:'bad',revision:1}]},
+  {action:'hide',documents:[{documentId:selected[0].documentId,revision:0}]}
+ ])await assert.rejects(()=>client.bulkAction(input),/Invalid|Select between/);
+ assert.equal(calls.length,1,'invalid or duplicate selections must not reach the RPC');
+});
+
+test('bulk action receipts reject missing, extra or mismatched selected documents',async()=>{
+ const selected=[{documentId,revision:5}];
+ for(const bad of [
+  {boardId:TRADELINK_BOARD_ID,action:'hide',applied:0,documents:[]},
+  {boardId:TRADELINK_BOARD_ID,action:'hide',applied:1,documents:[
+   {documentId,revision:4,hidden:true,deleted:false}]},
+  {boardId:TRADELINK_BOARD_ID,action:'hide',applied:1,documents:[
+   {documentId,revision:5,hidden:false,deleted:false}]},
+  {boardId:TRADELINK_BOARD_ID,action:'delete',applied:1,documents:[
+   {documentId,revision:5,hidden:false,deleted:true}]}
+ ]){
+  const {client}=signedClient({rpc:async()=>bad});
+  await assert.rejects(()=>client.bulkAction({action:'hide',documents:selected}),
+   /bulk-action receipt/i);
+ }
+});
+
 test('malformed inputs are blocked before the network and denied Board manager never reaches RPC',async()=>{
  const {client,calls}=signedClient();
  for(const input of [{query:'x'.repeat(121)},{documentType:'forged'},
-  {workflowState:'forged'},{archiveMode:'untrusted'},{limit:0},{limit:51},
+  {workflowState:'forged'},{archiveMode:'untrusted'},{visibilityMode:'untrusted'},
+  {limit:0},{limit:51},
   {cursor:{createdAt:timestamp,documentId:'not-a-uuid'}},
   {cursor:{createdAt:'not-a-date',documentId}}]){
   await assert.rejects(()=>client.searchPage(input),/Invalid TradeLink server search request/);
@@ -83,6 +130,7 @@ test('untrusted page envelopes, revisions, times, and cursors fail closed',async
   {...page,rows:[{...row,workflowState:'forged'}]},
   {...page,rows:[{...row,updatedAt:'bad'}]},
   {...page,rows:[{...row,archived:'false'}]},
+  {...page,rows:[{...row,hidden:'false'}]},
   {...page,nextCursor:{...page.nextCursor,documentId:boardItemId}},
   {...page,hasMore:false},
   {...page,rows:[]},

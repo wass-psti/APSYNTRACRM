@@ -13,7 +13,7 @@ const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
  groups:[],items:[],columns:[]};
 const row={documentId:id,boardItemId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
  documentNumber:'Q-001',clientName:'Reference Client',documentType:'quotation',
- revision:2,workflowState:'draft',archived:false,
+ revision:2,workflowState:'draft',archived:false,hidden:false,
  createdAt:'2026-11-08T20:00:00+08:00',updatedAt:'2026-11-08T22:12:00+08:00'};
 const render=(canManage=true)=>renderTradeLinkDocumentRepository({
  detail,workspaceId:workspace,canManage,
@@ -26,11 +26,15 @@ test('reference All Documents uses real signed row fields, compact menu, and no 
  assert.match(html,/tl-ref-count-badge">1<\/span>/);
  assert.match(html,/Create New Document/);
  assert.match(html,/data-action="tradelink-documents-refresh"/);
- assert.match(html,/data-tradelink-domain-record/);
+ assert.match(html,/data-tradelink-domain-record data-document-id="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"/);
  assert.match(html,/id="tl-select-visible-documents"/);
  assert.match(html,/data-tl-select-document/);
  assert.match(html,/data-tl-selected-count/);
  assert.match(html,/data-action="tradelink-documents-clear-selection"/);
+ assert.match(html,/data-action="tradelink-documents-delete-selection"/);
+ assert.match(html,/data-action="tradelink-documents-hide-selection"/);
+ assert.match(html,/data-action="tradelink-documents-unhide-selection"/);
+ assert.match(html,/name="visibilityMode"/);
  assert.match(html,/data-tradelink-action-menu/);
  assert.match(html,/popovertarget="tl-doc-menu-bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"/);
  assert.match(html,/Preview\/Edit/);
@@ -43,6 +47,31 @@ test('reference All Documents uses real signed row fields, compact menu, and no 
  assert.match(html,/Quotation/);
  assert.doesNotMatch(html,/₱18,520|Watchdog Automation Sales and Services|Q-011692|100 documents|Auto-sync enabled/);
  assert.doesNotMatch(html,/data-action="tradelink-document-delete"|data-action="tradelink-export-excel"/);
+});
+
+
+test('All Documents restores selected checkbox IDs after a render and exposes scoped bulk actions',()=>{
+ const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,canManage:true,
+  view:{...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',rows:[row],
+   selectedDocumentIds:[id]}});
+ assert.match(html,new RegExp('data-document-id="'+id+'" checked'));
+ assert.match(html,/1 selected/);
+ assert.match(html,/data-action="tradelink-documents-export-selection"/);
+ assert.match(html,/data-action="tradelink-documents-delete-selection"/);
+ assert.match(html,/data-action="tradelink-documents-hide-selection"/);
+ assert.match(html,/data-action="tradelink-documents-unhide-selection"/);
+ assert.match(html,/data-action="tradelink-documents-clear-selection"/);
+});
+
+
+test('hidden document view enables Unhide only for selected hidden records',()=>{
+ const hiddenRow={...row,hidden:true};
+ const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,canManage:true,
+  view:{...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',rows:[hiddenRow],
+   listFilters:{...initialTradeLinkDraftView().listFilters,visibilityMode:'hidden'},
+   selectedDocumentIds:[id]}});
+ assert.match(html,/data-action="tradelink-documents-unhide-selection"(?! disabled)/);
+ assert.match(html,/data-action="tradelink-documents-hide-selection" disabled/);
 });
 
 test('reference controls use a bounded updatedAt range, not a fabricated document issue date',()=>{

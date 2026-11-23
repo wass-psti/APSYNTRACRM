@@ -81,7 +81,7 @@ export function initialTradeLinkDraftView(documentType=null){
  const selected=typeLabels.some(([key])=>key===documentType)?documentType:null;
  return {status:'READ_PENDING',rows:[],selected:null,documentPreview:null,busy:false,error:'',
   message:'',draftNotice:'',mode:'create',editRequestId:null,pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,unsavedChanges:false,
-  listFilters:initialTradeLinkDraftListFilters(),listPage:null,
+  listFilters:initialTradeLinkDraftListFilters(),listPage:null,selectedDocumentIds:[],
   formValues:selected?{documentType:selected}:null};
 }
 /**
@@ -434,7 +434,7 @@ export class TradeLinkDraftWorkspace{
   const f=normalizeTradeLinkDraftListFilters(filters);
   const page=await this.client.searchPage({
    query:f.query,documentType:f.documentType,workflowState:f.workflowState,
-   archiveMode:f.archiveMode,cursor,limit});
+   archiveMode:f.archiveMode,visibilityMode:f.visibilityMode,cursor,limit});
   return {status:'AUTHORIZED_READ',rows:page.rows,
    listPage:{server:true,hasMore:page.hasMore,nextCursor:page.nextCursor,
     cursor,history:[],pageIndex:0,appliedFilters:f}};
@@ -507,6 +507,10 @@ export class TradeLinkDraftWorkspace{
   if(!['archive','restore'].includes(operation))
    throw new ApiError('Only archive and restore are supported for TradeLink Draft.',400);
   return this.client.commit({documentId,expectedRevision:revision,operation});
+ }
+ async bulkAction(input={}){
+  if(!TL03_DOMAIN_WRITES_ENABLED)disabled();
+  return this.client.bulkAction(input);
  }
 }
 const options=(arr,current)=>arr.map(([id,label])=>
@@ -1359,6 +1363,9 @@ const draftListStates=Object.freeze([
 const draftArchiveModes=Object.freeze([
  ['active','Active only'],['archived','Archived only'],['all','Active and archived']
 ]);
+const draftVisibilityModes=Object.freeze([
+ ['visible','Visible only'],['hidden','Hidden only'],['all','Visible and hidden']
+]);
 const draftSortFields=Object.freeze([
  ['createdAt','Date created'],['documentNumber','Document number'],
  ['documentType','Document module'],['revision','Revision'],['updatedAt','Last updated']
@@ -1367,7 +1374,7 @@ const draftSortDirections=Object.freeze([['asc','Ascending'],['desc','Descending
 const matchAllowed=(list,value,fallback)=>list.some(([key])=>key===value)?value:fallback;
 export function initialTradeLinkDraftListFilters(){
  return {query:'',documentType:'all',workflowState:'all',archiveMode:'active',
-  sortBy:'createdAt',sortDirection:'desc'};
+  visibilityMode:'visible',sortBy:'createdAt',sortDirection:'desc'};
 }
 export function normalizeTradeLinkDraftListFilters(input={}){
  const f=input&&typeof input==='object'&&!Array.isArray(input)?input:{};
@@ -1376,6 +1383,7 @@ export function normalizeTradeLinkDraftListFilters(input={}){
   documentType:matchAllowed(draftListTypes,f.documentType,'all'),
   workflowState:matchAllowed(draftListStates,f.workflowState,'all'),
   archiveMode:matchAllowed(draftArchiveModes,f.archiveMode,'active'),
+  visibilityMode:matchAllowed(draftVisibilityModes,f.visibilityMode,'visible'),
   sortBy:matchAllowed(draftSortFields,f.sortBy,'createdAt'),
   sortDirection:matchAllowed(draftSortDirections,f.sortDirection,'desc')
  };
@@ -1573,6 +1581,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
  const enabled=TL03_DOMAIN_READS_ENABLED&&(canManage||canReview)&&view.status==='AUTHORIZED_READ';
  const records=enabled?rows:[];
  const filters=normalizeTradeLinkDraftListFilters(view.listFilters);
+ const selectedIds=new Set(Array.isArray(view.selectedDocumentIds)?view.selectedDocumentIds:[]);
  const page=readOnly&&enabled&&view.listPage?.server===true?view.listPage:null;
  const applied=page?normalizeTradeLinkDraftListFilters(page.appliedFilters):filters;
  const displayed=filterTradeLinkDraftAuthorizedRows(records,applied);
@@ -1610,6 +1619,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
    '<div class="tl-ref-advanced-filter-grid">'+
    filterSelect('documentType','Document module',draftListTypes,filters.documentType)+
    filterSelect('archiveMode','Archive status',draftArchiveModes,filters.archiveMode)+
+   (canManage?filterSelect('visibilityMode','Visibility',draftVisibilityModes,filters.visibilityMode):'')+
    filterSelect('sortBy','Sort by',draftSortFields,filters.sortBy)+
    filterSelect('sortDirection','Sort order',draftSortDirections,filters.sortDirection)+
    '</div></details>'+
@@ -1631,9 +1641,19 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
    '</p>'+
   '<div class="tl-ref-selection-row"><p data-tradelink-domain-count role="status" aria-live="polite" aria-atomic="true">'+
    displayed.length+' of '+records.length+(canReview&&!creatorMode?' assigned documents':creatorMode?' created or assigned documents':' authorized records')+' in this response</p>'+
-   (readOnly&&!canReview?'<div class="tl-ref-selection-controls"><span data-tl-selected-count role="status" aria-live="polite">0 selected</span>'+
-    '<button type="button" data-action="tradelink-documents-export-selection" disabled>Export selected CSV</button> '+
-    '<button type="button" data-action="tradelink-documents-clear-selection">Clear selection</button></div>':'')+
+   (readOnly&&!canReview?(()=>{
+    const selectedIds=new Set(Array.isArray(view.selectedDocumentIds)?view.selectedDocumentIds:[]);
+    const selectedRows=records.filter(row=>selectedIds.has(row.documentId));
+    const selectedCount=selectedRows.length;
+    const selectedHidden=selectedRows.filter(row=>row.hidden===true).length;
+    const busy=view.busy===true;
+    return '<div class="tl-ref-selection-controls"><span data-tl-selected-count role="status" aria-live="polite">'+selectedCount+' selected</span>'+
+     '<button type="button" data-action="tradelink-documents-export-selection"'+(selectedCount&&!busy?'':' disabled')+'>Export selected CSV</button> '+
+     (canManage?'<button type="button" data-action="tradelink-documents-delete-selection"'+(selectedCount&&!busy?'':' disabled')+'>Delete Selected</button> '+
+      '<button type="button" data-action="tradelink-documents-hide-selection"'+(selectedCount&&!selectedHidden&&!busy?'':' disabled')+'>Hide Selected</button> '+
+      '<button type="button" data-action="tradelink-documents-unhide-selection"'+(selectedCount===0||selectedHidden!==selectedCount||busy?' disabled':'')+'>Unhide Selected</button> ':'')+
+     '<button type="button" data-action="tradelink-documents-clear-selection"'+(selectedCount&&!busy?'':' disabled')+'>Clear selection</button></div>';
+   })():'')+
    '</div>'+
   (records.length?
    '<div class="tl-records-scroll"><table class="tl-records-table">'+
@@ -1651,14 +1671,14 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
       row.workflowState==='draft'&&!row.archived;
      const canEditRow=ownerDraft||(canManage&&TL03_DOMAIN_WRITES_ENABLED&&
       !row.archived&&['draft','for-approval','revision-required','approved'].includes(row.workflowState));
-     return '<tr data-tradelink-domain-record data-document-number="'+
+     return '<tr data-tradelink-domain-record data-document-id="'+escape(row.documentId)+'" data-document-number="'+
       escape(row.documentNumber)+'" data-client-name="'+escape(row.clientName??'')+
       '" data-document-type="'+escape(row.documentType)+
       '" data-workflow-state="'+escape(row.workflowState)+'" data-revision="'+
       escape(row.revision)+'" data-created-at="'+escape(tradeLinkTimestamp(row.createdAt)===null?'':row.createdAt)+
       '" data-updated-at="'+escape(tradeLinkTimestamp(row.updatedAt)===null?'':row.updatedAt)+'" data-archived="'+
-      (row.archived===true?'true':'false')+'"'+(match?'':' hidden')+'>'+
-      (readOnly&&!canReview?'<td><input id="tl-select-'+escape(row.documentId)+'" type="checkbox" data-tl-select-document aria-label="Select document '+escape(row.documentNumber)+'" /></td>':'')+
+      (row.archived===true?'true':'false')+'" data-hidden="'+(row.hidden===true?'true':'false')+'"'+(match?'':' hidden')+'>'+
+      (readOnly&&!canReview?'<td><input id="tl-select-'+escape(row.documentId)+'" type="checkbox" data-tl-select-document data-document-id="'+escape(row.documentId)+'"'+(selectedIds.has(row.documentId)?' checked':'')+' aria-label="Select document '+escape(row.documentNumber)+'" /></td>':'')+
       '<td class="tl-ref-row-number">'+escape(index+1)+'</td>'+
       '<td class="tl-ref-doc-number">'+escape(row.documentNumber)+'</td>'+
       '<td>'+escape(typeof row.clientName==='string'&&row.clientName.trim()?row.clientName:'—')+'</td>'+
