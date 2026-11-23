@@ -190,7 +190,7 @@ import {createRemainingNativeSearchAdapters,readNativeSearchRecordDetail,renderN
 import {startInputExperience} from './input-experience.js';
 import {startMetricsExperience} from './metrics-experience.js';
 import {applyTimeTrackerOverviewFilters,filterTimeTrackerOverviewRows,syncTimeTrackerOverviewClock,timeTrackerOverviewCsv} from './time-tracker-overview.js';
-import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,TT_LOG_DEFAULT_FILTERS} from './time-tracker-log.js';
+import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,timeTrackerLogRowsForSnapshot,TT_LOG_DEFAULT_FILTERS} from './time-tracker-log.js';
 import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAULT_FILTERS} from './time-tracker-reports.js';
 import {timeTrackerCalendarMonth,shiftTimeTrackerCalendarMonth} from './time-tracker-calendar.js';
 import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED,timeTrackerOtWeek} from './time-tracker-overtime.js';
@@ -9538,9 +9538,16 @@ async function action(name,button){
  case 'tt-log-open-detail':{
   if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='log'||
      state.ttAttendance?.status!=='VERIFIED_READ'||state.ttLogAdminEditor)return;
-  const rows=state.ttAttendance.log?.rows||state.ttAttendance.records||[];
+  const rows=timeTrackerLogRowsForSnapshot(state.ttAttendance);
   const id=button.dataset.recordId;
-  if(!rows.some(r=>r.id===id))return;
+  const selectedRow=rows.find(r=>r.id===id);
+  if(!selectedRow)return;
+  if(selectedRow.isOjt){
+   // OJT identities are read-only here, not normal employee records.
+   state.ttLogExpandedIds=[id];render();
+   root.querySelector('[data-tt-log-detail-dialog] [data-action="tt-log-detail-close"]')?.focus();
+   break;
+  }
   if(timeTrackerAdminLogReady()&&state.ttAttendance.access?.moduleRole==='System Admin'&&!state.ttLogAdminBusy){
    let selected=new Set(state.ttLogSelectedIds);
    if(button.dataset.shiftSelect==='true'){
@@ -9592,8 +9599,9 @@ async function action(name,button){
  case 'tt-log-admin-select-visible':{
   if(!timeTrackerAdminLogReady()||state.ttAttendance.access.moduleRole!=='System Admin'||state.ttLogAdminBusy)return;
   const selected=new Set(state.ttLogSelectedIds);
+  const standardIds=new Set(state.ttAttendance.log?.rows?.map(row=>row.id)||[]);
   const ids=[...root.querySelectorAll('.tt-log-filterable:not([hidden])')]
-   .map(row=>row.dataset.recordId).filter(Boolean);
+   .map(row=>row.dataset.recordId).filter(id=>standardIds.has(id));
   for(const id of ids){
    if(selected.size>=TT_ADMIN_RECORD_LIMIT&&!selected.has(id))break;
    selected.add(id);
@@ -9681,7 +9689,7 @@ async function action(name,button){
  case 'tt-log-export':{
   if(state.ttBusy||state.ttView!=='log'||state.view!=='board'||
      state.tab!=='attendance'||state.ttAttendance?.status!=='VERIFIED_READ')return;
-  const rows=filterTimeTrackerLogRows(state.ttAttendance.log?.rows||state.ttAttendance.records,state.ttLogFilters);
+  const rows=filterTimeTrackerLogRows(timeTrackerLogRowsForSnapshot(state.ttAttendance),state.ttLogFilters);
   if(!rows.length)return;
   const blob=new Blob([timeTrackerLogCsv(rows)],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
@@ -12657,7 +12665,7 @@ root.addEventListener('change',event=>{
   if(key==='period'&&['all','today','week','month'].includes(value)||
      key==='status'&&['all','Active','Completed','Late','Administrative closure'].includes(value)||
      key==='sort'&&['newest','oldest'].includes(value)||
-     key==='location'&&(value==='all'||(state.ttAttendance.log?.rows||state.ttAttendance.records).some(r=>r.location===value))){
+     key==='location'&&(value==='all'||timeTrackerLogRowsForSnapshot(state.ttAttendance).some(r=>r.location===value))){
     state.ttLogFilters={...state.ttLogFilters,[key]:value};
     render();
   }
