@@ -1,0 +1,196 @@
+{
+  "implementation": "CP-CRM-SESSION-CPU-04",
+  "followUpDateUtc": "2026-11-23",
+  "project": {
+    "name": "APSYNTRACRM",
+    "ref": "jtlusodorfnyzgyuewkz",
+    "region": "ap-southeast-2",
+    "plan": "Pro",
+    "status": "ACTIVE_HEALTHY"
+  },
+  "dashboard": {
+    "observedAtUtc": "2026-11-23T07:16:00Z",
+    "route": "/observability/database",
+    "selectedWindow": "Last 60 minutes",
+    "chartWindowLocal": "2026-11-23 14:16–15:16 Asia/Manila",
+    "availablePanels": {
+      "cpuAveragePercent": 3.17,
+      "memoryUsageMB": 875.37,
+      "networkThroughputKBPerSecond": 127.1,
+      "diskIops": 4,
+      "memoryCommitmentVisible": true,
+      "databaseSizeGB": 0.45
+    },
+    "unavailablePanels": [
+      "Disk throughput",
+      "Database Connections",
+      "Dedicated Pooler Client Connections",
+      "Shared Pooler (Supavisor) client connections",
+      "Disk Usage"
+    ],
+    "planAvailability": {
+      "diskThroughput": "Team and Enterprise only; expected unavailable on Pro",
+      "databaseConnections": "Free and Pro",
+      "dedicatedPoolerConnections": "All plans",
+      "sharedPoolerConnections": "All plans",
+      "diskUsage": "Free and Pro"
+    },
+    "interpretation": "The Dashboard report is partially operational. Disk throughput is plan-gated for Pro. The other four unavailable panels are documented as available on Pro or all plans, so their failures are not explained by plan entitlement. The dashboard exposed no internal failing request status or trace ID.",
+    "officialDocumentation": "https://supabase.com/docs/guides/observability/reports"
+  },
+  "authWorkload": {
+    "windowUtc": {
+      "start": "2026-11-23T06:45:00Z",
+      "end": "2026-11-23T07:15:00Z",
+      "durationSeconds": 1800
+    },
+    "authService": {
+      "totalRequests": 154,
+      "getUser": {
+        "requests": 151,
+        "status200": 151
+      },
+      "postToken": {
+        "requests": 3,
+        "status200": 3
+      },
+      "otherStatuses": 0
+    },
+    "edgeGateway": {
+      "totalRequests": 2529,
+      "optionsPreflights": 253,
+      "getAuthUser": {
+        "requests": 151,
+        "status200": 151
+      },
+      "postAuthToken": {
+        "requests": 3,
+        "status200": 3
+      },
+      "clientErrors": 6,
+      "serverErrors": 0
+    },
+    "requestIdReconciliation": {
+      "authRequestRows": 154,
+      "distinctAuthRequestIds": 154,
+      "matchedEdgeRequestIds": 154,
+      "unmatchedAuthRows": 0,
+      "result": "PASS — every Auth /user and /token log row matched an Edge request_id"
+    },
+    "unrelatedEdgeClientErrors": [
+      {
+        "path": "/rest/v1/rpc/charter_dispatch",
+        "status": 403,
+        "requests": 5
+      },
+      {
+        "path": "/rest/v1/rpc/apsyntra_teams_snapshot",
+        "status": 404,
+        "requests": 1
+      }
+    ],
+    "normalizedRates": {
+      "authRequestsPerMinute": 5.13,
+      "authShareOfAllEdgeRequestsPercent": 6.09,
+      "authShareExcludingOptionsPercent": 6.75
+    },
+    "interpretation": "Auth service and Edge gateway counts reconcile exactly in this window. All Auth user and token requests were HTTP 200. Six unrelated Edge client errors were outside the Auth endpoints; no Edge 5xx errors were observed."
+  },
+  "browserAcceptance": {
+    "route": "https://wass-psti.github.io/APSYNTRACRM/#/time-tracker",
+    "separateTabUsed": true,
+    "existingProductionDeployment": true,
+    "beforeRefresh": {
+      "signedInUi": true,
+      "secureSessionIndicator": true,
+      "signInForm": false,
+      "timeTrackerRoute": true
+    },
+    "afterRefresh": {
+      "signedInUi": true,
+      "secureSessionIndicator": true,
+      "signInForm": false,
+      "timeTrackerRoute": true,
+      "attendanceScreenLoaded": true,
+      "activeAttendanceSessionPreserved": true
+    },
+    "attendanceWritePerformed": false,
+    "interpretation": "The currently deployed production application retained its signed-in TimeTracker UI and existing active attendance session across a genuine browser refresh. This verifies baseline production persistence, not execution of the unmerged CP-04 code."
+  },
+  "verification": {
+    "cp04FocusedTests": {
+      "passed": 6,
+      "failed": 0
+    },
+    "authSessionWorkspaceFocusedTests": {
+      "passed": 42,
+      "failed": 0
+    },
+    "fullFrontendTests": {
+      "passed": 3501,
+      "failed": 0
+    },
+    "syntaxChecks": "PASS",
+    "eslint": "PASS",
+    "prettier": "PASS",
+    "productionViteBuild": "PASS",
+    "buildWarnings": [
+      "Existing startup-guard.js classic-script bundling advisory",
+      "Existing main application chunk size advisory"
+    ],
+    "postMerge": {
+      "fullFrontendTests": {
+        "passed": 3506,
+        "failed": 0
+      },
+      "focusedRegressionTests": {
+        "passed": 61,
+        "failed": 0
+      },
+      "syntaxChecks": "PASS",
+      "repositoryEslint": "PASS",
+      "changedFileEslint": "PASS",
+      "prettier": "PASS",
+      "productionViteBuild": "PASS",
+      "buildWarning": "Existing main application chunk size advisory; build completed successfully"
+    }
+  },
+  "repository": {
+    "branch": "cp-crm-session-cpu-04",
+    "head": "d1268c0c779e933a8543ee3fa42fa32e93d1e97f",
+    "base": "cf20bd03237ca904435c3f2701ea8fbf44502126",
+    "aheadOfMainCommits": 2,
+    "behindMainCommits": 0,
+    "remoteBranchPresentBeforePush": false,
+    "latestMainCommit": "3fcced5744626b09815995d915e6fd457514f2be",
+    "mergeCommit": "4ea2b04",
+    "headAfterMerge": "4ea2b04",
+    "aheadOfMainAfterMerge": 4,
+    "mainIntegration": "Merged CP-TT-MANUAL-OT-01 without conflicts; TimeTracker changes preserved",
+    "pullRequest": "https://github.com/wass-psti/APSYNTRACRM/pull/804"
+  },
+  "remaining": {
+    "directMetricsApi30MinuteSampling": "NOT RUN — prior CLI secret-reveal invocation is held by the local safety review; no attempt was made to bypass it",
+    "cpuPercentiles": "NOT AVAILABLE from the observed Dashboard summary; p50, p95, and maximum remain unmeasured",
+    "remainingHostProcessAttribution": "PARTIAL — available process counters identify PostgreSQL and GoTrue only; remaining host activity is not exposed as per-process series",
+    "dashboardCorePanelFailure": "OPEN — four Pro/all-plan panels remain unavailable without an exposed internal error or trace ID",
+    "cp04ProductionDeployment": "PENDING — no deployment performed",
+    "ci": "PENDING — merge commit must be pushed and GitHub Actions must complete"
+  },
+  "constraints": {
+    "sourceCodeScope": [
+      "frontend/app.js",
+      "frontend/platform-sync.js",
+      "frontend/tests/cp-crm-session-cpu-04.test.mjs"
+    ],
+    "databaseSchemaChanged": false,
+    "databaseFunctionsChanged": false,
+    "rolesOrPermissionsChanged": false,
+    "projectSettingsChanged": false,
+    "credentialsCreatedOrRotated": false,
+    "backgroundCollectorInstalled": false,
+    "newDependencies": false,
+    "attendanceWritesPerformed": false,
+    "gradientDescentOrModelTrainingIntroduced": false
+  }
+}
