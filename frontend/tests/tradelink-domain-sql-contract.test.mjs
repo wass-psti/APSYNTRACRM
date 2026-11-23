@@ -160,7 +160,7 @@ test('deterministic document conflicts are HTTP 409 and cannot trigger serializa
 
 
 test('All Documents bulk action migration preserves history and separates hidden from deleted state',()=>{
- const sql=readFileSync('supabase/migrations/20261123171000_cp_tl_document_bulk_actions.sql','utf8');
+ const sql=readFileSync('supabase/migrations/20261123190000_cp_tl_document_bulk_actions.sql','utf8');
  assert.match(sql,/ADD COLUMN hidden_at timestamptz/);
  assert.match(sql,/ADD COLUMN deleted_at timestamptz/);
  assert.match(sql,/p_visibility_mode text/);

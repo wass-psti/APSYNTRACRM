@@ -2130,18 +2130,18 @@
       "sha256": "786a67b307af56eaa40c12e38dcf5b6ea170d918aa63601e381a3d16ff0741ee"
     },
     {
-      "version": "20261123171000",
-      "name": "cp_tl_document_bulk_actions",
-      "file": "20261123171000_cp_tl_document_bulk_actions.sql",
-      "bytes": 28220,
-      "sha256": "86c1141f04b0a0aedd23238fd407a6666caaa8efd401577ac68bd67dcc53dd0c"
-    },
-    {
       "version": "20261123180000",
       "name": "cp_tt_bootstrap_ot_self_review_01",
       "file": "20261123180000_cp_tt_bootstrap_ot_self_review_01.sql",
       "bytes": 5439,
       "sha256": "4d8d0c8244d9b93f1c78bab486d1ca2e005712ec76689941601a0102411b1a6a"
+    },
+    {
+      "version": "20261123190000",
+      "name": "cp_tl_document_bulk_actions",
+      "file": "20261123190000_cp_tl_document_bulk_actions.sql",
+      "bytes": 28220,
+      "sha256": "86c1141f04b0a0aedd23238fd407a6666caaa8efd401577ac68bd67dcc53dd0c"
     }
   ]
 }
