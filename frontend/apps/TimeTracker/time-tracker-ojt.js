@@ -82,10 +82,14 @@ export function projectOjtAdminAttendance(raw,scope){
  return Object.freeze({records:Object.freeze(raw.records.map(x=>{
   if(!uuid.test(x?.id||'')||!uuid.test(x?.internId||'')||ids.has(x.id)||
     !safeName(x.name)||!validTime(x.clockIn)||
-    (x.clockOut!==null&&!validTime(x.clockOut)))fail('Invalid OJT admin attendance row');
+    (x.clockOut!==null&&!validTime(x.clockOut))||
+     (x.clockOut!==null&&Date.parse(x.clockOut)<Date.parse(x.clockIn)))
+    fail('Invalid OJT admin attendance row');
   ids.add(x.id);
   return Object.freeze({id:x.id,internId:x.internId,name:x.name,
-   clockIn:x.clockIn,clockOut:x.clockOut,location:String(x.location||'')});
+   clockIn:x.clockIn,clockOut:x.clockOut,location:String(x.location||''),
+    workNote:typeof x.workNote==='string'?x.workNote.slice(0,500):'',
+    revision:Number.isSafeInteger(x.revision)&&x.revision>=1?x.revision:null});
  }))});
 }
 export class TimeTrackerOjtClient{
@@ -109,6 +113,25 @@ export class TimeTrackerOjtClient{
  adminAttendance(s){
   return this.perform(s,'timetracker_ojt_admin_attendance',{},
    v=>projectOjtAdminAttendance(v,s));
+ }
+ async mutateAdminRecord(s,{recordId,action,patch={},reason='',expectedRevision}={}){
+  if(!uuid.test(recordId||'')||
+    !['correct-time','edit','delete'].includes(action)||
+    !Number.isSafeInteger(expectedRevision)||expectedRevision<1||
+    !patch||typeof patch!=='object'||Array.isArray(patch))
+   fail('Select a current signed intern attendance record');
+  return this.perform(s,'timetracker_ojt_admin_mutate',{
+   p_record_id:recordId,p_action:action,p_patch:patch,
+   p_reason:String(reason||'').trim().slice(0,500),
+   p_expected_revision:expectedRevision
+  },v=>{
+   if(v?.contract!=='tt-ojt-admin-mutate-1'||v.mode!=='COMMITTED'||
+     !same(v,s)||v.actorId!==s.userId||v.recordId!==recordId||
+     v.action!==action||v.revision!==expectedRevision+1||
+     !validTime(v.committedAt))
+    fail('Signed OJT administrative mutation receipt unverified');
+   return Object.freeze(v);
+  });
  }
  async setGroup(s,userId,enabled){
   if(!uuid.test(userId||'')||typeof enabled!=='boolean')fail('OJT account required');
