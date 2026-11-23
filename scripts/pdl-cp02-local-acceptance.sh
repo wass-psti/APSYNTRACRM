@@ -84,18 +84,17 @@ fs.writeFileSync(process.argv[2], Buffer.from(
   "base64",
 ));
 NODE
-declare -A QR_PATHS=(
-  [gcash]="gcash/00000000-0000-4000-8000-000000000001.png"
-  [maya]="maya/00000000-0000-4000-8000-000000000002.png"
-  [bpi]="bpi/00000000-0000-4000-8000-000000000003.png"
-)
-for method in gcash maya bpi; do
+upload_qr() {
+  local path="$1"
   curl --fail --silent --show-error --request POST \
-    "$API_URL/storage/v1/object/pdl-payment-qr/${QR_PATHS[$method]}" \
+    "$API_URL/storage/v1/object/pdl-payment-qr/$path" \
     -H "apikey: $SERVICE_ROLE_KEY" -H "Authorization: Bearer $SERVICE_ROLE_KEY" \
     -H "Content-Type: image/png" -H "x-upsert: true" \
     --data-binary "@$WORKDIR/qr.png" >/dev/null
-done
+}
+upload_qr "gcash/00000000-0000-4000-8000-000000000001.png"
+upload_qr "maya/00000000-0000-4000-8000-000000000002.png"
+upload_qr "bpi/00000000-0000-4000-8000-000000000003.png"
 
 cat > "$WORKDIR/seed.sql" <<'SQL'
 begin;
