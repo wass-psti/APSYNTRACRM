@@ -4,8 +4,8 @@
 |---|---|
 | Date | 2026-11-23 |
 | Branch | `feat/fueltrans-m7-03b-20261123` |
-| Mainline base | `3fcced5` — CP-TT-MANUAL-OT-01 |
-| Integration commit | `6c3bcad` |
+| Mainline base | `26d3ea0` — CP-CRM-SESSION-CPU-04 (also includes CP-TT commit `3fcced5`) |
+| Integration commits | `6c3bcad`, `88622f1` |
 | M7 corrective commit | `40f87e0` |
 | Status | MAINLINE INTEGRATED — LOCAL/DISPOSABLE ACCEPTANCE PASS |
 | Production migration | PENDING |
@@ -16,7 +16,7 @@
 
 Integrated the latest `origin/main` commit `3fcced5` into the FuelTrans M7 branch.
 
-The integration preserves the M7 work while incorporating the CP-TT-MANUAL-OT-01 implementation, including the manual overtime workflow, employee review path, TimeTracker UI, tests, and disposable SQL acceptance.
+The integration preserves the M7 work while incorporating CP-TT-MANUAL-OT-01, including the manual overtime workflow, employee review path, TimeTracker UI, tests, and disposable SQL acceptance. It also integrates CP-CRM-SESSION-CPU-04 session recovery, preserving a separately verified Auth identity during workspace-context failures while retaining the existing sign-in path for genuine Auth identity denial.
 
 The migration source manifest conflict was resolved by unioning both branches' forward migrations by version. Shared recovered baseline entries, project reference, source metadata, and remote ledger were verified identical before merging.
 
@@ -59,7 +59,7 @@ The SQL transaction ended with `ROLLBACK`. The preflight ticket and allocator DD
 
 | Check | Result |
 |---|---|
-| Full repository unit tests | PASS — 3,505 / 3,505 |
+| Full repository unit tests | PASS — 3,511 / 3,511 |
 | `npm run check` | PASS |
 | `npm run lint` | PASS |
 | `npm run build` | PASS |
@@ -71,6 +71,7 @@ The SQL transaction ended with `ROLLBACK`. The preflight ticket and allocator DD
 | Stale browser clock replacement | PASS |
 | Philippine year boundary | PASS |
 | CP-TT manual OT disposable acceptance | PASS |
+| Full CP-TT CI disposable PostgreSQL 17 chain, including LIVE-01 and GPS-04 | PASS after fixture correction |
 | CP-TT GPS and atomic projection acceptance | PASS |
 | TimeTracker browser acceptance | PASS — desktop/tablet/mobile and axe checks |
 
@@ -96,7 +97,7 @@ The CP-FT-UI-07 CRM host handshake is emulated in the disposable browser fixture
 6. Perform genuine CRM-host acceptance with two independently signed-in existing accounts.
 7. Create a clearly labeled production acceptance ticket only after the second account is ready; verify create, number, persistence, lifecycle, dashboard and reports; then soft-delete it through the existing workflow and verify cleanup.
 
-The current signed-in administrator session is available. A second independent CRM browser session is not currently available in the controlled browser profile. The existing L2 membership inspected during preflight does not currently have FuelTrans module access; no assignment or permission change is authorized in this checkpoint. Use a second existing account that already has FuelTrans module access, without changing its role or permissions.
+The current signed-in administrator session is available. Two other existing FuelTrans administrator accounts have active sessions and existing FuelTrans module access; no second independent browser profile is currently open on the controlled Mac. The inspected L2 account does not have FuelTrans module access and is not selected. Use one of the two already-assigned administrator accounts in a separate browser profile or device; no assignment, role, or permission change is needed or authorized.
 
 ## 7. Next gate
 

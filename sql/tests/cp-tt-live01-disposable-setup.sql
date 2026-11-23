@@ -1,7 +1,7 @@
 -- CP-TT-LIVE-01 disposable-only stand-ins, following GPS-03 fixture and migration.
 -- Never used against employee records or production data.
 CREATE OR REPLACE FUNCTION public.module_role_for(
-  p_module_id text,p_user_id uuid)
+  p_module_id text,p_user_id uuid DEFAULT auth.uid())
 RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
 AS $$
  SELECT CASE WHEN public.has_module_access(p_module_id,p_user_id)
