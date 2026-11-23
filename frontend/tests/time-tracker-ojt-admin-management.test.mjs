@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {timeTrackerLogRowsForSnapshot,renderTimeTrackerLog,filterTimeTrackerLogRows,timeTrackerLogCsv} from '../time-tracker-log.js';
+import {timeTrackerLogRowsForSnapshot,retainTimeTrackerLogDetailIds,renderTimeTrackerLog,filterTimeTrackerLogRows,timeTrackerLogCsv} from '../time-tracker-log.js';
 import {projectOjtAdminAttendance,TimeTrackerOjtClient} from '../apps/TimeTracker/time-tracker-ojt.js';
 import {renderTimeTrackerOjtAdminEditor,buildTimeTrackerOjtAdminPatch} from '../apps/TimeTracker/time-tracker-ojt-admin-editor.js';
 
@@ -102,6 +102,28 @@ test('OJT records in Log use same correct/edit/delete actions, no generic GPS or
   assert.match(html,new RegExp('data-action="'+action+'"'));
  assert.doesNotMatch(html,/data-action="tt-log-detail-toggle-select"/);
  assert.doesNotMatch(html,/data-action="tt-log-gps-load"/);
+});
+
+test('OJT Log detail selection persists across render and respects signed role scope',()=>{
+ const id='ojt:'+recordId,snapshot=log();
+ const expanded=retainTimeTrackerLogDetailIds(snapshot,[id]);
+ assert.deepEqual(expanded,[id]);
+ const html=renderTimeTrackerLog({records:timeTrackerLogRowsForSnapshot(snapshot),
+  expandedRecordIds:expanded,adminEligible:true,adminFullAccess:true});
+ assert.match(html,/data-tt-log-detail-dialog/);
+ assert.match(html,new RegExp('data-tt-log-detail-dialog data-record-id="'+id+'"'));
+ for(const action of ['tt-log-admin-correct-time','tt-log-admin-edit','tt-log-admin-delete'])
+  assert.match(html,new RegExp('data-action="'+action+'"'));
+ const standard={id:'standard-1',name:'Regular Employee',ownerId:'cloud:employee-1',
+  clockIn:input.clockIn,clockOut:null,status:'Active',location:'Office-Base Duty'};
+ const combined={...snapshot,log:{rows:[standard]}};
+ assert.deepEqual(retainTimeTrackerLogDetailIds(combined,[standard.id]),[standard.id]);
+ assert.deepEqual(retainTimeTrackerLogDetailIds(combined,[standard.id,id]),[id]);
+ assert.deepEqual(retainTimeTrackerLogDetailIds(combined,[id,'deleted']),[id]);
+ assert.deepEqual(retainTimeTrackerLogDetailIds(log([input],'Employee'),[id]),[]);
+ assert.deepEqual(retainTimeTrackerLogDetailIds({...snapshot,status:'UNVERIFIED'},[id]),[]);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/state\\.ttLogExpandedIds=retainTimeTrackerLogDetailIds\\(state\\.ttAttendance,state\\.ttLogExpandedIds\\)/);
 });
 
 test('OJT signed mutator validates actor/board/revision and never uses ordinary record RPC',async()=>{

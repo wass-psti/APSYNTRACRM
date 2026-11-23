@@ -192,7 +192,7 @@ import {createRemainingNativeSearchAdapters,readNativeSearchRecordDetail,renderN
 import {startInputExperience} from './input-experience.js';
 import {startMetricsExperience} from './metrics-experience.js';
 import {applyTimeTrackerOverviewFilters,filterTimeTrackerOverviewRows,syncTimeTrackerOverviewClock,timeTrackerOverviewCsv} from './time-tracker-overview.js';
-import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,timeTrackerLogRowsForSnapshot,TT_LOG_DEFAULT_FILTERS} from './time-tracker-log.js';
+import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,timeTrackerLogRowsForSnapshot,retainTimeTrackerLogDetailIds,TT_LOG_DEFAULT_FILTERS} from './time-tracker-log.js';
 import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAULT_FILTERS} from './time-tracker-reports.js';
 import {timeTrackerCalendarMonth,shiftTimeTrackerCalendarMonth} from './time-tracker-calendar.js';
 import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED,TT_OT_MAX_WEEK_OFFSET,timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate} from './time-tracker-overtime.js';
@@ -1951,10 +1951,9 @@ function preserveTimeTrackerLogExpansion(){
     state.ttAttendance?.status!=='VERIFIED_READ')return;
  const section=root.querySelector('.tt-log');
  if(!section)return;
- const allowed=new Set((state.ttAttendance.log?.rows||state.ttAttendance.records||[]).map(r=>r.id));
  // One modal at a time. Preserve it across authorized re-renders and GPS reads,
- // not by inspecting expanded inline <details> elements.
- state.ttLogExpandedIds=state.ttLogExpandedIds.filter(id=>allowed.has(id)).slice(-1);
+ // validating both standard employee and signed OJT session IDs.
+ state.ttLogExpandedIds=retainTimeTrackerLogDetailIds(state.ttAttendance,state.ttLogExpandedIds);
 }
 function render(){
  // Protected Material Sourcing item details cannot survive a session, board,
