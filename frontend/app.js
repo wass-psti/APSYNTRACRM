@@ -13,6 +13,7 @@ import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelecto
 import {WORK_MANAGEMENT_WORKSPACE_ID} from './workspace-identity.js';
 import {workspaceApplicationsForNavigation,workspaceApplicationRouteAccess} from './workspace-application-routing.js';
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
+import {readWorkspacePreference,writeWorkspacePreference,watchWorkspacePreference,restoreWorkspacePreference} from './workspace-preference.js';
 import {WorkspaceInvitationClient,WS02D_INVITE_CLIENT_ENABLED} from './workspace-invitation-client.js';
 import {WorkspaceInvitationManagementClient} from './workspace-invitation-management.js';
 import {WorkspaceInvitationAcceptanceClient,captureInvitationLink,renderInvitationAcceptance} from './workspace-invitation-acceptance.js';
@@ -2639,6 +2640,9 @@ async function refreshSignedCrmRole({force=false}={}){
  }
  if(generation===crmRoleReadGeneration&&state.context?.user_id===actor&&
     state.context?.workspace_id===workspace&&!platformSyncEditInProgress())render();
+}
+async function restoreSavedWorkspacePreference(){
+ return restoreWorkspacePreference({auth,lifecycle:workspaceLifecycleClient,api:db});
 }
 async function refreshWorkspace(){
  const priorIdentity=state.context?.user_id,priorWorkspace=state.context?.workspace_id;
@@ -5537,6 +5541,7 @@ async function login(form){
  state.authBusy=true;submit.disabled=true;submit.textContent='Signing in…';
  try{
    await auth.signIn(email,password);
+   await restoreSavedWorkspacePreference();
    await refreshWorkspace();
    state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;
    // Preserve only the volatile B3 row reference through the same-tab auth handoff.
@@ -7511,12 +7516,15 @@ async function action(name,button){
      switchingEnabled:WS01_SWITCHING_ENABLED,
      onWorkspaceSwitched:async(receipt,targetWorkspace)=>{
       // The lifecycle client has verified the selection receipt and re-read
-      // the new signed context. Reconcile the shell in place.
+      // the new signed context. Persist the account preference, then reconcile
+      // the active shell in place without a page reload.
       const previousWorkspaceId=state.context?.workspace_id;
       if(receipt?.switched!==true||
          receipt.previousWorkspaceId!==previousWorkspaceId||
          !validUuid(receipt.workspaceId))
        throw new ApiError('The verified workspace selection receipt is invalid.',409);
+      const saved=writeWorkspacePreference(actor,receipt.workspaceId);
+      if(!saved)toast('Workspace changed, but this browser could not save the preference.',true);
       state.workspaceTransitionPending=true;
       state.workspaceTransitionTargetId=receipt.workspaceId;
       state.workspaceTransitionTargetName=typeof targetWorkspace?.name==='string'?
@@ -13412,6 +13420,40 @@ window.addEventListener('keydown',event=>{
 }});
 auth.onExpired=()=>{boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();ttWorkNoteDraft.clear();paseoReadRunId++;state.paseoManagement=null;timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;globalSearchController?.close({restoreFocus:false});pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;invitationAcceptanceStatus='';// Keep an open invitation through session expiry so the user can sign in again.
  startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;clearTimeTrackerOjtSelection();state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
+let workspacePreferenceSyncPending=false;
+let workspacePreferenceSyncQueued=null;
+let pendingExternalSignIn=false;
+async function reconcileWorkspacePreferenceChange({userId,workspaceId}={}){
+ if(!auth.isSignedIn||auth.userId!==userId||state.context?.user_id!==userId)return;
+ if(startupBusy||workspacePreferenceSyncPending){
+  workspacePreferenceSyncQueued={userId,workspaceId};
+  return;
+ }
+ if(state.context.workspace_id===workspaceId)return;
+ workspacePreferenceSyncPending=true;
+ const previousWorkspace=state.context.workspace_id;
+ try{
+  await refreshWorkspace();
+  if(!auth.isSignedIn||auth.userId!==userId||state.context?.user_id!==userId)return;
+  // The local-storage event is only a hint. Refresh the signed context first
+  // and reconcile only when the server confirms the same workspace.
+  if(state.context.workspace_id===workspaceId&&state.context.workspace_id!==previousWorkspace)
+   await onRoute();
+ }catch{/* Keep the current view; the next navigation can retry reconciliation. */}
+ finally{
+  workspacePreferenceSyncPending=false;
+  const queued=workspacePreferenceSyncQueued;
+  workspacePreferenceSyncQueued=null;
+  if(queued&&queued.workspaceId!==state.context?.workspace_id)
+   void reconcileWorkspacePreferenceChange(queued);
+ }
+}
+auth.onSessionChange=(event)=>{
+ if(event!=='SIGNED_IN'&&event!=='TOKEN_REFRESHED')return;
+ if(startupBusy){pendingExternalSignIn=true;return;}
+ if(state.authBusy)return;
+ if(auth.isSignedIn&&!state.context)void boot();
+};
 async function boot(){
  if(startupBusy)return;
  startupBusy=true;
@@ -13431,8 +13473,9 @@ async function boot(){
   }
   const callback=captureAuthReturn(location,history);
   if(callback){
-   // Recovery tokens are never installed as normal CRM sessions.
-   auth.clear();
+   // Recovery tokens are never installed as normal CRM sessions. Keep any
+   // separate browser tabs signed in; only clear this tab's in-memory view.
+   auth.clear({persist:false});
    if(callback.kind==='recovery'){
     try{
      recoveryContext=await inspectRecoveryToken(auth,callback);
@@ -13462,6 +13505,7 @@ async function boot(){
   }
   if(await startupVerifiedRead(async()=>await auth.restore())){
    state.user=auth.session.user;
+   await restoreSavedWorkspacePreference();
    startupCriticalPath.phase('workspace-authorization');
    setInitializationPhase('authorization');
    const startupUserId=auth.userId;
@@ -13499,6 +13543,15 @@ async function boot(){
   window.__APSYNTRA_STARTUP?.resolve(outcome);
   finishInitialization();
   startupBusy=false;
+  if(pendingExternalSignIn){
+   pendingExternalSignIn=false;
+   if(auth.isSignedIn&&!state.context&&outcome==='UNAUTHENTICATED')void boot();
+  }
+  if(workspacePreferenceSyncQueued){
+   const queued=workspacePreferenceSyncQueued;
+   workspacePreferenceSyncQueued=null;
+   void reconcileWorkspacePreferenceChange(queued);
+  }
  }
 }
 startSelectExperience(document.body);
@@ -13530,6 +13583,7 @@ globalSearchController=startGlobalSearch({
 });
 startInputExperience(document.body);
 startMetricsExperience(document.body);
+watchWorkspacePreference({onChange:change=>void reconcileWorkspacePreferenceChange(change)});
 // Register public static caching only after the signed startup promise settles.
 // A worker/module failure cannot block initialization or make startup fatal.
 void boot().then(()=>import('./static-cache-registration.js').then(

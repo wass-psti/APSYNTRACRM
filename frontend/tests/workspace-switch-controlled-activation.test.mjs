@@ -19,6 +19,7 @@ test('staged frontend selects only by signed CAS with authoritative context rere
  assert.match(ui,/row\.verifiedScope==='SIGNED_MEMBER_RPC'/);
  assert.match(ui,/typeof options\.onWorkspaceSwitched==='function'/);
  assert.match(app,/onWorkspaceSwitched:async\(receipt,targetWorkspace\)=>\{/);
+ assert.match(app,/writeWorkspacePreference\(actor,receipt\.workspaceId\)/);
  assert.match(app,/await refreshWorkspace\(\)/);
  assert.match(app,/await onRoute\(\)/);
  assert.doesNotMatch(app,/location\.reload\(\)/);

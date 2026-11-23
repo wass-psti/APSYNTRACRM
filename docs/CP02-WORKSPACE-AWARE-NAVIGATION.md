@@ -53,6 +53,7 @@ Initial session initialization is unchanged and continues to support legitimate 
 - `frontend/tests/workspace-application-routing.test.mjs` — route ownership, deep links, navigation catalog, ordinary CRM route compatibility and workspace transition regression coverage.
 - Existing sidebar/application tests updated to assert the new manifest-backed navigation contract instead of hard-coded link strings.
 - `frontend/workspace-ui.js` — forwards the verified switch receipt and target workspace to the in-place app transition for both existing and newly created workspaces.
+- `frontend/workspace-preference.js` — persists the signed, account-scoped last-selected workspace, restores it through the existing signed lifecycle on browser startup, and synchronizes preference changes between tabs without a reload.
 - Workspace-switch tests cover verified receipt handoff and no-reload transition behavior.
 - `frontend/tests/bootstrap-nav-visibility.test.mjs` exercises the actual sidebar renderer for Work Management, Main Workspace, and the immediate transition state.
 - `scripts/cp02-workspace-application-routing-browser.mjs` — Chromium browser acceptance for module loading, desktop/mobile viewports, 15-entry Work Management navigation, empty foreign-workspace navigation, and route ownership.
@@ -73,6 +74,8 @@ Initial session initialization is unchanged and continues to support legitimate 
 | Independently created board route                                | Unchanged                                                                                    |
 | Existing workspace identity changes in-session                   | Previous workspace catalog and app state cleared before new catalog load                     |
 | Initial deep link after session initialization                   | Existing route restoration remains supported                                                 |
+| Browser refresh                                                  | Last selected workspace is restored through the signed workspace lifecycle                   |
+| Another tab changes the workspace                                | This tab re-reads signed context and reconciles its route without a page reload              |
 | Workspace switch                                                 | Verified server receipt followed by in-place context/catalog refresh; no page reload         |
 | Transition while switching                                       | Previous workspace application links and board catalog hidden immediately                    |
 | Refresh after an interrupted transition                          | Signed context is re-read and pending transition clears only for the confirmed workspace     |
@@ -81,7 +84,7 @@ Initial session initialization is unchanged and continues to support legitimate 
 
 ## Verification evidence
 
-- Full repository automated test suite: **3,417 passed, 0 failed**.
+- Full repository automated test suite after synchronizing with the latest `main`: **3,447 passed, 0 failed**.
 - Focused workspace/application and switch-transition tests: **28 passed, 0 failed** (final focused run before the final full-suite rerun).
 - Existing sidebar and application integration tests: **all passed**, including direct execution of the actual sidebar renderer for Work Management, Main Workspace, and pending transition state.
 - Chromium browser acceptance for workspace application ownership: **PASS** at 1440×900 and 390×844 in the CP02 base implementation.
@@ -110,4 +113,4 @@ Initial session initialization is unchanged and continues to support legitimate 
 
 ## Deployment state
 
-CP01/CP02 and the in-place switch follow-up are local to `cp01-workspace-identity-ownership`. The live GitHub Pages tab still serves `origin/main`, which contains the older hard-coded sidebar links. Production remains unchanged until the normal branch review, CI and deployment process completes.
+CP01/CP02 and the in-place switch follow-up are on `cp01-workspace-identity-ownership` and included in pull request [#792](https://github.com/wass-psti/APSYNTRACRM/pull/792). The branch has been synchronized with the latest `main`. The pull request remains open and unmerged; production is unchanged until repository review, required checks and deployment complete.

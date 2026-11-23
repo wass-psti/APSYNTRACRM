@@ -392,13 +392,13 @@ function openDetails(catalog,workspaceId,options={}){
     const current=known?.rows?.find(item=>item.active===true&&
       item.verifiedScope==='SIGNED_MEMBER_RPC');
     if(!current)throw Error('Current workspace unavailable');
-    const receipt=await requestSignedWorkspaceSwitch({
+    const selectionReceipt=await requestSignedWorkspaceSwitch({
      lifecycle:options.lifecycle,workspaceId:row.id,
      expectedWorkspaceId:current.id
     });
     // The app reconciles workspace-scoped state in place after the verified
     // server transition; no full page reload is required.
-    await options.onWorkspaceSwitched(receipt,row);
+    await options.onWorkspaceSwitched(selectionReceipt,row);
    }catch(error){
     if(activeOverlay!==layer||!layer.isConnected)return;
     const code=Number.isInteger(error?.status)?error.status:0;
@@ -771,10 +771,10 @@ function openCreate(catalog,options={}){
      const current=verified?.rows?.find(row=>
       row.active===true&&row.verifiedScope==='SIGNED_MEMBER_RPC');
      if(!target||!current)throw Error('New workspace not verified in signed catalog');
-     const receipt=await requestSignedWorkspaceSwitch({
+     const selectionReceipt=await requestSignedWorkspaceSwitch({
       lifecycle,workspaceId:target.id,expectedWorkspaceId:current.id
      });
-     await options.onWorkspaceSwitched?.(receipt,target);
+     await options.onWorkspaceSwitched?.(selectionReceipt,target);
     }catch{
      feedback.textContent='Workspace created, but verified switching is unavailable. No workspace was changed.';
      open.disabled=false;
