@@ -259,9 +259,9 @@ jobs:
             -f sql/cp-tl03-staged-domain.sql \
             -f sql/tradelink-documents-page-candidate.sql \
             -f supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql \
-            -f sql/tests/cp-tl03-documents-page-preflight.sql \
+            -f sql/tests/cp-tl-document-identity-order-01b-preflight.sql \
             -f supabase/migrations/20261123080322_cp_tl_document_identity_order_01.sql \
-            -f sql/tests/cp-tl03-documents-page-disposable.sql
+            -f sql/tests/cp-tl-document-identity-order-01b-disposable.sql
   disposable-toolbox-postgres:
     runs-on: ubuntu-latest
     permissions:

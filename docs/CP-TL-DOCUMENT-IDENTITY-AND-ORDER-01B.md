@@ -16,7 +16,7 @@ Reconcile the already-deployed CP-01 migration scope, verify the production revi
 
 Command: `bash scripts/cp-tl-document-identity-order-01b-disposable.sh`
 
-The isolated fixture applies the existing TradeLink domain/reviewer contracts and the already-deployed CP-01 migration, then creates 54 synthetic documents inside a transaction. It verifies:
+The isolated fixture is kept separate from the CP-TL-03B legacy pagination fixture. It applies the existing TradeLink domain/reviewer contracts and the already-deployed CP-01 migration, then creates 54 synthetic documents inside a transaction. It verifies:
 
 | Check                        | Result                                         |
 | ---------------------------- | ---------------------------------------------- |
