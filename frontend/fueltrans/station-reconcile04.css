@@ -62,3 +62,24 @@
  .ft-source-form button{width:100%}
 }
 @media print{.ft-source-review{display:none!important}}
+
+/* CP-FT-UI-08: local, explicit handoff for independent owner verification. */
+.ft-owner-onboarding{
+ margin:14px 0;padding:16px;border:1px solid #cad8ed;border-radius:10px;
+ background:#f7faff;
+}
+.ft-owner-onboarding>strong{font-size:12px;color:#1c3d6b}
+.ft-owner-onboarding>p{font-size:11px;line-height:1.55}
+.ft-owner-onboarding form{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
+}
+.ft-owner-onboarding form label{display:flex;min-width:0;flex-direction:column;gap:6px;font-size:11px;font-weight:650}
+.ft-owner-onboarding input{
+ width:100%;min-width:0;box-sizing:border-box;padding:9px;border:1px solid #cbd9e9;
+ border-radius:7px;color:#263c56;background:#fff;
+}
+.ft-owner-onboarding button{justify-self:start;grid-column:1/-1}
+.ft-owner-onboarding #station-owner-packet-status{
+ grid-column:1/-1;margin:0;font-size:11px;line-height:1.5;overflow-wrap:anywhere;
+}
+@container fueltrans (max-width:620px){.ft-owner-onboarding form{grid-template-columns:minmax(0,1fr)}}

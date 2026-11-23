@@ -590,3 +590,38 @@
  .ft-detail-timers {grid-template-columns:repeat(2,minmax(0,1fr))}
  .ft-ticket-card {break-inside:avoid}
 }
+
+/* CP-FT-UI-08: reference-inspired client cards, backed by the original client select. */
+.ft-main .source-client-cards{
+ display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0 8px;
+}
+.ft-main .source-client-card{
+ display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;
+ min-width:0;min-height:108px;padding:15px 8px;border:1px solid #cbd5e5;
+ border-radius:10px;background:#fff;color:#475569;box-shadow:none;cursor:pointer;
+}
+.ft-main .source-client-card strong{font-weight:800;font-size:13px;letter-spacing:.04em}
+.ft-main .source-client-card .source-client-symbol{
+ display:grid;place-items:center;width:52px;height:43px;border-radius:8px;
+ color:#fff;font-size:25px;font-weight:800;background:#2464d9;
+}
+.ft-main .source-client-card[data-client-choice="UNIOIL"] .source-client-symbol{background:#ef6420}
+.ft-main .source-client-card[data-client-choice="ARAMCO"] .source-client-symbol{background:#0a9a50}
+.ft-main .source-client-card[data-client-choice="REPHIL"] .source-client-symbol{background:#e22335}
+.ft-main .source-client-card[data-client-choice="PETRON"] .source-client-symbol{background:#2458b4}
+.ft-main .source-client-card[aria-pressed="true"]{
+ border-color:#125ff0;background:#eaf2ff;box-shadow:0 0 0 2px #125ff04d;
+}
+.ft-main .source-client-card:focus-visible{outline:3px solid #0e57cf;outline-offset:2px}
+.ft-main .source-client-card:disabled{cursor:default;opacity:1}
+.ft-main .source-client-help{font-size:11px;line-height:1.5;margin:0 0 17px}
+@container fueltrans (max-width:690px){
+ .ft-main .source-client-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .ft-main .source-client-card{min-height:88px}
+}
+.ft-main .source-client-card[aria-pressed="false"]{
+ background:#fff!important;color:#475569!important;border-color:#cbd5e5!important;
+}
+.ft-main .source-client-card[aria-pressed="true"]{
+ background:#eaf2ff!important;color:#1455b8!important;border-color:#125ff0!important;
+}
