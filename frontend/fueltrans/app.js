@@ -17,6 +17,8 @@ import {buildStationHistoryQuery,projectStationHistory} from './station-lookup18
 import {buildRecordedStationsQuery,projectRecordedStations,STATION_HISTORY_PAGE_SIZE} from './station-history03.js';
 import {parseStationSourceCsv,reconcileStationSource,stationReconciliationCsv,STATION_SOURCE_MAX_BYTES} from './station-source04.js';
 import {stationCandidateEvidence} from './station-evidence07.js';
+import {buildStationOwnerReviewPacket} from './station-owner-review08.js';
+import {stageStationRegistryLocally} from './station-staging08.js';
 import {MAX_BATCH_STATIONS,validateBatchStations,stationTicketTitle,runSequentialTicketBatch,batchOutcomeMessage} from './batch-create19.js';
 import {reconcileUncertainTicket,validateUncertainReceipt} from './ticket-reconcile21.js';
 import {TICKET_DELETION_ROLES,executeSoftDelete,executeRestore} from './ticket-delete23.js';
@@ -301,7 +303,11 @@ function createForm(){
  const m=state.active;if(!canCreate(m)){say('Not allowed to create tickets.');return;}
  const forced=clientForMembership(m),localInfo=sourceOperationalInfo(),options=(items,prompt='Select…')=>`<option value="">${h(prompt)}</option>${items.map(v=>`<option value="${h(v)}">${h(v)}</option>`).join('')}`;
  layout(`${pageHeader('Create New Ticket','Submit a support request for station technical issues.')}<section class="panel source-create-panel"><ol class="source-step-progress" id="source-step-progress" aria-label="Ticket creation steps">${SOURCE_CREATE_STEPS.map((name,i)=>`<li data-stage-label="${i}">${h(name)}</li>`).join('')}</ol><p class="muted">Operational ${h(localInfo.shift)} · ${h(new Date(localInfo.operationalDate).toLocaleDateString())}. Shift and operational date use your device’s local time.</p><details class="source-draft-actions" aria-label="Private ticket draft" open><summary>Private ticket draft &amp; recovery</summary><p class="muted" id="create-draft-status" role="status">Checking saved draft…</p><div class="button-row"><button id="create-save-draft" type="button" class="secondary">Save draft</button><button id="create-restore-draft" type="button" class="secondary" disabled>Restore saved draft</button><button id="create-discard-draft" type="button" class="secondary" disabled>Discard saved draft</button></div></details><form id="ticket-form" novalidate>
- <section data-create-stage="0" class="source-create-stage"><h2>1. Client &amp; Location</h2><div class="form-grid"><label>Client *<select name="client" ${forced?'disabled':''} required>${forced?`<option value="${h(forced)}">${h(forced)}</option>`:options(CLIENTS,'Select client')}</select></label><label>Station ID *<input name="stationId" minlength="3" maxlength="120" required autocomplete="off"></label><label>Station Name *<input name="stationName" minlength="3" maxlength="160" required></label><div class="full source-station-history"><button type="button" class="secondary" id="find-station-history">Find previous station entries</button><p class="muted" id="station-history-status" role="status">Uses matching tickets visible to this account. Historical names are suggestions, not a verified station registry.</p><div id="station-history-suggestions" class="source-station-suggestions"></div></div></div><div class="full source-batch-stations" aria-label="Additional batch stations"><h3>Additional stations (optional)</h3><p class="muted">Create one ticket per station, up to 10 total. Each station is submitted separately. Any incomplete submissions are clearly reported.</p><div id="batch-station-list"></div><button type="button" class="secondary" id="batch-add-station">+ Add Another Station</button><p class="muted" id="batch-station-feedback" role="status">1 station selected.</p></div></section>
+ <section data-create-stage="0" class="source-create-stage"><h2>1. Client &amp; Location</h2>
+ <div class="source-client-cards" role="group" aria-label="Choose client organization">
+  ${(forced?[forced]:CLIENTS).map(client=>`<button type="button" class="source-client-card" data-client-choice="${h(client)}" aria-pressed="${forced===client?'true':'false'}" ${forced?'disabled':''}><span class="source-client-symbol" aria-hidden="true">${h(client.slice(0,1))}</span><strong>${h(client)}</strong></button>`).join('')}
+ </div><p class="muted source-client-help">Select the client here or use the client dropdown below. Station names remain unverified until confirmed against an approved directory.</p>
+ <div class="form-grid"><label>Client *<select name="client" ${forced?'disabled':''} required>${forced?`<option value="${h(forced)}">${h(forced)}</option>`:options(CLIENTS,'Select client')}</select></label><label>Station ID *<input name="stationId" minlength="3" maxlength="120" required autocomplete="off"></label><label>Station Name *<input name="stationName" minlength="3" maxlength="160" required></label><div class="full source-station-history"><button type="button" class="secondary" id="find-station-history">Find previous station entries</button><p class="muted" id="station-history-status" role="status">Uses matching tickets visible to this account. Historical names are suggestions, not a verified station registry.</p><div id="station-history-suggestions" class="source-station-suggestions"></div></div></div><div class="full source-batch-stations" aria-label="Additional batch stations"><h3>Additional stations (optional)</h3><p class="muted">Create one ticket per station, up to 10 total. Each station is submitted separately. Any incomplete submissions are clearly reported.</p><div id="batch-station-list"></div><button type="button" class="secondary" id="batch-add-station">+ Add Another Station</button><p class="muted" id="batch-station-feedback" role="status">1 station selected.</p></div></section>
  <section data-create-stage="1" class="source-create-stage" hidden><h2>2. Classification</h2><div class="form-grid"><label>System Type *<select name="systemType" required>${options(SYSTEM_TYPES,'Select system')}</select></label><label>Priority Level *<select name="priority" required>${options(PRIORITIES,'Select priority')}</select></label><label>Impact Level *<select name="impactLevel" required>${options(IMPACTS,'Select impact')}</select></label><label>Estimated Downtime (minutes)<input type="number" name="downtimeMinutes" min="0" max="525600" step="any"></label><label>Affected Terminals / Lanes<input type="number" name="affectedTerminals" min="0" max="10000" step="1"></label></div></section>
  <section data-create-stage="2" class="source-create-stage" hidden><h2>3. Issue Details</h2><div class="form-grid"><label class="full">Ticket Title *<input name="title" minlength="5" maxlength="160" required></label><label class="full">Issue Description *<textarea name="description" minlength="20" maxlength="10000" rows="7" required></textarea></label><label>Error Code / Reference<input name="errorCode" maxlength="50"></label><div class="full" id="critical-create-fields" hidden><div class="source-critical"><h3>Critical priority — additional information required</h3><label>Escalation Justification *<textarea name="escalationJustification" maxlength="500" minlength="10" rows="3"></textarea></label><label>Estimated Affected Transactions *<input name="affectedTransactions" type="number" min="1" max="100000000" step="1"></label></div></div></div></section>
  <section data-create-stage="3" class="source-create-stage" hidden><h2>4. Contact &amp; Handover</h2><div class="form-grid"><label>Reporting Channel *<select name="reportingChannel" required>${options(CHANNELS,'Select channel')}</select></label><label>Reporter Contact Name<input name="contactName" maxlength="120"></label><label>Reporter Phone<input name="contactPhone" maxlength="50" autocomplete="off"></label><label class="full source-evidence-picker">Attach evidence at creation (optional, up to 5 files)<input id="create-evidence-files" type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf,text/plain" aria-describedby="create-evidence-help create-evidence-status"></label><p id="create-evidence-help" class="muted full">Allowed: JPEG, PNG, WebP, PDF, text. Maximum 10 MB per file, 25 MB total. Files are uploaded only after the ticket is created and will not be included in the saved draft.</p><p id="create-evidence-status" role="status" class="muted full">No attachments selected.</p><label class="source-checkbox">Flag for shift handover <input type="checkbox" name="handoverFlag" ${localInfo.nearBoundary?'checked':''}></label></div><p class="muted">Handover is suggested only near the original 05:00–07:00 or 17:00–19:00 boundary; you control the flag.</p></section>
@@ -309,6 +315,17 @@ function createForm(){
  <div class="source-create-nav"><button type="button" class="secondary" id="create-back">← Back</button><span id="source-create-step-count" aria-live="polite">Step 1 of 5</span><button type="button" id="create-next">Continue →</button><button type="submit" id="create-submit" hidden>Submit Ticket</button></div></form>${pendingTicketReconciliationPanel()}</section>`);
  bindPendingTicketReconciliation();
  const form=document.getElementById('ticket-form');let step=0;const stages=[...form.querySelectorAll('[data-create-stage]')];
+ const clientSelect=form.elements.client;
+ const syncClientCards=()=>{for(const button of form.querySelectorAll('[data-client-choice]')){
+  button.setAttribute('aria-pressed',String(button.dataset.clientChoice===clientSelect.value));
+ }};
+ for(const button of form.querySelectorAll('[data-client-choice]'))button.onclick=()=>{
+  if(forced)return;
+  clientSelect.value=button.dataset.clientChoice;
+  clientSelect.dispatchEvent(new Event('change',{bubbles:true}));
+ };
+ clientSelect.addEventListener('change',syncClientCards);
+ syncClientCards();
  let batchStations=[];
  const batchList=form.querySelector('#batch-station-list'),batchStatus=form.querySelector('#batch-station-feedback'),batchAdd=form.querySelector('#batch-add-station');
  const batchSnapshot=()=>batchStations.map(s=>({stationId:s.stationId,stationName:s.stationName}));
@@ -370,7 +387,7 @@ function createForm(){
  form.addEventListener('input',()=>{draftDirty=true;if(draftLoaded)scheduleSave();});
  form.addEventListener('change',()=>{draftDirty=true;if(draftLoaded)scheduleSave();});
  document.getElementById('create-save-draft').onclick=()=>void saveDraft(true);
- restoreDraft.onclick=()=>{if(!savedDraft||!draftLoaded)return;for(const [k,v] of Object.entries(savedDraft.form)){const el=form.elements.namedItem(k);if(!el)continue;if(el instanceof HTMLInputElement&&el.type==='checkbox')el.checked=v===true;else el.value=String(v??'');}batchStations=(savedDraft.batchStations||[]).map(s=>({...s}));drawBatch();step=0;showCritical();syncStep();draftDirty=false;draftStatus.textContent=`Restored private ticket draft saved ${new Date(savedDraft.savedAt).toLocaleString()}.`;say('Private draft restored. Verify details before submitting.');};
+ restoreDraft.onclick=()=>{if(!savedDraft||!draftLoaded)return;for(const [k,v] of Object.entries(savedDraft.form)){const el=form.elements.namedItem(k);if(!el)continue;if(el instanceof HTMLInputElement&&el.type==='checkbox')el.checked=v===true;else el.value=String(v??'');}batchStations=(savedDraft.batchStations||[]).map(s=>({...s}));drawBatch();step=0;showCritical();syncClientCards();syncStep();draftDirty=false;draftStatus.textContent=`Restored private ticket draft saved ${new Date(savedDraft.savedAt).toLocaleString()}.`;say('Private draft restored. Verify details before submitting.');};
  discardDraft.onclick=async()=>{if(!draftLoaded||!savedDraft||state.busy)return;if(!confirm('Discard your saved private ticket draft? Current unsaved form input will remain.'))return;
   if(autoSaveTimer)clearTimeout(autoSaveTimer);if(draftSaving)await draftSaving;
   try{const row=await saveTicketDraftState(draftWorkspace,draftUser,draftRev,null);draftRev=row.revision;savedDraft=null;draftDirty=false;if(stillHere()){draftStatus.textContent='Saved draft discarded.';updateDraftUI();say('Saved private draft discarded.');}}
@@ -526,7 +543,44 @@ async function recordedStations(revision){
      ${compared.length>40?`<p class="muted">Showing the first 40 of ${compared.length} candidates.</p>`:''}
      ${parsed.issues.length?'':`<button class="secondary" id="station-export-review" type="button">Export comparison CSV</button><button class="secondary" id="station-export-evidence" type="button">Download candidate evidence manifest</button>`}`:
      '<p class="muted">No valid station candidates to compare.</p>'}
+    <div class="ft-owner-onboarding" id="station-owner-onboarding" aria-label="Owner verification handoff">
+     <strong>Prepare owner verification handoff</strong>
+     <p class="muted">The fields below are owner/source claims supplied for independent review, not proof of approval. No registry is activated.</p>
+     <form id="station-owner-packet-form">
+      <label>Proposed data owner *<input name="owner" required minlength="3" maxlength="140" autocomplete="off" placeholder="Owner or responsible team"></label>
+      <label>Source reference *<input name="sourceReference" required minlength="3" maxlength="220" autocomplete="off" placeholder="Approved repository, document or API reference"></label>
+      <label>Source revision/date *<input name="revision" required minlength="3" maxlength="80" placeholder="Version or export date"></label>
+      <label>Approval reference (optional)<input name="approvalReference" maxlength="160" autocomplete="off" placeholder="Ticket or signed approval reference"></label>
+      <button type="submit" class="secondary">Download owner-review packet</button>
+      <button type="button" class="secondary" id="station-stage-json">Download sanitized staging JSON (not imported)</button>
+      <p id="station-owner-packet-status" role="status" aria-live="polite"></p>
+     </form>
+    </div>
     <p class="muted">A CSV preview cannot establish station ownership or registry authority. Records remain local to this view until navigation.</p>`;
+   const ownerForm=document.getElementById('station-owner-packet-form');
+   if(ownerForm&&!evidence)ownerForm.closest('.ft-owner-onboarding')?.remove();
+   if(ownerForm&&evidence)ownerForm.onsubmit=event=>{
+    event.preventDefault();
+    const status=ownerForm.querySelector('#station-owner-packet-status');
+    try{
+     const packet=buildStationOwnerReviewPacket(evidence,Object.fromEntries(new FormData(ownerForm)),new Date().toISOString());
+     browserDownload(`fueltrans-station-owner-review-page-${state.stationPage+1}.json`,JSON.stringify(packet,null,2));
+     status.textContent='Owner-review packet prepared locally. Independent source verification is still required.';
+    }catch(error){status.textContent='Owner-review packet unavailable: '+error.message;}
+   };
+   const stageButton=document.getElementById('station-stage-json');
+   if(stageButton&&evidence)stageButton.onclick=async()=>{
+    const status=document.getElementById('station-owner-packet-status');
+    stageButton.disabled=true;
+    try{
+     const ownerPacket=buildStationOwnerReviewPacket(evidence,Object.fromEntries(new FormData(ownerForm)),new Date().toISOString());
+     const staged=await stageStationRegistryLocally(await file.text(),ownerPacket);
+     if(revision!==viewRevision||state.active?.workspace_id!==workspaceId||!stageButton.isConnected)return;
+     browserDownload(`fueltrans-station-staging-not-imported-${state.stationPage+1}.json`,JSON.stringify(staged,null,2));
+     status.textContent='Sanitized staging file downloaded. No source authority was verified and no database import occurred.';
+    }catch(error){if(status?.isConnected)status.textContent='Staging unavailable: '+error.message;}
+    finally{if(stageButton.isConnected)stageButton.disabled=false;}
+   };
    const manifestButton=document.getElementById('station-export-evidence');
    if(manifestButton&&evidence)manifestButton.onclick=()=>{
     browserDownload(`fueltrans-station-candidate-evidence-page-${state.stationPage+1}.json`,JSON.stringify(evidence,null,2));
