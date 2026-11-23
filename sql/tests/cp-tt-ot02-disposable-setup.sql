@@ -60,6 +60,7 @@ CREATE TABLE public.module_role_assignments(
  user_id uuid NOT NULL REFERENCES public.profiles(id),
  module_id text NOT NULL,
  enabled boolean NOT NULL,
+ role text NOT NULL DEFAULT 'Employee',
  PRIMARY KEY(user_id,module_id)
 );
 CREATE TABLE public.apsyntra_role_bootstrap_identities(
@@ -94,6 +95,13 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$
  AND b.workspace_id=public.current_workspace_id(auth.uid())
  AND bm.role IN ('owner','editor','viewer'))
 $$;
+CREATE FUNCTION public.module_role_for(p_module_id text,p_user_id uuid DEFAULT auth.uid())
+RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$
+ SELECT m.role FROM public.module_role_assignments m
+ JOIN public.profiles p ON p.id=m.user_id
+ WHERE m.user_id=p_user_id AND m.module_id=p_module_id
+ AND m.enabled AND p.status='active'
+$$;
 CREATE FUNCTION public.apsyntra_role_is_bootstrap()
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$
  SELECT EXISTS(
@@ -113,7 +121,8 @@ INSERT INTO public.profiles(id,display_name,status,platform_role) VALUES
  ('10000000-0000-4000-8000-000000000014','Ordinary Platform Manager','active','admin_general_manager'),
  ('20000000-0000-4000-8000-000000000015','Other Workspace','active','employee'),
  ('10000000-0000-4000-8000-000000000016','Revoked Employee','active','employee'),
- ('10000000-0000-4000-8000-000000000017','Inactive Employee','inactive','employee');
+ ('10000000-0000-4000-8000-000000000017','Inactive Employee','inactive','employee'),
+ ('10000000-0000-4000-8000-000000000018','System Admin','active','employee');
 INSERT INTO public.workspace_members(workspace_id,user_id,active) VALUES
  ('10000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000011',true),
  ('10000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000012',true),
@@ -121,6 +130,7 @@ INSERT INTO public.workspace_members(workspace_id,user_id,active) VALUES
  ('10000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000014',true),
  ('10000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000016',true),
  ('10000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000017',true),
+ ('10000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000018',true),
  ('20000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000015',true);
 INSERT INTO public.work_boards(id,workspace_id,name,status) VALUES
  ('10000000-0000-4000-8000-000000000021','10000000-0000-4000-8000-000000000001','TimeTracker Attendance','active'),
@@ -132,6 +142,8 @@ INSERT INTO public.work_board_members(board_id,user_id,role) VALUES
  ('20000000-0000-4000-8000-000000000022','20000000-0000-4000-8000-000000000015','viewer');
 INSERT INTO public.module_role_assignments(user_id,module_id,enabled)
  SELECT id,'time-tracker',true FROM public.profiles;
+UPDATE public.module_role_assignments SET role='System Admin'
+ WHERE user_id='10000000-0000-4000-8000-000000000018' AND module_id='time-tracker';
 INSERT INTO public.apsyntra_role_bootstrap_identities(user_id) VALUES
  ('10000000-0000-4000-8000-000000000013');
 INSERT INTO auth.sessions(id,user_id,not_after) VALUES
@@ -140,5 +152,6 @@ INSERT INTO auth.sessions(id,user_id,not_after) VALUES
  ('10000000-0000-4000-8000-000000000033','10000000-0000-4000-8000-000000000013',now()+interval '2 hours'),
  ('10000000-0000-4000-8000-000000000034','10000000-0000-4000-8000-000000000014',now()+interval '2 hours'),
  ('20000000-0000-4000-8000-000000000035','20000000-0000-4000-8000-000000000015',now()+interval '2 hours'),
- ('10000000-0000-4000-8000-000000000037','10000000-0000-4000-8000-000000000017',now()+interval '2 hours');
+ ('10000000-0000-4000-8000-000000000037','10000000-0000-4000-8000-000000000017',now()+interval '2 hours'),
+ ('10000000-0000-4000-8000-000000000038','10000000-0000-4000-8000-000000000018',now()+interval '2 hours');
 COMMIT;

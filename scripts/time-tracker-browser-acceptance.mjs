@@ -395,6 +395,64 @@ try {
     false,
   );
   await checkAccessibility("Bootstrap signed OT review fixture");
+
+  const manualOt = {
+    ...submittedOt,
+    id: "50000000-0000-4000-8000-000000000007",
+    submissionSource: "manual_admin",
+    submittedBy: "20000000-0000-4000-8000-000000000001",
+    submittedByName: "System Admin",
+  };
+  const manualAdminFixture = {
+    ...otFixture,
+    access: {
+      ...otFixture.access,
+      moduleRole: "System Admin",
+      manualOtManager: true,
+      bootstrapApprover: false,
+      overviewDirectory: [
+        { id: "20000000-0000-4000-8000-000000000001", status: "active", display_name: "System Admin" },
+        { id: "20000000-0000-4000-8000-000000000002", status: "active", display_name: "Test Employee" },
+      ],
+    },
+    otRequests: [manualOt],
+  };
+  await page.evaluate(
+    (result) => window.__timeTrackerRender({
+      view: "ot", result, now: new Date("2026-11-17T12:00:00Z"),
+      otFilters: { status: "Submitted" },
+    }),
+    manualAdminFixture,
+  );
+  assert.equal(await page.locator("#tt-ot-manual-form").count(), 1);
+  assert.equal(await page.locator("#tt-ot-manual-employee option").count(), 3);
+  assert.equal(await page.locator("#tt-ot-manual-form button[type=submit]").isDisabled(), false);
+  assert.equal(await page.locator(".tt-ot-manual-badge").count(), 1);
+  assert.equal(await page.locator('[data-action="tt-ot-approve"]').count(), 1);
+  assert.equal(await page.locator('[data-action="tt-ot-reject"]').count(), 1);
+  assert.equal(await page.locator("#tt-ot-week-jump-form").count(), 1);
+  await checkAccessibility("System Admin manual OT entry and review fixture");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const manualSectionBox = await page.locator(".tt-ot-manual-section").boundingBox();
+  assert.ok(manualSectionBox && manualSectionBox.width <= 390, "Manual OT section fits mobile viewport");
+  await page.setViewportSize({ width: 1280, height: 900 });
+
+  await page.evaluate(
+    (result) => window.__timeTrackerRender({
+      view: "ot", result, now: new Date("2026-11-17T12:00:00Z"),
+      otFilters: { status: "Submitted" },
+    }),
+    {
+      ...manualAdminFixture,
+      access: { ...manualAdminFixture.access, moduleRole: "Employee", manualOtManager: false },
+    },
+  );
+  assert.equal(await page.locator(".tt-ot-manual-section").count(), 1);
+  assert.equal(await page.locator("#tt-ot-manual-form").count(), 0);
+  assert.equal(await page.locator(".tt-ot-manual-readonly-note").count(), 1);
+  assert.equal(await page.locator(".tt-ot-review-actions").count(), 0);
+
   await page.evaluate(
     (result) =>
       window.__timeTrackerRender({
