@@ -3,6 +3,9 @@ import {GoTrueClient} from './vendor/supabase-auth.js';
 
 const STORE_KEY='apsyntra.crm.auth.v1';
 const MIGRATION_KEY='apsyntra.crm.auth.migration.v1';
+const VERIFIED_USER_CACHE_TTL_MS=30000;
+const PROVIDER_SESSION_REFRESH_MARGIN_MS=90000;
+const PROVIDER_SESSION_CHECK_INTERVAL_MS=30000;
 const isObject=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
 const browserSessionStorage=()=>{
   try{return globalThis.sessionStorage??null;}
@@ -31,7 +34,9 @@ export class AuthClient {
       wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),
       random=Math.random,maxReadRetries=1,retryBaseDelayMs=250}=options;
     this.fetchImpl=fetchImpl;this.storage=storage;this.clock=clock;this.session=null;
-    this.refreshing=null;this.verifiedUserPending=null;this.restorePending=null;
+    this.refreshing=null;this.verifiedUserPending=null;this.verifiedUserCache=null;
+    this.verifiedUserRevision=0;this.restorePending=null;
+    this.providerSessionReadAt=null;this.providerSessionReadPending=null;
     this.onExpired=()=>{};this.onSessionChange=()=>{};
     this.wait=wait;this.random=random;
     this.maxReadRetries=Number.isInteger(maxReadRetries)&&maxReadRetries>=0&&maxReadRetries<=2?maxReadRetries:1;
@@ -72,10 +77,17 @@ export class AuthClient {
     try{this.storage?.setItem(MIGRATION_KEY,'1');}catch{}
     try{this.legacyStorage?.removeItem(STORE_KEY);}catch{}
   }
+  invalidateVerifiedUser(){
+    this.verifiedUserCache=null;
+    this.verifiedUserPending=null;
+    this.verifiedUserRevision++;
+  }
   receiveProviderEvent(event,session){
     if(this.ignoreProviderSessionEvents||event==='INITIAL_SESSION')return;
     const previous=this.session;
     this.session=session||null;
+    this.providerSessionReadAt=null;
+    this.invalidateVerifiedUser();
     if(event==='SIGNED_OUT'){
       this.markLegacyMigrationComplete();
       if(previous&&!this.signOutInProgress&&!this.signInInProgress)this.onExpired();
@@ -98,6 +110,8 @@ export class AuthClient {
     if(result.error)throw providerError(result.error);
     let session=result.data?.session||null;
     this.session=session;
+    this.invalidateVerifiedUser();
+    this.providerSessionReadAt=null;
     let migrated=false;
     let migratedUser=null;
     if(!session){
@@ -160,6 +174,8 @@ export class AuthClient {
       }).then(result=>{
         if(result.error)throw providerError(result.error);
         this.session=result.data?.session||null;
+        this.invalidateVerifiedUser();
+        this.providerSessionReadAt=null;
         return this.session;
       });
       this.providerSavePending=pending;
@@ -169,13 +185,15 @@ export class AuthClient {
        ||!isObject(session.user)||typeof session.user.id!=='string')throw new ApiError('Invalid authentication response');
     this.session={access_token:session.access_token,refresh_token:session.refresh_token,
       expires_at:this.clock()+(Number(session.expires_in)||3600)*1000,user:session.user};
+    this.invalidateVerifiedUser();
     // Browser storage is persistence, not the authentication authority. Keep
     // the verified in-memory session usable if storage is unavailable/quota-limited.
     try{this.storage?.setItem(STORE_KEY,JSON.stringify(this.session));}
     catch{/* The current tab can continue; a later reload may require sign-in. */}
   }
   clear({persist=true}={}){
-    this.session=null;this.verifiedUserPending=null;
+    this.session=null;this.invalidateVerifiedUser();
+    this.providerSessionReadAt=null;
     if(this.provider){
       if(!persist){this.ignoreProviderSessionEvents=true;return;}
       this.markLegacyMigrationComplete();
@@ -304,6 +322,8 @@ export class AuthClient {
         if(!session||typeof user?.id!=='string'||user.id!==session.user?.id)
           throw new ApiError('Authentication did not return a valid session.',401);
         this.session={...session,user};
+        this.invalidateVerifiedUser();
+        this.providerSessionReadAt=null;
         this.markLegacyMigrationComplete();
         return user;
       }finally{this.signInInProgress=false;}
@@ -321,21 +341,32 @@ export class AuthClient {
     }
     return this.session.user;
   }
-  async getVerifiedUser(){
+  async getVerifiedUser({fresh=false}={}){
     if(this.provider){
       const token=await this.token();
       const expectedUserId=this.userId;
+      if(!expectedUserId)throw new ApiError('Please sign in to continue.',401,'SESSION_MISSING');
       const key=expectedUserId+':'+token;
+      const cached=this.verifiedUserCache;
+      const cacheAge=this.clock()-(cached?.verifiedAt??0);
+      if(!fresh&&cached?.key===key&&cacheAge>=0&&cacheAge<VERIFIED_USER_CACHE_TTL_MS)
+        return cached.user;
       if(this.verifiedUserPending?.key===key)return this.verifiedUserPending.promise;
+      const revision=this.verifiedUserRevision;
       const pending=(async()=>{
-        const result=await this.provider.getUser();
+        const result=await this.provider.getUser(token);
         if(result.error)throw providerError(result.error);
         const user=result.data?.user;
-        if(!this.session||this.userId!==expectedUserId||user?.id!==expectedUserId){
-          this.clear();
+        if(!this.session||this.userId!==expectedUserId)
+          throw new ApiError('Session changed during verification.',401,'SESSION_CHANGED');
+        if(!isObject(user)||user.id!==expectedUserId){
+          if(this.accessToken===token)this.clear();
           throw new ApiError('Session verification failed.',401,'SESSION_CHANGED');
         }
-        this.session={...this.session,user};
+        if(revision===this.verifiedUserRevision&&this.accessToken===token){
+          this.session={...this.session,user};
+          this.verifiedUserCache={key,user,verifiedAt:this.clock()};
+        }
         return user;
       })();
       const entry={key,promise:pending};
@@ -349,19 +380,28 @@ export class AuthClient {
     if(!this.session||typeof expectedUserId!=='string')
       throw new ApiError('Session changed during verification.',401,'SESSION_CHANGED');
     const key=expectedUserId+':'+token;
+    const cached=this.verifiedUserCache;
+    const cacheAge=this.clock()-(cached?.verifiedAt??0);
+    if(!fresh&&cached?.key===key&&cacheAge>=0&&cacheAge<VERIFIED_USER_CACHE_TTL_MS)
+      return cached.user;
     if(this.verifiedUserPending?.key===key)return this.verifiedUserPending.promise;
+    const revision=this.verifiedUserRevision;
     const pending=(async()=>{
       const data=await this.call('/auth/v1/user',{accessToken:token,requestKind:'read'});
-      if(!this.session||this.session.user?.id!==expectedUserId)
+      if(!this.session||this.userId!==expectedUserId)
         throw new ApiError('Session changed during verification.',401,'SESSION_CHANGED');
       if(!isObject(data)||typeof data.id!=='string'||data.id!==expectedUserId){
-        this.clear();throw new ApiError('Session verification failed.',401);
+        if(this.accessToken===token)this.clear();
+        throw new ApiError('Session verification failed.',401,'SESSION_CHANGED');
       }
-      // Server-side identity has already been verified. Persisting updated
-      // profile metadata is a best-effort cache update, not a new auth gate.
-      this.session.user=data;
-      try{this.storage?.setItem(STORE_KEY,JSON.stringify(this.session));}
-      catch{/* In-memory identity remains verified for the current tab. */}
+      if(revision===this.verifiedUserRevision&&this.accessToken===token){
+        // The server-verified profile is a short-lived local cache. Browser
+        // storage remains best-effort and never becomes the auth authority.
+        this.session={...this.session,user:data};
+        try{this.storage?.setItem(STORE_KEY,JSON.stringify(this.session));}
+        catch{/* In-memory identity remains verified for this tab. */}
+        this.verifiedUserCache={key,user:data,verifiedAt:this.clock()};
+      }
       return data;
     })();
     const entry={key,promise:pending};
@@ -423,6 +463,8 @@ export class AuthClient {
           throw error;
         }
         this.session=result.data?.session||null;
+        this.invalidateVerifiedUser();
+        this.providerSessionReadAt=null;
         if(!this.session?.access_token)throw new ApiError('Session expired.',401);
         return this.session.access_token;
       })().finally(()=>{this.refreshing=null;});
@@ -446,18 +488,83 @@ export class AuthClient {
     })().finally(()=>{this.refreshing=null;});
     return this.refreshing;
   }
-  async token(){
-    if(this.provider){
+  async readProviderSession({force=false}={}){
+    if(!this.provider)throw new ApiError('Authentication provider is unavailable.',503);
+    if(this.providerSessionReadPending)return this.providerSessionReadPending;
+    const now=this.clock();
+    const current=this.session;
+    const expiresAt=Number(current?.expires_at)*1000;
+    const checkedAt=this.providerSessionReadAt;
+    if(!force&&current?.access_token&&Number.isFinite(expiresAt)&&expiresAt>now&&
+       Number.isFinite(checkedAt)&&now>=checkedAt&&
+       now-checkedAt<PROVIDER_SESSION_CHECK_INTERVAL_MS)return current;
+    const pending=(async()=>{
+      const revision=this.verifiedUserRevision;
+      this.providerSessionReadAt=this.clock();
       const result=await this.provider.getSession();
       if(result.error)throw providerError(result.error);
-      this.session=result.data?.session||null;
-      if(!this.session?.access_token)
+      const next=result.data?.session||null;
+      // A BroadcastChannel auth event received during this read is newer than
+      // the storage snapshot. Never overwrite that event with an older read.
+      if(revision!==this.verifiedUserRevision)return this.session;
+      const previousToken=this.accessToken,previousUser=this.userId;
+      this.session=next;
+      if(previousToken!==this.accessToken||previousUser!==this.userId)
+        this.invalidateVerifiedUser();
+      return next;
+    })();
+    this.providerSessionReadPending=pending;
+    try{return await pending;}
+    finally{if(this.providerSessionReadPending===pending)this.providerSessionReadPending=null;}
+  }
+  async token(){
+    if(this.provider){
+      const current=this.session;
+      const now=this.clock();
+      const expiresAt=Number(current?.expires_at)*1000;
+      if(current?.access_token&&Number.isFinite(expiresAt)&&
+         expiresAt>now+PROVIDER_SESSION_REFRESH_MARGIN_MS)return current.access_token;
+      let latest;
+      try{latest=await this.readProviderSession();}
+      catch(error){
+        // A transient provider/storage failure must not discard a still-valid
+        // in-memory access token, but never reuse it after a sign-out or switch.
+        const latest=this.session;
+        const latestExpiresAt=Number(latest?.expires_at)*1000;
+        if(latest?.access_token&&Number.isFinite(latestExpiresAt)&&
+           latestExpiresAt>this.clock())return latest.access_token;
+        throw error;
+      }
+      if(!latest?.access_token)
         throw new ApiError('Please sign in to continue.',401,'SESSION_MISSING');
-      return this.session.access_token;
+      return latest.access_token;
     }
     if(!this.session)throw new ApiError('Please sign in to continue.',401);
     if(this.session.expires_at<=this.clock()+60000)return this.refresh();
     return this.session.access_token;
+  }
+  async recoverAfterUnauthorized(rejectedToken){
+    if(this.provider){
+      let current;
+      try{current=await this.readProviderSession({force:true});}
+      catch(error){
+        const cached=this.session;
+        const expiresAt=Number(cached?.expires_at)*1000;
+        if(cached?.access_token&&cached.access_token!==rejectedToken&&
+           Number.isFinite(expiresAt)&&expiresAt>this.clock())return cached.access_token;
+        throw error;
+      }
+      if(!current?.access_token)
+        throw new ApiError('Please sign in to continue.',401,'SESSION_MISSING');
+      const expiresAt=Number(current.expires_at)*1000;
+      if(current.access_token!==rejectedToken&&
+         Number.isFinite(expiresAt)&&expiresAt>this.clock())return current.access_token;
+      return this.refresh();
+    }
+    const current=this.session;
+    if(current?.access_token&&current.access_token!==rejectedToken&&
+       Number(current.expires_at)>this.clock())return current.access_token;
+    return this.refresh();
   }
   async authorized(path,options={}){
     const {retryUnauthorized=true,retryableRead=false,...requestOptions}=options;
@@ -468,7 +575,7 @@ export class AuthClient {
           requestKind:requestOptions.requestKind||(retryableRead?'read':'unknown')});
       }catch(error){
         if(error?.status===401&&retryUnauthorized&&!unauthorizedRetried){
-          token=await this.refresh();
+          token=await this.recoverAfterUnauthorized(token);
           unauthorizedRetried=true;
           continue;
         }
@@ -505,7 +612,8 @@ export class AuthClient {
       }catch{
         if(scope!=='local')await this.provider.signOut({scope:'local'}).catch(()=>{});
       }finally{
-        this.session=null;this.verifiedUserPending=null;
+        this.session=null;this.invalidateVerifiedUser();
+        this.providerSessionReadAt=null;
         this.markLegacyMigrationComplete();
         this.signOutInProgress=false;
       }

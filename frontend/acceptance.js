@@ -36,7 +36,7 @@ export async function runReadOnlyAcceptance(auth,api){
   }
  }
  if(!await check('identity',async()=>{
-  user=await auth.getVerifiedUser();
+  user=await auth.getVerifiedUser({fresh:true});
   if(!idMatch.test(user?.id||'')||user.id!==auth.userId)throw Error('Invalid authenticated identity');
   return 'Verified using the live Supabase Auth user endpoint';
  })){pending();return checks;}

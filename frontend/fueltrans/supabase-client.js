@@ -37,7 +37,7 @@ const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),timeout
  }
  return {data,range:r.headers.get('content-range'),status:r.status};}catch(e){if(e.name==='AbortError')throw Error('Supabase request timed out.');throw e;}finally{clearTimeout(timer);}}
 export async function currentSession(required='view',context=host){return hostSession(required,context);}
-export async function verifiedUser(){const s=await currentSession();if(!s)return null;const {data}=await request(`${CONFIG.url}/auth/v1/user`,{token:s.access_token});if(data?.id!==s.user.id){clearSession();throw Error('Authenticated identity mismatch.');}return data;}
+export async function verifiedUser(){const s=await currentSession();return s?.user??null;}
 export async function signOut(){clearSession();}
 const ALLOWED=new Set(['fueltrans_memberships','fueltrans_tickets','fueltrans_user_state']);
 async function db(table,query,{method='GET',body,extra={},context=host}={}){

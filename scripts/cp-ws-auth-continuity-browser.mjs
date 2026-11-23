@@ -21,7 +21,7 @@ const user = {
   created_at: "2026-01-01T00:00:00.000Z",
   updated_at: "2026-01-01T00:00:00.000Z",
 };
-function jwt() {
+function jwt(version = "initial") {
   const header = Buffer.from(
     JSON.stringify({ alg: "HS256", typ: "JWT" }),
   ).toString("base64url");
@@ -30,6 +30,7 @@ function jwt() {
       sub: userId,
       exp: Math.floor(Date.now() / 1000) + 3600,
       role: "authenticated",
+      jti: version,
     }),
   ).toString("base64url");
   return (
@@ -73,7 +74,7 @@ async function waitForServer(url, processHandle) {
   }
   throw Error("Vite server did not become ready.");
 }
-function installFakeAuthRoutes(context) {
+function installFakeAuthRoutes(context, stats) {
   const origin = new URL(SUPABASE_URL).origin;
   context.route("**/*", async (route) => {
     const request = route.request();
@@ -94,23 +95,33 @@ function installFakeAuthRoutes(context) {
       return route.fulfill({
         status: 200,
         headers: { ...cors, "content-type": "application/json" },
-        body: JSON.stringify(session()),
+        body: JSON.stringify(session(jwt("password"), "refresh-one")),
       });
     if (
       url.pathname.endsWith("/token") &&
       url.searchParams.get("grant_type") === "refresh_token"
-    )
+    ) {
+      stats.refreshRequests++;
       return route.fulfill({
         status: 200,
         headers: { ...cors, "content-type": "application/json" },
-        body: JSON.stringify(session(jwt(), "refresh-two")),
+        body: JSON.stringify(
+          session(
+            jwt("refresh-" + stats.refreshRequests),
+            "refresh-" + stats.refreshRequests,
+          ),
+        ),
       });
-    if (url.pathname.endsWith("/user"))
+    }
+    if (url.pathname.endsWith("/user")) {
+      stats.userRequests++;
+      stats.userTokens.push(request.headers()["authorization"] || "");
       return route.fulfill({
         status: 200,
         headers: { ...cors, "content-type": "application/json" },
         body: JSON.stringify(user),
       });
+    }
     if (url.pathname.endsWith("/logout"))
       return route.fulfill({ status: 204, headers: cors, body: "" });
     return route.fulfill({
@@ -140,10 +151,11 @@ const executablePath = "/Applications/Chromium.app/Contents/MacOS/Chromium";
 const browserOptions = { headless: true, args: ["--no-sandbox"] };
 if (existsSync(executablePath)) browserOptions.executablePath = executablePath;
 let context = null;
+let stats = { userRequests: 0, refreshRequests: 0, userTokens: [] };
 try {
   await waitForServer(baseUrl, vite);
   context = await chromium.launchPersistentContext(profileDir, browserOptions);
-  installFakeAuthRoutes(context);
+  installFakeAuthRoutes(context, stats);
   const page1 = await context.newPage();
   const page2 = await context.newPage();
   await Promise.all([
@@ -172,6 +184,61 @@ try {
     { timeout: 10000 },
   );
   assert.equal(await page2.evaluate(() => window.auth.userId), userId);
+
+  const beforeIdentityReads = stats.userRequests;
+  await page2.evaluate(async () => {
+    for (let index = 0; index < 100; index++) {
+      const verified = await window.auth.getVerifiedUser();
+      if (verified.id !== window.auth.userId) throw Error("Identity mismatch");
+    }
+  });
+  assert.equal(
+    stats.userRequests - beforeIdentityReads,
+    1,
+    "100 repeated verified-user reads should make one Auth request",
+  );
+
+  await page2.evaluate(() => {
+    const provider = window.auth.provider;
+    const original = provider.getSession.bind(provider);
+    window.sessionReadCount = 0;
+    provider.getSession = async () => {
+      window.sessionReadCount++;
+      return original();
+    };
+  });
+  const tokenBenchmark = await page2.evaluate(async () => {
+    const started = performance.now();
+    let token = null;
+    for (let index = 0; index < 1000; index++)
+      token = await window.auth.token();
+    return { token, elapsedMs: performance.now() - started };
+  });
+  assert.ok(tokenBenchmark.token, "A valid session token should be returned");
+  assert.equal(
+    await page2.evaluate(() => window.sessionReadCount),
+    0,
+    "1000 valid token reads should use the in-memory session",
+  );
+
+  const rotatedToken = await page1.evaluate(() => window.auth.refresh());
+  await page2.waitForFunction(
+    (token) => window.auth.accessToken === token,
+    rotatedToken,
+    { timeout: 10000 },
+  );
+  const beforePostRefreshReads = stats.userRequests;
+  await page2.evaluate(async () => {
+    for (let index = 0; index < 100; index++)
+      await window.auth.getVerifiedUser();
+  });
+  assert.equal(
+    stats.userRequests - beforePostRefreshReads,
+    1,
+    "A cross-tab token rotation should invalidate the old cache once",
+  );
+  assert.equal(stats.refreshRequests, 1);
+  assert.ok(tokenBenchmark.elapsedMs >= 0);
 
   await page1.evaluate(
     ({ userId, workspaceId }) =>
@@ -213,8 +280,9 @@ try {
   assert.equal(await page1.evaluate(() => window.auth.userId), userId);
 
   await context.close();
+  stats = { userRequests: 0, refreshRequests: 0, userTokens: [] };
   context = await chromium.launchPersistentContext(profileDir, browserOptions);
-  installFakeAuthRoutes(context);
+  installFakeAuthRoutes(context, stats);
   const restartedPage = await context.newPage();
   await restartedPage.goto(baseUrl + fixture);
   await restartedPage.waitForFunction(() => window.restoreState !== "pending");
@@ -231,7 +299,13 @@ try {
     workspaceId,
   );
   console.log(
-    "PASS: cross-window sign-in, cross-window logout, workspace preference sync, refresh restoration, and persistent browser-profile restart.",
+    "PASS: cross-window sign-in/logout, workspace preference sync, cached identity reads, 1000 in-memory token reads, cross-tab token rotation, and persistent browser-profile restart. " +
+      JSON.stringify({
+        userReadsBeforeRestart:
+          beforePostRefreshReads - beforeIdentityReads + 1,
+        refreshRequests: 1,
+        tokenReadBenchmarkMs: Number(tokenBenchmark.elapsedMs.toFixed(2)),
+      }),
   );
 } catch (error) {
   console.error(error);
