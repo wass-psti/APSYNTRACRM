@@ -1,0 +1,362 @@
+{
+  "implementation": "CP-CRM-SESSION-CPU-03",
+  "project": {
+    "name": "APSYNTRACRM",
+    "ref": "jtlusodorfnyzgyuewkz",
+    "region": "ap-southeast-2",
+    "status": "ACTIVE_HEALTHY",
+    "postgresVersion": "17.6.1"
+  },
+  "endpoint": {
+    "path": "/customer/v1/privileged/metrics",
+    "format": "Prometheus text exposition",
+    "authentication": "Existing Secret API key; value not stored or emitted",
+    "successfulScrapes": 5,
+    "firstResponseSeries": 1694
+  },
+  "sampling": {
+    "startUtc": "2026-11-23T05:21:42.000Z",
+    "endUtc": "2026-11-23T05:35:12.348Z",
+    "elapsedSeconds": 810.348,
+    "logicalCpus": 2,
+    "backgroundCollectorInstalled": false
+  },
+  "snapshots": [
+    {
+      "atUtc": "2026-11-23T05:21:42.000Z",
+      "httpStatus": 200,
+      "responseBytes": 654767,
+      "scrapeSeconds": 0.885397,
+      "cpuSeconds": {
+        "0": {
+          "idle": 2763225.82,
+          "iowait": 4456.25,
+          "irq": 0,
+          "nice": 636.4,
+          "softirq": 4629.79,
+          "steal": 7975.29,
+          "system": 30906.86,
+          "user": 113885.97
+        },
+        "1": {
+          "idle": 2763261.8,
+          "iowait": 4492.41,
+          "irq": 0,
+          "nice": 626.51,
+          "softirq": 4659.47,
+          "steal": 7931.34,
+          "system": 30854.7,
+          "user": 113791.86
+        }
+      },
+      "processCpuSeconds": {
+        "postgresql": 130.43,
+        "gotrue": 1039.27
+      },
+      "memory": {
+        "totalBytes": 978493440,
+        "availableBytes": 496246784
+      }
+    },
+    {
+      "atUtc": "2026-11-23T05:26:23.795Z",
+      "httpStatus": 200,
+      "responseBytes": 654798,
+      "cpuSeconds": {
+        "0": {
+          "idle": 2763490.55,
+          "iowait": 4458.34,
+          "irq": 0,
+          "nice": 636.42,
+          "softirq": 4629.86,
+          "steal": 7977.42,
+          "system": 30910.13,
+          "user": 113893.84
+        },
+        "1": {
+          "idle": 2763527.97,
+          "iowait": 4494.09,
+          "irq": 0,
+          "nice": 626.51,
+          "softirq": 4659.56,
+          "steal": 7933.59,
+          "system": 30857.91,
+          "user": 113798.65
+        }
+      },
+      "processCpuSeconds": {
+        "postgresql": 130.48,
+        "gotrue": 1039.77
+      },
+      "memory": {
+        "totalBytes": 978493440,
+        "availableBytes": 491442176
+      }
+    },
+    {
+      "atUtc": "2026-11-23T05:30:17.856Z",
+      "httpStatus": 200,
+      "responseBytes": 653218,
+      "cpuSeconds": {
+        "0": {
+          "idle": 2763718.1,
+          "iowait": 4458.63,
+          "irq": 0,
+          "nice": 636.43,
+          "softirq": 4629.9,
+          "steal": 7979.06,
+          "system": 30911.76,
+          "user": 113896.95
+        },
+        "1": {
+          "idle": 2763755.84,
+          "iowait": 4494.49,
+          "irq": 0,
+          "nice": 626.51,
+          "softirq": 4659.63,
+          "steal": 7935.18,
+          "system": 30859.45,
+          "user": 113801.22
+        }
+      },
+      "processCpuSeconds": {
+        "postgresql": 130.52,
+        "gotrue": 1040.22
+      },
+      "memory": {
+        "totalBytes": 978493440,
+        "availableBytes": 496488448
+      }
+    },
+    {
+      "atUtc": "2026-11-23T05:33:31.021Z",
+      "httpStatus": 200,
+      "responseBytes": 654777,
+      "cpuSeconds": {
+        "0": {
+          "idle": 2763897.38,
+          "iowait": 4460.69,
+          "irq": 0,
+          "nice": 636.43,
+          "softirq": 4629.96,
+          "steal": 7979.68,
+          "system": 30914.58,
+          "user": 113904.25
+        },
+        "1": {
+          "idle": 2763937.74,
+          "iowait": 4495.79,
+          "irq": 0,
+          "nice": 626.51,
+          "softirq": 4659.68,
+          "steal": 7935.73,
+          "system": 30862,
+          "user": 113807.05
+        }
+      },
+      "processCpuSeconds": {
+        "postgresql": 130.56,
+        "gotrue": 1040.57
+      },
+      "memory": {
+        "totalBytes": 978493440,
+        "availableBytes": 465121280
+      }
+    },
+    {
+      "atUtc": "2026-11-23T05:35:12.348Z",
+      "httpStatus": 200,
+      "responseBytes": 654788,
+      "cpuSeconds": {
+        "0": {
+          "idle": 2763995.93,
+          "iowait": 4460.75,
+          "irq": 0,
+          "nice": 636.43,
+          "softirq": 4629.98,
+          "steal": 7979.86,
+          "system": 30915.21,
+          "user": 113905.64
+        },
+        "1": {
+          "idle": 2764036.69,
+          "iowait": 4495.91,
+          "irq": 0,
+          "nice": 626.52,
+          "softirq": 4659.71,
+          "steal": 7935.92,
+          "system": 30862.68,
+          "user": 113807.93
+        }
+      },
+      "processCpuSeconds": {
+        "postgresql": 130.58,
+        "gotrue": 1040.73
+      },
+      "memory": {
+        "totalBytes": 978493440,
+        "availableBytes": 499027968
+      }
+    }
+  ],
+  "derivedIntervals": [
+    {
+      "fromUtc": "2026-11-23T05:21:42.000Z",
+      "toUtc": "2026-11-23T05:26:23.795Z",
+      "seconds": 281.795,
+      "cpuPercentIncludingIowait": 5.259025,
+      "cpuPercentExcludingIowait": 4.586256,
+      "iowaitPercent": 0.67277
+    },
+    {
+      "fromUtc": "2026-11-23T05:26:23.795Z",
+      "toUtc": "2026-11-23T05:30:17.856Z",
+      "seconds": 234.061,
+      "cpuPercentIncludingIowait": 2.75245,
+      "cpuPercentExcludingIowait": 2.605112,
+      "iowaitPercent": 0.147338
+    },
+    {
+      "fromUtc": "2026-11-23T05:30:17.856Z",
+      "toUtc": "2026-11-23T05:33:31.021Z",
+      "seconds": 193.165,
+      "cpuPercentIncludingIowait": 6.021024,
+      "cpuPercentExcludingIowait": 5.146753,
+      "iowaitPercent": 0.874271
+    },
+    {
+      "fromUtc": "2026-11-23T05:33:31.021Z",
+      "toUtc": "2026-11-23T05:35:12.348Z",
+      "seconds": 101.327,
+      "cpuPercentIncludingIowait": 2.077446,
+      "cpuPercentExcludingIowait": 1.9882,
+      "iowaitPercent": 0.089246
+    }
+  ],
+  "overall": {
+    "elapsedSeconds": 810.348,
+    "cpuPercentIncludingIowait": 4.315999,
+    "cpuPercentExcludingIowait": 3.820548,
+    "iowaitPercent": 0.495451,
+    "postgresProcessPercentOfOneCore": 0.018511,
+    "gotrueProcessPercentOfOneCore": 0.18017,
+    "availableMemoryPercentRange": [
+      47.53443,
+      50.999623
+    ]
+  },
+  "ioAndConnections": {
+    "firstSampleAtUtc": "2026-11-23T05:21:42.000Z",
+    "firstSample": {
+      "pgbouncerWaitingClients": 0,
+      "pgbouncerCurrentPostgresConnections": 2,
+      "pgbouncerServerUsedConnections": 2,
+      "pgbouncerClientActiveConnections": 1,
+      "directConnectionCount": 0,
+      "postgresConnectionStatsTotal": 17
+    },
+    "firstInterval": {
+      "fromUtc": "2026-11-23T05:21:42.000Z",
+      "toUtc": "2026-11-23T05:26:23.795Z",
+      "elapsedSeconds": 281.795,
+      "diskReadBytesDelta": 173809152,
+      "diskWriteBytesDelta": 74870784,
+      "diskReadMiBPerSecond": 0.5883,
+      "diskWriteMiBPerSecond": 0.2534
+    }
+  },
+  "postgresActivity": {
+    "fromUtc": "2026-11-23T05:22:55.526Z",
+    "toUtc": "2026-11-23T05:31:09.821Z",
+    "database": {
+      "commitsDelta": 820,
+      "rollbacksDelta": 0,
+      "sharedBufferReadsDelta": 0,
+      "sharedBufferHitsDelta": 198386,
+      "sharedBufferHitPercent": 99.976,
+      "deadlocks": 0
+    },
+    "statements": [
+      {
+        "name": "apsyntra_crm_my_effective_access",
+        "callsDelta": 4,
+        "totalExecutionMsDelta": 167.36,
+        "meanExecutionMsForDeltaCalls": 41.84
+      },
+      {
+        "name": "wm_auth_access_context",
+        "callsDelta": 12,
+        "totalExecutionMsDelta": 198.25,
+        "meanExecutionMsForDeltaCalls": 16.5208
+      },
+      {
+        "name": "select exists(select $1 from auth.users)",
+        "callsDelta": 0,
+        "totalExecutionMsDelta": 0
+      }
+    ]
+  },
+  "authWorkload": {
+    "currentWindowUtc": {
+      "from": "2026-11-23T05:00:00Z",
+      "to": "2026-11-23T05:30:00Z"
+    },
+    "current": {
+      "edgeRequests": 914,
+      "authUserRequests": 69,
+      "authUserSharePercent": 7.549,
+      "authUser200": 65,
+      "authUser403": 4,
+      "authToken200": 5,
+      "edge5xx": 0,
+      "authUserP95Ms": 17.61,
+      "authTokenP95Ms": 105.14
+    },
+    "priorComparisons": [
+      {
+        "window": "2026-11-23T03:10:00Z/03:40:00Z",
+        "edgeRequests": 2997,
+        "authUserRequests": 473,
+        "authUserSharePercent": 15.782
+      },
+      {
+        "window": "2026-11-23T03:45:00Z/04:15:00Z",
+        "edgeRequests": 1300,
+        "authUserRequests": 199,
+        "authUserSharePercent": 15.308
+      }
+    ],
+    "interpretation": "Lower normalized Auth GET /user share is observed, but workload mix and request volume differ; this is not causal proof of CP-01 impact."
+  },
+  "dashboard": {
+    "databaseResourcePanels": "Still show Unable to load data after refresh with a current 10-minute window.",
+    "queryPerformanceReport": {
+      "status": "Loaded",
+      "slowQueries": 141,
+      "cacheHitPercent": 99.99,
+      "averageRowsPerCall": 11.6
+    },
+    "diagnosis": "Metrics API is healthy; failure is limited to the Supabase Dashboard Database resource-report panels or their reporting path. Internal dashboard request failure code was not exposed."
+  },
+  "browserAcceptance": {
+    "browserOnline": true,
+    "route": "https://wass-psti.github.io/APSYNTRACRM/#/time-tracker",
+    "afterReadOnlyAttendanceRefresh": "CRM displayed sign-in screen while the same tab's GET /auth/v1/user returned HTTP 200.",
+    "authLogsDuringTransition": {
+      "authUser200": 2,
+      "authUser403": 0,
+      "authTokenRequests": 0
+    },
+    "outcome": "NOT_ACCEPTED — browser session UI did not remain in signed-in TimeTracker state. No sign-in attempt or attendance write was performed."
+  },
+  "constraints": {
+    "sourceCodeChanged": false,
+    "databaseSchemaChanged": false,
+    "projectSettingsChanged": false,
+    "credentialsCreatedOrRotated": false,
+    "credentialValueStoredOrPrinted": false,
+    "backgroundCollectorInstalled": false,
+    "newDependencies": false,
+    "trainingOrGradientDescentIntroduced": false
+  }
+}
