@@ -57,6 +57,7 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/apps/TimeTracker/time-tracker-add-department-modal.css",
  "frontend/apps/TimeTracker/time-tracker-ojt.css",
  "frontend/apps/TimeTracker/time-tracker-refined.css",
+ "frontend/apps/TimeTracker/time-tracker-unified-light.css",
  "frontend/monday-inspired-ui.css",
  "frontend/login-minimal.css",
  "frontend/talkbox-application.css",

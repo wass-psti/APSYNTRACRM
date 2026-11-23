@@ -27994,6 +27994,821 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   }
 }
 
+/* frontend/apps/TimeTracker/time-tracker-unified-light.css */
+/*
+ * TimeTracker unified light interface — November 2026.
+ * Visual-only extension: no attendance commands, roles, APIs, fields or
+ * control types are changed. Scoped to the signed TimeTracker board.
+ * Keep this AFTER the generated APSYNTRA stylesheet in index.html.
+ */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native {
+  --tt-ref-accent:#C2410C;
+  --tt-ref-accent-hover:#C2410C;
+  --tt-ref-action:#C2410C;
+  --tt-ref-text:#1F2933;
+  --tt-ref-muted:#5B6673;
+  --tt-ref-line:#E3E6EB;
+  --tt-ref-ground:#F5F6F8;
+  --tt-ui-white:#FFFFFF;
+  --tt-ui-soft:#FAFBFC;
+  --tt-ui-tint:#FDF0E8;
+  --tt-ui-green:#1B7F4B;
+  --tt-ui-green-bg:#E8F5EE;
+  --tt-ui-amber:#8A5A00;
+  --tt-ui-amber-bg:#FFF4D6;
+  --tt-ui-red:#B42318;
+  --tt-ui-red-bg:#FDECEA;
+  --tt-ui-neutral:#5B6673;
+  --tt-ui-neutral-bg:#EEF0F3;
+  width:100%;
+  min-width:0;
+  background:#F5F6F8 !important;
+  border:0;
+  color:#1F2933 !important;
+  font:400 14px/1.5 Arial,sans-serif !important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native *,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native *::before,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native *::after {
+  box-sizing:border-box;
+  font-family:Arial,sans-serif !important;
+  text-shadow:none !important;
+  box-shadow:none !important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(button,input,select,textarea,table,th,td,code,time) {
+  font-family:Arial,sans-serif !important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(time,[role="timer"],.tt-overview-metric strong,.tt-report-stat strong,.tt-clock-face,.tt-log-operation strong) {
+  font-variant-numeric:tabular-nums;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app.tt-application {
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  width:100%;
+  min-width:0;
+  gap:0;
+  background:#F5F6F8 !important;
+  color:#1F2933;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(h1,h2,h3,h4,h5,h6) {
+  color:#1F2933;
+  font-family:Arial,sans-serif !important;
+  letter-spacing:0 !important;
+  text-shadow:none !important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(p,small,label) {color:#5B6673}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(small,.fm1-eyebrow,.tt-muted) {font-size:12px;line-height:1.5}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(button,input,select,textarea) {font-size:14px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(button,input,select,textarea):focus-visible {
+  outline:2px solid #C2410C !important;
+  outline-offset:2px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) {
+  min-width:0;
+  max-width:100%;
+  min-height:40px;
+  border:1px solid #E3E6EB !important;
+  border-radius:8px !important;
+  background:#FFFFFF !important;
+  color:#1F2933 !important;
+  padding:8px 12px;
+  box-shadow:none !important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(input,textarea)::placeholder {color:#5B6673;opacity:1}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native input[type="checkbox"] {accent-color:#C2410C}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native input[type="radio"] {accent-color:#C2410C}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native textarea {min-height:84px;resize:vertical}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native button {
+  min-height:40px;
+  border:1px solid #E3E6EB;
+  border-radius:8px;
+  background:#FFFFFF;
+  color:#1F2933;
+  padding:8px 14px;
+  font-weight:600;
+  cursor:pointer;
+  transition:background-color .12s ease,border-color .12s ease;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native button:hover:not(:disabled) {border-color:#C2410C;background:#FDF0E8;color:#C2410C}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native button:disabled {cursor:not-allowed;opacity:.6}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(a,.tt-ov-refresh) {color:#C2410C}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.primary,.tt-start-button,.tt-ojt-clock-button,.tt-departments-add,.tt-ot-submit,.tt-report-export,.tt-ot-open,[data-action="tt-overview-export"]) {
+  border:1px solid #C2410C !important;
+  background:#C2410C !important;
+  color:#FFFFFF !important;
+  font-weight:700;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.primary,.tt-start-button,.tt-ojt-clock-button,.tt-departments-add,.tt-ot-submit,.tt-ot-open,[data-action="tt-overview-export"]):hover:not(:disabled) {
+  background:#C2410C !important;
+  color:#FFFFFF !important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-start-button,.tt-ojt-clock-button) {min-height:52px;border-radius:8px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-employees-table,.tt-report-table,.tt-log-table,.board-table,.tt-main-attendance-table) {
+  width:100%;
+  border-collapse:collapse;
+  border-spacing:0;
+  font-size:14px;
+  color:#1F2933;
+  font-variant-numeric:tabular-nums;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-employees-table,.tt-report-table,.tt-log-table,.board-table,.tt-main-attendance-table) th {
+  padding:12px 14px;
+  border:0;
+  border-bottom:1px solid #E3E6EB;
+  background:#FAFBFC !important;
+  color:#5B6673 !important;
+  text-transform:uppercase;
+  letter-spacing:.03em;
+  font:700 12px/1.4 Arial,sans-serif !important;
+  text-align:left;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-employees-table,.tt-report-table,.tt-log-table,.board-table,.tt-main-attendance-table) td {
+  padding:13px 14px;
+  border:0;
+  border-bottom:1px solid #E3E6EB;
+  background:#FFFFFF !important;
+  color:#1F2933 !important;
+  font:400 14px/1.5 Arial,sans-serif !important;
+  vertical-align:middle;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-employees-table,.tt-report-table,.tt-log-table,.board-table,.tt-main-attendance-table) tr:hover td {background:#FDF0E8!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-employees-table,.tt-report-table,.tt-log-table,.board-table,.tt-main-attendance-table) tr[aria-selected="true"] td {background:#FDF0E8!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-employees-table-wrap,.tt-reports-table-scroll,.tt-log-table-scroll,.table-scroll) {min-width:0;overflow-x:auto;border:1px solid #E3E6EB;border-radius:8px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-employees-table,.tt-report-table,.tt-log-table,.board-table) :is(button,.tt-log-row-summary) {min-height:32px;padding:5px 10px;font-size:12px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-log-badge,.tt-employee-active,.tt-team-status,.tt-ot-pill,.tt-ot-manual-badge,.tt-idle-badge,.tt-badge-active,.tt-summary-status,.tt-gps-status,.tt-monitor-check-status,.tt-main-status) {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  min-height:24px;
+  padding:3px 10px;
+  border:1px solid transparent!important;
+  border-radius:999px!important;
+  background:#EEF0F3!important;
+  color:#5B6673!important;
+  font-size:12px!important;
+  font-weight:700;
+  line-height:1.4;
+  white-space:nowrap;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-log-badge-active,.tt-employee-active,.tt-badge-active,.tt-team-status-active,.tt-ot-pill-approved,.tt-ot-pill-completed,.tt-monitor-healthy,.tt-main-status-completed) {background:#E8F5EE!important;color:#1B7F4B!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-log-badge-done,.tt-main-status-unknown,.tt-idle-badge) {background:#EEF0F3!important;color:#5B6673!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-ot-pill-pending,.tt-monitor-degraded) {background:#FFF4D6!important;color:#8A5A00!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-ot-pill-rejected,.tt-monitor-blocked) {background:#FDECEA!important;color:#B42318!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(progress,.tt-on-time-bar) {accent-color:#C2410C;background:#EEF0F3;border-radius:999px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native progress::-webkit-progress-value {background:#C2410C}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-on-time-bar i,.tt-arrival-bar i,.tt-department-row i,.tt-ot-chart i,.tt-cal-trend-bar i,.tt-report-dept i,.tt-gps-bar i) {
+  border-radius:999px;
+  background:#C2410C!important;
+  background-image:none!important;
+}
+
+/* Shared chrome: no serif logo, giant decorative banners, shadows or gradients. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-app-header.fm1-app-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  min-height:76px;
+  margin:0;
+  padding:12px 24px;
+  border:0;
+  border-bottom:1px solid #E3E6EB;
+  border-radius:0!important;
+  background:#FFFFFF!important;
+  background-image:none!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-app-header::before,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-app-header .tt-pixi-backdrop {display:none!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-app-brand {display:flex;align-items:center;gap:16px;min-width:0}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-brand-icon {
+  display:grid;place-items:center;
+  width:44px;height:44px;flex:0 0 44px;
+  padding:0;border:0;border-radius:8px!important;
+  background:#C2410C!important;color:#FFFFFF!important;
+  font-size:26px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-app-brand .fm1-eyebrow,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-app-brand h1 span {display:none!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-app-brand h1 {
+  margin:0!important;color:#1F2933!important;
+  font:700 22px/1.15 Arial,sans-serif!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-app-brand p {margin:3px 0 0;color:#5B6673;font-size:14px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-header-actions {display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-header-actions :is(.tt-header-link,.tt-header-refresh) {
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:40px;padding:8px 16px;
+  border:1px solid #E3E6EB;border-radius:8px;
+  background:#FFFFFF!important;color:#1F2933!important;font-size:14px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-role-pill {
+  padding:6px 12px!important;border:0!important;border-radius:999px!important;
+  background:#EEF0F3!important;color:#5B6673!important;font-size:12px!important;font-weight:700;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-navigation.fm1-tabs {
+  margin:0;padding:0 24px!important;border:0;border-bottom:1px solid #E3E6EB;
+  border-radius:0;background:#FFFFFF!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-navigation-scroll {
+  display:flex;flex-wrap:nowrap;align-items:center;gap:8px;
+  overflow-x:auto;scrollbar-width:thin;padding:0;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-nav-tab.fm1-tab {
+  position:relative;flex:0 0 auto;min-height:52px;margin:0;padding:14px 12px;
+  border:0;border-bottom:3px solid transparent;border-radius:0!important;
+  background:#FFFFFF!important;color:#5B6673!important;font-size:14px!important;font-weight:500;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-nav-tab.fm1-tab.is-current,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-nav-tab.fm1-tab[aria-selected="true"] {
+  border-bottom:3px solid #C2410C!important;background:#FFFFFF!important;
+  color:#C2410C!important;font-weight:700!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-nav-tab.fm1-tab:hover:not(.is-current) {background:#FDF0E8!important;color:#C2410C!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-application-heading,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-application[data-tt-view="clock"] .tt-application-heading {
+  display:flex!important;align-items:center;justify-content:space-between;gap:20px;
+  padding:24px 24px 16px!important;background:#F5F6F8;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-application-heading .fm1-eyebrow {display:none!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-application-heading h2 {margin:0;font:700 22px/1.3 Arial,sans-serif!important;color:#1F2933!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-application-heading p {margin:4px 0 0;font-size:14px!important;color:#5B6673}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-refresh-button {min-height:40px;padding:8px 16px;border-radius:8px;background:#FFFFFF!important;color:#1F2933!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-notices {
+  display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+  padding:0 24px 16px!important;margin:0;background:#F5F6F8!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-notice {
+  padding:5px 12px;border:0!important;border-radius:999px!important;
+  background:#EEF0F3!important;color:#5B6673!important;font-size:12px!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-notice-neutral:first-child {background:#E8F5EE!important;color:#1B7F4B!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-notice-warning {background:#FFF4D6!important;color:#8A5A00!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-app-footer {
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  margin:16px 24px 0;padding:16px 0 20px;
+  border-top:1px solid #E3E6EB;
+  background:transparent!important;color:#5B6673!important;
+  font-size:12px!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-app-footer span {color:#5B6673!important}
+
+/* Same flat card language for all 11 signed tabs and the shared OJT login. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-overview-panel,.tt-overview-whereabouts,.tt-overview-location,
+  .tt-time-dashboard,.tt-clock-card,.tt-content-panel,
+  .tt-departments-management,.tt-department-item,.tt-employees-summary,
+  .tt-employees-table-wrap,.tt-employees-toolbar,.tt-ojt-session,.tt-ojt-history,.tt-ojt-admin,
+  .tt-log-panel,.tt-log-location-panel,.tt-log-operations,.tt-log-shift-strip,
+  .tt-report-panel,.tt-reports-range,.tt-report-stat,
+  .tt-cal-panel,.tt-cal-upcoming,.tt-cal-selected,
+  .tt-ot-list,.tt-ot-insights,.tt-ot-manual-section,.tt-ot-modal,
+  .tt-hours-panel,.tt-team-member,.tt-team-toolbar,
+  .tt-monitor-checks,.tt-monitor-history,.tt-monitor-stat,
+  .tt-gps-panel,.tt-gps-map-shell,.tt-gps-kpi,.tt-gps-controls
+) {
+  border:1px solid #E3E6EB!important;
+  border-radius:12px!important;
+  background:#FFFFFF!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  color:#1F2933!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-overview-panel,.tt-overview-whereabouts,.tt-time-dashboard,.tt-clock-card,
+  .tt-departments-management,.tt-log-panel,.tt-log-location-panel,.tt-log-operations,
+  .tt-report-panel,.tt-reports-range,.tt-cal-panel,.tt-ot-list,
+  .tt-hours-panel,.tt-monitor-checks,.tt-gps-panel
+) {padding:20px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-overview-panel-heading h4,.tt-clock-card-head h4,.tt-departments-head h4,
+  .tt-log-section-heading h4,.tt-log-panel-top h4,.tt-report-panel h4,
+  .tt-cal-panel h4,.tt-hours-panel h4,.tt-gps-panel-head h4,
+  .tt-ot-list h4,.tt-ojt-session h4,.tt-ojt-history h4
+) {font:700 16px/1.3 Arial,sans-serif!important;color:#1F2933!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-overview,.tt-log,.tt-reports,.tt-calendar,.tt-overtime,
+  .tt-my-hours,.tt-team-directory,.tt-monitor,.tt-gps,.tt-employees-board
+) {width:100%;min-width:0;max-width:none;padding:0 24px 16px!important;margin:0;background:#F5F6F8!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-overview-hero,.tt-log-hero,.tt-reports-heading.tt-reports-command-hero,
+  .tt-cal-header.tt-cal-command-hero,.tt-ot-header.tt-ot-command-hero,
+  .tt-hours-header.tt-hours-command-hero,.tt-team-head.tt-team-command-hero,
+  .tt-monitor-head.tt-monitor-command-hero,.tt-gps-heading.tt-gps-command-hero
+) {
+  min-height:0!important;
+  padding:16px 20px!important;
+  border:1px solid #E3E6EB!important;
+  border-radius:12px!important;
+  background:#FFFFFF!important;
+  background-image:none!important;
+  color:#1F2933!important;
+  box-shadow:none!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-overview-graphics,.tt-log-graphics,.tt-report-graphics,.tt-cal-graphics,
+  .tt-ot-graphics,.tt-hours-graphics,.tt-team-graphics,.tt-monitor-graphics,
+  .tt-gps-graphics,.tt-time-scene
+) {display:none!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-overview-hero,.tt-log-hero,.tt-reports-heading,.tt-cal-header,
+  .tt-ot-header,.tt-hours-header,.tt-team-head,.tt-monitor-head,.tt-gps-heading
+)::before,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-overview-hero,.tt-log-hero,.tt-reports-heading,.tt-cal-header,
+  .tt-ot-header,.tt-hours-header,.tt-team-head,.tt-monitor-head,.tt-gps-heading
+)::after {display:none!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-overview-hero,.tt-log-hero,.tt-reports-heading,.tt-cal-header,
+  .tt-ot-header,.tt-hours-header,.tt-team-head,.tt-monitor-head,.tt-gps-heading
+) :is(h3,p,small,span,strong,time,b) {color:#1F2933!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-ov-heading-kicker,.tt-ov-telemetry-title,.tt-log-eyebrow,.tt-reports-eyebrow,
+  .tt-cal-hero-eyebrow,.tt-ot-eyebrow,.tt-hours-eyebrow,.tt-team-eyebrow,
+  .tt-monitor-eyebrow,.tt-gps-eyebrow
+) {font:700 12px/1.4 Arial,sans-serif!important;color:#5B6673!important;letter-spacing:0!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-ov-telemetry-stats,.tt-log-telemetry-grid,.tt-report-telemetry-grid,
+  .tt-cal-telemetry-grid,.tt-ot-telemetry-grid,.tt-hours-telemetry-grid,
+  .tt-team-telemetry-grid,.tt-monitor-telemetry-grid,.tt-gps-telemetry-grid
+) {border:1px solid #E3E6EB!important;border-radius:8px!important;background:#FAFBFC!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-ov-telemetry-stats,.tt-log-telemetry-grid,.tt-report-telemetry-grid,
+  .tt-cal-telemetry-grid,.tt-ot-telemetry-grid,.tt-hours-telemetry-grid,
+  .tt-team-telemetry-grid,.tt-monitor-telemetry-grid,.tt-gps-telemetry-grid
+) :is(div,span,strong) {color:#1F2933!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-ov-telemetry-stats,.tt-log-telemetry-grid,.tt-report-telemetry-grid,
+  .tt-cal-telemetry-grid,.tt-ot-telemetry-grid,.tt-hours-telemetry-grid,
+  .tt-team-telemetry-grid,.tt-monitor-telemetry-grid,.tt-gps-telemetry-grid
+) span {font-size:12px!important;color:#5B6673!important}
+
+/* Overview: filters first, six equal KPIs, even two-column analytics, records last.
+ * Additional existing widgets remain visible (no information is removed).
+ */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview.tt-overview-command {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:20px!important;
+  align-items:stretch;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command > .tt-overview-hero {grid-column:1/-1;order:0}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-hero {
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(270px,420px);
+  gap:24px;align-items:center;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-hero-content {
+  min-height:0!important;padding:0!important;display:grid;align-content:center;gap:4px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-hero h3 {font:700 16px/1.3 Arial,sans-serif!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-ov-scope {
+  width:max-content;max-width:100%;margin-top:8px;
+  padding:4px 10px;background:#EEF0F3!important;border-radius:999px;color:#5B6673!important;font-size:12px!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-ov-telemetry {
+  width:100%;min-width:0;max-width:none!important;padding:0!important;
+  background:transparent!important;border:0!important;display:grid;gap:8px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-live time {
+  font:700 22px/1.2 Arial,sans-serif!important;color:#1F2933!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-ov-telemetry-stats {
+  margin:0!important;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-ov-telemetry-stats > div {padding:6px 8px!important;gap:0!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-ov-refresh {min-height:32px!important;padding:5px 10px!important;width:max-content!important;justify-self:end}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command > .tt-overview-search {
+  grid-column:1;order:1;min-width:0;
+  display:flex;flex-direction:column;justify-content:end;gap:8px;
+  padding:16px 20px!important;margin:0!important;
+  border:1px solid #E3E6EB;border-radius:12px;background:#FFFFFF!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-search label,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-filters label {
+  color:#5B6673!important;font:700 12px/1.4 Arial,sans-serif!important;letter-spacing:0!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-search input {width:100%;height:40px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command > .tt-overview-filters {
+  grid-column:2;order:2;min-width:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  align-items:end;gap:12px;padding:16px 20px!important;margin:0!important;
+  border:1px solid #E3E6EB;border-radius:12px;background:#FFFFFF!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-filters label {display:flex;flex-direction:column;align-items:stretch;gap:8px;min-width:0}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-filters select {width:100%;height:40px;max-width:none}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command > .tt-overview-metrics {
+  grid-column:1/-1;order:3;display:grid;
+  grid-template-columns:repeat(6,minmax(0,1fr));gap:20px;
+  padding:0!important;margin:0;background:transparent!important;
+  border:0!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-metric {
+  min-height:112px;padding:20px!important;display:flex;flex-direction:column;
+  justify-content:space-between;gap:10px;
+  border:1px solid #E3E6EB!important;border-radius:12px!important;
+  background:#FFFFFF!important;background-image:none!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-metric::after {display:none!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-metric span {order:0;color:#5B6673!important;font:700 14px/1.3 Arial,sans-serif!important;text-transform:none;letter-spacing:0}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-metric strong {order:1;font:700 32px/1.1 Arial,sans-serif!important;color:#1F2933!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-on-time {
+  grid-column:1/-1;padding:12px 20px!important;min-height:0;
+  border:1px solid #E3E6EB!important;border-radius:12px!important;background:#FFFFFF!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-on-time-bar {height:10px!important;background:#EEF0F3!important;border-radius:999px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-on-time-bar i {background:#C2410C!important;background-image:none!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command > .tt-overview-locations {
+  grid-column:1/-1;order:4;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;
+  padding:0;margin:0;background:transparent!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-location {padding:16px 20px!important;min-height:88px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-location strong {font:700 32px/1.1 Arial,sans-serif!important;color:#1F2933!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-location span {font-size:14px!important;color:#5B6673!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-location small {font-size:12px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command > .tt-location-distribution {grid-column:1;order:5}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command > :is(.tt-overview-analytics,.tt-overview-bottom) {display:contents}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-analytics > .tt-overview-panel:nth-child(1) {order:6}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-bottom > .tt-overview-panel:nth-child(2) {order:7}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-analytics > .tt-overview-panel:nth-child(3) {order:8}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-analytics > .tt-overview-panel:nth-child(2) {order:9}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-bottom > .tt-overview-panel:nth-child(1) {order:10}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command > .tt-overview-whereabouts {grid-column:1/-1;order:11;padding:20px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command > .tt-attendance-list {grid-column:1/-1;order:12}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-panel {min-width:0}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-location-segment {background:#C2410C!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-location-track {background:#EEF0F3!important;border-radius:999px;overflow:hidden}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-location-legend i {background:#C2410C!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-late-list > div {display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #E3E6EB;padding:8px 0}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-late-list > div span {border-radius:999px;background:#FFF4D6!important;color:#8A5A00!important;font-size:12px;padding:4px 10px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-pulse-grid {border:1px solid #E3E6EB;border-radius:8px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-pulse-grid > div {background:#FFFFFF!important;border-color:#E3E6EB}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-pulse-grid strong {color:#1F2933!important;font-size:32px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-employee-card {border:1px solid #E3E6EB;border-radius:8px;background:#FFFFFF!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-employee-identity span {background:#FDF0E8!important;color:#C2410C!important;border:0!important;border-radius:50%;font-size:12px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-attendance-list .tt-muted {font-size:12px;color:#5B6673}
+
+/* Clock — two equal-height white cards; do not touch signed GPS or action events. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-clock-stage.tt-command-center {
+  padding:0 24px 16px!important;margin:0;
+  background:#F5F6F8!important;min-height:0!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout {
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px!important;
+  align-items:stretch;max-width:none!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-time-dashboard,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-clock-card.tt-attendance-console {
+  width:100%!important;max-width:none!important;min-height:500px!important;
+  margin:0!important;padding:20px!important;align-items:stretch;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-time-dashboard::after,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-clock-card.tt-attendance-console::before {display:none!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-time-dashboard-head {width:100%;justify-content:space-between}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-dashboard-kicker,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-console-kicker {font:700 16px/1.3 Arial,sans-serif!important;color:#1F2933!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-timezone-pill {padding:4px 10px;border:0!important;border-radius:999px!important;background:#EEF0F3!important;color:#5B6673!important;font-size:12px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-time-dashboard .tt-clock-hero {align-items:flex-start;text-align:left;width:100%;min-height:0!important;margin:20px 0!important;padding:0!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-time-dashboard .tt-clock-hero h3 {font:700 16px/1.4 Arial,sans-serif!important;color:#1F2933!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-time-dashboard .tt-clock-face {
+  justify-content:flex-start!important;margin:12px 0;
+  font:700 72px/1.05 Arial,sans-serif!important;color:#1F2933!important;
+  background:transparent!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-time-dashboard .tt-clock-face :is(span,strong) {font-family:Arial,sans-serif!important;color:#1F2933!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-time-dashboard .tt-clock-suffix {font-size:14px!important;color:#5B6673!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-clock-source,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-dashboard-source {font-size:12px!important;color:#5B6673!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-dashboard-section-label {border-top:1px solid #E3E6EB;padding-top:16px;font-size:12px!important;color:#5B6673!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-time-dashboard .tt-session-summary {
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;
+  padding:0!important;background:transparent!important;border:0!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-time-dashboard .tt-session-summary > div {
+  min-width:0;padding:12px!important;border:1px solid #E3E6EB!important;border-radius:8px;
+  background:#FFFFFF!important;text-align:center;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-time-dashboard .tt-session-summary strong {font-size:32px!important;color:#1F2933!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-attendance-console .tt-clock-card-head h4 {font:700 16px/1.3 Arial,sans-serif!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-console-description {color:#5B6673!important;font-size:14px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-attendance-console .tt-quick-location {display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-location-shortcut[aria-pressed="true"],
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-location-shortcut.is-active {background:#FDF0E8!important;color:#C2410C!important;border-color:#C2410C!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employee-department {background:#FAFBFC!important;border:1px solid #E3E6EB;border-radius:8px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-location-readiness.needs-action,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-location-readiness.needs-permission {background:#FFF4D6!important;color:#8A5A00!important;border:1px solid #E3E6EB;border-radius:8px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-location-readiness.is-ready {background:#E8F5EE!important;color:#1B7F4B!important;border:1px solid #E3E6EB;border-radius:8px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-location-readiness :is(strong,span,p) {color:inherit!important;font-size:12px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-session-ring,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-session-ring-track,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-session-ring-progress {color:#C2410C}
+
+/* Employees: departmental administration + roster, unchanged buttons and permissions. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board {display:grid;gap:20px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-heading {padding:0!important;margin:0}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-eyebrow {font-size:12px!important;color:#5B6673}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-summary {padding:16px 20px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-departments-management {padding:20px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-departments-head {display:flex;justify-content:space-between;gap:16px;align-items:center}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-departments-list {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-department-item {padding:16px!important;border-radius:8px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-department-actions button {min-height:32px!important;font-size:12px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-toolbar {padding:16px 20px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employee-avatar {background:#FDF0E8!important;color:#C2410C!important;border-radius:50%!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employee-actions button {min-height:32px!important;font-size:12px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-footnote {font-size:12px!important;color:#5B6673!important}
+
+/* Log: clear selection state, searchable records and signed-location evidence. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log.tt-log-command,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-reports.tt-reports-command,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-calendar.tt-calendar-command,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overtime.tt-overtime-command,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-my-hours.tt-my-hours-command,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-team-directory.tt-team-command,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-monitor.tt-monitor-command,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-gps.tt-gps-command {display:grid;gap:20px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-hero.tt-log-command-hero {display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,360px);gap:20px;align-items:center}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-hero h3,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-reports-heading,.tt-cal-header,.tt-ot-header,.tt-hours-header,.tt-team-head,.tt-monitor-head,.tt-gps-heading) h3 {
+  font:700 16px/1.3 Arial,sans-serif!important;color:#1F2933!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-controls {
+  display:flex;gap:12px;flex-wrap:wrap;align-items:end;
+  padding:20px!important;border:1px solid #E3E6EB;border-radius:12px;
+  background:#FFFFFF!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-controls label {font-size:12px!important;color:#5B6673!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-controls :is(input,select) {min-height:40px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-admin-toolbar {background:#FDF0E8!important;border:1px solid #E3E6EB!important;border-radius:8px!important;padding:12px 16px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-admin-toolbar-actions button {min-height:32px!important;font-size:12px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-operation-grid {display:grid;gap:12px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-operation {background:#FAFBFC!important;border:1px solid #E3E6EB!important;border-radius:8px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-row-summary {background:transparent!important;color:#1F2933!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-records tr[aria-selected="true"] td {background:#FDF0E8!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-admin-row-actions button,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-admin-editor-actions button {min-height:32px;font-size:12px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-log-admin-delete,.tt-department-danger) {border:1px solid #B42318!important;background:#FFFFFF!important;color:#B42318!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-log-admin-delete,.tt-department-danger):hover:not(:disabled) {background:#FDECEA!important;color:#B42318!important;border-color:#B42318!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-records tr:has(input[type="checkbox"]:checked) td {background:#FDF0E8!important}
+
+/* Reports: compact filters, flat KPIs, simple orange tracks and records. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-reports-range {padding:20px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-report-presets {display:flex;flex-wrap:wrap;gap:8px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-report-preset[aria-pressed="true"],
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-report-preset.is-current {background:#FDF0E8!important;color:#C2410C!important;border-color:#C2410C!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-report-kpis {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-report-stat {padding:20px!important;min-height:112px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-report-stat strong {font:700 32px/1.15 Arial,sans-serif!important;color:#1F2933!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-report-stat span {font-size:14px!important;color:#5B6673!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-report-analytics {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-report-record-chips > * {border-radius:999px!important;background:#EEF0F3!important;color:#5B6673!important;font-size:12px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-report-svg,.tt-report-departments,.tt-report-analytics) :is(rect,path,line) {stroke:#C2410C}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-report-dept :is(i,progress) {accent-color:#C2410C}
+
+/* Calendar and My Hours: retain day click targets and all original navigation. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-cal-navigate,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-hours-week-nav,.tt-hours-month-nav) {
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:16px 20px;border:1px solid #E3E6EB;border-radius:12px;background:#FFFFFF!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-cal-kpis,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-hours-kpis,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ot-metrics,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-team-stats,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-gps-kpis {
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-cal-kpis > *,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-hours-kpis > *,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ot-metrics > *,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-team-stats > * {
+  padding:20px!important;border:1px solid #E3E6EB!important;border-radius:12px!important;
+  background:#FFFFFF!important;box-shadow:none!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-cal-kpis strong,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-hours-kpis strong,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ot-metrics strong,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-team-stats strong,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-gps-kpi strong {font:700 32px/1.15 Arial,sans-serif!important;color:#1F2933!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-cal-analytics {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-cal-month {grid-column:1/-1}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-cal-day,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-hours-day {
+  min-height:80px;border:1px solid #E3E6EB!important;border-radius:8px!important;
+  background:#FFFFFF!important;color:#1F2933!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-cal-day.tt-cal-has-records,.tt-hours-day.tt-hours-full) {background:#FDF0E8!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-cal-day.tt-cal-selected-day,.tt-hours-day.tt-hours-selected) {border-color:#C2410C!important;background:#FDF0E8!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-cal-day.tt-cal-outside,.tt-hours-day.tt-hours-outside) {background:#FAFBFC!important;color:#5B6673!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-cal-legend,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-hours-legend {font-size:12px!important;color:#5B6673!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-cal-holiday-type {border-radius:999px!important;font-size:12px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-hours-progress progress {height:10px!important;accent-color:#C2410C}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-hours-week-records,.tt-hours-selected-records) {overflow-x:auto}
+
+/* Overtime: request workflow and admin actions retain their original semantics. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ot-week {display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:16px 20px;background:#FFFFFF!important;border:1px solid #E3E6EB;border-radius:12px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ot-insights {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;padding:20px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ot-list {padding:20px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-ot-request,.tt-ot-manual-record) {border:1px solid #E3E6EB!important;border-radius:8px!important;background:#FFFFFF!important;margin-bottom:12px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ot-approve {background:#E8F5EE!important;color:#1B7F4B!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ot-reject {background:#FDECEA!important;color:#B42318!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ot-modal {padding:20px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ot-form-grid {display:grid;gap:16px}
+
+/* Team directory, Monitor health, GPS evidence: consistent cards and controls. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-team-toolbar {padding:20px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-team-layout [aria-pressed="true"],
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-team-filters [aria-pressed="true"] {background:#FDF0E8!important;border-color:#C2410C!important;color:#C2410C!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-team-members {display:grid;gap:12px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-team-members-grid {grid-template-columns:repeat(3,minmax(0,1fr))}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-team-member {padding:16px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-team-avatar {background:#FDF0E8!important;color:#C2410C!important;border-radius:50%!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-team-department-edit {min-height:32px;font-size:12px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-monitor-stats {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-monitor-stat {padding:20px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-monitor-stat strong {font:700 32px/1.1 Arial,sans-serif!important;color:#1F2933!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-monitor-check {display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #E3E6EB}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-monitor-check:last-child {border-bottom:0}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-gps-controls {padding:20px!important;display:flex;flex-wrap:wrap;gap:12px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-gps-tabs {display:flex;gap:8px;flex-wrap:wrap}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-gps-tab[aria-selected="true"] {border-color:#C2410C!important;background:#FDF0E8!important;color:#C2410C!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-gps-map-shell {padding:16px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-gps-map-canvas {min-height:380px;background:#EEF0F3!important;border:1px solid #E3E6EB;border-radius:8px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-gps-map-modes button[aria-pressed="true"] {border-color:#C2410C!important;background:#FDF0E8!important;color:#C2410C!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-gps-kpi {padding:20px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-gps-bar progress {height:10px!important;accent-color:#C2410C}
+
+/* OJT shared login keeps separate intern identity / signed attendance behavior. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ojt-navigation {margin:0;padding:12px 24px;border-bottom:1px solid #E3E6EB;background:#FFFFFF;color:#C2410C}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ojt {padding:24px;display:grid;gap:20px;background:#F5F6F8}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ojt-session,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ojt-history,
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ojt-admin {padding:20px!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ojt-avatar {background:#FDF0E8!important;color:#C2410C!important;border-radius:50%!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ojt-error {background:#FDECEA!important;color:#B42318!important;border:1px solid #E3E6EB;border-radius:8px}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-ojt-success {background:#E8F5EE!important;color:#1B7F4B!important;border:1px solid #E3E6EB;border-radius:8px}
+
+/* Do not let document-wide dark styles recolor this intentionally light module. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-log-details-dialog,.tt-admin-editor,.tt-ot-modal) {
+  border:1px solid #E3E6EB!important;border-radius:12px!important;
+  background:#FFFFFF!important;color:#1F2933!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-admin-editor-head,.tt-admin-editor-actions) {background:#FAFBFC!important;border-color:#E3E6EB!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-admin-editor,.tt-ot-modal) :is(h2,h3,h4,strong) {color:#1F2933!important}
+
+@media (max-width:1100px) {
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command > .tt-overview-metrics {grid-template-columns:repeat(3,minmax(0,1fr))}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command > .tt-overview-filters {grid-template-columns:repeat(2,minmax(0,1fr))}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-report-kpis,.tt-cal-kpis,.tt-hours-kpis,.tt-ot-metrics,.tt-team-stats,.tt-monitor-stats,.tt-gps-kpis) {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:800px) {
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-app-header.fm1-app-header {padding:16px;align-items:flex-start;flex-wrap:wrap}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-navigation.fm1-tabs {padding-inline:16px!important}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-application-heading {padding:20px 16px 12px!important}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-notices {padding:0 16px 12px!important}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-overview,.tt-log,.tt-reports,.tt-calendar,.tt-overtime,.tt-my-hours,.tt-team-directory,.tt-monitor,.tt-gps,.tt-employees-board) {padding:0 16px 12px!important}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-clock-stage.tt-command-center {padding:0 16px 12px!important}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout {grid-template-columns:1fr}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-time-dashboard,
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-clock-card.tt-attendance-console {min-height:0!important}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command {grid-template-columns:1fr}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command > :is(.tt-overview-hero,.tt-overview-search,.tt-overview-filters,.tt-overview-metrics,.tt-overview-locations,.tt-location-distribution,.tt-overview-whereabouts,.tt-attendance-list),
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-analytics > .tt-overview-panel,
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-bottom > .tt-overview-panel {grid-column:1/-1}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command .tt-overview-hero,
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-hero.tt-log-command-hero {grid-template-columns:1fr}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-report-analytics,.tt-cal-analytics,.tt-ot-insights) {grid-template-columns:1fr}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-team-members-grid,.tt-departments-list) {grid-template-columns:repeat(2,minmax(0,1fr))}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-app-footer {margin:12px 16px 0}
+}
+@media (max-width:520px) {
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command > .tt-overview-metrics {grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command > .tt-overview-locations {grid-template-columns:1fr}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overview-command > .tt-overview-filters {grid-template-columns:1fr 1fr}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-team-members-grid,.tt-departments-list) {grid-template-columns:1fr}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-time-dashboard .tt-clock-face {font-size:56px!important}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-application-heading {align-items:flex-start}
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-header-actions {gap:8px}
+}
+@media (prefers-reduced-motion:reduce) {
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native *,
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native *::before,
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native *::after {transition:none!important;animation:none!important}
+}
+/* WCAG 2.2 AA: legacy OT sublabels used pale blue text at 10–11px. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overtime-command :is(
+  .tt-ot-subline,.tt-ot-section-heading,.tt-ot-section-heading span
+) {
+  color:#5B6673!important;
+  font-size:12px!important;
+  line-height:1.5!important;
+}
+/* Restore contrast in attendance Log chrome inherited from its former dark hero. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-command :is(
+  .tt-log-hero-scope,.tt-log-operation > span,
+  .tt-log-section-heading > span,.tt-log-panel-top p
+) {
+  color:#5B6673!important;
+  font-size:12px!important;
+  line-height:1.5!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-command .tt-log-hero-scope {
+  background:#EEF0F3!important;
+  border:1px solid #E3E6EB!important;
+  border-radius:999px!important;
+}
+/* The remaining legacy dark hero scope pills are also shown on light cards. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-reports-hero-scope,.tt-cal-hero-scope,.tt-ot-scope,
+  .tt-hours-hero-scope,.tt-team-hero-scope,
+  .tt-monitor-hero-scope,.tt-gps-hero-scope
+) {
+  color:#5B6673!important;
+  background:#EEF0F3!important;
+  border-color:#E3E6EB!important;
+  font-size:12px!important;
+}
+/* Keep the signed System Admin Log toolbar's interaction-tested geometry. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-command .tt-log-admin-toolbar {
+  border-radius:16px!important;
+  background-color:#FFFFFF!important;
+  background-image:linear-gradient(120deg,#FFFFFF 0%,#FDF0E8 100%)!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-command .tt-log-admin-toolbar-actions button {
+  border-radius:9px!important;
+  background-color:#FFFFFF!important;
+  background-image:linear-gradient(180deg,#FFFFFF,#FAFBFC)!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-command .tt-log-admin-selection-status {
+  border-radius:10px!important;
+  background:#FFFFFF!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-command :is(
+  .tt-log-admin-toolbar-heading span,.tt-log-admin-selection-status span,
+  .tt-log-admin-selection-status i
+) {
+  color:#5B6673!important;
+  font-size:12px!important;
+}
+/* Signed record dialogs must be readable against their flat light surfaces. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-admin-editor,.tt-log-details-dialog,.tt-admin-delete-dialog
+) :is(
+  .tt-admin-eyebrow,.tt-admin-mode-pill,.tt-admin-editor-head p,
+  .tt-admin-record-context small,.tt-admin-bulk-guidance p,
+  .tt-admin-field,.tt-admin-field-section > p,.tt-admin-gps p,
+  .tt-admin-gps legend,.tt-admin-editor-footnote,
+  .tt-admin-delete-dialog > p,.tt-admin-delete-records > span,
+  .tt-admin-delete-records ul,.tt-admin-delete-audit-note span
+) {
+  color:#5B6673!important;
+  font-size:12px!important;
+  line-height:1.5!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-admin-editor,.tt-log-details-dialog,.tt-admin-delete-dialog
+) .tt-admin-close {
+  color:#1F2933!important;
+  background:#FFFFFF!important;
+}
+/* WCAG AA across remaining tab help text: preserve statuses, colored marks and actions. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-reports-section-title,.tt-reports-section-title span,
+  .tt-report-panel > p,.tt-reports-range > p,
+  .tt-reports-record-head > label,.tt-report-footnote,
+  .tt-cal-navigate > p,.tt-cal-navigate strong span,
+  .tt-cal-section-title,.tt-cal-section-title span,
+  .tt-cal-metric-note,.tt-cal-panel > p,.tt-cal-weekdays span,
+  .tt-hours-week-nav > span,.tt-hours-section,
+  .tt-hours-session small,.tt-hours-footnote,.tt-hours-kpis span,
+  .tt-monitor-subheading,.tt-monitor-empty p,.tt-monitor-section,
+  .tt-monitor-stat > span,.tt-monitor-stat small,
+  .tt-monitor-check small,.tt-monitor-history > div,.tt-monitor-footnote,
+  .tt-team-toolbar label,.tt-team-count span,.tt-team-stats span,
+  .tt-team-section-title,.tt-team-member-main small,.tt-team-footnote,
+  .tt-gps-controls label,.tt-gps-compare-controls label,
+  .tt-gps-legend,.tt-gps-legend span:last-child,
+  .tt-gps-panel-head p,.tt-gps-record-person small,
+  .tt-gps-record-fix small,.tt-gps-kpis .tt-gps-kpi span,
+  .tt-gps-note,.tt-gps-loading,.tt-gps-privacy,
+  .tt-overview-panel-heading small,.tt-overview-panel-heading > b,
+  .tt-overview-location small,.tt-overview-live > span
+) {
+  color:#5B6673!important;
+  font-size:12px!important;
+  line-height:1.5!important;
+}
+/* Calendar metric captions, weekday abbreviations, and holiday dates: WCAG AA. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-calendar-command :is(
+  .tt-cal-kpis > div > span,.tt-cal-weekbar > span,
+  .tt-cal-holiday-list time[datetime]
+) {
+  color:#5B6673!important;
+  font-size:12px!important;
+  line-height:1.5!important;
+}
+
 /* frontend/monday-inspired-ui.css */
 /* APSYNTRA CRM / Monday-inspired UI — isolated presentation pass.
  * Boards and the workspace chrome only. No domain, auth, or RPC overrides.

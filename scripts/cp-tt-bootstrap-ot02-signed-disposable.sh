@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Real isolated GoTrue JWT and PostgREST OT RPC acceptance; never contacts production.
+# Official version-pinned Docker Hub mirrors bypass public ECR transfer quotas in CI.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ID="cpttot02-$$"; NETWORK="$ID-net"; DB="$ID-pg"; AUTH="$ID-auth"; REST="$ID-rest"
@@ -19,7 +20,7 @@ docker run --rm --network "$NETWORK" \
  -e DATABASE_URL="postgres://postgres:$PASSWORD@$DB:5432/postgres?sslmode=disable" \
  -e GOTRUE_DB_DRIVER=postgres -e API_EXTERNAL_URL=http://127.0.0.1:9999 \
  -e GOTRUE_SITE_URL=http://127.0.0.1:9999 -e GOTRUE_JWT_SECRET="$JWT_SECRET" \
- public.ecr.aws/supabase/gotrue:v2.197.0 auth migrate >/dev/null
+ supabase/gotrue:v2.197.0 auth migrate >/dev/null
 # Remove only fixture statements that would create duplicate Auth service-owned objects.
 python3 - "$ROOT/sql/tests/cp-tt-ot02-disposable-setup.sql" > "/tmp/$ID-fixture.sql" <<'PY'
 from pathlib import Path
@@ -50,11 +51,11 @@ docker run -d --rm --name "$AUTH" --network "$NETWORK" -p 127.0.0.1::9999 \
  -e GOTRUE_JWT_SECRET="$JWT_SECRET" -e GOTRUE_JWT_KEYS='[]' -e GOTRUE_JWT_EXP=3600 \
  -e GOTRUE_JWT_AUD=authenticated -e GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated \
  -e GOTRUE_EXTERNAL_EMAIL_ENABLED=true -e GOTRUE_DISABLE_SIGNUP=false -e GOTRUE_MAILER_AUTOCONFIRM=true \
- public.ecr.aws/supabase/gotrue:v2.197.0 >/dev/null
+ supabase/gotrue:v2.197.0 >/dev/null
 docker run -d --rm --name "$REST" --network "$NETWORK" -p 127.0.0.1::3000 \
  -e PGRST_DB_URI="postgres://authenticator:$PASSWORD@$DB:5432/postgres" \
  -e PGRST_DB_SCHEMAS=public -e PGRST_DB_ANON_ROLE=anon -e PGRST_JWT_SECRET="$JWT_SECRET" \
- public.ecr.aws/supabase/postgrest:v16.4 >/dev/null
+ postgrest/postgrest:v16.4 >/dev/null
 AUTH_PORT="$(docker port "$AUTH" 9999/tcp | tail -1 | sed 's/.*://')"
 REST_PORT="$(docker port "$REST" 3000/tcp | tail -1 | sed 's/.*://')"
 if ! CP_TT_OT03_BROWSER="${CP_TT_OT03_BROWSER:-0}" node "$ROOT/scripts/cp-tt-bootstrap-ot02-signed-disposable.mjs" "$AUTH_PORT" "$REST_PORT" "$DB"; then
