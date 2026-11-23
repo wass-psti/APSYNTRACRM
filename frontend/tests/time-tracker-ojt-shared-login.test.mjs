@@ -193,7 +193,7 @@ test('app wires dropdown selection, signed attendance and admin roster actions',
  assert.ok(dropdownStart>=0&&dropdownEnd>dropdownStart);
  assert.doesNotMatch(app.slice(dropdownStart,dropdownEnd),/captureAttendanceGeo/);
  const draftWrite=app.indexOf("ttWorkNoteDraft.write(timeTrackerWorkNoteScope(selected.id)");
- const gpsCapture=app.indexOf("captureAttendanceGeo(navigator.geolocation)",draftWrite);
+ const gpsCapture=app.indexOf("captureAttendanceGeo(navigator.geolocation",draftWrite);
  assert.ok(draftWrite>=0&&gpsCapture>draftWrite,
   'OJT work-plan draft must be persisted before requesting GPS');
  assert.doesNotMatch(app,/timeTrackerOjt\.select\(|timeTrackerOjt\.leave\(|tt-ojt-choose|ojtPin|p_pin|private PIN/i);
