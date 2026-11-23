@@ -269,7 +269,7 @@ export function renderTimeTrackerAdminDeleteDialog({confirmation=null,busy=false
   if(!ids.length)return '';
   const records=Array.isArray(confirmation.records)?confirmation.records:[];
   const bulk=ids.length>1;
-  const title=bulk?'Delete selected attendance records':'Delete attendance record';
+  const title=bulk?'Delete selected attendance records':confirmation.ojt?'Delete OJT attendance record':'Delete attendance record';
   const names=records.slice(0,4).map(record=>record?.name||record?.ownerName||'Attendance record');
   const extra=Math.max(0,ids.length-names.length);
   return '<div class="tt-admin-delete-backdrop" data-tt-admin-delete-backdrop>'+
@@ -277,7 +277,7 @@ export function renderTimeTrackerAdminDeleteDialog({confirmation=null,busy=false
     '<div class="tt-admin-delete-icon" aria-hidden="true">!</div>'+
     '<span class="tt-admin-eyebrow">SYSTEM ADMIN · RECORD REMOVAL</span>'+
     '<h3 id="tt-admin-delete-title">'+title+'</h3>'+
-    '<p id="tt-admin-delete-description">'+(bulk?'You are about to remove '+ids.length+' attendance records.':'You are about to remove this attendance record.')+' The records will disappear from the TimeTracker Log and their linked attendance-board projection. This action cannot be undone from the Log.</p>'+
+    '<p id="tt-admin-delete-description">'+(bulk?'You are about to remove '+ids.length+' attendance records.':'You are about to remove this attendance record.')+(confirmation.ojt?' The OJT attendance record will be removed, but its before/after evidence is retained in the private audit history.':' The records will disappear from the TimeTracker Log and their linked attendance-board projection. This action cannot be undone from the Log.')+'</p>'+
     (names.length?'<div class="tt-admin-delete-records"><span>Selected records</span><ul>'+names.map(name=>'<li>'+esc(name)+'</li>').join('')+
       (extra?'<li>and '+extra+' more</li>':'')+'</ul></div>':'')+
     '<div class="tt-admin-delete-audit-note"><strong>Audit evidence is retained</strong><span>The private administrative before/after audit history is not deleted.</span></div>'+
