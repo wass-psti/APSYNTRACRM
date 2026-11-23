@@ -259,3 +259,37 @@ test('bootstrap self review forward migration preserves System Admin scope and a
  assert.match(sql,/decided_at=clock_timestamp\(\)/);
  assert.doesNotMatch(sql,/gradient descent|backpropagation|training loop/i);
 });
+
+test('Bootstrap owns pending OT review actions while System Admin retains self-review denial',()=>{
+ const selfRow={...rows[0],id:'50000000-0000-4000-8000-000000000041',ownerId:'cloud:'+admin};
+ const bootstrap=renderTimeTrackerOvertime({requests:[selfRow],
+  access:{userId:admin,bootstrapApprover:true,otContractActive:true},now});
+ assert.match(bootstrap,/data-action="tt-ot-approve"/);
+ assert.match(bootstrap,/data-action="tt-ot-reject"/);
+ const manual={...selfRow,submissionSource:'manual_admin'};
+ const systemAdmin=renderTimeTrackerOvertime({requests:[manual],
+  access:{userId:admin,moduleRole:'System Admin',manualOtManager:true,bootstrapApprover:false,otContractActive:true},now});
+ assert.doesNotMatch(systemAdmin,/data-action="tt-ot-approve"/);
+ assert.doesNotMatch(systemAdmin,/data-action="tt-ot-reject"/);
+});
+
+test('signed bootstrap client decides self-submitted OT and reads former members',async()=>{
+ const self={...rows[0],id:'50000000-0000-4000-8000-000000000042',ownerId:'cloud:'+admin};
+ const former={...rows[0],id:'50000000-0000-4000-8000-000000000043',
+  ownerId:'cloud:50000000-0000-4000-8000-000000000099'};
+ const snapshot={mode:'ACTIVE',actorId:admin,workspaceId:workspace,
+  scope:'AUTHORIZED_WORKSPACE_TEAM',bootstrapApprover:true,manualOtManager:false,rows:[self,former]};
+ let decideArgs;
+ const client=setup({snapshot,rpcHandlers:{
+  timetracker_ot_decide:args=>(decideArgs=args,{
+   id:args.p_request_id,workspaceId:workspace,status:args.p_decision,
+   decidedBy:admin,submissionSource:'employee'})
+ }});
+ const initial=await client.snapshot(board);
+ assert.equal(initial.otRequests.length,2,'signed team OT must not depend on active employee directory');
+ for(const decision of ['Approved','Rejected']){
+  const result=await client.decideOvertime(board,self.id,decision);
+  assert.equal(result.status,decision);
+  assert.equal(decideArgs.p_request_id,self.id);
+ }
+});

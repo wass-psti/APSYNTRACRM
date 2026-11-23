@@ -122,3 +122,9 @@ const dup=await rpc(bootstrap,'timetracker_ot_decide',{p_board_id:board,p_reques
 assert.ok(dup.status>=400&&dup.status<500,'repeated status must be rejected');checks++;
 console.log('SIGNED_RECONNECT_VISIBILITY_AND_EXISTING_DENIALS PASS');
 console.log(`SIGNED_OT_HTTP_AND_SQL_CHECKS_PASS count=${checks}`);
+if(process.env.CP_TT_OT03_BROWSER==='1'){
+ const selfPending=receipt(await submit(bootstrap,'22:00','23:00','browser self approval'),'browser self submit');
+ const workerPending=receipt(await submit(worker,'17:00','18:00','browser other decline'),'browser worker submit');
+ const {runSignedOtBrowserAcceptance}=await import('./cp-tt-bootstrap-ot03-browser.mjs');
+ await runSignedOtBrowserAcceptance({restUrl:rest,bootstrap,worker,board,selfPending,workerPending});
+}

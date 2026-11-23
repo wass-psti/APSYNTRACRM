@@ -57,7 +57,7 @@ docker run -d --rm --name "$REST" --network "$NETWORK" -p 127.0.0.1::3000 \
  public.ecr.aws/supabase/postgrest:v16.4 >/dev/null
 AUTH_PORT="$(docker port "$AUTH" 9999/tcp | tail -1 | sed 's/.*://')"
 REST_PORT="$(docker port "$REST" 3000/tcp | tail -1 | sed 's/.*://')"
-if ! node "$ROOT/scripts/cp-tt-bootstrap-ot02-signed-disposable.mjs" "$AUTH_PORT" "$REST_PORT" "$DB"; then
+if ! CP_TT_OT03_BROWSER="${CP_TT_OT03_BROWSER:-0}" node "$ROOT/scripts/cp-tt-bootstrap-ot02-signed-disposable.mjs" "$AUTH_PORT" "$REST_PORT" "$DB"; then
  echo 'ISOLATED_RUNTIME_DIAGNOSTICS (sanitized)'
  docker logs --tail 8 "$AUTH" 2>&1 | sed -E 's@postgres://[^ ]+@postgres://[redacted]@g;s/(password|secret|token)[=:][^ ]+/\1=[redacted]/gi'
  exit 1

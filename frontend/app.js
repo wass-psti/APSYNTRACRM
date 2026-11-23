@@ -10262,7 +10262,8 @@ async function action(name,button){
   const access=state.ttAttendance.access;
   const canReview=access?.bootstrapApprover===true||
    (access?.manualOtManager===true&&request?.isManual===true);
-  if(!request||!canReview||request.ownerId==='cloud:'+access?.userId)return;
+  if(!request||!canReview||(access?.bootstrapApprover!==true&&
+     request.ownerId==='cloud:'+access?.userId))return;
   const decision=name==='tt-ot-approve'?'Approved':'Rejected';
   if(!confirm(decision+' this overtime request? The decision will be audited and cannot be reversed here.'))return;
   state.ttBusy=true;render();

@@ -235,9 +235,9 @@ export class TimeTrackerNativeClient{
     deny('Manual OT management role does not match the signed module role');
    const allowed=new Set(access.overviewDirectory.map(u=>'cloud:'+u.id));
    const projected=projectTimeTrackerOtRows(response.rows).filter(row=>
-    row.isManual||(allowed.has(row.ownerId)&&(
-      response.scope==='AUTHORIZED_WORKSPACE_TEAM'||
-      row.ownerId==='cloud:'+access.userId)));
+    row.isManual||(response.scope==='AUTHORIZED_WORKSPACE_TEAM'&&
+      response.bootstrapApprover===true)||(allowed.has(row.ownerId)&&
+      row.ownerId==='cloud:'+access.userId));
    otRequests=projected;
    otAccess=Object.freeze({scope:response.scope,
     bootstrapApprover:response.bootstrapApprover,
@@ -619,7 +619,7 @@ export class TimeTrackerNativeClient{
   const before=await this.snapshot(boardId);
   if(before.access.otContractActive!==true)deny('Authoritative OT contract unavailable');
   const request=before.otRequests.find(r=>r.id===requestId&&r.status==='Submitted'&&
-    r.ownerId!=='cloud:'+before.access.userId);
+    (before.access.bootstrapApprover===true||r.ownerId!=='cloud:'+before.access.userId));
   if(!request)deny('OT decision target unavailable or already reviewed');
   const canReview=before.access.bootstrapApprover===true||
    (before.access.manualOtManager===true&&request.isManual===true);
