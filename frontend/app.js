@@ -35,7 +35,7 @@ let closeBoardInviteDialog=()=>{};
 import {normalizeSignedBoardCandidates,normalizeAdminBoardCandidates,adminBoardChangeTarget,BoardGroupAccessClient,
  BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
 import {CreatorAccessClient,WS10_CREATOR_POLICY_ACTIVE} from './ws10-ownership.js';
-import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
+import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,TT_BOARD_GPS_PROJECTION_ENABLED} from './config.js';
 import {PlatformSync,shouldRefreshWorkspaceBoardList,shouldRecheckWorkspaceRoles,shouldResumeDeferredReconciliation} from './platform-sync.js';
 import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
@@ -199,7 +199,6 @@ import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
 import {probeTimeTrackerMonitor} from './time-tracker-monitor.js';
 import {buildTimeTrackerAdminPatch,TT_ADMIN_RECORD_LIMIT} from './time-tracker-record-management.js';
 import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
-import {TT_BOARD_GPS_PROJECTION_ENABLED,loadTimeTrackerBoardGps,renderTimeTrackerBoardGps} from './time-tracker-board-projection.js';
 import {renderTimeTrackerMainGroup} from './time-tracker-main-group.js';
 import {findTimeTrackerAttendanceBoard,TIMETRACKER_APPLICATION_ROUTE} from './time-tracker-application.js';
 import {openTimeTrackerAddDepartmentModal} from './apps/TimeTracker/time-tracker-add-department-modal.js';
@@ -213,6 +212,7 @@ import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-
 import {mountRoleConfigurationMotion,stopRoleConfigurationMotion} from './role-configuration-visuals.js';
 import {mountUserRoleMotion,stopUserRoleMotion} from './user-role-visuals.js';
 import {settingsIcon,mountSettingsMotion,stopSettingsMotion} from './settings-visuals.js';
+import {shouldRefreshNativeCatalogOnSync} from './native-application-catalog.js';
 import {crmPlatformRoleChangeNeeded,FUELTRANS_WORKSPACE_ROLES,SCOPED_SIX_MODULE_IDS,UserRoleManagementClient,renderUserRoleManagement,selectDefaultUserRoleTarget,defaultModuleRoleForAssignment,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
 import {parseSignedCrmRole,signedCrmRoleLabel,signedCrmIdentityLabel,currentSignedCrmRole} from './crm-role-context.js';
 import {workspaceRelationFromCatalog,workspaceRelationLabel} from './workspace-relation-context.js';
@@ -2330,6 +2330,8 @@ function invalidateSignedSyncView(){
  boardCacheChannel.stop();db.invalidateBoardCache();state.context=null;auth.clear();
  renderLogin('Your signed workspace access changed. Sign in again to continue.');
 }
+// Bound registry refresh work when multiple board broadcasts arrive together.
+let nativeRegistryBroadcastReadAt=0;
 async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  if(!state.context||state.context.user_id!==userId||
   state.context.workspace_id!==workspaceId||!auth.isSignedIn)return false;
@@ -2475,6 +2477,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   }
   if(tab==='items'&&moduleByBoardName(detail.board.name)?.key==='timetracker'){
    if(state.ttBoardGpsEligible&&TT_BOARD_GPS_PROJECTION_ENABLED){
+    const {loadTimeTrackerBoardGps}=await import('./time-tracker-board-projection.js');
     state.ttBoardAttendance=await loadTimeTrackerBoardGps({
      auth,api:db,boardId,workspaceId,enabled:true
     });
@@ -2570,8 +2573,19 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   return true;
  }
  if(view==='user-role-management'&&teamsController)await teamsController.load();
- if(view==='role-configuration'&&state.adminVerified===true)
+ if(view==='role-configuration'&&state.adminVerified===true){
   await loadRoleConfiguration();
+  // Board registry changes arrive as invalidation hints. Re-read the signed
+  // catalog only on the Native Application Access tab; never trust event data.
+  const now=Date.now();
+  if(shouldRefreshNativeCatalogOnSync({
+   reason,view,tab:state.roleTab,adminVerified:state.adminVerified,
+   busy:state.userRoleBusy,now,lastReadAt:nativeRegistryBroadcastReadAt
+  })){
+   nativeRegistryBroadcastReadAt=now;
+   await loadUserRoleManagement();
+  }
+ }
  if(view==='foundation'&&sensitive)await refreshFoundation();
  if(view==='boards'&&state.showArchived)state.archived=await db.boards('archived');
  if(view==='boards'&&state.showTrash)state.trashed=await db.boards('trashed');
@@ -2699,7 +2713,11 @@ async function loadUserRoleManagement(){
  if(state.adminVerified!==true || !(await roleConfig.adminVerified()))throw new ApiError('CRM administrator role management access denied.',403);
  const ctx=await db.context();
  if(ctx.user_id!==state.context?.user_id||ctx.workspace_id!==state.context?.workspace_id)throw new ApiError('Authoritative workspace changed.',403);
- state.userRoleData=await userRoleManager.snapshot(ctx.workspace_id,{includeFuelTrans:true,includeFundTracker:true,includeScopedSix:true,includeCharter:true});
+ const roleSnapshot=await userRoleManager.snapshot(ctx.workspace_id,{includeFuelTrans:true,includeFundTracker:true,includeScopedSix:true,includeCharter:true,includeNativeCatalog:state.view==='role-configuration'&&state.roleTab==='application-access'});
+ if(!auth.isSignedIn||auth.userId!==ctx.user_id||
+    state.context?.workspace_id!==ctx.workspace_id||state.context?.user_id!==ctx.user_id)
+  throw new ApiError('Signed workspace changed during application discovery.',409);
+ state.userRoleData=roleSnapshot;
  if(state.systemAdminData?.workspaceId!==ctx.workspace_id||state.systemAdminData?.actorId!==ctx.user_id)
   state.systemAdminData=null;
  const batchIdentity=ctx.workspace_id+':'+ctx.user_id;
@@ -3171,6 +3189,7 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
    if(!sameSession())return;
    if(state.ttBoardGpsEligible){
      try{
+       const {loadTimeTrackerBoardGps}=await import('./time-tracker-board-projection.js');
        const data=await loadTimeTrackerBoardGps({
          auth,api:db,boardId,workspaceId:workspace,enabled:true
        });
@@ -6580,6 +6599,7 @@ async function openTimeTrackerBoardProjectedGps(){
   !activeBoardLayout()||state.tab!=='items'||moduleByBoardName(state.board?.board?.name)?.key!=='timetracker')return;
  const snapshot={boardId:state.boardId,userId:auth.userId,
   workspaceId:state.context.workspace_id};
+ const {loadTimeTrackerBoardGps,renderTimeTrackerBoardGps}=await import('./time-tracker-board-projection.js');
  const details=await loadTimeTrackerBoardGps({
   auth,api:db,boardId:snapshot.boardId,workspaceId:snapshot.workspaceId
  });
@@ -10418,7 +10438,16 @@ async function action(name,button){
    const tab=button.dataset.tab;
    if(['roles','users','matrix','application-access','workspace','audit'].includes(tab)&&tab!==state.roleTab){
     state.roleTab=tab;
-    if(tab==='application-access')state.userRoleBatchScope='module';
+    if(tab==='application-access'){
+     state.userRoleBatchScope='module';
+     // A tab switch is a discovery boundary, even if another role tab already
+     // loaded a snapshot without the optional registered-application catalog.
+     state.userRoleBusy=true;
+     render();
+     try{await loadUserRoleManagement();}
+     catch(error){state.userRoleError=errorMessage(error);notice(error);}
+     finally{state.userRoleBusy=false;}
+    }
     render();
     animateTabContent('.aps-role-configuration');
    }
@@ -13170,10 +13199,27 @@ document.addEventListener('visibilitychange',()=>{
  platformSync.visibilityChanged();
  setBoardLoadingVisibility(root,document.hidden);
  if(!document.hidden)void refreshCorrectedTimeTrackerClock({onFocus:true});
+ if(!document.hidden)refreshNativeCatalogOnFocus();
 });
 // Window focus is distinct from document visibility: switching between two
 // visible application windows may not emit visibilitychange in either one.
 window.addEventListener('focus',()=>platformSync.focusChanged());
+// Revalidate the live role-management snapshot on returning to Native Application
+// Access. One request per focus interval, with no background polling.
+let nativeCatalogLastFocusRead=0;
+function refreshNativeCatalogOnFocus(){
+ if(state.view!=='role-configuration'||state.roleTab!=='application-access'||
+    !state.adminVerified||state.userRoleBusy||!state.userRoleData||!auth.isSignedIn)return;
+ const now=Date.now();
+ if(now-nativeCatalogLastFocusRead<60000)return;
+ nativeCatalogLastFocusRead=now;
+ state.userRoleBusy=true;
+ void loadUserRoleManagement().then(()=>render()).catch(err=>{
+  state.userRoleError=errorMessage(err);
+ }).finally(()=>{state.userRoleBusy=false;render();});
+}
+window.addEventListener('focus',refreshNativeCatalogOnFocus);
+
 window.addEventListener('focus',()=>{
  if(state.view==='board'&&state.tab==='items'&&state.board?.board?.id===state.boardId&&
     state.context?.user_id===auth.userId)

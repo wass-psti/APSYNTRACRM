@@ -49,7 +49,7 @@ test('native application routes display their own workspace breadcrumb', () => {
  assert.ok(paseo >= 0 && paseo < board, 'Paseo label must precede the generic fallback');
  assert.ok(talkbox >= 0 && talkbox < board, 'TalkBox label must precede the generic board label');
 });
- 
+
 test('UI CSS is scoped, responsive, dark mode and reduced-motion aware', () => {
  assert.match(css, /#app \.pdl-crm-portal/);
  assert.match(css, /html\[data-aps-monday-theme="dark"\]/);

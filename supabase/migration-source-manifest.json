@@ -2060,6 +2060,13 @@
       "sha256": "8a9941edaef3df705e1c7bb01b81f7b6600f60e25b7be8539f7d87e670a92370"
     },
     {
+      "version": "20261122010413",
+      "name": "cp_native_app_autosync_03_registry_projection",
+      "file": "20261122010413_cp_native_app_autosync_03_registry_projection.sql",
+      "bytes": 2158,
+      "sha256": "f75e4e0458b87b0de809d819b534438113012fc958d9a362fd2e1b4b68f061f6"
+    },
+    {
       "version": "20261122014311",
       "name": "pdl_schedule_visibility_and_calendar_readback",
       "file": "20261122014311_pdl_schedule_visibility_and_calendar_readback.sql",

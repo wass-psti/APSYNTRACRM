@@ -1,0 +1,44 @@
+name: CP-NATIVE-APP-AUTOSYNC-06 Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/app.js'
+      - 'frontend/native-application-catalog.js'
+      - 'frontend/native-application-role-assignment.js'
+      - 'frontend/user-role-management.js'
+      - 'frontend/user-role-batch.js'
+      - 'frontend/tests/cp-native-app-autosync-*.test.mjs'
+      - 'supabase/migrations/*cp_native_app_autosync*.sql'
+      - '.github/workflows/cp-native-app-autosync-06.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-autosync-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend-validation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Syntax and focused native application contracts
+        run: |
+          node --check frontend/app.js
+          node --check frontend/native-application-catalog.js
+          node --check frontend/user-role-management.js
+          node --test frontend/tests/cp-native-app-autosync-*.test.mjs
+      - name: Full frontend regression
+        run: npm test
+      - name: Production build
+        run: npm run build
