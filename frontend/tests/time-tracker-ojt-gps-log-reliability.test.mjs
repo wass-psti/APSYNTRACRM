@@ -8,7 +8,7 @@ import {filterTimeTrackerLogRows,renderTimeTrackerLog,timeTrackerLogCsv,
 
 const id='00000000-0000-4000-8000-000000000011';
 const internId='00000000-0000-4000-8000-000000000022';
-const clockIn=new Date().toISOString();
+const clockIn='2026-11-23T02:20:00.000Z'; // 10:20 AM Philippine Time: Late
 const coordinates=(timestamp=Date.now())=>({
  timestamp,coords:{latitude:10.25,longitude:123.88,accuracy:35}
 });
@@ -97,14 +97,14 @@ test('administrators see individually attributed OJT rows merged with regular Lo
  assert.equal(intern.ownerId,'ojt:'+internId);
  assert.equal(intern.department,'OJT');
  assert.equal(intern.status,'Active');
- assert.equal(intern.classification,'Not assessed');
+ assert.equal(intern.classification,'Late');
  assert.equal(filterTimeTrackerLogRows(rows,{search:'intern alpha'}).length,1);
  assert.match(timeTrackerLogCsv(rows),/Intern Alpha/);
  assert.deepEqual(timeTrackerLogRowsForSnapshot({...snapshot,access:{moduleRole:'Employee'}}),[standard]);
  assert.deepEqual(timeTrackerLogRowsForSnapshot({...snapshot,status:'LOADING'}),[]);
 });
 
-test('OJT Log details are clearly identified and have no ordinary record mutation actions',()=>{
+test('OJT Log details show signed admin controls, but not regular bulk selection or GPS actions',()=>{
  const rows=timeTrackerLogRowsForSnapshot({status:'VERIFIED_READ',
   access:{moduleRole:'IT Administrator'},log:{rows:[]},
   ojtAdminAttendance:{records:[
@@ -115,9 +115,10 @@ test('OJT Log details are clearly identified and have no ordinary record mutatio
  assert.match(html,/Intern Alpha/);
  assert.match(html,/OJT intern · Shared login/);
  assert.match(html,/SIGNED OJT ATTENDANCE/);
- assert.match(html,/Shared-login OJT attendance · Read-only/);
+ assert.match(html,/Shared-login OJT attendance · Admin corrections are audited/);
  assert.doesNotMatch(html,/data-action="tt-log-detail-toggle-select"/);
- assert.doesNotMatch(html,/data-action="tt-log-admin-correct-time"/);
- assert.doesNotMatch(html,/data-action="tt-log-admin-edit"/);
+ assert.match(html,/data-action="tt-log-admin-correct-time"/);
+ assert.match(html,/data-action="tt-log-admin-edit"/);
+ assert.match(html,/data-action="tt-log-admin-delete"/);
  assert.doesNotMatch(html,/data-action="tt-log-gps-load"/);
 });

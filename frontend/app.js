@@ -207,6 +207,7 @@ import {renderTimeTrackerMainGroup} from './time-tracker-main-group.js';
 import {findTimeTrackerAttendanceBoard,TIMETRACKER_APPLICATION_ROUTE} from './time-tracker-application.js';
 import {openTimeTrackerAddDepartmentModal} from './apps/TimeTracker/time-tracker-add-department-modal.js';
 import {TimeTrackerOjtClient,isEligibleTimeTrackerSharedOjtAccount,TIMETRACKER_SHARED_OJT_USER_ID} from './apps/TimeTracker/time-tracker-ojt.js';
+import {buildTimeTrackerOjtAdminPatch} from './apps/TimeTracker/time-tracker-ojt-admin-editor.js';
 import {attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError} from './time-tracker-clock-recovery.js';
 import {signedMapPoints,mountTimeTrackerMaps,disposeTimeTrackerMaps,setTimeTrackerMapTheme,retryTimeTrackerMaps,toggleTimeTrackerMapFullscreen} from './time-tracker-map.js';
 import {inspectMySignedEffectiveAccess,sanitizeEffectiveAccessReport} from './signed-effective-access.js';
@@ -4500,11 +4501,47 @@ function timeTrackerAdminLogReady(){
   state.board?.board?.workspace_id===state.context?.workspace_id&&
   moduleByBoardName(state.board?.board?.name)?.key==='timetracker';
 }
+function timeTrackerOjtLogAdminScope(){
+ if(!timeTrackerAdminLogReady()||!state.ttAttendance?.ojtAdminAttendance)return null;
+ const a=state.ttAttendance.access;
+ return {userId:a.userId,workspaceId:a.workspaceId,boardId:a.boardId};
+}
 async function openTimeTrackerAdminEditor(recordIds,mode='single',{timeOnly=false}={}){
  if(!timeTrackerAdminLogReady()||state.ttLogAdminBusy)return;
  if(timeOnly&&mode!=='single')return;
  if(state.ttAttendance.access.moduleRole!=='System Admin'&&mode!=='single')return;
  const ids=[...new Set(recordIds||[])];
+ if(ids.some(id=>String(id).startsWith('ojt:'))){
+  const scope=timeTrackerOjtLogAdminScope();
+  if(!scope||mode!=='single'||ids.length!==1||
+     !timeTrackerLogRowsForSnapshot(state.ttAttendance).some(row=>
+       row.isOjt&&row.id===ids[0])){
+   state.ttLogAdminError='Select one authorized intern attendance record.';render();return;
+  }
+  const identity=scope.userId,boardId=scope.boardId,seq=routeSerial;
+  state.ttLogAdminBusy=true;state.ttLogAdminError='';state.ttLogAdminSuccess='';render();
+  try{
+   const signed=await timeTrackerOjt.adminAttendance(scope);
+   if(seq!==routeSerial||!timeTrackerOjtLogAdminScope()||
+      state.context?.user_id!==identity||state.boardId!==boardId)return;
+   const row=signed.records.find(item=>'ojt:'+item.id===ids[0]);
+   if(!row||!Number.isSafeInteger(row.revision)||row.revision<1)
+    throw Error('OJT record revision is unavailable. Deploy the signed OJT admin migration and refresh the Log.');
+   state.ttLogAdminEditor={ojt:true,mode:'single',
+    timeOnly:timeOnly||state.ttAttendance.access.moduleRole==='IT Administrator',
+    record:row,recordIds:ids,revision:row.revision,
+    actorId:identity,workspaceId:scope.workspaceId,boardId};
+  }catch(err){
+   if(seq===routeSerial&&state.boardId===boardId)
+    state.ttLogAdminError=errorMessage(err);
+  }finally{
+   if(seq===routeSerial&&state.boardId===boardId){
+    state.ttLogAdminBusy=false;render();
+    root.querySelector('#tt-attendance-admin-form input[name="clockInAt"]')?.focus();
+   }
+  }
+  return;
+ }
  if(!ids.length||ids.length>TT_ADMIN_RECORD_LIMIT||
     (mode==='single'&&ids.length!==1)||
     ids.some(id=>!(state.ttAttendance.log?.rows||[]).some(row=>row.id===id))){
@@ -4534,6 +4571,42 @@ async function saveTimeTrackerAdminEditor(form){
  if(editor.actorId!==auth.userId||editor.workspaceId!==state.context?.workspace_id||
     editor.boardId!==state.boardId){
   state.ttLogAdminError='Signed workspace changed. Reopen the attendance editor.';render();return;
+ }
+ if(editor.ojt){
+  const scope=timeTrackerOjtLogAdminScope();
+  if(!scope||editor.mode!=='single'||editor.actorId!==scope.userId||
+     editor.workspaceId!==scope.workspaceId||editor.boardId!==scope.boardId){
+   state.ttLogAdminError='Signed OJT scope changed. Reopen the attendance editor.';render();return;
+  }
+  let ojtPlan;
+  try{
+   ojtPlan=buildTimeTrackerOjtAdminPatch(new FormData(form),{
+    record:editor.record,timeOnly:editor.timeOnly});
+  }catch(err){state.ttLogAdminError=errorMessage(err);render();return;}
+  const seq=routeSerial,boardId=scope.boardId;
+  state.ttLogAdminBusy=true;state.ttLogAdminError='';render();
+  try{
+   await timeTrackerOjt.mutateAdminRecord(scope,{
+    recordId:editor.record.id,action:editor.timeOnly?'correct-time':'edit',
+    patch:ojtPlan.patch,reason:ojtPlan.reason,expectedRevision:editor.revision
+   });
+   if(seq!==routeSerial||state.boardId!==boardId||!timeTrackerOjtLogAdminScope())return;
+   state.ttLogAdminEditor=null;state.ttLogSelectedIds=[];state.ttLogAdminBusy=false;
+   await loadTimeTracker(seq);
+   if(seq===routeSerial&&state.boardId===boardId&&state.ttAttendance?.status==='VERIFIED_READ')
+    state.ttLogAdminSuccess='Intern attendance correction saved and verified.';
+  }catch(err){
+   if(seq===routeSerial&&state.boardId===boardId){
+    const message=errorMessage(err);
+    state.ttLogAdminError=/OJT_REVISION_CONFLICT|40001/i.test(message)?
+     'Intern attendance changed. Close and reopen the editor to use the latest record.':
+     /timeout|network|fetch|connection/i.test(message)?
+      'Save confirmation is uncertain. Refresh the signed OJT Log before trying again.':message;
+   }
+  }finally{
+   if(seq===routeSerial&&state.boardId===boardId){state.ttLogAdminBusy=false;render();}
+  }
+  return;
  }
  let plan;
  try{
@@ -4575,6 +4648,21 @@ function deleteTimeTrackerAdminRecords(recordIds){
  if(state.ttAttendance?.access?.moduleRole!=='System Admin')return;
  if(!timeTrackerAdminLogReady()||state.ttLogAdminBusy||state.ttLogAdminEditor)return;
  const ids=[...new Set(recordIds||[])];
+ if(ids.some(id=>String(id).startsWith('ojt:'))){
+  const scope=timeTrackerOjtLogAdminScope();
+  const row=timeTrackerLogRowsForSnapshot(state.ttAttendance).find(r=>
+   r.isOjt&&r.id===ids[0]);
+  if(!scope||ids.length!==1||!row||
+     !Number.isSafeInteger(row.revision)||row.revision<1){
+   state.ttLogAdminError='Intern record revision unavailable. Refresh after deploying the signed OJT administration service.';
+   render();return;
+  }
+  state.ttLogAdminError='';state.ttLogAdminSuccess='';
+  state.ttLogAdminDeleteConfirm={ojt:true,recordIds:ids,
+   revision:row.revision,records:[{id:row.id,name:row.name,clockIn:row.clockIn,status:row.status}]};
+  render();root.querySelector('[data-action="tt-log-admin-delete-cancel"]')?.focus();
+  return;
+ }
  if(!ids.length||ids.length>TT_ADMIN_RECORD_LIMIT)return;
  const rows=state.ttAttendance.log?.rows||[];
  const selected=ids.map(id=>rows.find(row=>row.id===id));
@@ -4599,6 +4687,43 @@ async function confirmTimeTrackerAdminDeletion(){
  const confirmation=state.ttLogAdminDeleteConfirm;
  if(!confirmation||!timeTrackerAdminLogReady()||state.ttLogAdminBusy)return;
  const ids=[...confirmation.recordIds];
+ if(confirmation.ojt){
+  const scope=timeTrackerOjtLogAdminScope();
+  if(!scope||ids.length!==1||!String(ids[0]).startsWith('ojt:')||
+     !Number.isSafeInteger(confirmation.revision))return;
+  const seq=routeSerial,boardId=scope.boardId;
+  state.ttLogAdminBusy=true;state.ttLogAdminError='';render();
+  try{
+   const fresh=await timeTrackerOjt.adminAttendance(scope);
+   if(seq!==routeSerial||state.boardId!==boardId||!timeTrackerOjtLogAdminScope())return;
+   const row=fresh.records.find(r=>'ojt:'+r.id===ids[0]);
+   if(!row||row.revision!==confirmation.revision)
+    throw Error('OJT_REVISION_CONFLICT');
+   await timeTrackerOjt.mutateAdminRecord(scope,{
+    recordId:row.id,action:'delete',patch:{},
+    expectedRevision:row.revision,reason:'Administrator deleted intern attendance record'
+   });
+   if(seq!==routeSerial||state.boardId!==boardId||!timeTrackerOjtLogAdminScope())return;
+   state.ttLogAdminDeleteConfirm=null;state.ttLogAdminEditor=null;
+   state.ttLogSelectedIds=[];state.ttLogAdminBusy=false;
+   await loadTimeTracker(seq);
+   if(seq===routeSerial&&state.boardId===boardId&&state.ttAttendance?.status==='VERIFIED_READ')
+    state.ttLogAdminSuccess='Intern attendance record deleted; audit history retained.';
+  }catch(err){
+   if(seq===routeSerial&&state.boardId===boardId){
+    const message=errorMessage(err);
+    state.ttLogAdminError=/OJT_REVISION_CONFLICT|40001/i.test(message)?
+     'Intern attendance changed before deletion. Refresh the Log and retry.':
+     /timeout|network|fetch|connection/i.test(message)?
+      'Deletion confirmation is uncertain. Refresh the Log and verify the record before retrying.':message;
+   }
+  }finally{
+   if(seq===routeSerial&&state.boardId===boardId){
+    state.ttLogAdminBusy=false;state.ttLogAdminDeleteConfirm=null;render();
+   }
+  }
+  return;
+ }
  if(!ids.length||ids.length>TT_ADMIN_RECORD_LIMIT)return;
  const seq=routeSerial,boardId=state.boardId;
  state.ttLogAdminBusy=true;state.ttLogAdminError='';state.ttLogAdminSuccess='';render();
