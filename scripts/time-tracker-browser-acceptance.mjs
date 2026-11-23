@@ -395,6 +395,37 @@ try {
     false,
   );
   await checkAccessibility("Bootstrap signed OT review fixture");
+  // Bootstrap self-submitted requests must expose the same review controls.
+  await page.evaluate(
+    (result) =>
+      window.__timeTrackerRender({
+        view: "ot",
+        result,
+        now: new Date("2026-11-17T12:00:00Z"),
+        otFilters: { status: "Submitted" },
+      }),
+    {
+      ...otFixture,
+      access: {
+        ...otFixture.access,
+        userId: "20000000-0000-4000-8000-000000000001",
+        bootstrapApprover: true,
+      },
+      otRequests: [
+        {
+          ...submittedOt,
+          ownerId: "cloud:20000000-0000-4000-8000-000000000001",
+        },
+      ],
+    },
+  );
+  assert.equal(await page.locator('[data-action="tt-ot-approve"]').count(), 1);
+  assert.equal(await page.locator('[data-action="tt-ot-reject"]').count(), 1);
+  assert.equal(
+    await page.locator('[data-action="tt-ot-approve"]').isDisabled(),
+    false,
+  );
+  await checkAccessibility("Bootstrap self-submitted OT review fixture");
 
   const manualOt = {
     ...submittedOt,

@@ -1,0 +1,58 @@
+name: CP-TT Bootstrap OT signed browser acceptance
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/cp-tt-bootstrap-ot03.yml"
+      - "frontend/app.js"
+      - "frontend/time-tracker-*.js"
+      - "frontend/tests/time-tracker-overtime.test.mjs"
+      - "scripts/cp-tt-bootstrap-ot02-signed-disposable.*"
+      - "scripts/cp-tt-bootstrap-ot03-browser.mjs"
+      - "scripts/time-tracker-browser-acceptance.mjs"
+      - "supabase/migrations/20261123180000_cp_tt_bootstrap_ot_self_review_01.sql"
+      - "supabase/migration-source-manifest.json"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cp-tt-bootstrap-ot03.yml"
+      - "frontend/app.js"
+      - "frontend/time-tracker-*.js"
+      - "frontend/tests/time-tracker-overtime.test.mjs"
+      - "scripts/cp-tt-bootstrap-ot02-signed-disposable.*"
+      - "scripts/cp-tt-bootstrap-ot03-browser.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cp-tt-bootstrap-ot03-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  signed-ot-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked frontend and browser dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Validate TimeTracker OT contract and migration manifest
+        run: |
+          node --test frontend/tests/time-tracker-overtime.test.mjs
+          node scripts/verify-migration-source-manifest.mjs
+          node --check scripts/cp-tt-bootstrap-ot03-browser.mjs
+          bash -n scripts/cp-tt-bootstrap-ot02-signed-disposable.sh
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Real signed disposable GoTrue, PostgreSQL and Chromium OT acceptance
+        env:
+          CP_TT_OT03_BROWSER: "1"
+        run: bash scripts/cp-tt-bootstrap-ot02-signed-disposable.sh

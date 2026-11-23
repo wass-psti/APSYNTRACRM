@@ -138,8 +138,8 @@ const row=(r,access,query='',expandedRequestIds=[],otContractActive=false)=>'<de
  '<p><b>Reason:</b> '+esc(r.task||'Not supplied')+'</p>'+
  (r.isManual?'<p><b>Entry type:</b> Manual OT'+
   (access?.manualOtManager===true&&r.submittedByName?' · Entered by '+esc(r.submittedByName):'')+'</p>':'')+
- (r.status==='Submitted'&&r.ownerId!=='cloud:'+access?.userId&&
-  (access?.bootstrapApprover===true||(access?.manualOtManager===true&&r.isManual))?
+ (r.status==='Submitted'&&(access?.bootstrapApprover===true||
+  (r.ownerId!=='cloud:'+access?.userId&&access?.manualOtManager===true&&r.isManual))?
   '<div class="tt-ot-review-actions">'+
    '<button type="button" data-action="tt-ot-approve" data-id="'+esc(r.id)+'"'+
     (!(TT_OT_WRITES_ACCEPTED&&otContractActive)?' disabled title="Signed OT contract unavailable"':'')+'>Approve</button>'+
