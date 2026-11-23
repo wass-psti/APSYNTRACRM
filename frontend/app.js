@@ -11,6 +11,7 @@ import {mountAvatarImages} from './profile-avatar.js';
 
 import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels,WS01_SWITCHING_ENABLED} from './workspace-ui.js?v=cp-crm-wm-invite-flow-01';
 import {WORK_MANAGEMENT_WORKSPACE_ID} from './workspace-identity.js';
+import {workspaceApplicationsForNavigation,workspaceApplicationRouteAccess} from './workspace-application-routing.js';
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
 import {WorkspaceInvitationClient,WS02D_INVITE_CLIENT_ENABLED} from './workspace-invitation-client.js';
 import {WorkspaceInvitationManagementClient} from './workspace-invitation-management.js';
@@ -822,25 +823,16 @@ function sidebar(){
  const recent=state.boards.filter(board=>!isStandaloneApplicationBoard(board));
  const selectedNav=currentSidebarNavigation();
  const active=key=>selectedNav===key;
- // Every link comes from a registered host route or a board returned by the
- // signed, workspace-scoped board catalog. Do not invent module access.
- const boardApplications=BOARD_MODULES.filter(module=>
-  !STANDALONE_APPLICATION_MODULE_KEYS.has(module.key)).map(module=>{
-   const board=state.boards.find(row=>moduleByBoardName(row.name)?.key===module.key);
-   return board?sidebarNav('#/boards/'+board.id,module.name,'boards',
-    active('recent:'+board.id)):'';
-  }).join('');
+ const applications=workspaceApplicationsForNavigation(state.context?.workspace_id,state.boards);
+ const applicationNav=applications.map(application=>sidebarNav(
+  application.href,application.label,application.icon,
+  active(application.navigationKey)
+ )).join('');
+ const applicationSection=applications.length?
+  '<div class="side-section sidebar-nav-section">Applications</div>'+applicationNav:'';
  const nav=sidebarNav('#/overview','Overview','overview',active('overview'))+
   sidebarNav('#/boards','My boards','boards',active('boards'),{count:state.boards.filter(board=>!isStandaloneApplicationBoard(board)).length})+
-  '<div class="side-section sidebar-nav-section">Applications</div>'+
-  sidebarNav('#/fm1','FM1 Ticketing','ticket',active('fm1'))+
-  sidebarNav('#/time-tracker','TimeTracker','clock',active('time-tracker'))+
-  sidebarNav('#/fund-tracker','Fund Tracker','finance',active('fund-tracker'))+
-  sidebarNav(FUELTRACK_V3_APPLICATION_ROUTE,'FuelTrack+','fueltrack',active('fueltrack'))+
-  sidebarNav(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',active('tradelink'))+
-  sidebarNav('#/paseo','Paseo de Lomboy','paseo',active('paseo'))+
-  (state.boards.some(b=>moduleByBoardName(b.name)?.key==='toolbox')?sidebarNav(TALKBOX_APPLICATION_ROUTE,'TalkBox','talkbox',active('talkbox')):'')+
-  boardApplications+
+  applicationSection+
   (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',active('foundation')):'')+
   (engineeringUi?sidebarNav('#/security','Access acceptance','security',active('security')):'')+
   (state.adminVerified===true?'<div class="side-section sidebar-nav-section">Administration</div>'+
@@ -2652,10 +2644,44 @@ async function refreshWorkspace(){
  // authoritative context has resolved; identity/scope resets follow below.
  boardCacheChannel.stop();db.invalidateBoardCache();
  state.context=mergeProfileAvatarContext(state.context,incomingContext);
- if(priorIdentity!==state.context?.user_id||priorWorkspace!==state.context?.workspace_id){
+ const workspaceIdentityChanged=priorIdentity!==state.context?.user_id||
+  priorWorkspace!==state.context?.workspace_id;
+ if(workspaceIdentityChanged){
   trashBoardSelection.clear();
   crmRoleReadGeneration++;crmRoleLastReadAt=0;state.crmRoleSnapshot=null;
   workspaceRelationReadGeneration++;state.workspaceRelationSnapshot=null;
+  // Do not render the previous workspace's board catalog while the new
+  // workspace catalog is loading. A scope transition starts from Overview.
+  if(priorWorkspace){
+   routeSerial++;
+   state.boards=[];state.archived=[];state.trashed=[];
+   state.showArchived=false;state.showTrash=false;
+   state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
+   state.boardPageBusy=false;state.boardPageError='';state.issues=[];
+   state.edit=false;state.boardManage=false;state.view='overview';
+   state.ttStandalone=false;state.frtStandalone=false;
+   state.tlStandalone=false;state.fuelTrackStandalone=false;
+   state.fuelTrackBackend=null;state.fuelTrackBackendBusy=false;
+   state.fuelTrackBackendError='';state.fuelTrackPreflight=null;
+   state.fuelTrackPreflightBusy=false;state.fuelTrackPendingSubmission=null;
+   state.fuelTrackReceiptLink=null;state.fuelTrackRefuelingDialog=null;
+   state.fuelTrackActivity=null;state.fuelTrackActivityBusy=false;
+   state.fuelTrackActivityError='';
+   state.tradeLinkModuleRole='';state.tradeLinkActivity=null;
+   state.tradeLinkActivityBusy=false;state.tradeLinkActivityError='';
+   state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsBusy=false;
+   state.tradeLinkAnalyticsError='';state.tradeLinkAnalyticsRunId++;
+   state.paseoManagement=null;paseoReadRunId++;
+   talkBoxState={page:null,selected:null,busy:false,error:'',scope:'',
+    filter:{name:'',status:'All'},features:null,meetingOpen:false,meetingDate:'',
+    meetingHistory:[],meetingRecord:null,meetingRows:[]};
+   clearTalkBoxReportUrl();
+   pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;
+   fm1Module?.unmountFm1Application();
+   stopTimeTrackerClock();
+   history.replaceState(null,'',location.pathname+location.search+routeHome);
+   approvedRouteHash=routeHome;
+  }
  }
  boardCacheChannel.start({userId:state.context?.user_id,workspaceId:state.context?.workspace_id});
  if(priorIdentity!==state.context?.user_id||priorWorkspace!==state.context?.workspace_id){
@@ -5111,6 +5137,39 @@ async function onRoute(){
   state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkSection='overview';
  }
  if(parts[0]!=='fm1')fm1Module?.unmountFm1Application();
+ const applicationRoute=workspaceApplicationRouteAccess(hash,state.context?.workspace_id);
+ if(!applicationRoute.allowed){
+  // Application ownership controls which workspace opens its navigation route.
+  // Existing server-side role and data permissions are unchanged.
+  routeSerial++;
+  stopTimeTrackerClock();
+  state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
+  state.boardManage=false;state.edit=false;state.error='';
+  state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';
+  clearTimeTrackerOjtSelection();
+  state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;
+  state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;
+  state.frtFinanceDetailRevision++;
+  state.tradeLinkDraft=initialTradeLinkDraftView();
+  state.tradeLinkModuleRole='';state.tradeLinkActivity=null;
+  state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalytics=null;
+  state.tradeLinkAnalyticsBusy=false;state.tradeLinkAnalyticsError='';
+  state.fuelTrackBackend=null;state.fuelTrackBackendBusy=false;
+  state.fuelTrackActivity=null;state.fuelTrackActivityBusy=false;
+  state.fuelTrackPendingSubmission=null;state.fuelTrackRefuelingDialog=null;
+  state.paseoManagement=null;paseoReadRunId++;
+  talkBoxState={page:null,selected:null,busy:false,error:'',scope:'',
+   filter:{name:'',status:'All'},features:null,meetingOpen:false,meetingDate:'',
+   meetingHistory:[],meetingRecord:null,meetingRows:[]};
+  clearTalkBoxReportUrl();
+  pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;
+  fm1Module?.unmountFm1Application();
+  history.replaceState(null,'',location.pathname+location.search+routeHome);
+  approvedRouteHash=routeHome;
+  await onRoute();
+  toast('This application belongs to Work Management. Switch to that workspace to open it.');
+  return;
+ }
  if(parts[0]==='invitations'&&parts[1]==='accept'){
   state.view='invitation';render();return;
  }

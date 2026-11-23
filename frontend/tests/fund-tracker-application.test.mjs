@@ -1,4 +1,6 @@
 import test from "node:test";
+import {workspaceApplicationsForNavigation} from '../workspace-application-routing.js';
+import {WORK_MANAGEMENT_WORKSPACE_ID} from '../workspace-identity.js';
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
@@ -154,13 +156,16 @@ test("Fund Tracker route reuses the existing board host, adapter, renderer and d
     "fundTracker.snapshot(",
     "fundTracker.searchRequests(query,{limit})",
     "getHref:row=>fundTrackerRecordHref(row.companyCode,row.requestId)",
-    "sidebarNav('#/fund-tracker','Fund Tracker','finance'",
+    "workspaceApplicationsForNavigation(state.context?.workspace_id,state.boards)",
     "case 'frt-finance-view':",
     "case 'frt-finance-detail':",
     "case 'frt-finance-action':",
     "state.frtFinanceView",
     "return renderFundTrackerApplication()",
   ]) assert.ok(app.includes(fragment), fragment);
+  const fundTracker = workspaceApplicationsForNavigation(WORK_MANAGEMENT_WORKSPACE_ID, []).find((application) => application.id === 'frt');
+  assert.equal(fundTracker?.href, '#/fund-tracker');
+  assert.equal(fundTracker?.icon, 'finance');
   assert.equal(app.includes("loadFRTFinanceReadOnly("), false);
   assert.equal(app.includes("searchFRTRequestsReadOnly("), false);
   for (const call of [

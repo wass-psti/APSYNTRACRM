@@ -4,6 +4,8 @@ import {readFileSync,existsSync} from 'node:fs';
 import {readPaseoManagement} from '../apps/Paseo/native-admin.js';
 import {sidebarActiveRoute} from '../sidebar-active-route.js';
 import {PASEO_APPLICATION} from '../apps/Paseo/manifest.js';
+import {workspaceApplicationsForNavigation} from '../workspace-application-routing.js';
+import {WORK_MANAGEMENT_WORKSPACE_ID} from '../workspace-identity.js';
 
 const read=path=>readFileSync(path,'utf8');
 
@@ -21,7 +23,8 @@ test('public Paseo entry is a separate document with no CRM script or session co
 
 test('CRM signed workspace registers Paseo without granting anonymous CRM routes',()=>{
  const app=read('frontend/app.js');
- assert.match(app,/sidebarNav\('#\/paseo','Paseo de Lomboy'/);
+ assert.match(app,/workspaceApplicationsForNavigation\(state\.context\?\.workspace_id,state\.boards\)/);
+ assert.equal(workspaceApplicationsForNavigation(WORK_MANAGEMENT_WORKSPACE_ID,[]).find(application=>application.id==='paseo-de-lomboy')?.href,PASEO_APPLICATION.route);
  assert.equal(PASEO_APPLICATION.route,'#/paseo');
  assert.match(app,/if\(!state\.context\)return;/);
  assert.match(app,/readPaseoManagement\(token,\{cursor\}\)/);

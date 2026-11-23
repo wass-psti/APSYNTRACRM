@@ -1,4 +1,6 @@
 import test from "node:test";
+import {workspaceApplicationsForNavigation} from '../workspace-application-routing.js';
+import {WORK_MANAGEMENT_WORKSPACE_ID} from '../workspace-identity.js';
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
@@ -122,10 +124,10 @@ test("existing Team and GPS navigation eligibility is preserved without adding n
 });
 
 test("all legacy TimeTracker board URLs resolve to the dedicated application route", () => {
-  assert.match(
-    app,
-    /sidebarNav\('#\/time-tracker','TimeTracker','clock',active\('time-tracker'\)\)/,
-  );
+  assert.match(app,/workspaceApplicationsForNavigation\(state\.context\?\.workspace_id,state\.boards\)/);
+  const timeTracker=workspaceApplicationsForNavigation(WORK_MANAGEMENT_WORKSPACE_ID,[]).find(application=>application.id==='timetracker');
+  assert.equal(timeTracker?.href,'#/time-tracker');
+  assert.equal(timeTracker?.icon,'clock');
   assert.match(app, /if\(parts\[0\]==='time-tracker'\)/);
   assert.match(app, /db\.nativeApplicationBoardContext\('time-tracker'\)/);
   assert.match(

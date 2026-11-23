@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {sidebarActiveRoute} from '../sidebar-active-route.js';
+import {workspaceApplicationsForNavigation} from '../workspace-application-routing.js';
+import {WORK_MANAGEMENT_WORKSPACE_ID} from '../workspace-identity.js';
 
 const ids={
  tradelinkBoardId:'tl-board',fundTrackerBoardId:'frt-board',
@@ -54,7 +56,10 @@ test('sidebar uses one route-selected key for primary and recent links, with mat
  assert.match(sidebar,/const active=selectedNav==='recent:'\+b\.id/);
  assert.match(app,/const active=!!activeHref&&path===activeHref/);
  assert.doesNotMatch(sidebar,/location\.hash\.startsWith\(TRADELINK_APPLICATION_ROUTE\+'\/'\)/);
- assert.match(sidebar,/active\('tradelink'\)/);
+ assert.match(sidebar,/active\(application\.navigationKey\)/);
+ const tradeLink=workspaceApplicationsForNavigation(WORK_MANAGEMENT_WORKSPACE_ID,[]).find(application=>application.id==='tradelink');
+ assert.equal(tradeLink?.navigationKey,'tradelink');
+ assert.equal(tradeLink?.icon,'tradelink');
  assert.match(sidebar,/const selected=active\?' aria-current="page"':''/);
  assert.match(shell,/if\(active\)link\.setAttribute\('aria-current','page'\);\s*else link\.removeAttribute\('aria-current'\)/);
  assert.doesNotMatch(sidebar,/sidebarNav\([^\n]*,state\.tlStandalone===true\)/);

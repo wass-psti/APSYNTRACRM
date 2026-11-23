@@ -5,6 +5,8 @@ import {
  FUELTRACK_V3_ID,FUELTRACK_TABS,isFuelTrackV3ApplicationBoard,
  fuelTrackDashboardModel,fuelTrackHref,normalizeFuelTrackSection,renderFuelTrackV3Application
 } from '../fueltrack-v3-application.js';
+import {workspaceApplicationsForNavigation} from '../workspace-application-routing.js';
+import {WORK_MANAGEMENT_WORKSPACE_ID} from '../workspace-identity.js';
 
 const BOARD=FUELTRACK_V3_ID;
 const W='00000000-0000-4000-8000-000000000001';
@@ -127,7 +129,8 @@ test('unfinished tabs are navigation-ready without offering unauthorized writes'
 test('FuelTrack opens from its standalone route while preserving its existing Board and data source',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const index=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
- assert.match(app,/sidebarNav\(FUELTRACK_V3_APPLICATION_ROUTE,'FuelTrack\+'/);
+ assert.match(app,/workspaceApplicationsForNavigation\(state\.context\?\.workspace_id,state\.boards\)/);
+ assert.equal(workspaceApplicationsForNavigation(WORK_MANAGEMENT_WORKSPACE_ID,[]).find(application=>application.id==='fueltrack')?.href,'#/fueltrack');
  assert.match(app,/if\(parts\[0\]==='fueltrack'\)/);
  assert.match(app,/db\.nativeApplicationBoardContext\('fueltrack-plus'\)/);
  assert.match(app,/loadBoard\(FUELTRACK_V3_ID,'fueltrack',null,null,fuelTrackContext\)/);
