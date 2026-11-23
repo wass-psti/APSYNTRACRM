@@ -12,6 +12,29 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({
 }[c]));
 const validTime=value=>typeof value==='string'&&Number.isFinite(Date.parse(value));
 const safeRows=rows=>Array.isArray(rows)?rows.filter(r=>r&&validTime(r.clockIn)):[];
+
+/** Merge signed OJT and ordinary attendance for authorized admins.
+ * OJT records must remain read-only and cannot target normal attendance RPCs.
+ */
+export function timeTrackerLogRowsForSnapshot(snapshot){
+ if(snapshot?.status!=='VERIFIED_READ')return [];
+ const standard=snapshot.log?.rows||snapshot.records||[];
+ if(!['System Admin','IT Administrator'].includes(snapshot.access?.moduleRole))
+  return standard;
+ const signed=snapshot.ojtAdminAttendance?.records;
+ if(!Array.isArray(signed))return standard;
+ const ojtRows=signed.filter(r=>r&&typeof r.id==='string'&&
+  typeof r.internId==='string'&&typeof r.name==='string'&&validTime(r.clockIn)&&
+  (r.clockOut===null||validTime(r.clockOut))).map(r=>Object.freeze({
+   id:'ojt:'+r.id,ownerId:'ojt:'+r.internId,name:r.name,
+   clockIn:r.clockIn,clockOut:r.clockOut,department:'OJT',
+   location:TT_LOCATIONS.includes(r.location)?r.location:'Unspecified',
+   status:r.clockOut?'Completed':'Active',classification:'Not assessed',
+   workNote:'',creditedMs:null,isOjt:true
+  }));
+ return [...standard,...ojtRows];
+}
+
 const phtTime=value=>validTime(value)?formatTimeTrackerClock(value):'—';
 const phtDate=value=>new Intl.DateTimeFormat('en-PH',{
  timeZone:'Asia/Manila',weekday:'long',year:'numeric',month:'long',day:'numeric'
@@ -264,20 +287,23 @@ function renderTimeTrackerLogDetailDialog({row,now,gpsEligible=false,gpsData=nul
  adminEligible=false,adminFullAccess=false,adminBusy=false,selectedIds=[]}={}){
  if(!row)return '';
  const selected=selectedIds.includes(row.id);
- const details=safeSessionDetails(row,now,{gpsEligible,gpsData,gpsBusy,gpsError,
-  gpsErrorRecordId,mapEnabled,mapTheme,adminEligible,adminFullAccess,adminBusy});
+ const details=safeSessionDetails(row,now,{gpsEligible:!row.isOjt&&gpsEligible,
+  gpsData:row.isOjt?null:gpsData,gpsBusy,gpsError,gpsErrorRecordId,
+  mapEnabled:!row.isOjt&&mapEnabled,mapTheme,
+  adminEligible:!row.isOjt&&adminEligible,
+  adminFullAccess:!row.isOjt&&adminFullAccess,adminBusy});
  return '<div class="tt-admin-editor-backdrop tt-log-details-backdrop" data-tt-log-detail-backdrop>'+
   '<section class="tt-admin-editor tt-log-details-dialog" data-tt-log-detail-dialog data-record-id="'+esc(row.id)+'" role="dialog" aria-modal="true" aria-labelledby="tt-log-modal-title" tabindex="-1">'+
    '<header class="tt-admin-editor-head"><div class="tt-admin-editor-title-group">'+
-    '<span class="tt-admin-eyebrow">SIGNED ATTENDANCE RECORD</span>'+
+    '<span class="tt-admin-eyebrow">'+(row.isOjt?'SIGNED OJT ATTENDANCE':'SIGNED ATTENDANCE RECORD')+'</span>'+
     '<h3 id="tt-log-modal-title">'+esc(row.name||'Attendance details')+'</h3>'+
     '<p>'+esc(dateTime(row.clockIn))+' · '+esc(row.status||'Attendance record')+
      (selected?' · Selected':'')+'</p></div>'+
     '<button type="button" class="tt-admin-close" data-action="tt-log-detail-close" aria-label="Close attendance details">×</button>'+
    '</header>'+
    '<div class="tt-admin-editor-body">'+details+'</div>'+
-   '<footer class="tt-admin-editor-actions"><span class="tt-admin-editor-footnote">Signed attendance details · '+esc(row.department||'Unassigned')+'</span>'+
-    '<div>'+(adminFullAccess?'<button type="button" class="secondary" data-action="tt-log-detail-toggle-select" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+' aria-pressed="'+selected+'">'+(selected?'Remove selection':'Select record')+'</button>':'')+
+   '<footer class="tt-admin-editor-actions"><span class="tt-admin-editor-footnote">'+(row.isOjt?'Shared-login OJT attendance · Read-only':'Signed attendance details · '+esc(row.department||'Unassigned'))+'</span>'+
+    '<div>'+(adminFullAccess&&!row.isOjt?'<button type="button" class="secondary" data-action="tt-log-detail-toggle-select" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+' aria-pressed="'+selected+'">'+(selected?'Remove selection':'Select record')+'</button>':'')+
     '<button type="button" class="primary" data-action="tt-log-detail-close">Close details</button></div></footer>'+
   '</section></div>';
 }
@@ -295,7 +321,7 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
    '<summary class="tt-log-row-summary" data-action="tt-log-open-detail" data-record-id="'+esc(r.id)+
     '" aria-haspopup="dialog" aria-label="Open attendance details for '+esc(r.name||'employee')+'">'+
    '<span class="tt-log-row-person"><strong>'+esc(r.name||'Signed member')+
-    '</strong><small>'+esc(r.department||'Unassigned')+'</small></span>'+
+    '</strong><small>'+esc(r.isOjt?'OJT intern · Shared login':r.department||'Unassigned')+'</small></span>'+
    '<span title="'+esc(phtDate(r.clockIn))+'">'+esc(dateTime(r.clockIn))+'</span>'+
    '<span>'+esc(dateTime(r.clockOut))+'</span>'+
    '<span class="tt-log-row-location">'+esc(r.location||'Unspecified')+'</span>'+
@@ -390,8 +416,10 @@ export function renderTimeTrackerLog({
      '<th>Location</th><th>Department</th><th>Arrival</th>'+
      '<th>Status</th><th>Hours</th><th>Details</th></tr></thead>'+
      '<tbody>'+rows.map(r=>sessionRow(r,query,now,{
-      gpsEligible,gpsData,gpsBusy,gpsError,gpsErrorRecordId,
-      expandedRecordIds,mapEnabled,mapTheme,adminEligible,adminFullAccess,adminBusy,selectedIds})).join('')+
+      gpsEligible:!r.isOjt&&gpsEligible,gpsData:r.isOjt?null:gpsData,gpsBusy,gpsError,gpsErrorRecordId,
+      expandedRecordIds,mapEnabled:!r.isOjt&&mapEnabled,mapTheme,
+      adminEligible:!r.isOjt&&adminEligible,adminFullAccess:!r.isOjt&&adminFullAccess,
+      adminBusy,selectedIds})).join('')+
      '</tbody></table></div></div>':
      '<p class="tt-log-empty">No authorized attendance sessions match these filters.</p>')+
    (rows.length?'<p id="tt-log-empty-search" class="tt-log-empty"'+
