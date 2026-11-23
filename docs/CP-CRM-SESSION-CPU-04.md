@@ -357,3 +357,37 @@ The build completed with the existing startup-guard classic-script and main-chun
 | No attendance writes or training/gradient-descent execution           | VERIFIED                                                              |
 
 The sanitized follow-up evidence is stored in `docs/evidence/cp04-followup-20261123.json`. No access token, refresh token, Secret API key, request-ID value, or user record was written to it.
+
+## 13. Latest main integration and post-merge verification
+
+The remote `main` branch advanced to `3fcced5` with `CP-TT-MANUAL-OT-01` while CP-04 was being prepared. The latest main commit modified `frontend/app.js`, the TimeTracker overtime modules, the CI workflow, and the manual OT migration/test assets.
+
+The current CP-04 branch was merged with the latest main using Git's `ort` strategy:
+
+- Latest main commit: `3fcced5744626b09815995d915e6fd457514f2be`
+- Merge commit: `4ea2b04`
+- Merge conflicts: none
+- TimeTracker manual OT changes: preserved
+- CP-04 Auth/workspace recovery changes: preserved
+
+No production migration was run as part of this merge.
+
+### Post-merge verification
+
+The full verification sequence was rerun after integration:
+
+| Check                                                   |               Result |
+| ------------------------------------------------------- | -------------------: |
+| `npm run check`                                         |                 PASS |
+| `npm run lint`                                          |                 PASS |
+| ESLint on CP-04 and TimeTracker changed source/tests    |                 PASS |
+| `npm run format:check`                                  |                 PASS |
+| `npm run build`                                         |                 PASS |
+| Full frontend suite                                     | **3,506/3,506 PASS** |
+| Combined CP-04/Auth/workspace/TimeTracker focused suite |       **61/61 PASS** |
+
+The production Vite build completed. It emitted the existing main application chunk-size advisory; this did not fail the build.
+
+### Integration state
+
+Pull request [#804](https://github.com/wass-psti/APSYNTRACRM/pull/804) remains open. The merge commit has not yet been pushed to the PR branch at the time this section was recorded, so GitHub Actions and deployment acceptance are still pending.

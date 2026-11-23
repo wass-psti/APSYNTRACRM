@@ -137,7 +137,23 @@
     "buildWarnings": [
       "Existing startup-guard.js classic-script bundling advisory",
       "Existing main application chunk size advisory"
-    ]
+    ],
+    "postMerge": {
+      "fullFrontendTests": {
+        "passed": 3506,
+        "failed": 0
+      },
+      "focusedRegressionTests": {
+        "passed": 61,
+        "failed": 0
+      },
+      "syntaxChecks": "PASS",
+      "repositoryEslint": "PASS",
+      "changedFileEslint": "PASS",
+      "prettier": "PASS",
+      "productionViteBuild": "PASS",
+      "buildWarning": "Existing main application chunk size advisory; build completed successfully"
+    }
   },
   "repository": {
     "branch": "cp-crm-session-cpu-04",
@@ -145,14 +161,21 @@
     "base": "cf20bd03237ca904435c3f2701ea8fbf44502126",
     "aheadOfMainCommits": 2,
     "behindMainCommits": 0,
-    "remoteBranchPresentBeforePush": false
+    "remoteBranchPresentBeforePush": false,
+    "latestMainCommit": "3fcced5744626b09815995d915e6fd457514f2be",
+    "mergeCommit": "4ea2b04",
+    "headAfterMerge": "4ea2b04",
+    "aheadOfMainAfterMerge": 4,
+    "mainIntegration": "Merged CP-TT-MANUAL-OT-01 without conflicts; TimeTracker changes preserved",
+    "pullRequest": "https://github.com/wass-psti/APSYNTRACRM/pull/804"
   },
   "remaining": {
     "directMetricsApi30MinuteSampling": "NOT RUN — prior CLI secret-reveal invocation is held by the local safety review; no attempt was made to bypass it",
     "cpuPercentiles": "NOT AVAILABLE from the observed Dashboard summary; p50, p95, and maximum remain unmeasured",
     "remainingHostProcessAttribution": "PARTIAL — available process counters identify PostgreSQL and GoTrue only; remaining host activity is not exposed as per-process series",
     "dashboardCorePanelFailure": "OPEN — four Pro/all-plan panels remain unavailable without an exposed internal error or trace ID",
-    "cp04ProductionDeployment": "PENDING — CP-04 branch not yet pushed or deployed"
+    "cp04ProductionDeployment": "PENDING — no deployment performed",
+    "ci": "PENDING — merge commit must be pushed and GitHub Actions must complete"
   },
   "constraints": {
     "sourceCodeScope": [
