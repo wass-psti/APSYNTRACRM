@@ -2093,6 +2093,13 @@
       "file": "20261123140000_cp_tt_ojt_dropdown_identity.sql",
       "bytes": 13072,
       "sha256": "eaaa76bbd2174a8f883667e22ffb8468444fcac00e022097104a0bae27bdfcf6"
+    },
+    {
+      "version": "20261123160000",
+      "name": "cp_tt_manual_ot_01_manual_submission_and_scoped_review",
+      "file": "20261123160000_cp_tt_manual_ot_01_manual_submission_and_scoped_review.sql",
+      "bytes": 12775,
+      "sha256": "edc0ff382fac12551ab5add4570477bf06103aae62babb31b035cb1a5765c251"
     }
   ]
 }
