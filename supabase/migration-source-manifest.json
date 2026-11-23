@@ -2098,8 +2098,8 @@
       "version": "20261123150000",
       "name": "cp_fueltrans_m7_ticket_number_allocator",
       "file": "20261123150000_cp_fueltrans_m7_ticket_number_allocator.sql",
-      "bytes": 5695,
-      "sha256": "eeaba83acd259a88c370a2649273fb416ad72f3e0f852c4f219b5953b3752fb4"
+      "bytes": 6759,
+      "sha256": "e5afa7ba82dd927ea71061b861c35c2595169afaf09c14d54a760238b5230db9"
     }
   ]
 }

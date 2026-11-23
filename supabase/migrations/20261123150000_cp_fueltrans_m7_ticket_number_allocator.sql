@@ -93,9 +93,15 @@ BEGIN
       USING ERRCODE = '22023';
   END IF;
 
-  -- The reference year follows the Philippine business calendar, not UTC.
+  -- Browser timestamps are draft metadata, not authoritative creation time.
+  -- Capture the database clock once and use it for the row, payload and creation event.
+  NEW.created_at := clock_timestamp();
+  NEW.updated_at := NEW.created_at;
+
+  -- The reference year follows the Philippine business calendar, not UTC or the
+  -- browser's clock. The same database timestamp is used for both year and readback.
   v_ticket_year := extract(
-    year FROM (coalesce(NEW.created_at, clock_timestamp()) AT TIME ZONE 'Asia/Manila')
+    year FROM (NEW.created_at AT TIME ZONE 'Asia/Manila')
   )::integer;
 
   -- The row-level upsert serializes competing inserts for the same client/year.
@@ -117,23 +123,51 @@ BEGIN
   NEW.ticket_number := v_prefix || '-' || v_ticket_year::text || '-' ||
     lpad(v_sequence::text, 3, '0');
 
-  -- Keep the JSON payload and its creation activity aligned with the authoritative
-  -- number returned by the database.
+  -- Keep the ticket's database columns and JSON payload on the same timestamp
+  -- and synchronize the authoritative ticket reference.
   NEW.payload := jsonb_set(
     coalesce(NEW.payload, '{}'::jsonb),
     '{ticketId}',
     to_jsonb(NEW.ticket_number),
     true
   );
+  NEW.payload := jsonb_set(
+    NEW.payload,
+    '{createdAt}',
+    to_jsonb(NEW.created_at),
+    true
+  );
+  NEW.payload := jsonb_set(
+    NEW.payload,
+    '{updatedAt}',
+    to_jsonb(NEW.updated_at),
+    true
+  );
 
   IF jsonb_typeof(NEW.payload -> 'activity') = 'array' THEN
     SELECT jsonb_agg(
       CASE
-        WHEN jsonb_typeof(entry.value -> 'metadata') = 'object'
-          THEN jsonb_set(
-            entry.value,
+        WHEN jsonb_typeof(entry.value -> 'metadata') = 'object' THEN
+          jsonb_set(
+            CASE
+              WHEN entry.value ->> 'type' = 'ticket_created' THEN
+                jsonb_set(
+                  entry.value,
+                  '{timestamp}',
+                  to_jsonb(NEW.created_at),
+                  true
+                )
+              ELSE entry.value
+            END,
             '{metadata,ticketId}',
             to_jsonb(NEW.ticket_number),
+            true
+          )
+        WHEN entry.value ->> 'type' = 'ticket_created' THEN
+          jsonb_set(
+            entry.value,
+            '{timestamp}',
+            to_jsonb(NEW.created_at),
             true
           )
         ELSE entry.value
@@ -165,4 +199,4 @@ CREATE TRIGGER fueltrans_ticket_number_before_insert
   EXECUTE FUNCTION private.fueltrans_assign_ticket_number();
 
 COMMENT ON FUNCTION private.fueltrans_assign_ticket_number() IS
-  'Assigns unique client/year FuelTrans ticket references atomically on ticket insert.';
+  'Assigns unique client/year FuelTrans ticket references and database-authoritative creation timestamps atomically on ticket insert.';
