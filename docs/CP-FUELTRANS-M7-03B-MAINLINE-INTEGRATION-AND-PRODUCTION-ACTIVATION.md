@@ -4,8 +4,8 @@
 |---|---|
 | Date | 2026-11-23 |
 | Branch | `feat/fueltrans-m7-03b-20261123` |
-| Mainline base | `bad1cd9` — CP-TL-DOCUMENT-IDENTITY-ORDER-01 (also includes CP-CRM `26d3ea0` and CP-TT `3fcced5`) |
-| Integration commits | `6c3bcad`, `88622f1`, `66907da`, `683a40e`, `71b4206` |
+| Mainline base | `1e45b9c` — CP-TL migration manifest reconciliation (also includes CP-TL `bad1cd9`, CP-CRM `26d3ea0`, and CP-TT `3fcced5`) |
+| Integration commits | `6c3bcad`, `88622f1`, `66907da`, `683a40e`, `71b4206`, `629c99a` |
 | M7 corrective commit | `40f87e0` |
 | Status | MAINLINE INTEGRATED — LOCAL/DISPOSABLE ACCEPTANCE PASS |
 | Production migration | APPLIED — version `20261123081039` |
@@ -14,11 +14,11 @@
 
 ## 1. Mainline integration
 
-Integrated mainline commits `3fcced5` (CP-TT-MANUAL-OT-01), `26d3ea0` (CP-CRM-SESSION-CPU-04), `77db775` (CP-04 deployment evidence), and `bad1cd9` (CP-TL-DOCUMENT-IDENTITY-ORDER-01) into the FuelTrans M7 branch.
+Integrated mainline commits `3fcced5` (CP-TT-MANUAL-OT-01), `26d3ea0` (CP-CRM-SESSION-CPU-04), `77db775` (CP-04 deployment evidence), `bad1cd9` (CP-TL-DOCUMENT-IDENTITY-ORDER-01), and `1e45b9c` (CP-TL migration manifest reconciliation) into the FuelTrans M7 branch.
 
 The integration preserves the M7 work while incorporating CP-TT-MANUAL-OT-01, including the manual overtime workflow, employee review path, TimeTracker UI, tests, and disposable SQL acceptance. It also integrates CP-CRM-SESSION-CPU-04 session recovery, preserving a separately verified Auth identity during workspace-context failures while retaining the existing sign-in path for genuine Auth identity denial. CP-TL-DOCUMENT-IDENTITY-ORDER-01 is also included, preserving TradeLink client identity and newest-first document ordering.
 
-The migration source manifest was reconciled across all integrated mainline work. The CP-TL mainline commit had added migration `20261123080322` without registering its SQL file; the PR merge validation caught this mismatch. The missing entry was added with its actual production version, byte count, and SHA-256 digest. The M7 migration entry remains registered as `20261123081039`. Shared recovered baseline entries, project reference, source metadata, and remote ledger were preserved.
+The migration source manifest was reconciled across all integrated mainline work. The initial CP-TL change added migration `20261123080322` without registering its SQL file; PR merge validation caught the mismatch. Mainline follow-up `1e45b9c` registered the exact production version, byte count, and SHA-256 digest. The latest merge preserves that entry and the M7 entry `20261123081039`; shared recovered baseline entries, project reference, source metadata, and remote ledger remain intact.
 
 The Supabase migration API applied the M7 allocator and recorded production version `20261123081039` (UTC). The local migration filename and SHA-256 manifest are reconciled to that exact ledger version. The allocator is independent of the CP-TT migration and has no dependency on its execution order.
 
@@ -78,7 +78,7 @@ The post-application smoke-test transaction ended with `ROLLBACK`. The temporary
 | CP-TT GPS and atomic projection acceptance | PASS |
 | CP-TL client identity/order regression tests | PASS — included in full suite |
 | TimeTracker browser acceptance | PASS — desktop/tablet/mobile and axe checks |
-| GitHub Actions workflow-dispatch validation `45136146844` | PASS for prior integrated head; latest CP-TL manifest reconciliation is awaiting a fresh run |
+| GitHub Actions workflow-dispatch validation `45137783295` | PASS for the prior integrated head; latest manifest-only mainline sync is awaiting a fresh run |
 | Supabase health advisor | PASS — no health findings |
 | Supabase security advisor | INFO — private counter table has RLS with no policies; intentional because API grants are revoked and only the trigger accesses it |
 | Supabase performance advisor | No M7-specific issue; one unrelated existing duplicate index warning in Material Tracker |
