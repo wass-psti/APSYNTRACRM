@@ -36,6 +36,7 @@ docker cp "$ROOT/supabase/migrations/20260928035850_fueltrans_notifications.sql"
 docker cp "$ROOT/supabase/migrations/20260928040345_fueltrans_admin_state_and_hardening.sql" "$DB:/tmp/fueltrans-hardening.sql"
 docker cp "$ROOT/supabase/migrations/20260928041601_fueltrans_policy_hardening.sql" "$DB:/tmp/fueltrans-policies.sql"
 docker cp "$ROOT/supabase/migrations/20260929005600_fueltrans_workspace_contract_guard.sql" "$DB:/tmp/fueltrans-contract.sql"
+docker cp "$ROOT/supabase/migrations/20261123150000_cp_fueltrans_m7_ticket_number_allocator.sql" "$DB:/tmp/fueltrans-m7-numbering.sql"
 docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
  -f /tmp/prerequisites.sql \
  -f /tmp/fueltrans-initial.sql \
@@ -44,6 +45,18 @@ docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
  -f /tmp/fueltrans-hardening.sql \
  -f /tmp/fueltrans-policies.sql \
  -f /tmp/fueltrans-contract.sql
+
+# Seed disposable pre-existing references so the migration proves it resumes the
+# client/year high-water mark without rewriting old ticket identifiers.
+docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
+ -c "insert into public.workspaces(id) values ('00000000-0000-4000-8000-000000000901')"
+docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
+ -c "begin; set local session_replication_role = replica; insert into public.fueltrans_tickets (workspace_id,id,ticket_number,client_code,status,archived,payload,created_at,updated_at) values ('00000000-0000-4000-8000-000000000901','cpft06-seed-unioil','UNI-2026-037','UNIOIL','Resolved',true,'{}'::jsonb,'2026-11-23T03:00:00Z','2026-11-23T03:00:00Z'),('00000000-0000-4000-8000-000000000901','cpft06-seed-aramco','ARA-2026-012','ARAMCO','Resolved',true,'{}'::jsonb,'2026-11-23T03:00:00Z','2026-11-23T03:00:00Z'),('00000000-0000-4000-8000-000000000901','cpft06-seed-legacy','FTS-2026-00001','UNIOIL','Resolved',true,'{}'::jsonb,'2026-11-23T03:00:00Z','2026-11-23T03:00:00Z'); commit"
+docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
+ -f /tmp/fueltrans-m7-numbering.sql
+docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
+ -c "do \$\$ begin if (select last_value from private.fueltrans_ticket_number_counters where client_code='UNIOIL' and ticket_year=2026) <> 37 then raise exception 'UNIOIL high-water seed failed'; end if; if (select last_value from private.fueltrans_ticket_number_counters where client_code='ARAMCO' and ticket_year=2026) <> 12 then raise exception 'ARAMCO high-water seed failed'; end if; if (select ticket_number from public.fueltrans_tickets where id='cpft06-seed-legacy') <> 'FTS-2026-00001' then raise exception 'legacy ticket number was changed'; end if; if not (select relrowsecurity from pg_class where oid='private.fueltrans_ticket_number_counters'::regclass) then raise exception 'counter RLS is not enabled'; end if; if has_table_privilege('authenticated','private.fueltrans_ticket_number_counters','SELECT') or has_table_privilege('authenticated','private.fueltrans_ticket_number_counters','INSERT') then raise exception 'authenticated role can access private counters'; end if; if has_function_privilege('authenticated','private.fueltrans_assign_ticket_number()','EXECUTE') then raise exception 'authenticated role can execute trigger function directly'; end if; end \$\$"
+echo 'FUELTRANS_M7_NUMBERING_MIGRATION_AND_LEGACY_PRESERVATION PASS'
 
 # Existing test roles are not broadened; this is PostgREST's disposable connection role.
 docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \

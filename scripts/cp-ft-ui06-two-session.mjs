@@ -95,6 +95,16 @@ async function patch(actor,previous,action,now,note=''){
  assert.equal(Date.parse(persisted.updated_at),Date.parse(now));
  return persisted;
 }
+function sourceTicketForClient(client,member,user,id,now){
+ const draft=validateSourceTicketDraft({
+  client,title:'Disposable '+client+' ticket numbering test',
+  description:'Disposable integration test for the authoritative server-allocated ticket reference.',
+  priority:'Medium',stationId:'TEST06',stationName:'SYNTHETIC TEST STATION',
+  category:'Station Assistance',systemType:SYSTEM_TYPES[0],impactLevel:IMPACTS[1],
+  reportingChannel:CHANNELS[0],handoverFlag:false
+ },member);
+ return buildSourceTicketRecord(draft,member,user,{id,now});
+}
 
 await readiness(authBase,'/health');
 await readiness(restBase,'/');
@@ -126,14 +136,53 @@ const valid=validateSourceTicketDraft({
  handoverFlag:false
 },reporter.member);
 const now='2026-11-23T03:10:00.000Z',ticketId='cpft06-'+randomUUID();
-const record=buildSourceTicketRecord(valid,reporter.member,reporter.user,{
- id:ticketId,now,ticketId:'UNI-TEST-06'
-});
+const record=buildSourceTicketRecord(valid,reporter.member,reporter.user,{id:ticketId,now});
 const created=await requireStatus(rest('fueltrans_tickets','',{token:reporter.token,method:'POST',body:record}),201,'POST reporter ticket');
 assert.equal(created.length,1);
+assert.equal(created[0].ticket_number,'UNI-2026-038','UNIOIL counter resumes from the existing 037 reference');
+assert.equal(created[0].payload.ticketId,created[0].ticket_number);
+assert.equal(created[0].payload.activity[0].metadata.ticketId,created[0].ticket_number);
 let current=await readTicket(reporter,ticketId);
 assert.equal(current.status,'Open');
-console.log('REAL_GOTRUE_REPORTER_CREATE_PERSISTED_READBACK PASS');
+assert.equal(current.ticket_number,'UNI-2026-038');
+console.log('REAL_GOTRUE_SERVER_NUMBERING_UNIOIL_AND_PAYLOAD_READBACK PASS');
+
+const secondUnioilId='cpft06-sequence-'+randomUUID();
+const secondUnioil=sourceTicketForClient('UNIOIL',reporter.member,reporter.user,secondUnioilId,'2026-11-23T03:10:01.000Z');
+const secondUnioilResult=await requireStatus(rest('fueltrans_tickets','',{token:reporter.token,method:'POST',body:secondUnioil}),201,'second UNIOIL ticket');
+assert.equal(secondUnioilResult[0].ticket_number,'UNI-2026-039');
+
+const rollbackId='cpft06-rollback-'+randomUUID();
+sql(`BEGIN; SET LOCAL request.jwt.claim.sub = '${reporter.id}'; INSERT INTO public.fueltrans_tickets (workspace_id,id,client_code,status,archived,payload,created_at,updated_at) VALUES ('${workspaceId}','${rollbackId}','UNIOIL','Open',false,'{"ticketId":null,"activity":[]}'::jsonb,'2026-11-23T03:10:02.000Z','2026-11-23T03:10:02.000Z'); ROLLBACK;`);
+assert.equal(sql("select last_value from private.fueltrans_ticket_number_counters where client_code='UNIOIL' and ticket_year=2026"),'39','rolled-back ticket insert must not consume a sequence number');
+
+const concurrentIds=Array.from({length:12},()=> 'cpft06-concurrent-'+randomUUID());
+const concurrentNumbers=await Promise.all(concurrentIds.map(async(id,index)=>{
+ const row=sourceTicketForClient('UNIOIL',reporter.member,reporter.user,id,'2026-11-23T03:10:03.000Z');
+ const saved=await requireStatus(rest('fueltrans_tickets','',{token:reporter.token,method:'POST',body:row}),201,'concurrent UNIOIL insert '+index);
+ return saved[0].ticket_number;
+}));
+assert.equal(new Set(concurrentNumbers).size,12,'concurrent ticket numbers must be unique');
+const sortedConcurrent=[...concurrentNumbers].sort();
+assert.deepEqual(sortedConcurrent,Array.from({length:12},(_,index)=>'UNI-2026-'+String(index+40).padStart(3,'0')));
+console.log('REAL_GOTRUE_CONCURRENT_TICKET_NUMBER_ALLOCATION_12_WRITES_SINGLE_SEQUENCE PASS');
+
+const aramcoId='cpft06-aramco-'+randomUUID();
+const aramcoTicket=sourceTicketForClient('ARAMCO',other.member,other.user,aramcoId,'2026-11-23T03:10:04.000Z');
+const aramcoCreated=await requireStatus(rest('fueltrans_tickets','',{token:other.token,method:'POST',body:aramcoTicket}),201,'ARAMCO ticket');
+assert.equal(aramcoCreated[0].ticket_number,'ARA-2026-013');
+
+const rephilBeforeYearEnd=sourceTicketForClient('REPHIL',admin.member,admin.user,'cpft06-rephil-2026-'+randomUUID(),'2026-12-31T15:59:59.000Z');
+const rephil2026=await requireStatus(rest('fueltrans_tickets','',{token:admin.token,method:'POST',body:rephilBeforeYearEnd}),201,'REPHIL local-year boundary 2026');
+assert.equal(rephil2026[0].ticket_number,'REP-2026-001');
+const rephilAfterYearEnd=sourceTicketForClient('REPHIL',admin.member,admin.user,'cpft06-rephil-2027-'+randomUUID(),'2026-12-31T16:00:00.000Z');
+const rephil2027=await requireStatus(rest('fueltrans_tickets','',{token:admin.token,method:'POST',body:rephilAfterYearEnd}),201,'REPHIL local-year boundary 2027');
+assert.equal(rephil2027[0].ticket_number,'REP-2027-001');
+
+const petronTicket=sourceTicketForClient('PETRON',admin.member,admin.user,'cpft06-petron-'+randomUUID(),'2026-11-23T03:10:05.000Z');
+const petronCreated=await requireStatus(rest('fueltrans_tickets','',{token:admin.token,method:'POST',body:petronTicket}),201,'PETRON ticket');
+assert.equal(petronCreated[0].ticket_number,'PET-2026-001');
+console.log('REAL_GOTRUE_CLIENT_PREFIXES_AND_PHILIPPINE_YEAR_ROLLOVER PASS');
 
 const anonymousRead=await rest('fueltrans_tickets',queryTicket(ticketId));
 assert.ok([401,403].includes(anonymousRead.status),'anonymous ticket access must be denied');
@@ -181,9 +230,10 @@ const adminValid=validateSourceTicketDraft({
  systemType:SYSTEM_TYPES[0],impactLevel:IMPACTS[1],reportingChannel:CHANNELS[0],handoverFlag:false
 },admin.member);
 const adminRecord=buildSourceTicketRecord(adminValid,admin.member,admin.user,{
- id:adminTicketId,now:'2026-11-23T03:09:30.000Z',ticketId:'UNI-ADMIN-TEST'
+ id:adminTicketId,now:'2026-11-23T03:09:30.000Z'
 });
-await requireStatus(rest('fueltrans_tickets','',{token:admin.token,method:'POST',body:adminRecord}),201,'admin create ticket');
+const adminCreated=await requireStatus(rest('fueltrans_tickets','',{token:admin.token,method:'POST',body:adminRecord}),201,'admin create ticket');
+assert.equal(adminCreated[0].ticket_number,'UNI-2026-052');
 let adminCurrent=await readTicket(admin,adminTicketId);
 adminCurrent=await patch(admin,adminCurrent,'claim-l1','2026-11-23T03:09:31.000Z');
 adminCurrent=await patch(admin,adminCurrent,'status:Resolved','2026-11-23T03:09:32.000Z','Administrator completed the station diagnostic and verified successful recovery.');
@@ -194,9 +244,10 @@ console.log('GOTRUE_ADMIN_CREATE_CLAIM_RESOLVE_WITH_DOCUMENTATION PASS');
 // Two distinct L1 sessions attempt the same ticket revision at the same time.
 const raceTicketId='cpft06-race-'+randomUUID();
 const raceRecord=buildSourceTicketRecord(valid,reporter.member,reporter.user,{
- id:raceTicketId,now:'2026-11-23T03:09:00.000Z',ticketId:'UNI-TEST-RACE'
+ id:raceTicketId,now:'2026-11-23T03:09:00.000Z'
 });
-await requireStatus(rest('fueltrans_tickets','',{token:reporter.token,method:'POST',body:raceRecord}),201,'create claim-race ticket');
+const raceCreated=await requireStatus(rest('fueltrans_tickets','',{token:reporter.token,method:'POST',body:raceRecord}),201,'create claim-race ticket');
+assert.equal(raceCreated[0].ticket_number,'UNI-2026-053');
 const raceCurrent=await readTicket(reporter,raceTicketId);
 const claimants=[l1,secondL1];
 const raceTimes=['2026-11-23T03:09:01.000Z','2026-11-23T03:09:02.000Z'];

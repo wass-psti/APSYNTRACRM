@@ -425,8 +425,8 @@ function createForm(){
     const current=await readFreshFuelTransMembership(draftWorkspace,draftUser);
     if(!canCreate(current))throw Error('FuelTrans creation access revoked during batch.');
     const entry=validateSourceTicketDraft({...readInput(),...station,title:stationTicketTitle(readInput().title,station)},current);
-    const id=crypto.randomUUID(),now=new Date().toISOString(),ticketId=`FT-${now.slice(0,10).replaceAll('-','')}-${id.slice(0,8).toUpperCase()}`;
-    return buildSourceTicketRecord(entry,current,state.user,{id,now,ticketId});
+    const id=crypto.randomUUID(),now=new Date().toISOString();
+    return buildSourceTicketRecord(entry,current,state.user,{id,now});
    },insert:insertTicket,
    onProgress:()=>{draftSubmitted=true;if(autoSaveTimer)clearTimeout(autoSaveTimer);},
    afterInsert:async(saved)=>{

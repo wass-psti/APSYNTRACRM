@@ -2093,6 +2093,13 @@
       "file": "20261123140000_cp_tt_ojt_dropdown_identity.sql",
       "bytes": 13072,
       "sha256": "eaaa76bbd2174a8f883667e22ffb8468444fcac00e022097104a0bae27bdfcf6"
+    },
+    {
+      "version": "20261123150000",
+      "name": "cp_fueltrans_m7_ticket_number_allocator",
+      "file": "20261123150000_cp_fueltrans_m7_ticket_number_allocator.sql",
+      "bytes": 5695,
+      "sha256": "eeaba83acd259a88c370a2649273fb416ad72f3e0f852c4f219b5953b3752fb4"
     }
   ]
 }

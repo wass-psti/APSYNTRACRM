@@ -38,10 +38,12 @@ test('ticket category is required and persists into the support ticket payload',
  assert.throws(()=>validateSourceTicketDraft(draft,reporterMember),/category/);
  const valid=validateSourceTicketDraft({...draft,category:'POS Software Issue'},reporterMember);
  const record=buildSourceTicketRecord(valid,reporterMember,reporter,{
-  id:'category-ticket-1',now:'2026-11-23T02:00:00.000Z',ticketId:'UNI-CATEGORY-001'
+  id:'category-ticket-1',now:'2026-11-23T02:00:00.000Z'
  });
  assert.equal(valid.category,'POS Software Issue');
  assert.equal(record.payload.category,'POS Software Issue');
+ assert.equal(record.ticket_number,null,'ticket reference is allocated by the database, not the browser');
+ assert.equal(record.payload.ticketId,null,'payload receives the authoritative number from the insert trigger');
 });
 
 test('resolution and escalation transitions require meaningful written details',()=>{
