@@ -1581,6 +1581,7 @@ function clearTimeTrackerOjtSelection(){
  state.ttOjtSelected=null;state.ttOjtSnapshot=null;
  state.ttOjtBusy=false;state.ttOjtPending=false;
  state.ttOjtError='';state.ttOjtSuccess='';
+ state.ttOjtGeoProgress='';state.ttOjtLocationSelection='Office-Base Duty';
 }
 function timeTrackerOjtScope(){
  const a=state.ttAttendance?.access;
@@ -1604,6 +1605,8 @@ function renderTimeTrackerApplication(){
   ojtAttendance:timeTrackerOjtScope()?state.ttOjtSnapshot:null,
   ojtBusy:state.ttOjtBusy||state.ttOjtPending,
   ojtError:state.ttOjtError,ojtSuccess:state.ttOjtSuccess,
+  ojtGeoProgress:state.ttOjtGeoProgress||'',
+  ojtLocationSelection:state.ttOjtLocationSelection||'Office-Base Duty',
   result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,clockPendingAction:state.ttClockPending?.action||'clock-out',
    workPlanDraft:ttWorkNoteDraft.read(timeTrackerWorkNoteScope()),
    ojtWorkPlanDraft:ttWorkNoteDraft.read(timeTrackerWorkNoteScope(state.ttOjtSelected?.id||'')),
@@ -9261,15 +9264,24 @@ async function action(name,button){
   const active=state.ttOjtSnapshot?.active||null,action=active?'clock-out':'clock-in';
   const locationValue=active?.location||String(document.getElementById('tt-ojt-location')?.value||'');
   const note=active?'':String(document.getElementById('tt-ojt-note')?.value||'').trim();
+  if(!active)state.ttOjtLocationSelection=locationValue;
   if(action==='clock-in')ttWorkNoteDraft.write(timeTrackerWorkNoteScope(selected.id),
    document.getElementById('tt-ojt-note')?.value||'');
   if(action==='clock-in'&&locationValue==='Offsite (Home)'&&!note){
    state.ttOjtError='A work note is required for Offsite (Home).';render();break;
   }
-  state.ttOjtBusy=true;state.ttOjtError='';state.ttOjtSuccess='';render();
+  state.ttOjtBusy=true;state.ttOjtError='';state.ttOjtSuccess='';
+  state.ttOjtGeoProgress='Finding your GPS location…';render();
   try{
    // Deliberate user action: browser GPS is never queried on page load.
-   const geo=await captureAttendanceGeo(navigator.geolocation);
+   const geo=await captureAttendanceGeo(navigator.geolocation,{
+    onProgress:message=>{
+     if(timeTrackerOjtScope()&&state.ttOjtSelected===selected&&state.ttOjtBusy){
+      state.ttOjtGeoProgress=message;render();
+     }
+    }
+   });
+   state.ttOjtGeoProgress='';
    if(!timeTrackerOjtScope()||state.ttOjtSelected!==selected)
     throw Error('Identity changed before location capture');
    // Unknown write outcomes require a fresh signed snapshot, never replay.
@@ -9284,10 +9296,16 @@ async function action(name,button){
     'Clock in successfully recorded for '+selected.name+'.':
     'Clock out successfully recorded for '+selected.name+'.';
   }catch(err){
+   const gpsHelp={
+    TT_GEO_DENIED:'Browser location permission is blocked. Allow Location for this site in browser settings and retry. No attendance request was sent.',
+    TT_GEO_TIMEOUT:'GPS timed out. Keep this page open, enable device location and Wi-Fi, move near a window, then retry. No attendance request was sent.',
+    TT_GEO_UNAVAILABLE:'Your device cannot provide a current location. Check Location Services and network connectivity, then retry. No attendance request was sent.',
+    TT_GEO_INSECURE:'Location needs a secure HTTPS connection. Open APSYNTRA CRM using HTTPS and retry. No attendance request was sent.'
+   };
    state.ttOjtError=state.ttOjtPending?
     'Attendance result is uncertain. Use Refresh to verify the record before trying again.':
-    errorMessage(err);
-  }finally{state.ttOjtBusy=false;render();}
+    (gpsHelp[err?.code]||errorMessage(err));
+  }finally{state.ttOjtBusy=false;state.ttOjtGeoProgress='';render();}
   break;
  }
  case 'tt-ojt-group-enable':
@@ -12969,6 +12987,11 @@ root.addEventListener('drop',event=>{
 });
 root.addEventListener('dragend',()=>{tradeLinkDraggedLine=null;});
 root.addEventListener('change',async event=>{
+ if(event.target?.id==='tt-ojt-location'){
+  if(timeTrackerOjtScope()&&state.ttOjtSelected&&!state.ttOjtBusy)
+   state.ttOjtLocationSelection=String(event.target.value||'Office-Base Duty');
+  return;
+ }
  if(event.target?.id!=='tt-ojt-intern-select')return;
  const scope=timeTrackerOjtScope();
  const id=String(event.target.value||'');
@@ -12988,6 +13011,7 @@ root.addEventListener('change',async event=>{
     !state.ttAttendance?.ojtRoster?.interns?.some(row=>row.id===id))
    throw Error('The signed OJT account or selected intern changed. Select again.');
   state.ttOjtSelected={id:intern.id,name:intern.name,scope:{...scope}};
+  state.ttOjtLocationSelection='Office-Base Duty';
   state.ttOjtSnapshot=attendance;
   state.ttOjtSuccess='Selected '+intern.name+'. Your attendance history is ready.';
  }catch(err){
