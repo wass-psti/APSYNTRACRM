@@ -4,8 +4,9 @@
  */
 import {validUuid} from '../../data.js';
 import {B4_QA_BOARD_ID} from '../columns/column-recovery.js';
+import {WORK_MANAGEMENT_WORKSPACE_ID} from '../../workspace-identity.js';
 
-const QA_WORKSPACE_ID='00000000-0000-4000-8000-000000000001';
+const QA_WORKSPACE_ID=WORK_MANAGEMENT_WORKSPACE_ID;
 const CASE_TYPES=new Set(['NONE','SIGNED_MANAGER','SIGNED_NONMANAGER',
  'SIGNED_NONMEMBER','SIGNED_FOREIGN_WORKSPACE']);
 const STATES=new Set(['PASS','BLOCKED','INCONCLUSIVE']);

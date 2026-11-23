@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {renderTradeLinkApplication,normalizeTradeLinkSection} from '../tradelink-application.js';
 import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
+import {workspaceApplicationsForNavigation} from '../workspace-application-routing.js';
+import {WORK_MANAGEMENT_WORKSPACE_ID} from '../workspace-identity.js';
 const ws='00000000-0000-4000-8000-000000000001';
 const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:ws,name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'},items:[],groups:[],columns:[]};
 test('TradeLink root and legacy overview canonicalize to Create New, preserving explicit signed document/edit routes',()=>{
@@ -13,7 +15,10 @@ test('TradeLink root and legacy overview canonicalize to Create New, preserving 
  assert.match(source,/if\(parts\[1\]===TRADELINK_BOARD_ID\)/);
  assert.match(source,/tradeLinkApplicationHref\(legacy\.join\('\/'\)\)/);
  assert.match(source,/loadBoard\(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute\.draftType,tradeLinkRoute\.editId,tradeLinkContext\)/);
- assert.match(source,/sidebarNav\(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink'/);
+ assert.match(source,/workspaceApplicationsForNavigation\(state\.context\?\.workspace_id,state\.boards\)/);
+ const tradeLink=workspaceApplicationsForNavigation(WORK_MANAGEMENT_WORKSPACE_ID,[]).find(application=>application.id==='tradelink');
+ assert.equal(tradeLink?.href,'#/tradelink');
+ assert.equal(tradeLink?.icon,'tradelink');
 });
 test('obsolete landing widgets are removed but signed form, documents, and activity remain available',()=>{
  for(const section of [undefined,'overview','unexpected']){

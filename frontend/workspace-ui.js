@@ -392,23 +392,23 @@ function openDetails(catalog,workspaceId,options={}){
     const current=known?.rows?.find(item=>item.active===true&&
       item.verifiedScope==='SIGNED_MEMBER_RPC');
     if(!current)throw Error('Current workspace unavailable');
-    const receipt=await requestSignedWorkspaceSwitch({
+    const selectionReceipt=await requestSignedWorkspaceSwitch({
      lifecycle:options.lifecycle,workspaceId:row.id,
      expectedWorkspaceId:current.id
     });
-    // The app must discard all workspace-scoped state after the verified
-    // server transition. A full page reload avoids stale board/role caches.
-    await options.onWorkspaceSwitched(receipt);
+    // The app reconciles workspace-scoped state in place after the verified
+    // server transition; no full page reload is required.
+    await options.onWorkspaceSwitched(selectionReceipt,row);
    }catch(error){
     if(activeOverlay!==layer||!layer.isConnected)return;
     const code=Number.isInteger(error?.status)?error.status:0;
     feedback.textContent=code===401?
      'Your signed session expired. Sign in again before switching.':
      code===403||code===404?
-     'Server access to that workspace could not be confirmed. Reload before retrying.':
+     'Server access to that workspace could not be confirmed. Refresh the workspace list before retrying.':
      code===409?
-     'Your workspace selection changed in another session. Reload and try again.':
-     'The workspace switch could not be confirmed. Reload before trying again.';
+     'Your workspace selection changed in another session. Refresh the workspace list and try again.':
+     'The workspace switch could not be confirmed. Refresh the workspace list before trying again.';
     // Never automatically retry a potentially committed selection RPC.
    }
    return;
@@ -774,7 +774,7 @@ function openCreate(catalog,options={}){
      const selectionReceipt=await requestSignedWorkspaceSwitch({
       lifecycle,workspaceId:target.id,expectedWorkspaceId:current.id
      });
-     options.onWorkspaceSwitched?.(selectionReceipt);
+     await options.onWorkspaceSwitched?.(selectionReceipt,target);
     }catch{
      feedback.textContent='Workspace created, but verified switching is unavailable. No workspace was changed.';
      open.disabled=false;

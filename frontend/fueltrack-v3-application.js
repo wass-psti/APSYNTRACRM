@@ -3,6 +3,7 @@
  * Never substitute the Monday.com reference screenshot's 271 transactions.
  */
 import {renderFuelTrackNewRequest} from './fueltrack-v3-new-request.js';
+import {WORK_MANAGEMENT_BOARD_IDS} from './workspace-application-ownership.js';
 import {FUELTRACK_V3_APPLICATION_ROUTE,fuelTrackApplicationHref} from './fueltrack-v3-application-route.js';
 export {FUELTRACK_V3_APPLICATION_ROUTE} from './fueltrack-v3-application-route.js';
 import {renderFuelTrackApprovals} from './fueltrack-v3-approvals.js';
@@ -10,7 +11,7 @@ import {renderFuelTrackLightFuels,renderFuelTrackRefuelingDialog} from './fueltr
 import {renderFuelTrackActivity} from './fueltrack-v3-activity.js';
 import {renderFuelTrackSignedDashboardRich,renderFuelTrackSignedRequestsRich,renderFuelTrackSignedAnalyticsRich} from './fueltrack-v3-signed-views.js';
 import {verifyFuelTrackBackendSnapshot,projectFuelTrackApprovals,projectFuelTrackLightFuels,renderFuelTrackSignedDashboard,renderFuelTrackSignedRequests,renderFuelTrackSignedAnalytics} from './fueltrack-v3-backend-projections.js';
-export const FUELTRACK_V3_ID='7af78b3f-67bf-4600-9aa1-9006d19d486e';
+export const FUELTRACK_V3_ID=WORK_MANAGEMENT_BOARD_IDS.fueltrack;
 const MARKER='[APSYNTRA:MODULE:fueltrack:v1]';
 const h=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const fmt=new Intl.NumberFormat('en-PH',{maximumFractionDigits:2});

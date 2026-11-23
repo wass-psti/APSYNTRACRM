@@ -1,8 +1,8 @@
 /** CRM-native TimeTracker application route and existing-board discovery. */
 import {validTimeTrackerDepartmentName} from '../../time-tracker-team.js';
+import {WORK_MANAGEMENT_BOARD_IDS} from '../../workspace-application-ownership.js';
 export const TIMETRACKER_APPLICATION_ROUTE = "#/time-tracker";
-export const TIMETRACKER_ATTENDANCE_BOARD_ID =
-  "46bf4ee7-368a-4c35-842c-8593ea1f6ac3";
+export const TIMETRACKER_ATTENDANCE_BOARD_ID = WORK_MANAGEMENT_BOARD_IDS.timetracker;
 
 /** Prefer the canonical attendance board; never substitute a legacy board. */
 export function findTimeTrackerAttendanceBoard(boards, resolveModule) {

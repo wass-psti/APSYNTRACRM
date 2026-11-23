@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+import { workspaceApplicationsForNavigation } from "../workspace-application-routing.js";
+import { WORK_MANAGEMENT_WORKSPACE_ID } from "../workspace-identity.js";
 const index = readFileSync(
   new URL("../../index.html", import.meta.url),
   "utf8",
@@ -26,8 +28,14 @@ const dataLayer = readFileSync(new URL("../data.js", import.meta.url), "utf8");
 test("FM1 is integrated into the existing CRM sidebar and hash router", () => {
   assert.match(
     app,
-    /sidebarNav\('#\/fm1','FM1 Ticketing','ticket',active\('fm1'\)\)/,
+    /workspaceApplicationsForNavigation\(state\.context\?\.workspace_id,state\.boards\)/,
   );
+  const fm1 = workspaceApplicationsForNavigation(
+    WORK_MANAGEMENT_WORKSPACE_ID,
+    [],
+  ).find((item) => item.id === "fm1-ticketing");
+  assert.equal(fm1?.href, "#/fm1");
+  assert.equal(fm1?.icon, "ticket");
   assert.match(
     app,
     /if\(parts\[0\]==='fm1'\)fm1Module=await import\('\.\/fm1\/index\.js'\)/,

@@ -54,6 +54,8 @@ const server=createServer(async(req,res)=>{
   '/frontend/data.js','/frontend/session.js','/frontend/config.js',
   '/frontend/vendor/supabase-auth.js',
   '/frontend/native-application-access.js','/frontend/board/cache-channel.js',
+  '/frontend/workspace-application-ownership.js','/frontend/workspace-identity.js',
+  '/frontend/board/services/manifest.js',
   '/frontend/tests/fixtures/board-virtual-browser.html',
   '/frontend/board/presentation/presentation.js','/frontend/board/presentation/window.js',
   '/frontend/styles.css'

@@ -30,16 +30,19 @@ test('staged workspace switching binds to signed server selection without local 
  assert.match(ui,/options\.switchingEnabled===true/);
  assert.match(ui,/typeof options\.onWorkspaceSwitched==='function'/);
  assert.match(app,/switchingEnabled:WS01_SWITCHING_ENABLED/);
- assert.match(app,/onWorkspaceSwitched:receipt=>\{/);
- assert.match(app,/writeWorkspacePreference\(actor,receipt\?\.workspaceId\)/);
+ assert.match(app,/onWorkspaceSwitched:async\(receipt,targetWorkspace\)=>\{/);
+ assert.match(app,/writeWorkspacePreference\(actor,receipt\.workspaceId\)/);
+ assert.match(app,/await refreshWorkspace\(\)/);
+ assert.match(app,/await onRoute\(\)/);
+ assert.doesNotMatch(app,/location\.reload\(\)/);
  assert.match(ui,/const selectionReceipt=await requestSignedWorkspaceSwitch\(/);
- assert.match(ui,/options\.onWorkspaceSwitched\?\.\(selectionReceipt\)/);
- assert.match(app,/location\.reload\(\)/);
+ assert.match(ui,/await options\.onWorkspaceSwitched\(selectionReceipt,row\)/);
+ assert.match(ui,/await options\.onWorkspaceSwitched\?\.\(selectionReceipt,target\)/);
  assert.match(ui,/WS01_SWITCHING_ENABLED=true/);
  assert.match(app,/switchingEnabled:WS01_SWITCHING_ENABLED/);
 });
 
-test('fresh signed catalog must be checked before CAS RPC and reload receipt',async()=>{
+test('fresh signed catalog must be checked before CAS RPC and selection receipt',async()=>{
  const calls=[];
  const result=await requestSignedWorkspaceSwitch({
   workspaceId:shared,expectedWorkspaceId:primary,
@@ -107,4 +110,17 @@ test('server read or write denial is propagated without silently selecting local
   lifecycle:{discover:async()=>verified(),select:async()=>{selects++;throw denied;}}
  }),err=>err===denied);
  assert.equal(selects,1);
+});
+
+
+test('workspace switch forwards the verified receipt and target to the in-place app transition',()=>{
+ const ui=readFileSync('frontend/workspace-ui.js','utf8');
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(ui,/await options\.onWorkspaceSwitched\(selectionReceipt,row\)/);
+ assert.match(ui,/await options\.onWorkspaceSwitched\?\.\(selectionReceipt,target\)/);
+ assert.match(app,/state\.workspaceTransitionPending\?\[\]:/);
+ assert.match(app,/state\.workspaceTransitionTargetId=receipt\.workspaceId/);
+ assert.match(app,/Switching to '\+\(state\.workspaceTransitionTargetName/);
+ assert.match(app,/if\(state\.workspaceTransitionPending\)return false/);
+ assert.match(app,/state\.workspaceTransitionPending=false/);
 });

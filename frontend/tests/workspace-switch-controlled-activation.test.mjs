@@ -18,9 +18,11 @@ test('staged frontend selects only by signed CAS with authoritative context rere
  assert.match(ui,/requestSignedWorkspaceSwitch\(/);
  assert.match(ui,/row\.verifiedScope==='SIGNED_MEMBER_RPC'/);
  assert.match(ui,/typeof options\.onWorkspaceSwitched==='function'/);
- assert.match(app,/onWorkspaceSwitched:receipt=>\{/);
- assert.match(app,/writeWorkspacePreference\(actor,receipt\?\.workspaceId\)/);
- assert.match(app,/location\.reload\(\)/);
+ assert.match(app,/onWorkspaceSwitched:async\(receipt,targetWorkspace\)=>\{/);
+ assert.match(app,/writeWorkspacePreference\(actor,receipt\.workspaceId\)/);
+ assert.match(app,/await refreshWorkspace\(\)/);
+ assert.match(app,/await onRoute\(\)/);
+ assert.doesNotMatch(app,/location\.reload\(\)/);
 });
 test('staged backend activation checks session authority and grants only signed selection execute',()=>{
  for(const token of [

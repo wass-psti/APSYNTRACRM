@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { sidebarIcon } from '../sidebar-visuals.js';
+import {WORK_MANAGEMENT_BOARD_APPLICATIONS} from '../workspace-application-ownership.js';
+import {workspaceApplicationsForNavigation} from '../workspace-application-routing.js';
+import {WORK_MANAGEMENT_WORKSPACE_ID} from '../workspace-identity.js';
 
 const app = readFileSync('frontend/app.js', 'utf8');
 const css = readFileSync('frontend/dark-workspace-account-completion.css', 'utf8');
@@ -20,9 +23,13 @@ test('Paseo and TalkBox have distinct solid native icons without altering routes
   assert.match(markup, /aria-hidden="true"/);
   assert.doesNotMatch(markup, /filter=|drop-shadow|glow/);
  }
- assert.match(app, /sidebarNav\('#\/paseo','Paseo de Lomboy','paseo',active\('paseo'\)\)/);
- assert.match(app, /sidebarNav\(TALKBOX_APPLICATION_ROUTE,'TalkBox','talkbox',active\('talkbox'\)\)/);
- assert.match(app, /state\.boards\.some\(b=>moduleByBoardName\(b\.name\)\?\.key==='toolbox'\)/);
+ assert.match(app,/workspaceApplicationsForNavigation\(state\.context\?\.workspace_id,state\.boards\)/);
+ const boards=WORK_MANAGEMENT_BOARD_APPLICATIONS.map(application=>({id:application.boardId,name:application.name}));
+ const navigation=workspaceApplicationsForNavigation(WORK_MANAGEMENT_WORKSPACE_ID,boards);
+ assert.equal(navigation.find(application=>application.id==='paseo-de-lomboy')?.icon,'paseo');
+ assert.equal(navigation.find(application=>application.id==='talkbox')?.icon,'talkbox');
+ assert.equal(navigation.find(application=>application.id==='paseo-de-lomboy')?.href,'#/paseo');
+ assert.equal(navigation.find(application=>application.id==='talkbox')?.href,'#/talkbox');
 });
 
 test('modern Paseo launcher retains public and administrator links and both actions', () => {

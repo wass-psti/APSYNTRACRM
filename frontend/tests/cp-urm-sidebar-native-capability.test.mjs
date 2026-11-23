@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {BOARD_MODULES} from '../board/services/manifest.js';
+import {WORK_MANAGEMENT_BOARD_APPLICATIONS} from '../workspace-application-ownership.js';
+import {workspaceApplicationsForNavigation} from '../workspace-application-routing.js';
+import {WORK_MANAGEMENT_WORKSPACE_ID} from '../workspace-identity.js';
 
 const app=readFileSync('frontend/app.js','utf8');
 const presentation=readFileSync('frontend/monday-inspired-ui.js','utf8');
@@ -19,17 +22,21 @@ test('Monday presentation must preserve host-authorized applications and admin c
  assert.match(sidebar,/user-role-management/);
 });
 
-test('native application section preserves standalone routes and authorized module boards',()=>{
- for(const route of ['#/fm1','#/time-tracker','#/fund-tracker'])assert.ok(sidebar.includes(route),route);
- for(const label of ['FuelTrack+','TradeLink'])assert.ok(sidebar.includes(label),label);
+test('native application section is generated from the canonical manifest for Work Management only',()=>{
  assert.equal(BOARD_MODULES.length,12);
- assert.match(sidebar,/const boardApplications=BOARD_MODULES\.filter/);
- assert.match(sidebar,/state\.boards\.find\(row=>moduleByBoardName\(row\.name\)\?\.key===module\.key\)/);
- assert.match(sidebar,/board\?sidebarNav\('#\/boards\/'\+board\.id,module\.name/);
- assert.match(sidebar,/Applications<\/div>/);
- assert.match(sidebar,/boardApplications\+/);
+ assert.equal(WORK_MANAGEMENT_BOARD_APPLICATIONS.length,12);
+ assert.match(sidebar,/workspaceApplicationsForNavigation\(state\.context\?\.workspace_id,state\.boards\)/);
+ assert.match(sidebar,/const applicationNav=applications\.map/);
+ assert.match(sidebar,/const applicationSection=applications\.length\?/);
+ assert.match(sidebar,/active\(application\.navigationKey\)/);
  assert.match(sidebar,/sidebar-recent-list/);
  assert.match(sidebar,/!isStandaloneApplicationBoard\(board\)/);
+ const boards=WORK_MANAGEMENT_BOARD_APPLICATIONS.map(application=>({id:application.boardId,name:application.name}));
+ const navigation=workspaceApplicationsForNavigation(WORK_MANAGEMENT_WORKSPACE_ID,boards);
+ assert.equal(navigation.length,15);
+ for(const route of ['#/fm1','#/time-tracker','#/fund-tracker','#/fueltrack','#/tradelink','#/paseo','#/talkbox'])
+  assert.ok(navigation.some(application=>application.href===route),route);
+ assert.deepEqual(workspaceApplicationsForNavigation('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',boards),[]);
 });
 
 test('CRM tier change revalidates signed administrator capability without profile mutation',()=>{

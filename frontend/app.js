@@ -10,6 +10,8 @@ import {ProfileAvatarClient} from './profile-avatar-client.js';
 import {mountAvatarImages} from './profile-avatar.js';
 
 import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels,WS01_SWITCHING_ENABLED} from './workspace-ui.js?v=cp-crm-wm-invite-flow-01';
+import {WORK_MANAGEMENT_WORKSPACE_ID} from './workspace-identity.js';
+import {workspaceApplicationsForNavigation,workspaceApplicationRouteAccess} from './workspace-application-routing.js';
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
 import {readWorkspacePreference,writeWorkspacePreference,watchWorkspacePreference,restoreWorkspacePreference} from './workspace-preference.js';
 import {WorkspaceInvitationClient,WS02D_INVITE_CLIENT_ENABLED} from './workspace-invitation-client.js';
@@ -414,7 +416,7 @@ async function getSystemAdminClient(){
 }
 let performanceProfileAbort=null;
 const startupCriticalPath=createStartupCriticalPath();
-const state={performanceBusy:false,performanceReport:null,context:null,boardCatalogError:'',crmRoleSnapshot:null,workspaceRelationSnapshot:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',boardItemSearch:'',mrhTrackerFilters:{...MATERIAL_TRACKER_DEFAULT_FILTERS},mrhTrackerScope:'',mrhAddView:false,mrhAddBusy:false,groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,boardPageBusy:false,boardPageError:'',issues:[],edit:false,boardManage:false,
+const state={workspaceTransitionPending:false,workspaceTransitionTargetId:null,workspaceTransitionTargetName:'',performanceBusy:false,performanceReport:null,context:null,boardCatalogError:'',crmRoleSnapshot:null,workspaceRelationSnapshot:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',boardItemSearch:'',mrhTrackerFilters:{...MATERIAL_TRACKER_DEFAULT_FILTERS},mrhTrackerScope:'',mrhAddView:false,mrhAddBusy:false,groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,boardPageBusy:false,boardPageError:'',issues:[],edit:false,boardManage:false,
   view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceView:'tracker',frtStatusFilter:'all',ttStandalone:false,frtStandalone:false,tlStandalone:false,fuelTrackStandalone:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttOjtSelected:null,ttOjtSnapshot:null,ttOjtBusy:false,ttOjtError:'',ttOjtSuccess:'',ttOjtPending:false,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttClockCorrectionNotice:'',ttClockStage:'idle',ttGeoPromptVisible:false,ttGeoPermission:'unknown',ttGeoMessage:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtExpandedRequestIds:[],ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttLogSelectedIds:[],ttLogAdminEditor:null,ttLogAdminDeleteConfirm:null,ttLogAdminBusy:false,ttLogAdminError:'',ttLogAdminSuccess:'',ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttEmployeesSearch:'',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkModuleRole:'',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkAnalytics:null,tradeLinkAnalyticsBusy:false,tradeLinkAnalyticsRunId:0,tradeLinkAnalyticsError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,adminVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleSection:'applications',userRoleBoardSearch:'',userRoleBatchMode:false,userRoleBatchSelected:[],userRoleBatchMemberSearch:'',userRoleBatchIdentity:'',userRoleBatchScope:'module',userRoleBatchResource:'',userRoleBatchRole:'',userRoleBatchAction:'assign',userRoleBatchModulesSelected:[],userRoleBatchModuleRoles:{},userRoleNativeBatchResults:[],userRoleBusy:false,userRoleError:'',systemAdminData:null,systemAdminBusy:false,systemAdminError:''};
 // A work plan is an unsaved, signed-scope draft until Clock In succeeds.
 const ttWorkNoteDraft=createTimeTrackerWorkNoteDraft();
@@ -444,7 +446,9 @@ const displayDate=value=>{if(!value)return '—';const d=new Date(value);return 
 const initials=value=>String(value||'U').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
 const iconColor=index=>['','green','orange','pink','blue'][Math.abs(index)%5];
 const name=()=>state.context?.profile?.display_name||state.context?.profile?.email?.split('@')[0]||'Member';
-const workspaceName=()=>state.context?.workspace_id==='00000000-0000-4000-8000-000000000001'?'Work Management':'Current workspace';
+const workspaceName=()=>state.workspaceTransitionPending?
+ 'Switching to '+(state.workspaceTransitionTargetName||'workspace')+'…':
+ state.context?.workspace_id===WORK_MANAGEMENT_WORKSPACE_ID?'Work Management':'Current workspace';
 const STANDALONE_APPLICATION_MODULE_KEYS=new Set(['timetracker','frt','tradelink','fueltrack']);
 const isStandaloneApplicationBoard=board=>STANDALONE_APPLICATION_MODULE_KEYS.has(
  moduleByBoardName(board?.name)?.key)||moduleByBoardName(board?.name)?.key==='toolbox';
@@ -822,25 +826,17 @@ function sidebar(){
  const recent=state.boards.filter(board=>!isStandaloneApplicationBoard(board));
  const selectedNav=currentSidebarNavigation();
  const active=key=>selectedNav===key;
- // Every link comes from a registered host route or a board returned by the
- // signed, workspace-scoped board catalog. Do not invent module access.
- const boardApplications=BOARD_MODULES.filter(module=>
-  !STANDALONE_APPLICATION_MODULE_KEYS.has(module.key)).map(module=>{
-   const board=state.boards.find(row=>moduleByBoardName(row.name)?.key===module.key);
-   return board?sidebarNav('#/boards/'+board.id,module.name,'boards',
-    active('recent:'+board.id)):'';
-  }).join('');
+ const applications=state.workspaceTransitionPending?[]:
+  workspaceApplicationsForNavigation(state.context?.workspace_id,state.boards);
+ const applicationNav=applications.map(application=>sidebarNav(
+  application.href,application.label,application.icon,
+  active(application.navigationKey)
+ )).join('');
+ const applicationSection=applications.length?
+  '<div class="side-section sidebar-nav-section">Applications</div>'+applicationNav:'';
  const nav=sidebarNav('#/overview','Overview','overview',active('overview'))+
   sidebarNav('#/boards','My boards','boards',active('boards'),{count:state.boards.filter(board=>!isStandaloneApplicationBoard(board)).length})+
-  '<div class="side-section sidebar-nav-section">Applications</div>'+
-  sidebarNav('#/fm1','FM1 Ticketing','ticket',active('fm1'))+
-  sidebarNav('#/time-tracker','TimeTracker','clock',active('time-tracker'))+
-  sidebarNav('#/fund-tracker','Fund Tracker','finance',active('fund-tracker'))+
-  sidebarNav(FUELTRACK_V3_APPLICATION_ROUTE,'FuelTrack+','fueltrack',active('fueltrack'))+
-  sidebarNav(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',active('tradelink'))+
-  sidebarNav('#/paseo','Paseo de Lomboy','paseo',active('paseo'))+
-  (state.boards.some(b=>moduleByBoardName(b.name)?.key==='toolbox')?sidebarNav(TALKBOX_APPLICATION_ROUTE,'TalkBox','talkbox',active('talkbox')):'')+
-  boardApplications+
+  applicationSection+
   (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',active('foundation')):'')+
   (engineeringUi?sidebarNav('#/security','Access acceptance','security',active('security')):'')+
   (state.adminVerified===true?'<div class="side-section sidebar-nav-section">Administration</div>'+
@@ -1495,7 +1491,7 @@ function groupHeading(group,count){
   count+' item'+(count===1?'':'s')+(state.board?.pagination?.has_more===true?' shown':''):
   count===persistedCount?persistedCount+' items'+archiveSuffix:
    'Showing '+count+' of '+persistedCount+' items'+archiveSuffix;
- const fuelTrackEditable=state.edit&&state.board?.board?.id==='7af78b3f-67bf-4600-9aa1-9006d19d486e'&&
+ const fuelTrackEditable=state.edit&&state.board?.board?.id===FUELTRACK_V3_ID&&
   state.board?.board?.name==='FuelTrack+ v3'&&
   String(state.board.board.description||'').startsWith('[APSYNTRA:MODULE:fueltrack:v1]');
  if(editing)return '<div class="group-heading board-group-editing" data-group-id="'+id+'">'+
@@ -2335,6 +2331,7 @@ function invalidateSignedSyncView(){
  renderLogin('Your signed workspace access changed. Sign in again to continue.');
 }
 async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
+ if(state.workspaceTransitionPending)return false;
  if(!state.context||state.context.user_id!==userId||
   state.context.workspace_id!==workspaceId||!auth.isSignedIn)return false;
  const serial=routeSerial,view=state.view,tab=state.tab,boardId=state.boardId;
@@ -2658,10 +2655,44 @@ async function refreshWorkspace(){
  // authoritative context has resolved; identity/scope resets follow below.
  boardCacheChannel.stop();db.invalidateBoardCache();
  state.context=mergeProfileAvatarContext(state.context,incomingContext);
- if(priorIdentity!==state.context?.user_id||priorWorkspace!==state.context?.workspace_id){
+ const workspaceIdentityChanged=priorIdentity!==state.context?.user_id||
+  priorWorkspace!==state.context?.workspace_id;
+ if(workspaceIdentityChanged){
   trashBoardSelection.clear();
   crmRoleReadGeneration++;crmRoleLastReadAt=0;state.crmRoleSnapshot=null;
   workspaceRelationReadGeneration++;state.workspaceRelationSnapshot=null;
+  // Do not render the previous workspace's board catalog while the new
+  // workspace catalog is loading. A scope transition starts from Overview.
+  if(priorWorkspace){
+   routeSerial++;
+   state.boards=[];state.archived=[];state.trashed=[];
+   state.showArchived=false;state.showTrash=false;
+   state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
+   state.boardPageBusy=false;state.boardPageError='';state.issues=[];
+   state.edit=false;state.boardManage=false;state.view='overview';
+   state.ttStandalone=false;state.frtStandalone=false;
+   state.tlStandalone=false;state.fuelTrackStandalone=false;
+   state.fuelTrackBackend=null;state.fuelTrackBackendBusy=false;
+   state.fuelTrackBackendError='';state.fuelTrackPreflight=null;
+   state.fuelTrackPreflightBusy=false;state.fuelTrackPendingSubmission=null;
+   state.fuelTrackReceiptLink=null;state.fuelTrackRefuelingDialog=null;
+   state.fuelTrackActivity=null;state.fuelTrackActivityBusy=false;
+   state.fuelTrackActivityError='';
+   state.tradeLinkModuleRole='';state.tradeLinkActivity=null;
+   state.tradeLinkActivityBusy=false;state.tradeLinkActivityError='';
+   state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsBusy=false;
+   state.tradeLinkAnalyticsError='';state.tradeLinkAnalyticsRunId++;
+   state.paseoManagement=null;paseoReadRunId++;
+   talkBoxState={page:null,selected:null,busy:false,error:'',scope:'',
+    filter:{name:'',status:'All'},features:null,meetingOpen:false,meetingDate:'',
+    meetingHistory:[],meetingRecord:null,meetingRows:[]};
+   clearTalkBoxReportUrl();
+   pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;
+   fm1Module?.unmountFm1Application();
+   stopTimeTrackerClock();
+   history.replaceState(null,'',location.pathname+location.search+routeHome);
+   approvedRouteHash=routeHome;
+  }
  }
  boardCacheChannel.start({userId:state.context?.user_id,workspaceId:state.context?.workspace_id});
  if(priorIdentity!==state.context?.user_id||priorWorkspace!==state.context?.workspace_id){
@@ -2701,6 +2732,13 @@ async function refreshWorkspace(){
  void refreshSignedCrmRole({force:true}).catch(()=>{});
  void refreshSignedWorkspaceRelation().catch(()=>{});
  if(!state.roleVerified){state.roleData=null;state.roleError='';state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.ttTeam=null;state.ttTeamRunId++;state.ttTeamError='';}
+ if(state.workspaceTransitionPending&&
+    state.context?.workspace_id===state.workspaceTransitionTargetId&&
+    !state.boardCatalogError){
+  state.workspaceTransitionPending=false;
+  state.workspaceTransitionTargetId=null;
+  state.workspaceTransitionTargetName='';
+ }
 }
 async function loadUserRoleManagement(){
  if(state.adminVerified!==true || !(await roleConfig.adminVerified()))throw new ApiError('CRM administrator role management access denied.',403);
@@ -5104,6 +5142,13 @@ async function onRoute(){
  closeTradeLinkSavedDocumentOutput();
  syncFuelTrans({container:null});
  if(!state.context)return;
+ if(state.workspaceTransitionPending){
+  history.replaceState(null,'',location.pathname+location.search+routeHome);
+  approvedRouteHash=routeHome;
+  state.view='overview';
+  render();
+  return;
+ }
  sidebarMobileOpen=false;
  const hash=location.hash||routeHome;
  const routePath=hash.split('?')[0];
@@ -5117,6 +5162,39 @@ async function onRoute(){
   state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkSection='overview';
  }
  if(parts[0]!=='fm1')fm1Module?.unmountFm1Application();
+ const applicationRoute=workspaceApplicationRouteAccess(hash,state.context?.workspace_id);
+ if(!applicationRoute.allowed){
+  // Application ownership controls which workspace opens its navigation route.
+  // Existing server-side role and data permissions are unchanged.
+  routeSerial++;
+  stopTimeTrackerClock();
+  state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
+  state.boardManage=false;state.edit=false;state.error='';
+  state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';
+  clearTimeTrackerOjtSelection();
+  state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;
+  state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;
+  state.frtFinanceDetailRevision++;
+  state.tradeLinkDraft=initialTradeLinkDraftView();
+  state.tradeLinkModuleRole='';state.tradeLinkActivity=null;
+  state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalytics=null;
+  state.tradeLinkAnalyticsBusy=false;state.tradeLinkAnalyticsError='';
+  state.fuelTrackBackend=null;state.fuelTrackBackendBusy=false;
+  state.fuelTrackActivity=null;state.fuelTrackActivityBusy=false;
+  state.fuelTrackPendingSubmission=null;state.fuelTrackRefuelingDialog=null;
+  state.paseoManagement=null;paseoReadRunId++;
+  talkBoxState={page:null,selected:null,busy:false,error:'',scope:'',
+   filter:{name:'',status:'All'},features:null,meetingOpen:false,meetingDate:'',
+   meetingHistory:[],meetingRecord:null,meetingRows:[]};
+  clearTalkBoxReportUrl();
+  pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;
+  fm1Module?.unmountFm1Application();
+  history.replaceState(null,'',location.pathname+location.search+routeHome);
+  approvedRouteHash=routeHome;
+  await onRoute();
+  toast('This application belongs to Work Management. Switch to that workspace to open it.');
+  return;
+ }
  if(parts[0]==='invitations'&&parts[1]==='accept'){
   state.view='invitation';render();return;
  }
@@ -7439,14 +7517,75 @@ async function action(name,button){
      listInvitations:workspaceId=>workspaceInvitationLiveManager.list(workspaceId),
      revokeInvitation:request=>workspaceInvitationLiveManager.revoke(request),
      switchingEnabled:WS01_SWITCHING_ENABLED,
-     onWorkspaceSwitched:receipt=>{
-      // Persist only after the lifecycle client has verified the server-side
-      // selection and read back the new active workspace.
-      const saved=writeWorkspacePreference(actor,receipt?.workspaceId);
+     onWorkspaceSwitched:async(receipt,targetWorkspace)=>{
+      // The lifecycle client has verified the selection receipt and re-read
+      // the new signed context. Persist the account preference, then reconcile
+      // the active shell in place without a page reload.
+      const previousWorkspaceId=state.context?.workspace_id;
+      if(receipt?.switched!==true||
+         receipt.previousWorkspaceId!==previousWorkspaceId||
+         !validUuid(receipt.workspaceId))
+       throw new ApiError('The verified workspace selection receipt is invalid.',409);
+      const saved=writeWorkspacePreference(actor,receipt.workspaceId);
       if(!saved)toast('Workspace changed, but this browser could not save the preference.',true);
-      // The reload rebuilds all workspace-scoped board/module/role state.
-      location.hash='#/overview';
-      location.reload();
+      state.workspaceTransitionPending=true;
+      state.workspaceTransitionTargetId=receipt.workspaceId;
+      state.workspaceTransitionTargetName=typeof targetWorkspace?.name==='string'?
+       targetWorkspace.name.trim().slice(0,120):'';
+      routeSerial++;
+      crmRoleReadGeneration++;crmRoleLastReadAt=0;
+      workspaceRelationReadGeneration++;
+      boardCacheChannel.stop();db.invalidateBoardCache();
+      state.boards=[];state.archived=[];state.trashed=[];
+      state.showArchived=false;state.showTrash=false;
+      state.boardId=null;state.board=null;state.boardUi=null;
+      state.loading=false;state.loadingIssues=false;state.boardPageBusy=false;
+      state.boardPageError='';state.issues=[];state.edit=false;state.boardManage=false;
+      state.view='overview';state.ttStandalone=false;state.frtStandalone=false;
+      state.tlStandalone=false;state.fuelTrackStandalone=false;
+      pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;
+      fm1Module?.unmountFm1Application();stopTimeTrackerClock();
+      history.replaceState(null,'',location.pathname+location.search+routeHome);
+      approvedRouteHash=routeHome;
+      render();
+      try{
+       await refreshWorkspace();
+       const activeWorkspaceId=state.context?.workspace_id;
+       if(activeWorkspaceId===receipt.workspaceId&&state.boardCatalogError)
+        throw new ApiError('The selected workspace board catalog is not available yet.',503);
+       if(activeWorkspaceId!==receipt.workspaceId){
+        if(validUuid(activeWorkspaceId)&&activeWorkspaceId!==previousWorkspaceId){
+         // A newer signed selection won while this transition was refreshing.
+         // Follow the latest server context rather than leaving the shell pending.
+         state.workspaceTransitionPending=false;
+         state.workspaceTransitionTargetId=null;
+         state.workspaceTransitionTargetName='';
+        }else{
+         throw new ApiError('The selected workspace context has not been confirmed yet.',409);
+        }
+       }
+      }catch(error){
+       // The server selection is already committed. Keep the previous scope
+       // hidden and let the existing Refresh action retry the signed context read.
+       state.workspaceTransitionPending=true;
+       state.workspaceTransitionTargetId=receipt.workspaceId;
+       state.workspaceTransitionTargetName=typeof targetWorkspace?.name==='string'?
+        targetWorkspace.name.trim().slice(0,120):'';
+       closeWorkspacePanels();
+       render();
+       toast('Workspace switch confirmed. The new workspace is still loading; use Refresh to retry.',true);
+       return;
+      }
+      state.workspaceTransitionPending=false;
+      state.workspaceTransitionTargetId=null;
+      state.workspaceTransitionTargetName='';
+      closeWorkspacePanels();
+      try{
+       await onRoute();
+       toast('Switched to '+(targetWorkspace?.name||'the selected workspace')+'.');
+      }catch(error){
+       toast('Workspace switched. Overview is available; refresh the workspace if content is incomplete.',true);
+      }
      }});
    break;
  }

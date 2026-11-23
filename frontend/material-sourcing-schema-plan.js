@@ -2,7 +2,8 @@
  * This module intentionally makes NO signed RPC, SQL or other data mutations.
  * Commercial/identity fields require a separate authoritative field-access contract.
  */
-export const MATERIAL_SOURCING_BOARD_ID='617c4c0f-e343-4b3b-8456-50d47dcbaf99';
+import {WORK_MANAGEMENT_BOARD_IDS} from './workspace-application-ownership.js';
+export const MATERIAL_SOURCING_BOARD_ID=WORK_MANAGEMENT_BOARD_IDS.materials;
 export const MATERIAL_SOURCING_GROUP=Object.freeze({
  id:'21566a87-b287-4a61-b521-bb233956e09e',title:'Main group'
 });

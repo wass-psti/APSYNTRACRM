@@ -3,7 +3,8 @@
  * The original authoritative mirror columns remain stored and available to the
  * existing FRT finance endpoint / domain workflow.
  */
-export const FRT_BOARD_ID='f36da8fe-8d9d-4629-9938-12533cb3ca39';
+import {WORK_MANAGEMENT_BOARD_IDS} from './workspace-application-ownership.js';
+export const FRT_BOARD_ID=WORK_MANAGEMENT_BOARD_IDS.frt;
 export const FRT_REFERENCE_STATUS_LABELS=Object.freeze([
  'Working on it','Stuck','Done','Pending Approval'
 ]);
