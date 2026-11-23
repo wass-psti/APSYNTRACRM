@@ -1,0 +1,105 @@
+name: CP-TT-OJT Dropdown-Only Identity Acceptance
+on:
+  pull_request:
+    paths:
+      - "frontend/app.js"
+      - "frontend/time-tracker-native.js"
+      - "frontend/time-tracker-ui.js"
+      - "frontend/apps/TimeTracker/time-tracker-ojt.js"
+      - "frontend/tests/time-tracker-ojt-shared-login.test.mjs"
+      - "supabase/migrations/20261123100000_cp_tt_ojt_shared_identities.sql"
+      - "supabase/migrations/20261123130000_cp_tt_ojt_employee_department_identity.sql"
+      - "supabase/migrations/20261123140000_cp_tt_ojt_dropdown_identity.sql"
+      - "supabase/migration-source-manifest.json"
+      - "sql/tests/cp-tt-ojt-dropdown-*.sql"
+      - "docs/CP-TT-OJT-01-SHARED-LOGIN.md"
+      - ".github/workflows/cp-tt-ojt-dropdown.yml"
+  push:
+    branches: [main]
+    paths:
+      - "frontend/app.js"
+      - "frontend/time-tracker-native.js"
+      - "frontend/time-tracker-ui.js"
+      - "frontend/apps/TimeTracker/time-tracker-ojt.js"
+      - "frontend/tests/time-tracker-ojt-shared-login.test.mjs"
+      - "supabase/migrations/20261123100000_cp_tt_ojt_shared_identities.sql"
+      - "supabase/migrations/20261123130000_cp_tt_ojt_employee_department_identity.sql"
+      - "supabase/migrations/20261123140000_cp_tt_ojt_dropdown_identity.sql"
+      - "supabase/migration-source-manifest.json"
+      - "sql/tests/cp-tt-ojt-dropdown-*.sql"
+      - "docs/CP-TT-OJT-01-SHARED-LOGIN.md"
+      - ".github/workflows/cp-tt-ojt-dropdown.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cp-tt-ojt-dropdown-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: OJT frontend contract and regression tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Check shipped JavaScript syntax
+        run: |
+          node --check frontend/app.js
+          node --check frontend/time-tracker-native.js
+          node --check frontend/time-tracker-ui.js
+          node --check frontend/apps/TimeTracker/time-tracker-ojt.js
+      - name: Test dropdown-only OJT identity and existing attendance contracts
+        run: node --test frontend/tests/time-tracker-ojt-shared-login.test.mjs
+      - name: Verify recovered migration source manifest
+        run: node scripts/verify-migration-source-manifest.mjs
+
+  disposable-postgres:
+    name: PostgreSQL 17 OJT migration and authorization acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Apply migrations in order and verify dropdown-only behavior
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-tt-ojt-dropdown-disposable-setup.sql \
+            -f supabase/migrations/20261123100000_cp_tt_ojt_shared_identities.sql \
+            -f supabase/migrations/20261123130000_cp_tt_ojt_employee_department_identity.sql \
+            -f sql/tests/cp-tt-ojt-dropdown-disposable-pre-migration3-seed.sql \
+            -f supabase/migrations/20261123140000_cp_tt_ojt_dropdown_identity.sql \
+            -f sql/tests/cp-tt-ojt-dropdown-disposable-acceptance.sql

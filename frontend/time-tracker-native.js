@@ -7,6 +7,7 @@ import {projectTimeTrackerOtRows,validateOvertimeDraft,TT_OT_WRITES_ACCEPTED} fr
 import {projectTimeTrackerTeamDirectory,projectTimeTrackerTeamDepartments,TT_TEAM_DEPARTMENTS,validTimeTrackerDepartmentName} from './time-tracker-team.js';
 import {projectTimeTrackerEmployees,projectTimeTrackerEmployeeDepartments,projectTimeTrackerDepartmentCatalog} from './time-tracker-application.js';
 import {validateTimeTrackerGps} from './time-tracker-gps.js';
+import {projectOjtRoster,projectOjtAdmin,projectOjtAdminAttendance,TIMETRACKER_SHARED_OJT_USER_ID} from './apps/TimeTracker/time-tracker-ojt.js';
 /**
  * TimeTracker native APSYNTRA adapter. Source reference: TimeTracker v2.0.14.
  * No standalone app, storage shim, local JWT, synthetic rows, or privileged key.
@@ -174,6 +175,7 @@ export class TimeTrackerNativeClient{
  }
  async snapshot(boardId,{clockOnly=false}={}){
   const access=await this.access(boardId);
+  const canManageOjt=['System Admin','IT Administrator'].includes(access.moduleRole);
   // Issue independent, read-only RPCs together AFTER signed access verification.
   // Backend scope checks remain authoritative; identity is checked again below.
   const otRead=clockOnly?Promise.resolve(null):
@@ -184,10 +186,10 @@ export class TimeTrackerNativeClient{
   const clockRead=this.attendanceCapability(boardId,access);
   // Department is a signed, workspace-scoped employee record, not a browser field.
   // A missing deployment leaves Clock In unavailable rather than guessing.
-  const catalogRead=!clockOnly&&['System Admin','IT Administrator'].includes(access.moduleRole)?
+  const catalogRead=!clockOnly&&canManageOjt?
    this.api.rpc('timetracker_department_catalog_snapshot',{p_board_id:boardId})
     .then(response=>({response}),error=>({error})):Promise.resolve(null);
-  const employeeDepartmentsRead=!clockOnly&&['System Admin','IT Administrator'].includes(access.moduleRole)?
+  const employeeDepartmentsRead=!clockOnly&&canManageOjt?
    this.api.rpc('timetracker_employee_department_directory_snapshot',{p_board_id:boardId})
     .then(response=>({response}),error=>({error})):Promise.resolve(null);
   const departmentRead=this.api.rpc('timetracker_employee_department_for_clock',{
@@ -304,9 +306,41 @@ export class TimeTrackerNativeClient{
    try{employees=projectTimeTrackerEmployeeDepartments(employees,employeeDepartments.response);}
    catch{/* Optional directory corruption cannot block an employee's Clock. */}
   }
+  // Optional OJT feature detection uses the already-verified native session.
+  // Ordinary TimeTracker snapshots must remain compatible with older backends.
+  const designatedSharedOjt=access.userId===TIMETRACKER_SHARED_OJT_USER_ID;
+  let ojtRoster=null,ojtAdmin=null,ojtAdminAttendance=null;
+  if(designatedSharedOjt){
+   try{
+    const signedRoster=projectOjtRoster(
+     await this.api.rpc('timetracker_ojt_roster',{p_board_id:boardId}),access);
+    // An unconfigured shared account cannot use ordinary Employee Clock.
+    ojtRoster=signedRoster.mode==='PERSONAL'?
+     {mode:'SETUP_REQUIRED',interns:[]} : signedRoster;
+   }catch(error){
+    if(!/PGRST202|Could not find the function|Unexpected RPC timetracker_ojt_roster/.test(String(error?.message||error)))throw error;
+    // Clear front-end-only error state, not an invented signed server roster.
+    ojtRoster={mode:'SERVICE_UNAVAILABLE',interns:[]};
+   }
+  }
+  if(!clockOnly&&canManageOjt){
+   try{
+    ojtAdmin=projectOjtAdmin(
+     await this.api.rpc('timetracker_ojt_admin_snapshot',{p_board_id:boardId}),access);
+    ojtAdminAttendance=projectOjtAdminAttendance(
+     await this.api.rpc('timetracker_ojt_admin_attendance',{p_board_id:boardId}),access);
+   }catch(error){
+    if(!/PGRST202|Could not find the function|Unexpected RPC timetracker_ojt_/.test(String(error?.message||error)))throw error;
+   }
+  }
   await checkIdentity(this.auth,this.api,access,boardId);
-  return {status:'VERIFIED_READ',clockOnly:clockOnly===true,access:{...access,...otAccess,attendanceWritesAccepted,employeeDepartment,employees,departmentCatalog},records,otRequests,autoClockout,autoClockoutUnavailable,overview,log,revision:row?Number(row.revision):0,
-   active:records.find(x=>x.status==='Active')||null};
+  return {status:'VERIFIED_READ',clockOnly:clockOnly===true,
+   access:{...access,...otAccess,
+    attendanceWritesAccepted:designatedSharedOjt?false:attendanceWritesAccepted,
+    employeeDepartment,employees,departmentCatalog},
+   ojtRoster,ojtAdmin,ojtAdminAttendance,
+   records,otRequests,autoClockout,autoClockoutUnavailable,overview,log,
+   revision:row?Number(row.revision):0,active:records.find(x=>x.status==='Active')||null};
  }
  /** A fresh independently guarded bootstrap read; no Team information for normal users. */
  async teamDirectory(boardId){

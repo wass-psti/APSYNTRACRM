@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { readFileSync, readdirSync } from 'node:fs';
+import { resolve, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -32,10 +32,24 @@ for (const entry of allEntries) {
   versions.add(entry.version);
 
   const path = resolve(migrationDir, entry.file);
-  assert.equal(path.startsWith(migrationDir + '/'), true, 'Migration path must remain inside supabase/migrations');
-  assert.equal(statSync(path).size, entry.bytes, 'Byte length changed: ' + entry.file);
-  const digest = createHash('sha256').update(readFileSync(path)).digest('hex');
-  assert.equal(digest, entry.sha256, 'SHA-256 mismatch: ' + entry.file);
+  assert.equal(path.startsWith(migrationDir + sep), true, 'Migration path must remain inside supabase/migrations');
+  const raw = readFileSync(path);
+
+  const matchesManifest = (data) =>
+    data.length === entry.bytes &&
+    createHash('sha256').update(data).digest('hex') === entry.sha256;
+
+  // Git may convert LF to CRLF when checking out files on Windows.
+  // Accept only exact source bytes or their LF-normalized equivalent.
+  const normalized = Buffer.from(
+    raw.toString('utf8').replace(/\r\n/g, '\n'),
+    'utf8'
+  );
+
+  assert.ok(
+    matchesManifest(raw) || matchesManifest(normalized),
+    'Byte length or SHA-256 mismatch: ' + entry.file
+  );
 }
 
 assert.equal(manifest.files[0].version, '20260917142647');

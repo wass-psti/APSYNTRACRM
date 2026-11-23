@@ -1857,11 +1857,60 @@
       "sha256": "da8629f5bdb69cc33e279a968baab60608234e01c614f3ada23ecfc17ab56e6e"
     },
     {
+      "version": "20261120095020",
+      "name": "pdl_guest_booking_shared_backend_foundation",
+      "file": "20261120095020_pdl_guest_booking_shared_backend_foundation.sql",
+      "bytes": 18525,
+      "sha256": "acaf9d332ef6f8d9ef1a22412792ee28690f16ff683ed45749391878adff190f"
+    },
+    {
+      "version": "20261120095242",
+      "name": "pdl_guest_api_admin_media_support",
+      "file": "20261120095242_pdl_guest_api_admin_media_support.sql",
+      "bytes": 4886,
+      "sha256": "aa2bd800943cd1ecedb5179140b420f23237d846d05865bb9c4c8e989fca308b"
+    },
+    {
+      "version": "20261120095311",
+      "name": "pdl_guest_api_court_rate_qr_management",
+      "file": "20261120095311_pdl_guest_api_court_rate_qr_management.sql",
+      "bytes": 7085,
+      "sha256": "1b4f236b3f16c80637ac2d865a4beeb566d82d7f0a2b2ea2df55e8eff5e899d2"
+    },
+    {
+      "version": "20261120095505",
+      "name": "pdl_guest_api_postgrest_claim_compatibility",
+      "file": "20261120095505_pdl_guest_api_postgrest_claim_compatibility.sql",
+      "bytes": 6993,
+      "sha256": "8b808390c43331ed3ccf9179c84418cf0b5d39ef8d5c91e1d7fa4053429f0610"
+    },
+    {
+      "version": "20261120095844",
+      "name": "pdl_guest_atomic_idempotency_lock",
+      "file": "20261120095844_pdl_guest_atomic_idempotency_lock.sql",
+      "bytes": 4464,
+      "sha256": "90e444e00288ddc66b0c35e18829b2f05a859cfaf9d78deb01072c5b175ce356"
+    },
+    {
       "version": "20261120100000",
       "name": "cp_tt_employee_departments_qol",
       "file": "20261120100000_cp_tt_employee_departments_qol.sql",
       "bytes": 11993,
       "sha256": "8528f5fbdd935a737e1d778bdd28f02c1927acf0016bd0f35451c5da3e4d42ac"
+    },
+    {
+      "version": "20261120100008",
+      "name": "pdl_guest_quote_fk_index",
+      "file": "20261120100008_pdl_guest_quote_fk_index.sql",
+      "bytes": 178,
+      "sha256": "047b5e420dde8bc97bee8f07e6951be20597a498c1f14898737e0c1f59b3a363"
+    },
+    {
+      "version": "20261120100115",
+      "name": "pdl_guest_availability_requires_approved_rate",
+      "file": "20261120100115_pdl_guest_availability_requires_approved_rate.sql",
+      "bytes": 1299,
+      "sha256": "f9cc292a6747d024a388ffa5c4047960762e743e77f0c5aae0997b0aa3defe9d"
     },
     {
       "version": "20261120101751",
@@ -1941,11 +1990,116 @@
       "sha256": "238b4a965ec52a12a573304ec3203dd122f03d25aa2ed3273f3ac3c0ce240667"
     },
     {
+      "version": "20261121130052",
+      "name": "cp_crm_invite_prod02_schema",
+      "file": "20261121130052_cp_crm_invite_prod02_schema.sql",
+      "bytes": 3320,
+      "sha256": "91a2032a209d1b88bdf30fafc4ea5ccf10ead6aac1c9e88546a21d9e80c34a16"
+    },
+    {
+      "version": "20261121130111",
+      "name": "cp_crm_invite_prod02_issue",
+      "file": "20261121130111_cp_crm_invite_prod02_issue.sql",
+      "bytes": 6083,
+      "sha256": "6d38191532409838dd74098bb6f24609bfa498453196af81875ceda0e82eae81"
+    },
+    {
+      "version": "20261121130132",
+      "name": "cp_crm_invite_prod02_accept",
+      "file": "20261121130132_cp_crm_invite_prod02_accept.sql",
+      "bytes": 3500,
+      "sha256": "567f7ee391388376d42a1b72bd1f4c556f5a56ae579325133955bbbffe5d67dd"
+    },
+    {
+      "version": "20261121130146",
+      "name": "cp_crm_invite_prod02_revoke",
+      "file": "20261121130146_cp_crm_invite_prod02_revoke.sql",
+      "bytes": 1830,
+      "sha256": "2e5b6913dd504bd433ab91c6b53a5dcbc7493e32acfc8efa81d3e4eceb47d7d2"
+    },
+    {
+      "version": "20261121130229",
+      "name": "cp_crm_invite_prod02_manager",
+      "file": "20261121130229_cp_crm_invite_prod02_manager.sql",
+      "bytes": 3281,
+      "sha256": "0b432d74bab856e055cd0281cc0ac2f29fa0bbb9740827d7e45576a7288f0779"
+    },
+    {
+      "version": "20261121130243",
+      "name": "cp_crm_invite_prod02_delivery",
+      "file": "20261121130243_cp_crm_invite_prod02_delivery.sql",
+      "bytes": 6994,
+      "sha256": "bce79876f73e0d62562557c5246d05c635956ca56d01f5ffeb8e37b05ecba618"
+    },
+    {
+      "version": "20261121130327",
+      "name": "cp_crm_invite_prod02_bootstrap_sender_parity",
+      "file": "20261121130327_cp_crm_invite_prod02_bootstrap_sender_parity.sql",
+      "bytes": 2156,
+      "sha256": "33a6f76e0d455fbf7259806c94c6da8a0480200272efc352a996a5e44ad00807"
+    },
+    {
+      "version": "20261121134322",
+      "name": "pdl_operational_calendar_and_policies",
+      "file": "20261121134322_pdl_operational_calendar_and_policies.sql",
+      "bytes": 19696,
+      "sha256": "5cc408472e15cb51a5864d551ba86840c84c11ce115e6dbb9d5a9e2b16b1a38f"
+    },
+    {
+      "version": "20261121143743",
+      "name": "pdl_dynamic_operating_hour_slots",
+      "file": "20261121143743_pdl_dynamic_operating_hour_slots.sql",
+      "bytes": 2403,
+      "sha256": "7561dc57926c1bfb4f4a411f7543592947cc577c67e549b97580c9258c6d4370"
+    },
+    {
+      "version": "20261121153857",
+      "name": "pdl_admin_paginated_lifecycle",
+      "file": "20261121153857_pdl_admin_paginated_lifecycle.sql",
+      "bytes": 4658,
+      "sha256": "8a9941edaef3df705e1c7bb01b81f7b6600f60e25b7be8539f7d87e670a92370"
+    },
+    {
       "version": "20261122010413",
       "name": "cp_native_app_autosync_03_registry_projection",
       "file": "20261122010413_cp_native_app_autosync_03_registry_projection.sql",
       "bytes": 2158,
       "sha256": "f75e4e0458b87b0de809d819b534438113012fc958d9a362fd2e1b4b68f061f6"
+    },
+    {
+      "version": "20261122014311",
+      "name": "pdl_schedule_visibility_and_calendar_readback",
+      "file": "20261122014311_pdl_schedule_visibility_and_calendar_readback.sql",
+      "bytes": 8920,
+      "sha256": "0dd457ee15f5ab9330148fc28b3264b3d6df81f9e257ef03300ec5ca48f9c2e0"
+    },
+    {
+      "version": "20261122142021",
+      "name": "pdl_exclude_past_same_day_slots",
+      "file": "20261122142021_pdl_exclude_past_same_day_slots.sql",
+      "bytes": 4292,
+      "sha256": "06ac4abddab7c9cadbdbb62bcf5854e2147debf436dfda75c769d5a485384e24"
+    },
+    {
+      "version": "20261123100000",
+      "name": "cp_tt_ojt_shared_identities",
+      "file": "20261123100000_cp_tt_ojt_shared_identities.sql",
+      "bytes": 24567,
+      "sha256": "4fb0df7d5746cf9d222c8c569e8a5824d6b1b86477d2728e842e5955bbb178fc"
+    },
+    {
+      "version": "20261123130000",
+      "name": "cp_tt_ojt_employee_department_identity",
+      "file": "20261123130000_cp_tt_ojt_employee_department_identity.sql",
+      "bytes": 6925,
+      "sha256": "ede421f8f471d0af0952c467e72bc39e5e2584348d79641c79939885f3d0a68b"
+    },
+    {
+      "version": "20261123140000",
+      "name": "cp_tt_ojt_dropdown_identity",
+      "file": "20261123140000_cp_tt_ojt_dropdown_identity.sql",
+      "bytes": 13072,
+      "sha256": "eaaa76bbd2174a8f883667e22ffb8468444fcac00e022097104a0bae27bdfcf6"
     }
   ]
 }

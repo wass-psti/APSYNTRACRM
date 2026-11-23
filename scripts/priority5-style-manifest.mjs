@@ -1,6 +1,7 @@
 // Ordered CSS entry manifest. Preserve cascade and source paths.
 export const STYLE_SOURCES=Object.freeze([
  "frontend/styles.css",
+ "frontend/mobile-home.css",
  "frontend/auth/experience.css",
  "frontend/sidebar-experience.css",
  "frontend/workspace-ui.css",
@@ -54,6 +55,7 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/board-activity-avatars.css",
  "frontend/time-tracker-application.css",
  "frontend/apps/TimeTracker/time-tracker-add-department-modal.css",
+ "frontend/apps/TimeTracker/time-tracker-ojt.css",
  "frontend/apps/TimeTracker/time-tracker-refined.css",
  "frontend/monday-inspired-ui.css",
  "frontend/login-minimal.css",
@@ -75,8 +77,6 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/dark-attendance-admin.css",
  "frontend/dark-workspace-account-completion.css",
  "frontend/dark-simplified-system.css",
- "frontend/board-overhaul-experience.css",
- "frontend/board-uiverse-overhaul.css",
- "frontend/crm-complete-design-system.css"
+ "frontend/board-overhaul-experience.css"
 ]);
 export const STYLE_BUNDLE="frontend/apsyntra-styles.bundle.css";
