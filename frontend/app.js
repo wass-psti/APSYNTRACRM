@@ -39,7 +39,7 @@ import {normalizeSignedBoardCandidates,normalizeAdminBoardCandidates,adminBoardC
  BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
 import {CreatorAccessClient,WS10_CREATOR_POLICY_ACTIVE} from './ws10-ownership.js';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
-import {PlatformSync,shouldRefreshWorkspaceBoardList,shouldRecheckWorkspaceRoles,shouldResumeDeferredReconciliation} from './platform-sync.js';
+import {PlatformSync,shouldRefreshWorkspaceBoardList,shouldRecheckWorkspaceRoles,shouldResumeDeferredReconciliation,shouldPreserveSignedSessionOnContextFailure} from './platform-sync.js';
 import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
 import {runPagesPersistenceAcceptance,QA_BOARD_NAME} from './pages-persistence.js';
@@ -2314,20 +2314,31 @@ function platformSyncEditInProgress(){
   (state.mrhAddView&&state.tab==='sourcing')||
   focused?.closest?.('input,textarea,select,[contenteditable="true"]'));
 }
-/** Revoke stale rendered data immediately when the server invalidates identity. */
-function invalidateSignedSyncView(){
+/**
+ * Drop stale workspace data without discarding a still-valid Auth identity.
+ * Workspace-context failures get the normal bounded startup retry surface;
+ * only an independently failed Auth identity check returns to sign-in.
+ */
+function invalidateSignedSyncView({preserveAuth=false,error=null}={}){
  startupCriticalPath.clear();
  performanceProfileAbort?.abort();performanceProfileAbort=null;
  state.performanceReport=null;state.performanceBusy=false;
  boardPreferences.clearMemory();
  boardCacheChannel.stop();db.invalidateBoardCache();
- platformSync.stop();
  crmRoleReadGeneration++;crmRoleLastReadAt=0;state.crmRoleSnapshot=null;
  workspaceRelationReadGeneration++;state.workspaceRelationSnapshot=null;
  state.board=null;state.boardUi=null;state.boards=[];state.tradeLinkDraft=initialTradeLinkDraftView();
  state.ttAttendance=null;clearTimeTrackerOjtSelection();state.ttBoardAttendance=null;state.ttBoardGpsEligible=false;state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';
  state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';
- boardCacheChannel.stop();db.invalidateBoardCache();state.context=null;auth.clear();
+ state.context=null;
+ if(preserveAuth&&auth.isSignedIn){
+  renderBootstrapFailure(error||new ApiError(
+   'The signed workspace context changed. Retry to restore the current workspace.',
+   503,'WORKSPACE_CONTEXT_CHANGED'));
+  return;
+ }
+ platformSync.stop();
+ auth.clear();
  renderLogin('Your signed workspace access changed. Sign in again to continue.');
 }
 async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
@@ -2347,19 +2358,44 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  const nativeModuleId=view==='board'?nativeApplicationModuleForBoardId(boardId):null;
  // Board broadcasts carry identifiers only; the server remains authoritative.
  if(reason==='broadcast'&&!boardChanged&&view==='board')return true;
- let who,current;
+ let who;
  try{
   who=await auth.getVerifiedUser();
-  current=await db.context();
  }catch(error){
-  if(isCurrent()&&([401,403].includes(Number(error?.status))||
-     error?.code==='42501'))invalidateSignedSyncView();
+  // Only a failure from the Auth identity endpoint can expire the Auth session.
+  if(isCurrent()&&[401,403].includes(Number(error?.status)))
+   invalidateSignedSyncView();
   throw error;
  }
  if(!isCurrent())return false;
- if(who?.id!==userId||current.user_id!==userId||
-  current.workspace_id!==workspaceId){
-  invalidateSignedSyncView();return false;
+ if(who?.id!==userId){
+  invalidateSignedSyncView({
+   preserveAuth:auth.isSignedIn,
+   error:new ApiError(
+    'The authenticated identity changed during workspace synchronization. Retry to restore the current workspace.',
+    503,'SIGNED_IDENTITY_CHANGED')
+  });
+  return false;
+ }
+ let current;
+ try{
+  current=await db.context();
+ }catch(error){
+  // A workspace RPC denial or SQL permission error is not an Auth sign-out.
+  if(isCurrent()&&shouldPreserveSignedSessionOnContextFailure(error,{
+   authSignedIn:auth.isSignedIn
+  }))invalidateSignedSyncView({preserveAuth:true,error});
+  throw error;
+ }
+ if(!isCurrent())return false;
+ if(current.user_id!==userId||current.workspace_id!==workspaceId){
+  invalidateSignedSyncView({
+   preserveAuth:auth.isSignedIn,
+   error:new ApiError(
+    'The active workspace context changed during synchronization. Retry to load the current workspace.',
+    503,'WORKSPACE_CONTEXT_CHANGED')
+  });
+  return false;
  }
  // Revocation takes precedence over preserving local editor state. This is
  // an authoritative signed board-view check, not a client-side visibility rule.

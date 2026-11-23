@@ -1,0 +1,210 @@
+{
+  "implementation": "CP-CRM-SESSION-CPU-04",
+  "project": {
+    "name": "APSYNTRACRM",
+    "ref": "jtlusodorfnyzgyuewkz",
+    "region": "ap-southeast-2",
+    "status": "ACTIVE_HEALTHY",
+    "postgresVersion": "17.6.1",
+    "computeSize": "micro"
+  },
+  "observation": {
+    "authAndEdgeWindowUtc": {
+      "start": "2026-11-23T06:13:00Z",
+      "end": "2026-11-23T06:43:00Z",
+      "durationSeconds": 1800
+    },
+    "pgStatsSnapshotUtc": "2026-11-23T06:46:52.701494Z",
+    "projectOverviewSnapshotUtc": "2026-11-23T06:53:00Z",
+    "source": "Supabase unified logs, read-only PostgreSQL statistics, project overview, existing CP-03 Prometheus snapshot"
+  },
+  "cpuReanalysisOfCp03Sample": {
+    "sourceSampleWindowUtc": {
+      "start": "2026-11-23T05:21:42.000Z",
+      "end": "2026-11-23T05:35:12.348Z",
+      "elapsedSeconds": 810.348
+    },
+    "logicalCpus": 2,
+    "cpuPercentIncludingIowaitAndSteal": 4.3159987366,
+    "cpuPercentExcludingIowaitButIncludingSteal": 3.8205475974,
+    "activeCpuPercentExcludingIowaitAndSteal": 3.2538753569,
+    "activeCpuPercentOfNonStolenTime": 3.2724192484,
+    "iowaitPercentOfAllCpuSeconds": 0.4954511392,
+    "stealPercentOfAllCpuSeconds": 0.566672239,
+    "postgresProcessPercentOfOneCore": 0.018511,
+    "gotrueProcessPercentOfOneCore": 0.18017,
+    "availableProcessCpuServiceTypes": ["postgresql", "gotrue"],
+    "hostCpuServiceType": "db",
+    "interpretation": "The earlier 4.32% figure included both I/O wait and hypervisor steal. Excluding both yields approximately 3.25% active execution. The Metrics API exposed no per-process CPU series for other host services, so the remaining host activity cannot be attributed to PostgreSQL or GoTrue from this metric set."
+  },
+  "authAndEdge": {
+    "edge": {
+      "totalRequests": 2473,
+      "optionsPreflights": 360,
+      "nonPreflightRequests": 2113,
+      "authGetUserRequests": 142,
+      "authTokenRequests": 15,
+      "combinedAuthRequests": 157,
+      "authShareOfAllEdgeRequestsPercent": 6.34897,
+      "authShareOfNonPreflightRequestsPercent": 7.43019,
+      "authGetUserShareOfAllEdgeRequestsPercent": 5.74242,
+      "http401": 0,
+      "http403": 0,
+      "http5xx": 0
+    },
+    "authServiceLogs": {
+      "getUserRequests": 125,
+      "getUserHttp200": 125,
+      "getUserMeanDurationMs": 3.815,
+      "getUserP95DurationMs": 7.544,
+      "tokenRequests": 8,
+      "tokenHttp200": 8,
+      "tokenMeanDurationMs": 41.215,
+      "tokenP95DurationMs": 121.621,
+      "otherNonRequestAuthEvents": 8
+    },
+    "reconciliationNote": "Edge gateway and Auth service logs returned different request counts for the same nominal time window (142 vs 125 GET /user; 15 vs 8 /token). The cause of this log-stream discrepancy was not established; all Auth service request rows observed were HTTP 200."
+  },
+  "postgres": {
+    "logWindowUtc": {
+      "start": "2026-11-23T06:13:00Z",
+      "end": "2026-11-23T06:43:00Z"
+    },
+    "logRows": 484,
+    "errorRows": 0,
+    "durationRows": 0,
+    "deadlockRows": 0,
+    "canceledStatementRows": 0,
+    "pgStatDatabaseCumulativeSnapshot": {
+      "commits": 3093809,
+      "rollbacks": 63219757,
+      "sharedBufferHits": 2235344658,
+      "sharedBufferReads": 531786,
+      "deadlocks": 0,
+      "note": "Cumulative counters, not a 30-minute delta; the rollback count must not be interpreted as current-window activity."
+    },
+    "topPgStatStatementsCumulativeSnapshot": [
+      {
+        "function": "wm_list_boards",
+        "calls": 36643,
+        "totalExecutionMs": 6939555.73,
+        "meanExecutionMs": 189.38
+      },
+      {
+        "function": "apsyntra_crm_my_effective_access",
+        "calls": 17012,
+        "totalExecutionMs": 2098604.84,
+        "meanExecutionMs": 123.36
+      },
+      {
+        "function": "wm_get_board_items_page",
+        "calls": 20342,
+        "totalExecutionMs": 903056.24,
+        "meanExecutionMs": 44.39
+      },
+      {
+        "function": "wm_get_board_shell",
+        "calls": 20392,
+        "totalExecutionMs": 569061.24,
+        "meanExecutionMs": 27.91
+      },
+      {
+        "function": "wm_auth_access_context",
+        "calls": 94721,
+        "totalExecutionMs": 623912,
+        "meanExecutionMs": 6.59
+      }
+    ],
+    "activitySnapshot": {
+      "postgrestIdleConnections": 8,
+      "realtimeIdleConnections": 2,
+      "realtimeReplicationActive": 1,
+      "managementApiActive": 1,
+      "interpretation": "Most reported client connections were idle; no evidence of pooler saturation was established from this snapshot."
+    }
+  },
+  "projectOverview": {
+    "status": "Healthy",
+    "cpuPercentRounded": 4,
+    "ramPercentRounded": 53,
+    "diskPercentRounded": 47,
+    "databaseConnections": 19,
+    "databaseMaxConnections": 60,
+    "databaseSizeGb": 0.45,
+    "note": "Single overview snapshot, not a 30-minute average."
+  },
+  "dashboardReport": {
+    "plan": "Pro",
+    "observedResourcePanelsUnavailable": [
+      "Memory usage",
+      "Memory commitment",
+      "CPU usage",
+      "Network throughput",
+      "Disk IOPS",
+      "Disk throughput",
+      "Database connections",
+      "Dedicated Pooler Client Connections",
+      "Shared Pooler Client Connections",
+      "Disk Usage"
+    ],
+    "databaseSizePanelAvailable": true,
+    "projectOverviewSummaryAvailable": true,
+    "docsPlanAvailability": {
+      "proAvailable": [
+        "Memory usage",
+        "CPU usage",
+        "Disk IOPS",
+        "Database connections",
+        "Disk usage",
+        "Database size"
+      ],
+      "teamEnterprisePlatformAdvanced": [
+        "Memory commitment",
+        "Network throughput",
+        "Disk throughput"
+      ],
+      "source": "https://supabase.com/docs/guides/observability/reports"
+    },
+    "diagnosis": "The failures include base Database report charts documented as available on Pro, so plan entitlement alone does not explain the failure. The project remains healthy and its Overview summary loads. The detailed Database report's internal request failure code was not exposed."
+  },
+  "browserAcceptance": {
+    "route": "https://wass-psti.github.io/APSYNTRACRM/#/time-tracker",
+    "refreshPerformed": true,
+    "signedInUiAfterRefresh": true,
+    "secureSessionIndicator": true,
+    "userIndicator": "LM",
+    "activeAttendanceSessionPreserved": true,
+    "attendanceWritePerformed": false,
+    "syncStatusAfterRefresh": "Checked · Authorized polling fallback",
+    "lastAuthoritativeCheckLocal": "2026-11-23 14:39:52 Asia/Manila",
+    "liveRealtimeSyncConfirmed": false,
+    "result": "Page refresh preserved the signed-in CRM and active TimeTracker session. The app used its authorized polling fallback; Live Realtime sync was not confirmed."
+  },
+  "sourceChanges": {
+    "files": [
+      "frontend/app.js",
+      "frontend/platform-sync.js",
+      "frontend/tests/cp-crm-session-cpu-04.test.mjs"
+    ],
+    "serverSideAuthChanges": false,
+    "databaseSchemaChanges": false,
+    "rlsOrPolicyChanges": false,
+    "roleOrPermissionChanges": false,
+    "productionSettingsChanged": false,
+    "productionDeploymentPerformed": false,
+    "credentialsCreatedOrRotated": false,
+    "newDependencies": false,
+    "backgroundCollectorInstalled": false,
+    "trainingOrGradientDescentIntroduced": false
+  },
+  "benchmark": {
+    "thirtyMinuteMetricsApiSample": "NOT RUN",
+    "reason": "The one-time existing-secret-key sampler is awaiting user review after the client blocked the credential-reveal invocation. No key value was emitted or stored."
+  },
+  "git": {
+    "branch": "cp-crm-session-cpu-04",
+    "baseCommitBeforeRebase": "192ee6e",
+    "originMainAtDiscovery": "cf20bd0",
+    "branchStatus": "26 commits behind current origin/main; integration required before PR"
+  }
+}

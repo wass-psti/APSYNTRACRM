@@ -24,6 +24,14 @@ export function shouldRecheckWorkspaceRoles({reason,roleChanged=false,lastReadAt
 export function shouldRefreshWorkspaceBoardList({reason,view}={}){
  return reason!=='broadcast'||view!=='board';
 }
+/**
+ * A workspace-context denial is not proof that the Auth identity is invalid.
+ * Keep an independently verified signed session available for a bounded retry.
+ */
+export function shouldPreserveSignedSessionOnContextFailure(error,{authSignedIn=false}={}){
+ return authSignedIn===true&&
+  ([401,403].includes(Number(error?.status))||error?.code==='42501');
+}
 /** Retry a deferred reconciliation after a blocking local read/edit has cleared. */
 export function shouldResumeDeferredReconciliation(status,{blocked=false}={}){
  return !blocked&&status?.phase==='reconnecting'&&
