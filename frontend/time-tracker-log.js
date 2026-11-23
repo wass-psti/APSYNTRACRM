@@ -316,7 +316,7 @@ function renderTimeTrackerLogDetailDialog({row,now,gpsEligible=false,gpsData=nul
    '</header>'+
    '<div class="tt-admin-editor-body">'+details+'</div>'+
    '<footer class="tt-admin-editor-actions"><span class="tt-admin-editor-footnote">'+(row.isOjt?'Shared-login OJT attendance · Admin corrections are audited':'Signed attendance details · '+esc(row.department||'Unassigned'))+'</span>'+
-    '<div>'+(adminFullAccess&&!row.isOjt?'<button type="button" class="secondary" data-action="tt-log-detail-toggle-select" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+' aria-pressed="'+selected+'">'+(selected?'Remove selection':'Select record')+'</button>':'')+
+    '<div>'+(adminFullAccess?'<button type="button" class="secondary" data-action="tt-log-detail-toggle-select" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+' aria-pressed="'+selected+'">'+(selected?'Remove selection':'Select record')+'</button>':'')+
     '<button type="button" class="primary" data-action="tt-log-detail-close">Close details</button></div></footer>'+
   '</section></div>';
 }
@@ -357,6 +357,7 @@ export function renderTimeTrackerLog({
  const rows=filterTimeTrackerLogRows(records,{...options,search:''},now);
  const visible=filterTimeTrackerLogRows(records,options,now);
  const editableVisible=visible.some(row=>!row.isOjt);
+ const standardSelected=selectedIds.filter(id=>rows.some(row=>row.id===id&&!row.isOjt));
  const query=String(options.search??'').slice(0,120);
  const summary=timeTrackerLogSummary(rows,now);
  const team=scope==='AUTHORIZED_WORKSPACE_TEAM';
@@ -419,8 +420,8 @@ export function renderTimeTrackerLog({
     '<div class="tt-log-admin-selection-status"><strong class="tt-log-admin-selected">'+selectedIds.length+'</strong><span>selected <i>·</i> up to '+TT_ADMIN_RECORD_LIMIT+'</span></div></div>'+
     '<div class="tt-log-admin-toolbar-actions">'+
     '<button type="button" data-action="tt-log-admin-select-visible"'+(!editableVisible||adminBusy?' disabled':'')+'>Select visible</button>'+
-    '<button type="button" data-action="tt-log-admin-bulk-edit"'+(selectedIds.length&&!adminBusy?'':' disabled')+'><span aria-hidden="true">✎</span> Edit selected</button>'+
-    '<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-bulk-delete"'+(selectedIds.length&&!adminBusy?'':' disabled')+'><span aria-hidden="true">⌫</span> Delete selected</button>'+
+    '<button type="button" data-action="tt-log-admin-bulk-edit"'+(standardSelected.length&&!adminBusy?'':' disabled')+'><span aria-hidden="true">✎</span> Edit selected</button>'+
+    '<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-bulk-delete"'+(standardSelected.length&&!adminBusy?'':' disabled')+'><span aria-hidden="true">⌫</span> Delete selected</button>'+
     '<button type="button" class="tt-log-admin-reset" data-action="tt-log-admin-clear-selection"'+(selectedIds.length&&!adminBusy?'':' disabled')+'>Clear selection</button></div></div>':'')+
    (adminError&&!adminEditor?'<p class="tt-log-admin-feedback is-error" role="alert">'+esc(adminError)+'</p>':'')+
    (adminSuccess?'<p class="tt-log-admin-feedback is-success" role="status">'+esc(adminSuccess)+'</p>':'')+

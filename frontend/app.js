@@ -4512,27 +4512,35 @@ async function openTimeTrackerAdminEditor(recordIds,mode='single',{timeOnly=fals
  const ids=[...new Set(recordIds||[])];
  if(ids.some(id=>String(id).startsWith('ojt:'))){
   const scope=timeTrackerOjtLogAdminScope();
-  if(!scope||mode!=='single'||ids.length!==1||
-     !timeTrackerLogRowsForSnapshot(state.ttAttendance).some(row=>
-       row.isOjt&&row.id===ids[0])){
+  const preview=state.ttAttendance?.ojtAdminAttendance?.records?.find(row=>'ojt:'+row.id===ids[0]);
+  if(!scope||mode!=='single'||ids.length!==1||!preview||
+     !timeTrackerLogRowsForSnapshot(state.ttAttendance).some(row=>row.isOjt&&row.id===ids[0])){
    state.ttLogAdminError='Select one authorized intern attendance record.';render();return;
   }
   const identity=scope.userId,boardId=scope.boardId,seq=routeSerial;
+  const editor={ojt:true,mode:'single',
+   timeOnly:timeOnly||state.ttAttendance.access.moduleRole==='IT Administrator',
+   record:preview,recordIds:ids,revision:null,verifying:true,
+   actorId:identity,workspaceId:scope.workspaceId,boardId};
+  // Present the editor immediately and wait for a fresh signed revision before writes.
+  state.ttLogAdminEditor=editor;
   state.ttLogAdminBusy=true;state.ttLogAdminError='';state.ttLogAdminSuccess='';render();
   try{
    const signed=await timeTrackerOjt.adminAttendance(scope);
    if(seq!==routeSerial||!timeTrackerOjtLogAdminScope()||
-      state.context?.user_id!==identity||state.boardId!==boardId)return;
+      state.context?.user_id!==identity||state.boardId!==boardId||
+      state.ttLogAdminEditor!==editor)return;
    const row=signed.records.find(item=>'ojt:'+item.id===ids[0]);
-   if(!row||!Number.isSafeInteger(row.revision)||row.revision<1)
-    throw Error('OJT record revision is unavailable. Deploy the signed OJT admin migration and refresh the Log.');
-   state.ttLogAdminEditor={ojt:true,mode:'single',
-    timeOnly:timeOnly||state.ttAttendance.access.moduleRole==='IT Administrator',
-    record:row,recordIds:ids,revision:row.revision,
-    actorId:identity,workspaceId:scope.workspaceId,boardId};
+   if(!row)throw Error('Intern attendance was changed or removed. Refresh Logs.');
+   const revision=Number.isSafeInteger(row.revision)&&row.revision>=1?row.revision:null;
+   state.ttLogAdminEditor={...editor,record:row,revision,verifying:false};
+   if(revision===null)
+    state.ttLogAdminError='Signed OJT editing requires database migration 20261123150000_cp_tt_ojt_admin_record_management.sql. Deploy it, then refresh Logs.';
   }catch(err){
-   if(seq===routeSerial&&state.boardId===boardId)
-    state.ttLogAdminError=errorMessage(err);
+   if(seq===routeSerial&&state.boardId===boardId&&state.ttLogAdminEditor===editor){
+    state.ttLogAdminEditor={...editor,verifying:false};
+    state.ttLogAdminError='Unable to verify OJT editing permissions: '+errorMessage(err);
+   }
   }finally{
    if(seq===routeSerial&&state.boardId===boardId){
     state.ttLogAdminBusy=false;render();
@@ -4576,6 +4584,9 @@ async function saveTimeTrackerAdminEditor(form){
   if(!scope||editor.mode!=='single'||editor.actorId!==scope.userId||
      editor.workspaceId!==scope.workspaceId||editor.boardId!==scope.boardId){
    state.ttLogAdminError='Signed OJT scope changed. Reopen the attendance editor.';render();return;
+  }
+  if(!Number.isSafeInteger(editor.revision)||editor.revision<1){
+   state.ttLogAdminError='Signed OJT editing is not active. Deploy the OJT admin migration and refresh Logs.';render();return;
   }
   let ojtPlan;
   try{
@@ -4651,14 +4662,14 @@ function deleteTimeTrackerAdminRecords(recordIds){
   const scope=timeTrackerOjtLogAdminScope();
   const row=timeTrackerLogRowsForSnapshot(state.ttAttendance).find(r=>
    r.isOjt&&r.id===ids[0]);
-  if(!scope||ids.length!==1||!row||
-     !Number.isSafeInteger(row.revision)||row.revision<1){
-   state.ttLogAdminError='Intern record revision unavailable. Refresh after deploying the signed OJT administration service.';
-   render();return;
+  if(!scope||ids.length!==1||!row){
+   state.ttLogAdminError='Select one authorized intern attendance record.';render();return;
   }
+  const revision=Number.isSafeInteger(row.revision)&&row.revision>=1?row.revision:null;
   state.ttLogAdminError='';state.ttLogAdminSuccess='';
   state.ttLogAdminDeleteConfirm={ojt:true,recordIds:ids,
-   revision:row.revision,records:[{id:row.id,name:row.name,clockIn:row.clockIn,status:row.status}]};
+   revision,records:[{id:row.id,name:row.name,clockIn:row.clockIn,status:row.status}],
+   error:revision===null?'Signed OJT deletion requires database migration 20261123150000_cp_tt_ojt_admin_record_management.sql. Deploy it, then refresh Logs.':''};
   render();root.querySelector('[data-action="tt-log-admin-delete-cancel"]')?.focus();
   return;
  }
@@ -9853,13 +9864,15 @@ async function action(name,button){
   const selectedRow=rows.find(r=>r.id===id);
   if(!selectedRow)return;
   if(selectedRow.isOjt){
-   // OJT identities are read-only here, not normal employee records.
+   // OJT selection is individual-only and never enters standard employee bulk operations.
+   if(timeTrackerAdminLogReady()&&state.ttAttendance.access.moduleRole==='System Admin')
+    state.ttLogSelectedIds=[id];
    state.ttLogExpandedIds=[id];render();
    root.querySelector('[data-tt-log-detail-dialog] [data-action="tt-log-detail-close"]')?.focus();
    break;
   }
   if(timeTrackerAdminLogReady()&&state.ttAttendance.access?.moduleRole==='System Admin'&&!state.ttLogAdminBusy){
-   let selected=new Set(state.ttLogSelectedIds);
+   let selected=new Set(state.ttLogSelectedIds.filter(id=>!String(id).startsWith('ojt:')));
    if(button.dataset.shiftSelect==='true'){
     const standardIds=new Set(state.ttAttendance.log?.rows?.map(row=>row.id)||[]);
     const order=[...root.querySelectorAll('.tt-log-filterable:not([hidden])')]
@@ -9900,9 +9913,22 @@ async function action(name,button){
  case 'tt-log-detail-toggle-select':{
   if(!timeTrackerAdminLogReady()||state.ttAttendance.access.moduleRole!=='System Admin'||state.ttLogAdminBusy)return;
   const id=button.dataset.recordId;
-  if(!state.ttLogExpandedIds.includes(id)||
-     !(state.ttAttendance.log?.rows||[]).some(row=>row.id===id))return;
-  const selected=new Set(state.ttLogSelectedIds);
+  const record=timeTrackerLogRowsForSnapshot(state.ttAttendance).find(row=>row.id===id);
+  if(!state.ttLogExpandedIds.includes(id)||!record)return;
+  if(record.isOjt){
+   if(state.ttLogSelectedIds.includes(id)){
+    state.ttLogSelectedIds=state.ttLogSelectedIds.filter(value=>value!==id);
+    state.ttLogExpandedIds=[];
+    render();
+    [...root.querySelectorAll('[data-action="tt-log-open-detail"]')]
+     .find(row=>row.dataset.recordId===id)?.focus();
+   }else{
+    state.ttLogSelectedIds=[id];render();
+    root.querySelector('[data-action="tt-log-detail-toggle-select"]')?.focus();
+   }
+   break;
+  }
+  const selected=new Set(state.ttLogSelectedIds.filter(value=>!String(value).startsWith('ojt:')));
   if(selected.has(id))selected.delete(id);
   else if(selected.size<TT_ADMIN_RECORD_LIMIT)selected.add(id);
   else {toast('Select at most '+TT_ADMIN_RECORD_LIMIT+' attendance records.',true);return;}
@@ -9911,8 +9937,8 @@ async function action(name,button){
  }
  case 'tt-log-admin-select-visible':{
   if(!timeTrackerAdminLogReady()||state.ttAttendance.access.moduleRole!=='System Admin'||state.ttLogAdminBusy)return;
-  const selected=new Set(state.ttLogSelectedIds);
   const standardIds=new Set(state.ttAttendance.log?.rows?.map(row=>row.id)||[]);
+  const selected=new Set(state.ttLogSelectedIds.filter(id=>standardIds.has(id)));
   const ids=[...root.querySelectorAll('.tt-log-filterable:not([hidden])')]
    .map(row=>row.dataset.recordId).filter(id=>standardIds.has(id));
   for(const id of ids){
@@ -9941,7 +9967,7 @@ async function action(name,button){
  }
  case 'tt-log-admin-bulk-edit':{
   if(!timeTrackerAdminLogReady()||state.ttAttendance.access.moduleRole!=='System Admin')return;
-  await openTimeTrackerAdminEditor(state.ttLogSelectedIds,'bulk');break;
+  await openTimeTrackerAdminEditor(state.ttLogSelectedIds.filter(id=>!String(id).startsWith('ojt:')),'bulk');break;
  }
  case 'tt-log-admin-delete':{
   if(!timeTrackerAdminLogReady())return;
@@ -9955,7 +9981,7 @@ async function action(name,button){
  }
  case 'tt-log-admin-bulk-delete':{
   if(!timeTrackerAdminLogReady()||state.ttAttendance.access.moduleRole!=='System Admin')return;
-  await deleteTimeTrackerAdminRecords(state.ttLogSelectedIds);break;
+  await deleteTimeTrackerAdminRecords(state.ttLogSelectedIds.filter(id=>!String(id).startsWith('ojt:')));break;
  }
  case 'tt-log-admin-clear-selection':{
   if(state.ttAttendance?.access?.moduleRole!=='System Admin')return;

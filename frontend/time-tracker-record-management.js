@@ -281,8 +281,8 @@ export function renderTimeTrackerAdminDeleteDialog({confirmation=null,busy=false
     (names.length?'<div class="tt-admin-delete-records"><span>Selected records</span><ul>'+names.map(name=>'<li>'+esc(name)+'</li>').join('')+
       (extra?'<li>and '+extra+' more</li>':'')+'</ul></div>':'')+
     '<div class="tt-admin-delete-audit-note"><strong>Audit evidence is retained</strong><span>The private administrative before/after audit history is not deleted.</span></div>'+
-    (error?'<p class="tt-admin-error" role="alert">'+esc(error)+'</p>':'')+
+    (error||confirmation.error?'<p class="tt-admin-error" role="alert">'+esc(error||confirmation.error)+'</p>':'')+
     '<footer class="tt-admin-delete-actions"><button type="button" data-action="tt-log-admin-delete-cancel"'+(busy?' disabled':'')+'>Cancel</button>'+
-    '<button type="button" class="tt-admin-delete-confirm" data-action="tt-log-admin-delete-confirm"'+(busy?' disabled':'')+'>'+(busy?'Deleting…':bulk?'Delete '+ids.length+' records':'Delete record')+'</button></footer>'+
+    '<button type="button" class="tt-admin-delete-confirm" data-action="tt-log-admin-delete-confirm"'+(busy||(confirmation.ojt&&(!Number.isSafeInteger(confirmation.revision)||confirmation.revision<1))?' disabled':'')+'>'+(busy?'Deleting…':bulk?'Delete '+ids.length+' records':'Delete record')+'</button></footer>'+
     '</section></div>';
 }

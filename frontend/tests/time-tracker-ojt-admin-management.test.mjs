@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {timeTrackerLogRowsForSnapshot,retainTimeTrackerLogDetailIds,renderTimeTrackerLog,filterTimeTrackerLogRows,timeTrackerLogCsv} from '../time-tracker-log.js';
 import {projectOjtAdminAttendance,TimeTrackerOjtClient} from '../apps/TimeTracker/time-tracker-ojt.js';
 import {renderTimeTrackerOjtAdminEditor,buildTimeTrackerOjtAdminPatch} from '../apps/TimeTracker/time-tracker-ojt-admin-editor.js';
+import {renderTimeTrackerAdminDeleteDialog} from '../time-tracker-record-management.js';
 
 const scope={userId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
  workspaceId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
@@ -100,7 +101,7 @@ test('OJT records in Log use same correct/edit/delete actions, no generic GPS or
   expandedRecordIds:['ojt:'+recordId],adminEligible:true,adminFullAccess:true});
  for(const action of ['tt-log-admin-correct-time','tt-log-admin-edit','tt-log-admin-delete'])
   assert.match(html,new RegExp('data-action="'+action+'"'));
- assert.doesNotMatch(html,/data-action="tt-log-detail-toggle-select"/);
+ assert.match(html,/data-action="tt-log-detail-toggle-select"/);
  assert.doesNotMatch(html,/data-action="tt-log-gps-load"/);
 });
 
@@ -124,6 +125,84 @@ test('OJT Log detail selection persists across render and respects signed role s
  assert.deepEqual(retainTimeTrackerLogDetailIds({...snapshot,status:'UNVERIFIED'},[id]),[]);
  const app=readFileSync('frontend/app.js','utf8');
   assert.ok(app.includes('state.ttLogExpandedIds=retainTimeTrackerLogDetailIds(state.ttAttendance,state.ttLogExpandedIds)'));
+});
+
+test('OJT Correct time opens the regular attendance-style modal with editable saved times',()=>{
+ const completed={...input,clockOut:'2026-11-23T08:20:00.000Z'};
+ const html=renderTimeTrackerOjtAdminEditor({editor:{
+  ojt:true,record:completed,timeOnly:true,revision:2}});
+ assert.match(html,/data-tt-admin-dialog/);
+ assert.match(html,/Correct attendance times/);
+ assert.match(html,/name="clockInAt"/);
+ assert.match(html,/name="clockOutAt"/);
+ assert.match(html,/Save time correction<\\/button>/);
+ assert.doesNotMatch(html,/type="submit" class="primary" disabled/);
+ const corrected=buildTimeTrackerOjtAdminPatch(form({
+  clockInAt:'2026-11-23 10:00 AM',clockOutAt:'2026-11-23 04:00 PM',
+  reason:'Verified original shift'
+ }),{record:completed,timeOnly:true});
+ assert.deepEqual(corrected.patch,{
+  clockInAt:'2026-11-23T02:00:00.000Z',
+  clockOutAt:'2026-11-23T08:00:00.000Z'
+ });
+});
+
+test('System Admin OJT Edit Record permits clock-out completion but protects intern identity and GPS',()=>{
+ const html=renderTimeTrackerOjtAdminEditor({editor:{
+  ojt:true,record:input,timeOnly:false,revision:2}});
+ assert.match(html,/Edit attendance record/);
+ for(const name of ['clockInAt','clockOutAt','location','workNote'])
+  assert.match(html,new RegExp('name="'+name+'"'));
+ assert.match(html,/value="Intern Alpha" readonly/);
+ assert.match(html,/value="OJT" readonly/);
+ assert.doesNotMatch(html,/name="employeeId"|name="department"|name="clockInGeolatitude"/);
+ assert.doesNotMatch(html,/type="submit" class="primary" disabled/);
+ const command=buildTimeTrackerOjtAdminPatch(form({
+  clockInAt:'2026-11-23 10:20 AM',clockOutAt:'2026-11-23 04:30 PM',
+  location:'Office-Base Duty',workNote:'',reason:'Admin completed session'
+ }),{record:input,timeOnly:false});
+ assert.deepEqual(command.patch,{clockOutAt:'2026-11-23T08:30:00.000Z'});
+});
+
+test('OJT delete always has a warning, but an unverified revision cannot confirm a write',()=>{
+ const id='ojt:'+recordId;
+ const confirmation={ojt:true,recordIds:[id],revision:null,
+  records:[{name:'Intern Alpha'}],
+  error:'OJT administration migration required'};
+ const warning=renderTimeTrackerAdminDeleteDialog({confirmation});
+ assert.match(warning,/role="alertdialog"/);
+ assert.match(warning,/Delete OJT attendance record/);
+ assert.match(warning,/Intern Alpha/);
+ assert.match(warning,/OJT administration migration required/);
+ assert.match(warning,/data-action="tt-log-admin-delete-confirm" disabled/);
+ const permitted=renderTimeTrackerAdminDeleteDialog({
+  confirmation:{...confirmation,error:'',revision:2}});
+ assert.doesNotMatch(permitted,/data-action="tt-log-admin-delete-confirm" disabled/);
+});
+
+test('OJT individual Remove selection never enables ordinary employee bulk edits',()=>{
+ const id='ojt:'+recordId,rows=timeTrackerLogRowsForSnapshot(log());
+ const html=renderTimeTrackerLog({records:rows,expandedRecordIds:[id],
+  selectedIds:[id],adminEligible:true,adminFullAccess:true});
+ assert.match(html,/Remove selection/);
+ assert.match(html,/aria-pressed="true"/);
+ assert.match(html,/data-action="tt-log-admin-bulk-edit" disabled/);
+ assert.match(html,/data-action="tt-log-admin-bulk-delete" disabled/);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/state\\.ttLogSelectedIds=\\[id\\]/);
+ assert.match(app,/if\\(record\\.isOjt\\)/);
+ assert.match(app,/state\\.ttLogExpandedIds=\\[\\]/);
+ assert.match(app,/timeTrackerOjt\\.adminAttendance\\(scope\\)/);
+ assert.match(app,/Signed OJT editing requires database migration/);
+});
+
+test('Pending OJT signed verification opens a correction dialog but disables saving',()=>{
+ const html=renderTimeTrackerOjtAdminEditor({editor:{
+  ojt:true,record:input,timeOnly:true,revision:null,verifying:true}});
+ assert.match(html,/data-ojt-admin-editor="true"/);
+ assert.match(html,/Verifying current signed OJT attendance/);
+ assert.match(html,/name="clockInAt"/);
+ assert.match(html,/type="submit" class="primary" disabled/);
 });
 
 test('OJT signed mutator validates actor/board/revision and never uses ordinary record RPC',async()=>{
