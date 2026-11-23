@@ -57,7 +57,9 @@ The existing assigned-document endpoint remains available and now also returns `
 - `npm run build`: passed. Existing large-bundle warning remains; no build failure.
 - Targeted ESLint: passed.
 - `git diff --check`: passed.
-- Production data audit: 25 documents; all 25 have non-empty `customerName`; no missing `created_at`; 24 have `updated_at > created_at`.
+- Initial production data audit at migration deployment: 25 documents; all 25 had non-empty `customerName`; no missing `created_at`; 24 had `updated_at > created_at`.
+- Follow-up read-only production audit after subsequent live document activity: 27 documents; 26 have non-empty `customerName`; one document has no persisted customer identity; zero have missing `created_at`.
+- The record `Q-011133` has no `customerName`, `clientName`, or `customer` value in its persisted JSON, and its linked Board item title is only the document number. The UI and saved preview correctly show an em dash for this absent value. No customer identity was inferred or backfilled.
 - Database postflight: migration recorded, creation index present, public RPC remains invoker, private page helper is definer, authenticated execution present, anonymous execution absent.
 
 ## Remaining acceptance
