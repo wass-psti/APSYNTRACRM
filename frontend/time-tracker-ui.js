@@ -11,7 +11,7 @@ import {
 import {timeTrackerManilaDay} from './time-tracker-policy.js';
 import {formatTimeTrackerAutoClockoutTime} from './time-tracker-auto-clockout.js';
 import {renderTimeTrackerOverview} from './time-tracker-overview.js';
-import {renderTimeTrackerLog} from './time-tracker-log.js';
+import {renderTimeTrackerLog,timeTrackerLogRowsForSnapshot} from './time-tracker-log.js';
 import {renderTimeTrackerReports} from './time-tracker-reports.js';
 import {renderTimeTrackerCalendar} from './time-tracker-calendar.js';
 import {renderTimeTrackerOvertime} from './time-tracker-overtime.js';
@@ -368,7 +368,8 @@ export function renderTimeTrackerNative({
  result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',workPlanDraft='',ojtWorkPlanDraft='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',clockCorrectionNotice='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError='',
  adminEligible=false,adminFullAccess=adminEligible,adminDirectory=[],adminSelectedIds=[],adminEditor=null,adminDeleteConfirm=null,adminBusy=false,adminError='',adminSuccess='',
- ojtSelected=null,ojtAttendance=null,ojtBusy=false,ojtError='',ojtSuccess=''
+ ojtSelected=null,ojtAttendance=null,ojtBusy=false,ojtError='',ojtSuccess='',
+ ojtLocationSelection='Office-Base Duty',ojtGeoProgress=''
 }={}){
  const verified=result?.status==='VERIFIED_READ';
  const selected=((view==='team'&&teamEligible!==true)||
@@ -397,7 +398,8 @@ export function renderTimeTrackerNative({
  }
  if(sharedOjt){
   html+=renderTimeTrackerOjtClock({roster:result.ojtRoster,selected:ojtSelected,
-   attendance:ojtAttendance,busy:busy||ojtBusy,error:ojtError,success:ojtSuccess,workPlanDraft:ojtWorkPlanDraft});
+   attendance:ojtAttendance,busy:busy||ojtBusy,error:ojtError,success:ojtSuccess,
+   workPlanDraft:ojtWorkPlanDraft,locationSelection:ojtLocationSelection,geoProgress:ojtGeoProgress});
   html+=applicationFooter()+'</div></section>';
   return html;
  }
@@ -417,7 +419,7 @@ export function renderTimeTrackerNative({
     employees:result.access?.employees?.members||[]});
  }
  if(selected==='log')html+=renderTimeTrackerLog({
-  records:result.log?.rows||result.records,
+  records:timeTrackerLogRowsForSnapshot(result),
   scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
   filters:logFilters,now,busy,
   gpsEligible:logGpsEligible,gpsData:logGpsData,gpsBusy:logGpsBusy,gpsError:logGpsError,
