@@ -256,8 +256,8 @@ export function renderTimeTrackerOverview({
   '<section class="tt-overview-metrics" aria-label="Today attendance summary">'+
    [
     ['Employees',overview.peopleCount],['Active',overview.activeCount],
-    ['Completed',overview.completedCount],['Late today',overview.lateCount],
-    ['Avg hours',hours(overview.averageCreditedMs)],['Still working',overview.activeCount]
+    ['Completed',overview.completedCount],['On-Site',overview.onsiteCount],
+    ['Late',overview.lateCount],['Avg Hours',hours(overview.averageCreditedMs)]
    ].map(([label,value])=>'<div class="tt-overview-metric"><strong>'+
      escapeHtml(value)+'</strong><span>'+escapeHtml(label)+'</span></div>').join('')+
    '<div class="tt-on-time"><span>On-time rate</span><div class="tt-on-time-bar"><i class="'+bucket(overview.onTimeRate??0)+'"></i></div><b>'+
