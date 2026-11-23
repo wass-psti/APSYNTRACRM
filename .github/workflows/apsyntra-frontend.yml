@@ -353,6 +353,7 @@ jobs:
             -f sql/tests/cp-tt-ot02-disposable-setup.sql \
             -f sql/cp-tt-ot01-staged-bootstrap-approval.sql \
             -f supabase/migrations/20261123160000_cp_tt_manual_ot_01_manual_submission_and_scoped_review.sql \
+            -f supabase/migrations/20261123170000_cp_tt_hr_ot_all_user_log_01.sql \
             -f sql/tests/cp-tt-ot02-disposable-acceptance.sql \
             -f sql/cp-tt-monitor01-staged-health.sql \
             -f sql/tests/cp-tt-monitor01-disposable-acceptance.sql \

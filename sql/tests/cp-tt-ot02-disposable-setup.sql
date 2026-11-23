@@ -11,6 +11,19 @@ BEGIN
  END IF;
 END $$;
 CREATE SCHEMA auth;
+CREATE SCHEMA realtime;
+CREATE TABLE realtime.messages(
+ id bigserial PRIMARY KEY,
+ payload jsonb NOT NULL,
+ event text NOT NULL,
+ topic text NOT NULL,
+ private boolean NOT NULL
+);
+CREATE FUNCTION realtime.send(payload jsonb,event text,topic text,private boolean DEFAULT true)
+RETURNS void LANGUAGE sql AS $$
+ INSERT INTO realtime.messages(payload,event,topic,private)
+ VALUES($1,$2,$3,$4)
+$$;
 GRANT USAGE ON SCHEMA auth,public TO authenticated,anon;
 
 CREATE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$

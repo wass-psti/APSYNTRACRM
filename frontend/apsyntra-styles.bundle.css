@@ -14174,6 +14174,15 @@ html[data-aps-monday-theme="dark"] .ws02-invite-state.is-declined{background:#48
  color:#5c6e86;
 }
 
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-more{
+ justify-self:start;min-height:38px;padding:9px 13px;
+ border:1px solid #d5def3;border-radius:8px;background:#f5f7ff;
+ color:#425a9a;font-size:11px;font-weight:740;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-more:hover{
+ background:#edf1ff;border-color:#aab9e7;
+}
+
 /* frontend/time-tracker-my-hours-command.css */
 /* CP-TT-HOURS-VIS01: Personal My Hours presentation only.
  * Signed self-only data and original 45h credit policy are unchanged.

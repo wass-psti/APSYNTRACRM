@@ -221,12 +221,21 @@ test('SQL server contract is staged and enforces bootstrap decision gate and aud
  assert.doesNotMatch(migration,/UPDATE public\.timetracker_ot_requests\s+SET\s+submitted_by/);
  assert.doesNotMatch(migration,/submitted_by SET NOT NULL/);
  assert.match(migration,/v_source='manual_admin'/);
+ const historyMigration=readFileSync('supabase/migrations/20261123170000_cp_tt_hr_ot_all_user_log_01.sql','utf8');
+ assert.match(historyMigration,/LEFT JOIN public\.workspace_members wm/);
+ assert.match(historyMigration,/r\.submission_source='manual_admin'/);
+ assert.match(historyMigration,/timetracker_ot_realtime_broadcast_change/);
+ assert.match(historyMigration,/realtime\.send/);
+ assert.match(historyMigration,/board-change/);
+ assert.match(historyMigration,/OT_'\|\|TG_OP/);
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/tt-ot-open/);
  assert.match(app,/tt-ot-current/);
  assert.match(app,/tt-ot-manual-form/);
  assert.match(app,/tt-ot-week-jump-form/);
  assert.match(app,/TT_OT_WRITES_ACCEPTED/);
+ assert.match(app,/case 'tt-ot-manual-more'/);
+ assert.match(app,/ttOtManualVisibleCount/);
 });
 
 test('overtime search retains same-status request nodes for immediate query broadening',()=>{
