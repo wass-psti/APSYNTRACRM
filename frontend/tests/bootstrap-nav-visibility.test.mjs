@@ -16,8 +16,8 @@ const renderSidebar=new Function('state','TRADELINK_BOARD_ID','TRADELINK_APPLICA
  'signedCrmRoleLabel','signedCrmIdentityLabel','workspaceRelationLabel','currentSidebarNavigation',
  'BOARD_MODULES','STANDALONE_APPLICATION_MODULE_KEYS','moduleByBoardName','workspaceApplicationsForNavigation','isStandaloneApplicationBoard',sidebarSource+'\nreturn sidebar();');
 const nav=(href,label)=>`<a href="${href}">${label}</a>`;
-const render=({roleVerified,platform_role='employee',search='',workspaceId='test-workspace',boards=[]})=>renderSidebar(
- {roleVerified,boards,view:'overview',boardId:null,
+const render=({roleVerified,platform_role='employee',search='',workspaceId='test-workspace',boards=[],workspaceTransitionPending=false})=>renderSidebar(
+ {roleVerified,boards,workspaceTransitionPending,view:'overview',boardId:null,
   context:{user_id:'test-user',workspace_id:workspaceId,profile:{platform_role}}},
  '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88','#/tradelink','#/fueltrack',{search},showEngineeringDiagnostics,nav,()=>'',()=>'',()=> 'Test workspace',()=> 'Test user',()=> 'TU',String,()=>'',signedCrmRoleLabel,signedCrmIdentityLabel,workspaceRelationLabel,()=> 'overview',[],new Set(),()=>null,workspaceApplicationsForNavigation,()=>false
 );
@@ -83,4 +83,12 @@ test('application navigation is rendered only for the owning Work Management wor
  for(const href of ['#/overview','#/boards','#/user-role-management','#/settings'])
   assert.ok(otherPrimary.includes('href=\"'+href+'\"'),href);
  assert.match(otherWorkspace,/Personal board/);
+});
+
+test('the application section disappears immediately while a verified workspace transition is loading',()=>{
+ const boards=WORK_MANAGEMENT_BOARD_APPLICATIONS.map(application=>({id:application.boardId,name:application.name}));
+ const pending=render({workspaceId:WORK_MANAGEMENT_WORKSPACE_ID,boards,workspaceTransitionPending:true});
+ const primary=pending.split('<nav class="nav-list" aria-label="Primary">')[1].split('</nav>')[0];
+ assert.doesNotMatch(primary,/Applications|FM1 Ticketing|TimeTracker|Fund Tracker|FuelTrack\+|TradeLink|Paseo de Lomboy|TalkBox/);
+ assert.match(primary,/#\/overview/);
 });

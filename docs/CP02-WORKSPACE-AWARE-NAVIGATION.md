@@ -44,7 +44,7 @@ This is client-side application placement and navigation behavior only. It does 
 
 When an already initialized session's user or workspace identity changes, `refreshWorkspace()` clears the previous workspace's board, archived and trashed catalogs and native application state before loading the new workspace catalog. It returns the view to Overview and replaces the route so old workspace board or application state is not rendered while the new catalog is loading.
 
-Initial session initialization is unchanged and continues to support legitimate direct application deep links after the signed workspace context is established. The existing verified workspace-switch receipt and full reload behavior remain intact.
+Initial session initialization is unchanged and continues to support legitimate direct application deep links after the signed workspace context is established. After a verified workspace-switch receipt, the app immediately hides the previous workspace application section, clears visible board state, changes the route to Overview, and refreshes the signed workspace context and board catalog in place. It then renders the new workspace without a page reload. Background reconciliation is paused only during this short transition. If the context refresh fails after the server has committed the switch, the previous workspace stays hidden and the existing Refresh action retries the signed context read.
 
 ## Files changed
 
@@ -52,6 +52,9 @@ Initial session initialization is unchanged and continues to support legitimate 
 - `frontend/app.js` — manifest-backed Applications section, route ownership handling, and stale workspace-state cleanup.
 - `frontend/tests/workspace-application-routing.test.mjs` — route ownership, deep links, navigation catalog, ordinary CRM route compatibility and workspace transition regression coverage.
 - Existing sidebar/application tests updated to assert the new manifest-backed navigation contract instead of hard-coded link strings.
+- `frontend/workspace-ui.js` — forwards the verified switch receipt and target workspace to the in-place app transition for both existing and newly created workspaces.
+- Workspace-switch tests cover verified receipt handoff and no-reload transition behavior.
+- `frontend/tests/bootstrap-nav-visibility.test.mjs` exercises the actual sidebar renderer for Work Management, Main Workspace, and the immediate transition state.
 - `scripts/cp02-workspace-application-routing-browser.mjs` — Chromium browser acceptance for module loading, desktop/mobile viewports, 15-entry Work Management navigation, empty foreign-workspace navigation, and route ownership.
 
 ## Acceptance criteria
@@ -70,23 +73,30 @@ Initial session initialization is unchanged and continues to support legitimate 
 | Independently created board route                                | Unchanged                                                                                    |
 | Existing workspace identity changes in-session                   | Previous workspace catalog and app state cleared before new catalog load                     |
 | Initial deep link after session initialization                   | Existing route restoration remains supported                                                 |
-| Workspace switch                                                 | Existing verified switch and reload behavior preserved                                       |
+| Workspace switch                                                 | Verified server receipt followed by in-place context/catalog refresh; no page reload         |
+| Transition while switching                                       | Previous workspace application links and board catalog hidden immediately                    |
+| Refresh after an interrupted transition                          | Signed context is re-read and pending transition clears only for the confirmed workspace     |
 | Desktop and mobile browser module execution                      | No page errors; same application ownership result                                            |
 | Training constraint                                              | No training, retraining, fine-tuning, gradient descent or model parameter updates introduced |
 
 ## Verification evidence
 
-- Full repository automated test suite: **3,415 passed, 0 failed** (final run recorded after implementation).
-- Focused workspace/application route tests: **13 passed**.
-- Existing sidebar and application integration tests: **all passed**.
-- Chromium browser acceptance: **PASS** at 1440×900 and 390×844.
+- Full repository automated test suite: **3,417 passed, 0 failed**.
+- Focused workspace/application and switch-transition tests: **28 passed, 0 failed** (final focused run before the final full-suite rerun).
+- Existing sidebar and application integration tests: **all passed**, including direct execution of the actual sidebar renderer for Work Management, Main Workspace, and pending transition state.
+- Chromium browser acceptance for workspace application ownership: **PASS** at 1440×900 and 390×844 in the CP02 base implementation.
   - Work Management application entries: 15.
   - Foreign workspace application entries: 0.
   - Foreign-workspace direct application routes incorrectly allowed: 0.
   - Owner-workspace application routes incorrectly denied: 0.
   - Ordinary CRM and custom board routes preserved.
   - Browser page errors: 0.
-- Repository syntax checks, build and lint: PASS. Build retains the repository’s existing non-blocking large-chunk size warning.
+- Final Chromium acceptance script: **PASS** at desktop and mobile viewports; Work Management 15 entries, foreign workspace 0 entries, 0 incorrectly allowed foreign application routes, and 0 incorrectly denied owner routes.
+- `npm run check`: **PASS**.
+- `npm run build`: **PASS**; retains the repository’s existing non-blocking large-chunk size warning.
+- `npm run lint`: **PASS**.
+- Targeted ESLint for all changed JavaScript and test files: **PASS**.
+- Prettier check for the updated handoff document: **PASS**.
 
 ## Explicitly unchanged
 
@@ -100,4 +110,4 @@ Initial session initialization is unchanged and continues to support legitimate 
 
 ## Deployment state
 
-This checkpoint is implemented and verified locally. It is not deployed until the repository's normal branch/review/deployment process completes. CP01 remains the parent commit on the current feature branch.
+CP01/CP02 and the in-place switch follow-up are local to `cp01-workspace-identity-ownership`. The live GitHub Pages tab still serves `origin/main`, which contains the older hard-coded sidebar links. Production remains unchanged until the normal branch review, CI and deployment process completes.

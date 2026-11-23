@@ -210,12 +210,23 @@ test("app shell consumes the ownership manifest for sidebar and checks route own
   assert.ok(routeGuard > 0 && fm1Import > routeGuard);
 });
 
-test("workspace switch continues to reload the app after the existing verified switch receipt", () => {
+test("workspace switch reconciles the new signed workspace in place without a page reload", () => {
   const app = readFileSync("frontend/app.js", "utf8");
-  assert.match(
-    app,
-    /onWorkspaceSwitched:\(\)=>\{[\s\S]*?location\.hash='#\/overview';\s*location\.reload\(\);/,
-  );
+  const start = app.indexOf("onWorkspaceSwitched:async(receipt,targetWorkspace)=>{");
+  const end = app.indexOf("}});", start);
+  const handler = app.slice(start, end);
+  assert.ok(start > 0 && end > start);
+  assert.match(handler, /receipt\.previousWorkspaceId!==previousWorkspaceId/);
+  assert.match(handler, /state\.workspaceTransitionPending=true/);
+  assert.match(handler, /state\.workspaceTransitionTargetId=receipt\.workspaceId/);
+  assert.match(handler, /state\.boards=\[\];state\.archived=\[\];state\.trashed=\[\]/);
+  assert.match(handler, /await refreshWorkspace\(\)/);
+  assert.match(handler, /await onRoute\(\)/);
+  assert.match(handler, /closeWorkspacePanels\(\)/);
+  assert.doesNotMatch(handler, /location\.reload\(\)/);
+  assert.match(app, /if\(state\.workspaceTransitionPending\)return false/);
+  assert.match(app, /if\(state\.workspaceTransitionPending\)/);
+  assert.match(app, /state\.context\?\.workspace_id===state\.workspaceTransitionTargetId/);
 });
 
 test("a changed workspace clears the previous workspace catalog and app state before loading new boards", () => {
@@ -239,6 +250,8 @@ test("a changed workspace clears the previous workspace catalog and app state be
   );
   assert.match(refresh, /state\.view='overview'/);
   assert.match(refresh, /pendingNativeSearchSelection=null/);
+  assert.match(refresh, /state\.context\?\.workspace_id===state\.workspaceTransitionTargetId&&/);
+  assert.match(refresh, /!state\.boardCatalogError/);
   assert.match(
     refresh,
     /history\.replaceState\(null,'',location\.pathname\+location\.search\+routeHome\)/,
