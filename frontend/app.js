@@ -9551,7 +9551,9 @@ async function action(name,button){
   if(timeTrackerAdminLogReady()&&state.ttAttendance.access?.moduleRole==='System Admin'&&!state.ttLogAdminBusy){
    let selected=new Set(state.ttLogSelectedIds);
    if(button.dataset.shiftSelect==='true'){
-    const order=[...root.querySelectorAll('.tt-log-filterable:not([hidden])')].map(row=>row.dataset.recordId);
+    const standardIds=new Set(state.ttAttendance.log?.rows?.map(row=>row.id)||[]);
+    const order=[...root.querySelectorAll('.tt-log-filterable:not([hidden])')]
+     .map(row=>row.dataset.recordId).filter(id=>standardIds.has(id));
     const last=state.ttLogSelectedIds.at(-1),start=order.indexOf(last),end=order.indexOf(id);
     if(start>=0&&end>=0){
      for(const candidate of order.slice(Math.min(start,end),Math.max(start,end)+1)){
@@ -9588,7 +9590,8 @@ async function action(name,button){
  case 'tt-log-detail-toggle-select':{
   if(!timeTrackerAdminLogReady()||state.ttAttendance.access.moduleRole!=='System Admin'||state.ttLogAdminBusy)return;
   const id=button.dataset.recordId;
-  if(!state.ttLogExpandedIds.includes(id))return;
+  if(!state.ttLogExpandedIds.includes(id)||
+     !(state.ttAttendance.log?.rows||[]).some(row=>row.id===id))return;
   const selected=new Set(state.ttLogSelectedIds);
   if(selected.has(id))selected.delete(id);
   else if(selected.size<TT_ADMIN_RECORD_LIMIT)selected.add(id);
