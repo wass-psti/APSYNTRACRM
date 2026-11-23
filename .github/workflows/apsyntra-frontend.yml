@@ -70,6 +70,7 @@ on:
       - "sql/tests/cp-frt-ic-01-disposable-acceptance.sql"
       - "sql/cp-tt-ot01-*.sql"
       - "sql/tests/cp-tt-ot02-*.sql"
+      - "supabase/migrations/20261123160000_cp_tt_manual_ot_01_manual_submission_and_scoped_review.sql"
       - "sql/cp-tt-monitor01-*.sql"
       - "sql/cp-tt-gps02-*.sql"
       - "sql/cp-tt-gps03-*.sql"
@@ -351,6 +352,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 \
             -f sql/tests/cp-tt-ot02-disposable-setup.sql \
             -f sql/cp-tt-ot01-staged-bootstrap-approval.sql \
+            -f supabase/migrations/20261123160000_cp_tt_manual_ot_01_manual_submission_and_scoped_review.sql \
             -f sql/tests/cp-tt-ot02-disposable-acceptance.sql \
             -f sql/cp-tt-monitor01-staged-health.sql \
             -f sql/tests/cp-tt-monitor01-disposable-acceptance.sql \
