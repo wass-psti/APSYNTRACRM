@@ -241,6 +241,7 @@ jobs:
         run: |
           sh scripts/cp-ft-ui06-gotrue-postgrest.sh
       - name: Verify TradeLink creation-order pagination and reviewer merge in disposable PostgreSQL 17
+        if: always()
         env:
           PGPASSWORD: disposable_only
           PGHOST: 127.0.0.1
