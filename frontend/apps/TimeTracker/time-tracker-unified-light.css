@@ -699,3 +699,11 @@
   #app .aps-board-shell.aps-time-tracker-shell .tt-native *::before,
   #app .aps-board-shell.aps-time-tracker-shell .tt-native *::after {transition:none!important;animation:none!important}
 }
+/* WCAG 2.2 AA: legacy OT sublabels used pale blue text at 10–11px. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-overtime-command :is(
+  .tt-ot-subline,.tt-ot-section-heading,.tt-ot-section-heading span
+) {
+  color:#5B6673!important;
+  font-size:12px!important;
+  line-height:1.5!important;
+}
