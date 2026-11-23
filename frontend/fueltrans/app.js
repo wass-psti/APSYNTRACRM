@@ -19,6 +19,7 @@ import {parseStationSourceCsv,reconcileStationSource,stationReconciliationCsv,ST
 import {stationCandidateEvidence} from './station-evidence07.js';
 import {buildStationOwnerReviewPacket} from './station-owner-review08.js';
 import {stageStationRegistryLocally} from './station-staging08.js';
+import {buildUnsignedStationApprovalRequest} from './station-import-plan09.js';
 import {MAX_BATCH_STATIONS,validateBatchStations,stationTicketTitle,runSequentialTicketBatch,batchOutcomeMessage} from './batch-create19.js';
 import {reconcileUncertainTicket,validateUncertainReceipt} from './ticket-reconcile21.js';
 import {TICKET_DELETION_ROLES,executeSoftDelete,executeRestore} from './ticket-delete23.js';
@@ -553,6 +554,7 @@ async function recordedStations(revision){
       <label>Approval reference (optional)<input name="approvalReference" maxlength="160" autocomplete="off" placeholder="Ticket or signed approval reference"></label>
       <button type="submit" class="secondary">Download owner-review packet</button>
       <button type="button" class="secondary" id="station-stage-json">Download sanitized staging JSON (not imported)</button>
+      <button type="button" class="secondary" id="station-approval-request">Download unsigned owner approval request</button>
       <p id="station-owner-packet-status" role="status" aria-live="polite"></p>
      </form>
     </div>
@@ -567,6 +569,17 @@ async function recordedStations(revision){
      browserDownload(`fueltrans-station-owner-review-page-${state.stationPage+1}.json`,JSON.stringify(packet,null,2));
      status.textContent='Owner-review packet prepared locally. Independent source verification is still required.';
     }catch(error){status.textContent='Owner-review packet unavailable: '+error.message;}
+   };
+   const requestButton=document.getElementById('station-approval-request');
+   if(requestButton&&evidence)requestButton.onclick=()=>{
+    if(revision!==viewRevision||state.active?.workspace_id!==workspaceId||!requestButton.isConnected)return;
+    const status=document.getElementById('station-owner-packet-status');
+    try{
+     const ownerPacket=buildStationOwnerReviewPacket(evidence,Object.fromEntries(new FormData(ownerForm)),new Date().toISOString());
+     const request=buildUnsignedStationApprovalRequest(ownerPacket,workspaceId);
+     browserDownload(`fueltrans-station-approval-unsigned-${state.stationPage+1}.json`,JSON.stringify(request,null,2));
+     status.textContent='Unsigned approval request saved locally. An independent owner signature and trusted public key are still required.';
+    }catch(error){status.textContent='Approval request unavailable: '+error.message;}
    };
    const stageButton=document.getElementById('station-stage-json');
    if(stageButton&&evidence)stageButton.onclick=async()=>{
