@@ -84,7 +84,7 @@ export function nativeApplicationModuleForRoute(hash){
 export function workspaceRouteAllowsBoardCatalogFallback(hash){
  const path=String(hash||'').split('?')[0].replace(/^#\/?/,'');
  const route=path.split('/')[0]||'overview';
- return route==='overview'||nativeApplicationModuleForRoute(hash)!==null;
+ return route==='overview'||route==='fueltrans'||nativeApplicationModuleForRoute(hash)!==null;
 }
 
 export function nativeApplicationModuleForBoardId(boardId){

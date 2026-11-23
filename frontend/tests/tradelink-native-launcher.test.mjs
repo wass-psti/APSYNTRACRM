@@ -33,6 +33,6 @@ test('TradeLink launcher remains selected throughout its native module routes',(
 
 test('TradeLink is exposed once in the native sidebar, not duplicated in recent board links',()=>{
  assert.ok(app.includes("state.boards.filter(board=>!isStandaloneApplicationBoard(board))"));
- assert.match(app,/STANDALONE_APPLICATION_MODULE_KEYS=new Set\(\['timetracker','frt','tradelink','fueltrack'\]\)/);
+ assert.match(app,/STANDALONE_APPLICATION_MODULE_KEYS=new Set\(\['timetracker','frt','tradelink','fueltrack','fueltrans'\]\)/);
  assert.ok(app.includes(".filter(board=>!isStandaloneApplicationBoard(board))"));
 });

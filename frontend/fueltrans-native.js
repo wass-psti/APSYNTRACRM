@@ -2,7 +2,7 @@ import {mountFuelTrans} from './fueltrans/app.js';
 import {connectFuelTrans} from './fueltrans/supabase-client.js';
 let mounted=null;
 /** Retain form state across host redraws, dispose on identity/workspace/board exit. */
-export function syncFuelTrans({container,auth,api,boardId,workspaceId,userId,route='dashboard',refresh=false,onMutation}){
+export function syncFuelTrans({container,auth,api,boardId,workspaceId,userId,route='dashboard',base=null,refresh=false,onMutation}){
  const key=[boardId,workspaceId,userId].join(':');
  if(mounted&&(!container||mounted.key!==key)){
   mounted.dispose();mounted.disconnect();mounted=null;
@@ -23,10 +23,11 @@ export function syncFuelTrans({container,auth,api,boardId,workspaceId,userId,rou
  const reconcileStyles=document.createElement('link');reconcileStyles.rel='stylesheet';
  reconcileStyles.href=new URL('./fueltrans/station-reconcile04.css',import.meta.url).href;
  const root=document.createElement('div');shadow.append(stylesheet,referenceStyles,operationalStyles,stationStyles,reconcileStyles,root);container.append(element);
+ const appBase=base||('#/boards/'+boardId+'/fueltrans');
  const context={auth,api,boardId,workspaceId,userId,onMutation,
   isCurrent:()=>element.isConnected&&auth.userId===userId&&
-   location.hash.startsWith('#/boards/'+boardId+'/fueltrans')};
+   (location.hash===appBase||location.hash.startsWith(appBase+'/'))};
  const disconnect=connectFuelTrans(context);
- const dispose=mountFuelTrans(root,{workspaceId,route,base:'#/boards/'+boardId+'/fueltrans'});
+ const dispose=mountFuelTrans(root,{workspaceId,route,base:appBase});
  mounted={key,element,root,disconnect,dispose,refresh:()=>root.dispatchEvent(new Event('apsyntra:refresh'))};
 }

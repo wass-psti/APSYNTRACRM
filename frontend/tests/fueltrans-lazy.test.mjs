@@ -49,6 +49,10 @@ test('embedded FuelTrans refresh preserves active editing and disposes its refre
  const app=readFileSync('frontend/fueltrans/app.js','utf8');
  const client=readFileSync('frontend/fueltrans/supabase-client.js','utf8');
  assert.match(native,/if\(refresh\)mounted\.refresh\(\)/);
+ assert.match(native,/base=null/);
+ assert.match(native,/const appBase=base\|\|/);
+ assert.match(native,/location\.hash===appBase/);
+ assert.match(native,/location\.hash\.startsWith\(appBase\+'/);
  assert.match(native,/if\(!container\.contains\(mounted\.element\)\)container\.append\(mounted\.element\)/);
  assert.match(native,/root\.dispatchEvent\(new Event\('apsyntra:refresh'\)\)/);
  assert.match(app,/root\.addEventListener\('apsyntra:refresh',refreshFromHost\)/);
