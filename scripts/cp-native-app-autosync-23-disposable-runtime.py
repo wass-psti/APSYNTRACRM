@@ -6,6 +6,7 @@ Temporary database password, network and service containers are destroyed by
 the caller's EXIT cleanup and this probe's finally block.
 """
 import json
+import base64
 import secrets
 import subprocess
 import sys
@@ -43,6 +44,18 @@ def inspect(name):
 def sql(statement):
     return docker("exec", DATABASE, "psql", "-X", "-U", "postgres",
                   "-d", DB_NAME, "-Atqc", statement).decode().strip()
+
+def sanitized_container_log(name):
+    """Inspect BOTH Docker log streams in memory; never echo raw log text."""
+    if name not in (AUTH, REST, DATABASE):
+        raise RuntimeError("Unrecognized disposable diagnostic container")
+    result = subprocess.run(["docker", "logs", "--tail", "85", name],
+                            capture_output=True, check=False)
+    if result.returncode != 0:
+        return ""
+    return (result.stdout + result.stderr).decode(errors="replace").lower()
+
+
 
 def health(service, port, path):
     # Check from the isolated PostgreSQL container itself. An --internal
@@ -93,6 +106,29 @@ def signed_http(service, port, path, workspace, payload=None, token=None):
             import re
             statuses = re.findall(rb"HTTP/[0-9.]+\s+(\d{3})", result.stderr)
             status = statuses[-1].decode() if statuses else "unknown"
+            if path == "/":
+                rest_logs = sanitized_container_log(REST)
+                signals = {
+                    "invalid-jwt": ("invalid jwt", "jwt invalid", "jwt verification"),
+                    "invalid-role": ("role does not exist", "invalid role", "role claim"),
+                    "permission-denied": ("permission denied", "insufficient privilege"),
+                    "jwt-expired": ("jwt expired", "token is expired"),
+                    "missing-token": ("missing token", "no jwt"),
+                }
+                labels = [key for key,patterns in signals.items()
+                          if any(pattern in rest_logs for pattern in patterns)]
+                print("CP24_PGRST_LOG_CLASSES=" +
+                      ",".join(labels or ["unclassified"]))
+            if path in ("/signup", "/"):
+                label = "CP24_AUTH_HTTP_ERROR_CODE" if path == "/signup" else "CP24_PGRST_ERROR_CODE"
+                try:
+                    response = json.loads(result.stdout.decode())
+                    error_code = response.get("code") or response.get("error_code") or "not-exposed"
+                    if not isinstance(error_code, str) or not error_code.replace("_", "").isalnum():
+                        error_code = "not-exposed"
+                    print(label + "=" + error_code[:64])
+                except (ValueError, UnicodeDecodeError, AttributeError):
+                    print(label + "=not-exposed")
             stage = {
                 "/signup": "auth-signup", "/token?grant_type=password": "auth-login",
                 "/user": "auth-user", "/": "data-api"
@@ -163,6 +199,10 @@ def main():
         auth_env["GOTRUE_DB_DATABASE_URL"] = conn + "?search_path=auth"
         auth_env["GOTRUE_DB_DB_NAMESPACE"] = "auth"
         auth_env["GOTRUE_JWT_SECRET"] = jwt
+        # The source local service contains an asymmetric signing keyset.
+        # Never transplant its private signing keys into this QA environment:
+        # it would sign ES256 while PostgREST uses our disposable HS256 secret.
+        auth_env["GOTRUE_JWT_KEYS"] = "[]"
         auth_env["GOTRUE_MAILER_AUTOCONFIRM"] = "true"
         auth_env["GOTRUE_DISABLE_SIGNUP"] = "false"
         rest_env["PGRST_DB_URI"] = conn
@@ -200,8 +240,50 @@ def main():
         for _ in range(3):
             email = "cp23-qa-" + secrets.token_hex(10) + "@example.com"
             password = secrets.token_urlsafe(28) + "Q9!"
-            signup = signed_http(AUTH, 9999, "/signup", env_file.parent,
-                                {"email": email, "password": password})
+            try:
+                signup = signed_http(AUTH, 9999, "/signup", env_file.parent,
+                                    {"email": email, "password": password})
+            except RuntimeError:
+                import re
+                # Only inspect error labels and SQLSTATE. Never print raw logs,
+                # tokens, body or full queries.
+                logs = sanitized_container_log(AUTH)
+                patterns = {
+                    "missing-relation": "does not exist",
+                    "permission-denied": "permission denied",
+                    "null-constraint": "null value in column",
+                    "foreign-key": "foreign key constraint",
+                    "unique-constraint": "duplicate key",
+                    "function-error": "pl/pgsql function",
+                    "transaction-failed": "current transaction is aborted",
+                    "database-error": "database error",
+                }
+                labels = [name for name, match in patterns.items() if match in logs]
+                states = sorted(set(re.findall(
+                    r"(?:sqlstate|sql_state|code)\s*[:=]\s*\"?([0-9a-z]{5})",
+                    logs)))
+                print("CP24_AUTH_SIGNUP_CLASSES=" + ",".join(labels or ["unclassified"]))
+                print("CP24_AUTH_SQLSTATES=" + ",".join(states or ["not-exposed"]))
+                # PostgreSQL logs are inspected in memory and reduced to
+                # non-sensitive SQLSTATE/known failure labels before teardown.
+                pg_logs = sanitized_container_log(DATABASE)
+                pg_labels = [name for name, match in patterns.items()
+                             if match in pg_logs]
+                pg_states = sorted(set(re.findall(
+                    r"(?:sqlstate|sql_state|code)\s*[:=]\s*\"?([0-9a-z]{5})",
+                    pg_logs)))
+                print("CP24_PG_CLASSES=" + ",".join(pg_labels or ["unclassified"]))
+                print("CP24_PG_SQLSTATES=" + ",".join(pg_states or ["not-exposed"]))
+                # Emit ONLY the database object type/name, never log lines.
+                # SQL object identifiers cannot include user emails/passwords.
+                targets = sorted(set(re.findall(
+                    r"permission denied for (schema|table|relation|sequence|function) "
+                    r"([a-z_][a-z0-9_]*)", logs + "\n" + pg_logs
+                )))
+                print("CP24_DENIED_DB_OBJECTS=" +
+                      ",".join(kind + ":" + name for kind, name in targets)
+                      if targets else "CP24_DENIED_DB_OBJECTS=not-exposed")
+                raise
             actor = (signup.get("user") or signup).get("id")
             if not actor:
                 raise RuntimeError("Genuine disposable GoTrue signup subject missing")
@@ -215,11 +297,21 @@ def main():
                                   token=token)
             if profile.get("id") != actor:
                 raise RuntimeError("Signed disposable GoTrue identity mismatch")
-            signed_http(REST, 3000, "/", env_file.parent, token=token)
             identities.append(actor)
         if len(set(identities)) != 3 or sql("SELECT count(*) FROM auth.users") != "3":
             raise RuntimeError("Exactly three distinct signed identities required")
-        print("PASS: three independently signed GoTrue users and Data API JWT round-trips")
+        print("PASS: three independent actual GoTrue signup, sign-in and signed /user checks")
+        # Inspect only non-identifying JWT header/audience/role metadata.
+        header, claims = token.split(".")[:2]
+        decoded = lambda item: json.loads(base64.urlsafe_b64decode(
+            item + "=" * (-len(item) % 4)).decode())
+        fields = decoded(header)
+        body = decoded(claims)
+        print("CP24_SIGNED_JWT_ALG=" + str(fields.get("alg", "missing"))[:12])
+        print("CP24_SIGNED_JWT_ROLE=" + str(body.get("role", "missing"))[:25])
+        print("CP24_SIGNED_JWT_AUD=" + str(body.get("aud", "missing"))[:25])
+        signed_http(REST, 3000, "/", env_file.parent, token=token)
+        print("PASS: same-backend authenticated Data API JWT request")
         print("NOT VERIFIED: newly registered module signed writer acceptance")
     finally:
         for name in reversed(created):

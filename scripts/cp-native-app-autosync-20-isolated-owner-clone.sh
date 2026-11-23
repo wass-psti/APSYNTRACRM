@@ -108,11 +108,23 @@ fi
 phase="isolated-postgres-startup"
 docker run -d --name "$name" --network "$network_arg" --env-file "$envfile" "$image" >/dev/null
 created=true
-for attempt in $(seq 1 35); do
-  if docker exec "$name" pg_isready -U postgres >/dev/null 2>&1; then break; fi
+postgres_ready=false
+for attempt in $(seq 1 90); do
+  if docker exec "$name" pg_isready -U postgres >/dev/null 2>&1; then
+    postgres_ready=true
+    break
+  fi
   sleep 0.3
 done
-docker exec "$name" pg_isready -U postgres >/dev/null
+if [[ "$postgres_ready" != true ]]; then
+  running="$(docker inspect -f '{{.State.Running}}' "$name" 2>/dev/null || echo unknown)"
+  if [[ "$running" == true ]]; then
+    echo 'CP24_PG_STARTUP_CLASS=not-ready' >&2
+  else
+    echo 'CP24_PG_STARTUP_CLASS=container-exited' >&2
+  fi
+  exit 2
+fi
 echo 'PASS: independent PostgreSQL 17 initialized without external networking'
 
 cd "$root"
@@ -175,7 +187,25 @@ docker exec -i "$name" psql -X -At -U postgres -d cp_native20_owner_clone \
   < "$root/sql/acceptance/cp-native-app-autosync-20-owner-clone.sql"
 phase="complete"
 echo 'PASS: actual staging Auth schema/table/sequence ownership verified in isolated cluster'
+if [[ "${CP24_SIGNUP_SQL_PROBE:-}" == 1 ]]; then
+  phase="auth-insert-trigger-probe"
+  docker exec -i "$name" psql -X -U postgres -v ON_ERROR_STOP=1 \
+    -d cp_native20_owner_clone -f /dev/stdin \
+    < "$root/sql/acceptance/cp-native-app-autosync-24-signup-trigger-probe.sql" 2>&1 \
+    | grep -E 'CP24_AUTH_INSERT_TRIGGER|BEGIN|ROLLBACK'
+fi
+
 if [[ "${CP23_DISPOSABLE_RUNTIME_PROBE:-}" == 1 ]]; then
+  if [[ "${CP24_AUTH_SCHEMA_USAGE_PROBE:-}" == 1 ]]; then
+    phase="disposable-auth-schema-usage"
+    # The source staging grant was omitted from the CP20 owner-only restore.
+    # Reconstruct the minimal schema USAGE required by its original table owner.
+    # This GRANT exists in the disposable clone ONLY; not in shared/local/live DB.
+    docker exec "$name" psql -X -U postgres -v ON_ERROR_STOP=1 \
+      -d cp_native20_owner_clone \
+      -c 'GRANT USAGE ON SCHEMA auth TO supabase_auth_admin;' >/dev/null
+    echo 'PASS: disposable Auth table owner schema USAGE restored'
+  fi
   phase="disposable-auth-data-api"
   python3 "$root/scripts/cp-native-app-autosync-23-disposable-runtime.py" \
     --disposable "$envfile"
