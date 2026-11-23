@@ -1,0 +1,124 @@
+/** Genuine isolated GoTrue + PostgREST OT acceptance; no production credentials. */
+import assert from 'node:assert/strict';
+import {randomBytes} from 'node:crypto';
+import {execFileSync} from 'node:child_process';
+const [authPort,restPort,db] = process.argv.slice(2);
+assert.match(authPort||'',/^\d{2,5}$/);
+assert.match(restPort||'',/^\d{2,5}$/);
+assert.match(db||'',/^cpttot02-\d+-pg$/);
+const auth=`http://127.0.0.1:${authPort}`;
+const rest=`http://127.0.0.1:${restPort}`;
+const board='10000000-0000-4000-8000-000000000021';
+const workspace='10000000-0000-4000-8000-000000000001';
+const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+const password='D1!'+randomBytes(24).toString('base64url');
+const nonce=randomBytes(8).toString('hex');
+const date=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+let checks=0;
+function sql(statement){
+ return execFileSync('docker',['exec',db,'psql','-X','-qAt','-v','ON_ERROR_STOP=1','-U','postgres','-d','postgres','-c',statement],
+  {encoding:'utf8',timeout:12000,maxBuffer:10240}).trim();
+}
+async function call(base,path,body,token){
+ const response=await fetch(base+path,{method:body===undefined?'GET':'POST',
+  headers:{accept:'application/json',...(body===undefined?{}:{'content-type':'application/json'}),
+   ...(token?{Authorization:`Bearer ${token}`}:{})},
+  ...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(10000)});
+ const raw=await response.text();let data;
+ try{data=JSON.parse(raw);}catch{data=raw;}
+ return {status:response.status,data};
+}
+async function ready(){
+ for(let i=0;i<45;i++){
+  try{const a=await call(auth,'/health'),r=await call(rest,'/');if(a.status===200&&r.status<500)return;}catch{}
+  await new Promise(resolve=>setTimeout(resolve,300));
+ }
+ throw Error('Isolated Auth/Rest readiness failed');
+}
+function expect(res,status,label){
+ assert.equal(res.status,status,`${label} returned HTTP ${res.status}: ${JSON.stringify(res.data).slice(0,250)}`);
+ checks++;
+ return res.data;
+}
+async function actor(label){
+ const email=`cpttot02-${nonce}-${label}@example.invalid`;
+ const signup=expect(await call(auth,'/signup',{email,password}),200,`${label} signup`);
+ const id=signup?.user?.id||signup?.id;
+ assert.match(id,uuid);
+ const login=expect(await call(auth,'/token?grant_type=password',{email,password}),200,`${label} login`);
+ const token=login.access_token;
+ assert.match(token||'',/^[\w-]+\./);
+ const claims=JSON.parse(Buffer.from(token.split('.')[1],'base64url').toString('utf8'));
+ assert.equal(claims.sub,id);assert.match(claims.session_id,uuid);assert.equal(claims.role,'authenticated');
+ const self=expect(await call(auth,'/user',undefined,token),200,`${label} signed user`);
+ assert.equal(self.id,id);
+ return {email,id,sessionId:claims.session_id,token};
+}
+function link(actor,label,bootstrap=false,systemAdmin=false){
+ assert.match(actor.id,uuid);
+ const role=bootstrap?'admin_general_manager':'employee';
+ sql(`INSERT INTO public.profiles(id,display_name,status,platform_role) VALUES ('${actor.id}','Synthetic ${label}','active','${role}');
+ INSERT INTO public.workspace_members VALUES ('${workspace}','${actor.id}',true);
+ INSERT INTO public.work_board_members VALUES ('${board}','${actor.id}','viewer');
+ INSERT INTO public.module_role_assignments VALUES ('${actor.id}','time-tracker',true,'${systemAdmin?'System Admin':'Employee'}');
+ ${bootstrap?`INSERT INTO public.apsyntra_role_bootstrap_identities VALUES ('${actor.id}');`:''}`);
+}
+async function rpc(actor,method,args){
+ return call(rest,`/rpc/${method}`,args,actor.token);
+}
+function receipt(res,label){const result=expect(res,200,label);assert.equal(typeof result,'object');return result;}
+function submit(actor,start,end,label){return rpc(actor,'timetracker_ot_submit',{
+ p_board_id:board,p_date:date,p_start:start,p_end:end,p_reason:`Isolated ${label} overtime work performed for testing`});}
+async function decision(actor,id,status,label){
+ const result=receipt(await rpc(actor,'timetracker_ot_decide',{p_board_id:board,p_request_id:id,p_decision:status}),label);
+ assert.equal(result.id,id);assert.equal(result.status,status);assert.equal(result.decidedBy,actor.id);
+ return result;
+}
+function assertDatabase(id,status,decider){
+ assert.match(id,uuid);assert.match(decider,uuid);
+ const row=sql(`SELECT status||'|'||decided_by::text||'|'||(decided_at IS NOT NULL)::text FROM public.timetracker_ot_requests WHERE id='${id}'`);
+ assert.equal(row,`${status}|${decider}|true`);
+ const owner=sql(`SELECT owner_id::text FROM public.timetracker_ot_requests WHERE id='${id}'`);
+ const audit=sql(`SELECT event||'|'||actor_id::text FROM public.timetracker_ot_audit WHERE request_id='${id}' ORDER BY event_id`);
+ assert.equal(audit,`submitted|${owner}\n${status.toLowerCase()}|${decider}`);
+ checks++;
+}
+await ready();
+const bootstrap=await actor('bootstrap');
+const worker=await actor('worker');
+const admin=await actor('system-admin');
+assert.equal(new Set([bootstrap.id,worker.id,admin.id]).size,3);
+link(bootstrap,'Bootstrap',true);
+link(worker,'Worker');
+link(admin,'System Admin',false,true);
+console.log('GOTRUE_THREE_REAL_SIGNED_PROFILES PASS');
+const a=receipt(await submit(bootstrap,'18:00','19:00','bootstrap self approval'),'bootstrap submit A');
+await decision(bootstrap,a.id,'Approved','bootstrap self approval');
+assertDatabase(a.id,'Approved',bootstrap.id);
+const b=receipt(await submit(bootstrap,'19:00','20:00','bootstrap self decline'),'bootstrap submit B');
+await decision(bootstrap,b.id,'Rejected','bootstrap self decline');
+assertDatabase(b.id,'Rejected',bootstrap.id);
+const c=receipt(await submit(worker,'20:00','21:00','worker request'),'worker submit C');
+await decision(bootstrap,c.id,'Approved','bootstrap approves worker');
+assertDatabase(c.id,'Approved',bootstrap.id);
+const d=receipt(await submit(worker,'21:00','22:00','worker decline'),'worker submit D');
+await decision(bootstrap,d.id,'Rejected','bootstrap declines worker');
+assertDatabase(d.id,'Rejected',bootstrap.id);
+console.log('SIGNED_SELF_AND_OTHER_DECISIONS_PERSISTED_WITH_AUDIT PASS');
+const snap=receipt(await rpc(bootstrap,'timetracker_ot_snapshot',{p_board_id:board}),'bootstrap snapshot');
+assert.equal(snap.bootstrapApprover,true);
+for(const x of [a,b,c,d])assert.ok(snap.rows.find(row=>row.id===x.id));
+const workerSnap=receipt(await rpc(worker,'timetracker_ot_snapshot',{p_board_id:board}),'worker snapshot');
+assert.equal(workerSnap.bootstrapApprover,false);
+assert.ok(workerSnap.rows.every(row=>row.ownerId===`cloud:${worker.id}`));
+const reLogin=expect(await call(auth,'/token?grant_type=password',{email:bootstrap.email,password}),200,'bootstrap reconnect login');
+const fresh={...bootstrap,token:reLogin.access_token};
+const freshSnap=receipt(await rpc(fresh,'timetracker_ot_snapshot',{p_board_id:board}),'reconnected bootstrap readback');
+for(const x of [a,b,c,d])assert.ok(freshSnap.rows.find(row=>row.id===x.id));
+expect(await rpc(worker,'timetracker_ot_decide',{p_board_id:board,p_request_id:a.id,p_decision:'Rejected'}),403,'worker denial');
+const pending=receipt(await submit(worker,'16:00','17:00','remaining worker pending'),'worker pending');
+expect(await rpc(admin,'timetracker_ot_decide',{p_board_id:board,p_request_id:pending.id,p_decision:'Approved'}),403,'System Admin ordinary-OT denial');
+const dup=await rpc(bootstrap,'timetracker_ot_decide',{p_board_id:board,p_request_id:a.id,p_decision:'Rejected'});
+assert.ok(dup.status>=400&&dup.status<500,'repeated status must be rejected');checks++;
+console.log('SIGNED_RECONNECT_VISIBILITY_AND_EXISTING_DENIALS PASS');
+console.log(`SIGNED_OT_HTTP_AND_SQL_CHECKS_PASS count=${checks}`);
