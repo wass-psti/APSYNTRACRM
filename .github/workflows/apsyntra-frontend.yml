@@ -120,6 +120,9 @@ jobs:
           node --check frontend/fueltrans/station-owner-review08.js
           node --check frontend/fueltrans/station-staging08.js
           node --check scripts/cp-ft-ui08-browser.mjs
+          node --check frontend/fueltrans/station-import-plan09.js
+          node --check scripts/cp-ft-ui09-station-import-dry-run.mjs
+          node --check scripts/cp-ft-ui09-browser.mjs
       - name: Check main HTML entry point
         run: |
           test -f index.html
