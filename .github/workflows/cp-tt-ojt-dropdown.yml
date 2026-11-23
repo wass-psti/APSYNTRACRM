@@ -7,6 +7,8 @@ on:
       - "frontend/time-tracker-ui.js"
       - "frontend/apps/TimeTracker/time-tracker-ojt.js"
       - "frontend/tests/time-tracker-ojt-shared-login.test.mjs"
+      - "frontend/tests/time-tracker-ojt-gps-log-reliability.test.mjs"
+      - "frontend/time-tracker-log.js"
       - "supabase/migrations/20261123100000_cp_tt_ojt_shared_identities.sql"
       - "supabase/migrations/20261123130000_cp_tt_ojt_employee_department_identity.sql"
       - "supabase/migrations/20261123140000_cp_tt_ojt_dropdown_identity.sql"
@@ -22,6 +24,8 @@ on:
       - "frontend/time-tracker-ui.js"
       - "frontend/apps/TimeTracker/time-tracker-ojt.js"
       - "frontend/tests/time-tracker-ojt-shared-login.test.mjs"
+      - "frontend/tests/time-tracker-ojt-gps-log-reliability.test.mjs"
+      - "frontend/time-tracker-log.js"
       - "supabase/migrations/20261123100000_cp_tt_ojt_shared_identities.sql"
       - "supabase/migrations/20261123130000_cp_tt_ojt_employee_department_identity.sql"
       - "supabase/migrations/20261123140000_cp_tt_ojt_dropdown_identity.sql"
@@ -59,8 +63,10 @@ jobs:
           node --check frontend/time-tracker-native.js
           node --check frontend/time-tracker-ui.js
           node --check frontend/apps/TimeTracker/time-tracker-ojt.js
+          node --check frontend/time-tracker-log.js
+          node --check frontend/time-tracker-clock-recovery.js
       - name: Test dropdown-only OJT identity and existing attendance contracts
-        run: node --test frontend/tests/time-tracker-ojt-shared-login.test.mjs
+        run: node --test frontend/tests/time-tracker-ojt-shared-login.test.mjs frontend/tests/time-tracker-ojt-gps-log-reliability.test.mjs
       - name: Verify recovered migration source manifest
         run: node scripts/verify-migration-source-manifest.mjs
 
