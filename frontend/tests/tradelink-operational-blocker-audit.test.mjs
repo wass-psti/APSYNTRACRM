@@ -7,13 +7,15 @@ const itemId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const documentId='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const record={id:documentId,board_item_id:itemId,revision:2,
  document_number:'Q-2026-001',document_type:'quotation',
- workflow_state:'draft',archived_at:null,updated_at:'2026-11-12T04:00:00Z'};
+ workflow_state:'draft',archived_at:null,created_at:'2026-11-12T03:00:00Z',
+ updated_at:'2026-11-12T04:00:00Z',content:{customerName:'Example Client'}};
 const receipt={documentId,boardItemId:itemId,revision:2};
 const window={status:'AUTHORIZED_READ',rows:Array.from({length:50},(_,i)=>({
  documentId:`cccccccc-cccc-4ccc-8ccc-${String(i).padStart(12,'0')}`,
  boardItemId:`dddddddd-dddd-4ddd-8ddd-${String(i).padStart(12,'0')}`,
  documentNumber:'Q-'+i,documentType:'quotation',workflowState:'draft',
- archived:false,revision:1,updatedAt:'2026-11-11T00:00:00Z'}))};
+ archived:false,revision:1,clientName:'Example Client',
+ createdAt:'2026-11-11T00:00:00Z',updatedAt:'2026-11-11T00:00:00Z'}))};
 
 test('confirmed saved record outside bounded 50-row list appears in All Documents without duplicate writes',()=>{
  const result=reconcileTradeLinkSavedListing(window,record,receipt);
