@@ -23,7 +23,7 @@ export async function runWs01B2SignedDiscovery({auth,api}={}){
   return result([item('signed-identity','BLOCKED')]);
  let actor,context;
  try{
-  actor=await auth.getVerifiedUser();context=await api.context();
+  actor=await auth.getVerifiedUser({fresh:true});context=await api.context();
  }catch{return result([item('signed-identity','BLOCKED')]);}
  if(!validUuid(actor?.id)||auth.userId!==actor.id||
   !validUuid(context?.workspace_id)||context?.user_id!==actor.id||
@@ -46,7 +46,7 @@ export async function runWs01B2SignedDiscovery({auth,api}={}){
   checks.push(item('membership-catalog','BLOCKED'));
  }
  try{
-  const after=await auth.getVerifiedUser(),ctx=await api.context();
+  const after=await auth.getVerifiedUser({fresh:true}),ctx=await api.context();
   checks.push(item('stable-session',
    after?.id===actor.id&&auth.userId===actor.id&&
    ctx?.user_id===actor.id&&ctx?.workspace_id===context.workspace_id&&

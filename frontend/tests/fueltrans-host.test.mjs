@@ -1,10 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {connectFuelTrans,listTickets,insertTicket} from '../fueltrans/supabase-client.js';
+import {connectFuelTrans,listTickets,insertTicket,verifiedUser} from '../fueltrans/supabase-client.js';
 const workspaceId='00000000-0000-4000-8000-000000000001',userId='actor';
 function context(edit=true,onMutation=()=>{}){return {workspaceId,userId,boardId:'board',onMutation,isCurrent:()=>true,
  auth:{getVerifiedUser:async()=>({id:userId}),token:async()=>'test-token'},
  api:{rpc:async()=>true,context:async()=>({user_id:userId,workspace_id:workspaceId}),board:async()=>({board:{workspace_id:workspaceId,name:'FuelTrans Standalone'}}),allowed:async(_,permission)=>permission==='view'||edit}};}
+test('FuelTrans verifiedUser reuses the host-verified identity without a second Auth request',async()=>{
+ const original=globalThis.fetch;let authReads=0,networkCalls=0;
+ globalThis.fetch=async()=>{networkCalls++;throw Error('duplicate /auth/v1/user request');};
+ const host=context();
+ host.auth.getVerifiedUser=async()=>{authReads++;return {id:userId,email:'user@example.test'};};
+ const disconnect=connectFuelTrans(host);
+ try{
+  assert.deepEqual(await verifiedUser(),{id:userId,email:'user@example.test'});
+  assert.equal(authReads,1);
+  assert.equal(networkCalls,0);
+ }finally{disconnect();globalThis.fetch=original;}
+});
+
 test('FuelTrans locks requests to current board workspace and current host lifetime',async()=>{
  const original=globalThis.fetch;let calls=0;
  globalThis.fetch=async()=>{calls++;return new Response('[]',{headers:{'content-type':'application/json','content-range':'*/0'}});};

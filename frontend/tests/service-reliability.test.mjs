@@ -122,6 +122,65 @@ test('verified user reads are coalesced only while the same signed identity requ
  assert.equal(a.id,userId);assert.equal(b.id,userId);assert.equal(calls,1);
 });
 
+test('verified identity reads reuse the same server-verified user for 30 seconds',async()=>{
+ let now=1700000000000,userReads=0;
+ const values=new Map();
+ const auth=new AuthClient({
+  clock:()=>now,
+  fetchImpl:async url=>{
+   if(url.endsWith('/auth/v1/user')){
+    userReads++;
+    return response(200,{id:userId,email:'user@example.test'});
+   }
+   throw Error('Unexpected auth request: '+url);
+  },
+  storage:{getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)}
+ });
+ auth.save({access_token:'signed-access',refresh_token:'signed-refresh',expires_in:3600,user:{id:userId}});
+ for(let index=0;index<1000;index++)
+  assert.equal((await auth.getVerifiedUser()).id,userId);
+ assert.equal(userReads,1);
+ now+=30001;
+ await auth.getVerifiedUser();
+ assert.equal(userReads,2);
+ await auth.getVerifiedUser({fresh:true});
+ assert.equal(userReads,3);
+});
+
+test('a newer in-memory access token is reused after 401 before attempting refresh',async()=>{
+ let auth,apiCalls=0,refreshCalls=0;
+ const values=new Map();
+ auth=new AuthClient({
+  clock:()=>1700000000000,
+  fetchImpl:async(url,options)=>{
+   if(url.includes('/auth/v1/token?grant_type=refresh_token')){
+    refreshCalls++;
+    return response(200,{access_token:'unneeded-access',refresh_token:'unneeded-refresh',
+     expires_in:3600,user:{id:userId}});
+   }
+   if(url.endsWith('/rest/v1/rpc/session-continuity-test')){
+    apiCalls++;
+    if(apiCalls===1){
+     auth.save({access_token:'newer-access',refresh_token:'newer-refresh',
+      expires_in:3600,user:{id:userId}});
+     return response(401,{message:'Expired token'});
+    }
+    assert.equal(options.headers.Authorization,'Bearer newer-access');
+    return response(200,{ok:true});
+   }
+   throw Error('Unexpected request: '+url);
+  },
+  storage:{getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)}
+ });
+ auth.save({access_token:'old-access',refresh_token:'old-refresh',expires_in:3600,user:{id:userId}});
+ const result=await auth.authorized('/rest/v1/rpc/session-continuity-test',{
+  method:'POST',body:{},requestKind:'read'
+ });
+ assert.deepEqual(result,{ok:true});
+ assert.equal(apiCalls,2);
+ assert.equal(refreshCalls,0);
+});
+
 test('concurrent token refresh requests share one refresh-token exchange',async()=>{
  const gate=deferred();let calls=0;
  const now=1700000000000;
