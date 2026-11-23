@@ -159,9 +159,9 @@
 #app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-log-badge-active,.tt-employee-active,.tt-badge-active,.tt-team-status-active,.tt-ot-pill-approved,.tt-ot-pill-completed,.tt-monitor-healthy,.tt-main-status-completed) {background:#E8F5EE!important;color:#1B7F4B!important}
 #app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-log-badge-done,.tt-main-status-unknown,.tt-idle-badge) {background:#EEF0F3!important;color:#5B6673!important}
 #app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-ot-pill-pending,.tt-monitor-degraded) {background:#FFF4D6!important;color:#8A5A00!important}
-#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-ot-pill-rejected,.tt-monitor-blocked,.tt-log-admin-delete,.tt-department-danger) {background:#FDECEA!important;color:#B42318!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-ot-pill-rejected,.tt-monitor-blocked) {background:#FDECEA!important;color:#B42318!important}
 #app .aps-board-shell.aps-time-tracker-shell .tt-native :is(progress,.tt-on-time-bar) {accent-color:#C2410C;background:#EEF0F3;border-radius:999px}
-#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(progress::-webkit-progress-value) {background:#C2410C}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native progress::-webkit-progress-value {background:#C2410C}
 #app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-on-time-bar i,.tt-arrival-bar i,.tt-department-row i,.tt-ot-chart i,.tt-cal-trend-bar i,.tt-report-dept i,.tt-gps-bar i) {
   border-radius:999px;
   background:#C2410C!important;
@@ -550,7 +550,9 @@
 #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-records tr[aria-selected="true"] td {background:#FDF0E8!important}
 #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-admin-row-actions button,
 #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-admin-editor-actions button {min-height:32px;font-size:12px}
-#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-admin-delete:hover:not(:disabled) {color:#B42318!important;background:#FDECEA!important;border-color:#B42318!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-log-admin-delete,.tt-department-danger) {border:1px solid #B42318!important;background:#FFFFFF!important;color:#B42318!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(.tt-log-admin-delete,.tt-department-danger):hover:not(:disabled) {background:#FDECEA!important;color:#B42318!important;border-color:#B42318!important}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-records tr:has(input[type="checkbox"]:checked) td {background:#FDF0E8!important}
 
 /* Reports: compact filters, flat KPIs, simple orange tracks and records. */
 #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-reports-range {padding:20px!important}
