@@ -49,4 +49,4 @@ No gradient descent, backpropagation, training, retraining, fine-tuning, iterati
 
 ## Deployment note
 
-Migration source: `20261123190000_cp_tl_document_bulk_actions.sql`. Production application must use the existing Supabase project and must not use a blanket `db push` while the local and remote migration ledgers contain unrelated missing/pending versions. Apply this migration independently after confirming its final production version, then deploy the frontend.
+Migration source: `20261123103806_cp_tl_document_bulk_actions.sql`. Production application must use the existing Supabase project and must not use a blanket `db push` while the local and remote migration ledgers contain unrelated missing/pending versions. Apply this migration independently after confirming its final production version, then deploy the frontend.

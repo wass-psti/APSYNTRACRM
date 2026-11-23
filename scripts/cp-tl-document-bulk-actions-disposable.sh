@@ -27,7 +27,7 @@ for file in \
  supabase/migrations/20261123080322_cp_tl_document_identity_order_01.sql \
  sql/tests/cp-tl-document-identity-order-01b-disposable.sql \
  supabase/migrations/20261117020000_tradelink_immutable_revision_snapshots.sql \
- supabase/migrations/20261123190000_cp_tl_document_bulk_actions.sql \
+ supabase/migrations/20261123103806_cp_tl_document_bulk_actions.sql \
  sql/tests/cp-tl-document-bulk-actions-disposable.sql; do
  test -f "$file"
  echo "== $file =="

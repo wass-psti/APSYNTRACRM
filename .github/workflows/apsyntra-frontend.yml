@@ -285,7 +285,7 @@ jobs:
             -f supabase/migrations/20261123080322_cp_tl_document_identity_order_01.sql \
             -f sql/tests/cp-tl-document-identity-order-01b-disposable.sql \
             -f supabase/migrations/20261117020000_tradelink_immutable_revision_snapshots.sql \
-            -f supabase/migrations/20261123190000_cp_tl_document_bulk_actions.sql \
+            -f supabase/migrations/20261123103806_cp_tl_document_bulk_actions.sql \
             -f sql/tests/cp-tl-document-bulk-actions-disposable.sql
   disposable-toolbox-postgres:
     runs-on: ubuntu-latest
