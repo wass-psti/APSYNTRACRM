@@ -343,6 +343,7 @@ export function renderTimeTrackerLog({
  const options={...TT_LOG_DEFAULT_FILTERS,...filters};
  const rows=filterTimeTrackerLogRows(records,{...options,search:''},now);
  const visible=filterTimeTrackerLogRows(records,options,now);
+ const editableVisible=visible.some(row=>!row.isOjt);
  const query=String(options.search??'').slice(0,120);
  const summary=timeTrackerLogSummary(rows,now);
  const team=scope==='AUTHORIZED_WORKSPACE_TEAM';
@@ -399,12 +400,12 @@ export function renderTimeTrackerLog({
     ' authorized employee'+(summary.people===1?'':'s')+'</p></div>'+
     '<span class="tt-log-readonly">'+summary.historical+
     ' earlier · '+summary.today+' today</span></div>'+
-   (adminEligible?'<p class="tt-log-footnote">Click any record to view its details in a popup and highlight it for editing. Use Ctrl/⌘ or Shift when selecting more records. Correction notes are optional; edits are audited.</p>':'')+
+   (adminEligible?'<p class="tt-log-footnote">Click a record for details. Standard employee records support authorized editing and multi-selection; OJT intern records are read-only. Intern attendance is drawn from the latest signed OJT snapshot (up to 100 entries).</p>':'')+
    (adminFullAccess?'<div class="tt-log-admin-toolbar" role="region" aria-label="System Admin attendance record management">'+
     '<div class="tt-log-admin-toolbar-copy"><div class="tt-log-admin-toolbar-heading"><span class="tt-log-admin-toolbar-icon" aria-hidden="true">✦</span><div><strong>Manage attendance records</strong><span>Click a record to highlight it; no checkboxes required</span></div></div>'+
     '<div class="tt-log-admin-selection-status"><strong class="tt-log-admin-selected">'+selectedIds.length+'</strong><span>selected <i>·</i> up to '+TT_ADMIN_RECORD_LIMIT+'</span></div></div>'+
     '<div class="tt-log-admin-toolbar-actions">'+
-    '<button type="button" data-action="tt-log-admin-select-visible"'+(!visible.length||adminBusy?' disabled':'')+'>Select visible</button>'+
+    '<button type="button" data-action="tt-log-admin-select-visible"'+(!editableVisible||adminBusy?' disabled':'')+'>Select visible</button>'+
     '<button type="button" data-action="tt-log-admin-bulk-edit"'+(selectedIds.length&&!adminBusy?'':' disabled')+'><span aria-hidden="true">✎</span> Edit selected</button>'+
     '<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-bulk-delete"'+(selectedIds.length&&!adminBusy?'':' disabled')+'><span aria-hidden="true">⌫</span> Delete selected</button>'+
     '<button type="button" class="tt-log-admin-reset" data-action="tt-log-admin-clear-selection"'+(selectedIds.length&&!adminBusy?'':' disabled')+'>Clear selection</button></div></div>':'')+
