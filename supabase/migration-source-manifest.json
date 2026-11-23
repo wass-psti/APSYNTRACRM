@@ -2109,6 +2109,13 @@
       "sha256": "eaaa76bbd2174a8f883667e22ffb8468444fcac00e022097104a0bae27bdfcf6"
     },
     {
+      "version": "20261123150000",
+      "name": "cp_tt_ojt_admin_record_management",
+      "file": "20261123150000_cp_tt_ojt_admin_record_management.sql",
+      "bytes": 8323,
+      "sha256": "94ed1c8509c89923b0dfe3ec2c80e3e7ed45b2f2e6c7ac2931d3e233683750a7"
+    },
+    {
       "version": "20261123160000",
       "name": "cp_tt_manual_ot_01_manual_submission_and_scoped_review",
       "file": "20261123160000_cp_tt_manual_ot_01_manual_submission_and_scoped_review.sql",
@@ -2121,6 +2128,13 @@
       "file": "20261123170000_cp_tt_hr_ot_all_user_log_01.sql",
       "bytes": 4523,
       "sha256": "786a67b307af56eaa40c12e38dcf5b6ea170d918aa63601e381a3d16ff0741ee"
+    },
+    {
+      "version": "20261123180000",
+      "name": "cp_tt_bootstrap_ot_self_review_01",
+      "file": "20261123180000_cp_tt_bootstrap_ot_self_review_01.sql",
+      "bytes": 5439,
+      "sha256": "4d8d0c8244d9b93f1c78bab486d1ca2e005712ec76689941601a0102411b1a6a"
     }
   ]
 }

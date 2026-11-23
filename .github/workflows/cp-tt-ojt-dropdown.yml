@@ -9,6 +9,11 @@ on:
       - "frontend/tests/time-tracker-ojt-shared-login.test.mjs"
       - "frontend/tests/time-tracker-ojt-gps-log-reliability.test.mjs"
       - "frontend/time-tracker-log.js"
+      - "frontend/time-tracker-record-management.js"
+      - "frontend/apps/TimeTracker/time-tracker-ojt-admin-editor.js"
+      - "frontend/tests/time-tracker-ojt-admin-management.test.mjs"
+      - "supabase/migrations/20261123150000_cp_tt_ojt_admin_record_management.sql"
+      - "sql/tests/cp-tt-ojt-admin-management-disposable-acceptance.sql"
       - "supabase/migrations/20261123100000_cp_tt_ojt_shared_identities.sql"
       - "supabase/migrations/20261123130000_cp_tt_ojt_employee_department_identity.sql"
       - "supabase/migrations/20261123140000_cp_tt_ojt_dropdown_identity.sql"
@@ -26,6 +31,11 @@ on:
       - "frontend/tests/time-tracker-ojt-shared-login.test.mjs"
       - "frontend/tests/time-tracker-ojt-gps-log-reliability.test.mjs"
       - "frontend/time-tracker-log.js"
+      - "frontend/time-tracker-record-management.js"
+      - "frontend/apps/TimeTracker/time-tracker-ojt-admin-editor.js"
+      - "frontend/tests/time-tracker-ojt-admin-management.test.mjs"
+      - "supabase/migrations/20261123150000_cp_tt_ojt_admin_record_management.sql"
+      - "sql/tests/cp-tt-ojt-admin-management-disposable-acceptance.sql"
       - "supabase/migrations/20261123100000_cp_tt_ojt_shared_identities.sql"
       - "supabase/migrations/20261123130000_cp_tt_ojt_employee_department_identity.sql"
       - "supabase/migrations/20261123140000_cp_tt_ojt_dropdown_identity.sql"
@@ -64,9 +74,11 @@ jobs:
           node --check frontend/time-tracker-ui.js
           node --check frontend/apps/TimeTracker/time-tracker-ojt.js
           node --check frontend/time-tracker-log.js
+          node --check frontend/time-tracker-record-management.js
+          node --check frontend/apps/TimeTracker/time-tracker-ojt-admin-editor.js
           node --check frontend/time-tracker-clock-recovery.js
       - name: Test dropdown-only OJT identity and existing attendance contracts
-        run: node --test frontend/tests/time-tracker-ojt-shared-login.test.mjs frontend/tests/time-tracker-ojt-gps-log-reliability.test.mjs
+        run: node --test frontend/tests/time-tracker-ojt-shared-login.test.mjs frontend/tests/time-tracker-ojt-gps-log-reliability.test.mjs frontend/tests/time-tracker-ojt-admin-management.test.mjs
       - name: Verify recovered migration source manifest
         run: node scripts/verify-migration-source-manifest.mjs
 
@@ -108,4 +120,6 @@ jobs:
             -f supabase/migrations/20261123130000_cp_tt_ojt_employee_department_identity.sql \
             -f sql/tests/cp-tt-ojt-dropdown-disposable-pre-migration3-seed.sql \
             -f supabase/migrations/20261123140000_cp_tt_ojt_dropdown_identity.sql \
-            -f sql/tests/cp-tt-ojt-dropdown-disposable-acceptance.sql
+            -f sql/tests/cp-tt-ojt-dropdown-disposable-acceptance.sql \
+            -f supabase/migrations/20261123150000_cp_tt_ojt_admin_record_management.sql \
+            -f sql/tests/cp-tt-ojt-admin-management-disposable-acceptance.sql

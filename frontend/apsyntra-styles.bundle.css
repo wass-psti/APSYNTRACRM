@@ -28799,6 +28799,15 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   font-size:12px!important;
   line-height:1.5!important;
 }
+/* Calendar metric captions, weekday abbreviations, and holiday dates: WCAG AA. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-calendar-command :is(
+  .tt-cal-kpis > div > span,.tt-cal-weekbar > span,
+  .tt-cal-holiday-list time[datetime]
+) {
+  color:#5B6673!important;
+  font-size:12px!important;
+  line-height:1.5!important;
+}
 
 /* frontend/monday-inspired-ui.css */
 /* APSYNTRA CRM / Monday-inspired UI — isolated presentation pass.

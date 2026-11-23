@@ -1,11 +1,12 @@
 import {formatTimeTrackerDurationMs} from './time-tracker-duration-format.js';
 import {formatTimeTrackerClock,formatTimeTrackerShortDateTime,formatTimeTrackerDateTime} from './time-tracker-time-format.js';
 /** Native signed TimeTracker Log. System Admin mutations use the dedicated signed RPC; other roles remain read-only. */
-import {TT_LOCATIONS} from './time-tracker-policy.js';
+import {TT_LOCATIONS,creditedAttendanceMs,manilaClockMinutes} from './time-tracker-policy.js';
 import {filterMyAttendancePeriod} from './time-tracker-native.js';
 import {manilaDay} from './time-tracker-overview.js';
 import {mapFrame} from './time-tracker-map.js';
 import {renderTimeTrackerAdminEditor,renderTimeTrackerAdminDeleteDialog,TT_ADMIN_RECORD_LIMIT} from './time-tracker-record-management.js';
+import {renderTimeTrackerOjtAdminEditor} from './apps/TimeTracker/time-tracker-ojt-admin-editor.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -29,10 +30,23 @@ export function timeTrackerLogRowsForSnapshot(snapshot){
    id:'ojt:'+r.id,ownerId:'ojt:'+r.internId,name:r.name,
    clockIn:r.clockIn,clockOut:r.clockOut,department:'OJT',
    location:TT_LOCATIONS.includes(r.location)?r.location:'Unspecified',
-   status:r.clockOut?'Completed':'Active',classification:'Not assessed',
-   workNote:'',creditedMs:null,isOjt:true
+   status:r.clockOut?'Completed':'Active',
+   classification:manilaClockMinutes(r.clockIn)>480?'Late':'On time',
+   workNote:typeof r.workNote==='string'?r.workNote.slice(0,500):'',
+   creditedMs:r.clockOut?creditedAttendanceMs(r.clockIn,r.clockOut):null,
+   revision:Number.isSafeInteger(Number(r.revision))?Number(r.revision):null,
+   isOjt:true
   }));
  return [...standard,...ojtRows];
+}
+
+/** Keep one open Log detail only while that signed record remains authorized.
+ * Includes prefixed OJT sessions; never retains a stale or cross-role record.
+ */
+export function retainTimeTrackerLogDetailIds(snapshot,expandedIds=[]){
+ const allowed=new Set(timeTrackerLogRowsForSnapshot(snapshot).map(row=>row.id));
+ return (Array.isArray(expandedIds)?expandedIds:[])
+  .filter(id=>typeof id==='string'&&allowed.has(id)).slice(-1);
 }
 
 const phtTime=value=>validTime(value)?formatTimeTrackerClock(value):'—';
@@ -290,8 +304,7 @@ function renderTimeTrackerLogDetailDialog({row,now,gpsEligible=false,gpsData=nul
  const details=safeSessionDetails(row,now,{gpsEligible:!row.isOjt&&gpsEligible,
   gpsData:row.isOjt?null:gpsData,gpsBusy,gpsError,gpsErrorRecordId,
   mapEnabled:!row.isOjt&&mapEnabled,mapTheme,
-  adminEligible:!row.isOjt&&adminEligible,
-  adminFullAccess:!row.isOjt&&adminFullAccess,adminBusy});
+  adminEligible,adminFullAccess,adminBusy});
  return '<div class="tt-admin-editor-backdrop tt-log-details-backdrop" data-tt-log-detail-backdrop>'+
   '<section class="tt-admin-editor tt-log-details-dialog" data-tt-log-detail-dialog data-record-id="'+esc(row.id)+'" role="dialog" aria-modal="true" aria-labelledby="tt-log-modal-title" tabindex="-1">'+
    '<header class="tt-admin-editor-head"><div class="tt-admin-editor-title-group">'+
@@ -302,7 +315,7 @@ function renderTimeTrackerLogDetailDialog({row,now,gpsEligible=false,gpsData=nul
     '<button type="button" class="tt-admin-close" data-action="tt-log-detail-close" aria-label="Close attendance details">×</button>'+
    '</header>'+
    '<div class="tt-admin-editor-body">'+details+'</div>'+
-   '<footer class="tt-admin-editor-actions"><span class="tt-admin-editor-footnote">'+(row.isOjt?'Shared-login OJT attendance · Read-only':'Signed attendance details · '+esc(row.department||'Unassigned'))+'</span>'+
+   '<footer class="tt-admin-editor-actions"><span class="tt-admin-editor-footnote">'+(row.isOjt?'Shared-login OJT attendance · Admin corrections are audited':'Signed attendance details · '+esc(row.department||'Unassigned'))+'</span>'+
     '<div>'+(adminFullAccess&&!row.isOjt?'<button type="button" class="secondary" data-action="tt-log-detail-toggle-select" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+' aria-pressed="'+selected+'">'+(selected?'Remove selection':'Select record')+'</button>':'')+
     '<button type="button" class="primary" data-action="tt-log-detail-close">Close details</button></div></footer>'+
   '</section></div>';
@@ -400,7 +413,7 @@ export function renderTimeTrackerLog({
     ' authorized employee'+(summary.people===1?'':'s')+'</p></div>'+
     '<span class="tt-log-readonly">'+summary.historical+
     ' earlier · '+summary.today+' today</span></div>'+
-   (adminEligible?'<p class="tt-log-footnote">Click any record to view its details in a popup. Standard employee records support authorized editing and multi-selection; OJT intern records are read-only. Intern attendance is drawn from the latest signed OJT snapshot (up to 100 entries).</p>':'')+
+   (adminEligible?'<p class="tt-log-footnote">Click any record to view its details in a popup. Standard employee records support authorized editing and multi-selection; OJT intern records can be corrected individually by authorized admins; bulk operations remain for standard employees. Intern attendance is drawn from the latest signed OJT snapshot (up to 100 entries).</p>':'')+
    (adminFullAccess?'<div class="tt-log-admin-toolbar" role="region" aria-label="System Admin attendance record management">'+
     '<div class="tt-log-admin-toolbar-copy"><div class="tt-log-admin-toolbar-heading"><span class="tt-log-admin-toolbar-icon" aria-hidden="true">✦</span><div><strong>Manage attendance records</strong><span>Click a record to highlight it; no checkboxes required</span></div></div>'+
     '<div class="tt-log-admin-selection-status"><strong class="tt-log-admin-selected">'+selectedIds.length+'</strong><span>selected <i>·</i> up to '+TT_ADMIN_RECORD_LIMIT+'</span></div></div>'+
@@ -419,7 +432,7 @@ export function renderTimeTrackerLog({
      '<tbody>'+rows.map(r=>sessionRow(r,query,now,{
       gpsEligible:!r.isOjt&&gpsEligible,gpsData:r.isOjt?null:gpsData,gpsBusy,gpsError,gpsErrorRecordId,
       expandedRecordIds,mapEnabled:!r.isOjt&&mapEnabled,mapTheme,
-      adminEligible:!r.isOjt&&adminEligible,adminFullAccess:!r.isOjt&&adminFullAccess,
+      adminEligible,adminFullAccess,
       adminBusy,selectedIds})).join('')+
      '</tbody></table></div></div>':
      '<p class="tt-log-empty">No authorized attendance sessions match these filters.</p>')+
@@ -430,7 +443,8 @@ export function renderTimeTrackerLog({
   '</section>'+(adminEditor||adminDeleteConfirm?'':renderTimeTrackerLogDetailDialog({row:rows.find(r=>expandedRecordIds.includes(r.id))||null,now,
     gpsEligible,gpsData,gpsBusy,gpsError,gpsErrorRecordId,mapEnabled,mapTheme,
     adminEligible,adminFullAccess,adminBusy,selectedIds}))+
-   renderTimeTrackerAdminEditor({editor:adminEditor,directory:adminDirectory,busy:adminBusy,error:adminEditor?adminError:'',timeOnly:adminEditor?.timeOnly===true})+
+   (adminEditor?.ojt?renderTimeTrackerOjtAdminEditor({editor:adminEditor,busy:adminBusy,error:adminError}):
+    renderTimeTrackerAdminEditor({editor:adminEditor,directory:adminDirectory,busy:adminBusy,error:adminEditor?adminError:'',timeOnly:adminEditor?.timeOnly===true}))+
    renderTimeTrackerAdminDeleteDialog({confirmation:adminDeleteConfirm,busy:adminBusy})+'</section>';
 }
 

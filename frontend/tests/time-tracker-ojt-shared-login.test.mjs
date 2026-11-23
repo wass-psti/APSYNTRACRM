@@ -63,7 +63,7 @@ test('admin projection retains inactive profiles for roster management only',()=
  assert.throws(()=>projectOjtAdmin({...adminRaw(),workspaceId:intern},scope),/roster/);
  assert.deepEqual(projectOjtAdminAttendance(adminAttendance(),scope).records[0],
   {id:record,internId:intern,name:'Intern Alpha',clockIn:stamp,
-   clockOut:null,location:'Office-Base Duty'});
+   clockOut:null,location:'Office-Base Duty',workNote:'',revision:null});
 });
 
 test('attendance projection is bound to the selected intern and rejects conflicting active rows',()=>{
