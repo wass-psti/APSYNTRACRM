@@ -241,7 +241,7 @@ test('existing login, sessions, RLS, bootstrap access and signed routes remain u
  assert.match(app,/window\.addEventListener\('hashchange'/);
  assert.match(client,/STORE_KEY='apsyntra\.crm\.auth\.v1'/);
  assert.match(client,/async restore\(\)/);
- assert.match(client,/async getVerifiedUser\(\)/);
+ assert.match(client,/async getVerifiedUser\(\{fresh=false\}=\{\}\)/);
  assert.match(client,/async authorized\(/);
  assert.doesNotMatch(source,/user_metadata|platform_role|workspace_members|service_role/);
 });

@@ -47,6 +47,7 @@ BEGIN
  '10000000-0000-4000-8000-000000000021',
  (clock_timestamp() AT TIME ZONE 'Asia/Manila')::date,
  '18:00','20:00','Site work required for the maintenance shift');
+ PERFORM set_config('test.regular_a_ot_id',v->>'id',false);
  IF v->>'status'<>'Submitted' OR
   v->>'ownerId'<>'cloud:10000000-0000-4000-8000-000000000011' THEN
   RAISE EXCEPTION 'FAIL: employee submit receipt %',v;
@@ -103,6 +104,7 @@ BEGIN
    '10000000-0000-4000-8000-000000000021',
    (clock_timestamp() AT TIME ZONE 'Asia/Manila')::date,
    '19:00','21:00','Night shift inventory reconciliation work');
+ PERFORM set_config('test.regular_b_ot_id',v->>'id',false);
  IF v->>'status'<>'Submitted' THEN RAISE EXCEPTION 'FAIL B submit'; END IF;
 END $$;
 RESET ROLE;
@@ -167,12 +169,152 @@ BEGIN
   '10000000-0000-4000-8000-000000000021',
   (clock_timestamp() AT TIME ZONE 'Asia/Manila')::date,
   '18:00','20:00','Bootstrap personal overtime request not self-approved');
+ PERFORM set_config('test.bootstrap_ot_id',v->>'id',false);
  BEGIN
   PERFORM public.timetracker_ot_decide(
    '10000000-0000-4000-8000-000000000021',(v->>'id')::uuid,'Approved');
   RAISE EXCEPTION 'FAIL: bootstrap self approval allowed';
  EXCEPTION WHEN insufficient_privilege THEN NULL;
  END;
+END $$;
+RESET ROLE;
+
+-- System Admins can create and review manual OT only; regular employee OT remains bootstrap-reviewed.
+SELECT set_config('request.jwt.claims',
+ jsonb_build_object('sub','10000000-0000-4000-8000-000000000018',
+ 'session_id','10000000-0000-4000-8000-000000000038')::text,false);
+SET ROLE authenticated;
+DO $$
+DECLARE v jsonb;v_manual_a uuid;v_manual_b uuid;v_manual_self uuid;v_regular uuid;
+BEGIN
+ v:=public.timetracker_ot_snapshot('10000000-0000-4000-8000-000000000021');
+ IF v->>'scope'<>'OWN_OT_ONLY' OR v->>'manualOtManager'<>'true' OR
+    v->>'bootstrapApprover'<>'false' OR jsonb_array_length(v->'rows')<>0 THEN
+  RAISE EXCEPTION 'FAIL: System Admin manual-only initial scope %',v;
+ END IF;
+ v_regular:=current_setting('test.bootstrap_ot_id')::uuid;
+ BEGIN
+  PERFORM public.timetracker_ot_decide(
+   '10000000-0000-4000-8000-000000000021',v_regular,'Approved');
+  RAISE EXCEPTION 'FAIL: System Admin approved regular employee OT';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ v:=public.timetracker_ot_submit_manual(
+  '10000000-0000-4000-8000-000000000021',
+  '10000000-0000-4000-8000-000000000011',
+  current_date-365,'18:00','20:00','Manual historical overtime for a verified work assignment');
+ IF v->>'status'<>'Submitted' OR v->>'submissionSource'<>'manual_admin' OR
+    v->>'ownerId'<>'cloud:10000000-0000-4000-8000-000000000011' OR
+    v->>'submittedBy'<>'10000000-0000-4000-8000-000000000018' THEN
+  RAISE EXCEPTION 'FAIL: manual submission receipt %',v;
+ END IF;
+ v_manual_a:=(v->>'id')::uuid;
+ PERFORM set_config('test.manual_a_ot_id',v_manual_a::text,false);
+ v:=public.timetracker_ot_snapshot('10000000-0000-4000-8000-000000000021');
+ IF v->>'scope'<>'OWN_OT_ONLY' OR jsonb_array_length(v->'rows')<>1 OR
+    v->'rows'->0->>'submissionSource'<>'manual_admin' OR
+    v->'rows'->0->>'submittedBy'<>'10000000-0000-4000-8000-000000000018' THEN
+  RAISE EXCEPTION 'FAIL: System Admin manual-only snapshot %',v;
+ END IF;
+ v:=public.timetracker_ot_decide(
+  '10000000-0000-4000-8000-000000000021',v_manual_a,'Approved');
+ IF v->>'status'<>'Approved' OR v->>'decidedBy'<>'10000000-0000-4000-8000-000000000018' THEN
+  RAISE EXCEPTION 'FAIL: System Admin manual approval receipt %',v;
+ END IF;
+ -- An already approved interval cannot be entered again as a new manual request.
+ BEGIN
+  PERFORM public.timetracker_ot_submit_manual(
+   '10000000-0000-4000-8000-000000000021',
+   '10000000-0000-4000-8000-000000000011',
+   current_date-365,'18:00','20:00','Duplicate manual historical overtime interval');
+  RAISE EXCEPTION 'FAIL: duplicate approved manual OT accepted';
+ EXCEPTION WHEN unique_violation THEN NULL;
+ END;
+ v:=public.timetracker_ot_submit_manual(
+  '10000000-0000-4000-8000-000000000021',
+  '10000000-0000-4000-8000-000000000012',
+  current_date-364,'19:00','21:00','Manual historical overtime for second employee');
+ v_manual_b:=(v->>'id')::uuid;
+ PERFORM set_config('test.manual_b_ot_id',v_manual_b::text,false);
+ v:=public.timetracker_ot_decide(
+  '10000000-0000-4000-8000-000000000021',v_manual_b,'Rejected');
+ IF v->>'status'<>'Rejected' THEN RAISE EXCEPTION 'FAIL: System Admin manual rejection %',v; END IF;
+ v:=public.timetracker_ot_submit_manual(
+  '10000000-0000-4000-8000-000000000021',
+  '10000000-0000-4000-8000-000000000018',
+  current_date-363,'17:00','18:00','Manual historical overtime for System Admin employee record');
+ v_manual_self:=(v->>'id')::uuid;
+ BEGIN
+  PERFORM public.timetracker_ot_decide(
+   '10000000-0000-4000-8000-000000000021',v_manual_self,'Approved');
+  RAISE EXCEPTION 'FAIL: System Admin approved own manual OT';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ BEGIN
+  PERFORM public.timetracker_ot_submit_manual(
+   '10000000-0000-4000-8000-000000000021',
+   '10000000-0000-4000-8000-000000000011',
+   current_date+1,'18:00','20:00','Future manual overtime must not be accepted');
+  RAISE EXCEPTION 'FAIL: future manual OT accepted';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL;
+ END;
+ v:=public.timetracker_ot_snapshot('10000000-0000-4000-8000-000000000021');
+ IF jsonb_array_length(v->'rows')<>3 OR EXISTS(
+  SELECT 1 FROM jsonb_array_elements(v->'rows') r
+  WHERE r->>'submissionSource'<>'manual_admin') THEN
+  RAISE EXCEPTION 'FAIL: System Admin saw regular OT or missed manual OT %',v;
+ END IF;
+END $$;
+RESET ROLE;
+
+-- Employees can display workspace manual OT records read-only, plus their own regular OT.
+SELECT set_config('request.jwt.claims',
+ jsonb_build_object('sub','10000000-0000-4000-8000-000000000011',
+ 'session_id','10000000-0000-4000-8000-000000000031')::text,false);
+SET ROLE authenticated;
+DO $$
+DECLARE v jsonb;v_manual uuid;
+BEGIN
+ v:=public.timetracker_ot_snapshot('10000000-0000-4000-8000-000000000021');
+ IF v->>'scope'<>'OWN_OT_ONLY' OR jsonb_array_length(v->'rows')<>4 OR
+    (SELECT count(*) FROM jsonb_array_elements(v->'rows') r
+      WHERE r->>'submissionSource'='manual_admin')<>3 OR
+    NOT EXISTS(SELECT 1 FROM jsonb_array_elements(v->'rows') r
+      WHERE r->>'ownerId'='cloud:10000000-0000-4000-8000-000000000012'
+       AND r->>'submissionSource'='manual_admin') THEN
+  RAISE EXCEPTION 'FAIL: employee manual OT read-only visibility %',v;
+ END IF;
+ v_manual:=current_setting('test.manual_a_ot_id')::uuid;
+ BEGIN
+  PERFORM public.timetracker_ot_submit_manual(
+   '10000000-0000-4000-8000-000000000021',
+   '10000000-0000-4000-8000-000000000012',
+   current_date-362,'18:00','20:00','Employee manual OT submission is not enabled');
+  RAISE EXCEPTION 'FAIL: employee created manual OT';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ BEGIN
+  PERFORM public.timetracker_ot_decide(
+   '10000000-0000-4000-8000-000000000021',v_manual,'Rejected');
+  RAISE EXCEPTION 'FAIL: employee modified manual OT';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+END $$;
+RESET ROLE;
+
+SELECT set_config('request.jwt.claims',
+ jsonb_build_object('sub','10000000-0000-4000-8000-000000000012',
+ 'session_id','10000000-0000-4000-8000-000000000032')::text,false);
+SET ROLE authenticated;
+DO $$
+DECLARE v jsonb;
+BEGIN
+ v:=public.timetracker_ot_snapshot('10000000-0000-4000-8000-000000000021');
+ IF jsonb_array_length(v->'rows')<>4 OR
+  (SELECT count(*) FROM jsonb_array_elements(v->'rows') r
+   WHERE r->>'submissionSource'='manual_admin')<>3 THEN
+  RAISE EXCEPTION 'FAIL: employee B manual OT read-only visibility %',v;
+ END IF;
 END $$;
 RESET ROLE;
 
@@ -273,11 +415,11 @@ DO $$
 DECLARE v_count int;
 BEGIN
  SELECT count(*) INTO v_count FROM public.timetracker_ot_audit;
- IF v_count<>5 THEN
-  RAISE EXCEPTION 'FAIL: expected 5 audit events, got %',v_count;
+ IF v_count<>10 THEN
+  RAISE EXCEPTION 'FAIL: expected 10 audit events, got %',v_count;
  END IF;
- IF (SELECT count(*) FROM public.timetracker_ot_requests)<>3 THEN
-  RAISE EXCEPTION 'FAIL: expected 3 OT requests';
+ IF (SELECT count(*) FROM public.timetracker_ot_requests)<>6 THEN
+  RAISE EXCEPTION 'FAIL: expected 6 OT requests';
  END IF;
  BEGIN
   DELETE FROM public.timetracker_ot_audit;
@@ -290,4 +432,66 @@ BEGIN
  EXCEPTION WHEN insufficient_privilege THEN NULL;
  END;
 END $$;
-\echo 'CP-TT-OT-02 disposable acceptance PASS (signed role simulation, NOT genuine sessions)'
+-- Manual history remains visible after the owner leaves the active workspace.
+-- The same signed snapshot continues to require an active member for ordinary OT.
+-- Roll back the synthetic membership change so later acceptance tests start clean.
+BEGIN;
+UPDATE public.workspace_members SET active=false
+ WHERE workspace_id='10000000-0000-4000-8000-000000000001'
+   AND user_id='10000000-0000-4000-8000-000000000011';
+SELECT set_config('request.jwt.claims',
+ jsonb_build_object('sub','10000000-0000-4000-8000-000000000013',
+ 'session_id','10000000-0000-4000-8000-000000000033')::text,true);
+SET LOCAL ROLE authenticated;
+DO $$
+DECLARE v jsonb;
+BEGIN
+ v:=public.timetracker_ot_snapshot('10000000-0000-4000-8000-000000000021');
+ IF v->>'scope'<>'AUTHORIZED_WORKSPACE_TEAM' OR
+    (SELECT count(*) FROM jsonb_array_elements(v->'rows') r
+      WHERE r->>'submissionSource'='manual_admin')<>3 OR
+    NOT EXISTS(SELECT 1 FROM jsonb_array_elements(v->'rows') r
+      WHERE r->>'ownerId'='cloud:10000000-0000-4000-8000-000000000011'
+       AND r->>'submissionSource'='manual_admin') THEN
+  RAISE EXCEPTION 'FAIL: manual OT history disappeared after owner membership ended %',v;
+ END IF;
+ IF EXISTS(SELECT 1 FROM jsonb_array_elements(v->'rows') r
+    WHERE r->>'ownerId'='cloud:10000000-0000-4000-8000-000000000011'
+      AND r->>'submissionSource'='employee') THEN
+  RAISE EXCEPTION 'FAIL: inactive owner regular OT escaped the active-member scope';
+ END IF;
+END $$;
+ROLLBACK;
+
+-- INSERT/UPDATE notifications are private, board-scoped and contain no OT data.
+DO $$
+DECLARE v_board uuid:='10000000-0000-4000-8000-000000000021';
+BEGIN
+ IF NOT EXISTS(
+  SELECT 1 FROM realtime.messages m
+  WHERE m.topic='board:'||v_board::text AND m.event='board-change'
+    AND m.private=true AND m.payload->>'board_id'=v_board::text
+    AND m.payload->>'entity'='board'
+    AND m.payload->>'action'='OT_INSERT'
+    AND m.payload ? 'occurred_at'
+ ) THEN
+  RAISE EXCEPTION 'FAIL: manual OT insert did not publish board invalidation';
+ END IF;
+ IF NOT EXISTS(
+  SELECT 1 FROM realtime.messages m
+  WHERE m.topic='board:'||v_board::text AND m.event='board-change'
+    AND m.private=true AND m.payload->>'board_id'=v_board::text
+    AND m.payload->>'action'='OT_UPDATE'
+ ) THEN
+  RAISE EXCEPTION 'FAIL: OT decision did not publish board invalidation';
+ END IF;
+ IF EXISTS(
+  SELECT 1 FROM realtime.messages m
+  WHERE m.topic='board:'||v_board::text AND m.event='board-change'
+    AND (m.payload ?| ARRAY['reason','owner_id','submitted_by','status','record','old_record'])
+ ) THEN
+  RAISE EXCEPTION 'FAIL: Realtime invalidation leaked OT record data';
+ END IF;
+END $$;
+
+\echo 'CP-TT-MANUAL-OT-01 disposable acceptance PASS (role simulation, NOT genuine sessions)'

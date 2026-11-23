@@ -45,6 +45,10 @@
 .ft-source-results-head {padding:13px 15px;background:#edf4ff;border:1px solid #d2e2fa;border-radius:8px;margin-top:13px}
 .ft-source-results-head strong{font-size:12px;color:#1f406f}
 .ft-source-results-head p{font-size:11px;margin:8px 0 0;line-height:1.5}
+.ft-source-fingerprint{overflow-wrap:anywhere}
+.ft-source-fingerprint code{display:inline;font-size:10px;letter-spacing:.01em;user-select:all}
+.ft-source-review #station-export-evidence{margin:2px 0 7px 8px}
+@media (max-width:600px){.ft-source-review #station-export-evidence{margin-left:0;width:100%}}
 .ft-source-issues {padding:11px 14px;background:#fff6ed;border:1px solid #f0d5b9;border-radius:8px;margin:11px 0}
 .ft-source-issues strong {font-size:12px;color:#875019}
 .ft-source-issues ul{margin:8px 0;padding-left:20px;font-size:11px;line-height:1.6}
@@ -58,3 +62,24 @@
  .ft-source-form button{width:100%}
 }
 @media print{.ft-source-review{display:none!important}}
+
+/* CP-FT-UI-08: local, explicit handoff for independent owner verification. */
+.ft-owner-onboarding{
+ margin:14px 0;padding:16px;border:1px solid #cad8ed;border-radius:10px;
+ background:#f7faff;
+}
+.ft-owner-onboarding>strong{font-size:12px;color:#1c3d6b}
+.ft-owner-onboarding>p{font-size:11px;line-height:1.55}
+.ft-owner-onboarding form{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
+}
+.ft-owner-onboarding form label{display:flex;min-width:0;flex-direction:column;gap:6px;font-size:11px;font-weight:650}
+.ft-owner-onboarding input{
+ width:100%;min-width:0;box-sizing:border-box;padding:9px;border:1px solid #cbd9e9;
+ border-radius:7px;color:#263c56;background:#fff;
+}
+.ft-owner-onboarding button{justify-self:start;grid-column:1/-1}
+.ft-owner-onboarding #station-owner-packet-status{
+ grid-column:1/-1;margin:0;font-size:11px;line-height:1.5;overflow-wrap:anywhere;
+}
+@container fueltrans (max-width:620px){.ft-owner-onboarding form{grid-template-columns:minmax(0,1fr)}}

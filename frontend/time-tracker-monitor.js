@@ -87,7 +87,7 @@ export async function probeTimeTrackerMonitor({
    return null;
   }
  };
- const signed=await run('Supabase Auth identity',()=>auth.getVerifiedUser(),
+ const signed=await run('Supabase Auth identity',()=>auth.getVerifiedUser({fresh:true}),
   u=>u?.id===initialId);
  if(!signed) return Object.freeze({
   status:'BLOCKED',sampledAt:new Date(clock()).toISOString(),checks,

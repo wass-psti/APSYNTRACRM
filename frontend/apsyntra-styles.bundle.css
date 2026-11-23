@@ -2766,6 +2766,29 @@
     border-radius: 13px;
     background: var(--apsm-panel);
   }
+  #app .apsm-workspace-switch {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px solid var(--apsm-stroke);
+    border-radius: 13px;
+    background: var(--apsm-panel);
+    color: var(--apsm-ink);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 720;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  #app .apsm-workspace-switch:hover { background: var(--apsm-bg); }
+  #app .apsm-workspace-switch-icon { display: inline-flex; flex: none; }
+  #app .apsm-workspace-switch-label { line-height: 1; }
+  #app .apsm-workspace-switch-header { border-radius: 12px; padding-inline: 9px; }
 
   #app .apsm-search {
     display: flex;
@@ -3062,7 +3085,8 @@
 
   #app .apsm-home a:focus-visible,
   #app .apsm-home button:focus-visible,
-  #app .apsm-app-header a:focus-visible {
+  #app .apsm-app-header a:focus-visible,
+  #app .apsm-app-header button:focus-visible {
     outline: 3px solid var(--apsm-accent);
     outline-offset: 2px;
   }
@@ -3078,7 +3102,9 @@
 
 @media (max-width: 360px) {
   #app .shell.apsm-home-route > .apsm-home { padding-inline: 12px; }
-  #app .apsm-identity { gap: 9px; }
+  #app .apsm-identity { gap: 9px; flex: 1; }
+  #app .apsm-workspace-switch-header .apsm-workspace-switch-label { display: none; }
+  #app .apsm-workspace-switch-header { padding-inline: 0; }
   #app .apsm-avatar { width: 43px; height: 43px; flex-basis: 43px; }
   #app .apsm-card { flex-basis: 84vw; }
   #app .apsm-bottom-nav { left: 7px; right: 7px; }
@@ -13977,6 +14003,184 @@ html[data-aps-monday-theme="dark"] .ws02-invite-state.is-declined{background:#48
  #app .aps-board-shell .tt-native .tt-overtime-command :is(.tt-ot-insights article,.tt-ot-list,.tt-ot-metrics>div){
   border-color:#7588af;
  }
+}
+
+/* CP-TT-MANUAL-OT-01: dedicated, responsive administrator entry and historical navigation. */
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-week>div #tt-ot-week-jump-form{
+ display:flex;align-items:center;gap:7px;flex-wrap:wrap;
+ padding:3px 0;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command #tt-ot-week-jump-form label{
+ color:#6d7f9b;font-size:10px;font-weight:750;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command #tt-ot-week-jump{
+ width:145px;min-height:38px;padding:8px 9px;
+ border:1px solid #d8e3f5;border-radius:8px;
+ background:#fbfcff;color:#304a70;font-size:11px;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-section{
+ display:grid;gap:18px;min-width:0;padding:clamp(17px,2.1vw,25px);
+ border:1px solid #dbe5f5;border-radius:15px;background:#fff;
+ box-shadow:0 9px 25px #1b376a0d;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-heading{
+ display:flex;align-items:flex-start;justify-content:space-between;gap:14px;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-heading>div>span{
+ color:#687eaa;font-size:9px;font-weight:850;letter-spacing:.16em;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-heading h3{
+ margin:6px 0;color:#263f68;font:800 20px/1.2 Inter,system-ui,sans-serif;
+ letter-spacing:-.035em;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-heading p{
+ margin:0;color:#71829c;font-size:12px;line-height:1.55;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-chip{
+ flex:none;padding:7px 10px;border:1px solid #d5defb;border-radius:999px;
+ background:#f2f4ff;color:#5363b6;font-size:10px;font-weight:750;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-grid{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-grid label{
+ display:grid;gap:7px;min-width:0;color:#607491;font-size:10px;
+ font-weight:780;letter-spacing:.08em;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-grid input,
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-grid select,
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-grid textarea{
+ width:100%;min-width:0;min-height:42px;padding:10px 12px;
+ border:1px solid #dce5f3;border-radius:9px;background:#fbfcff;
+ color:#304a70;font:500 12px/1.45 Inter,system-ui,sans-serif;
+ letter-spacing:normal;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-grid textarea{
+ min-height:88px;resize:vertical;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-reason{
+ grid-column:1/-1;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-footer{
+ display:flex;align-items:center;justify-content:space-between;gap:14px;
+ margin-top:15px;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-footer p{
+ max-width:650px;margin:0;color:#73839b;font-size:11px;line-height:1.55;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-footer button{
+ flex:none;min-height:41px;padding:10px 16px;border:1px solid #566bd0;
+ border-radius:9px;background:#596bd5;color:#fff;font-size:11px;font-weight:760;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-footer button:disabled{
+ opacity:.5;cursor:not-allowed;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-empty{
+ margin:0;color:#7b8ba4;font-size:12px;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-badge{
+ display:inline-flex;vertical-align:middle;margin-left:7px;padding:3px 7px;
+ border:1px solid #d5defb;border-radius:999px;background:#f2f4ff;
+ color:#5664b5;font-size:9px;font-style:normal;font-weight:760;
+ white-space:nowrap;
+}
+@media(max-width:720px){
+ #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-grid{
+  grid-template-columns:1fr;
+ }
+ #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-reason{
+  grid-column:auto;
+ }
+ #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-footer{
+  align-items:stretch;flex-direction:column;
+ }
+ #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-footer button{
+  width:100%;
+ }
+ #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-week>div #tt-ot-week-jump-form{
+  width:100%;order:5;
+ }
+}
+
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-readonly-note{
+ margin:0;padding:11px 13px;border:1px solid #e0e8f4;border-radius:9px;
+ background:#f7f9fd;color:#687d9a;font-size:11px;line-height:1.55;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-records{
+ display:grid;gap:10px;padding-top:5px;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-records-heading,
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-record-heading{
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-records-heading{
+ color:#516987;font-size:11px;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-records-heading span{
+ color:#8291a8;font-size:10px;font-weight:650;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-record{
+ display:grid;gap:7px;padding:12px 13px;
+ border:1px solid #e2e9f4;border-radius:10px;background:#fbfcff;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-record-heading strong{
+ color:#344e70;font-size:12px;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-record-meta{
+ display:flex;align-items:center;flex-wrap:wrap;gap:8px 15px;
+ color:#74849b;font-size:10px;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-record-meta strong{
+ color:#465e83;font-size:11px;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-record>p{
+ margin:0;color:#667993;font-size:11px;line-height:1.5;
+ overflow-wrap:anywhere;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-record>small{
+ color:#8291a8;font-size:9px;
+}
+
+/* Maintain WCAG AA contrast for the manual OT read-only and date-navigation copy. */
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-week #tt-ot-week-jump-form label{
+ color:#536780;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-heading>div>span{
+ color:#4e638b;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-heading>div>p{
+ color:#596b84;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-readonly-note{
+ color:#526680;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-records-heading>span{
+ color:#5c6e86;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-empty{
+ color:#596b84;
+}
+
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-footer>p{
+ color:#596b84;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-record-meta>span{
+ color:#536780;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-record>p{
+ color:#536780;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-record>small{
+ color:#5c6e86;
+}
+
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-more{
+ justify-self:start;min-height:38px;padding:9px 13px;
+ border:1px solid #d5def3;border-radius:8px;background:#f5f7ff;
+ color:#425a9a;font-size:11px;font-weight:740;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-manual-more:hover{
+ background:#edf1ff;border-color:#aab9e7;
 }
 
 /* frontend/time-tracker-my-hours-command.css */

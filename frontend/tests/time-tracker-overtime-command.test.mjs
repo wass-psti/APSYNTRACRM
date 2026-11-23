@@ -35,7 +35,9 @@ test('OT uses a distinct, data-driven command hero and one optional passive Pixi
  assert.match(markup,/class="tt-ot-graphics" aria-hidden="true"/);
  assert.match(markup,/class="tt-ot-hero-telemetry" aria-label="Authorized weekly overtime snapshot"/);
  assert.match(markup,/SIGNED WEEKLY SNAPSHOT/);
- assert.match(markup,/Read-only · Signed request scope/);
+ assert.match(markup,/Read-only · Employee OT visibility/);
+ assert.match(markup,/Manual OT Submission/);
+ assert.match(markup,/READ-ONLY RECORDS/);
  assert.equal((markup.match(/class="tt-pixi-backdrop"/g)||[]).length,1);
  assert.equal((markup.match(/data-action="tt-refresh"/g)||[]).length,1);
  assert.doesNotMatch(markup,/<canvas|<script|style=|onclick=/);
@@ -48,6 +50,32 @@ test('OT uses a distinct, data-driven command hero and one optional passive Pixi
  assert.match(markup,/>1<\/strong><span>Rejected<\/span>/);
  assert.doesNotMatch(markup,/Outside Member/);
 });
+test('manual OT history shows all dates independently of weekly analytics and paginates',()=>{
+ const history=Array.from({length:52},(_,index)=>({
+  id:'manual-history-'+index,name:'Manual Employee '+index,
+  ownerId:'cloud:manual-'+index,date:'2025-01-01',
+  status:['Submitted','Approved','Rejected'][index%3],
+  start:'18:00',end:'19:00',durationMinutes:60,
+  task:'Historical manual overtime record',submissionSource:'manual_admin'
+ }));
+ const firstPage=render({requests:[...rows,...history],
+  access:{moduleRole:'HR',manualOtManager:false},manualVisibleCount:50,
+  filters:{weekOffset:0}});
+ assert.match(firstPage,/Manual Employee 0/);
+ assert.match(firstPage,/Manual Employee 49/);
+ assert.doesNotMatch(firstPage,/Manual Employee 50/);
+ assert.match(firstPage,/50 of 52 total/);
+ assert.match(firstPage,/data-action="tt-ot-manual-more"/);
+ assert.match(firstPage,/READ-ONLY RECORDS/);
+ assert.doesNotMatch(firstPage,/tt-ot-manual-form/);
+ assert.match(firstPage,/3 authorized request\(s\) this week/);
+ const allRows=render({requests:[...rows,...history],
+  access:{moduleRole:'HR',manualOtManager:false},manualVisibleCount:100});
+ assert.match(allRows,/Manual Employee 51/);
+ assert.doesNotMatch(allRows,/data-action="tt-ot-manual-more"/);
+ assert.match(allRows,/52 of 52 total/);
+});
+
 test('existing OT navigation, role checks, search and staged write restrictions remain',()=>{
  const employee=render({modalOpen:true,filters:{status:'Approved'}});
  for(const token of ['tt-ot-prev','tt-ot-next','tt-ot-current','tt-ot-status',
@@ -73,9 +101,9 @@ test('OT metrics, request details and charts remain escaped and accessible',()=>
  assert.match(attack,/aria-label="Saturday approved overtime minutes"/);
  assert.match(attack,/aria-pressed="true"/);
  assert.match(attack,/aria-label="Previous week"/);
- const earliest=render({filters:{weekOffset:-104}});
+ const earliest=render({filters:{weekOffset:-5200}});
  assert.match(earliest,/data-action="tt-ot-prev"[^>]* disabled/);
- const latest=render({filters:{weekOffset:104}});
+ const latest=render({filters:{weekOffset:5200}});
  assert.match(latest,/data-action="tt-ot-next"[^>]* disabled/);
 });
 test('OT stylesheet is scoped, responsive, keyboard accessible and motion safe',()=>{

@@ -365,7 +365,7 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',workPlanDraft='',ojtWorkPlanDraft='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',clockCorrectionNotice='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
+ result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',workPlanDraft='',ojtWorkPlanDraft='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',clockCorrectionNotice='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otManualVisibleCount=50,otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError='',
  adminEligible=false,adminFullAccess=adminEligible,adminDirectory=[],adminSelectedIds=[],adminEditor=null,adminDeleteConfirm=null,adminBusy=false,adminError='',adminSuccess='',
  ojtSelected=null,ojtAttendance=null,ojtBusy=false,ojtError='',ojtSuccess='',
@@ -455,7 +455,7 @@ export function renderTimeTrackerNative({
  });
  if(selected==='ot')html+=renderTimeTrackerOvertime({
   requests:result.otRequests||[],access:result.access,
-  filters:otFilters,expandedRequestIds:otExpandedRequestIds,modalOpen:otModalOpen,form:otDraft,now
+  filters:otFilters,manualVisibleCount:otManualVisibleCount,expandedRequestIds:otExpandedRequestIds,modalOpen:otModalOpen,form:otDraft,now,busy
  });
  html+=applicationFooter()+'</div></section>';
  return html;

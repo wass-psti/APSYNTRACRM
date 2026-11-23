@@ -1,0 +1,223 @@
+{
+  "implementation": "CP-CRM-SESSION-CPU-04",
+  "followUpDateUtc": "2026-11-23",
+  "project": {
+    "name": "APSYNTRACRM",
+    "ref": "jtlusodorfnyzgyuewkz",
+    "region": "ap-southeast-2",
+    "plan": "Pro",
+    "status": "ACTIVE_HEALTHY"
+  },
+  "dashboard": {
+    "observedAtUtc": "2026-11-23T07:16:00Z",
+    "route": "/observability/database",
+    "selectedWindow": "Last 60 minutes",
+    "chartWindowLocal": "2026-11-23 14:16–15:16 Asia/Manila",
+    "availablePanels": {
+      "cpuAveragePercent": 3.17,
+      "memoryUsageMB": 875.37,
+      "networkThroughputKBPerSecond": 127.1,
+      "diskIops": 4,
+      "memoryCommitmentVisible": true,
+      "databaseSizeGB": 0.45
+    },
+    "unavailablePanels": [
+      "Disk throughput",
+      "Database Connections",
+      "Dedicated Pooler Client Connections",
+      "Shared Pooler (Supavisor) client connections",
+      "Disk Usage"
+    ],
+    "planAvailability": {
+      "diskThroughput": "Team and Enterprise only; expected unavailable on Pro",
+      "databaseConnections": "Free and Pro",
+      "dedicatedPoolerConnections": "All plans",
+      "sharedPoolerConnections": "All plans",
+      "diskUsage": "Free and Pro"
+    },
+    "interpretation": "The Dashboard report is partially operational. Disk throughput is plan-gated for Pro. The other four unavailable panels are documented as available on Pro or all plans, so their failures are not explained by plan entitlement. The dashboard exposed no internal failing request status or trace ID.",
+    "officialDocumentation": "https://supabase.com/docs/guides/observability/reports"
+  },
+  "authWorkload": {
+    "windowUtc": {
+      "start": "2026-11-23T06:45:00Z",
+      "end": "2026-11-23T07:15:00Z",
+      "durationSeconds": 1800
+    },
+    "authService": {
+      "totalRequests": 154,
+      "getUser": {
+        "requests": 151,
+        "status200": 151
+      },
+      "postToken": {
+        "requests": 3,
+        "status200": 3
+      },
+      "otherStatuses": 0
+    },
+    "edgeGateway": {
+      "totalRequests": 2529,
+      "optionsPreflights": 253,
+      "getAuthUser": {
+        "requests": 151,
+        "status200": 151
+      },
+      "postAuthToken": {
+        "requests": 3,
+        "status200": 3
+      },
+      "clientErrors": 6,
+      "serverErrors": 0
+    },
+    "requestIdReconciliation": {
+      "authRequestRows": 154,
+      "distinctAuthRequestIds": 154,
+      "matchedEdgeRequestIds": 154,
+      "unmatchedAuthRows": 0,
+      "result": "PASS — every Auth /user and /token log row matched an Edge request_id"
+    },
+    "unrelatedEdgeClientErrors": [
+      {
+        "path": "/rest/v1/rpc/charter_dispatch",
+        "status": 403,
+        "requests": 5
+      },
+      {
+        "path": "/rest/v1/rpc/apsyntra_teams_snapshot",
+        "status": 404,
+        "requests": 1
+      }
+    ],
+    "normalizedRates": {
+      "authRequestsPerMinute": 5.13,
+      "authShareOfAllEdgeRequestsPercent": 6.09,
+      "authShareExcludingOptionsPercent": 6.75
+    },
+    "interpretation": "Auth service and Edge gateway counts reconcile exactly in this window. All Auth user and token requests were HTTP 200. Six unrelated Edge client errors were outside the Auth endpoints; no Edge 5xx errors were observed."
+  },
+  "browserAcceptance": {
+    "route": "https://wass-psti.github.io/APSYNTRACRM/#/time-tracker",
+    "separateTabUsed": true,
+    "existingProductionDeployment": true,
+    "beforeRefresh": {
+      "signedInUi": true,
+      "secureSessionIndicator": true,
+      "signInForm": false,
+      "timeTrackerRoute": true
+    },
+    "afterRefresh": {
+      "signedInUi": true,
+      "secureSessionIndicator": true,
+      "signInForm": false,
+      "timeTrackerRoute": true,
+      "attendanceScreenLoaded": true,
+      "activeAttendanceSessionPreserved": true
+    },
+    "attendanceWritePerformed": false,
+    "interpretation": "The currently deployed production application retained its signed-in TimeTracker UI and existing active attendance session across a genuine browser refresh. This verifies baseline production persistence, not execution of the unmerged CP-04 code."
+  },
+  "verification": {
+    "cp04FocusedTests": {
+      "passed": 6,
+      "failed": 0
+    },
+    "authSessionWorkspaceFocusedTests": {
+      "passed": 42,
+      "failed": 0
+    },
+    "fullFrontendTests": {
+      "passed": 3501,
+      "failed": 0
+    },
+    "syntaxChecks": "PASS",
+    "eslint": "PASS",
+    "prettier": "PASS",
+    "productionViteBuild": "PASS",
+    "buildWarnings": [
+      "Existing startup-guard.js classic-script bundling advisory",
+      "Existing main application chunk size advisory"
+    ],
+    "postMerge": {
+      "fullFrontendTests": {
+        "passed": 3506,
+        "failed": 0
+      },
+      "focusedRegressionTests": {
+        "passed": 61,
+        "failed": 0
+      },
+      "syntaxChecks": "PASS",
+      "repositoryEslint": "PASS",
+      "changedFileEslint": "PASS",
+      "prettier": "PASS",
+      "productionViteBuild": "PASS",
+      "buildWarning": "Existing main application chunk size advisory; build completed successfully",
+      "githubCheckRuns": {
+        "total": 29,
+        "success": 26,
+        "failure": 2,
+        "pending": 0,
+        "failureNotes": [
+          "Supabase Preview status did not pass; GitHub Pages deployment succeeded.",
+          "TimeTracker disposable PostgreSQL integration failed in sql/tests/cp-tt-live01-disposable-setup.sql because CREATE OR REPLACE attempted to remove defaults from public.module_role_for(text,uuid). CP-TT-MANUAL-OT-01 disposable acceptance passed earlier in the same job."
+        ]
+      }
+    }
+  },
+  "repository": {
+    "branch": "cp-crm-session-cpu-04",
+    "head": "d1268c0c779e933a8543ee3fa42fa32e93d1e97f",
+    "base": "cf20bd03237ca904435c3f2701ea8fbf44502126",
+    "aheadOfMainCommits": 2,
+    "behindMainCommits": 0,
+    "remoteBranchPresentBeforePush": false,
+    "latestMainCommit": "3fcced5744626b09815995d915e6fd457514f2be",
+    "mergeCommit": "4ea2b04",
+    "headAfterMerge": "8431574d124baa156e0f01bc791ec2f1c549ca7c",
+    "aheadOfMainAfterMerge": 4,
+    "mainIntegration": "Merged CP-TT-MANUAL-OT-01 without conflicts; TimeTracker changes preserved",
+    "pullRequest": "https://github.com/wass-psti/APSYNTRACRM/pull/804",
+    "mainCommit": "26d3ea06b632f1bb53e136716e77f5a916a73b96",
+    "pullRequestState": "MERGED",
+    "mergedAtUtc": "2026-11-23T07:40:44Z",
+    "pullRequestMergeCommit": "26d3ea06b632f1bb53e136716e77f5a916a73b96"
+  },
+  "remaining": {
+    "directMetricsApi30MinuteSampling": "NOT RUN — prior CLI sampling invocation was held because it would reveal the existing Secret API key; no bypass or secret extraction attempted.",
+    "cpuPercentiles": "PENDING — 30-minute counter-delta samples are not available; dashboard 3.17% is a 60-minute average only.",
+    "remainingHostProcessAttribution": "PARTIAL — Metrics API exposes PostgreSQL and GoTrue process counters, but not remaining host services.",
+    "dashboardCorePanelFailure": "OPEN — four Pro/all-plan panels remain unavailable without an exposed internal status, trace ID, or report-service error.",
+    "cp04ProductionDeployment": "VERIFIED — PR #804 merged and GitHub Pages deployment run 45132856353 succeeded; deployed platform-sync.js hash matches origin/main.",
+    "ci": "PARTIAL — 26/29 check runs successful; two unrelated check failures are documented in section 14.2; CP-04 focused and full frontend tests passed.",
+    "postDeploymentBrowserAcceptance": "PENDING — genuine signed-in browser acceptance after deployment has not been completed; the currently selected tab is paused while hidden and has no authoritative check."
+  },
+  "constraints": {
+    "sourceCodeScope": [
+      "frontend/app.js",
+      "frontend/platform-sync.js",
+      "frontend/tests/cp-crm-session-cpu-04.test.mjs"
+    ],
+    "databaseSchemaChanged": false,
+    "databaseFunctionsChanged": false,
+    "rolesOrPermissionsChanged": false,
+    "projectSettingsChanged": false,
+    "credentialsCreatedOrRotated": false,
+    "backgroundCollectorInstalled": false,
+    "newDependencies": false,
+    "attendanceWritesPerformed": false,
+    "gradientDescentOrModelTrainingIntroduced": false
+  },
+  "deployment": {
+    "provider": "GitHub Pages",
+    "workflowRunId": 45132856353,
+    "workflowRunUrl": "https://github.com/wass-psti/APSYNTRACRM/actions/runs/45132856353",
+    "status": "completed",
+    "conclusion": "success",
+    "updatedAtUtc": "2026-11-23T07:41:31Z",
+    "liveSourcePath": "frontend/platform-sync.js",
+    "liveSourceSha256": "6542e0de330096f4b53e70949957a8509aea1b392a91801822fc98046574eac6",
+    "mainSourceSha256": "6542e0de330096f4b53e70949957a8509aea1b392a91801822fc98046574eac6",
+    "sourceMatch": true
+  }
+}

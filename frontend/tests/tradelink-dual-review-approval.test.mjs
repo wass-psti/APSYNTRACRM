@@ -88,7 +88,8 @@ test('assigned reviewer client uses signed native application context and record
     calls.push({name,args});
     if(name==='tl03_assigned_documents')return [{documentId,boardItemId,
      documentType:'quotation',documentNumber:'Q-ASSIGNED-01',revision:3,
-     workflowState:'for-approval',archived:false,updatedAt:'2026-11-12T08:00:00Z',
+     workflowState:'for-approval',archived:false,clientName:'Assigned Client',
+     createdAt:'2026-11-11T08:00:00Z',updatedAt:'2026-11-12T08:00:00Z',
      primaryEmail:'reviewer@example.test',secondaryEmail:'manager@example.test',
      primaryAt:null,secondaryAt:null,assignedStage:'primary'}];
     if(name==='tl03_record_review_stage')return {documentId,boardItemId,

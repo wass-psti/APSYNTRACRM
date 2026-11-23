@@ -74,7 +74,10 @@ test("restored CSS bundle excludes both superseded redesign layers and remains d
     bundle,
     /\/\* frontend\/(?:crm-complete-design-system|board-uiverse-overhaul)\.css \*\//,
   );
-  assert.match(index, /apsyntra-styles\.bundle\.css\?v=cp-crm-ui-restore-01/);
+  assert.match(
+    index,
+    /apsyntra-styles\.bundle\.css\?v=(?:cp-crm-ui-restore-01|cp-mobile-workspace-switch-01)/,
+  );
   assert.equal(existsSync("frontend/crm-complete-design-system.css"), true);
   assert.equal(existsSync("frontend/board-uiverse-overhaul.css"), true);
 });

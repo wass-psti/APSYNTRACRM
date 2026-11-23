@@ -35,7 +35,7 @@ export async function runTradeLinkStageASignedReadOnly({auth,api,createProbeId=(
  const checks=[];
  let actor,context;
  try{
-  actor=await auth.getVerifiedUser();
+  actor=await auth.getVerifiedUser({fresh:true});
   context=await api.context();
  }catch{
   return finish([entry('signed-identity','BLOCKED','Live GoTrue user or workspace could not be verified.')]);
@@ -119,7 +119,7 @@ export async function runTradeLinkStageASignedReadOnly({auth,api,createProbeId=(
     'Wrong-board response was inconclusive.'));
  }
  try{
-  const next=await auth.getVerifiedUser(),ctx=await api.context();
+  const next=await auth.getVerifiedUser({fresh:true}),ctx=await api.context();
   checks.push(entry('stable-session',
    next?.id===actor.id&&auth.userId===actor.id&&ctx?.user_id===actor.id&&
    ctx?.workspace_id===context.workspace_id&&ctx?.profile?.status==='active'?

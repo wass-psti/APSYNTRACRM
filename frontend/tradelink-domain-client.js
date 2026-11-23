@@ -394,7 +394,11 @@ export class TradeLinkDomainClient{
   if(!Array.isArray(rows)||rows.length>limit||rows.some(r=>!validUuid(r?.documentId)||
       !validUuid(r?.boardItemId)||!TYPES.has(r?.documentType)||
       !STATES.has(r?.workflowState)||!Number.isSafeInteger(r?.revision)||r.revision<1||
-      typeof r?.createdByActor!=='boolean'))
+      typeof r?.createdByActor!=='boolean'||
+      typeof r?.documentNumber!=='string'||
+      (r?.clientName!==null&&r?.clientName!==undefined&&typeof r.clientName!=='string')||
+      typeof r?.createdAt!=='string'||!Number.isFinite(Date.parse(r.createdAt))||
+      typeof r?.updatedAt!=='string'||!Number.isFinite(Date.parse(r.updatedAt))))
    deny('Invalid TradeLink document list response.',409);
   return rows;
  }
@@ -407,15 +411,22 @@ export class TradeLinkDomainClient{
     !STATES.has(workflowState)&&workflowState!=='all'||
     !['all','active','archived'].includes(archiveMode)||
     !Number.isSafeInteger(limit)||limit<1||limit>50||
-    (cursor!==null&&(!cursor||typeof cursor.updatedAt!=='string'||
-      !Number.isFinite(Date.parse(cursor.updatedAt))||
+    (cursor!==null&&(!cursor||typeof cursor.createdAt!=='string'||
+      !Number.isFinite(Date.parse(cursor.createdAt))||
       !validUuid(cursor.documentId))))
    deny('Invalid TradeLink server search request.',400);
-  await this.session({allowCreateUser:true});
+  try{
+   await this.session({allowCreateUser:true});
+  }catch(error){
+   // Assigned reviewers use the existing reviewer session contract. The
+   // database page RPC remains authoritative for which assigned rows exist.
+   if(error?.status!==403)throw error;
+   await this.reviewerSession();
+  }
   const response=await this.api.rpc('tl03_documents_page',{
    p_board_id:TRADELINK_BOARD_ID,p_search:query,
    p_document_type:documentType,p_workflow_state:workflowState,
-   p_archive_mode:archiveMode,p_before_at:cursor?.updatedAt??null,
+   p_archive_mode:archiveMode,p_before_at:cursor?.createdAt??null,
    p_before_id:cursor?.documentId??null,p_limit:limit
   });
   if(!response||typeof response!=='object'||Array.isArray(response)||
@@ -424,18 +435,23 @@ export class TradeLinkDomainClient{
     (response.hasMore!==Boolean(response.nextCursor))||
     (response.nextCursor!==null&&
       (!validUuid(response.nextCursor?.documentId)||
-       typeof response.nextCursor?.updatedAt!=='string'||
-       !Number.isFinite(Date.parse(response.nextCursor.updatedAt))))||
+       typeof response.nextCursor?.createdAt!=='string'||
+       !Number.isFinite(Date.parse(response.nextCursor.createdAt))))||
     response.rows.some(r=>!validUuid(r?.documentId)||!validUuid(r?.boardItemId)||
       !TYPES.has(r?.documentType)||!STATES.has(r?.workflowState)||
       typeof r?.documentNumber!=='string'||typeof r?.archived!=='boolean'||
       typeof r?.createdByActor!=='boolean'||
+      (r?.clientName!==null&&r?.clientName!==undefined&&typeof r.clientName!=='string')||
+      !['primary','secondary',null,undefined].includes(r?.assignedStage)||
+      (r?.primaryAt!=null&&(typeof r.primaryAt!=='string'||!Number.isFinite(Date.parse(r.primaryAt))))||
+      (r?.secondaryAt!=null&&(typeof r.secondaryAt!=='string'||!Number.isFinite(Date.parse(r.secondaryAt))))||
       !Number.isSafeInteger(r?.revision)||r.revision<1||
+      typeof r?.createdAt!=='string'||!Number.isFinite(Date.parse(r.createdAt))||
       typeof r?.updatedAt!=='string'||!Number.isFinite(Date.parse(r.updatedAt)))||
     (response.hasMore&&(!response.rows.length||
       response.nextCursor.documentId!==response.rows.at(-1).documentId||
-      Date.parse(response.nextCursor.updatedAt)!==
-        Date.parse(response.rows.at(-1).updatedAt))))
+      Date.parse(response.nextCursor.createdAt)!==
+        Date.parse(response.rows.at(-1).createdAt))))
     deny('Invalid authorized TradeLink server page response.',409);
   return response;
  }
@@ -453,6 +469,8 @@ export class TradeLinkDomainClient{
     row.revision<1||typeof row?.primaryEmail!=='string'||
     typeof row?.secondaryEmail!=='string'||
     !['primary','secondary'].includes(row?.assignedStage)||
+    (row.clientName!==null&&row.clientName!==undefined&&typeof row.clientName!=='string')||
+    typeof row?.createdAt!=='string'||!Number.isFinite(Date.parse(row.createdAt))||
     typeof row?.updatedAt!=='string'||!Number.isFinite(Date.parse(row.updatedAt))||
     (row.primaryAt!==null&&row.primaryAt!==undefined&&
      (typeof row.primaryAt!=='string'||!Number.isFinite(Date.parse(row.primaryAt))))||

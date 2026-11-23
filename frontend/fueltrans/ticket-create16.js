@@ -5,6 +5,7 @@
 import {validateTicketForm,createTicketRecord} from './ticket-domain.js';
 import {SYSTEM_TYPES} from './queue-filters15.js';
 export {SYSTEM_TYPES};
+export const CATEGORIES=Object.freeze(['Station Assistance','POS Software Issue','Station Inquiry','POS L2','Deployment']);
 export const IMPACTS=Object.freeze(['Informational','Minor Degradation','Partial Service Interruption','Major Service Interruption','Complete Station Outage']);
 export const CHANNELS=Object.freeze(['Phone Call','Email or Message','Client Portal','Internal Monitoring','Walk-in Report']);
 export const SOURCE_CREATE_STEPS=Object.freeze(['Client & Location','Classification','Issue Details','Contact','Review']);
@@ -20,6 +21,8 @@ export function validateSourceTicketDraft(form,member){
  const raw=form??{};
  const core=validateTicketForm({client:raw.client,title:raw.title,description:raw.description,priority:raw.priority,stationId:raw.stationId,stationName:raw.stationName,systemType:raw.systemType,impactLevel:raw.impactLevel,reportingChannel:raw.reportingChannel},member);
  if(core.name.length<5)throw Error('Ticket title requires at least 5 characters.');
+ const category=String(raw.category??'').trim();
+ if(!CATEGORIES.includes(category))throw Error('Choose a source-defined ticket category.');
  if(core.details.length<20)throw Error('Issue details require at least 20 characters.');
  if(core.stationId.length<3||core.stationName.length<3)throw Error('Station ID and station name require at least 3 characters each.');
  if(!SYSTEM_TYPES.includes(core.systemType))throw Error('Choose a source-defined system type.');
@@ -34,7 +37,7 @@ export function validateSourceTicketDraft(form,member){
  const affectedTransactions=boundedCount(raw.affectedTransactions,100000000,'Affected transactions',{whole:true,positive:true});
  if(core.priority==='Critical'&&(escalationJustification.length<10||affectedTransactions===null))throw Error('Critical priority requires justification (10+ characters) and affected transactions greater than zero.');
  const handoverFlag=raw.handoverFlag===true||raw.handoverFlag==='on';
- return Object.freeze({...core,downtimeMinutes,affectedTerminals,errorCode,contactName,contactPhone,escalationJustification:core.priority==='Critical'?escalationJustification:'',affectedTransactions:core.priority==='Critical'?affectedTransactions:null,handoverFlag});
+ return Object.freeze({...core,category,downtimeMinutes,affectedTerminals,errorCode,contactName,contactPhone,escalationJustification:core.priority==='Critical'?escalationJustification:'',affectedTransactions:core.priority==='Critical'?affectedTransactions:null,handoverFlag});
 }
 // Intentionally calculates in the user's local browser timezone, like source getAutoInfo.
 // Never substitutes this metadata for server-side SLA enforcement.
@@ -48,7 +51,7 @@ export function sourceOperationalInfo(date=new Date()){
 export function buildSourceTicketRecord(valid,member,user,meta){
  if(!meta||typeof meta.now!=='string'||!Number.isFinite(Date.parse(meta.now)))throw Error('Missing valid creation time.');
  const row=createTicketRecord(valid,member,user,meta);
- const p={...row.payload};
+ const p={...row.payload,category:valid.category};
  const info=sourceOperationalInfo(new Date(meta.now));
  p.reportingShift=info.shift;p.operationalDate=info.operationalDate;
  p.handoverFlag=valid.handoverFlag;p.handoverFlaggedAt=valid.handoverFlag?meta.now:null;

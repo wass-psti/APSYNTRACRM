@@ -70,6 +70,7 @@ on:
       - "sql/tests/cp-frt-ic-01-disposable-acceptance.sql"
       - "sql/cp-tt-ot01-*.sql"
       - "sql/tests/cp-tt-ot02-*.sql"
+      - "supabase/migrations/20261123160000_cp_tt_manual_ot_01_manual_submission_and_scoped_review.sql"
       - "sql/cp-tt-monitor01-*.sql"
       - "sql/cp-tt-gps02-*.sql"
       - "sql/cp-tt-gps03-*.sql"
@@ -114,6 +115,15 @@ jobs:
           node --check scripts/build-supabase-auth-vendor.mjs
           node --check scripts/cp-ws-auth-continuity-browser.mjs
           node --check scripts/cp-board-col01-signed-http.mjs
+          node --check frontend/fueltrans/station-evidence07.js
+          node --check scripts/cp-ft-ui07-browser.mjs
+          node --check scripts/cp-ft-ui07-real-browser.mjs
+          node --check frontend/fueltrans/station-owner-review08.js
+          node --check frontend/fueltrans/station-staging08.js
+          node --check scripts/cp-ft-ui08-browser.mjs
+          node --check frontend/fueltrans/station-import-plan09.js
+          node --check scripts/cp-ft-ui09-station-import-dry-run.mjs
+          node --check scripts/cp-ft-ui09-browser.mjs
       - name: Check main HTML entry point
         run: |
           test -f index.html
@@ -210,6 +220,26 @@ jobs:
             -f sql/tests/cp-main-workspace-owner-admin-setup.sql \
             -f supabase/migrations/20261113031952_main_workspace_owner_crm_admin_20261113.sql \
             -f sql/tests/cp-main-workspace-owner-admin-acceptance.sql
+      - name: Verify FuelTrans two-identity persisted lifecycle with existing RLS contracts
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+        run: |
+          createdb cp_ft_ui05_disposable
+          PGDATABASE=cp_ft_ui05_disposable psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-ft-ui05-prerequisites.sql \
+            -f supabase/migrations/20260928034824_fueltrans_workspace_integration.sql \
+            -f supabase/migrations/20260928035728_fueltrans_membership_identity.sql \
+            -f supabase/migrations/20260928035850_fueltrans_notifications.sql \
+            -f supabase/migrations/20260928040345_fueltrans_admin_state_and_hardening.sql \
+            -f supabase/migrations/20260928041601_fueltrans_policy_hardening.sql \
+            -f supabase/migrations/20260929005600_fueltrans_workspace_contract_guard.sql \
+            -f sql/tests/cp-ft-ui05-disposable-lifecycle.sql
+      - name: Verify real GoTrue two-session FuelTrans REST lifecycle in disposable containers
+        run: |
+          sh scripts/cp-ft-ui06-gotrue-postgrest.sh
   disposable-toolbox-postgres:
     runs-on: ubuntu-latest
     permissions:
@@ -322,6 +352,8 @@ jobs:
           psql -v ON_ERROR_STOP=1 \
             -f sql/tests/cp-tt-ot02-disposable-setup.sql \
             -f sql/cp-tt-ot01-staged-bootstrap-approval.sql \
+            -f supabase/migrations/20261123160000_cp_tt_manual_ot_01_manual_submission_and_scoped_review.sql \
+            -f supabase/migrations/20261123170000_cp_tt_hr_ot_all_user_log_01.sql \
             -f sql/tests/cp-tt-ot02-disposable-acceptance.sql \
             -f sql/cp-tt-monitor01-staged-health.sql \
             -f sql/tests/cp-tt-monitor01-disposable-acceptance.sql \

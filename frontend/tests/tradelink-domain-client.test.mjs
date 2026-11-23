@@ -301,8 +301,10 @@ test('existing TradeLink User module role can create and list own Drafts without
   rpc:async(name,args)=>{
    calls.push(['rpc',name,args]);
    if(name==='tl03_documents_list')return [{
-    documentId:id,boardItemId:item,documentType:'quotation',
-    workflowState:'draft',revision:1,createdByActor:true
+    documentId:id,boardItemId:item,documentType:'quotation',documentNumber:'Q-TEST-01',
+    workflowState:'draft',revision:1,archived:false,createdByActor:true,
+    clientName:'Example Client',createdAt:'2026-11-19T10:00:00Z',
+    updatedAt:'2026-11-19T10:00:00Z'
    }];
    if(name==='tl03_document_create')return {
     documentId:id,boardItemId:item,documentNumber:'Q-20261119000001',

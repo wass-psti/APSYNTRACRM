@@ -53,7 +53,8 @@ test('split navigation preserves existing signed routes and refuses a foreign wo
 test('All Documents renders the signed list beside an honest empty preview, then places a selected preview in the adjacent pane',()=>{
  const row={documentId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
   boardItemId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',documentType:'quotation',
-  documentNumber:'Q-SPLIT-01',revision:1,workflowState:'draft',archived:false,
+  documentNumber:'Q-SPLIT-01',clientName:'Split View Client',revision:1,
+  workflowState:'draft',archived:false,createdAt:'2026-11-12T01:00:00.000Z',
   updatedAt:'2026-11-13T01:00:00.000Z'};
  const view={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',rows:[row]};
  const html=renderTradeLinkDocumentRepository({detail,workspaceId,view,canManage:true});
@@ -73,7 +74,8 @@ test('a verified saved document is rendered inside the adjacent preview pane wit
  const documentId='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
  const boardItemId='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
  const row={documentId,boardItemId,documentType:'quotation',documentNumber:'Q-SPLIT-02',
-  revision:5,workflowState:'draft',archived:false,updatedAt:'2026-11-13T01:00:00.000Z'};
+  revision:5,workflowState:'draft',archived:false,clientName:'Verified preview customer',
+  createdAt:'2026-11-12T01:00:00.000Z',updatedAt:'2026-11-13T01:00:00.000Z'};
  const record={id:documentId,workspace_id:workspaceId,board_id:TRADELINK_BOARD_ID,
   board_item_id:boardItemId,revision:5,workflow_state:'draft',archived_at:null,
   updated_at:'2026-11-13T01:00:00.000Z',created_at:'2026-11-12T01:00:00.000Z',

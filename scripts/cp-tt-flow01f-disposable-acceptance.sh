@@ -8,6 +8,8 @@ command -v docker >/dev/null || { echo 'Docker is required' >&2; exit 1; }
 for f in \
   sql/tests/cp-tt-ot02-disposable-setup.sql \
   sql/cp-tt-ot01-staged-bootstrap-approval.sql \
+  supabase/migrations/20261123160000_cp_tt_manual_ot_01_manual_submission_and_scoped_review.sql \
+  supabase/migrations/20261123170000_cp_tt_hr_ot_all_user_log_01.sql \
   sql/tests/cp-tt-ot02-disposable-acceptance.sql \
   sql/tests/cp-board-collab01-disposable-setup.sql \
   sql/tests/cp-tt-gps01-disposable-setup.sql \
@@ -49,8 +51,10 @@ docker exec "$container" psql -X -v ON_ERROR_STOP=1 -q \
   -U postgres -d postgres \
   -f /repo/sql/tests/cp-tt-ot02-disposable-setup.sql \
   -f /repo/sql/cp-tt-ot01-staged-bootstrap-approval.sql \
+  -f /repo/supabase/migrations/20261123160000_cp_tt_manual_ot_01_manual_submission_and_scoped_review.sql \
+  -f /repo/supabase/migrations/20261123170000_cp_tt_hr_ot_all_user_log_01.sql \
   -f /repo/sql/tests/cp-tt-ot02-disposable-acceptance.sql \
-  | grep -F 'CP-TT-OT-02 disposable acceptance PASS'
+  | grep -F 'CP-TT-MANUAL-OT-01 disposable acceptance PASS'
 stop_disposable
 
 # Separate PostgreSQL cluster is necessary: roles exist cluster-wide, not per

@@ -27,13 +27,13 @@ const fields=data=>({get:key=>data[key]??null});
 
 test('creator documents and reviewer assignments merge by immutable document ID',()=>{
  const own={documentId:'11111111-1111-4111-8111-111111111111',
-  documentNumber:'Q-OWN',createdByActor:true,updatedAt:'2026-11-19T10:00:00Z'};
+  documentNumber:'Q-OWN',createdByActor:true,createdAt:'2026-11-19T10:00:00Z',updatedAt:'2026-11-19T10:00:00Z'};
  const assignedSame={documentId:own.documentId,documentNumber:'Q-OWN',
   assignedStage:'primary',primaryEmail:'reviewer@example.test',
-  updatedAt:'2026-11-19T10:00:00Z'};
+  createdAt:'2026-11-19T10:00:00Z',updatedAt:'2026-11-19T10:00:00Z'};
  const assignedOther={documentId:'22222222-2222-4222-8222-222222222222',
   documentNumber:'Q-REVIEW',assignedStage:'secondary',
-  updatedAt:'2026-11-19T09:00:00Z'};
+  createdAt:'2026-11-19T09:00:00Z',updatedAt:'2026-11-19T09:00:00Z'};
  const rows=mergeTradeLinkCreatedAndAssignedRows([own],[assignedSame,assignedOther]);
  assert.equal(rows.length,2);
  assert.equal(rows[0].documentId,own.documentId);
@@ -88,7 +88,7 @@ test('six source modules deep-link to their selected, unsaved Draft forms',()=>{
     cashAmount:'25',receivedBy:'msenagan@watchdogautomation.com.ph',verifiedBy:'asenagan@watchdogautomation.com.ph'},
    esi:{customerName:'Invoice client',customerTin:'TIN-001',verifiedBy:'msenagan@watchdogautomation.com.ph',approvedBy:'asenagan@watchdogautomation.com.ph',
     lineDescription:'Goods',lineQuantity:'2',lineUnitPrice:'150'},
-   quotation:{customerName:'Prospective client',customerEmail:'client@example.com',
+   quotation:{customerName:'Example client',customerEmail:'client@example.com',
     validity:'30 days',deliveryCommitment:'Within 14 days',paymentTerms:'Net 30',approvedBy:'asenagan@watchdogautomation.com.ph',
     lineDescription:'Service',lineQuantity:'2',lineUnitPrice:'150'},
    po:{customerName:'Supplier',targetDeliveryDate:'2026-12-01',paymentTerms:'Net 30',
@@ -839,11 +839,13 @@ test('TradeLink User All Documents shows own Draft edit and assigned reviewer ac
  const own={documentId:'11111111-1111-4111-8111-111111111111',
   boardItemId:'22222222-2222-4222-8222-222222222222',documentType:'quotation',
   documentNumber:'Q-OWN-001',workflowState:'draft',revision:1,archived:false,
-  updatedAt:'2026-11-19T10:00:00Z',createdByActor:true};
+  createdAt:'2026-11-19T10:00:00Z',updatedAt:'2026-11-19T10:00:00Z',
+  clientName:'Own Client',createdByActor:true};
  const assigned={documentId:'33333333-3333-4333-8333-333333333333',
   boardItemId:'44444444-4444-4444-8444-444444444444',documentType:'quotation',
   documentNumber:'Q-REVIEW-001',workflowState:'for-approval',revision:2,
-  archived:false,updatedAt:'2026-11-19T09:00:00Z',createdByActor:false,
+  archived:false,createdAt:'2026-11-19T09:00:00Z',updatedAt:'2026-11-19T09:00:00Z',
+  clientName:'Assigned Client',createdByActor:false,
   assignedStage:'primary',primaryEmail:'reviewer@example.test',
   secondaryEmail:'second@example.test',primaryAt:null,secondaryAt:null};
  const view={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',
@@ -886,17 +888,17 @@ test('read-only listing presents filters but never reveals rows or enables RPC u
 
 test('source-bound local document search filters only previously authorized page entries',()=>{
  const rows=[
-  {documentNumber:'Q-100',documentType:'quotation',workflowState:'draft',archived:false},
-  {documentNumber:'Q-200',documentType:'quotation',workflowState:'approved',archived:false},
-  {documentNumber:'PO-300',documentType:'po',workflowState:'draft',archived:true},
-  {documentNumber:'PL-400',documentType:'packing',workflowState:'completed',archived:false},
-  {documentNumber:'E-500',documentType:'esi',workflowState:'revision-required',archived:false}
+  {documentNumber:'Q-100',documentType:'quotation',workflowState:'draft',archived:false,createdAt:'2026-11-01T00:00:00Z'},
+  {documentNumber:'Q-200',documentType:'quotation',workflowState:'approved',archived:false,createdAt:'2026-11-02T00:00:00Z'},
+  {documentNumber:'PO-300',documentType:'po',workflowState:'draft',archived:true,createdAt:'2026-11-03T00:00:00Z'},
+  {documentNumber:'PL-400',documentType:'packing',workflowState:'completed',archived:false,createdAt:'2026-11-04T00:00:00Z'},
+  {documentNumber:'E-500',documentType:'esi',workflowState:'revision-required',archived:false,createdAt:'2026-11-05T00:00:00Z'}
  ];
  assert.deepEqual(initialTradeLinkDraftListFilters(),{
   query:'',documentType:'all',workflowState:'all',archiveMode:'active',
-  sortBy:'documentNumber',sortDirection:'asc'});
+  sortBy:'createdAt',sortDirection:'desc'});
  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows).map(x=>x.documentNumber),
-  ['E-500','PL-400','Q-100','Q-200']);
+  ['E-500','PL-400','Q-200','Q-100']);
  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{query:' q-',documentType:'quotation',
   workflowState:'draft'}).map(x=>x.documentNumber),['Q-100']);
  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{archiveMode:'archived'}).map(x=>x.documentNumber),
@@ -909,8 +911,8 @@ test('source-bound local document search filters only previously authorized page
  assert.equal(unsafe.documentType,'all');
  assert.equal(unsafe.workflowState,'all');
  assert.equal(unsafe.archiveMode,'active');
- assert.equal(unsafe.sortBy,'documentNumber');
- assert.equal(unsafe.sortDirection,'asc');
+ assert.equal(unsafe.sortBy,'createdAt');
+ assert.equal(unsafe.sortDirection,'desc');
  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(null,{}),[]);
  assert.equal(filterTradeLinkDraftAuthorizedRows(Array.from({length:120},
   (_,i)=>({...rows[0],documentNumber:'Q-'+i})),{archiveMode:'all'}).length,50);
@@ -988,7 +990,7 @@ test('sorting handles numbered document IDs and numeric revision without re-quer
   {documentNumber:'Q-2',documentType:'quotation',workflowState:'draft',revision:11,archived:false},
   {documentNumber:'PO-3',documentType:'po',workflowState:'approved',revision:4,archived:false}
  ];
- assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{sortBy:'documentNumber'})
+ assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{sortBy:'documentNumber',sortDirection:'asc'})
   .map(r=>r.documentNumber),['PO-3','Q-2','Q-10']);
  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{sortBy:'documentNumber',sortDirection:'desc'})
   .map(r=>r.documentNumber),['Q-10','Q-2','PO-3']);
@@ -996,8 +998,8 @@ test('sorting handles numbered document IDs and numeric revision without re-quer
   .map(r=>r.revision),[11,4,2]);
  const normalized=normalizeTradeLinkDraftListFilters({
   sortBy:'../metadata',sortDirection:'drop',query:'x'.repeat(200)});
- assert.equal(normalized.sortBy,'documentNumber');
- assert.equal(normalized.sortDirection,'asc');
+ assert.equal(normalized.sortBy,'createdAt');
+ assert.equal(normalized.sortDirection,'desc');
  assert.equal(normalized.query.length,120);
 });
 

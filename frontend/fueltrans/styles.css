@@ -112,3 +112,17 @@ html{scroll-behavior:smooth}:host{line-height:1.45}.shell{grid-template-columns:
 .ft-navigation{display:flex;flex-wrap:wrap;gap:12px;padding:14px 22px;background:#fafbfe;border-bottom:1px solid #e8ebf2}.ft-nav-group{display:flex;flex-wrap:wrap;align-items:center;gap:4px}.ft-nav-group>span{font-size:9px;letter-spacing:.08em;color:#81889c;margin-right:5px}.ft-nav-group a{font-size:12px;padding:7px 9px;border-radius:7px;color:#687187}.ft-nav-group a.active{background:var(--purple-soft,#eeefff);color:var(--purple,#5d61e8);font-weight:650}.ft-nav-group a:hover{background:#f0f1f8}.content{padding:24px;background:transparent}.page-heading h1{font-size:25px;letter-spacing:-.7px}.panel,.stat-card{box-shadow:none;border-color:#e8ebf2;border-radius:12px}button{border-radius:8px}button:not(.secondary):not(.danger){background:var(--purple,#5d61e8)}.role-tag{background:#f1f2f8;color:#687187}progress{width:100%;accent-color:var(--purple,#5d61e8)}.auth,.loading{min-height:320px}.auth-card{box-shadow:none}.table-wrap{max-width:100%;overflow:auto}@media(max-width:700px){.content{padding:16px}.ft-toolbar{padding:14px;flex-wrap:wrap}.ft-navigation{padding:12px;gap:8px}.ft-nav-group>span{display:none}.page-heading{gap:12px}.stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .ft-navigation .ft-nav-group a{background:transparent;color:#626b80;text-decoration:none}.ft-navigation .ft-nav-group a.active{background:#eeefff;color:#514fc4}.ft-navigation .ft-nav-group a:hover{background:#f0f1f8;color:#373d55}
 @media print{.ft-navigation,.ft-toolbar{display:none!important}.ft-application{border:0;overflow:visible}.content{padding:0}}
+
+/* Accessible, focused ticket escalation and resolution forms. */
+.ft-workflow-reason-dialog{
+ width:min(620px,calc(100% - 32px));max-width:620px;
+ border:1px solid var(--ft-border,#CBD5E1);border-radius:14px;
+ padding:24px;color:var(--ft-text,#1F2937);background:var(--ft-surface,#FFFFFF);
+ box-shadow:0 24px 70px rgba(15,23,42,.22);
+}
+.ft-workflow-reason-dialog::backdrop{background:rgba(15,23,42,.48);}
+.ft-workflow-reason-dialog form{display:grid;gap:14px;}
+.ft-workflow-reason-dialog h2{margin:0;}
+.ft-workflow-reason-dialog textarea{display:block;width:100%;min-height:130px;resize:vertical;}
+.ft-workflow-reason-dialog [role=alert]{min-height:1.2em;color:var(--ft-danger,#B42318);}
+.ft-workflow-reason-dialog .button-row{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;}

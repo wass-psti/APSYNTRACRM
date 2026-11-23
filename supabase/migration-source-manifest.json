@@ -2074,6 +2074,20 @@
       "sha256": "06ac4abddab7c9cadbdbb62bcf5854e2147debf436dfda75c769d5a485384e24"
     },
     {
+      "version": "20261123080322",
+      "name": "cp_tl_document_identity_order_01",
+      "file": "20261123080322_cp_tl_document_identity_order_01.sql",
+      "bytes": 14387,
+      "sha256": "45444ad9e15f67d7b4cd0d007966a8d5edf760fe9610eda94cf338a49ac265b1"
+    },
+    {
+      "version": "20261123081039",
+      "name": "cp_fueltrans_m7_ticket_number_allocator",
+      "file": "20261123081039_cp_fueltrans_m7_ticket_number_allocator.sql",
+      "bytes": 6759,
+      "sha256": "e5afa7ba82dd927ea71061b861c35c2595169afaf09c14d54a760238b5230db9"
+    },
+    {
       "version": "20261123100000",
       "name": "cp_tt_ojt_shared_identities",
       "file": "20261123100000_cp_tt_ojt_shared_identities.sql",
@@ -2100,6 +2114,20 @@
       "file": "20261123150000_cp_tt_ojt_admin_record_management.sql",
       "bytes": 8323,
       "sha256": "94ed1c8509c89923b0dfe3ec2c80e3e7ed45b2f2e6c7ac2931d3e233683750a7"
+    },
+    {
+      "version": "20261123160000",
+      "name": "cp_tt_manual_ot_01_manual_submission_and_scoped_review",
+      "file": "20261123160000_cp_tt_manual_ot_01_manual_submission_and_scoped_review.sql",
+      "bytes": 12775,
+      "sha256": "edc0ff382fac12551ab5add4570477bf06103aae62babb31b035cb1a5765c251"
+    },
+    {
+      "version": "20261123170000",
+      "name": "cp_tt_hr_ot_all_user_log_01",
+      "file": "20261123170000_cp_tt_hr_ot_all_user_log_01.sql",
+      "bytes": 4523,
+      "sha256": "786a67b307af56eaa40c12e38dcf5b6ea170d918aa63601e381a3d16ff0741ee"
     }
   ]
 }
