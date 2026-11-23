@@ -65,6 +65,8 @@ export function attendanceClockError(err,{commitAttempted=false,action='clock-ou
  if(attendanceAuthFailure(err))return 'Your signed attendance permission is no longer valid. Sign in again and refresh TimeTracker.';
  if(err?.code==='TT_GEO_DENIED')return 'Location permission was denied. Enable Location Services and browser location access, then try again. No '+verb+' request was sent.';
  if(err?.code==='TT_GEO_UNAVAILABLE')return 'A current GPS location could not be obtained. Check device location services and network connectivity, then try again. No '+verb+' request was sent.';
+ if(err?.code==='TT_GEO_TIMEOUT')return 'GPS acquisition timed out. Turn on device location and Wi-Fi, then retry near a window or outdoors. No '+verb+' request was sent.';
+ if(err?.code==='TT_GEO_INSECURE')return 'Browser GPS requires HTTPS. Open APSYNTRA CRM over HTTPS and retry. No '+verb+' request was sent.';
  return commitAttempted?
   label+' confirmation is uncertain. Verify the signed attendance state before trying again.':
   label+' could not start. Refresh your signed attendance session before retrying.';
