@@ -49,6 +49,7 @@ The recommended direction is to keep the **Recorded Stations** view and local-on
 - An isolated GoTrue instance initially returned signup HTTP 500 because the `auth.identities` relation was not found by its unqualified query. Initializing GoTrue's 75 schema migrations was necessary; the disposable PostgreSQL role's `search_path` must also resolve `auth` before `public` **before** migrations and service startup. This matches the dedicated auth-schema resolution expected by Supabase.
 - The isolated JWT required `GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated` to emit the correct PostgREST role.
 - PostgreSQL serializes timestamps with an equivalent UTC `+00:00` notation; tests compare parsed timestamps rather than an exact string format.
+- Initial main-branch CI exposed a startup race in a fresh official PostgreSQL container: `pg_isready` succeeded against the temporary Unix-socket initialization server before final startup. The runner now probes `127.0.0.1:5432` from *inside* the disposable container to require the final TCP server, retaining the existing migration, auth, and RLS behavior.
 - These are **test-container configuration corrections**, not changes to hosted Auth, production permissions, or persistent user state.
 
 ## UI parity matrix (supplied images)
