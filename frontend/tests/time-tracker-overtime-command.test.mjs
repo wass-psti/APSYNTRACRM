@@ -35,7 +35,9 @@ test('OT uses a distinct, data-driven command hero and one optional passive Pixi
  assert.match(markup,/class="tt-ot-graphics" aria-hidden="true"/);
  assert.match(markup,/class="tt-ot-hero-telemetry" aria-label="Authorized weekly overtime snapshot"/);
  assert.match(markup,/SIGNED WEEKLY SNAPSHOT/);
- assert.match(markup,/Read-only · Signed request scope/);
+ assert.match(markup,/Read-only · Employee OT visibility/);
+ assert.match(markup,/Manual OT Submission/);
+ assert.match(markup,/READ-ONLY RECORDS/);
  assert.equal((markup.match(/class="tt-pixi-backdrop"/g)||[]).length,1);
  assert.equal((markup.match(/data-action="tt-refresh"/g)||[]).length,1);
  assert.doesNotMatch(markup,/<canvas|<script|style=|onclick=/);
@@ -73,9 +75,9 @@ test('OT metrics, request details and charts remain escaped and accessible',()=>
  assert.match(attack,/aria-label="Saturday approved overtime minutes"/);
  assert.match(attack,/aria-pressed="true"/);
  assert.match(attack,/aria-label="Previous week"/);
- const earliest=render({filters:{weekOffset:-104}});
+ const earliest=render({filters:{weekOffset:-5200}});
  assert.match(earliest,/data-action="tt-ot-prev"[^>]* disabled/);
- const latest=render({filters:{weekOffset:104}});
+ const latest=render({filters:{weekOffset:5200}});
  assert.match(latest,/data-action="tt-ot-next"[^>]* disabled/);
 });
 test('OT stylesheet is scoped, responsive, keyboard accessible and motion safe',()=>{
