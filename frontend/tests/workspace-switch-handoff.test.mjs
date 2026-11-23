@@ -30,7 +30,10 @@ test('staged workspace switching binds to signed server selection without local 
  assert.match(ui,/options\.switchingEnabled===true/);
  assert.match(ui,/typeof options\.onWorkspaceSwitched==='function'/);
  assert.match(app,/switchingEnabled:WS01_SWITCHING_ENABLED/);
- assert.match(app,/onWorkspaceSwitched:\(\)=>\{/);
+ assert.match(app,/onWorkspaceSwitched:receipt=>\{/);
+ assert.match(app,/writeWorkspacePreference\(actor,receipt\?\.workspaceId\)/);
+ assert.match(ui,/const selectionReceipt=await requestSignedWorkspaceSwitch\(/);
+ assert.match(ui,/options\.onWorkspaceSwitched\?\.\(selectionReceipt\)/);
  assert.match(app,/location\.reload\(\)/);
  assert.match(ui,/WS01_SWITCHING_ENABLED=true/);
  assert.match(app,/switchingEnabled:WS01_SWITCHING_ENABLED/);

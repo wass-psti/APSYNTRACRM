@@ -2,4 +2,6 @@ node_modules/
 dist/
 .DS_Store
 supabase/.temp/
-frontend/vendor/
+!frontend/vendor/
+frontend/vendor/*
+!frontend/vendor/supabase-auth.js

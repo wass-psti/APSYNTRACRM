@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Workspace Auth Continuity Fixture</title></head>
+<body>
+<p id="status">initializing</p>
+<script type="module">
+ import {AuthClient} from '../../session.js';
+ import {watchWorkspacePreference,writeWorkspacePreference,readWorkspacePreference} from '../../workspace-preference.js';
+ window.authEvents=[];
+ window.preferenceEvents=[];
+ window.expiredCount=0;
+ window.auth=new AuthClient();
+ window.auth.onSessionChange=(event,session)=>{
+  window.authEvents.push({event,userId:session?.user?.id||null});
+ };
+ window.auth.onExpired=()=>{window.expiredCount++;};
+ watchWorkspacePreference({onChange:value=>window.preferenceEvents.push(value)});
+ window.writeWorkspacePreference=writeWorkspacePreference;
+ window.readWorkspacePreference=readWorkspacePreference;
+ window.restoreState='pending';
+ window.auth.restore().then(value=>{
+  window.restoreState=value?'SIGNED_IN':'UNAUTHENTICATED';
+  document.getElementById('status').textContent=window.restoreState;
+ }).catch(error=>{
+  window.restoreState='ERROR';
+  window.restoreError=error?.code||error?.message||'unknown';
+  document.getElementById('status').textContent=window.restoreState;
+ });
+</script>
+</body>
+</html>

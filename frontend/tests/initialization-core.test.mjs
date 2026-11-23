@@ -12,11 +12,15 @@ test('startup phases describe real work without invented progress or access succ
  assert.equal(initializationPhaseLabel('fake'),'Preparing frontend…');
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/if\(await startupVerifiedRead\(async\(\)=>await auth\.restore\(\)\)\)/);
+ assert.match(app,/state\.user=auth\.session\.user;\s*await restoreSavedWorkspacePreference\(\);\s*startupCriticalPath\.phase\('workspace-authorization'\)/);
+ assert.match(app,/await auth\.signIn\(email,password\);\s*await restoreSavedWorkspacePreference\(\);\s*await refreshWorkspace\(\)/);
  assert.match(app,/setInitializationPhase\('authentication'\)/);
  assert.match(app,/setInitializationPhase\('authorization'\)/);
  assert.match(app,/await startupVerifiedRead\(async\(\)=>await refreshWorkspace\(\),\{/);
  assert.match(app,/startupRecoveryStage='route';\s*setInitializationPhase\('workspace'\)/);
- assert.match(app,/finally\{\s*startupCriticalPath\.end\(\{authenticated:outcome==='AUTHENTICATED'\}\);\s*window\.__APSYNTRA_STARTUP\?\.resolve\(outcome\);\s*finishInitialization\(\);\s*startupBusy=false;\s*\}/);
+ assert.match(app,/finally\{\s*startupCriticalPath\.end\(\{authenticated:outcome==='AUTHENTICATED'\}\);\s*window\.__APSYNTRA_STARTUP\?\.resolve\(outcome\);\s*finishInitialization\(\);\s*startupBusy=false;/);
+ assert.match(app,/if\(pendingExternalSignIn\)/);
+ assert.match(app,/if\(workspacePreferenceSyncQueued\)/);
  assert.ok(app.lastIndexOf('finishInitialization()')>app.lastIndexOf('await onRoute()'));
  assert.doesNotMatch(app,/await startInitialization\(/);
 });

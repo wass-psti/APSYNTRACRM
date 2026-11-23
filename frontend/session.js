@@ -1,30 +1,170 @@
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
+import {GoTrueClient} from './vendor/supabase-auth.js';
 
 const STORE_KEY='apsyntra.crm.auth.v1';
+const MIGRATION_KEY='apsyntra.crm.auth.migration.v1';
 const isObject=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
 const browserSessionStorage=()=>{
   try{return globalThis.sessionStorage??null;}
   catch{return null;}
 };
+const browserLocalStorage=()=>{
+  try{return globalThis.localStorage??null;}
+  catch{return null;}
+};
+const providerError=error=>new ApiError(
+  typeof error?.message==='string'?error.message:'Authentication request failed.',
+  Number.isInteger(error?.status)?error.status:0,
+  error?.name==='AuthRetryableFetchError'?'NETWORK_UNAVAILABLE':
+    typeof error?.code==='string'?error.code:'AUTH_PROVIDER_ERROR'
+);
+const validLegacySession=value=>isObject(value)&&isObject(value.user)&&
+  typeof value.user.id==='string'&&typeof value.access_token==='string'&&
+  typeof value.refresh_token==='string'&&Number.isFinite(value.expires_at);
 export class ApiError extends Error {
   constructor(message,status=0,code=''){ super(message);this.name='ApiError';this.status=status;this.code=code; }
 }
 export class AuthClient {
-  constructor({fetchImpl=globalThis.fetch?.bind(globalThis),storage=browserSessionStorage(),
-    clock=()=>Date.now(),requestTimeoutMs=12000,wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),
-    random=Math.random,maxReadRetries=1,retryBaseDelayMs=250}={}){
+  constructor(options={}){
+    const {fetchImpl=globalThis.fetch?.bind(globalThis),storage=browserSessionStorage(),
+      clock=()=>Date.now(),requestTimeoutMs=12000,
+      wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),
+      random=Math.random,maxReadRetries=1,retryBaseDelayMs=250}=options;
     this.fetchImpl=fetchImpl;this.storage=storage;this.clock=clock;this.session=null;
-    this.refreshing=null;this.verifiedUserPending=null;this.onExpired=()=>{};
+    this.refreshing=null;this.verifiedUserPending=null;this.restorePending=null;
+    this.onExpired=()=>{};this.onSessionChange=()=>{};
     this.wait=wait;this.random=random;
     this.maxReadRetries=Number.isInteger(maxReadRetries)&&maxReadRetries>=0&&maxReadRetries<=2?maxReadRetries:1;
     this.retryBaseDelayMs=Number.isInteger(retryBaseDelayMs)&&retryBaseDelayMs>=0&&retryBaseDelayMs<=2000?retryBaseDelayMs:250;
     this.requestTimeoutMs=Number.isInteger(requestTimeoutMs)&&requestTimeoutMs>=10&&requestTimeoutMs<=30000?
       requestTimeoutMs:12000;
+    this.provider=options.provider||null;
+    this.providerMode=!!this.provider||options.providerMode===true||
+      (Object.keys(options).length===0&&typeof globalThis.window!=='undefined');
+    this.legacyStorage=options.legacyStorage??browserSessionStorage();
+    this.signInInProgress=false;this.signOutInProgress=false;
+    this.ignoreProviderSessionEvents=false;
+    if(this.providerMode)this.storage=options.storage??browserLocalStorage();
+    if(this.providerMode&&!this.provider){
+      this.provider=new GoTrueClient({
+        url:SUPABASE_URL+'/auth/v1',
+        headers:{apikey:SUPABASE_PUBLISHABLE_KEY},
+        storageKey:STORE_KEY,
+        persistSession:true,
+        autoRefreshToken:true,
+        detectSessionInUrl:false,
+        fetch:this.fetchImpl
+      });
+    }
+    if(this.provider){
+      this.providerSubscription=this.provider.onAuthStateChange((event,session)=>{
+        this.receiveProviderEvent(event,session);
+      });
+    }
   }
   get isSignedIn(){return !!this.session?.access_token;}
   get userId(){return this.session?.user?.id??null;}
   get accessToken(){return this.session?.access_token??null;}
+  legacyMigrationComplete(){
+    try{return this.storage?.getItem(MIGRATION_KEY)==='1';}catch{return false;}
+  }
+  markLegacyMigrationComplete(){
+    try{this.storage?.setItem(MIGRATION_KEY,'1');}catch{}
+    try{this.legacyStorage?.removeItem(STORE_KEY);}catch{}
+  }
+  receiveProviderEvent(event,session){
+    if(this.ignoreProviderSessionEvents||event==='INITIAL_SESSION')return;
+    const previous=this.session;
+    this.session=session||null;
+    if(event==='SIGNED_OUT'){
+      this.markLegacyMigrationComplete();
+      if(previous&&!this.signOutInProgress&&!this.signInInProgress)this.onExpired();
+      return;
+    }
+    if(this.signInInProgress)return;
+    if(event==='TOKEN_REFRESHED'){
+      this.onSessionChange(event,session,previous);
+      return;
+    }
+    if(event!=='SIGNED_IN')return;
+    const previousUser=previous?.user?.id||null;
+    const nextUser=session?.user?.id||null;
+    if(previousUser&&nextUser&&previousUser!==nextUser)this.onExpired();
+    this.onSessionChange(event,session,previous);
+  }
+  async restoreProvider(){
+    this.ignoreProviderSessionEvents=false;
+    const result=await this.provider.getSession();
+    if(result.error)throw providerError(result.error);
+    let session=result.data?.session||null;
+    this.session=session;
+    let migrated=false;
+    let migratedUser=null;
+    if(!session){
+      if(this.legacyMigrationComplete()){
+        try{this.legacyStorage?.removeItem(STORE_KEY);}catch{}
+        return false;
+      }
+      let raw=null;
+      try{raw=this.legacyStorage?.getItem(STORE_KEY)||null;}catch{}
+      if(raw){
+        let legacy=null;
+        try{legacy=JSON.parse(raw);}catch{}
+        if(!validLegacySession(legacy)){
+          this.markLegacyMigrationComplete();
+          return false;
+        }
+        const imported=await this.provider.setSession({
+          access_token:legacy.access_token,refresh_token:legacy.refresh_token
+        });
+        if(imported.error){
+          const error=providerError(imported.error);
+          if([400,401,403].includes(error.status)){
+            this.markLegacyMigrationComplete();
+            return false;
+          }
+          throw error;
+        }
+        session=imported.data?.session||null;
+        migratedUser=imported.data?.user||null;
+        migrated=!!session;
+      }
+    }
+    if(!session){this.session=null;return false;}
+    this.session=session;
+    try{
+      if(migrated&&migratedUser){
+        this.session={...session,user:migratedUser};
+      }else{
+        await this.getVerifiedUser();
+      }
+      this.markLegacyMigrationComplete();
+      return true;
+    }catch(error){
+      if([400,401,403].includes(error?.status)){
+        await this.provider.signOut({scope:'local'}).catch(()=>{});
+        this.session=null;
+        this.markLegacyMigrationComplete();
+        return false;
+      }
+      // Keep a valid, recoverable provider session through network failures.
+      throw error;
+    }
+  }
   save(session){
+    if(this.provider){
+      if(!isObject(session)||typeof session.access_token!=='string'||
+         typeof session.refresh_token!=='string')throw new ApiError('Invalid authentication response');
+      const pending=this.provider.setSession({
+        access_token:session.access_token,refresh_token:session.refresh_token
+      }).then(result=>{
+        if(result.error)throw providerError(result.error);
+        this.session=result.data?.session||null;
+        return this.session;
+      });
+      this.providerSavePending=pending;
+      return pending;
+    }
     if(!isObject(session)||typeof session.access_token!=='string'||typeof session.refresh_token!=='string'
        ||!isObject(session.user)||typeof session.user.id!=='string')throw new ApiError('Invalid authentication response');
     this.session={access_token:session.access_token,refresh_token:session.refresh_token,
@@ -34,8 +174,17 @@ export class AuthClient {
     try{this.storage?.setItem(STORE_KEY,JSON.stringify(this.session));}
     catch{/* The current tab can continue; a later reload may require sign-in. */}
   }
-  clear(){
+  clear({persist=true}={}){
     this.session=null;this.verifiedUserPending=null;
+    if(this.provider){
+      if(!persist){this.ignoreProviderSessionEvents=true;return;}
+      this.markLegacyMigrationComplete();
+      this.signOutInProgress=true;
+      void this.provider.signOut({scope:'local'}).catch(()=>{}).finally(()=>{
+        this.signOutInProgress=false;
+      });
+      return;
+    }
     // A storage failure must never prevent in-memory sign-out or token invalidation.
     try{this.storage?.removeItem(STORE_KEY);}
     catch{/* The stale persisted entry cannot be removed in this browser context. */}
@@ -144,6 +293,21 @@ export class AuthClient {
   }
   async signIn(email,password){
     if(!email?.trim()||!password)throw new ApiError('Enter your email and password.');
+    if(this.provider){
+      this.ignoreProviderSessionEvents=false;
+      this.signInInProgress=true;
+      try{
+        const result=await this.provider.signInWithPassword({email:email.trim(),password});
+        if(result.error)throw providerError(result.error);
+        const session=result.data?.session;
+        const user=result.data?.user||session?.user;
+        if(!session||typeof user?.id!=='string'||user.id!==session.user?.id)
+          throw new ApiError('Authentication did not return a valid session.',401);
+        this.session={...session,user};
+        this.markLegacyMigrationComplete();
+        return user;
+      }finally{this.signInInProgress=false;}
+    }
     const data=await this.call('/auth/v1/token?grant_type=password',{
       method:'POST',body:{email:email.trim(),password}
     });
@@ -158,6 +322,27 @@ export class AuthClient {
     return this.session.user;
   }
   async getVerifiedUser(){
+    if(this.provider){
+      const token=await this.token();
+      const expectedUserId=this.userId;
+      const key=expectedUserId+':'+token;
+      if(this.verifiedUserPending?.key===key)return this.verifiedUserPending.promise;
+      const pending=(async()=>{
+        const result=await this.provider.getUser();
+        if(result.error)throw providerError(result.error);
+        const user=result.data?.user;
+        if(!this.session||this.userId!==expectedUserId||user?.id!==expectedUserId){
+          this.clear();
+          throw new ApiError('Session verification failed.',401,'SESSION_CHANGED');
+        }
+        this.session={...this.session,user};
+        return user;
+      })();
+      const entry={key,promise:pending};
+      this.verifiedUserPending=entry;
+      try{return await pending;}
+      finally{if(this.verifiedUserPending===entry)this.verifiedUserPending=null;}
+    }
     if(!this.session)throw new ApiError('You are not signed in.',401);
     const token=await this.token();
     const expectedUserId=this.session?.user?.id;
@@ -185,6 +370,11 @@ export class AuthClient {
     finally{if(this.verifiedUserPending===entry)this.verifiedUserPending=null;}
   }
   async restore(){
+    if(this.provider){
+      if(this.restorePending)return this.restorePending;
+      this.restorePending=this.restoreProvider().finally(()=>{this.restorePending=null;});
+      return this.restorePending;
+    }
     let raw=null;
     try{raw=this.storage?.getItem(STORE_KEY);}
     catch{
@@ -219,6 +409,25 @@ export class AuthClient {
     }
   }
   async refresh(){
+    if(this.provider){
+      if(this.refreshing)return this.refreshing;
+      this.refreshing=(async()=>{
+        const result=await this.provider.refreshSession();
+        if(result.error){
+          const error=providerError(result.error);
+          if([400,401,403].includes(error.status)){
+            const hadSession=!!this.session;
+            this.clear();
+            if(hadSession)this.onExpired();
+          }
+          throw error;
+        }
+        this.session=result.data?.session||null;
+        if(!this.session?.access_token)throw new ApiError('Session expired.',401);
+        return this.session.access_token;
+      })().finally(()=>{this.refreshing=null;});
+      return this.refreshing;
+    }
     if(!this.session)throw new ApiError('Session expired.',401);
     if(this.refreshing)return this.refreshing;
     this.refreshing=(async()=>{
@@ -238,6 +447,14 @@ export class AuthClient {
     return this.refreshing;
   }
   async token(){
+    if(this.provider){
+      const result=await this.provider.getSession();
+      if(result.error)throw providerError(result.error);
+      this.session=result.data?.session||null;
+      if(!this.session?.access_token)
+        throw new ApiError('Please sign in to continue.',401,'SESSION_MISSING');
+      return this.session.access_token;
+    }
     if(!this.session)throw new ApiError('Please sign in to continue.',401);
     if(this.session.expires_at<=this.clock()+60000)return this.refresh();
     return this.session.access_token;
@@ -277,6 +494,23 @@ export class AuthClient {
   }
   async signOut({scope='global'}={}){
     if(scope!=='global'&&scope!=='local')throw new ApiError('Unsupported sign-out scope.');
+    if(this.provider){
+      this.signOutInProgress=true;
+      let serverAcknowledged=false;
+      try{
+        const result=await this.provider.signOut({scope});
+        serverAcknowledged=!result.error;
+        if(result.error&&scope!=='local')
+          await this.provider.signOut({scope:'local'}).catch(()=>{});
+      }catch{
+        if(scope!=='local')await this.provider.signOut({scope:'local'}).catch(()=>{});
+      }finally{
+        this.session=null;this.verifiedUserPending=null;
+        this.markLegacyMigrationComplete();
+        this.signOutInProgress=false;
+      }
+      return serverAcknowledged;
+    }
     const token=this.session?.access_token;
     let serverAcknowledged=false;
     try{

@@ -771,10 +771,10 @@ function openCreate(catalog,options={}){
      const current=verified?.rows?.find(row=>
       row.active===true&&row.verifiedScope==='SIGNED_MEMBER_RPC');
      if(!target||!current)throw Error('New workspace not verified in signed catalog');
-     await requestSignedWorkspaceSwitch({
+     const selectionReceipt=await requestSignedWorkspaceSwitch({
       lifecycle,workspaceId:target.id,expectedWorkspaceId:current.id
      });
-     options.onWorkspaceSwitched?.();
+     options.onWorkspaceSwitched?.(selectionReceipt);
     }catch{
      feedback.textContent='Workspace created, but verified switching is unavailable. No workspace was changed.';
      open.disabled=false;
