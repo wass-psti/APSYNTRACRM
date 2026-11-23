@@ -775,3 +775,30 @@
   color:#1F2933!important;
   background:#FFFFFF!important;
 }
+/* WCAG AA across remaining tab help text: preserve statuses, colored marks and actions. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-reports-section-title,.tt-reports-section-title span,
+  .tt-report-panel > p,.tt-reports-range > p,
+  .tt-reports-record-head > label,.tt-report-footnote,
+  .tt-cal-navigate > p,.tt-cal-navigate strong span,
+  .tt-cal-section-title,.tt-cal-section-title span,
+  .tt-cal-metric-note,.tt-cal-panel > p,.tt-cal-weekdays span,
+  .tt-hours-week-nav > span,.tt-hours-section,
+  .tt-hours-session small,.tt-hours-footnote,.tt-hours-kpis span,
+  .tt-monitor-subheading,.tt-monitor-empty p,.tt-monitor-section,
+  .tt-monitor-stat > span,.tt-monitor-stat small,
+  .tt-monitor-check small,.tt-monitor-history > div,.tt-monitor-footnote,
+  .tt-team-toolbar label,.tt-team-count span,.tt-team-stats span,
+  .tt-team-section-title,.tt-team-member-main small,.tt-team-footnote,
+  .tt-gps-controls label,.tt-gps-compare-controls label,
+  .tt-gps-legend,.tt-gps-legend span:last-child,
+  .tt-gps-panel-head p,.tt-gps-record-person small,
+  .tt-gps-record-fix small,.tt-gps-kpis .tt-gps-kpi span,
+  .tt-gps-note,.tt-gps-loading,.tt-gps-privacy,
+  .tt-overview-panel-heading small,.tt-overview-panel-heading > b,
+  .tt-overview-location small,.tt-overview-live > span
+) {
+  color:#5B6673!important;
+  font-size:12px!important;
+  line-height:1.5!important;
+}
