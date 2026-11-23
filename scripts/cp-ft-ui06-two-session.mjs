@@ -173,6 +173,12 @@ assert.equal(staleAttempt.length,0);
 assert.equal((await readTicket(l1,ticketId)).status,'Resolved');
 console.log('TWO_SESSION_L1_L2_CLAIM_ESCALATE_RESOLVE_READBACK_CAS PASS');
 
+// Opt-in real browser acceptance requires local Playwright; CI's existing API gate stays unchanged.
+if(process.env.FT_UI07_BROWSER==='1'){
+ const {verifyFuelTransTwoSessionBrowser}=await import('./cp-ft-ui07-real-browser.mjs');
+ await verifyFuelTransTwoSessionBrowser({restPort,workspaceId,actors});
+}
+
 sql("update public.fueltrans_memberships set enabled=false where workspace_id='"+workspaceId+"' and user_id='"+l2.id+"'");
 const afterRevoke=await requireStatus(rest('fueltrans_tickets',queryTicket(ticketId),{token:l2.token}),200,'revoked membership read');
 assert.deepEqual(afterRevoke,[]);

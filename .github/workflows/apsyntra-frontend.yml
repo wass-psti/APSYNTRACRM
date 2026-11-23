@@ -114,6 +114,9 @@ jobs:
           node --check scripts/build-supabase-auth-vendor.mjs
           node --check scripts/cp-ws-auth-continuity-browser.mjs
           node --check scripts/cp-board-col01-signed-http.mjs
+          node --check frontend/fueltrans/station-evidence07.js
+          node --check scripts/cp-ft-ui07-browser.mjs
+          node --check scripts/cp-ft-ui07-real-browser.mjs
       - name: Check main HTML entry point
         run: |
           test -f index.html
