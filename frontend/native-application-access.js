@@ -1,20 +1,27 @@
+import { WORK_MANAGEMENT_WORKSPACE_ID } from './workspace-identity.js';
+import { WORK_MANAGEMENT_BOARD_IDS } from './workspace-application-ownership.js';
+
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export const NATIVE_APPLICATIONS=Object.freeze({
  'time-tracker':Object.freeze({
-  boardId:'46bf4ee7-368a-4c35-842c-8593ea1f6ac3',
+  boardId:WORK_MANAGEMENT_BOARD_IDS.timetracker,
+  workspaceId:WORK_MANAGEMENT_WORKSPACE_ID,
   name:'TimeTracker Attendance',marker:'[APSYNTRA:MODULE:timetracker:v1]'
  }),
  'fund-released-tracker':Object.freeze({
-  boardId:'f36da8fe-8d9d-4629-9938-12533cb3ca39',
+  boardId:WORK_MANAGEMENT_BOARD_IDS.frt,
+  workspaceId:WORK_MANAGEMENT_WORKSPACE_ID,
   name:'Fund Released Tracker',marker:'[APSYNTRA:MODULE:frt:v1]'
  }),
  'fueltrack-plus':Object.freeze({
-  boardId:'7af78b3f-67bf-4600-9aa1-9006d19d486e',
+  boardId:WORK_MANAGEMENT_BOARD_IDS.fueltrack,
+  workspaceId:WORK_MANAGEMENT_WORKSPACE_ID,
   name:'FuelTrack+ v3',marker:'[APSYNTRA:MODULE:fueltrack:v1]'
  }),
  tradelink:Object.freeze({
-  boardId:'264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',
+  boardId:WORK_MANAGEMENT_BOARD_IDS.tradelink,
+  workspaceId:WORK_MANAGEMENT_WORKSPACE_ID,
   name:'TradeLink',marker:'[APSYNTRA:MODULE:tradelink:v1]'
  })
 });
@@ -28,8 +35,10 @@ export function normalizeNativeApplicationBoardContext(payload,{
  if(!expected||payload?.contract!=='native-app-board-v1'||
   payload.moduleId!==moduleId||payload.userId!==userId||
   payload.workspaceId!==workspaceId||!UUID.test(userId||'')||
-  !UUID.test(workspaceId||'')||!board||board.id!==expected.boardId||
-  board.name!==expected.name||board.workspace_id!==workspaceId||
+  !UUID.test(workspaceId||'')||workspaceId.toLowerCase()!==expected.workspaceId||
+  !board||board.id!==expected.boardId||
+  String(board.workspace_id||'').toLowerCase()!==expected.workspaceId||
+  board.name!==expected.name||
   board.status!=='active'||board.archived_at!==null||board.trashed_at!==null||
   typeof board.description!=='string'||!board.description.startsWith(expected.marker)||
   typeof payload.role!=='string'||!payload.role.trim()||

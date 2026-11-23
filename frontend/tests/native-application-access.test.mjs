@@ -55,6 +55,8 @@ test('native context rejects stale users, workspaces, module IDs and noncanonica
   {...valid,contract:'other'},
   {...valid,userId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'},
   {...valid,workspaceId:'00000000-0000-4000-8000-000000000002'},
+  {...valid,workspaceId:'00000000-0000-4000-8000-000000000002',
+   board:{...valid.board,workspace_id:'00000000-0000-4000-8000-000000000002'}},
   {...valid,moduleId:'fueltrack-plus'},
   {...valid,board:{...valid.board,id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'}},
   {...valid,board:{...valid.board,workspace_id:'00000000-0000-4000-8000-000000000002'}},

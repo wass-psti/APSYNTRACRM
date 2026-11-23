@@ -4,13 +4,14 @@
  */
 import {validUuid} from './data.js';
 import {TRADELINK_BOARD_ID} from './tradelink-board-items.js';
+import {WORK_MANAGEMENT_WORKSPACE_ID} from './workspace-identity.js';
 import {inspectMySignedEffectiveAccess} from './signed-effective-access.js';
 
 export const TL03_STAGE_A_CHECKPOINT='CP-TL-03C-STAGE-A-SIGNED-READ';
 const OUTCOMES=new Set(['PASS','FAIL','BLOCKED']);
 const SCENARIOS=new Set(['AUTHORIZED_MANAGER','MODULE_ROLE_DENIED',
  'BOARD_MANAGER_DENIED','FOREIGN_WORKSPACE_DENIED','UNVERIFIED']);
-const TARGET_WORKSPACE='00000000-0000-4000-8000-000000000001';
+const TARGET_WORKSPACE=WORK_MANAGEMENT_WORKSPACE_ID;
 const WRONG_BOARD='00000000-0000-4000-8000-000000000002';
 const SAFE_CHECKS=new Set(['signed-identity','effective-access','document-list',
  'missing-document-read','wrong-board-denial','stable-session']);

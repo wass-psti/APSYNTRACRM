@@ -10,6 +10,7 @@ import {ProfileAvatarClient} from './profile-avatar-client.js';
 import {mountAvatarImages} from './profile-avatar.js';
 
 import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels,WS01_SWITCHING_ENABLED} from './workspace-ui.js?v=cp-crm-wm-invite-flow-01';
+import {WORK_MANAGEMENT_WORKSPACE_ID} from './workspace-identity.js';
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
 import {WorkspaceInvitationClient,WS02D_INVITE_CLIENT_ENABLED} from './workspace-invitation-client.js';
 import {WorkspaceInvitationManagementClient} from './workspace-invitation-management.js';
@@ -443,7 +444,7 @@ const displayDate=value=>{if(!value)return '—';const d=new Date(value);return 
 const initials=value=>String(value||'U').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
 const iconColor=index=>['','green','orange','pink','blue'][Math.abs(index)%5];
 const name=()=>state.context?.profile?.display_name||state.context?.profile?.email?.split('@')[0]||'Member';
-const workspaceName=()=>state.context?.workspace_id==='00000000-0000-4000-8000-000000000001'?'Work Management':'Current workspace';
+const workspaceName=()=>state.context?.workspace_id===WORK_MANAGEMENT_WORKSPACE_ID?'Work Management':'Current workspace';
 const STANDALONE_APPLICATION_MODULE_KEYS=new Set(['timetracker','frt','tradelink','fueltrack']);
 const isStandaloneApplicationBoard=board=>STANDALONE_APPLICATION_MODULE_KEYS.has(
  moduleByBoardName(board?.name)?.key)||moduleByBoardName(board?.name)?.key==='toolbox';
@@ -1494,7 +1495,7 @@ function groupHeading(group,count){
   count+' item'+(count===1?'':'s')+(state.board?.pagination?.has_more===true?' shown':''):
   count===persistedCount?persistedCount+' items'+archiveSuffix:
    'Showing '+count+' of '+persistedCount+' items'+archiveSuffix;
- const fuelTrackEditable=state.edit&&state.board?.board?.id==='7af78b3f-67bf-4600-9aa1-9006d19d486e'&&
+ const fuelTrackEditable=state.edit&&state.board?.board?.id===FUELTRACK_V3_ID&&
   state.board?.board?.name==='FuelTrack+ v3'&&
   String(state.board.board.description||'').startsWith('[APSYNTRA:MODULE:fueltrack:v1]');
  if(editing)return '<div class="group-heading board-group-editing" data-group-id="'+id+'">'+

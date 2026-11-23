@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const fuelTrackApplicationSource=readFileSync(new URL('../fueltrack-v3-application.js',import.meta.url),'utf8');
 const begin=source.indexOf('function groupHeading(group,count){');
 const end=source.indexOf('\nfunction row01AcceptancePanel(',begin);
 const heading=source.slice(begin,end);
@@ -92,6 +93,8 @@ test('FuelTrack heading provides a direct inline edit button outside the floatin
  assert.match(heading,/fuelTrackEditable\?'<button type="button" class="board-group-rename-trigger"/);
  assert.match(heading,/data-action="group-inline-edit"/);
  assert.match(heading,/aria-label="Edit name inline for /);
- assert.match(heading,/state\.edit&&state\.board\?\.board\?\.id==='7af78b3f-67bf-4600-9aa1-9006d19d486e'/);
+ assert.match(heading,/state\.edit&&state\.board\?\.board\?\.id===FUELTRACK_V3_ID/);
+ assert.match(source,/FUELTRACK_V3_ID/);
+ assert.match(fuelTrackApplicationSource,/FUELTRACK_V3_ID=WORK_MANAGEMENT_BOARD_IDS\.fueltrack/);
  assert.match(heading,/const displayTitle=title;/);
 });

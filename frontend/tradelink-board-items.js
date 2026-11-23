@@ -1,7 +1,8 @@
 /** TradeLink-specific Board Items contract. No source records or file URLs are synthesized. */
 import {ApiError} from './session.js';
 import {validUuid} from './data.js';
-export const TRADELINK_BOARD_ID='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88';
+import {WORK_MANAGEMENT_BOARD_IDS} from './workspace-application-ownership.js';
+export const TRADELINK_BOARD_ID=WORK_MANAGEMENT_BOARD_IDS.tradelink;
 export const TRADELINK_WORKFLOW_STATUS=Object.freeze(['For Approval','Submitted','Approved','Draft']);
 export const TRADELINK_QUOTE_STATUS=Object.freeze(['Submitted','Won','Expired','Closed','Under Negotiation','Delivered','Canceled','On-Hold','Lost','Working on it','Approved']);
 export const TRADELINK_FIELDS=Object.freeze([

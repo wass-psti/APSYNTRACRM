@@ -4,6 +4,7 @@
  */
 import {ApiError} from './session.js';
 import {validUuid} from './data.js';
+import {WORK_MANAGEMENT_BOARD_IDS} from './workspace-application-ownership.js';
 
 const PREFIX='apsyntra.tt.empty-group-hide.v1';
 export const MANAGED_TT_GROUP_DELETE_ENABLED=false;
@@ -26,7 +27,7 @@ export function canSafelyHideEmptyTimeTrackerGroup(board,group,allGroups,items){
  * If renamed, populated (including archived records), or moved, show it again.
  */
 export const TIMETRACKER_REDUNDANT_GROUP=Object.freeze({
- boardId:'46bf4ee7-368a-4c35-842c-8593ea1f6ac3',
+ boardId:WORK_MANAGEMENT_BOARD_IDS.timetracker,
  groupId:'d0224e2b-20c0-41a3-90f0-046aad545191',
  title:'Main Group II'
 });

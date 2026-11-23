@@ -2,6 +2,7 @@
  * Never uses domain/production boards. Explicit user confirmation required by UI.
  */
 import {runSignedNegativeBoardAcceptance} from './negative-acceptance.js';
+import {WORK_MANAGEMENT_WORKSPACE_ID} from '../../workspace-identity.js';
 const QA_BOARD='098b6797-0bf7-407b-8802-bd8a00c606f6';
 const QA_GROUP='6eaf3d6e-f9a1-4f32-85cd-d05b383fe27f';
 export async function runDeniedQaWrite(auth,api,{verifiedReadOnlyResult}={}){
@@ -14,7 +15,7 @@ export async function runDeniedQaWrite(auth,api,{verifiedReadOnlyResult}={}){
   context=await api.context();
   if(!me?.id||me.id!==auth.userId||context.user_id!==me.id)
    throw Error('Signed identity mismatch');
-  const isOther=context.workspace_id!=='00000000-0000-4000-8000-000000000001';
+  const isOther=context.workspace_id!==WORK_MANAGEMENT_WORKSPACE_ID;
   if((verifiedReadOnlyResult.scenario==='cross_workspace')!==isOther)
    throw Error('Workspace changed since read-only acceptance');
   if(!isOther&&context.profile.platform_role==='admin_general_manager')

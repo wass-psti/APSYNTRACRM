@@ -1,5 +1,6 @@
 /** Authorized typed board-grid presentation. No domain records are synthesized. */
 import {moduleByBoardName} from '../services/manifest.js';
+import {WORK_MANAGEMENT_BOARD_IDS} from '../../workspace-application-ownership.js';
 import {isMaterialSourcingRestrictedColumn,isApprovedPublicMaterialSourcingColumn} from '../../material-sourcing-schema-plan.js';
 import {isTradeLinkBoard,tradeLinkGridColumns,tradeLinkDisplayValue,TRADELINK_FILES_KEY} from '../../tradelink-board-items.js';
 import {boardTable} from './presentation.js';
@@ -36,7 +37,7 @@ export function boardGridColumns(detail,{primaryTitle=null,columnLabels={},allow
  // reconciliation and pump references remain stored and protected; no migration
  // or lossy field deletion is required before the domain app is integrated.
  // Fail closed to the ordinary domain grid if the expected date contract drifts.
- const fueltrack=detail?.board?.id==='7af78b3f-67bf-4600-9aa1-9006d19d486e'&&
+ const fueltrack=detail?.board?.id===WORK_MANAGEMENT_BOARD_IDS.fueltrack&&
   module?.key==='fueltrack'&&
   String(detail.board.description||'').startsWith('[APSYNTRA:MODULE:fueltrack:v1]');
  const eventDate=columns.find(c=>c.name==='Event Date'&&c.data_type==='date');
