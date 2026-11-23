@@ -104,9 +104,9 @@ test('standalone native routes are recognized without requiring a generic board 
  }
 });
 
-test('board catalog fallback is limited to overview and the four native application routes',()=>{
+test('board catalog fallback includes the direct FuelTrans frontend route without treating it as a DB native resolver',()=>{
  for(const route of ['', '#/','#/overview','#/time-tracker','#/fund-tracker',
-  '#/fueltrack/dashboard','#/tradelink/documents']){
+  '#/fueltrack/dashboard','#/tradelink/documents','#/fueltrans']){
   assert.equal(workspaceRouteAllowsBoardCatalogFallback(route),true);
  }
  for(const route of ['#/boards','#/boards/46bf4ee7-368a-4c35-842c-8593ea1f6ac3/attendance',

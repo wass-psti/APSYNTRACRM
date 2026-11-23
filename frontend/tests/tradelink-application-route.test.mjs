@@ -38,10 +38,10 @@ test('TradeLink opens the native renderer inside the existing host and uses the 
  assert.match(app,/if\(parts\[0\]!=='tradelink'\)\{\s*state\.tradeLinkModuleRole=''\s*;\s*if\(state\.tradeLinkAnalyticsBusy\)/);
  assert.match(app,/tradeLinkApplicationHref\('drafts\/quotation'\)/);
  assert.match(app,/return \[\.\.\.state\.boards,\.\.\.archived\]\.filter\(board=>/);
- assert.match(app,/STANDALONE_APPLICATION_MODULE_KEYS=new Set\(\['timetracker','frt','tradelink','fueltrack'\]\)/);
+ assert.match(app,/STANDALONE_APPLICATION_MODULE_KEYS=new Set\(\['timetracker','frt','tradelink','fueltrack','fueltrans'\]\)/);
  assert.match(app,/isStandaloneApplicationBoard\(board\)/);
  assert.doesNotMatch(app,/directModule|signedDraftRoute/);
- assert.match(app,/STANDALONE_APPLICATION_MODULE_KEYS=new Set\(\['timetracker','frt','tradelink','fueltrack'\]\)/);
+ assert.match(app,/STANDALONE_APPLICATION_MODULE_KEYS=new Set\(\['timetracker','frt','tradelink','fueltrack','fueltrans'\]\)/);
  assert.match(app,/state\.boards\.filter\(board=>!isStandaloneApplicationBoard\(board\)\)/);
  assert.doesNotMatch(app,/href:'#\/boards\/'\+b\.id\+'\/tradelink\/drafts\/quotation'/);
 });

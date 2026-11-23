@@ -15,6 +15,7 @@ import {
 const APPLICATION_ICONS = Object.freeze({
   "fm1-ticketing": "ticket",
   timetracker: "clock",
+  fueltrans: "ticket",
   frt: "finance",
   fueltrack: "fueltrack",
   tradelink: "tradelink",

@@ -71,6 +71,7 @@ test("board-backed applications appear only when their canonical board is in the
       "fueltrack",
       "tradelink",
       "paseo-de-lomboy",
+      "fueltrans",
     ],
   );
 
@@ -88,7 +89,8 @@ test("board-backed applications appear only when their canonical board is in the
   );
   assert.ok(withToolbox.some((application) => application.id === "talkbox"));
   assert.ok(withToolbox.some((application) => application.id === "toolbox"));
-  assert.equal(withToolbox.length, 8);
+  assert.equal(withToolbox.length, 9);
+  assert.ok(withToolbox.some((application) => application.id === "fueltrans"));
 });
 
 test("native and auxiliary application routes resolve to their registered owners", () => {
@@ -106,8 +108,10 @@ test("native and auxiliary application routes resolve to their registered owners
   }
 });
 
-test("all twelve canonical board routes and their deep links resolve to their owner", () => {
-  for (const application of WORK_MANAGEMENT_BOARD_APPLICATIONS) {
+test("all canonical board-backed application routes and their deep links resolve to their owner", () => {
+  for (const application of WORK_MANAGEMENT_BOARD_APPLICATIONS.filter(
+    (item) => item.routeKind === "board",
+  )) {
     for (const route of [
       `#/boards/${application.boardId}`,
       `#/boards/${application.boardId}/items`,
@@ -120,6 +124,20 @@ test("all twelve canonical board routes and their deep links resolve to their ow
         true,
       );
     }
+  }
+});
+
+test("FuelTrans canonical route and legacy board URLs resolve to the same workspace-owned application", () => {
+  const fuelTrans = WORK_MANAGEMENT_APPLICATIONS.find((item) => item.id === "fueltrans");
+  for (const route of [
+    "#/fueltrans",
+    "#/fueltrans/tickets",
+    "#/fueltrans/ticket/123",
+    "#/boards/" + fuelTrans.boardId,
+    "#/boards/" + fuelTrans.boardId + "/fueltrans/ticket/123",
+  ]) {
+    assert.equal(applicationForWorkspaceRoute(route)?.id, "fueltrans", route);
+    assert.equal(workspaceApplicationRouteAccess(route, WORK_MANAGEMENT_WORKSPACE_ID).allowed, true, route);
   }
 });
 

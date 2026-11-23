@@ -248,7 +248,7 @@ test('wires TradeLink to its existing bounded signed document search and native 
  assert.match(app,/ttOtExpandedRequestIds/);
  assert.match(app,/await import\('\.\/fueltrans\/supabase-client\.js'\)/);
  assert.match(app,/searchFuelTransTickets\(context,\{query,limit\}\)/);
- assert.match(app,/fueltrans\/ticket\/'\+encodeURIComponent\(row\.id\)/);
+ assert.match(app,/fuelTransApplicationHref\('ticket\/'\+encodeURIComponent\(row\.id\)\)/);
  assert.match(app,/nativeSearchRegistry\.search\(query/);
  assert.match(app,/Promise\.allSettled\(\[/);
  assert.match(tradeLink,/async searchPage\(\{filters=initialTradeLinkDraftListFilters\(\),cursor=null,limit=50\}/);
