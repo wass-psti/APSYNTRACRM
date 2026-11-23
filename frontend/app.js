@@ -4610,6 +4610,21 @@ function deleteTimeTrackerAdminRecords(recordIds){
  if(state.ttAttendance?.access?.moduleRole!=='System Admin')return;
  if(!timeTrackerAdminLogReady()||state.ttLogAdminBusy||state.ttLogAdminEditor)return;
  const ids=[...new Set(recordIds||[])];
+ if(ids.some(id=>String(id).startsWith('ojt:'))){
+  const scope=timeTrackerOjtLogAdminScope();
+  const row=timeTrackerLogRowsForSnapshot(state.ttAttendance).find(r=>
+   r.isOjt&&r.id===ids[0]);
+  if(!scope||ids.length!==1||!row||
+     !Number.isSafeInteger(row.revision)||row.revision<1){
+   state.ttLogAdminError='Intern record revision unavailable. Refresh after deploying the signed OJT administration service.';
+   render();return;
+  }
+  state.ttLogAdminError='';state.ttLogAdminSuccess='';
+  state.ttLogAdminDeleteConfirm={ojt:true,recordIds:ids,
+   revision:row.revision,records:[{id:row.id,name:row.name,clockIn:row.clockIn,status:row.status}]};
+  render();root.querySelector('[data-action="tt-log-admin-delete-cancel"]')?.focus();
+  return;
+ }
  if(!ids.length||ids.length>TT_ADMIN_RECORD_LIMIT)return;
  const rows=state.ttAttendance.log?.rows||[];
  const selected=ids.map(id=>rows.find(row=>row.id===id));
@@ -4634,6 +4649,43 @@ async function confirmTimeTrackerAdminDeletion(){
  const confirmation=state.ttLogAdminDeleteConfirm;
  if(!confirmation||!timeTrackerAdminLogReady()||state.ttLogAdminBusy)return;
  const ids=[...confirmation.recordIds];
+ if(confirmation.ojt){
+  const scope=timeTrackerOjtLogAdminScope();
+  if(!scope||ids.length!==1||!String(ids[0]).startsWith('ojt:')||
+     !Number.isSafeInteger(confirmation.revision))return;
+  const seq=routeSerial,boardId=scope.boardId;
+  state.ttLogAdminBusy=true;state.ttLogAdminError='';render();
+  try{
+   const fresh=await timeTrackerOjt.adminAttendance(scope);
+   if(seq!==routeSerial||state.boardId!==boardId||!timeTrackerOjtLogAdminScope())return;
+   const row=fresh.records.find(r=>'ojt:'+r.id===ids[0]);
+   if(!row||row.revision!==confirmation.revision)
+    throw Error('OJT_REVISION_CONFLICT');
+   await timeTrackerOjt.mutateAdminRecord(scope,{
+    recordId:row.id,action:'delete',patch:{},
+    expectedRevision:row.revision,reason:'Administrator deleted intern attendance record'
+   });
+   if(seq!==routeSerial||state.boardId!==boardId||!timeTrackerOjtLogAdminScope())return;
+   state.ttLogAdminDeleteConfirm=null;state.ttLogAdminEditor=null;
+   state.ttLogSelectedIds=[];state.ttLogAdminBusy=false;
+   await loadTimeTracker(seq);
+   if(seq===routeSerial&&state.boardId===boardId&&state.ttAttendance?.status==='VERIFIED_READ')
+    state.ttLogAdminSuccess='Intern attendance record deleted; audit history retained.';
+  }catch(err){
+   if(seq===routeSerial&&state.boardId===boardId){
+    const message=errorMessage(err);
+    state.ttLogAdminError=/OJT_REVISION_CONFLICT|40001/i.test(message)?
+     'Intern attendance changed before deletion. Refresh the Log and retry.':
+     /timeout|network|fetch|connection/i.test(message)?
+      'Deletion confirmation is uncertain. Refresh the Log and verify the record before retrying.':message;
+   }
+  }finally{
+   if(seq===routeSerial&&state.boardId===boardId){
+    state.ttLogAdminBusy=false;state.ttLogAdminDeleteConfirm=null;render();
+   }
+  }
+  return;
+ }
  if(!ids.length||ids.length>TT_ADMIN_RECORD_LIMIT)return;
  const seq=routeSerial,boardId=state.boardId;
  state.ttLogAdminBusy=true;state.ttLogAdminError='';state.ttLogAdminSuccess='';render();
