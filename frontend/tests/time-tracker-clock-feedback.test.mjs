@@ -179,7 +179,10 @@ test('department assignment uses an existing signed page scope and targeted read
 
 test('Clock write still preserves fresh GPS and signed read-after-write requirements',()=>{
  assert.match(nativeSource,/this\.snapshot\(boardId,\{clockOnly:true\}\)/);
- assert.match(nativeSource,/maximumAge:0/);
+ // Browser-managed recent GPS caches are permitted, while stale fixes remain rejected.
+ assert.match(nativeSource,/maximumAge:25000/);
+ assert.match(nativeSource,/maximumAge:45000/);
+ assert.match(nativeSource,/now-capturedAt>60000/);
  assert.match(nativeSource,/retryUnauthorized:false/);
  assert.match(appSource,/clockOnly:state\.ttView==='clock'/);
  assert.match(appSource,/clockOnly:true/);
