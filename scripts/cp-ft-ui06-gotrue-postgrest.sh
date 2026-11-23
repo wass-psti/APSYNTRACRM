@@ -22,7 +22,9 @@ docker run -d --rm --network "$NETWORK" --name "$DB" \
 ready=0
 i=0
 while [ "$i" -lt 40 ]; do
- if docker exec "$DB" pg_isready -U postgres >/dev/null 2>&1; then ready=1;break;fi
+ # The postgres:17 image starts a temporary socket-only server during initdb.
+ # Require the final TCP listener to avoid racing the temporary server shutdown.
+ if docker exec "$DB" pg_isready -h 127.0.0.1 -p 5432 -U postgres >/dev/null 2>&1; then ready=1;break;fi
  i=$((i+1));sleep 1
 done
 if [ "$ready" -ne 1 ];then echo "FAIL: disposable database did not become ready";exit 1;fi
