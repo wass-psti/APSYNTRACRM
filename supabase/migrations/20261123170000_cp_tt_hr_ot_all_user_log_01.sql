@@ -131,9 +131,6 @@ CREATE TRIGGER timetracker_ot_realtime_change
 AFTER INSERT OR UPDATE OR DELETE ON public.timetracker_ot_requests
 FOR EACH ROW EXECUTE FUNCTION public.timetracker_ot_realtime_broadcast_change();
 
-REVOKE ALL ON FUNCTION public.timetracker_ot_realtime_broadcast_change()
- FROM PUBLIC,anon,authenticated;
-
 COMMENT ON FUNCTION public.timetracker_ot_snapshot(uuid) IS
  'Returns the existing signed OT snapshot; manual_admin history remains visible after owner membership ends.';
 COMMENT ON FUNCTION public.timetracker_ot_realtime_broadcast_change() IS
