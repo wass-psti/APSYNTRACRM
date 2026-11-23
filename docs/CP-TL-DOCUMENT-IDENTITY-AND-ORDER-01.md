@@ -12,7 +12,8 @@ Standardize the TradeLink document party label as **Client Name**, expose the pe
 - Return that persisted value as the read-model field `clientName`.
 - Return the authoritative `tradelink_documents.created_at` value as `createdAt`.
 - Keep `document_number`, document IDs, Board-item links, revisions, and numbering sequences unchanged.
-- No customer-name column rename, data backfill, or document-table migration was introduced.
+- No customer-name column rename, data backfill, or document-table shape change was introduced.
+- Scope reconciliation: this already-applied migration adds an index and replaces existing RPC definitions; it is retained as the existing deployed baseline rather than rolled back. It is the sole one-time migration exception for this workstream. CP-01B introduces no further migration, table, column, data backfill, role, permission, or RLS change.
 
 ### Chronological ordering
 
@@ -62,18 +63,16 @@ The existing assigned-document endpoint remains available and now also returns `
 - The record `Q-011133` has no `customerName`, `clientName`, or `customer` value in its persisted JSON, and its linked Board item title is only the document number. The UI and saved preview correctly show an em dash for this absent value. No customer identity was inferred or backfilled.
 - Database postflight: migration recorded, creation index present, public RPC remains invoker, private page helper is definer, authenticated execution present, anonymous execution absent.
 
-## Remaining acceptance
+## CP-TL-DOCUMENT-IDENTITY-AND-ORDER-01B acceptance
 
-The database migration is deployed. Frontend changes still require the normal GitHub review/merge and Pages deployment. After deployment, perform a read-only signed-browser acceptance for:
+- PR #807 contains the frontend and SQL implementation; PR #808 records the migration source hash; PR #809 corrects the follow-up production audit. All three are merged.
+- The production Pages deployment for the merged closeout passed.
+- Production browser: the signed account is an existing assigned secondary reviewer on `CP-TL-08C-QA-20261112-01`; that document is already Approved, so this verifies assigned-document readback but does not exercise a pending reviewer action or a reviewer-only User session.
+- Production currently contains 15 active documents and 27 total including archived records, below the 50-row page size. A production second page therefore cannot be exercised without creating production fixtures, which this milestone does not permit.
+- Disposable PostgreSQL 17 acceptance now creates 54 synthetic records, verifies reviewer-only 50+2, creator/reviewer 50+3, and manager 50+4 pages, creator/reviewer overlap without duplication, UUID tie-breaking for identical `created_at` values, and an edit that advances `updated_at` without changing `created_at` or list position. All fixture writes are rolled back.
+- Follow-up production audit: 27 documents; 26 have non-empty `customerName`, one (`Q-011133`) has no persisted client identity, and zero have missing `created_at`. The UI correctly displays an em dash for the missing value.
 
-1. Client Name in the Quotation editor and saved preview.
-2. Document Number and Client Name in All Documents.
-3. Newest-first order after initial load and refresh.
-4. Creator/reviewer merged list ordering and deduplication.
-5. Page-cursor continuity where a second page exists.
-6. Editing a document without moving its creation position.
-
-No production document creation or update was used as a test fixture.
+A separate signed browser session for a TradeLink `User` reviewer with a pending assigned document remains outstanding. No production document creation or update was used as a test fixture.
 
 ## Inference-only constraint
 
