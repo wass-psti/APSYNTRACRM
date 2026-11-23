@@ -24,9 +24,9 @@ for file in \
  sql/cp-tl03-staged-domain.sql \
  sql/tradelink-documents-page-candidate.sql \
  supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql \
- sql/tests/cp-tl03-documents-page-preflight.sql \
+ sql/tests/cp-tl-document-identity-order-01b-preflight.sql \
  supabase/migrations/20261123080322_cp_tl_document_identity_order_01.sql \
- sql/tests/cp-tl03-documents-page-disposable.sql; do
+ sql/tests/cp-tl-document-identity-order-01b-disposable.sql; do
  test -f "$file"
  echo "== $file =="
  psql_in -q -f "/repo/$file"
