@@ -37,7 +37,7 @@ docker cp "$ROOT/supabase/migrations/20260928035850_fueltrans_notifications.sql"
 docker cp "$ROOT/supabase/migrations/20260928040345_fueltrans_admin_state_and_hardening.sql" "$DB:/tmp/fueltrans-hardening.sql"
 docker cp "$ROOT/supabase/migrations/20260928041601_fueltrans_policy_hardening.sql" "$DB:/tmp/fueltrans-policies.sql"
 docker cp "$ROOT/supabase/migrations/20260929005600_fueltrans_workspace_contract_guard.sql" "$DB:/tmp/fueltrans-contract.sql"
-docker cp "$ROOT/supabase/migrations/20261123170000_cp_fueltrans_m7_ticket_number_allocator.sql" "$DB:/tmp/fueltrans-m7-numbering.sql"
+docker cp "$ROOT/supabase/migrations/20261123081039_cp_fueltrans_m7_ticket_number_allocator.sql" "$DB:/tmp/fueltrans-m7-numbering.sql"
 docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
  -f /tmp/prerequisites.sql \
  -f /tmp/fueltrans-initial.sql \

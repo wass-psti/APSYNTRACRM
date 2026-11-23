@@ -2074,6 +2074,13 @@
       "sha256": "06ac4abddab7c9cadbdbb62bcf5854e2147debf436dfda75c769d5a485384e24"
     },
     {
+      "version": "20261123081039",
+      "name": "cp_fueltrans_m7_ticket_number_allocator",
+      "file": "20261123081039_cp_fueltrans_m7_ticket_number_allocator.sql",
+      "bytes": 6759,
+      "sha256": "e5afa7ba82dd927ea71061b861c35c2595169afaf09c14d54a760238b5230db9"
+    },
+    {
       "version": "20261123100000",
       "name": "cp_tt_ojt_shared_identities",
       "file": "20261123100000_cp_tt_ojt_shared_identities.sql",
@@ -2100,13 +2107,6 @@
       "file": "20261123160000_cp_tt_manual_ot_01_manual_submission_and_scoped_review.sql",
       "bytes": 12775,
       "sha256": "edc0ff382fac12551ab5add4570477bf06103aae62babb31b035cb1a5765c251"
-    },
-    {
-      "version": "20261123170000",
-      "name": "cp_fueltrans_m7_ticket_number_allocator",
-      "file": "20261123170000_cp_fueltrans_m7_ticket_number_allocator.sql",
-      "bytes": 6759,
-      "sha256": "e5afa7ba82dd927ea71061b861c35c2595169afaf09c14d54a760238b5230db9"
     }
   ]
 }

@@ -20,7 +20,7 @@ Implemented the requested client/year/sequence format:
 
 The sequence is maintained independently per client and Philippine calendar year. The sequence is minimum three digits and can grow beyond 999 without truncation.
 
-The new migration \`20261123170000_cp_fueltrans_m7_ticket_number_allocator.sql\`:
+The new migration \`20261123081039_cp_fueltrans_m7_ticket_number_allocator.sql\`:
 
 - Adds a private counter keyed by client code and year.
 - Uses one transactional upsert to serialize concurrent inserts for the same client/year.
