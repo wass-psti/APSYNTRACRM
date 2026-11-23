@@ -40,6 +40,15 @@ export function timeTrackerLogRowsForSnapshot(snapshot){
  return [...standard,...ojtRows];
 }
 
+/** Keep one open Log detail only while that signed record remains authorized.
+ * Includes prefixed OJT sessions; never retains a stale or cross-role record.
+ */
+export function retainTimeTrackerLogDetailIds(snapshot,expandedIds=[]){
+ const allowed=new Set(timeTrackerLogRowsForSnapshot(snapshot).map(row=>row.id));
+ return (Array.isArray(expandedIds)?expandedIds:[])
+  .filter(id=>typeof id==='string'&&allowed.has(id)).slice(-1);
+}
+
 const phtTime=value=>validTime(value)?formatTimeTrackerClock(value):'—';
 const phtDate=value=>new Intl.DateTimeFormat('en-PH',{
  timeZone:'Asia/Manila',weekday:'long',year:'numeric',month:'long',day:'numeric'

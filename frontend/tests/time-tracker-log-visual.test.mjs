@@ -118,7 +118,7 @@ test('GPS load retains expanded audit details and scopes errors to selected reco
  assert.equal((failed.match(/Signed GPS request failed validation\./g)||[]).length,1);
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/function preserveTimeTrackerLogExpansion/);
- assert.match(app,/state\.ttLogExpandedIds=state\.ttLogExpandedIds\.filter/);
+  assert.ok(app.includes('state.ttLogExpandedIds=retainTimeTrackerLogDetailIds(state.ttAttendance,state.ttLogExpandedIds)'));
  assert.match(app,/preserveTimeTrackerLogExpansion\(\);/);
  assert.match(app,/state\.ttLogGpsErrorRecordId=record\?\.id/);
  assert.doesNotMatch(app,/state\.ttLogGpsData=null;\s*state\.ttLogGpsError='Signed GPS evidence could not be verified/);
