@@ -112,9 +112,30 @@ function bindPendingTicketReconciliation(){
   finally{if(button.isConnected)button.disabled=!pendingUncertainTicket;}
  };
 }
-function pageHeader(title,subtitle=''){return `<div class="page-heading"><div><p class="eyebrow">FUELTRANS SUPPORT PORTAL</p><h1>${h(title)}</h1><p class="muted">${h(subtitle)}</p></div><button id="refresh" class="secondary">↻ Refresh</button></div>`;}
+function pageHeader(title,subtitle=''){
+ return `<div class="page-heading"><div><p class="eyebrow">SUPPORT OPERATIONS</p><h1>${h(title)}</h1>${subtitle?`<p class="muted">${h(subtitle)}</p>`:''}</div><button id="refresh" class="secondary" type="button" aria-label="Refresh current FuelTrans view">↻ Refresh</button></div>`;
+}
+function activeShift(){
+ const hour=Number(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',hour:'2-digit',hourCycle:'h23'}).format(new Date()));
+ return hour>=6&&hour<18?'Shift A · 06:00–18:00':'Shift B · 18:00–06:00';
+}
+function greeting(){
+ const hour=Number(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',hour:'2-digit',hourCycle:'h23'}).format(new Date()));
+ return hour<12?'Good morning':hour<18?'Good afternoon':'Good evening';
+}
 function statusBadge(s){return `<span class="status status-${String(s).toLowerCase().replace(/[^a-z0-9]/g,'-')}">${h(s)}</span>`;}
-const navigation=[{label:'OVERVIEW',links:[['dashboard','Dashboard','◫']]},{label:'SUPPORT OPERATIONS',links:[['create-ticket','Create Ticket','＋'],['tickets','Ticket Queue','☷'],['l1-workspace','Global L1 Workspace','◉'],['l2-dispatch','Local L2 Dispatch','↗'],['handover','Handover','⇄']]},{label:'INSIGHTS',links:[['reports','Reports','▥'],['notifications','Notifications','♧'],['report-bug','Report Bug','⚑']]},{label:'SYSTEM',links:[['admin','Administration','⚙'],['users','User Directory','♙'],['sessions','Sessions','◷'],['audit','Audit Events','☰'],['it-issues','IT Issue Queue','⚑'],['logo-files','Logo Files','▣'],['disaster-recovery','Disaster Recovery','♙']]}];
+const navigation=[
+ {label:'OVERVIEW',links:[['dashboard','Dashboard','▦']]},
+ {label:'SUPPORT OPERATIONS',links:[
+  ['create-ticket','Create Ticket','＋'],['tickets','Ticket Queue','▤'],
+  ['l1-workspace','Global L1 Workspace','◉'],['l2-dispatch','Local L2 Dispatch','↗'],
+  ['handover','Shift Handover','⇄']]},
+ {label:'INSIGHTS',links:[['reports','Analytics & Reports','▥'],['notifications','Notifications','♧'],['report-bug','Report Issue','⚑']]},
+ {label:'SYSTEM',links:[['admin','Administration','⚙'],['users','User Directory','♙'],
+  ['sessions','Sessions','◷'],['audit','Audit Events','☰'],
+  ['it-issues','IT Issue Queue','⚑'],['logo-files','Logo Files','▣'],
+  ['disaster-recovery','Disaster Recovery','♙']]}
+];
 function allowRoute(r){if(['admin','users','sessions','audit','logo-files','it-issues'].includes(r))return mayReadAdministration(state.active);if(r==='disaster-recovery')return mayReadAdministration(state.active)&&['asenagan@watchdogautomation.com.ph','lmsenagan@watchdogautomation.com.ph'].includes(String(state.user?.email||'').toLowerCase());if(r==='create-ticket')return canCreate(state.active);if(r==='l1-workspace')return ['admin','global_l1_support'].includes(role());if(r==='l2-dispatch')return ['admin','local_l2_support'].includes(role());if(r==='handover')return ['admin','global_l1_support','local_l2_support'].includes(role());if(r==='reports')return ['admin','fueltrans','watchdog_employee','global_l1_support','local_l2_support','call_center_specialist','viewer'].includes(role());return true;}
 function currentHash(){let raw;try{raw=decodeURIComponent(location.hash.replace(/^#\/?/,'').trim());}catch{return 'dashboard';}if(raw.startsWith('ticket/')||raw.startsWith('report-bug/'))return raw;return knownRoutes.has(raw)?raw:'dashboard';}
 function loginView(){root.innerHTML='<main class="auth"><div class="auth-card"><h1>APSYNTRA CRM session required</h1><p>Access FuelTrans through the authenticated APSYNTRA CRM host.</p></div></main>';}
@@ -123,8 +144,30 @@ async function bootstrap(){++viewRevision;root.innerHTML='<main class="loading">
 async function logout(){try{await signOut();}catch{clearSession();}loginView();}
 function layout(content){
  if(disposed)return;
- const nav=navigation.map(group=>`<div class="ft-nav-group"><span>${h(group.label)}</span>${group.links.filter(x=>allowRoute(x[0])).map(([r,label])=>`<a href="${host.base}/${r}" class="${state.route===r?'active':''}" ${state.route===r?'aria-current="page"':''}>${h(label)}</a>`).join('')}</div>`).join('');
- root.innerHTML=`<section class="ft-application"><div class="ft-toolbar"><div><span class="eyebrow">FuelTrans</span><span class="role-tag">${h(role().replaceAll('_',' '))}</span></div><label class="refresh-setting25">Refresh<select id="auto-refresh25" aria-label="Automatic data refresh interval">${REFRESH_OPTIONS25.map(ms=>`<option value="${ms}" ${refreshMs25===ms?'selected':''}>${refreshLabel25(ms)}</option>`).join('')}</select></label></div><nav class="ft-navigation" aria-label="FuelTrans views">${nav}</nav><main id="main-content" class="content" tabindex="-1">${content}<p id="feedback" role="status" aria-live="polite" ${state.notice?'':'hidden'}>${h(state.notice)}</p></main></section>`;
+ const memberName=state.active?.display_name||state.user?.email||'Support engineer';
+ const initials=memberName.trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase();
+ const nav=navigation.map(group=>`<div class="ft-nav-group"><span class="ft-nav-label">${h(group.label)}</span>${group.links.filter(x=>allowRoute(x[0])).map(([r,label,icon])=>{
+  const active=state.route===r||(r==='tickets'&&state.route.startsWith('ticket/'))||(r==='report-bug'&&state.route.startsWith('report-bug/'));
+  return `<a href="${host.base}/${r}" class="${active?'active':''}" ${active?'aria-current="page"':''}><span class="ft-nav-icon" aria-hidden="true">${h(icon)}</span><span>${h(label)}</span></a>`;
+ }).join('')}</div>`).join('');
+ root.innerHTML=`<section class="ft-application">
+  <a class="skip-to-content" href="#main-content">Skip to FuelTrans content</a>
+  <aside class="ft-sidebar" aria-label="FuelTrans application sidebar">
+   <div class="ft-brand"><span class="ft-brand-mark" aria-hidden="true">F</span><span><strong>FuelTrans Support</strong><small>OPERATIONS PORTAL</small></span></div>
+   <nav class="ft-navigation" aria-label="FuelTrans views">${nav}</nav>
+   <div class="ft-sidebar-footer"><span class="ft-avatar" aria-hidden="true">${h(initials)}</span><span><strong>${h(memberName)}</strong><small>${h(role().replaceAll('_',' '))}</small></span></div>
+  </aside>
+  <div class="ft-main">
+   <header class="ft-toolbar">
+    <div class="ft-toolbar-identity"><span class="ft-toolbar-mark" aria-hidden="true">F</span><span><small>Watchdog Automation</small><strong>FuelTrans Support Portal</strong></span></div>
+    <div class="ft-toolbar-actions"><span class="ft-shift-indicator"><span class="ft-live-dot" aria-hidden="true"></span>${h(activeShift())}</span>
+     <label class="refresh-setting25">Auto refresh<select id="auto-refresh25" aria-label="Automatic data refresh interval">${REFRESH_OPTIONS25.map(ms=>`<option value="${ms}" ${refreshMs25===ms?'selected':''}>${refreshLabel25(ms)}</option>`).join('')}</select></label>
+     <span class="ft-toolbar-avatar" aria-label="${h(memberName)}">${h(initials)}</span>
+    </div>
+   </header>
+   <main id="main-content" class="content" tabindex="-1">${content}<p id="feedback" role="status" aria-live="polite" ${state.notice?'':'hidden'}>${h(state.notice)}</p></main>
+  </div>
+ </section>`;
  document.getElementById('auto-refresh25').onchange=e=>{refreshMs25=normalizeRefresh25(e.target.value);try{localStorage.setItem('fueltrans-auto-refresh-ms-v1',String(refreshMs25));}catch{}scheduleAutoRefresh25();};
  const button=document.getElementById('refresh');if(button)button.onclick=()=>go(state.route);
 }
@@ -139,7 +182,33 @@ function toolbar(){
 }
 async function tickets(revision){const {rows,total}=await fetchPage();if(revision!==viewRevision)return;state.tickets=rows;state.total=total;const pageCount=Math.max(1,Math.ceil(state.total/pageSize));layout(`${pageHeader('Ticket Queue','Browse tickets within your authorized FuelTrans workspace.')}<div class="panel">${toolbar()}<p class="muted">Server-scoped results · ${state.total} ticket(s) · page ${state.page+1} of ${pageCount}</p>${ticketTable(state.tickets)}${TICKET_DELETION_ROLES.includes(state.active.role)?`<section class="bulk-controls" aria-label="Bulk recoverable ticket deletion"><h3>Bulk delete (recoverable)</h3><p class="muted">Select up to 25 tickets shown on this page. Each deletion is separately confirmed by the server; confirmed deletions will not be retried if a subsequent operation fails.</p><div id="bulk-ticket-selection">${state.tickets.map(t=>`<label class="check"><input type="checkbox" class="bulk-ticket-id" value="${h(t.id)}">${h(t.ticket_number||t.id)} — ${h(titleOf(t))}</label>`).join('')}</div><button id="bulk-delete24" type="button">Delete selected tickets (recoverable)</button></section>`:''}<div class="pager"><button id="prev" class="secondary" ${state.page===0?'disabled':''}>← Previous</button><span>${Math.min(state.page*pageSize+1,state.total)}–${Math.min((state.page+1)*pageSize,state.total)} / ${state.total}</span><button id="next" class="secondary" ${(state.page+1)*pageSize>=state.total?'disabled':''}>Next →</button></div></div>`);const bulkButton=document.getElementById('bulk-delete24');if(bulkButton)bulkButton.onclick=async()=>{if(state.busy)return;const ids=[...document.querySelectorAll('.bulk-ticket-id:checked')].map(x=>x.value);if(!ids.length||ids.length>25){say('Select 1 to 25 tickets from this page.');return;}if(!confirm(`Recoverably delete ${ids.length} selected ticket(s)? Existing records, history, and attachments are preserved.`))return;const ws=state.active.workspace_id,uid=state.user.id;state.busy=true;bulkButton.disabled=true;try{const result=await bulkDelete({rows:state.tickets,ids,workspaceId:ws,userId:uid,readMembership:readFreshFuelTransMembership,readTicket,invoke:args=>callTicketDeletionRpc('fueltrans_soft_delete_ticket_v1',args)});await go('tickets',{preserveNotice:true});say(`${result.confirmed.length} ticket(s) confirmed deleted.${result.failure?` Stopped on ${result.failure.id}: ${result.failure.message}. Do not automatically retry uncertain operations.`:''}`);}catch(err){say(err.message);}finally{state.busy=false;if(bulkButton.isConnected)bulkButton.disabled=false;}};document.getElementById('filter-form').onsubmit=e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{const next=normalizeQueueFilters({client:String(f.get('client')||'all'),priority:String(f.get('priority')||'all'),system:String(f.get('system')||'all'),from:String(f.get('from')||''),to:String(f.get('to')||''),sort:String(f.get('sort')||'recent')});const search=String(f.get('search')||'').trim();if(search.length>80)throw Error('Ticket search is too long.');if(clientForMembership(state.active)&&next.client!=='all'&&next.client!==clientForMembership(state.active))throw Error('Cross-client filter denied.');state.filter=search;state.status=String(f.get('status')||'all');state.archived=f.get('archived')==='on';state.clientFilter=next.client;state.priorityFilter=next.priority;state.systemFilter=next.system;state.queueFrom=next.from;state.queueTo=next.to;state.queueSort=next.sort;state.page=0;go('tickets');}catch(err){say(err.message);}};document.getElementById('clear-filter').onclick=()=>{state.filter='';state.status='all';state.archived=false;state.clientFilter='all';state.priorityFilter='all';state.systemFilter='all';state.queueFrom='';state.queueTo='';state.queueSort='recent';state.page=0;go('tickets');};document.getElementById('prev').onclick=()=>{state.page=Math.max(0,state.page-1);go('tickets');};document.getElementById('next').onclick=()=>{state.page++;go('tickets');};}
 async function stats(){const ws=state.active.workspace_id;const keys=[null,...STATUS];const result=await Promise.all(keys.map(s=>countTickets(ws,s)));return Object.fromEntries(keys.map((s,i)=>[s||'total',result[i]]));}
-async function dashboard(revision){const ws=state.active.workspace_id;const [counts,{rows}]=await Promise.all([stats(),listTickets(buildTicketQuery({workspaceId:ws,limit:6}))]);if(revision!==viewRevision)return;state.stats=counts;const count=counts.total;const active=(counts.Open||0)+(counts['Under L1 Review']||0)+(counts['Escalated to L2']||0)+(counts['Under L2 Review']||0);layout(`${pageHeader('Dashboard','Live overview of authorized FuelTrans tickets.')}<section class="stat-grid"><div class="stat-card"><small>All active records</small><strong>${count}</strong></div><div class="stat-card"><small>Active workload</small><strong>${active}</strong></div><div class="stat-card"><small>Under L1 review</small><strong>${counts['Under L1 Review']||0}</strong></div><div class="stat-card"><small>Escalated to L2</small><strong>${counts['Escalated to L2']||0}</strong></div><div class="stat-card"><small>Resolved</small><strong>${counts.Resolved||0}</strong></div></section><div class="panel"><div class="panel-header"><h2>Recent tickets</h2><a href="${host.base}/tickets">View ticket queue →</a></div>${ticketTable(rows,'No tickets have been created in this workspace.')}</div>`);}
+async function dashboard(revision){
+ const ws=state.active.workspace_id;
+ const [counts,{rows}]=await Promise.all([stats(),listTickets(buildTicketQuery({workspaceId:ws,limit:6}))]);
+ if(revision!==viewRevision)return;
+ state.stats=counts;
+ const total=Number(counts.total)||0;
+ const open=Number(counts.Open)||0;
+ const l1=Number(counts['Under L1 Review'])||0;
+ const escalated=Number(counts['Escalated to L2'])||0;
+ const l2=Number(counts['Under L2 Review'])||0;
+ const resolved=Number(counts.Resolved)||0;
+ const active=open+l1+escalated+l2;
+ const firstName=String(state.active.display_name||'team').trim().split(/\s+/)[0];
+ const metrics=[
+  ['Active',active],['Open',open],['Under L1',l1],
+  ['Escalated to L2',escalated],['Resolved',resolved],['Total records',total]
+ ];
+ const recent=rows.length?rows.map(t=>`<li><a href="${host.base}/ticket/${encodeURIComponent(t.id)}"><span class="ft-ticket-id">${h(t.ticket_number||t.id)}</span><span class="ft-dashboard-title">${h(titleOf(t))}</span>${statusBadge(statusOf(t))}<time datetime="${h(t.updated_at)}">${h(friendlyTime(t.updated_at))}</time></a></li>`).join(''):'<li class="ft-dashboard-empty">No tickets have been created in this workspace.</li>';
+ const segments=`<span class="ft-open-fill" style="width:${total?Math.round(open/total*100):0}%"></span><span style="width:${total?Math.round(resolved/total*100):0}%"></span>`;
+ const statusRows=[['Open',open],['Under L1 Review',l1],['Escalated to L2',escalated],['Under L2 Review',l2],['Resolved',resolved]];
+ layout(`${pageHeader(greeting()+', '+firstName,'Current ticket activity in your FuelTrans workspace.')}
+  <section class="stat-grid" aria-label="Ticket status summary">${metrics.map(([label,value])=>`<div class="stat-card"><small>${h(label)}</small><strong>${value}</strong></div>`).join('')}</section>
+  <div class="ft-dashboard-grid">
+   <section class="panel"><div class="panel-header"><h2>Recent Tickets</h2><a href="${host.base}/tickets">View all →</a></div><ul class="ft-dashboard-list">${recent}</ul></section>
+   <section class="panel"><div class="panel-header"><h2>Status Distribution</h2></div><div class="ft-distribution-bar" aria-hidden="true">${segments}</div><ul class="ft-distribution">${statusRows.map(([label,value])=>`<li><span>${h(label)}</span><strong>${value}</strong></li>`).join('')}</ul></section>
+  </div>`);
+}
 async function details(id,revision){const t=await readTicket(state.active.workspace_id,id);if(revision!==viewRevision)return;if(!t){layout(`<a href="${host.base}/tickets">← Ticket Queue</a><div class="error-panel"><h2>Ticket unavailable</h2><p>The ticket does not exist or your membership cannot access it.</p></div>`);return;}state.detail=t;const p=t.payload||{};const fields=[['Ticket number',t.ticket_number||t.id],['Client',t.client_code],['Status',statusOf(t)],['Priority',priorityOf(t)],['Station ID',p.stationId],['Station name',p.stationName],['System',p.systemType],['Impact',p.impactLevel],['Reported via',p.reportingChannel],['Created',friendlyTime(t.created_at)],['Updated',friendlyTime(t.updated_at)]];layout(`<a href="${host.base}/tickets" class="back-link">← Ticket Queue</a>${pageHeader(titleOf(t),t.ticket_number||t.id)}<div class="detail-layout"><section class="panel"><h2>Issue details</h2><p class="description">${h(p.issueDetails||p.description||'No issue details provided.')}</p><h2>Ticket activity</h2><ol class="activity-list">${Array.isArray(p.activity)&&p.activity.length?p.activity.slice(-20).reverse().map(a=>`<li><strong>${h(a.title||a.type||'Activity')}</strong><span>${h(friendlyTime(a.timestamp))}</span><p>${h(a.message||'')}</p></li>`).join(''):'<li>No recorded activity.</li>'}</ol></section><aside class="panel info-card"><h2>Ticket information</h2><p class="muted">Source-derived elapsed time projections (no SLA threshold configured).</p><div class="info-row"><span>Age</span><strong>${trackedTime(t,'age')}</strong></div><div class="info-row"><span>Current response segment</span><strong>${trackedTime(t,'response')}</strong></div><div class="info-row"><span>First L1 response</span><strong>${trackedTime(t,'firstResponse')}</strong></div><div class="info-row"><span>Resolution elapsed</span><strong>${trackedTime(t,'resolution')}</strong></div>${fields.map(([label,value])=>`<div class="info-row"><span>${h(label)}</span><strong>${h(value??'—')}</strong></div>`).join('')}<p class="muted">Attachment upload is available below. Timer projections are read-only, not server-enforced SLA. Trusted ticket history is shown separately below.</p></aside></div>${ticketActions(t)}${delegationPanel(t)}${evidencePanel(t)}${pendingTicketReconciliationPanel()}<section class="panel" id="trusted-history"><h2>Server-recorded ticket history</h2><p class="muted">Loading trusted event history…</p></section>`);bindTicketActions(t);bindEvidence(t);bindPendingTicketReconciliation();void bindDelegation(t);void loadTrustedHistory(t,revision);}
 function createForm(){
  const m=state.active;if(!canCreate(m)){say('Not allowed to create tickets.');return;}
