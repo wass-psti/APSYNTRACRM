@@ -15,6 +15,31 @@ if ! mkdir "$lock" 2>/dev/null; then
 fi
 tmp=""
 created=false
+phase="initialization"
+# Diagnostics report only the operation category and a redacted error class.
+# Do not print database passwords, connection strings or schema contents.
+diagnose_failure() {
+  local code="$1"
+  local stage="$phase"
+  local category="unclassified"
+  if [[ -n "$tmp" && -f "$tmp/restore.log" ]]; then
+    if grep -qi 'role .* does not exist' "$tmp/restore.log"; then
+      category="missing-disposable-role"
+    elif grep -qi 'permission denied' "$tmp/restore.log"; then
+      category="ownership-or-permission"
+    elif grep -qi 'already exists' "$tmp/restore.log"; then
+      category="existing-object-conflict"
+    elif grep -qi 'connection refused\|could not connect' "$tmp/restore.log"; then
+      category="connection"
+    elif grep -qi 'timeout\|deadline exceeded' "$tmp/restore.log"; then
+      category="timeout"
+    elif grep -qi 'ERROR:\|FATAL:' "$tmp/restore.log"; then
+      category="postgres-error"
+    fi
+  fi
+  printf 'CP22_FAILURE_STAGE=%s\nCP22_FAILURE_CLASS=%s\nCP22_FAILURE_EXIT=%s\n' "$stage" "$category" "$code" >&2
+}
+trap 'diagnose_failure "$?"' ERR
 cleanup() {
   if [[ "$created" == true ]]; then
     docker rm -f "$name" >/dev/null 2>&1 || true
@@ -26,6 +51,17 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Deterministic, no-network failure diagnostic. Does not start Docker or
+# contact staging. It exercises ERR and EXIT cleanup using the real lock.
+if [[ "${1:-}" == "--diagnostic-self-test" ]]; then
+  phase="diagnostic-self-test"
+  false
+fi
+if [[ $# -gt 0 ]]; then
+  echo 'BLOCKED: unknown owner-clone option' >&2
+  exit 2
+fi
+
 if docker ps -a --format '{{.Names}}' | grep -qx "$name"; then
   echo 'BLOCKED: CP20 container exists; refusing overwrite' >&2
   exit 2
@@ -34,6 +70,7 @@ if ! docker image inspect "$image" >/dev/null 2>&1; then
   echo 'BLOCKED: preinstalled PostgreSQL 17 image unavailable' >&2
   exit 2
 fi
+phase="temporary-directory"
 tmp="$(mktemp -d /tmp/cp-native20.XXXXXX)"
 readonly dump="$tmp/staging-schema.sql"
 readonly restore="$tmp/staging-owner-restore.sql"
@@ -41,6 +78,7 @@ readonly envfile="$tmp/pg.env"
 readonly restore_log="$tmp/restore.log"
 
 # Generate a one-use password and never print or commit it.
+phase="temporary-password"
 python3 - "$envfile" <<'PY'
 from pathlib import Path
 import secrets,sys
@@ -50,6 +88,7 @@ path.chmod(0o600)
 PY
 
 # The new PG server is not published to the host or any Docker network.
+phase="isolated-postgres-startup"
 docker run -d --name "$name" --network none --env-file "$envfile" "$image" >/dev/null
 created=true
 for attempt in $(seq 1 35); do
@@ -60,6 +99,7 @@ docker exec "$name" pg_isready -U postgres >/dev/null
 echo 'PASS: independent PostgreSQL 17 initialized without external networking'
 
 cd "$root"
+phase="staging-schema-export"
 supabase db dump --project-ref "$project" \
   --schema auth,public,private,extensions \
   --file "$dump" --yes --log-level error >"$restore_log" 2>&1
@@ -67,6 +107,7 @@ chmod 600 "$dump"
 
 # Restore the exact original staged ownership statements into a separate
 # cluster. Local role shells are NOLOGIN and have no global elevated privileges.
+phase="source-owner-inventory"
 python3 - "$dump" "$tmp/roles.sql" "$restore" <<'PY'
 from pathlib import Path
 import re,sys
@@ -93,22 +134,28 @@ Path(sys.argv[2]).write_text(''.join(
 print('PASS: staged ownership preserved, platform ACLs omitted only in isolated clone')
 PY
 
+phase="disposable-owner-roles"
 docker exec -i "$name" psql -X -U postgres -v ON_ERROR_STOP=1 \
   -f /dev/stdin < "$tmp/roles.sql" >"$restore_log" 2>&1
+phase="owner-clone-create"
 docker exec "$name" createdb -U postgres -T template0 cp_native20_owner_clone
+phase="pgcrypto-extension"
 docker exec "$name" psql -X -U postgres -d cp_native20_owner_clone \
   -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION IF NOT EXISTS pgcrypto;' \
   >>"$restore_log" 2>&1
+phase="staging-schema-restore"
 if ! docker exec -i "$name" psql -X -U postgres -d cp_native20_owner_clone \
   -v ON_ERROR_STOP=1 --single-transaction -f /dev/stdin \
   < "$restore" >>"$restore_log" 2>&1; then
   echo 'BLOCKED: actual staging owner-preserving restore failed' >&2
-  tail -7 "$restore_log" | sed -E 's/(password|secret|token)=[^ ]+/\1=[REDACTED]/gi' >&2
+  diagnose_failure 2
   exit 2
 fi
 
+phase="auth-ownership-verification"
 docker exec -i "$name" psql -X -At -U postgres -d cp_native20_owner_clone \
   -v ON_ERROR_STOP=1 \
   < "$root/sql/acceptance/cp-native-app-autosync-20-owner-clone.sql"
+phase="complete"
 echo 'PASS: actual staging Auth schema/table/sequence ownership verified in isolated cluster'
 echo 'NOT VERIFIED: staging GoTrue startup, signed new-module writer acceptance'
