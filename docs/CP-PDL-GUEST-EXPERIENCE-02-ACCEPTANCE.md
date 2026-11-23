@@ -55,4 +55,34 @@ No hosted Supabase project is created, linked, migrated, or modified. No product
 
 ## Verification status
 
-This record documents implementation and criteria. Actual pass/fail evidence must be recorded from local or CI execution; a configured workflow or successful build alone is not end-to-end acceptance.
+<badge color="success">VERIFIED — GitHub Actions</badge>
+
+**CP02 workflow:** PASS
+- Push run: https://github.com/wass-psti/APSYNTRACRM/actions/runs/45094170535
+- Pull-request run: https://github.com/wass-psti/APSYNTRACRM/actions/runs/45094175910
+- Tested branch commit: cae007b4a81b207f003cd70eaf42f5955a076e96
+
+**Actual disposable integration evidence:**
+- All 12 existing PDL migrations applied to a new local Supabase project with unique project ID and non-default ports.
+- 3/3 synthetic QR assets uploaded and independently retrieved.
+- 9/9 future availability combinations and 9/9 same-day availability checks passed.
+- Server-generated quote returned the expected PHP 225.00 for the 90-minute fixture.
+- Actual multipart submission returned HTTP 201 and persisted one reservation.
+- Independent receipt readback returned the persisted reservation.
+- Same-key retry returned the original reservation; changed payload returned HTTP 409.
+- Overlapping quote rejected; invalid receipt token returned HTTP 404.
+- Invalid evidence was rejected and created no reservation.
+- Private Storage readback matched the exact submitted synthetic PDF bytes.
+- Database count was exactly one for the successful idempotency key; state remained pending_verification/submitted.
+- Chromium loaded the frontend, accessed the local API proxy, retrieved the receipt and all three QR images, and recorded zero uncaught page errors.
+- Paseo Vitest: 15 test files, 78/78 tests passed.
+- TypeScript typecheck: PASS.
+- Production build: PASS.
+
+**Additional existing regression workflow:** Paseo Native CRM Integration Acceptance PASS, including CP04 hour-first duration/booking-review browser acceptance and public/CRM browser isolation.
+
+**Warnings (non-blocking):** Existing Vite pages-restore script bundling warning, existing Zod Rollup annotation warnings, Supabase CLI inbucket deprecation notice, and GitHub Actions Node 20 deprecation notice. No acceptance step failed.
+
+**Cleanup and scope:** The disposable Supabase stop/cleanup trap ran as part of the successful job. The GitHub runner was ephemeral. No hosted Supabase project, production reservation, payment, QR recipient, or payment verification was modified. No gradient descent, backpropagation, training, fine-tuning, model-weight updates, or training dependency was introduced.
+
+The implementation is verified on the CP02 branch. PR #786 remains draft and unmerged; no production deployment was performed.
