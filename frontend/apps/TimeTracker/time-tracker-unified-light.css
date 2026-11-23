@@ -732,3 +732,25 @@
   border-color:#E3E6EB!important;
   font-size:12px!important;
 }
+/* Keep the signed System Admin Log toolbar's interaction-tested geometry. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-command .tt-log-admin-toolbar {
+  border-radius:16px!important;
+  background-color:#FFFFFF!important;
+  background-image:linear-gradient(120deg,#FFFFFF 0%,#FDF0E8 100%)!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-command .tt-log-admin-toolbar-actions button {
+  border-radius:9px!important;
+  background-color:#FFFFFF!important;
+  background-image:linear-gradient(180deg,#FFFFFF,#FAFBFC)!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-command .tt-log-admin-selection-status {
+  border-radius:10px!important;
+  background:#FFFFFF!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-command :is(
+  .tt-log-admin-toolbar-heading span,.tt-log-admin-selection-status span,
+  .tt-log-admin-selection-status i
+) {
+  color:#5B6673!important;
+  font-size:12px!important;
+}
