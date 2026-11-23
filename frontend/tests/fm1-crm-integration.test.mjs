@@ -26,10 +26,16 @@ const apiClient = readFileSync(
 const dataLayer = readFileSync(new URL("../data.js", import.meta.url), "utf8");
 
 test("FM1 is integrated into the existing CRM sidebar and hash router", () => {
-  assert.match(app, /workspaceApplicationsForNavigation\(state\.context\?\.workspace_id,state\.boards\)/);
-  const fm1 = workspaceApplicationsForNavigation(WORK_MANAGEMENT_WORKSPACE_ID, []).find((item) => item.id === 'fm1-ticketing');
-  assert.equal(fm1?.href, '#/fm1');
-  assert.equal(fm1?.icon, 'ticket');
+  assert.match(
+    app,
+    /workspaceApplicationsForNavigation\(state\.context\?\.workspace_id,state\.boards\)/,
+  );
+  const fm1 = workspaceApplicationsForNavigation(
+    WORK_MANAGEMENT_WORKSPACE_ID,
+    [],
+  ).find((item) => item.id === "fm1-ticketing");
+  assert.equal(fm1?.href, "#/fm1");
+  assert.equal(fm1?.icon, "ticket");
   assert.match(
     app,
     /if\(parts\[0\]==='fm1'\)fm1Module=await import\('\.\/fm1\/index\.js'\)/,
