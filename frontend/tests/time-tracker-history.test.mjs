@@ -9,6 +9,7 @@ import {TimeTrackerNativeClient} from '../time-tracker-native.js';
 const manager='e247a7b9-c3d4-4d3d-91b1-abcdef000001';
 const staff='e247a7b9-c3d4-4d3d-91b1-abcdef000002';
 const colleague='e247a7b9-c3d4-4d3d-91b1-abcdef000003';
+const hrPeer='e247a7b9-c3d4-4d3d-91b1-abcdef000005';
 const foreign='e247a7b9-c3d4-4d3d-91b1-abcdef000004';
 const board='46bf4ee7-368a-4c35-842c-8593ea1f6ac3';
 const workspace='00000000-0000-4000-8000-000000000001';
@@ -17,6 +18,7 @@ const directory=[
  {id:manager,status:'active',display_name:'Manager Person'},
  {id:staff,status:'active',display_name:'Engineering Member'},
  {id:colleague,status:'active',display_name:'Staff Two'},
+ {id:hrPeer,status:'active',display_name:'Second HR Member'},
  {id:foreign,status:'inactive',display_name:'Inactive member'}
 ];
 const record=(id,user,timestamp,clockOut=null,name='')=>({
@@ -50,6 +52,16 @@ test('privileged signed current-workspace roles see today and all eligible prior
   assert.equal(log.rows[0].classification,'Late');
   assert.equal(log.rows[1].classification,'On time');
  }
+});
+
+test('two independent HR identities receive the same all-user attendance Log projection',()=>{
+ const first=projectTimeTrackerLog({value:state,directory,userId:manager,moduleRole:'HR'});
+ const second=projectTimeTrackerLog({value:state,directory,userId:hrPeer,moduleRole:'HR'});
+ assert.equal(first.scope,'AUTHORIZED_WORKSPACE_TEAM');
+ assert.equal(second.scope,'AUTHORIZED_WORKSPACE_TEAM');
+ assert.deepEqual(second.rows.map(row=>row.id),first.rows.map(row=>row.id));
+ assert.deepEqual(second.rows.map(row=>row.ownerId),first.rows.map(row=>row.ownerId));
+ assert.equal(second.rows.length,4);
 });
 
 test('nonmanagement roles cannot browse coworkers despite broad API record input',()=>{
