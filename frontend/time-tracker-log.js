@@ -6,6 +6,7 @@ import {filterMyAttendancePeriod} from './time-tracker-native.js';
 import {manilaDay} from './time-tracker-overview.js';
 import {mapFrame} from './time-tracker-map.js';
 import {renderTimeTrackerAdminEditor,renderTimeTrackerAdminDeleteDialog,TT_ADMIN_RECORD_LIMIT} from './time-tracker-record-management.js';
+import {renderTimeTrackerOjtAdminEditor} from './apps/TimeTracker/time-tracker-ojt-admin-editor.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -433,7 +434,8 @@ export function renderTimeTrackerLog({
   '</section>'+(adminEditor||adminDeleteConfirm?'':renderTimeTrackerLogDetailDialog({row:rows.find(r=>expandedRecordIds.includes(r.id))||null,now,
     gpsEligible,gpsData,gpsBusy,gpsError,gpsErrorRecordId,mapEnabled,mapTheme,
     adminEligible,adminFullAccess,adminBusy,selectedIds}))+
-   renderTimeTrackerAdminEditor({editor:adminEditor,directory:adminDirectory,busy:adminBusy,error:adminEditor?adminError:'',timeOnly:adminEditor?.timeOnly===true})+
+   (adminEditor?.ojt?renderTimeTrackerOjtAdminEditor({editor:adminEditor,busy:adminBusy,error:adminError}):
+    renderTimeTrackerAdminEditor({editor:adminEditor,directory:adminDirectory,busy:adminBusy,error:adminEditor?adminError:'',timeOnly:adminEditor?.timeOnly===true}))+
    renderTimeTrackerAdminDeleteDialog({confirmation:adminDeleteConfirm,busy:adminBusy})+'</section>';
 }
 
