@@ -16,6 +16,7 @@ import {validateCreateEvidence,uploadCreatedTicketEvidence,creationEvidenceMessa
 import {buildStationHistoryQuery,projectStationHistory} from './station-lookup18.js';
 import {buildRecordedStationsQuery,projectRecordedStations,STATION_HISTORY_PAGE_SIZE} from './station-history03.js';
 import {parseStationSourceCsv,reconcileStationSource,stationReconciliationCsv,STATION_SOURCE_MAX_BYTES} from './station-source04.js';
+import {stationCandidateEvidence} from './station-evidence07.js';
 import {MAX_BATCH_STATIONS,validateBatchStations,stationTicketTitle,runSequentialTicketBatch,batchOutcomeMessage} from './batch-create19.js';
 import {reconcileUncertainTicket,validateUncertainReceipt} from './ticket-reconcile21.js';
 import {TICKET_DELETION_ROLES,executeSoftDelete,executeRestore} from './ticket-delete23.js';
@@ -494,6 +495,10 @@ async function recordedStations(revision){
    const parsed=parseStationSourceCsv(await file.text(),{assignedClient});
    if(revision!==viewRevision||state.active?.workspace_id!==workspaceId||!output.isConnected)return;
    const compared=reconcileStationSource(parsed.rows,stations);
+   const evidence=parsed.issues.length?null:await stationCandidateEvidence({
+    parsed,compared,ticketPage:state.stationPage+1,ticketCount:rows.length,reviewedAt:new Date().toISOString()
+   });
+   if(revision!==viewRevision||state.active?.workspace_id!==workspaceId||!output.isConnected)return;
    const labels={
     matched_on_visible_page:'Matches ticket on this page',
     name_difference_on_visible_page:'Name differs on this page',
@@ -512,15 +517,20 @@ async function recordedStations(revision){
      <strong>Local source review — no changes saved</strong>
      <p>Validated: ${parsed.rows.length} unique station candidates · ${parsed.duplicates} identical duplicates · ${parsed.issues.length} validation issues · ${parsed.ignoredColumnCount} extra columns ignored.</p>
      <p>Current ticket page only: ${counts.matched_on_visible_page} matching names · ${counts.name_difference_on_visible_page} differing names · ${counts.not_on_visible_page} not observed. A station not observed on this page may exist elsewhere.</p>
+     ${evidence?`<p class="ft-source-fingerprint">Allowed station metadata SHA-256: <code>${h(evidence.fingerprint.value)}</code></p>`:''}
     </div>
     ${parsed.issues.length?`<div class="ft-source-issues" role="note"><strong>Resolve validation issues before exporting.</strong><ul>${issueList}</ul>${parsed.issues.length>10?`<p>Plus ${parsed.issues.length-10} additional issues.</p>`:''}</div>`:''}
     ${compared.length?`<div class="table-wrap ft-source-table"><table>
      <thead><tr><th>Client</th><th>Station ID</th><th>Candidate station name</th><th>Comparison</th><th>Name on ticket page</th></tr></thead>
      <tbody>${comparison}</tbody></table></div>
      ${compared.length>40?`<p class="muted">Showing the first 40 of ${compared.length} candidates.</p>`:''}
-     ${parsed.issues.length?'':`<button class="secondary" id="station-export-review" type="button">Export comparison CSV</button>`}`:
+     ${parsed.issues.length?'':`<button class="secondary" id="station-export-review" type="button">Export comparison CSV</button><button class="secondary" id="station-export-evidence" type="button">Download candidate evidence manifest</button>`}`:
      '<p class="muted">No valid station candidates to compare.</p>'}
     <p class="muted">A CSV preview cannot establish station ownership or registry authority. Records remain local to this view until navigation.</p>`;
+   const manifestButton=document.getElementById('station-export-evidence');
+   if(manifestButton&&evidence)manifestButton.onclick=()=>{
+    browserDownload(`fueltrans-station-candidate-evidence-page-${state.stationPage+1}.json`,JSON.stringify(evidence,null,2));
+   };
    const exportButton=document.getElementById('station-export-review');
    if(exportButton)exportButton.onclick=()=>{
     browserDownload(`fueltrans-station-comparison-page-${state.stationPage+1}.csv`,
