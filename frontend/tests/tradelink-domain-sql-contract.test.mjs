@@ -157,3 +157,25 @@ test('deterministic document conflicts are HTTP 409 and cannot trigger serializa
  assert.match(sql,/ERRCODE='PT409'/);
  assert.doesNotMatch(sql,/ERRCODE='40001'/);
 });
+
+
+test('All Documents bulk action migration preserves history and separates hidden from deleted state',()=>{
+ const sql=readFileSync('supabase/migrations/20261123171000_cp_tl_document_bulk_actions.sql','utf8');
+ assert.match(sql,/ADD COLUMN hidden_at timestamptz/);
+ assert.match(sql,/ADD COLUMN deleted_at timestamptz/);
+ assert.match(sql,/p_visibility_mode text/);
+ assert.match(sql,/p_visibility_mode='hidden'/);
+ assert.match(sql,/p_visibility_mode='visible'/);
+ assert.match(sql,/p_action NOT IN \('hide','unhide','delete'\)/);
+ assert.match(sql,/FOR UPDATE/);
+ assert.match(sql,/private\.tl03_can_manage\(p_board_id\)/);
+ assert.match(sql,/public\.wm_set_board_item_archived/);
+ assert.match(sql,/terminal visibility metadata/);
+ assert.match(sql,/Deleted TradeLink documents are terminal/);
+ assert.match(sql,/work_board_log/);
+ assert.doesNotMatch(sql,/DELETE FROM public\.tradelink_documents/i);
+ assert.doesNotMatch(sql,/DELETE FROM public\.tradelink_document_events/i);
+ assert.doesNotMatch(sql,/DELETE FROM private\.tradelink_document_revision_snapshots/i);
+ assert.doesNotMatch(sql,/ALTER TABLE public\.tradelink_documents ENABLE ROW LEVEL SECURITY/i);
+ assert.doesNotMatch(sql,/CREATE ROLE|GRANT .*service_role|gradient descent|backpropagation|fine.?tun|training loop/i);
+});

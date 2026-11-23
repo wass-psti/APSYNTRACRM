@@ -180,10 +180,11 @@ test('All Documents wires export only to the current selected authorized rows',(
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/case 'tradelink-documents-export-selection'/);
  assert.match(app,/exportTradeLinkDocumentSelection\(/);
- assert.match(app,/!row\.hidden&&row\.querySelector\('\[data-tl-select-document\]'\)\?\.checked/);
+ assert.match(app,/!row\.hidden&&selected\.has\(row\.dataset\.documentId\)/);
+ assert.match(app,/row\.querySelector\('\[data-tl-select-document\]'\)\?\.checked/);
  assert.match(app,/serializeTradeLinkDocumentCsv\(records\)/);
  const workspace=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
- assert.match(workspace,/data-action="tradelink-documents-export-selection" disabled/);
+ assert.match(workspace,/data-action="tradelink-documents-export-selection".*selectedCount&&!busy/);
 });
 
 test('analytics requests release stale busy state and retry the current route after overlapping navigation',()=>{

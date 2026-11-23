@@ -37,7 +37,7 @@ const row={id:docId,board_id:TRADELINK_BOARD_ID,workspace_id:ws,
  workflow_state:'draft',revision:2,content:draft};
 const listed={documentId:docId,boardItemId:itemId,documentType:'quotation',
  documentNumber:'Q-2026-01',clientName:'Prospect',workflowState:'draft',revision:2,
- archived:false,createdAt:'2026-11-08T01:00:00Z',
+ archived:false,hidden:false,createdAt:'2026-11-08T01:00:00Z',
  updatedAt:'2026-11-08T02:00:00Z',createdByActor:false};
 function entries(extra={}){
  const raw={documentType:'quotation',documentNumber:'Q-2026-01',
