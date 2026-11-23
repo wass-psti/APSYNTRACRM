@@ -2100,6 +2100,13 @@
       "file": "20261123160000_cp_tt_manual_ot_01_manual_submission_and_scoped_review.sql",
       "bytes": 12775,
       "sha256": "edc0ff382fac12551ab5add4570477bf06103aae62babb31b035cb1a5765c251"
+    },
+    {
+      "version": "20261123170000",
+      "name": "cp_tt_hr_ot_all_user_log_01",
+      "file": "20261123170000_cp_tt_hr_ot_all_user_log_01.sql",
+      "bytes": 4630,
+      "sha256": "76e98f68ad0f23a04ed0f474d070b851c8c4d33afb79d5eb65e903b5151cd19d"
     }
   ]
 }
