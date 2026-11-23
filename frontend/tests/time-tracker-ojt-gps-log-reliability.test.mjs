@@ -104,7 +104,7 @@ test('administrators see individually attributed OJT rows merged with regular Lo
  assert.deepEqual(timeTrackerLogRowsForSnapshot({...snapshot,status:'LOADING'}),[]);
 });
 
-test('OJT Log details show signed admin controls, but not regular bulk selection or GPS actions',()=>{
+test('OJT Log details show individual selection and admin actions, never GPS or standard bulk writes',()=>{
  const rows=timeTrackerLogRowsForSnapshot({status:'VERIFIED_READ',
   access:{moduleRole:'IT Administrator'},log:{rows:[]},
   ojtAdminAttendance:{records:[
@@ -116,7 +116,7 @@ test('OJT Log details show signed admin controls, but not regular bulk selection
  assert.match(html,/OJT intern · Shared login/);
  assert.match(html,/SIGNED OJT ATTENDANCE/);
  assert.match(html,/Shared-login OJT attendance · Admin corrections are audited/);
- assert.doesNotMatch(html,/data-action="tt-log-detail-toggle-select"/);
+ assert.match(html,/data-action="tt-log-detail-toggle-select"/);
  assert.match(html,/data-action="tt-log-admin-correct-time"/);
  assert.match(html,/data-action="tt-log-admin-edit"/);
  assert.match(html,/data-action="tt-log-admin-delete"/);
