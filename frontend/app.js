@@ -195,7 +195,7 @@ import {applyTimeTrackerOverviewFilters,filterTimeTrackerOverviewRows,syncTimeTr
 import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,timeTrackerLogRowsForSnapshot,TT_LOG_DEFAULT_FILTERS} from './time-tracker-log.js';
 import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAULT_FILTERS} from './time-tracker-reports.js';
 import {timeTrackerCalendarMonth,shiftTimeTrackerCalendarMonth} from './time-tracker-calendar.js';
-import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED,timeTrackerOtWeek} from './time-tracker-overtime.js';
+import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED,TT_OT_MAX_WEEK_OFFSET,timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate} from './time-tracker-overtime.js';
 import {parseTimeTrackerClockInput} from './time-tracker-time-format.js';
 import {timeTrackerMyHoursWeek} from './time-tracker-my-hours.js';
 import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
@@ -10097,7 +10097,7 @@ async function action(name,button){
   if(name==='tt-ot-current')state.ttOtFilters={...state.ttOtFilters,weekOffset:0};
   if(name==='tt-ot-prev'||name==='tt-ot-next'){
    const offset=state.ttOtFilters.weekOffset+(name==='tt-ot-prev'?-1:1);
-   if(Math.abs(offset)>104)return;
+   if(Math.abs(offset)>TT_OT_MAX_WEEK_OFFSET)return;
    state.ttOtFilters={...state.ttOtFilters,weekOffset:offset};
   }
   if(name==='tt-ot-status'&&['Submitted','Approved','Rejected'].includes(button.dataset.status))
@@ -10111,9 +10111,13 @@ async function action(name,button){
  case 'tt-ot-reject':{
   if(!TT_OT_WRITES_ACCEPTED||state.ttBusy||
      state.view!=='board'||state.tab!=='attendance'||state.ttView!=='ot'||
-     state.ttAttendance?.status!=='VERIFIED_READ'||
-     state.ttAttendance.access?.bootstrapApprover!==true)return;
+     state.ttAttendance?.status!=='VERIFIED_READ')return;
   const requestId=button.dataset.id;
+  const request=state.ttAttendance.otRequests?.find(row=>row.id===requestId&&row.status==='Submitted');
+  const access=state.ttAttendance.access;
+  const canReview=access?.bootstrapApprover===true||
+   (access?.manualOtManager===true&&request?.isManual===true);
+  if(!request||!canReview||request.ownerId==='cloud:'+access?.userId)return;
   const decision=name==='tt-ot-approve'?'Approved':'Rejected';
   if(!confirm(decision+' this overtime request? The decision will be audited and cannot be reversed here.'))return;
   state.ttBusy=true;render();
@@ -13095,6 +13099,51 @@ root.addEventListener('submit',event=>{
  }
  if(event.target.matches('[data-group-inline-form]')){
   event.preventDefault();Promise.resolve(saveGroupInline(event.target)).catch(notice);return;
+ }
+ if(event.target.id==='tt-ot-week-jump-form'){
+  event.preventDefault();
+  if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='ot'||
+     state.ttAttendance?.status!=='VERIFIED_READ'||state.ttBusy)return;
+  try{
+   const date=root.querySelector('#tt-ot-week-jump')?.value||'';
+   const weekOffset=timeTrackerOtWeekOffsetForDate(date);
+   state.ttOtFilters={...state.ttOtFilters,weekOffset};
+   render();
+  }catch(error){toast(error.message,true);}
+  return;
+ }
+ if(event.target.id==='tt-ot-manual-form'){
+  event.preventDefault();
+  const access=state.ttAttendance?.access;
+  if(!TT_OT_WRITES_ACCEPTED||access?.manualOtManager!==true||
+     access?.moduleRole!=='System Admin'||state.view!=='board'||
+     state.tab!=='attendance'||state.ttView!=='ot'||
+     state.ttAttendance?.status!=='VERIFIED_READ'||state.ttBusy){
+   toast('Manual OT submission is unavailable for this TimeTracker session.',true);
+   return;
+  }
+  const draft={
+   employeeId:root.querySelector('#tt-ot-manual-employee')?.value||'',
+   date:root.querySelector('#tt-ot-manual-date')?.value||'',
+   start:root.querySelector('#tt-ot-manual-start')?.value||'',
+   end:root.querySelector('#tt-ot-manual-end')?.value||'',
+   reason:root.querySelector('#tt-ot-manual-reason')?.value||''
+  };
+  try{
+   draft.start=parseTimeTrackerClockInput(draft.start);
+   draft.end=parseTimeTrackerClockInput(draft.end);
+  }catch(error){toast(error.message,true);return;}
+  let weekOffset;
+  try{weekOffset=timeTrackerOtWeekOffsetForDate(draft.date);}
+  catch(error){toast(error.message,true);return;}
+  state.ttBusy=true;render();
+  Promise.resolve(timeTracker.submitManualOvertime(state.boardId,draft))
+   .then(async()=>{
+    state.ttOtFilters={...state.ttOtFilters,weekOffset,status:'Submitted',search:''};
+    await loadTimeTracker();
+    toast('Manual OT submitted for employee review.');
+   }).catch(notice).finally(()=>{state.ttBusy=false;render();});
+  return;
  }
  if(event.target.id==='tt-ot-form'){
   event.preventDefault();
