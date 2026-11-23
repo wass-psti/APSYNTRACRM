@@ -707,3 +707,28 @@
   font-size:12px!important;
   line-height:1.5!important;
 }
+/* Restore contrast in attendance Log chrome inherited from its former dark hero. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-command :is(
+  .tt-log-hero-scope,.tt-log-operation > span,
+  .tt-log-section-heading > span,.tt-log-panel-top p
+) {
+  color:#5B6673!important;
+  font-size:12px!important;
+  line-height:1.5!important;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-log-command .tt-log-hero-scope {
+  background:#EEF0F3!important;
+  border:1px solid #E3E6EB!important;
+  border-radius:999px!important;
+}
+/* The remaining legacy dark hero scope pills are also shown on light cards. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native :is(
+  .tt-reports-hero-scope,.tt-cal-hero-scope,.tt-ot-scope,
+  .tt-hours-hero-scope,.tt-team-hero-scope,
+  .tt-monitor-hero-scope,.tt-gps-hero-scope
+) {
+  color:#5B6673!important;
+  background:#EEF0F3!important;
+  border-color:#E3E6EB!important;
+  font-size:12px!important;
+}
