@@ -15,7 +15,7 @@ const validTime=value=>typeof value==='string'&&Number.isFinite(Date.parse(value
 const safeRows=rows=>Array.isArray(rows)?rows.filter(r=>r&&validTime(r.clockIn)):[];
 
 /** Merge signed OJT and ordinary attendance for authorized admins.
- * OJT records must remain read-only and cannot target normal attendance RPCs.
+ * OJT mutations require a separate signed admin RPC, never normal employee RPCs.
  */
 export function timeTrackerLogRowsForSnapshot(snapshot){
  if(snapshot?.status!=='VERIFIED_READ')return [];

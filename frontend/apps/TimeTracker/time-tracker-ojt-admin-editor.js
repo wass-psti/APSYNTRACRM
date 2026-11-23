@@ -52,7 +52,7 @@ export function renderTimeTrackerOjtAdminEditor({editor=null,busy=false,error=''
  const ready=Number.isSafeInteger(editor.revision)&&editor.revision>=1&&!editor.verifying;
  const blocked=busy||!ready;
  const context='<div class="tt-admin-record-context"><span class="tt-admin-record-avatar" aria-hidden="true">'+
-  esc(record.name.trim().split(/\\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase()||'O')+
+  esc(record.name.trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase()||'O')+
   '</span><div><strong>'+esc(record.name)+'</strong><small>OJT intern · Shared login · '+(active?'Active session':'Completed session')+
   '</small></div><span class="tt-admin-record-status">'+(active?'Active':'Completed')+'</span></div>';
  const field=(label,name,value,placeholder='YYYY-MM-DD hh:mm AM/PM')=>

@@ -135,7 +135,7 @@ test('OJT Correct time opens the regular attendance-style modal with editable sa
  assert.match(html,/Correct attendance times/);
  assert.match(html,/name="clockInAt"/);
  assert.match(html,/name="clockOutAt"/);
- assert.match(html,/Save time correction<\\/button>/);
+ assert.ok(html.includes('Save time correction</button>'));
  assert.doesNotMatch(html,/type="submit" class="primary" disabled/);
  const corrected=buildTimeTrackerOjtAdminPatch(form({
   clockInAt:'2026-11-23 10:00 AM',clockOutAt:'2026-11-23 04:00 PM',
@@ -189,10 +189,10 @@ test('OJT individual Remove selection never enables ordinary employee bulk edits
  assert.match(html,/data-action="tt-log-admin-bulk-edit" disabled/);
  assert.match(html,/data-action="tt-log-admin-bulk-delete" disabled/);
  const app=readFileSync('frontend/app.js','utf8');
- assert.match(app,/state\\.ttLogSelectedIds=\\[id\\]/);
- assert.match(app,/if\\(record\\.isOjt\\)/);
- assert.match(app,/state\\.ttLogExpandedIds=\\[\\]/);
- assert.match(app,/timeTrackerOjt\\.adminAttendance\\(scope\\)/);
+ assert.ok(app.includes('state.ttLogSelectedIds=[id]'));
+ assert.ok(app.includes('if(record.isOjt)'));
+ assert.ok(app.includes('state.ttLogExpandedIds=[]'));
+ assert.ok(app.includes('timeTrackerOjt.adminAttendance(scope)'));
  assert.match(app,/Signed OJT editing requires database migration/);
 });
 
