@@ -27,7 +27,7 @@ test('geolocation first uses fresh high accuracy; returns original browser times
  let calls=0;
  const geo={getCurrentPosition(ok,fail,opts){
   calls++;
-  assert.deepEqual(opts,{enableHighAccuracy:true,timeout:5000,maximumAge:0});
+  assert.deepEqual(opts,{enableHighAccuracy:true,timeout:10000,maximumAge:25000});
   ok(position());
  }};
  const fix=await captureAttendanceGeo(geo);
@@ -45,10 +45,10 @@ test('timeout or unavailable high accuracy falls back only to fresh balanced GPS
   const geo={getCurrentPosition(ok,bad,opts){
    calls++;
    if(calls===1){
-    assert.deepEqual(opts,{enableHighAccuracy:true,timeout:5000,maximumAge:0});
+    assert.deepEqual(opts,{enableHighAccuracy:true,timeout:10000,maximumAge:25000});
     bad({code,message:'Timeout expired'});
    }else{
-    assert.deepEqual(opts,{enableHighAccuracy:false,timeout:7000,maximumAge:0});
+    assert.deepEqual(opts,{enableHighAccuracy:false,timeout:12000,maximumAge:45000});
     ok(position());
    }
   }};
@@ -73,8 +73,9 @@ test('double timeout and old/invalid fixes remain fail closed',async()=>{
   calls++;bad({code:3,message:'Timeout expired'});
  }};
  await assert.rejects(()=>captureAttendanceGeo(geo),err=>
-  err.code==='TT_GEO_UNAVAILABLE');
+  err.code==='TT_GEO_TIMEOUT');
  assert.equal(calls,2);
+ assert.match(attendanceClockError({code:'TT_GEO_TIMEOUT'}),/No clock-out request was sent/);
  const stale={getCurrentPosition(ok){ok(position(Date.now()-120000));}};
  await assert.rejects(()=>captureAttendanceGeo(stale),err=>
   err.code==='TT_GEO_UNAVAILABLE');
