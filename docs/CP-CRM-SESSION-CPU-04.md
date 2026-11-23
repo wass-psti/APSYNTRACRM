@@ -246,3 +246,114 @@ No speculative SQL changes, permission changes, project-setting changes, or prod
 
 - `docs/evidence/cp04-production-attribution.json` — sanitized production metrics, log attribution, database counters, dashboard state, and browser acceptance.
 - `docs/CP-CRM-SESSION-CPU-04.md` — this implementation report.
+
+## 12. Follow-up verification — 2026-11-23
+
+This section supersedes the earlier provisional observations where the newer evidence below is more specific.
+
+### 12.1 Current Database report and plan entitlements
+
+The authenticated Supabase Dashboard Database report was opened again at:
+
+`/dashboard/project/jtlusodorfnyzgyuewkz/observability/database`
+
+The project is on the Pro plan. With the Dashboard set to **Last 60 minutes**, it displayed:
+
+| Panel                                   | Current result |
+| --------------------------------------- | -------------: |
+| CPU usage (average for selected window) |      **3.17%** |
+| Memory usage                            |      875.37 MB |
+| Network throughput                      |     127.1 KB/s |
+| Disk IOPS                               |              4 |
+| Database size                           |        0.45 GB |
+
+The following panels still displayed `Unable to load data`:
+
+- Disk throughput
+- Database Connections
+- Dedicated Pooler Client Connections
+- Shared Pooler (Supavisor) client connections
+- Disk Usage
+
+The current official [Supabase Reports documentation](https://supabase.com/docs/guides/observability/reports) classifies Disk throughput as Team/Enterprise-only. Its absence is expected for this Pro project. The same documentation lists Database Connections and Disk Usage as Free/Pro, and Dedicated/Shared Pooler connections as available on all plans. Their continued failure is therefore not explained by the current plan.
+
+**Updated diagnosis:** The Database report is partially operational. One missing panel is plan-gated; four missing panels should be available on this Pro project. The Dashboard still exposes no internal failing request status, trace ID, or report-service error code.
+
+The 3.17% CPU value is the Dashboard's average for its selected 60-minute window. It is close to the approximately 3% target, but it is not a 30-minute counter-delta benchmark and does not provide p50, p95, or maximum values.
+
+### 12.2 Auth service and Edge gateway request-ID reconciliation
+
+A new equal-duration 30-minute read-only log window was examined: **06:45:00–07:15:00 UTC**.
+
+| Measurement                           | Auth service | Edge gateway |
+| ------------------------------------- | -----------: | -----------: |
+| `GET /user` / `GET /auth/v1/user`     | 151 HTTP 200 | 151 HTTP 200 |
+| `POST /token` / `POST /auth/v1/token` |   3 HTTP 200 |   3 HTTP 200 |
+| Total matching Auth requests          |          154 |          154 |
+
+The request-ID join returned:
+
+- Auth rows: 154
+- Distinct Auth request IDs: 154
+- Matched Edge request IDs: 154
+- Unmatched Auth rows: 0
+
+The full Edge window contained 2,529 requests, including 253 OPTIONS preflights, six client errors, and zero server errors. The Auth requests represented 6.09% of all Edge requests (6.77% excluding OPTIONS).
+
+The six non-Auth client errors were five 403 responses from `/rest/v1/rpc/charter_dispatch` and one 404 from `/rest/v1/rpc/apsyntra_teams_snapshot`. No Auth `/user` or `/token` errors occurred in this window.
+
+**Result: VERIFIED.** The Auth and Edge log streams reconcile exactly by request ID in this window. The earlier CP-04 count discrepancy did not recur.
+
+### 12.3 Genuine production TimeTracker refresh
+
+A separate Chromium tab was opened at:
+
+`https://wass-psti.github.io/APSYNTRACRM/#/time-tracker`
+
+The tab was refreshed once. Both before and after refresh:
+
+- The signed-in CRM UI remained visible.
+- The Secure session indicator remained visible.
+- The sign-in form did not appear.
+- The TimeTracker route remained selected.
+- The existing active attendance session remained visible after the page finished loading.
+
+No attendance action, clock-in, clock-out, or attendance write was performed.
+
+**Result: VERIFIED for the currently deployed production baseline.** This confirms that the observed CP-03 sign-in transition did not recur during this follow-up. It does not yet prove the CP-04 code change is deployed; the CP-04 branch remains separate at this point.
+
+### 12.4 Re-run verification
+
+The CP-04 worktree was re-verified:
+
+| Check                                |               Result |
+| ------------------------------------ | -------------------: |
+| CP-04 focused tests                  |             6/6 PASS |
+| Auth/session/workspace focused tests |           42/42 PASS |
+| Full frontend test suite             | **3,501/3,501 PASS** |
+| JavaScript syntax checks             |                 PASS |
+| Repository ESLint                    |                 PASS |
+| Repository Prettier                  |                 PASS |
+| Production Vite build                |                 PASS |
+
+The build completed with the existing startup-guard classic-script and main-chunk-size advisories. No new dependency was introduced.
+
+### 12.5 Updated acceptance status
+
+| Acceptance area                                                       | Updated status                                                        |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Corrected historical CPU counter accounting                           | VERIFIED                                                              |
+| Current Dashboard CPU average near 3%                                 | VERIFIED — 3.17% over Last 60 minutes                                 |
+| Comparable 30-minute CPU counter benchmark and percentiles            | PENDING                                                               |
+| Full host process attribution                                         | PARTIAL — remaining service process counters are not exposed          |
+| Auth/Edge request-ID reconciliation                                   | VERIFIED — 154/154 matched                                            |
+| PostgreSQL workload evidence                                          | VERIFIED as a read-only snapshot; no speculative SQL tuning justified |
+| Dashboard Disk throughput on Pro                                      | EXPECTED UNAVAILABLE — Team/Enterprise entitlement                    |
+| Pro/all-plan Database Connections, Pooler Connections, and Disk Usage | PARTIAL — panels still fail without internal trace/error detail       |
+| Production TimeTracker signed-in refresh baseline                     | VERIFIED                                                              |
+| CP-04 recovery code                                                   | IMPLEMENTED AND TESTED                                                |
+| CP-04 code deployed to production                                     | PENDING                                                               |
+| No schema, role, permission, project-setting, or credential changes   | VERIFIED                                                              |
+| No attendance writes or training/gradient-descent execution           | VERIFIED                                                              |
+
+The sanitized follow-up evidence is stored in `docs/evidence/cp04-followup-20261123.json`. No access token, refresh token, Secret API key, request-ID value, or user record was written to it.
