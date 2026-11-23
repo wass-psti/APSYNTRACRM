@@ -123,7 +123,7 @@ test('OJT Log detail selection persists across render and respects signed role s
  assert.deepEqual(retainTimeTrackerLogDetailIds(log([input],'Employee'),[id]),[]);
  assert.deepEqual(retainTimeTrackerLogDetailIds({...snapshot,status:'UNVERIFIED'},[id]),[]);
  const app=readFileSync('frontend/app.js','utf8');
- assert.match(app,/state\\.ttLogExpandedIds=retainTimeTrackerLogDetailIds\\(state\\.ttAttendance,state\\.ttLogExpandedIds\\)/);
+  assert.ok(app.includes('state.ttLogExpandedIds=retainTimeTrackerLogDetailIds(state.ttAttendance,state.ttLogExpandedIds)'));
 });
 
 test('OJT signed mutator validates actor/board/revision and never uses ordinary record RPC',async()=>{
