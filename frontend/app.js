@@ -5106,7 +5106,6 @@ async function saveTimeTrackerAdminEditor(form){
  if(editor.manualClockout){
   if(state.ttAttendance.access.moduleRole!=='System Admin')return;
   editor.clockOutDraft=String(new FormData(form).get('clockOutAt')||'');
-  editor.reasonDraft=String(new FormData(form).get('reason')||'');
  }
  if(editor.ojt){
   const scope=timeTrackerOjtLogAdminScope();
