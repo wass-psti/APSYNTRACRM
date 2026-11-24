@@ -234,40 +234,42 @@ export function renderTimeTrackerOjtClock({
   '</tbody></table></div></section>';
  return html;
 }
-export function renderTimeTrackerOjtAdmin({admin=null,attendance=null,employees=[]}={}){
+export function renderTimeTrackerOjtAdmin({admin=null,attendance=null,employees=[],search='',busy=false}={}){
  if(!admin)return '<section class="tt-ojt-admin"><h4>OJT Interns</h4>'+
   '<p>Intern roster management is unavailable until the signed OJT service is deployed.</p></section>';
  const users=employees.filter(isEligibleTimeTrackerSharedOjtAccount);
  const configured=new Set(admin.groups.map(x=>x.userId));
+ const q=String(search||'').trim().toLocaleLowerCase();
+ const disabled=busy?' disabled':'';
+ const matchAttrs=name=>' data-tt-employee-search-row data-search-text="'+esc(name.toLocaleLowerCase())+'"'+(!name.toLocaleLowerCase().includes(q)?' hidden':'');
+ const edit='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5H5v14h14v-7M13 11l6-6 2 2-6 6-4 1z"/></svg>';
  return '<section class="tt-ojt-admin" aria-label="OJT intern roster management">'+
   '<div class="tt-ojt-admin-head"><h4>OJT Interns</h4>'+
-   '<p>Manage the names available in the shared OJT TimeTracker login. Interns select their name from a dropdown before starting attendance.</p></div>'+
+   '<p>Interns pick their name from a shared login before clocking in.</p></div>'+
   '<div class="tt-ojt-unconfigured">'+
    users.filter(x=>!configured.has(x.id)).map(x=>
     '<div><strong>'+esc(x.name)+'</strong>'+
     '<button type="button" data-action="tt-ojt-group-enable" data-ojt-user="'+esc(x.id)+
-    '">Enable OJT login</button></div>').join('')+'</div>'+
+    '"'+disabled+'>Enable OJT login</button></div>').join('')+'</div>'+
   admin.groups.map(g=>{
    const user=users.find(x=>x.id===g.userId);
    return '<article class="tt-ojt-admin-group"><header><div><strong>'+
-    esc(user?.name||'OJT account')+'</strong><small>'+
+    esc(user?.name||'OJT account')+'</strong><small class="tt-ojt-login-status'+(g.enabled?' is-enabled':'')+'">'+
     (g.enabled?'Shared login enabled':'Shared login disabled')+'</small></div>'+
     '<button type="button" data-action="tt-ojt-group-toggle" data-ojt-user="'+
-    esc(g.userId)+'" data-ojt-enabled="'+String(!g.enabled)+'">'+
+    esc(g.userId)+'" data-ojt-enabled="'+String(!g.enabled)+'"'+disabled+'>'+
     (g.enabled?'Disable OJT login':'Enable OJT login')+'</button></header>'+
     '<div class="tt-ojt-admin-people">'+
-     g.interns.map(i=>'<div><span class="tt-ojt-avatar">'+esc(i.name[0]?.toUpperCase()||'O')+
-      '</span><strong>'+esc(i.name)+'</strong><small>'+ (i.active?'Active':'Inactive')+
-      '</small><button type="button" data-action="tt-ojt-intern-edit" data-ojt-user="'+
-      esc(g.userId)+'" data-ojt-id="'+esc(i.id)+'">Edit</button></div>').join('')+
+     g.interns.map(i=>'<div'+matchAttrs(i.name)+'><span class="tt-ojt-avatar" aria-hidden="true">'+esc(i.name[0]?.toUpperCase()||'O')+
+      '</span><strong>'+esc(i.name)+'</strong>'+(!i.active?'<small>Inactive</small>':'')+
+      '<button type="button" class="tt-employee-icon" data-action="tt-ojt-intern-edit" data-ojt-user="'+
+      esc(g.userId)+'" data-ojt-id="'+esc(i.id)+'" aria-label="'+esc('Edit '+i.name)+'" title="'+esc('Edit '+i.name)+'"'+disabled+'>'+edit+'</button></div>').join('')+
     '</div><button type="button" class="tt-ojt-add" data-action="tt-ojt-intern-add" data-ojt-user="'+
-    esc(g.userId)+'">+ Add intern</button></article>';
+    esc(g.userId)+'"'+disabled+'>+ Add intern</button></article>';
   }).join('')+
   '<div class="tt-ojt-admin-records"><h4>Recent intern attendance</h4>'+
-  '<table><thead><tr><th>Intern</th><th>Clock in</th><th>Clock out</th></tr></thead><tbody>'+
-  (attendance?.records?.length?
-   attendance.records.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+
-    esc(stamp(x.clockIn))+'</td><td>'+esc(stamp(x.clockOut))+'</td></tr>').join(''):
-   '<tr><td colspan="3">No OJT attendance records available.</td></tr>')+
-  '</tbody></table></div></section>';
+  '<div class="tt-ojt-attendance-list">'+(attendance?.records?.length?
+   attendance.records.map(x=>'<div class="tt-ojt-attendance-row"'+matchAttrs(x.name)+'><strong>'+esc(x.name)+'</strong><span>'+
+    esc(stamp(x.clockIn))+' <span aria-hidden="true">→</span> '+(x.clockOut?esc(stamp(x.clockOut)):'<strong class="tt-ojt-in-progress">In progress</strong>')+'</span></div>').join(''):
+   '<p>No OJT attendance records available.</p>')+'</div></div></section>';
 }

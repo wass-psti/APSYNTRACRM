@@ -10,6 +10,7 @@ import {
 
 const app=readFileSync('frontend/app.js','utf8');
 const ui=readFileSync('frontend/time-tracker-ui.js','utf8');
+const employeesUi=readFileSync('frontend/apps/TimeTracker/time-tracker-application.js','utf8');
 const native=readFileSync('frontend/time-tracker-native.js','utf8');
 const firstMigration=readFileSync('supabase/migrations/20261123100000_cp_tt_ojt_shared_identities.sql','utf8');
 const correction=readFileSync('supabase/migrations/20261123130000_cp_tt_ojt_employee_department_identity.sql','utf8');
@@ -154,13 +155,21 @@ test('Clock uses a dropdown and loads the selected intern before exposing clock 
 
 test('Employees admin UI adds, edits and deactivates names without PIN fields',()=>{
  const html=renderTimeTrackerOjtAdmin({admin:adminRaw(),
+  attendance:projectOjtAdminAttendance(adminAttendance(),scope),
   employees:[{id:TIMETRACKER_SHARED_OJT_USER_ID,name:'OJT Account',
    role:'Employee',department:'OJT'}]});
  assert.match(html,/OJT Interns/);
  assert.match(html,/Add intern/);
- assert.match(html,/Edit/);
- assert.match(html,/Active/);
- assert.match(html,/Inactive/);
+ assert.match(html,/data-action="tt-ojt-intern-add"/);
+ assert.match(html,/data-action="tt-ojt-group-toggle"/);
+ assert.match(html,/Shared login enabled/);
+ assert.match(html,/aria-label="Edit Intern Alpha"/);
+ assert.match(html,/aria-label="Edit Intern Beta"/);
+ assert.match(html,/<strong>Intern Alpha<\/strong><button/);
+ assert.match(html,/<strong>Intern Beta<\/strong><small>Inactive<\/small>/);
+ assert.doesNotMatch(html,/<small>Active<\/small>/);
+ assert.match(html,/class="tt-ojt-attendance-row"/);
+ assert.match(html,/→<\/span> <strong class="tt-ojt-in-progress">In progress<\/strong>/);
  assert.doesNotMatch(html,/PIN|password|verification code/i);
 });
 
@@ -198,7 +207,11 @@ test('app wires dropdown selection, signed attendance and admin roster actions',
   'OJT work-plan draft must be persisted before requesting GPS');
  assert.doesNotMatch(app,/timeTrackerOjt\.select\(|timeTrackerOjt\.leave\(|tt-ojt-choose|ojtPin|p_pin|private PIN/i);
  assert.match(ui,/renderTimeTrackerOjtClock/);
- assert.match(ui,/renderTimeTrackerOjtAdmin/);
+ assert.match(ui,/renderTimeTrackerEmployees\(\{/);
+ assert.match(ui,/ojtAdmin:result\.ojtAdmin/);
+ assert.match(ui,/ojtAttendance:result\.ojtAdminAttendance/);
+ assert.match(employeesUi,/panel\('ojt',renderTimeTrackerOjtAdmin\(\{/);
+ assert.match(employeesUi,/manager\?panel\('departments'/);
  assert.match(native,/attendanceWritesAccepted:designatedSharedOjt\?false/);
  assert.match(native,/timetracker_ojt_roster/);
  assert.match(native,/timetracker_ojt_admin_snapshot/);

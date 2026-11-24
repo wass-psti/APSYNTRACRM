@@ -18,7 +18,7 @@ import {renderTimeTrackerOvertime} from './time-tracker-overtime.js';
 import {renderTimeTrackerMyHours} from './time-tracker-my-hours.js';
 import {renderTimeTrackerTeam} from './time-tracker-team.js';
 import {renderTimeTrackerEmployees} from './time-tracker-application.js';
-import {renderTimeTrackerOjtClock,renderTimeTrackerOjtAdmin} from './apps/TimeTracker/time-tracker-ojt.js';
+import {renderTimeTrackerOjtClock} from './apps/TimeTracker/time-tracker-ojt.js';
 import {renderTimeTrackerMonitor} from './time-tracker-monitor.js';
 import {renderTimeTrackerGps} from './time-tracker-gps.js';
 
@@ -383,7 +383,7 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',workPlanDraft='',ojtWorkPlanDraft='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',clockCorrectionNotice='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otManualVisibleCount=50,otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
+ result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',workPlanDraft='',ojtWorkPlanDraft='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',clockCorrectionNotice='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',employeesTab='directory',employeesDepartment='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otManualVisibleCount=50,otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError='',
  adminEligible=false,adminFullAccess=adminEligible,adminDirectory=[],adminSelectedIds=[],adminEditor=null,adminDeleteConfirm=null,adminBusy=false,adminError='',adminSuccess='',
  ojtSelected=null,ojtAttendance=null,ojtBusy=false,ojtError='',ojtSuccess='',
@@ -398,7 +398,7 @@ export function renderTimeTrackerNative({
   head(verified?result.access:null,busy,selected)+
   (sharedOjt?'<nav class="tt-ojt-navigation" aria-label="Intern attendance"><strong>OJT attendance</strong></nav>':
    navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true))+
-  (sharedOjt?'':applicationHeading(selected,busy)+((selected==='clock'&&verified&&TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&result.access?.attendanceWritesAccepted===true)?'':notifications(verified,verified&&result.access?.attendanceWritesAccepted===true,busy)));
+  (sharedOjt||selected==='employees'?'':applicationHeading(selected,busy)+((selected==='clock'&&verified&&TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&result.access?.attendanceWritesAccepted===true)?'':notifications(verified,verified&&result.access?.attendanceWritesAccepted===true,busy)));
  if(busy&&verified&&selected==='clock')html+='<div class="tt-clock-sync-status" role="status" aria-live="polite">'+
   '<span class="tt-inline-spinner" aria-hidden="true"></span>Synchronizing signed attendance…</div>';
  if(error)html+='<div class="tt-feedback tt-feedback-error" role="alert">'+esc(error)+'</div>';
@@ -429,12 +429,10 @@ export function renderTimeTrackerNative({
  });
  if(selected==='employees'){
   html+=renderTimeTrackerEmployees({
-   directory:result.access?.employees,access:result.access,search:employeesSearch,loading:busy
+   directory:result.access?.employees,access:result.access,search:employeesSearch,
+   tab:employeesTab,department:employeesDepartment,loading:busy,ojtAdmin:result.ojtAdmin,
+   ojtAttendance:result.ojtAdminAttendance,ojtBusy
   });
-  if(['System Admin','IT Administrator'].includes(result.access?.moduleRole))
-   html+=renderTimeTrackerOjtAdmin({admin:result.ojtAdmin,
-    attendance:result.ojtAdminAttendance,
-    employees:result.access?.employees?.members||[]});
  }
  if(selected==='log')html+=renderTimeTrackerLog({
   records:timeTrackerLogRowsForSnapshot(result),
