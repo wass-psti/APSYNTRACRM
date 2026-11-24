@@ -104,7 +104,8 @@ try {
       ringTransform: ringStyle.transform,
       ringProgressTransition: progressStyle.transitionProperty,
       ringProgressTransitionDuration: progressStyle.transitionDuration,
-      activeAnimations: workPlan.getAnimations().length + ring.getAnimations().length,
+      activeAnimations:
+        workPlan.getAnimations().length + ring.getAnimations().length,
       violations: result.violations.map((item) => ({
         id: item.id,
         nodes: item.nodes.map((node) => ({
