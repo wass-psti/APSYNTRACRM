@@ -45,7 +45,7 @@ export function filterOrderIntakeRows(rows, filters = {}) {
       (!filters.status || row.status === filters.status) &&
       (!filters.company || row.company === filters.company) &&
       (!filters.industry || row.industry === filters.industry) &&
-      (!filters.currency || row.currency === filters.currency) &&
+      (!filters.currency || (filters.currency==='Unknown currency' ? row.record_kind==='legacy'&&!row.currency : row.currency === filters.currency)) &&
       (!filters.from || (row.date_received && row.date_received >= filters.from)) &&
       (!filters.to || (row.date_received && row.date_received <= filters.to));
   });
