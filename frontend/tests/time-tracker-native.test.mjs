@@ -11,6 +11,7 @@ const other='ed2ef1bc-50ea-4eea-8b83-2d6ec8434797';
 const workspace='00000000-0000-4000-8000-000000000001';
 const foreign='00000000-0000-4000-8000-000000000002';
 const board='46bf4ee7-368a-4c35-842c-8593ea1f6ac3';
+const autoRecordId='00000000-0000-4000-8000-000000000099';
 const stamp=(hour,minute=0)=>new Date(Date.UTC(2026,10,2,hour-8,minute)).toISOString();
 const example=(ownerId=user)=>({
  id:'session-1',ownerId:'cloud:'+ownerId,
@@ -20,7 +21,7 @@ const example=(ownerId=user)=>({
 });
 function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=workspace,
  records=[],malformed=false,writeReady=false,foreignCapability=false,autoClockoutSnapshot=null,departmentValue='HR',email='employee@example.test'}={}){
- let commitCount=0, lastWrite=null;
+ let commitCount=0, lastWrite=null,autoCompleteCount=0,autoCompleteArgs=null;
  const auth={userId:activeUser,getVerifiedUser:async()=>({id:activeUser,email})};
  let currentRecords=records;
  const api={
@@ -51,6 +52,13 @@ function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=works
      if(!writeReady)throw Error('PGRST202: function not deployed');
      return {mode:'ACTIVE',contract:'tt-attendance-1',canClock:true,
       actorId:activeUser,workspaceId:foreignCapability?foreign:ctxWs,boardId:board};
+    case 'timetracker_auto_clockout_complete':{
+     autoCompleteCount++;autoCompleteArgs=args;
+     return {mode:'COMMITTED',contract:'tt-auto-clockout-complete-1',
+      actorId:activeUser,workspaceId:ctxWs,boardId:board,recordId:args.p_record_id,
+      scheduledClockOutAt:'2026-11-20T10:30:00.000Z',
+      gpsCapturedAt:args.p_geo.capturedAt,revision:3,committedAt:new Date().toISOString()};
+    }
     case 'timetracker_attendance_commit_v2':{
      commitCount++;
      lastWrite=args;
@@ -69,7 +77,8 @@ function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=works
   }
  };
  return {client:new TimeTrackerNativeClient({auth,api}),auth,api,commits:()=>commitCount,
-  lastWrite:()=>lastWrite};
+  lastWrite:()=>lastWrite,autoCompletes:()=>autoCompleteCount,
+  lastAutoComplete:()=>autoCompleteArgs};
 }
 
 test('source 08:00 late threshold and unpaid 12:00–13:00 credit policy',()=>{
@@ -149,6 +158,17 @@ test('signed automatic clock-out snapshot is bound to the active session and PHT
   ...response,session:null
  }}).client.snapshot(board);
  assert.equal(legacy.autoClockout,null);
+ const pendingSession={...session,status:'PENDING_GPS',
+  pendingAt:'2026-11-20T10:31:00.000Z',
+  scheduledClockOutAt:'2026-11-20T10:30:00.000Z',
+  clockOutReason:'nine_hour_threshold_grace_expired',
+  nextAt:'2026-11-20T10:30:00.000Z'};
+ const pending=await setup({records:[example()],autoClockoutSnapshot:{
+  ...response,session:pendingSession
+ }}).client.snapshot(board);
+ assert.equal(pending.autoClockout.status,'PENDING_GPS');
+ assert.equal(pending.autoClockout.scheduledClockOutAt,pendingSession.scheduledClockOutAt);
+ assert.equal(pending.autoClockout.pendingAt,pendingSession.pendingAt);
 });
 
 test('clock-in validates offsite note, GPS and duplicate sessions before RPC',async()=>{
@@ -180,6 +200,54 @@ test('clock-out requires active record; invalid geographic coordinates never sen
  assert.equal(yes.commits(),0);
 });
 
+test('automatic clock-out completion preserves the scheduled time and submits fresh foreground GPS',async()=>{
+ const session={recordId:autoRecordId,status:'PENDING_GPS',
+  thresholdAt:'2026-11-20T10:00:00.000Z',
+  graceStartedAt:'2026-11-20T10:00:00.000Z',
+  graceDeadlineAt:'2026-11-20T10:30:00.000Z',overtimeCutoffAt:null,
+  scheduledClockOutAt:'2026-11-20T10:30:00.000Z',
+  pendingAt:'2026-11-20T10:31:00.000Z',nextAt:'2026-11-20T10:30:00.000Z',
+  lastEvaluatedAt:'2026-11-20T10:31:00.000Z',
+  clockOutReason:'nine_hour_threshold_grace_expired'};
+ const snapshot={mode:'ACTIVE',contract:'tt-auto-clockout-1',actorId:user,
+  workspaceId:workspace,boardId:board,session};
+ const s=setup({records:[{...example(),id:autoRecordId}],writeReady:true,autoClockoutSnapshot:snapshot});
+ const geo={status:'captured',source:'browser-geolocation',latitude:10.2,
+  longitude:123.9,accuracy:14,capturedAt:new Date().toISOString()};
+ const result=await s.client.completeAutomaticClockOut(board,{recordId:autoRecordId,geo});
+ assert.equal(result.mode,'COMMITTED');
+ assert.equal(result.scheduledClockOutAt,session.scheduledClockOutAt);
+ assert.equal(result.gpsCapturedAt,geo.capturedAt);
+ assert.equal(s.autoCompletes(),1);
+ assert.equal(s.lastAutoComplete().p_record_id,autoRecordId);
+ assert.equal(s.lastAutoComplete().p_geo,geo);
+});
+
+test('automatic clock-out rejects stale GPS and does not call the completion RPC',async()=>{
+ const session={recordId:autoRecordId,status:'PENDING_GPS',
+  thresholdAt:'2026-11-20T10:00:00.000Z',scheduledClockOutAt:'2026-11-20T10:30:00.000Z',
+  pendingAt:'2026-11-20T10:31:00.000Z',clockOutReason:'nine_hour_threshold_grace_expired'};
+ const s=setup({records:[{...example(),id:autoRecordId}],writeReady:true,autoClockoutSnapshot:{
+  mode:'ACTIVE',contract:'tt-auto-clockout-1',actorId:user,
+  workspaceId:workspace,boardId:board,session}});
+ await assert.rejects(s.client.completeAutomaticClockOut(board,{recordId:autoRecordId,geo:{
+  status:'captured',source:'browser-geolocation',latitude:10,longitude:123,
+  accuracy:10,capturedAt:new Date(Date.now()-120000).toISOString()
+ }}),/fresh foreground/);
+ assert.equal(s.autoCompletes(),0);
+});
+
+test('automatic clock-out recognizes a session already closed manually without a duplicate write',async()=>{
+ const closed={...example(),id:autoRecordId,clockOut:{timestamp:'2026-11-20T10:35:00.000Z',
+  geo:{status:'captured',latitude:10,longitude:123,accuracy:10}}};
+ const s=setup({records:[closed],writeReady:true,autoClockoutSnapshot:{
+  mode:'ACTIVE',contract:'tt-auto-clockout-1',actorId:user,
+  workspaceId:workspace,boardId:board,session:null}});
+ const result=await s.client.completeAutomaticClockOut(board,{recordId:autoRecordId,geo:{}});
+ assert.equal(result.mode,'ALREADY_CLOSED');
+ assert.equal(s.autoCompletes(),0);
+});
+
 test('browser GPS captured with no fake or cached location fallback',async()=>{
  const geo={getCurrentPosition(ok){ok({timestamp:Date.now(),
   coords:{latitude:10.2,longitude:123.9,accuracy:14}});}};
@@ -187,6 +255,18 @@ test('browser GPS captured with no fake or cached location fallback',async()=>{
  assert.equal(result.status,'captured');
  assert.equal(result.source,'browser-geolocation');
  await assert.rejects(captureAttendanceGeo(null),/unavailable/);
+});
+
+test('automatic foreground GPS acquisition disables all cached browser fixes',async()=>{
+ const options=[];
+ const geo={getCurrentPosition(ok,_fail,settings){
+  options.push(settings);
+  ok({timestamp:Date.now(),coords:{latitude:10.2,longitude:123.9,accuracy:14}});
+ }};
+ const fix=await captureAttendanceGeo(geo,{freshOnly:true});
+ assert.equal(fix.status,'captured');
+ assert.equal(options.length,1);
+ assert.equal(options[0].maximumAge,0);
 });
 
 test('native TimeTracker application shell preserves attendance rendering and escapes untrusted metadata',()=>{
