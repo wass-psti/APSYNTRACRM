@@ -68,7 +68,7 @@ export function projectOjtAttendance(raw,scope,internId){
    fail('Invalid intern attendance record');
   seen.add(x.id);
   return Object.freeze({id:x.id,clockIn:x.clockIn,clockOut:x.clockOut,
-   location:x.location,workNote:x.workNote||'',status:x.clockOut?'Completed':'Active'});
+   location:x.location,workNote:x.workNote||'',manualEntry:x.manualEntry===true,status:x.clockOut?'Completed':'Active'});
  });
  if(records.filter(x=>x.status==='Active').length>1)
   fail('Conflicting OJT sessions require administrator review');
@@ -89,7 +89,8 @@ export function projectOjtAdminAttendance(raw,scope){
   return Object.freeze({id:x.id,internId:x.internId,name:x.name,
    clockIn:x.clockIn,clockOut:x.clockOut,location:String(x.location||''),
     workNote:typeof x.workNote==='string'?x.workNote.slice(0,500):'',
-    revision:Number.isSafeInteger(x.revision)&&x.revision>=1?x.revision:null});
+    revision:Number.isSafeInteger(x.revision)&&x.revision>=1?x.revision:null,
+     manualEntry:x.manualEntry===true});
  }))});
 }
 export class TimeTrackerOjtClient{
@@ -130,6 +131,22 @@ export class TimeTrackerOjtClient{
      v.action!==action||v.revision!==expectedRevision+1||
      !validTime(v.committedAt))
     fail('Signed OJT administrative mutation receipt unverified');
+   return Object.freeze(v);
+  });
+ }
+ async createAdminAttendance(s,{requestId,internId,clockIn,clockOut=null,location,workNote='',reason=''}={}){
+  if(!uuid.test(requestId||'')||!uuid.test(internId||'')||
+     !validTime(clockIn)||(clockOut!==null&&!validTime(clockOut))||
+     typeof reason!=='string'||reason.trim().length<10||reason.length>500)
+   fail('Verified missed attendance entry and explanation required');
+  return this.perform(s,'timetracker_ojt_admin_create',{
+   p_request_id:requestId,p_intern_id:internId,p_clock_in:clockIn,
+   p_clock_out:clockOut,p_location:location,p_work_note:workNote,p_reason:reason.trim()
+  },v=>{
+   if(v?.contract!=='tt-ojt-admin-create-1'||v.mode!=='COMMITTED'||
+      !same(v,s)||v.actorId!==s.userId||v.internId!==internId||
+      v.recordId!==requestId||v.manualEntry!==true||!validTime(v.committedAt))
+    fail('Signed manual OJT attendance receipt unverified');
    return Object.freeze(v);
   });
  }
@@ -229,7 +246,7 @@ export function renderTimeTrackerOjtClock({
   '<table><thead><tr><th>Clock in</th><th>Clock out</th><th>Location</th></tr></thead><tbody>'+
   (attendance?.records?.length?
     attendance.records.map(x=>'<tr><td>'+esc(stamp(x.clockIn))+'</td><td>'+
-     esc(stamp(x.clockOut))+'</td><td>'+esc(x.location)+'</td></tr>').join(''):
+     esc(stamp(x.clockOut))+'</td><td>'+esc(x.location)+(x.manualEntry?' · Manual entry':'')+'</td></tr>').join(''):
     '<tr><td colspan="3">No attendance records yet.</td></tr>')+
   '</tbody></table></div></section>';
  return html;
