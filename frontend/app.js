@@ -204,7 +204,7 @@ import {createRemainingNativeSearchAdapters,readNativeSearchRecordDetail,renderN
 import {startInputExperience} from './input-experience.js';
 import {startMetricsExperience} from './metrics-experience.js';
 import {applyTimeTrackerOverviewFilters,filterTimeTrackerOverviewRows,syncTimeTrackerOverviewClock,timeTrackerOverviewCsv} from './time-tracker-overview.js';
-import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,timeTrackerLogRowsForSnapshot,retainTimeTrackerLogDetailIds,TT_LOG_DEFAULT_FILTERS} from './time-tracker-log.js';
+import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,timeTrackerLogRowsForSnapshot,retainTimeTrackerLogDetailIds,TT_LOG_DEFAULT_FILTERS,startTimeTrackerLogColumnResize} from './time-tracker-log.js';
 import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAULT_FILTERS} from './time-tracker-reports.js';
 import {timeTrackerCalendarMonth,shiftTimeTrackerCalendarMonth} from './time-tracker-calendar.js';
 import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED,TT_OT_MAX_WEEK_OFFSET,timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate,updateTimeTrackerOvertimePreview,updateTimeTrackerManualOtPreview} from './time-tracker-overtime.js';
@@ -10460,6 +10460,7 @@ async function action(name,button){
   break;
  }
  case 'tt-log-view':
+ case 'tt-log-date-clear':
  case 'tt-log-filter-reset':
  case 'tt-log-filter-apply':{
   if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='log'||state.ttAttendance?.status!=='VERIFIED_READ')return;
@@ -10467,6 +10468,9 @@ async function action(name,button){
   if(name==='tt-log-view'){
    if(!['all','today','Completed','Active'].includes(button.dataset.target))return;
    next.view=button.dataset.target;
+   if(next.view==='today'){next.date='';next.period='all';next.start='';next.end='';}
+  }else if(name==='tt-log-date-clear'){
+   next.date='';
   }else if(name==='tt-log-filter-reset'){
    next={...TT_LOG_DEFAULT_FILTERS,view:next.view,search:next.search,employeeId:next.employeeId};
   }else{
@@ -10474,13 +10478,15 @@ async function action(name,button){
    if(!panel)return;
    for(const key of ['period','status','location','department','sort','start','end'])next[key]=panel.querySelector('#tt-log-'+key)?.value||TT_LOG_DEFAULT_FILTERS[key];
    if(next.period==='custom'&&(!next.start||!next.end||next.start>next.end)){toast('Select a valid start and end date.',true);return;}
+   if(next.period!=='all')next.date='';
   }
   state.ttLogFilters=next;
   const visible=new Set(filterTimeTrackerLogRows(timeTrackerLogRowsForSnapshot(state.ttAttendance),next).map(r=>r.id));
   state.ttLogSelectedIds=state.ttLogSelectedIds.filter(id=>visible.has(id));
   state.ttLogExpandedIds=[];
   render();
-  if(name!=='tt-log-view')root.querySelector('.tt-log-filter-trigger')?.focus();
+  if(name==='tt-log-date-clear')root.querySelector('#tt-log-date')?.focus();
+  else if(name!=='tt-log-view')root.querySelector('.tt-log-filter-trigger')?.focus();
   break;
  }
  case 'tt-log-insights':{
@@ -13787,6 +13793,19 @@ root.addEventListener('change',event=>{
    render();
   }
  }
+ if(event.target.id==='tt-log-date'&&state.view==='board'&&state.tab==='attendance'&&state.ttView==='log'&&state.ttAttendance?.status==='VERIFIED_READ'){
+  const date=event.target.value;
+  if(date!==''&&!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
+  const next={...TT_LOG_DEFAULT_FILTERS,...state.ttLogFilters,date,period:'all',start:'',end:''};
+  if(next.view==='today')next.view='all';
+  state.ttLogFilters=next;
+  const visible=new Set(filterTimeTrackerLogRows(timeTrackerLogRowsForSnapshot(state.ttAttendance),next).map(r=>r.id));
+  state.ttLogSelectedIds=state.ttLogSelectedIds.filter(id=>visible.has(id));
+  state.ttLogExpandedIds=[];
+  render();
+  root.querySelector('#tt-log-date')?.focus();
+  return;
+ }
  if(event.target.id==='tt-log-period'&&state.ttView==='log'){
   const range=event.target.closest('.tt-log-filter-panel')?.querySelector('.tt-log-custom-range');
   if(range)range.hidden=event.target.value!=='custom';
@@ -14699,6 +14718,7 @@ async function boot(){
 startSelectExperience(document.body);
 startActionMenuExperience(document.body);
 startSearchExperience(document.body);
+startTimeTrackerLogColumnResize(root);
 globalSearchController=startGlobalSearch({
  root:document.body,
  getScope:()=>auth.isSignedIn&&state.context?{

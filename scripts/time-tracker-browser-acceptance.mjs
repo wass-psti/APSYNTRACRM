@@ -861,6 +861,32 @@ try {
   await page.locator(".tt-log-search .aps-search-mark").waitFor();
   assert.equal(await page.locator(".tt-log-search > svg").isVisible(), false);
   await page.evaluate(() => window.__stopLogSearchTest());
+  await page.locator("#tt-log-date").waitFor();
+  await page.evaluate(async () => {
+    const { startTimeTrackerLogColumnResize } =
+      await import("/frontend/time-tracker-log.js");
+    window.__stopLogResizeTest = startTimeTrackerLogColumnResize(
+      document.querySelector("#app"),
+    );
+  });
+  const handle = page.locator('[data-tt-log-resize="in"]');
+  const initialWidth = Number(await handle.getAttribute("aria-valuenow"));
+  const initialHeight = await page
+    .locator(".tt-log-row-summary")
+    .evaluate((row) => row.getBoundingClientRect().height);
+  await handle.focus();
+  await handle.press("ArrowRight");
+  assert.equal(
+    Number(await handle.getAttribute("aria-valuenow")),
+    initialWidth + 16,
+  );
+  assert.equal(
+    await page
+      .locator(".tt-log-row-summary")
+      .evaluate((row) => row.getBoundingClientRect().height),
+    initialHeight,
+  );
+  await page.evaluate(() => window.__stopLogResizeTest());
   await page.locator(".tt-log-filter-trigger").click();
   await page.locator(".tt-log-filter-panel").waitFor();
   for (const id of ["period", "status", "location", "department", "sort"]) {
