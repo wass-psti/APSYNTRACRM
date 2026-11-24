@@ -172,21 +172,18 @@ try {
     const clockLayout = document.querySelector(".tt-command-layout");
     const sessionCard = document.querySelector(".tt-attendance-console");
     const clockFace = document.querySelector(".tt-clock-face");
+    const brandIcon = header.querySelector(".tt-brand-icon");
+    const shortcut = header.querySelector(".tt-header-link");
+    const activeTab = document.querySelector(".tt-nav-tab.is-current");
     return {
       appDisplay: getComputedStyle(app).display,
       headerRadius: getComputedStyle(header).borderRadius,
-      brandColor: getComputedStyle(
-        header.querySelector(".tt-brand-icon"),
-      ).backgroundColor,
+      brandColor: getComputedStyle(brandIcon).backgroundColor,
       roleLabel: header.querySelector(".tt-header-role").textContent,
       roleInitials: header.querySelector(".tt-header-avatar").textContent,
       refreshText: header.querySelector(".tt-header-refresh").textContent,
-      shortcutColor: getComputedStyle(
-        header.querySelector(".tt-header-link"),
-      ).backgroundColor,
-      activeUnderline: getComputedStyle(
-        document.querySelector(".tt-nav-tab.is-current"),
-      ).borderBottomColor,
+      shortcutColor: getComputedStyle(shortcut).backgroundColor,
+      activeUnderline: getComputedStyle(activeTab).borderBottomColor,
       headerBackground: getComputedStyle(header).backgroundColor,
       navOverflow: getComputedStyle(navScroll).overflowX,
       clockLayout: getComputedStyle(clockLayout).flexDirection,
