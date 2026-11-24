@@ -271,12 +271,14 @@ try {
       locationPreference: "Office-Base Duty",
     }),
   );
-  assert.equal(await page.locator("#tt-note").isVisible(), false);
+  const noteField = page.locator("#tt-note");
+  const badge = page.locator(".tt-idle-badge");
+  const clockFace = page.locator(".tt-clock-face");
+  const readClockSize = (el) => parseFloat(getComputedStyle(el).fontSize);
+  assert.equal(await noteField.isVisible(), false);
   assert.equal(await page.locator("#tt-session-progress").count(), 0);
-  assert.equal(await page.locator(".tt-idle-badge").textContent(), "Not clocked in");
-  const idleClockSize = await page.locator(".tt-clock-face").evaluate(
-    (element) => parseFloat(getComputedStyle(element).fontSize),
-  );
+  assert.equal(await badge.textContent(), "Not clocked in");
+  const idleClockSize = await clockFace.evaluate(readClockSize);
   await page.evaluate(() =>
     window.__timeTrackerRender({
       result: {
@@ -293,9 +295,9 @@ try {
       locationPreference: "Offsite (Home)",
     }),
   );
-  assert.equal(await page.locator("#tt-note").isVisible(), true);
-  assert.equal(await page.locator("#tt-note").evaluate((element) => element.required), true);
-  assert.equal(await page.locator("#tt-note").evaluate((element) => element.validity.valueMissing), true);
+  assert.equal(await noteField.isVisible(), true);
+  assert.equal(await noteField.evaluate((el) => el.required), true);
+  assert.equal(await noteField.evaluate((el) => el.validity.valueMissing), true);
   await page.evaluate(() => {
     const active = {
       id: "clock-state-fixture",
@@ -322,23 +324,31 @@ try {
       now: new Date("2026-11-24T06:07:00Z"),
     });
   });
-  assert.equal(await page.locator(".tt-idle-badge").textContent(), "Active");
-  assert.equal(await page.locator("#tt-session-elapsed").textContent(), "05:13:54");
+  assert.equal(await badge.textContent(), "Active");
+  assert.equal(
+    await page.locator("#tt-session-elapsed").textContent(),
+    "05:13:54",
+  );
   assert.equal(await page.locator(".tt-session-ring > svg").isVisible(), true);
-  assert.ok(await page.locator(".tt-clock-face").evaluate(
-    (element) => parseFloat(getComputedStyle(element).fontSize),
-  ) < idleClockSize);
-  assert.equal(await page.locator("#tt-note").inputValue(), "Offsite development");
-  assert.equal(await page.locator("#tt-note").evaluate((element) => element.readOnly), true);
-  const activeLayout = await page.evaluate(() => ({
-    ring: document.querySelector(".tt-session-ring").getBoundingClientRect().width,
-    ringTop: document.querySelector(".tt-session-ring").getBoundingClientRect().top,
-    summaryTop: document.querySelector(".tt-session-summary").getBoundingClientRect().top,
-    summary: getComputedStyle(document.querySelector(".tt-session-summary > div")).backgroundColor,
-    context: getComputedStyle(document.querySelector(".tt-active-session-context")).backgroundColor,
-    note: getComputedStyle(document.querySelector("#tt-note")).backgroundColor,
-    overflow: document.documentElement.scrollWidth - innerWidth,
-  }));
+  const activeClockSize = await clockFace.evaluate(readClockSize);
+  assert.ok(activeClockSize < idleClockSize);
+  assert.equal(await noteField.inputValue(), "Offsite development");
+  assert.equal(await noteField.evaluate((el) => el.readOnly), true);
+  const activeLayout = await page.evaluate(() => {
+    const ring = document.querySelector(".tt-session-ring");
+    const summary = document.querySelector(".tt-session-summary");
+    const context = document.querySelector(".tt-active-session-context");
+    const note = document.querySelector("#tt-note");
+    return {
+      ring: ring.getBoundingClientRect().width,
+      ringTop: ring.getBoundingClientRect().top,
+      summaryTop: summary.getBoundingClientRect().top,
+      summary: getComputedStyle(summary.querySelector("div")).backgroundColor,
+      context: getComputedStyle(context).backgroundColor,
+      note: getComputedStyle(note).backgroundColor,
+      overflow: document.documentElement.scrollWidth - innerWidth,
+    };
+  });
   assert.ok(activeLayout.ring >= 170);
   assert.ok(activeLayout.ringTop < activeLayout.summaryTop);
   for (const surface of ["summary", "context", "note"]) {
