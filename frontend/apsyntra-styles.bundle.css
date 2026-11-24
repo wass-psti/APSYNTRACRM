@@ -14377,7 +14377,7 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log.tt-l
  border-bottom:1px solid #e7edf7;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-modal-eyebrow{
- display:block;margin:0 0 8px;color:#6379a0;
+ display:block;margin:0 0 8px;color:#536b8d;
  font-size:9px;font-weight:850;letter-spacing:.16em;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-modal-header h3{
@@ -14413,7 +14413,7 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log.tt-l
  letter-spacing:normal;box-shadow:inset 0 1px 2px #142b4b08;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-date-field small{
- color:#6b7e99;font-size:10px;font-weight:500;line-height:1.5;
+ color:#526681;font-size:10px;font-weight:500;line-height:1.5;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-schedule{
  display:grid;align-content:start;gap:13px;min-width:0;padding:15px;
@@ -14426,11 +14426,11 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log.tt-l
  margin:0 0 4px;color:#304b74;font:760 13px/1.3 Inter,system-ui,sans-serif;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-schedule-heading p{
- margin:0;color:#6e809b;font-size:10px;line-height:1.45;
+ margin:0;color:#536b8d;font-size:10px;line-height:1.45;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-schedule-heading>span{
  flex:none;padding:5px 8px;border:1px solid #d8e2f3;border-radius:999px;
- background:#fff;color:#647a9d;font-size:9px;font-weight:750;
+ background:#fff;color:#536b8d;font-size:9px;font-weight:750;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-time-grid{
  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
@@ -14450,7 +14450,7 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log.tt-l
  display:flex;align-items:center;justify-content:space-between;gap:10px;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-duration-top>span{
- color:#6a7e9c;font-size:10px;font-weight:700;
+ color:#536b8d;font-size:10px;font-weight:700;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-duration-top strong{
  color:#263f68;font:800 17px/1.2 ui-monospace,SFMono-Regular,monospace;
@@ -14461,7 +14461,7 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log.tt-l
  accent-color:#5c70d4;background:#e9eef8;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-duration-foot small{
- color:#6b7e99;font-size:9px;line-height:1.4;
+ color:#526681;font-size:9px;line-height:1.4;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-duration-foot small:last-child{
  text-align:right;
@@ -14476,7 +14476,7 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log.tt-l
  display:flex;align-items:center;justify-content:space-between;gap:12px;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-reason-meta small{
- color:#687d9a;font-size:10px;line-height:1.4;
+ color:#536b8d;font-size:10px;line-height:1.4;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-reason-meta small:last-child{
  flex:none;font-weight:750;font-variant-numeric:tabular-nums;

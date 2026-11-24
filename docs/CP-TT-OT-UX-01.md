@@ -33,9 +33,10 @@ No new permission model, approval layer, database migration, or backend contract
 ## Verification
 
 - Focused OT and time-format suites: 24 tests PASS, including the new UI, preview, native-input, and application-wiring tests.
-- Browser acceptance PASS: desktop layout, native time controls, duration preview, range/reason validation, character counter, mobile layout, dark theme, inactive-contract state, and zero page errors.
+- Dedicated browser acceptance PASS: desktop/mobile layout, native time controls, live duration, range/reason validation, character counter, dark theme, inactive-contract state, and zero page errors.
+- Full TimeTracker real-Chromium acceptance PASS, including the Submit OT modal and WCAG 2.2 AA axe checks with zero violations after contrast corrections.
 - Full application build PASS; the existing ordered CSS bundle was regenerated and verified.
-- Full application regression suite: 3,594 tests PASS, 0 failures.
+- Full application regression suite: 3,605 tests PASS, 0 failures.
 - Repository checks PASS: `npm run check`, `npm run lint`, and `npm run format:check`.
 - Existing non-blocking Vite warnings remain: the classic startup-guard script is not bundled as a module, and large application chunks exceed the 500 kB advisory threshold.
 
