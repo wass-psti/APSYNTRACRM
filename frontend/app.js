@@ -487,8 +487,20 @@ async function talkBoxAttachments(){
  const {TalkBoxAttachmentClient}=await import('./talkbox-attachments.js');
  return new TalkBoxAttachmentClient({api:db,auth,workspaceId:state.context.workspace_id});
 }
-function talkBoxCurrent(scope){return auth.isSignedIn&&state.view==='board'&&state.tab==='talkbox'&&state.context?.user_id===auth.userId&&
+function talkBoxCurrent(scope){return auth.isSignedIn&&state.view==='talkbox'&&state.tab==='talkbox'&&state.context?.user_id===auth.userId&&
  [auth.userId,state.context.workspace_id,state.boardId].join('|')===scope;}
+function renderTalkBoxNativeApplication(){
+ return renderTalkBoxApplication({
+  page:talkBoxState.page,selected:talkBoxState.selected,
+  busy:talkBoxState.busy||state.loading,
+  error:talkBoxState.error||state.error||'',
+  canEdit:state.edit,filter:talkBoxState.filter,features:talkBoxState.features||{},
+  meetingOpen:talkBoxState.meetingOpen===true,meetingDate:talkBoxState.meetingDate||'',
+  meetingHistory:talkBoxState.meetingHistory||[],meetingRecord:talkBoxState.meetingRecord||null,
+  meetingRows:talkBoxState.meetingRows||[],meetingError:talkBoxState.meetingError||'',
+  reportUrl:talkBoxState.reportUrl||''
+ });
+}
 async function loadTalkBox({more=false,selectedId=null}={}){
  const scope=[auth.userId,state.context?.workspace_id,state.boardId].join('|');
  if(!talkBoxCurrent(scope)||talkBoxState.busy)return;
@@ -990,6 +1002,7 @@ function shell(body){
  root.querySelector('.main')?.classList.toggle('aps-fueltrans-shell',state.fuelTransStandalone===true);
  root.querySelector('.main')?.classList.toggle('aps-overview-shell',state.view==='overview');
  root.querySelector('.main')?.classList.toggle('aps-fm1-shell',state.view==='fm1');
+ root.querySelector('.main')?.classList.toggle('aps-talkbox-shell',state.view==='talkbox');
  root.querySelector('.main')?.classList.toggle('aps-boards-shell',state.view==='boards');
  root.querySelector('.main')?.classList.toggle('aps-foundation-shell',state.view==='foundation');
  root.querySelector('.main')?.classList.toggle('aps-security-shell',state.view==='security');
@@ -1781,11 +1794,10 @@ function boardPage(){
   state.tab==='items'&&BOARD_STRUCTURE_ADMIN_ENABLED;
  const columnLabels=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.columnLabels:{};
  const allowCustom=BOARD_STRUCTURE_ADMIN_ENABLED&&state.boardUi?.status==='VERIFIED_READ';
- const tabSpecs=[
+ const tabSpecs=moduleKey==='toolbox'?[]:[
   ...(isMaterialTrackerBoard(state.board)?[{key:'sourcing',href:'#/boards/'+b.id+'/sourcing',label:'◇ Material Tracker'}]:[]),
   {key:'items',href:'#/boards/'+b.id+(moduleKey==='fueltrans'?'/items':moduleKey==='timetracker'?'/items':''),
     label:'▤ Main table'},
-  ...(moduleKey==='toolbox'?[{key:'talkbox',href:TALKBOX_APPLICATION_ROUTE,label:'TalkBox application'}]:[]),
   {key:'issues',href:'#/boards/'+b.id+'/issues',
     label:'◇ APSYNTRA Issues <span class="csp-u060">('+state.issues.length+')</span>'},
   ...(moduleKey==='fueltrans'?[{key:'fueltrans',href:'#/boards/'+b.id+'/fueltrans',label:'FuelTrans application'}]:[]),
@@ -1822,7 +1834,7 @@ function boardPage(){
 
 <div data-board-live-content>
 ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFundTrackerApplication():state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,otExpandedRequestIds:state.ttOtExpandedRequestIds,clockPendingAction:state.ttClockPending?.action||'clock-out',error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,employeesSearch:state.ttEmployeesSearch,employeesTab:state.ttEmployeesTab,employeesDepartment:state.ttEmployeesDepartment,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otManualVisibleCount:state.ttOtManualVisibleCount,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,adminEligible:state.ttAttendance?.access?.moduleRole==='System Admin',adminDirectory:state.ttLogAdminEditor?.directory||state.ttAttendance?.access?.overviewDirectory||[],adminSelectedIds:state.ttLogSelectedIds,adminEditor:state.ttLogAdminEditor,adminBusy:state.ttLogAdminBusy,adminError:state.ttLogAdminError,adminSuccess:state.ttLogAdminSuccess,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
- gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,canCreate:state.boardManage||state.tradeLinkModuleRole==='User',actorId:state.context?.user_id||'',actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='talkbox'&&moduleKey==='toolbox'?renderTalkBoxApplication({page:talkBoxState.page,selected:talkBoxState.selected,busy:talkBoxState.busy,error:talkBoxState.error,canEdit:state.edit,filter:talkBoxState.filter,features:talkBoxState.features||{},meetingOpen:talkBoxState.meetingOpen===true,meetingDate:talkBoxState.meetingDate||'',meetingHistory:talkBoxState.meetingHistory||[],meetingRecord:talkBoxState.meetingRecord||null,meetingRows:talkBoxState.meetingRows||[],meetingError:talkBoxState.meetingError||'',reportUrl:talkBoxState.reportUrl||''}):state.tab==='issues'?issuesPage():`
+ gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,canCreate:state.boardManage||state.tradeLinkModuleRole==='User',actorId:state.context?.user_id||'',actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar">
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ New item</button>':''}
  <div class="search-wrap board-toolbar-search"><svg class="board-toolbar-search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 5 5"></path></svg><input id="search-board-items" class="search-input" aria-label="Search board items" placeholder="Search" value="${e(state.boardItemSearch)}" /></div>
@@ -2014,6 +2026,7 @@ function render(){
  }));
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='fm1'){shell('<div id="fm1-application-root"></div>');fm1Module?.mountFm1Application(root.querySelector('#fm1-application-root'),{userId:state.context?.user_id,workspaceId:state.context?.workspace_id,api:db});}
+ else if(state.view==='talkbox')shell(renderTalkBoxNativeApplication());
  else if(state.view==='time-tracker')shell(renderTimeTrackerRouteUnavailable());
  else if(state.view==='paseo')shell(renderPaseoNative());
  else if(state.view==='tradelink')shell(renderTradeLinkRouteUnavailable(state.error));
@@ -3210,7 +3223,7 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
    await loadTradeLinkDrafts(seq);
   return;
  }
- state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true;state.board=null;state.boardUi=null;state.boardPageBusy=false;state.boardPageError='';state.boardManage=false;state.error=null;state.issues=[];state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;state.frtFinanceView='tracker';state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
+ if(tab==='talkbox')state.view='talkbox';else state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true;state.board=null;state.boardUi=null;state.boardPageBusy=false;state.boardPageError='';state.boardManage=false;state.error=null;state.issues=[];state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;state.frtFinanceView='tracker';state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
  render();
  try{
    const [resolvedNative,genericDetail,view,edit,manage,boardUi]=await Promise.all([
