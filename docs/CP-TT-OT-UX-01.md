@@ -34,7 +34,8 @@ No new permission model, approval layer, database migration, or backend contract
 
 - Focused OT and time-format suites: 24 tests PASS, including the new UI, preview, native-input, and application-wiring tests.
 - Dedicated browser acceptance PASS: desktop/mobile layout, native time controls, live duration, range/reason validation, character counter, dark theme, inactive-contract state, and zero page errors.
-- Full TimeTracker real-Chromium acceptance PASS, including the Submit OT modal and WCAG 2.2 AA axe checks with zero violations after contrast corrections.
+- Local Mac real-Chromium TimeTracker acceptance PASS, including the Submit OT modal, responsive views, and WCAG 2.2 AA axe checks.
+- GitHub CI confirms the Submit OT accessibility fixture passes. The broader TimeTracker workflow subsequently fails on the separate Clock-tab `#tt-note-wrap` label (1.28:1 contrast), introduced by existing commit `2b903bf`; this out-of-scope Clock issue was not modified.
 - Full application build PASS; the existing ordered CSS bundle was regenerated and verified.
 - Full application regression suite: 3,605 tests PASS, 0 failures.
 - Repository checks PASS: `npm run check`, `npm run lint`, and `npm run format:check`.
