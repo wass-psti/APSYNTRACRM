@@ -31,12 +31,12 @@ test('daily attendance summary uses Philippine dates across UTC midnight',()=>{
   result:{status:'VERIFIED_READ',access,records:[phtYesterday,phtToday],active:null},
   view:'clock',now:instant
  });
- assert.match(markup,/class="tt-session-summary"[^>]*>[\s\S]*?<strong>1<\/strong><span>Sessions/);
+ assert.match(markup,/class="tt-session-summary"[^>]*>[\s\S]*?<span>Sessions today<\/span><strong>1<\/strong>/);
 });
 
-test('Clock is a genuine two-panel layout, not the legacy centered vertical stack',()=>{
+test('Clock uses a single compact widget with two summary cards and one status badge',()=>{
  const markup=render();
- const layout=markup.indexOf('class="tt-command-layout"');
+ const layout=markup.indexOf('class="tt-command-layout tt-clock-compact"');
  const dashboard=markup.indexOf('class="tt-time-dashboard"');
  const console=markup.indexOf('class="tt-clock-card tt-attendance-console"');
  assert.ok(layout>0);
@@ -44,7 +44,11 @@ test('Clock is a genuine two-panel layout, not the legacy centered vertical stac
  assert.match(markup,/class="tt-clock-stage tt-command-center"/);
  assert.match(markup,/aria-label="Live time and attendance summary"/);
  assert.match(markup,/aria-label="Attendance clock form"/);
- assert.match(markup,/class="tt-time-dashboard-head"/);
+ assert.match(markup,/class="tt-compact-header"/);
+ assert.match(markup,/<span>Sessions today<\/span><strong>/);
+ assert.match(markup,/<span>Hours logged<\/span><strong>/);
+ assert.doesNotMatch(markup,/tt-summary-status|<span>Status<\/span>/);
+ assert.equal((markup.match(/class="tt-idle-badge/g)||[]).length,1);
  assert.match(markup,/class="tt-clock-face" role="timer" aria-label="Current Philippine time"/);
  assert.match(markup,/class="tt-dashboard-section-label">TODAY’S ATTENDANCE/);
  assert.match(markup,/class="tt-console-kicker"/);
@@ -65,7 +69,7 @@ test('Idle Clock preserves signed Clock In controls without requesting GPS',()=>
  assert.match(markup,/data-action="tt-location-shortcut" data-location="Office-Base Duty"/);
  assert.match(markup,/data-action="tt-location-shortcut" data-location="Offsite \(Home\)"/);
  assert.match(markup,/id="tt-note-wrap" hidden/);
- assert.match(markup,/Your session is securely recorded when you start or end attendance/);
+ assert.match(markup,/Session is secured with a fresh GPS fix on start and end/);
  assert.doesNotMatch(markup,/tt-location-readiness/);
  assert.match(markup,/Start your work session with a signed record/);
  assert.doesNotMatch(markup,/value="clock-out"/);
@@ -75,12 +79,17 @@ test('Idle Clock preserves signed Clock In controls without requesting GPS',()=>
 test('Active Clock preserves authoritative session details and Clock Out',()=>{
  const markup=render({active:record,records:[record]});
  assert.match(markup,/name="tt-action" value="clock-out"/);
- assert.match(markup,/class="tt-idle-badge tt-badge-active">ACTIVE/);
- assert.match(markup,/Recorded work location/);
+ assert.match(markup,/class="tt-idle-badge tt-badge-active">Active/);
+ assert.match(markup,/Location<\/span><strong>Office-Base Duty<\/strong>/);
  assert.match(markup,/Office-Base Duty/);
- assert.match(markup,/Recorded department/);
+ assert.match(markup,/Department<\/span><strong>Information Technology<\/strong>/);
  assert.match(markup,/Information Technology/);
- assert.match(markup,/captures a new browser GPS fix/);
+ assert.match(markup,/Session is secured with a fresh GPS fix on start and end/);
+ assert.match(markup,/tt-compact-active/);
+ assert.match(markup,/Elapsed this session/);
+ assert.match(markup,/tt-compact-clock-icon/);
+ assert.equal((markup.match(/class="tt-idle-badge/g)||[]).length,1);
+ assert.doesNotMatch(markup,/Signed Clock writes active|Signed workspace verified/);
  assert.doesNotMatch(markup,/name="tt-action" value="clock-in"/);
 });
 
