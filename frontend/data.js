@@ -159,6 +159,7 @@ const BOARD_READ_RPC=new Set([
  'frt_archive_list',
  'charter_dispatch',
  'has_module_access','list_module_directory','list_module_state',
+ 'timetracker_clock_snapshot',
  'timetracker_ot_snapshot','timetracker_attendance_capabilities',
  'timetracker_board_private_snapshot','timetracker_team_directory_snapshot',
  'timetracker_gps_snapshot','timetracker_monitor_snapshot',

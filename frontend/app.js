@@ -2907,6 +2907,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   if(tab==='talkbox')await loadTalkBox();
   if(tab==='attendance'&&moduleByBoardName(detail.board.name)?.key==='timetracker'){
    const fresh=await timeTracker.snapshot(boardId,{
+    clockOnly:timeTrackerClockOnlyForRoute(userId,workspaceId,boardId),
     nativeContext:nativeModuleId==='time-tracker'?resolvedNative:null
    });
    if(!isCurrent()||platformSyncEditInProgress())return false;
@@ -4921,10 +4922,20 @@ async function loadTradeLinkAnalytics(seq=routeSerial){
   }
  }
 }
+function timeTrackerClockOnlyForRoute(identity,workspaceId,boardId){
+ if(state.ttView!=='clock')return false;
+ const pending=pendingNativeSearchSelection;
+ const hasPendingRecord=pending?.applicationId==='timetracker'&&
+  ['Attendance session','Overtime request'].includes(pending.recordType)&&
+  pending.userId===identity&&pending.workspaceId===workspaceId&&
+  pending.boardId===boardId;
+ return !hasPendingRecord;
+}
 async function loadTimeTracker(seq=routeSerial,nativeContext=null){
  if(state.view!=='board'||state.tab!=='attendance'||
     moduleByBoardName(state.board?.board?.name)?.key!=='timetracker')return;
  const run=++state.ttRunId,identity=state.context?.user_id,ws=state.context?.workspace_id;
+ const clockOnly=timeTrackerClockOnlyForRoute(identity,ws,state.boardId);
  restoreTimeTrackerClockPending();
  // Normal Clock loading never probes browser geolocation.
  state.ttGeoPromptVisible=false;state.ttGeoMessage='';state.ttGeoPermission='unknown';
@@ -4936,7 +4947,7 @@ async function loadTimeTracker(seq=routeSerial,nativeContext=null){
  state.ttReadLoading=true;state.ttBusy=true;state.ttError='';render();
  try{
   const snapshot=await timeTracker.snapshot(state.boardId,{
-   clockOnly:state.ttView==='clock',nativeContext
+   clockOnly,nativeContext
   });
   if(run===state.ttRunId&&seq===routeSerial&&auth.isSignedIn&&
     state.context?.user_id===identity&&state.context?.workspace_id===ws)

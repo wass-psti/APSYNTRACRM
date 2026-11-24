@@ -122,9 +122,36 @@ async function checkIdentity(auth,api,expected,boardId){
   deny('Signed identity or workspace changed; operation rejected');
  return context;
 }
+function isMissingClockSnapshot(error){
+ return /PGRST202|Could not find the function|Unexpected RPC timetracker_clock_snapshot|function public\.timetracker_clock_snapshot.*does not exist/i
+  .test(String(error?.message||error));
+}
+function normalizeClockSnapshot(response,access,boardId){
+ if(!isRecord(response)||response.contract!=='tt-clock-snapshot-1'||
+    response.actorId!==access.userId||response.workspaceId!==access.workspaceId||
+    response.boardId!==boardId||response.stateKey!==stateKey||
+    response.scope!=='shared'||typeof response.rowFound!=='boolean'||
+    !Number.isSafeInteger(Number(response.revision))||Number(response.revision)<0||
+    typeof response.value!=='string')
+  deny('Signed TimeTracker Clock snapshot identity or schema mismatch');
+ const revision=Number(response.revision);
+ if(response.rowFound){
+  if(revision<1||!safeTime(response.updatedAt))
+   deny('Invalid authoritative Clock attendance revision');
+  return {state_key:stateKey,scope:'shared',revision,value:response.value};
+ }
+ if(revision!==0||response.updatedAt!==null)
+  deny('Empty TimeTracker Clock snapshot has an invalid revision');
+ let empty;
+ try{empty=JSON.parse(response.value);}
+ catch{deny('TimeTracker Clock snapshot value is malformed');}
+ if(empty?.version!==1||!Array.isArray(empty.records)||empty.records.length!==0)
+  deny('Empty TimeTracker Clock snapshot contract invalid');
+ return null;
+}
 export class TimeTrackerNativeClient{
  constructor({auth,api}){this.auth=auth;this.api=api;}
- async access(boardId,{nativeContext=null}={}){
+ async access(boardId,{nativeContext=null,includeDirectory=true}={}){
   const {auth,api}=this;
   // The canonical native resolver already verifies active workspace membership,
   // TimeTracker module access, the module role and the exact canonical board.
@@ -138,31 +165,37 @@ export class TimeTrackerNativeClient{
      (native.board?.workspace_id&&native.board.workspace_id!==native.workspaceId)||
      native.board?.name!=='TimeTracker Attendance')
    deny('TimeTracker native application identity or workspace mismatch');
-  const users=await api.rpc('list_module_directory',{p_module_id:moduleId});
-  if(!Array.isArray(users))deny('TimeTracker central directory unavailable');
-  const self=users.find(x=>x?.id===who.id&&x.status==='active');
-  if(!self||!TT_ROLES.includes(self.module_role))
+  let users=null,self=null;
+  if(includeDirectory){
+   users=await api.rpc('list_module_directory',{p_module_id:moduleId});
+   if(!Array.isArray(users))deny('TimeTracker central directory unavailable');
+   self=users.find(x=>x?.id===who.id&&x.status==='active');
+   if(!self||!TT_ROLES.includes(self.module_role))
+    deny('Central TimeTracker role assignment unavailable');
+  }
+  // The canonical native context already contains the signed module role.
+  // Clock does not need the employee directory to establish that role.
+  const moduleRole=includeDirectory?self.module_role:native.role;
+  if(!TT_ROLES.includes(moduleRole))
    deny('Central TimeTracker role assignment unavailable');
   const ctx=await checkIdentity(auth,api,{
    userId:who.id,workspaceId:native.workspaceId
   },boardId);
-  const overviewDirectory=users.filter(u=>u&&u.status==='active'&&
-    typeof u.id==='string'&&(u.id===who.id||TT_TEAM_OVERVIEW_ROLES.includes(self.module_role)))
+  const overviewDirectory=includeDirectory?users.filter(u=>u&&u.status==='active'&&
+    typeof u.id==='string'&&(u.id===who.id||TT_TEAM_OVERVIEW_ROLES.includes(moduleRole)))
     .map(u=>Object.freeze({id:u.id,status:'active',
-      display_name:String(u.display_name||'Workforce member').slice(0,100)}));
-  // Reuse this EXISTING authenticated Supabase module directory read.
-  // Only name + TimeTracker role are carried into the read-only employee tab.
-  // A corrupt optional roster must never interrupt Clock In/Out or My Hours.
-  // Render Employees unavailable rather than exposing or guessing directory rows.
+      display_name:String(u.display_name||'Workforce member').slice(0,100)})):[];
+  // The employee directory is loaded only for views that render it or use it
+  // for team/overview projections. Clock needs only the signed module role.
   let employees=null;
-  if(canViewTimeTrackerEmployees({moduleRole:self.module_role}))try{
+  if(includeDirectory&&canViewTimeTrackerEmployees({moduleRole}))try{
    employees=projectTimeTrackerEmployees(users,{
     userId:who.id,workspaceId:ctx.workspace_id,boardId,validRoles:TT_ROLES
    });
   }catch{/* Fail closed for the optional read-only Employees view. */}
   return Object.freeze({userId:who.id,workspaceId:ctx.workspace_id,boardId,
     platformRole:ctx.profile?.platform_role||'Unassigned',
-    moduleRole:self.module_role,name:String(self.display_name||'Signed user').slice(0,100),
+    moduleRole,name:String(self?.display_name||'Signed user').slice(0,100),
     email:typeof who.email==='string'?who.email.trim().toLowerCase():'',
     overviewDirectory:Object.freeze(overviewDirectory),employees});
 
@@ -181,7 +214,7 @@ export class TimeTrackerNativeClient{
   }
  }
  async snapshot(boardId,{clockOnly=false,nativeContext=null}={}){
-  const access=await this.access(boardId,{nativeContext});
+  const access=await this.access(boardId,{nativeContext,includeDirectory:!clockOnly});
   const canManageOjt=['System Admin','IT Administrator'].includes(access.moduleRole);
   // Issue independent, read-only RPCs together AFTER signed access verification.
   // Backend scope checks remain authoritative; identity is checked again below.
@@ -202,24 +235,39 @@ export class TimeTrackerNativeClient{
   const departmentRead=this.api.rpc('timetracker_employee_department_for_clock',{
    p_board_id:boardId
   }).then(response=>({response}),error=>({error}));
-  const raw=await this.api.rpc('list_module_state',{p_module_id:moduleId});
-  if(!Array.isArray(raw))deny('TimeTracker state API contract invalid');
-  const row=raw.find(x=>x?.state_key===stateKey&&x.scope==='shared');
+  let raw=null,row=null;
+  if(clockOnly){
+   try{
+    const response=await this.api.rpc('timetracker_clock_snapshot',{p_board_id:boardId});
+    row=normalizeClockSnapshot(response,access,boardId);
+   }catch(error){
+    // Keep the current Clock functional during a staged backend rollout. Only
+    // a genuinely missing RPC falls back; permission, scope and data errors do not.
+    if(!isMissingClockSnapshot(error))throw error;
+    raw=await this.api.rpc('list_module_state',{p_module_id:moduleId});
+    if(!Array.isArray(raw))deny('TimeTracker state API contract invalid');
+    row=raw.find(x=>x?.state_key===stateKey&&x.scope==='shared');
+   }
+  }else{
+   raw=await this.api.rpc('list_module_state',{p_module_id:moduleId});
+   if(!Array.isArray(raw))deny('TimeTracker state API contract invalid');
+   row=raw.find(x=>x?.state_key===stateKey&&x.scope==='shared');
+  }
   if(row&&(!Number.isSafeInteger(Number(row.revision))||Number(row.revision)<1||
     typeof row.value!=='string'))deny('Invalid authoritative attendance revision');
   const records=projectOwnAttendance(row?row.value:{version:1,records:[]},access.userId);
-  const overview=projectTimeTrackerOverview({
+  const overview=clockOnly?null:projectTimeTrackerOverview({
    value:row?row.value:{version:1,records:[]},
    directory:access.overviewDirectory,userId:access.userId,
    moduleRole:access.moduleRole
   });
-  const log=projectTimeTrackerLog({
+  const log=clockOnly?null:projectTimeTrackerLog({
    value:row?row.value:{version:1,records:[]},
    directory:access.overviewDirectory,userId:access.userId,
    moduleRole:access.moduleRole
   });
-  const otRow=raw.find(x=>x?.state_key==='timetracker.ot.v1'&&x.scope==='shared');
-  let otRequests=projectOwnOvertime(otRow?.value||{version:1,requests:[]},access.userId)
+  const otRow=clockOnly?null:raw.find(x=>x?.state_key==='timetracker.ot.v1'&&x.scope==='shared');
+  let otRequests=clockOnly?[]:projectOwnOvertime(otRow?.value||{version:1,requests:[]},access.userId)
    .map(row=>Object.freeze({...row,ownerId:'cloud:'+access.userId,name:access.name}));
   let otAccess=Object.freeze({scope:'OWN_OT_ONLY',
    bootstrapApprover:false,manualOtManager:false,otContractActive:false});

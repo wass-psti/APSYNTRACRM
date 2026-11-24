@@ -50,7 +50,7 @@ test('native application route initialization no longer depends on generic board
 });
 
 test('TimeTracker and TradeLink reviewer clients use native assignment rather than generic board view',()=>{
- const ttAccess=section(tt,'async access(boardId,{nativeContext=null}={}){',' /** Only a current signed');
+ const ttAccess=section(tt,'async access(boardId,{nativeContext=null,includeDirectory=true}={}){',' /** Only a current signed');
  assert.match(ttAccess,/nativeApplicationBoardContext\(moduleId\)/);
  assert.doesNotMatch(ttAccess,/api\.board\(|api\.allowed\(/);
  const reviewer=section(tl,'async reviewerSession(){',' async boardProjection(');

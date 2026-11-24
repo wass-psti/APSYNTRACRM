@@ -20,14 +20,18 @@ test('Clock-only signed snapshot excludes unrelated OT and department administra
  const api={
   context:async()=>({user_id:actor,workspace_id:workspace,profile:{status:'active'}}),
   nativeApplicationBoardContext:async()=>({userId:actor,workspaceId:workspace,
-   board:{id:board,name:'TimeTracker Attendance'}}),
+   role:'System Admin',board:{id:board,name:'TimeTracker Attendance'}}),
   rpc:async(name)=>{
    calls.push(name);
    if(name==='has_module_access')return true;
    if(name==='list_module_directory')return [{id:actor,status:'active',module_role:'System Admin',
     display_name:'Administrator'}];
-   if(name==='list_module_state')return [{state_key:'timetracker.attendance.v1',
-    scope:'shared',revision:1,value:JSON.stringify({version:1,records:[]})}];
+   if(name==='timetracker_clock_snapshot')return {
+    contract:'tt-clock-snapshot-1',actorId:actor,workspaceId:workspace,
+    boardId:board,stateKey:'timetracker.attendance.v1',scope:'shared',
+    rowFound:true,revision:1,updatedAt:'2026-11-20T00:00:00.000Z',
+    value:JSON.stringify({version:1,records:[]})
+   };
    if(name==='timetracker_employee_department_for_clock')
     return {contract:'tt-department-1',actorId:actor,workspaceId:workspace,
      boardId:board,department:'OJT'};
@@ -48,7 +52,9 @@ test('Clock-only signed snapshot excludes unrelated OT and department administra
  assert.equal(calls.includes('timetracker_ot_snapshot'),false);
  assert.equal(calls.includes('timetracker_department_catalog_snapshot'),false);
  assert.equal(calls.includes('timetracker_employee_department_directory_snapshot'),false);
- assert.equal(calls.includes('list_module_state'),true);
+ assert.equal(calls.includes('list_module_directory'),false);
+ assert.equal(calls.includes('list_module_state'),false);
+ assert.equal(calls.includes('timetracker_clock_snapshot'),true);
  assert.equal(calls.includes('timetracker_auto_clockout_snapshot'),true);
 });
 
@@ -187,7 +193,8 @@ test('Clock write still preserves fresh GPS and signed read-after-write requirem
  assert.match(nativeSource,/gpsPositionFailureReason\(position\)/);
  assert.match(gpsDiagnosticsSource,/now-capturedAt>60000/);
  assert.match(nativeSource,/retryUnauthorized:false/);
- assert.match(appSource,/clockOnly:state\.ttView==='clock'/);
+ assert.match(appSource,/clockOnly:timeTrackerClockOnlyForRoute\(userId,workspaceId,boardId\)/);
+ assert.match(appSource,/const clockOnly=timeTrackerClockOnlyForRoute\(identity,ws,state\.boardId\)/);
  assert.match(appSource,/clockOnly:true/);
  assert.match(appSource,/requiresDetail=next!=='clock'/);
  assert.doesNotMatch(appSource,/case 'tt-location-check'/);
