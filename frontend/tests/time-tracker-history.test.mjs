@@ -109,7 +109,8 @@ test('rendered team Log identifies employee names without raw GPS or audit metad
  assert.match(html,/Staff Two/);
  assert.match(html,/October 28/);
  assert.match(html,/November 2/);
- assert.match(html,/Details/);
+ assert.match(html,/data-action="tt-log-open-detail"/);
+ assert.match(html,/aria-haspopup="dialog"/);
  assert.ok(!html.includes(String(state.records[0].clockIn.geo.latitude)));
  assert.ok(!html.includes(String(state.records[0].clockIn.geo.longitude)));
  assert.doesNotMatch(html,/"geo":|"audit":/);
