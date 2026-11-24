@@ -157,9 +157,20 @@ function navigation(view,busy,bootstrapEligible=false,gpsEligible=false,employee
 /** Reparent the existing authorized tabs; never synthesize a second set of actions.
  * Narrow screens and the collapsed icon rail retain the original in-content navigation.
  */
+// Load only the same-origin font when the standalone reference Clock is mounted.
+let referenceFont;
+function loadTimeTrackerReferenceFont(documentRef){
+ if(!documentRef?.fonts||typeof FontFace==='undefined')return;
+ if(referenceFont)return;
+ const url=new URL('./assets/fonts/Montserrat-SemiBold.woff2',import.meta.url);
+ referenceFont=new FontFace('Montserrat','url("'+url.href+'")',{weight:'600',style:'normal',display:'swap'});
+ documentRef.fonts.add(referenceFont);
+ referenceFont.load().catch(()=>{documentRef.fonts.delete(referenceFont);referenceFont=null;});
+}
 export function syncTimeTrackerSidebar(shell,{enabled=false,expanded=false,fresh=false}={}){
  const sidebar=shell.querySelector('.aps-sidebar');
  const application=shell.querySelector('.main-content .tt-application');
+ if(enabled&&application?.hasAttribute?.('data-tt-reference-shell'))loadTimeTrackerReferenceFont(shell.ownerDocument);
  const parent=sidebar?.querySelector('a.nav-link[href="#/time-tracker"]');
  const previous=sidebar?.querySelector('.tt-navigation');
  if(fresh)previous?.remove();
@@ -294,7 +305,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
   'Automatic clock-out monitoring unavailable';
  let html='<div class="tt-clock-stage tt-command-center">'+
   '<h2 class="tt-reference-welcome"><span data-tt-welcome-greeting>'+t.greeting+'</span> '+
-   esc(displayName||(access?.moduleRole==='System Admin'?'System admin':access?.moduleRole)||'')+(referenceShell?'!':'')+'</h2>'+
+   esc(referenceShell?(String(displayName||'').trim().split(/\s+/)[0]||'there'):(displayName||(access?.moduleRole==='System Admin'?'System admin':access?.moduleRole)||''))+(referenceShell?'!':'')+'</h2>'+
   (referenceShell?'<button type="button" class="tt-reference-refresh" data-action="tt-refresh"'+(busy?' disabled':'')+'>Refresh attendance</button>':'')+
   '<div class="tt-command-layout tt-clock-compact" data-session-state="'+(active?'active':'idle')+'">'+
    '<section class="tt-time-dashboard" aria-label="Live time and attendance summary">'+

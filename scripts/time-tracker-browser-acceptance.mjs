@@ -1148,7 +1148,7 @@ try {
     };
   }, verifiedResult);
   assert.equal(referenceLayout.header, false);
-  assert.equal(referenceLayout.greeting, "Good evening, Example Employee!");
+  assert.equal(referenceLayout.greeting, "Good evening, Example!");
   assert.match(referenceLayout.font, /^Montserrat/);
   assert.equal(referenceLayout.loadedFont, true);
   assert.equal(referenceLayout.textAlign, "center");
