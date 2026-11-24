@@ -43,6 +43,9 @@ SQL
 CREATE TABLE public.profiles(id uuid PRIMARY KEY,display_name text,email text,status text);
 SQL
   run < supabase/migrations/20261124110118_cp_oi_native_05a_operational_lifecycle.sql
+  if [ "${OI_VERIFY_CONFIRMATION:-0}" = 1 ]; then
+   run < supabase/migrations/20261124121228_cp_oi_native_07_confirmation_audit.sql
+  fi
  fi
 fi
 

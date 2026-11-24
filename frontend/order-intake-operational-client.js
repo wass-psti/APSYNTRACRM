@@ -49,6 +49,15 @@ export class OrderIntakeOperationalClient extends OrderIntakeRegistryClient {
   if(!Array.isArray(rows)||rows.length>51||rows.some(row=>row.workspace_id!==this.workspaceId||row.recipient_id!==this.auth.userId))throw Error('Invalid notification inbox response');
   return {rows:rows.slice(0,50),hasMore:rows.length>50};
  }
+ async recordConfirmation(doc,id,sha256){
+  const metadata={entityId:doc.entity.id,poNumber:doc.poNumber,currency:doc.currency,total:doc.total,
+   vatRate:doc.vatRate,vatExclusiveAmount:doc.vatExclusiveAmount,vatAmount:doc.vatAmount,
+   quotation:doc.quotation,signatory:doc.signatory,itemCount:doc.items.length};
+  const receipt=await this.request(()=>this.api.rpc('order_intake_record_confirmation',{
+   p_id:id,p_order_id:doc.orderId,p_kind:doc.recordKind,p_revision:doc.revision,p_sha256:sha256,p_metadata:metadata}));
+  if(receipt?.id!==id||receipt.sha256!==sha256||!receipt.generatedAt)throw Error('PDF audit receipt could not be confirmed.');
+  return receipt;
+ }
  async markNotificationRead(id){
   const result=await this.request(()=>this.api.rpc('order_intake_notification_read',{p_id:id}));
   if(result?.id!==id||!result.readAt)throw Error('Notification acknowledgement not confirmed');

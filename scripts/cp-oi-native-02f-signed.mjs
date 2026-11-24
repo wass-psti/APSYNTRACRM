@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
+import {verifyConfirmationSigned} from './cp-oi-native-07-signed.mjs';
 import {verifyOperationalLifecycle} from './cp-oi-native-05a-signed.mjs';
 import {verifyLifecycleSigned} from './cp-oi-native-05-signed.mjs';
 import {verifyOrderEditorBrowser} from './cp-oi-native-03-editor-browser.mjs';
@@ -100,3 +101,5 @@ if(process.env.OI_VERIFY_MUTATIONS==='1'){
 }
 
 if(process.env.OI_VERIFY_OPERATIONAL==='1')await verifyOperationalLifecycle({auth,api,workspace,foreign,signin,sql,manifest});
+
+if(process.env.OI_VERIFY_CONFIRMATION==='1')await verifyConfirmationSigned({auth,api,workspace,foreign,signin,sql});

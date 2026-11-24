@@ -225,7 +225,7 @@ const NON_BOARD_DOMAIN_RPC=new Set([
  'fm1_end_hold_v1','fm1_assign_ticket_v1','fm1_add_conversation_v1',
  'fm1_notification_inbox_v1','fm1_notification_mark_read_v1',
  'order_intake_legacy_change','order_intake_recipient_options',
- 'order_intake_bind_recipient','order_intake_notification_read'
+ 'order_intake_bind_recipient','order_intake_notification_read','order_intake_record_confirmation'
 ]);
 
 export class DomainApi {

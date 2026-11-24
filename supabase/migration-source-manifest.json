@@ -2172,6 +2172,13 @@
       "sha256": "d11e986eeebe7e5b57bf8b6f889e8f1bf10bac97268ec3d5be9a6b5f96605f9d"
     },
     {
+      "version": "20261124121228",
+      "name": "cp_oi_native_07_confirmation_audit",
+      "file": "20261124121228_cp_oi_native_07_confirmation_audit.sql",
+      "bytes": 3809,
+      "sha256": "4003157dcb1cecb0697d19f23d6ba6b24cd88113c9b55d569349cead8df7ddaf"
+    },
+    {
       "version": "20261124170000",
       "name": "cp_tt_ot_creator_withdrawal",
       "file": "20261124170000_cp_tt_ot_creator_withdrawal.sql",
