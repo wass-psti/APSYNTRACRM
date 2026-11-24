@@ -13,7 +13,7 @@ function addTotal(totals,row,checked) {
 }
 const summarize=totals=>[...totals].sort(([a],[b])=>a.localeCompare(b)).map(([currency,t])=>({
  currency,count:t.count,amount:formatMinor(t.amount),financialCount:t.financialCount,
- calculatedExpenses:formatMinor(t.expenses),calculatedGrossProfit:formatMinor(t.profit)
+ calculatedExpenses:t.financialCount?formatMinor(t.expenses):null,calculatedGrossProfit:t.financialCount?formatMinor(t.profit):null
 }));
 function indexRows(rows,keyFor) {
  const counts=new Map();
@@ -21,11 +21,11 @@ function indexRows(rows,keyFor) {
  return counts;
 }
 export function dryRunOrderIntake(source,destination) {
- if(!source||!['monday-export','legacy-backup','fixture'].includes(source.kind)||!Array.isArray(source.rows)||
+ if(!source||!['monday-export','monday-workbook','legacy-backup','fixture'].includes(source.kind)||!Array.isArray(source.rows)||
   !Number.isSafeInteger(source.expectedCount)||source.expectedCount!==source.rows.length||
   typeof source.reference!=='string'||!source.reference.trim()||
   typeof source.exportedAt!=='string'||!Number.isFinite(Date.parse(source.exportedAt)))throw new Error('Incomplete source inventory');
- if(source.kind==='monday-export'&&String(source.boardId)!==SOURCE_BOARD_ID)throw new Error('Unexpected source board');
+ if(['monday-export','monday-workbook'].includes(source.kind)&&String(source.boardId)!==SOURCE_BOARD_ID)throw new Error('Unexpected source board');
  if(!destination||destination.workspaceId!==WORK_MANAGEMENT_WORKSPACE_ID||destination.complete!==true||
   !Array.isArray(destination.rows)||destination.expectedCount!==destination.rows.length)throw new Error('Incomplete destination snapshot');
  const existing=new Map();
@@ -48,7 +48,7 @@ export function dryRunOrderIntake(source,destination) {
   if(existing.has(key))checked.issues.push(existing.get(key)?'EXISTING_ARCHIVED_PO':'EXISTING_ACTIVE_PO');
   addTotal(sourceTotals,row,checked);
   if(!checked.issues.length)addTotal(candidateTotals,row,checked);
-  return {row:index+1,sourceItemId:row.sourceItemId||null,status:checked.issues.length?'HOLD':'CANDIDATE',issues:checked.issues,warnings:checked.warnings};
+  return {row:index+1,sourceLocator:row.sourceLocator||null,sourceItemId:row.sourceItemId||null,status:checked.issues.length?'HOLD':'CANDIDATE',issues:checked.issues,warnings:checked.warnings};
  });
  const candidates=results.filter(row=>row.status==='CANDIDATE').length;
  return {status:source.kind==='fixture'?'FIXTURE_ONLY':candidates===rows.length&&rows.length>0?'REVIEW_REQUIRED':'EXCEPTIONS_PENDING',

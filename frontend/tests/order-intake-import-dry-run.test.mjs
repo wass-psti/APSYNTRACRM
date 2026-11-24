@@ -74,3 +74,15 @@ test('a fully mapped declared export still requires review, not production autho
  const r=dryRunOrderIntake({...source([{item,supplemental}]),kind:'monday-export',boardId:'3670228015'},dest());
  assert.equal(r.status,'REVIEW_REQUIRED');assert.equal(r.candidateCount,1);assert.equal(r.productionImportAuthorized,false);
 });
+
+test('workbook row locations are retained and unknown financial totals are not reported as zero',()=>{
+ const input={...row,sourceItemId:undefined,sourceLocator:'order intake!A4',vatRate:undefined};
+ const report=dryRunOrderIntake({...source([input]),kind:'monday-workbook',boardId:'3670228015'},dest());
+ assert.equal(report.status,'EXCEPTIONS_PENDING');
+ assert.equal(report.results[0].sourceLocator,'order intake!A4');
+ assert.equal(report.results[0].sourceItemId,null);
+ assert.equal(report.sourceTotals[0].financialCount,0);
+ assert.equal(report.sourceTotals[0].calculatedExpenses,null);
+ assert.equal(report.sourceTotals[0].calculatedGrossProfit,null);
+ assert.throws(()=>dryRunOrderIntake({...source([input]),kind:'monday-workbook',boardId:'wrong'},dest()),/source board/);
+});
