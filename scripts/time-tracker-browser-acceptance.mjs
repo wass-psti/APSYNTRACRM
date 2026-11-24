@@ -209,9 +209,9 @@ try {
   assert.equal(desktopLayout.headerBackground, "rgb(255, 255, 255)");
   assert.equal(desktopLayout.navOverflow, "auto");
   assert.equal(desktopLayout.clockLayout, "column");
-  assert.equal(desktopLayout.sessionCardBackground, "rgb(255, 255, 255)");
-  assert.equal(desktopLayout.clockSize, "32px");
-  assert.equal(desktopLayout.clockWeight, "500");
+  assert.equal(desktopLayout.sessionCardBackground, "rgb(230, 241, 251)");
+  assert.equal(desktopLayout.clockSize, "52px");
+  assert.equal(desktopLayout.clockWeight, "600");
   assert.equal(desktopLayout.statsCount, 2);
   assert.equal(desktopLayout.badges, 1);
   assert.equal(desktopLayout.compact, true);
@@ -250,6 +250,104 @@ try {
     );
   };
   await checkAccessibility("TimeTracker clock view");
+
+  // CP-TT-CLOCK-STATE: exercise both actual responsive Clock layouts with
+  // a synthetic signed snapshot, without issuing any attendance writes.
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.evaluate(() =>
+    window.__timeTrackerRender({
+      result: {
+        status: "VERIFIED_READ",
+        access: {
+          moduleRole: "Employee",
+          employeeDepartment: "Engineering",
+          attendanceWritesAccepted: true,
+        },
+        records: [],
+        active: null,
+        otRequests: [],
+      },
+      now: new Date("2026-11-24T06:07:00Z"),
+      locationPreference: "Office-Base Duty",
+    }),
+  );
+  assert.equal(await page.locator("#tt-note").isVisible(), false);
+  assert.equal(await page.locator("#tt-session-progress").count(), 0);
+  assert.equal(await page.locator(".tt-idle-badge").textContent(), "Not clocked in");
+  const idleClockSize = await page.locator(".tt-clock-face").evaluate(
+    (element) => parseFloat(getComputedStyle(element).fontSize),
+  );
+  await page.evaluate(() =>
+    window.__timeTrackerRender({
+      result: {
+        status: "VERIFIED_READ",
+        access: {
+          moduleRole: "Employee",
+          employeeDepartment: "Engineering",
+          attendanceWritesAccepted: true,
+        },
+        records: [],
+        active: null,
+        otRequests: [],
+      },
+      locationPreference: "Offsite (Home)",
+    }),
+  );
+  assert.equal(await page.locator("#tt-note").isVisible(), true);
+  assert.equal(await page.locator("#tt-note").evaluate((element) => element.required), true);
+  assert.equal(await page.locator("#tt-note").evaluate((element) => element.validity.valueMissing), true);
+  await page.evaluate(() => {
+    const active = {
+      id: "clock-state-fixture",
+      clockIn: "2026-11-24T00:53:06Z",
+      clockOut: null,
+      status: "Active",
+      creditedMs: null,
+      location: "Offsite (Home)",
+      department: "Engineering",
+      workNote: "Offsite development",
+    };
+    window.__timeTrackerRender({
+      result: {
+        status: "VERIFIED_READ",
+        access: {
+          moduleRole: "Employee",
+          employeeDepartment: "Engineering",
+          attendanceWritesAccepted: true,
+        },
+        records: [active],
+        active,
+        otRequests: [],
+      },
+      now: new Date("2026-11-24T06:07:00Z"),
+    });
+  });
+  assert.equal(await page.locator(".tt-idle-badge").textContent(), "Active");
+  assert.equal(await page.locator("#tt-session-elapsed").textContent(), "05:13:54");
+  assert.equal(await page.locator(".tt-session-ring > svg").isVisible(), true);
+  assert.ok(await page.locator(".tt-clock-face").evaluate(
+    (element) => parseFloat(getComputedStyle(element).fontSize),
+  ) < idleClockSize);
+  assert.equal(await page.locator("#tt-note").inputValue(), "Offsite development");
+  assert.equal(await page.locator("#tt-note").evaluate((element) => element.readOnly), true);
+  const activeLayout = await page.evaluate(() => ({
+    ring: document.querySelector(".tt-session-ring").getBoundingClientRect().width,
+    ringTop: document.querySelector(".tt-session-ring").getBoundingClientRect().top,
+    summaryTop: document.querySelector(".tt-session-summary").getBoundingClientRect().top,
+    summary: getComputedStyle(document.querySelector(".tt-session-summary > div")).backgroundColor,
+    context: getComputedStyle(document.querySelector(".tt-active-session-context")).backgroundColor,
+    note: getComputedStyle(document.querySelector("#tt-note")).backgroundColor,
+    overflow: document.documentElement.scrollWidth - innerWidth,
+  }));
+  assert.ok(activeLayout.ring >= 170);
+  assert.ok(activeLayout.ringTop < activeLayout.summaryTop);
+  for (const surface of ["summary", "context", "note"]) {
+    assert.equal(activeLayout[surface], "rgb(230, 241, 251)");
+  }
+  assert.ok(activeLayout.overflow <= 0, "Clock card overflows at 360px");
+  await checkAccessibility("TimeTracker active mobile Clock");
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.evaluate(() => window.__timeTrackerRender());
 
   // CP-TT-FLOW-01C: Browser-level, isolated two-tab reload acceptance. No live
   // user account, actual attendance write or production data is involved.
