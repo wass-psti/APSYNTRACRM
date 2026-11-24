@@ -23,14 +23,19 @@ test('active elapsed timer is based on signed clock-in time, not local storage',
  assert.equal(timeTrackerSessionElapsed('2026-11-18T00:00:00Z',at).progress,1);
 });
 
-test('rendering matches the compact blue and purple clock reference without weakening signed actions',()=>{
+test('rendering matches the unified warm Clock workspace without weakening signed actions',()=>{
  const html=renderTimeTrackerNative({
   result:{status:'VERIFIED_READ',access,records:[active],active,otRequests:[]},
   now:at,view:'clock'
  });
  assert.match(html,/data-tt-view="clock"/);
+ assert.match(html,/class="tt-clock-stage tt-clock-rework"/);
+ assert.match(html,/class="tt-clock-rework-workspace tt-attendance-console"/);
+ assert.match(html,/class="tt-clock-rework-greeting">Good afternoon,/);
+ assert.match(html,/class="tt-clock-rework-stats tt-session-summary"/);
+ assert.doesNotMatch(html,/tt-command-layout|tt-clock-compact/);
  assert.match(html,/class="tt-session-ring"/);
- assert.match(html,/id="tt-session-elapsed" data-clock-in="2026-11-19T00:00:00.000Z">07:55:00/);
+ assert.match(html,/id="tt-session-elapsed" data-clock-in="2026-11-19T00:00:00.000Z"[\s\S]*?>07:55:00/);
  assert.match(html,/id="tt-session-progress"/);
  assert.match(html,/role="timer" aria-label="Elapsed time/);
  assert.match(html,/data-action="tt-tab" data-target="hours"/);
@@ -73,19 +78,21 @@ test('existing clock tick updates elapsed text and SVG offset without rebuilding
 
 test('refined stylesheet remains scoped, responsive and uses native controls',()=>{
  const css=readFileSync('frontend/apps/TimeTracker/time-tracker-refined.css','utf8');
+ const clockCss=readFileSync('frontend/time-tracker-clock-command.css','utf8');
  const manifest=readFileSync('scripts/priority5-style-manifest.mjs','utf8');
  assert.match(css,/#app \.aps-board-shell\.aps-time-tracker-shell \.tt-native/);
  assert.match(css,/\.tt-session-ring-progress/);
- assert.match(css,/\.tt-clock-compact/);
- assert.match(css,/--tt-compact-panel:#E6F1FB/);
- assert.match(css,/--tt-compact-button:#4f43b1/);
- assert.match(css,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
- assert.match(css,/font-size:32px;font-weight:500/);
- assert.match(css,/@media \(max-width: 480px\)/);
- assert.match(css,/@media \(prefers-reduced-motion: reduce\)/);
- assert.match(css,/focus-visible/);
- assert.doesNotMatch(css,/@import|url\(|animation:.*infinite|!important/);
+ assert.match(clockCss,/\.tt-clock-rework/);
+ assert.match(clockCss,/--tt-clock-accent: #b85d3d/);
+ assert.match(clockCss,/max-width: none/);
+ assert.match(clockCss,/grid-template-columns: minmax\(0, 1fr\) minmax\(300px, 0\.82fr\)/);
+ assert.match(clockCss,/tt-work-plan-validation/);
+ assert.match(clockCss,/@media \(max-width: 640px\)/);
+ assert.match(clockCss,/@media \(prefers-reduced-motion: reduce\)/);
+ assert.match(clockCss,/focus-visible/);
+ assert.doesNotMatch(clockCss,/@import|url\(|animation:.*infinite|will-change/);
  assert.match(manifest,/frontend\/apps\/TimeTracker\/time-tracker-refined\.css/);
+ assert.match(manifest,/frontend\/time-tracker-clock-command\.css/);
 });
 
 test('Clock view never starts hidden decorative GPU work',()=>{

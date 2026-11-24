@@ -281,7 +281,7 @@ test('native TimeTracker application shell preserves attendance rendering and es
  assert.match(html,/class="tt-navigation fm1-tabs"/);
  assert.match(html,/tt-clock-form/);
  assert.match(html,/tt-clock-face/);
- assert.match(html,/tt-session-summary/);
+ assert.match(html,/tt-clock-rework-stats/);
  assert.doesNotMatch(html,/<script>bad<\/script>/);
  const log=renderTimeTrackerNative({result:{status:'VERIFIED_READ',
   access:{moduleRole:'Employee',platformRole:'hr',name:'<script>bad</script>'},
@@ -406,7 +406,7 @@ test('Clock reference layout formats stable local time and daytime greeting',()=
  assert.match(html,/id="tt-clock-hours">03/);
  assert.match(html,/id="tt-clock-minutes">22/);
  assert.match(html,/tt-clock-colon/);
- assert.match(html,/tt-session-summary/);
+ assert.match(html,/tt-clock-rework-stats/);
  assert.match(html,/Quick select/);
  assert.match(html,/data-location="Office-Base Duty"/);
  assert.match(html,/data-location="Offsite \(Home\)"/);
