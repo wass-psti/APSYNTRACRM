@@ -50,7 +50,7 @@ test('split navigation preserves existing signed routes and refuses a foreign wo
 });
 
 
-test('All Documents renders the signed list beside an honest empty preview, then places a selected preview in the adjacent pane',()=>{
+test('All Documents uses the full width without an empty preview and consolidates opening actions',()=>{
  const row={documentId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
   boardItemId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',documentType:'quotation',
   documentNumber:'Q-SPLIT-01',clientName:'Split View Client',revision:1,
@@ -58,19 +58,19 @@ test('All Documents renders the signed list beside an honest empty preview, then
   updatedAt:'2026-11-13T01:00:00.000Z'};
  const view={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',rows:[row]};
  const html=renderTradeLinkDocumentRepository({detail,workspaceId,view,canManage:true});
- assert.match(html,/class="tl-document-split-view" data-tradelink-document-split/);
+ assert.doesNotMatch(html,/tl-document-split-view|data-tradelink-document-split/);
  assert.match(html,/class="tl-document-list-pane"/);
- assert.match(html,/class="tl-document-preview-pane" aria-label="Selected document preview"/);
+ assert.doesNotMatch(html,/tl-document-preview-pane|tl-document-detail-view/);
  assert.match(html,/Q-SPLIT-01/);
- assert.match(html,/Select a document/);
+ assert.doesNotMatch(html,/Select a document/);
  assert.match(html,/Preview\/Edit/);
- assert.match(html,/Preview<\/button>/);
- assert.match(html,/Choose Preview or View document from the list/);
+ assert.doesNotMatch(html,/>Preview<\/button>/);
+ assert.match(html,/Revision history &amp; details/);
  assert.match(html,/data-action="tradelink-document-open"/);
 });
 
 
-test('a verified saved document is rendered inside the adjacent preview pane without changing its signed revision',()=>{
+test('a verified saved document is rendered inside the on-demand detail view without changing its signed revision',()=>{
  const documentId='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
  const boardItemId='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
  const row={documentId,boardItemId,documentType:'quotation',documentNumber:'Q-SPLIT-02',
@@ -87,8 +87,8 @@ test('a verified saved document is rendered inside the adjacent preview pane wit
  const view={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',rows:[row],
   documentPreview:{documentId,record,attachments:[],events:[]}};
  const html=renderTradeLinkDocumentRepository({detail,workspaceId,view,canManage:true});
- const paneStart=html.indexOf('<aside class="tl-document-preview-pane"');
- const paneEnd=html.indexOf('</aside>',paneStart);
+ const paneStart=html.indexOf('<section class="tl-document-detail-view"');
+ const paneEnd=html.lastIndexOf('</section>');
  assert.ok(paneStart>=0&&paneEnd>paneStart);
  const pane=html.slice(paneStart,paneEnd);
  assert.match(pane,/data-tradelink-saved-preview/);
@@ -118,8 +118,8 @@ test('split view is responsive, keyboard accessible, reduced-motion aware, and C
  assert.match(css,/CP-TL-SPLIT-01/);
  assert.match(css,/data-tl-section=\"drafts\"\]\[data-tl-can-create=\"true\"\] \.tl-app-layout/);
  assert.match(css,/grid-template-columns:minmax\(220px,260px\) minmax\(0,1fr\)/);
- assert.match(css,/\.tl-document-split-view/);
- assert.match(css,/grid-template-columns:minmax\(0,1\.15fr\) minmax\(340px,\.85fr\)/);
+ assert.doesNotMatch(css,/\.tl-document-split-view|\.tl-document-preview-empty/);
+ assert.match(css,/\.tl-document-list-pane\{min-width:0;width:100%\}/);
  assert.match(css,/data-tl-section=\"drafts\"\]\[data-tl-can-create=\"true\"\] \.tl-app-nav \.tl-module-link\{\s*display:flex/);
  assert.match(css,/\.tl-reference-portal \.tl-app-nav a:focus-visible/);
  assert.match(fixture,/moduleNavVisible/);
