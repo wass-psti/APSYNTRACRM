@@ -28399,6 +28399,8 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell.aps-time-tracker-shell 
 #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact[data-session-state="idle"] .tt-clock-card.tt-attendance-console { background:var(--tt-session-data);color:var(--tt-session-ink); }
 #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact[data-session-state="idle"] .tt-attendance-console h4 { color:var(--tt-session-ink);font-weight:600; }
 #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact[data-session-state="idle"] .tt-attendance-console .tt-console-description { color:var(--tt-session-label);margin-bottom:20px; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-attendance-console .tt-write-restriction { color:#75452f; }
+html[data-aps-monday-theme="dark"] #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-attendance-console .tt-write-restriction { color:#ffd0ad; }
 #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact[data-session-state="active"] .tt-clock-card.tt-compact-active { background:transparent;padding:0; }
 #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-clock-card .tt-active-session-context { background:var(--tt-session-data);color:var(--tt-session-label); }
 #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-active-session-context > div > span { color:var(--tt-session-label); }
