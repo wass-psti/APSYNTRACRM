@@ -669,7 +669,10 @@ try {
   );
   assert.equal(await page.locator(".tt-ot-manual-section").count(), 0);
   assert.equal(await page.locator("#tt-ot-manual-form").count(), 0);
-  assert.equal(await page.locator('[data-action="tt-ot-manual-open"]').count(), 0);
+  assert.equal(
+    await page.locator('[data-action="tt-ot-manual-open"]').count(),
+    0,
+  );
   assert.equal(await page.locator(".tt-ot-review-actions").count(), 0);
 
   await page.evaluate(
