@@ -179,3 +179,16 @@ test('header uses role-derived identity and retains accessible signed navigation
  assert.match(loading,/Checking signed access/);
  assert.match(loading,/data-action="tt-refresh" disabled/);
 });
+
+ test('Work Plan is visible and required only for a non-exempt Offsite Home clock-in',()=>{
+ const result={status:'VERIFIED_READ',access:{...access,employeeDepartment:'Engineering'},records:[],active:null};
+ const office=renderTimeTrackerNative({result,view:'clock',locationPreference:'Office-Base Duty',workPlanDraft:'Preserved draft'});
+ const home=renderTimeTrackerNative({result,view:'clock',locationPreference:'Offsite (Home)',workPlanDraft:'Preserved draft'});
+ assert.match(office,/id="tt-note-wrap" hidden/);
+ assert.doesNotMatch(office,/textarea id="tt-note" required/);
+ assert.match(home,/id="tt-note-wrap">Work Plan/);
+ assert.match(home,/textarea id="tt-note" required/);
+ assert.match(home,/Work Plan is required for Offsite \(Home\)/);
+ assert.match(office,/Preserved draft/);
+ assert.match(home,/Preserved draft/);
+ });
