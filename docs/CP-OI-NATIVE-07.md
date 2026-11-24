@@ -13,3 +13,6 @@ Candidate 20261124121228 SHA256 4003157dcb1cecb0697d19f23d6ba6b24cd88113c9b55d56
 
 ## Release
 CP06 PR #869 merged at 87980216, 37 CI successful and one skipped. Pages run 45391165746 successful. CP07 branch remains separate until the audit schema is authorized and activated. Actual signed production generation, authentic digital signing if requested, and full document storage/traceability remain distinct. No new role requirements, training, backpropagation or model parameter changes.
+
+## Production activation — 2026-11-24
+Explicit owner authorization received for 20261124121228. Isolated private workdir fetched 312 actual remote ledger files; include-all dry-run selected exactly the authorized migration with the reviewed SHA256. Applied only this migration with skip-vault. Independent pre/post digests equal for 909 historical payloads and the complete existing native row. Ledger count 1; audit row count 0; RLS enabled with two scoped policies; invoker RPC executable by authenticated, not anon. Authenticated cannot update/delete audit records or override generated actor/time. No existing record, role or policy changes. Candidate moved unchanged to tracked migrations; source manifest and disposable runner path updated. Production frontend deployment and genuine signed generation still require acceptance. No fabricated business or audit records.
