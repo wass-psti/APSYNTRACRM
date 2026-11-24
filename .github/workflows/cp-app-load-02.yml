@@ -1,0 +1,71 @@
+name: CP-APP-LOAD-02 TimeTracker Clock Retrieval
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/20261124180000_cp_app_load_02_lightweight_timetracker_retrieval.sql"
+      - "sql/tests/cp-app-load-02-disposable-*.sql"
+      - ".github/workflows/cp-app-load-02.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/20261124180000_cp_app_load_02_lightweight_timetracker_retrieval.sql"
+      - "sql/tests/cp-app-load-02-disposable-*.sql"
+      - ".github/workflows/cp-app-load-02.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cp-app-load-02-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  disposable-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable_only
+          POSTGRES_DB: cp_app_load_02_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cp_app_load_02_disposable"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Apply disposable fixture and candidate migration
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: disposable_only
+          PGDATABASE: cp_app_load_02_disposable
+        run: |
+          psql -v ON_ERROR_STOP=1 -f sql/tests/cp-app-load-02-disposable-setup.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261124180000_cp_app_load_02_lightweight_timetracker_retrieval.sql
+
+      - name: Verify signed scope, owner projection and payload reduction
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: disposable_only
+          PGDATABASE: cp_app_load_02_disposable
+        run: psql -v ON_ERROR_STOP=1 -f sql/tests/cp-app-load-02-disposable-acceptance.sql

@@ -2074,6 +2074,13 @@
       "sha256": "06ac4abddab7c9cadbdbb62bcf5854e2147debf436dfda75c769d5a485384e24"
     },
     {
+      "version": "20261123072051",
+      "name": "cp_tt_manual_ot_01_manual_submission_and_scoped_review",
+      "file": "20261123072051_cp_tt_manual_ot_01_manual_submission_and_scoped_review.sql",
+      "bytes": 12776,
+      "sha256": "2d000968bdb2f5476ceda735dfbe6c9f8b76f16639b0d96ab3b5e2a9d1ca5ba9"
+    },
+    {
       "version": "20261123080322",
       "name": "cp_tl_document_identity_order_01",
       "file": "20261123080322_cp_tl_document_identity_order_01.sql",
@@ -2086,6 +2093,13 @@
       "file": "20261123081039_cp_fueltrans_m7_ticket_number_allocator.sql",
       "bytes": 6759,
       "sha256": "e5afa7ba82dd927ea71061b861c35c2595169afaf09c14d54a760238b5230db9"
+    },
+    {
+      "version": "20261123084003",
+      "name": "cp_tt_hr_ot_all_user_log_01",
+      "file": "20261123084003_cp_tt_hr_ot_all_user_log_01.sql",
+      "bytes": 4525,
+      "sha256": "c80d3fe5bfddc446cbe959d8909f6c1973c4e46930434dff42e1144ebd33b025"
     },
     {
       "version": "20261123100000",
@@ -2172,6 +2186,13 @@
       "sha256": "d11e986eeebe7e5b57bf8b6f889e8f1bf10bac97268ec3d5be9a6b5f96605f9d"
     },
     {
+      "version": "20261124115432",
+      "name": "cp_agt_18b_workforce_capture_v1",
+      "file": "20261124115432_cp_agt_18b_workforce_capture_v1.sql",
+      "bytes": 3988,
+      "sha256": "b7da34085cc66d654eea393b318de5de4c5da1fc033d8bc98944935943ebc38f"
+    },
+    {
       "version": "20261124121228",
       "name": "cp_oi_native_07_confirmation_audit",
       "file": "20261124121228_cp_oi_native_07_confirmation_audit.sql",
@@ -2179,11 +2200,53 @@
       "sha256": "4003157dcb1cecb0697d19f23d6ba6b24cd88113c9b55d569349cead8df7ddaf"
     },
     {
+      "version": "20261124123100",
+      "name": "cp_agt_19a_operational_workforce",
+      "file": "20261124123100_cp_agt_19a_operational_workforce.sql",
+      "bytes": 133590,
+      "sha256": "d48bef037f8017c66b36d096219b85899e8c6163c08375c32cd111d8b179e465"
+    },
+    {
+      "version": "20261124124430",
+      "name": "cp_agt_19b_commercial_inventory",
+      "file": "20261124124430_cp_agt_19b_commercial_inventory.sql",
+      "bytes": 4425,
+      "sha256": "83fa07d6bb613e883f4c690fb81cd517c5f92160eae768a7c484c9e6331c35cd"
+    },
+    {
+      "version": "20261124124633",
+      "name": "cp_agt_19b_company_scope_binding",
+      "file": "20261124124633_cp_agt_19b_company_scope_binding.sql",
+      "bytes": 5863,
+      "sha256": "7a17013d74362bf6219a5d8814601b29a3e092e11c692a303e3322da01a730b5"
+    },
+    {
+      "version": "20261124125556",
+      "name": "cp_agt_19b_commercial_relationship_binding",
+      "file": "20261124125556_cp_agt_19b_commercial_relationship_binding.sql",
+      "bytes": 15657,
+      "sha256": "580b46a8f3596ac71612f6983aea09fa386324aff584ae2468dc4edf1f95ca82"
+    },
+    {
+      "version": "20261124130920",
+      "name": "cp_agt_19b_final_workforce_archive_parity",
+      "file": "20261124130920_cp_agt_19b_final_workforce_archive_parity.sql",
+      "bytes": 9170,
+      "sha256": "03529f3c108bf9076402909df56c0d06a176645a90d17bb9403a301b7fa8ab41"
+    },
+    {
       "version": "20261124170000",
       "name": "cp_tt_ot_creator_withdrawal",
       "file": "20261124170000_cp_tt_ot_creator_withdrawal.sql",
       "bytes": 5115,
       "sha256": "678b8e85c41785015f0e190ea35b8c125a0334622b743efede83f3355e0f0456"
+    },
+    {
+      "version": "20261124180000",
+      "name": "cp_app_load_02_lightweight_timetracker_retrieval",
+      "file": "20261124180000_cp_app_load_02_lightweight_timetracker_retrieval.sql",
+      "bytes": 3704,
+      "sha256": "dbfec304389ff21ad1093ca09969b397d94b9eb9c4e5de07bf3e59bf466a1fe0"
     },
     {
       "version": "20261124193000",

@@ -20,9 +20,13 @@ const example=(ownerId=user)=>({
  clockOut:null
 });
 function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=workspace,
- records=[],malformed=false,writeReady=false,foreignCapability=false,autoClockoutSnapshot=null,departmentValue='HR',email='employee@example.test'}={}){
+ records=[],malformed=false,writeReady=false,foreignCapability=false,autoClockoutSnapshot=null,
+ departmentValue='HR',email='employee@example.test',clockSnapshotUnavailable=false,
+ clockSnapshotError=null,clockSnapshotOverride=null}={}){
  let commitCount=0,lastWrite=null,autoCompleteCount=0,autoCompleteArgs=null;
  let contextReadCount=0,nativeContextReadCount=0,moduleAccessReadCount=0;
+ let directoryReadCount=0,stateReadCount=0,clockSnapshotReadCount=0;
+ const rpcCounts=new Map();
  const auth={userId:activeUser,getVerifiedUser:async()=>({id:activeUser,email})};
  let currentRecords=records;
  const nativeContext=()=> {
@@ -49,12 +53,34 @@ function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=works
   board:async()=>{throw Error('Generic board reads must not gate native TimeTracker access');},
   allowed:async()=>{throw Error('Generic board permissions must not gate native TimeTracker access');},
   rpc:async(name,args)=>{
+   rpcCounts.set(name,(rpcCounts.get(name)||0)+1);
    switch(name){
     case 'has_module_access':moduleAccessReadCount++;return grant;
-    case 'list_module_directory':return [{id:activeUser,status:'active',module_role:role,
-     display_name:'Test signed employee'}];
-    case 'list_module_state':return [{state_key:'timetracker.attendance.v1',
-     scope:'shared',revision:2,value:malformed?'not-json':JSON.stringify({version:1,records:currentRecords})}];
+    case 'list_module_directory':
+     directoryReadCount++;
+     return [{id:activeUser,status:'active',module_role:role,
+      display_name:'Test signed employee'}];
+    case 'list_module_state':
+     stateReadCount++;
+     return [{state_key:'timetracker.attendance.v1',
+      scope:'shared',revision:2,value:malformed?'not-json':JSON.stringify({version:1,records:currentRecords})}];
+    case 'timetracker_clock_snapshot':{
+     clockSnapshotReadCount++;
+     if(clockSnapshotError)throw clockSnapshotError;
+     if(clockSnapshotUnavailable)throw Error('PGRST202: function not found');
+     if(clockSnapshotOverride)return clockSnapshotOverride;
+     const ownRecords=currentRecords.filter(record=>record?.ownerId==='cloud:'+activeUser)
+      .map(record=>{
+       const copy=structuredClone(record);
+       if(copy.clockIn&&typeof copy.clockIn==='object')delete copy.clockIn.geo;
+       if(copy.clockOut&&typeof copy.clockOut==='object')delete copy.clockOut.geo;
+       return copy;
+      });
+     return {contract:'tt-clock-snapshot-1',actorId:activeUser,
+      workspaceId:ctxWs,boardId:board,stateKey:'timetracker.attendance.v1',
+      scope:'shared',rowFound:true,revision:2,updatedAt:'2026-11-20T00:00:00.000Z',
+      value:JSON.stringify({version:1,records:malformed?'not-json':ownRecords})};
+    }
     case 'timetracker_auto_clockout_snapshot':
      if(autoClockoutSnapshot===null)throw Error('PGRST202: function not deployed');
      return autoClockoutSnapshot;
@@ -93,7 +119,9 @@ function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=works
   lastWrite:()=>lastWrite,autoCompletes:()=>autoCompleteCount,
   lastAutoComplete:()=>autoCompleteArgs,nativeContext,
   contextReads:()=>contextReadCount,nativeContextReads:()=>nativeContextReadCount,
-  moduleAccessReads:()=>moduleAccessReadCount};
+  moduleAccessReads:()=>moduleAccessReadCount,directoryReads:()=>directoryReadCount,
+  stateReads:()=>stateReadCount,clockSnapshotReads:()=>clockSnapshotReadCount,
+  rpcCalls:name=>rpcCounts.get(name)||0};
 }
 
 test('source 08:00 late threshold and unpaid 12:00–13:00 credit policy',()=>{
@@ -161,11 +189,116 @@ test('TimeTracker rejects a supplied native context from another workspace',asyn
  await assert.rejects(s.client.snapshot(board,{nativeContext:stale}),
   /native application identity or workspace mismatch/i);
 });
+test('Clock-only role is validated from the canonical native application context',async()=>{
+ const s=setup({role:'invalid'});
+ await assert.rejects(s.client.snapshot(board,{
+  clockOnly:true,nativeContext:s.nativeContext()
+ }),/role assignment/);
+ assert.equal(s.directoryReads(),0);
+});
 
-test('initial TimeTracker route passes its canonical native context into the first snapshot',()=>{
+test('Clock snapshot RPC is registered as an idempotent read-only domain call',()=>{
+ const data=readFileSync(new URL('../data.js',import.meta.url),'utf8');
+ const allowlist=data.slice(data.indexOf('const BOARD_READ_RPC'),
+  data.indexOf('const BOARD_MUTATION_RPC'));
+ assert.match(allowlist,/'timetracker_clock_snapshot'/);
+});
+
+test('Clock-only snapshot skips directory, full state, overview, log and OT retrieval',async()=>{
+ const s=setup({records:[example(),example(other)]});
+ const snapshot=await s.client.snapshot(board,{
+  clockOnly:true,nativeContext:s.nativeContext()
+ });
+ assert.equal(snapshot.status,'VERIFIED_READ');
+ assert.equal(snapshot.clockOnly,true);
+ assert.equal(snapshot.access.moduleRole,'Employee');
+ assert.equal(snapshot.access.name,'Signed user');
+ assert.deepEqual(snapshot.access.overviewDirectory,[]);
+ assert.equal(snapshot.access.employees,null);
+ assert.equal(snapshot.records.length,1);
+ assert.equal(snapshot.records[0].id,'session-1');
+ assert.equal(snapshot.active.id,'session-1');
+ assert.equal(snapshot.overview,null);
+ assert.equal(snapshot.log,null);
+ assert.deepEqual(snapshot.otRequests,[]);
+ assert.equal(s.directoryReads(),0,'Clock does not fetch the employee directory');
+ assert.equal(s.stateReads(),0,'Clock does not fetch all module state rows');
+ assert.equal(s.clockSnapshotReads(),1,'Clock reads one actor-scoped attendance projection');
+ assert.equal(s.rpcCalls('timetracker_ot_snapshot'),0);
+ assert.equal(JSON.stringify(snapshot.records).includes('123.4'),false);
+});
+
+test('Clock-only retrieval falls back only when the lightweight RPC is not deployed',async()=>{
+ const s=setup({records:[example(),example(other)],clockSnapshotUnavailable:true});
+ const snapshot=await s.client.snapshot(board,{
+  clockOnly:true,nativeContext:s.nativeContext()
+ });
+ assert.equal(snapshot.clockOnly,true);
+ assert.equal(snapshot.records.length,1);
+ assert.equal(snapshot.records[0].id,'session-1');
+ assert.equal(s.directoryReads(),0);
+ assert.equal(s.clockSnapshotReads(),1);
+ assert.equal(s.stateReads(),1,'legacy full-state fallback preserves compatibility');
+});
+
+test('Clock-only retrieval never falls back on authorization or contract failures',async()=>{
+ const denied=setup({clockSnapshotError:Object.assign(
+  new Error('TimeTracker module access denied'),{status:403,code:'42501'})});
+ await assert.rejects(denied.client.snapshot(board,{
+  clockOnly:true,nativeContext:denied.nativeContext()
+ }),/module access denied/i);
+ assert.equal(denied.stateReads(),0);
+ assert.equal(denied.directoryReads(),0);
+
+ const foreignContext=setup({clockSnapshotOverride:{
+  contract:'tt-clock-snapshot-1',actorId:user,workspaceId:foreign,boardId:board,
+  stateKey:'timetracker.attendance.v1',scope:'shared',rowFound:true,
+  revision:2,updatedAt:'2026-11-20T00:00:00.000Z',
+  value:JSON.stringify({version:1,records:[example()]})
+ }});
+ await assert.rejects(foreignContext.client.snapshot(board,{
+  clockOnly:true,nativeContext:foreignContext.nativeContext()
+ }),/snapshot identity or schema mismatch/i);
+ assert.equal(foreignContext.stateReads(),0);
+});
+
+test('Clock-only empty state preserves the zero-revision empty contract',async()=>{
+ const s=setup({clockSnapshotOverride:{
+  contract:'tt-clock-snapshot-1',actorId:user,workspaceId:workspace,boardId:board,
+  stateKey:'timetracker.attendance.v1',scope:'shared',rowFound:false,
+  revision:0,updatedAt:null,value:JSON.stringify({version:1,records:[]})
+ }});
+ const snapshot=await s.client.snapshot(board,{
+  clockOnly:true,nativeContext:s.nativeContext()
+ });
+ assert.equal(snapshot.revision,0);
+ assert.deepEqual(snapshot.records,[]);
+ assert.equal(snapshot.active,null);
+});
+
+test('full TimeTracker views retain directory and complete state retrieval',async()=>{
+ const s=setup({records:[example(),example(other)]});
+ const snapshot=await s.client.snapshot(board,{nativeContext:s.nativeContext()});
+ assert.equal(snapshot.clockOnly,false);
+ assert.equal(snapshot.access.employees,null);
+ assert.ok(snapshot.overview);
+ assert.ok(snapshot.log);
+ assert.equal(snapshot.records.length,1);
+ assert.equal(s.directoryReads(),1);
+ assert.equal(s.stateReads(),1);
+ assert.equal(s.clockSnapshotReads(),0);
+});
+
+
+test('initial and background TimeTracker routes use Clock-only mode unless a record is selected',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/await loadTimeTracker\(seq,nativeModuleId==='time-tracker'\?nativeContext:null\)/);
- assert.match(app,/timeTracker\.snapshot\(state\.boardId,\{\s*clockOnly:state\.ttView==='clock',nativeContext\s*\}\)/);
+ assert.match(app,/function timeTrackerClockOnlyForRoute\(identity,workspaceId,boardId\)/);
+ assert.match(app,/pending\?\.applicationId==='timetracker'/);
+ assert.match(app,/\['Attendance session','Overtime request'\]\.includes\(pending\.recordType\)/);
+ assert.match(app,/const clockOnly=timeTrackerClockOnlyForRoute\(identity,ws,state\.boardId\)/);
+ assert.match(app,/timeTracker\.snapshot\(state\.boardId,\{\s*clockOnly,nativeContext\s*\}\)/);
+ assert.match(app,/clockOnly:timeTrackerClockOnlyForRoute\(userId,workspaceId,boardId\)/);
 });
 
 test('read projects existing authoritative state and rejects malformed state',async()=>{
