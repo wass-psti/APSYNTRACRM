@@ -586,3 +586,172 @@
  html[data-aps-monday-theme="dark"] #app .apsm-account-signout {color:#ffb4b4}
  #app .apsm-account button:focus-visible {outline:2px solid var(--apsm-accent);outline-offset:-3px}
 }
+
+/* Mobile account and launcher polish: explicit scope defeats later desktop
+ * settings rules in the consolidated stylesheet. Never hide desktop panels. */
+@media (max-width: 810px) {
+  #app .shell.apsm-shell .aps-settings { min-width: 0; }
+  #app .shell.apsm-shell .aps-settings .apsm-account {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 10px 4px 24px;
+    color: var(--apsm-ink);
+  }
+  #app .shell.apsm-shell .aps-settings .settings-hero,
+  #app .shell.apsm-shell .aps-settings:not(.apsm-profile-expanded):not(.apsm-security-expanded) .settings-grid {
+    display: none !important;
+  }
+  #app .shell.apsm-shell .aps-settings:is(.apsm-profile-expanded,.apsm-security-expanded) .settings-grid {
+    display: block !important;
+    min-width: 0;
+  }
+  #app .shell.apsm-shell .aps-settings:not(.apsm-profile-expanded) .settings-profile-panel,
+  #app .shell.apsm-shell .aps-settings:not(.apsm-security-expanded) .settings-grid > :not(.settings-profile-panel) {
+    display: none !important;
+  }
+  #app .shell.apsm-shell .apsm-account h1 {
+    margin: 0 0 20px;
+    font-size: 23px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -.02em;
+    color: var(--apsm-ink);
+  }
+  #app .shell.apsm-shell .apsm-account h2 {
+    margin: 22px 4px 9px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--apsm-muted);
+  }
+  #app .shell.apsm-shell .apsm-account-current {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px;
+    min-width: 0;
+    border-radius: 18px;
+    background: var(--apsm-lavender);
+    color: var(--apsm-accent);
+  }
+  #app .shell.apsm-shell .apsm-account-avatar {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  #app .shell.apsm-shell .apsm-account strong,
+  #app .shell.apsm-shell .apsm-account small {
+    display: block;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+  }
+  #app .shell.apsm-shell .apsm-account strong { font-size: 16px; font-weight: 600; }
+  #app .shell.apsm-shell .apsm-account small { font-size: 12px; font-weight: 400; }
+  #app .shell.apsm-shell .apsm-account-list {
+    border-radius: 16px;
+    background: var(--apsm-panel);
+  }
+  #app .shell.apsm-shell .apsm-account :is(button.apsm-account-add,button.apsm-account-signout,.apsm-account-list button) {
+    appearance: none;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    min-height: 52px;
+    padding: 12px 14px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.4;
+    text-align: left;
+    box-shadow: none;
+    cursor: pointer;
+  }
+  #app .shell.apsm-shell .apsm-account-list button {
+    border: 0;
+    border-radius: 0;
+    background: var(--apsm-panel);
+    color: var(--apsm-ink);
+  }
+  #app .shell.apsm-shell .apsm-account-list button + button { border-top: 1px solid var(--apsm-stroke); }
+  #app .shell.apsm-shell .apsm-account-list button > span:last-child {
+    margin-left: auto;
+    flex: 0 0 auto;
+    color: var(--apsm-muted);
+    font-size: 22px;
+    line-height: 1;
+  }
+  #app .shell.apsm-shell .apsm-account-list button > span:nth-child(2),
+  #app .shell.apsm-shell .apsm-account-signout > span:last-child {
+    min-width: 0;
+    flex: 1;
+    overflow-wrap: anywhere;
+  }
+  #app .shell.apsm-shell .apsm-account button svg { flex: 0 0 20px; width: 20px; height: 20px; }
+  #app .shell.apsm-shell .apsm-account button.apsm-account-add {
+    justify-content: center;
+    margin: 14px 0 22px;
+    border: 1px solid var(--apsm-accent);
+    border-radius: 14px;
+    color: var(--apsm-accent);
+    background: transparent;
+  }
+  #app .shell.apsm-shell .apsm-account button.apsm-account-signout {
+    border: 1px solid var(--apsm-stroke);
+    border-radius: 16px;
+    background: var(--apsm-panel);
+    color: #a1262b;
+  }
+  html[data-aps-monday-theme="dark"] #app .shell.apsm-shell .apsm-account button.apsm-account-signout { color: #ffb4b4; }
+  #app .shell.apsm-shell .apsm-account button:focus-visible {
+    outline: 2px solid var(--apsm-accent);
+    outline-offset: -3px;
+  }
+  #app .shell.apsm-home-route > .apsm-home {
+    box-sizing: border-box;
+    background: var(--apsm-bg);
+  }
+  #app .shell.apsm-shell .apsm-hero { padding: 12px; margin-bottom: 12px; }
+  #app .shell.apsm-shell .apsm-identity { flex: 1; min-width: 0; gap: 10px; }
+  #app .shell.apsm-shell .apsm-settings { flex: 0 0 44px; height: 44px; color: var(--apsm-ink); background: var(--apsm-bg); }
+  #app .shell.apsm-shell .apsm-workspace-switch-home { min-width: 44px; min-height: 44px; }
+  #app .shell.apsm-shell .apsm-clock-card {
+    padding: 16px;
+    border-radius: 18px;
+    gap: 10px;
+  }
+  #app .shell.apsm-shell .apsm-clock-card > strong { font-size: 20px; font-weight: 650; overflow-wrap: anywhere; }
+  #app .shell.apsm-shell .apsm-clock-card[data-status="idle"] .apsm-clock-badge {
+    background: var(--apsm-panel);
+    color: var(--apsm-muted);
+  }
+  #app .shell.apsm-shell .apsm-carousel {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 10px;
+    overflow: visible;
+  }
+  #app .shell.apsm-shell .apsm-card { min-width: 0; min-height: 120px; }
+  #app .shell.apsm-shell .apsm-card-open { padding: 14px; min-width: 0; }
+  #app .shell.apsm-shell .apsm-card-open strong { font-size: 16px; font-weight: 650; }
+  #app .shell.apsm-shell .apsm-section { margin-bottom: 20px; }
+  #app .shell.apsm-shell .apsm-heading h2 { font-size: 15px; font-weight: 600; }
+  #app .shell.apsm-shell .apsm-bottom-nav > :is(a,button) { min-height: 48px; font-size: 10px; }
+}
+@media (max-width: 360px) {
+  #app .shell.apsm-shell .apsm-hero { padding: 10px; gap: 6px; }
+  #app .shell.apsm-shell .apsm-identity { gap: 7px; }
+  #app .shell.apsm-shell .apsm-identity h1 { font-size: 16px; }
+  #app .shell.apsm-shell .apsm-card-open { padding: 11px; }
+  #app .shell.apsm-shell .apsm-card-open strong { font-size: 14px; }
+  #app .shell.apsm-shell .apsm-bottom-nav > :is(a,button) { font-size: 9px; }
+}
