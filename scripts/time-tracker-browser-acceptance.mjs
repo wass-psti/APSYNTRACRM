@@ -297,7 +297,10 @@ try {
   );
   assert.equal(await noteField.isVisible(), true);
   assert.equal(await noteField.evaluate((el) => el.required), true);
-  assert.equal(await noteField.evaluate((el) => el.validity.valueMissing), true);
+  assert.equal(
+    await noteField.evaluate((el) => el.validity.valueMissing),
+    true,
+  );
   await page.evaluate(() => {
     const active = {
       id: "clock-state-fixture",
