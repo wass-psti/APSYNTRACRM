@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {mountTimeTrackerPixi} from '../time-tracker-pixi-scene.js';
+import {timeTrackerNineHourThreshold} from '../time-tracker-auto-clockout.js';
 import {
  renderTimeTrackerNative,timeTrackerSessionElapsed,syncTimeTrackerClock
 } from '../time-tracker-ui.js';
@@ -12,12 +13,12 @@ const active={
  location:'Office-Base Duty',department:'Engineering',creditedMs:null
 };
 const access={moduleRole:'IT Administrator',attendanceWritesAccepted:true};
-const at=new Date('2026-11-19T07:55:00.000Z');
+const at=new Date('2026-11-19T06:55:00.000Z');
 
 test('active elapsed timer is based on signed clock-in time, not local storage',()=>{
  const elapsed=timeTrackerSessionElapsed(active.clockIn,at);
- assert.equal(elapsed.label,'07:55:00');
- assert.ok(elapsed.progress>.87 && elapsed.progress<.89);
+ assert.equal(elapsed.label,'06:55:00');
+ assert.ok(elapsed.progress>.76 && elapsed.progress<.78);
  assert.deepEqual(timeTrackerSessionElapsed('bad',at),{label:'00:00:00',progress:0});
  assert.equal(timeTrackerSessionElapsed('2026-11-19T08:00:00Z',at).label,'00:00:00');
  assert.equal(timeTrackerSessionElapsed('2026-11-18T00:00:00Z',at).progress,1);
@@ -30,7 +31,7 @@ test('rendering matches the compact blue and purple clock reference without weak
  });
  assert.match(html,/data-tt-view="clock"/);
  assert.match(html,/class="tt-session-ring"/);
- assert.match(html,/id="tt-session-elapsed" data-clock-in="2026-11-19T00:00:00.000Z">07:55:00/);
+ assert.match(html,/id="tt-session-elapsed" data-clock-in="2026-11-19T00:00:00.000Z">06:55:00/);
  assert.match(html,/id="tt-session-progress"/);
  assert.match(html,/role="timer" aria-label="Elapsed time/);
  assert.match(html,/data-action="tt-tab" data-target="hours"/);
@@ -65,8 +66,8 @@ test('existing clock tick updates elapsed text and SVG offset without rebuilding
  nodes.get('tt-session-elapsed').dataset.clockIn=active.clockIn;
  const root={querySelector(selector){return nodes.get(selector.slice(1))||null;}};
  assert.equal(syncTimeTrackerClock(root,at),true);
- assert.equal(nodes.get('tt-session-elapsed').textContent,'07:55:00');
- assert.ok(Number(nodes.get('tt-session-progress')['stroke-dashoffset'])<50);
+ assert.equal(nodes.get('tt-session-elapsed').textContent,'06:55:00');
+ assert.equal(nodes.get('tt-session-progress')['stroke-dashoffset'],(339.292*(1-(6*60+55)/(9*60))).toFixed(3));
  assert.equal(nodes.get('tt-clock-hours').textContent,'03');
  assert.equal(nodes.get('tt-clock-period').textContent,'PM');
 });
@@ -96,4 +97,55 @@ test('Clock view never starts hidden decorative GPU work',()=>{
  }};
  assert.equal(mountTimeTrackerPixi(root,{load:async()=>{loads++;return {};}}),false);
  assert.equal(loads,0);
+});
+
+
+test('credited Clock and ring pause throughout Philippine lunch and resume at 1 PM',()=>{
+ const clockIn='2026-11-24T00:00:00Z';
+ const cases=[
+  ['2026-11-24T03:59:59Z','03:59:59'],
+  ['2026-11-24T04:00:00Z','04:00:00'],
+  ['2026-11-24T04:30:00Z','04:00:00'],
+  ['2026-11-24T05:00:00Z','04:00:00'],
+  ['2026-11-24T05:00:01Z','04:00:01'],
+  ['2026-11-24T09:59:59Z','08:59:59'],
+  ['2026-11-24T10:00:00Z','09:00:00'],
+  ['2026-11-24T10:30:00Z','09:30:00']
+ ];
+ for(const [now,label] of cases)assert.equal(timeTrackerSessionElapsed(clockIn,new Date(now)).label,label);
+ assert.deepEqual(timeTrackerSessionElapsed(clockIn,new Date(cases[2][0])),timeTrackerSessionElapsed(clockIn,new Date(cases[3][0])));
+ assert.equal(timeTrackerSessionElapsed(clockIn,new Date(cases[5][0])).progress<1,true);
+ assert.equal(timeTrackerSessionElapsed(clockIn,new Date(cases[6][0])).progress,1);
+ assert.equal(timeTrackerNineHourThreshold(clockIn),'2026-11-24T10:00:00.000Z');
+ assert.equal(timeTrackerSessionElapsed('2026-11-24T04:30:00Z',new Date('2026-11-24T06:00:00Z')).label,'01:00:00');
+ assert.equal(timeTrackerSessionElapsed('2026-11-24T05:00:00Z',new Date('2026-11-24T14:00:00Z')).label,'09:00:00');
+});
+
+test('active Clock render and live ticks agree with credited total and paid-work goal',()=>{
+ const clockIn='2026-11-23T23:02:00Z';
+ const record={...active,clockIn};
+ const now=new Date('2026-11-24T07:37:49Z');
+ const html=renderTimeTrackerNative({result:{status:'VERIFIED_READ',access,records:[record],active:record},now,view:'clock'});
+ assert.match(html,/id="tt-session-elapsed"[^>]*>07:35:49/);
+ assert.match(html,/<span>Total logged<\/span><strong>07:35:49/);
+ assert.match(html,/data-tt-goal-remaining="[^"]+">1h 25m to goal/);
+ const elapsed={dataset:{clockIn},textContent:''};
+ const progress={setAttribute(key,value){this[key]=value;}};
+ const goal={dataset:{ttGoalRemaining:clockIn},textContent:''};
+ const totalValue={textContent:''};
+ const total={dataset:{ttLiveTotal:clockIn,creditedBase:'0'},querySelector(){return totalValue;}};
+ const clock={textContent:''};
+ const nodes={'#tt-clock-hours':clock,'#tt-session-elapsed':elapsed,'#tt-session-progress':progress,
+  '[data-tt-goal-remaining]':goal,'[data-tt-live-total]':total};
+ const root={querySelector(selector){return nodes[selector]||null;}};
+ syncTimeTrackerClock(root,now);
+ assert.equal(elapsed.textContent,'07:35:49');
+ assert.equal(totalValue.textContent,elapsed.textContent);
+ assert.equal(goal.textContent,'1h 25m to goal');
+ const threshold=timeTrackerNineHourThreshold(clockIn);
+ assert.equal(threshold,'2026-11-24T09:02:00.000Z');
+ syncTimeTrackerClock(root,new Date(threshold));
+ assert.equal(elapsed.textContent,'09:00:00');
+ assert.equal(goal.textContent,'9h goal reached');
+ assert.equal(progress['stroke-dashoffset'],'0.000');
 });
