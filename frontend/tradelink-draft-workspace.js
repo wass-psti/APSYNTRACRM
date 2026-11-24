@@ -1420,7 +1420,9 @@ function tradeLinkDraftRowMatches(row,filters){
  if(!typeLabels.some(([id])=>id===row.documentType))return false;
  if(!draftListStates.some(([id])=>id===row.workflowState&&id!=='all'))return false;
  const archived=row.archived===true;
- return (filters.documentType==='all'||row.documentType===filters.documentType)&&
+ const hidden=row.hidden===true;
+ return (filters.visibilityMode==='all'||(filters.visibilityMode==='hidden'?hidden:!hidden))&&
+  (filters.documentType==='all'||row.documentType===filters.documentType)&&
   (filters.workflowState==='all'||row.workflowState===filters.workflowState)&&
   (filters.archiveMode==='all'||
    (filters.archiveMode==='archived'?archived:!archived))&&
@@ -1483,7 +1485,8 @@ export function updateTradeLinkDraftListUI(container,input={}){
    documentNumber:row.dataset?.documentNumber,
    documentType:row.dataset?.documentType,
    workflowState:row.dataset?.workflowState,
-   archived:row.dataset?.archived==='true'
+   archived:row.dataset?.archived==='true',
+   hidden:row.dataset?.hidden==='true'
   };
   const start=container.querySelector('[data-tl-updated-start]')?.value||'';
   const end=container.querySelector('[data-tl-updated-end]')?.value||'';
@@ -1642,8 +1645,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
   '<div class="tl-ref-selection-row"><p data-tradelink-domain-count role="status" aria-live="polite" aria-atomic="true">'+
    displayed.length+' of '+records.length+(canReview&&!creatorMode?' assigned documents':creatorMode?' created or assigned documents':' authorized records')+' in this response</p>'+
    (readOnly&&!canReview?(()=>{
-    const selectedIds=new Set(Array.isArray(view.selectedDocumentIds)?view.selectedDocumentIds:[]);
-    const selectedRows=records.filter(row=>selectedIds.has(row.documentId));
+    const selectedRows=displayed.filter(row=>selectedIds.has(row.documentId));
     const selectedCount=selectedRows.length;
     const selectedHidden=selectedRows.filter(row=>row.hidden===true).length;
     const busy=view.busy===true;
@@ -1678,7 +1680,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
       escape(row.revision)+'" data-created-at="'+escape(tradeLinkTimestamp(row.createdAt)===null?'':row.createdAt)+
       '" data-updated-at="'+escape(tradeLinkTimestamp(row.updatedAt)===null?'':row.updatedAt)+'" data-archived="'+
       (row.archived===true?'true':'false')+'" data-hidden="'+(row.hidden===true?'true':'false')+'"'+(match?'':' hidden')+'>'+
-      (readOnly&&!canReview?'<td><input id="tl-select-'+escape(row.documentId)+'" type="checkbox" data-tl-select-document data-document-id="'+escape(row.documentId)+'"'+(selectedIds.has(row.documentId)?' checked':'')+' aria-label="Select document '+escape(row.documentNumber)+'" /></td>':'')+
+      (readOnly&&!canReview?'<td><input id="tl-select-'+escape(row.documentId)+'" type="checkbox" data-tl-select-document data-document-id="'+escape(row.documentId)+'"'+(match&&selectedIds.has(row.documentId)?' checked':'')+' aria-label="Select document '+escape(row.documentNumber)+'" /></td>':'')+
       '<td class="tl-ref-row-number">'+escape(index+1)+'</td>'+
       '<td class="tl-ref-doc-number">'+escape(row.documentNumber)+'</td>'+
       '<td>'+escape(typeof row.clientName==='string'&&row.clientName.trim()?row.clientName:'—')+'</td>'+

@@ -4139,6 +4139,7 @@ async function applyTradeLinkDocumentBulkAction(operation){
  if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
   !state.boardManage||state.tradeLinkDraft?.status!=='AUTHORIZED_READ'||
   state.tradeLinkDraft.busy||!['hide','unhide','delete'].includes(operation))return;
+ updateTradeLinkDocumentSelection(root.querySelector('[data-tradelink-domain-list]'));
  const selectedIds=[...new Set(state.tradeLinkDraft.selectedDocumentIds||[])];
  if(!selectedIds.length||selectedIds.length>50)return;
  const selectedSet=new Set(selectedIds);
@@ -12795,15 +12796,14 @@ root.addEventListener('click',event=>{
 function updateTradeLinkDocumentSelection(panel){
  if(!panel||!tradeLinkAuthorizedListRoute()||!state.boardManage||
     state.tradeLinkDraft?.status!=='AUTHORIZED_READ')return;
- const selected=new Set(Array.isArray(state.tradeLinkDraft.selectedDocumentIds)?
-  state.tradeLinkDraft.selectedDocumentIds:[]);
+ const selected=new Set();
  const rows=[...panel.querySelectorAll('[data-tradelink-domain-record]')];
  for(const row of rows){
   const checkbox=row.querySelector('[data-tl-select-document]');
   const id=checkbox?.dataset.documentId||'';
   if(!id)continue;
   if(!row.hidden&&checkbox.checked)selected.add(id);
-  else selected.delete(id);
+  else checkbox.checked=false;
  }
  const currentRows=state.tradeLinkDraft.rows.filter(row=>selected.has(row.documentId));
  state.tradeLinkDraft={...state.tradeLinkDraft,
