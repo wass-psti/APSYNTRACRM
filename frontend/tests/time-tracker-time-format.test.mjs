@@ -19,7 +19,7 @@ test('Philippine times display hh:mm AM/PM at midnight, noon and evening',()=>{
  assert.equal(formatTimeTrackerShortDateTime('2026-11-20T10:05:00Z'),'Nov 20, 06:05 PM');
  assert.equal(formatTimeTrackerClock('invalid'),'—');
 });
-test('overtime display is AM/PM but approved payload shape remains HH:mm',()=>{
+test('overtime request uses native time controls and retains HH:mm payload values',()=>{
  for(const [raw,shown] of [['00:00','12:00 AM'],['12:00','12:00 PM'],['18:05','06:05 PM']]){
   assert.equal(formatTimeTrackerWallClock(raw),shown);
   assert.equal(parseTimeTrackerClockInput(shown),raw);
@@ -29,9 +29,10 @@ test('overtime display is AM/PM but approved payload shape remains HH:mm',()=>{
  const html=renderTimeTrackerOvertime({modalOpen:true,now:new Date('2026-11-20T04:00:00Z'),
   requests:[{id:'ot',name:'Employee',date:'2026-11-20',status:'Submitted',start:'18:00',end:'20:00',durationMinutes:120,task:'Job'}]});
  assert.match(html,/Start:<\/b> 06:00 PM/);
- assert.match(html,/tt-ot-start" type="text"/);
- assert.match(html,/value="06:00 PM"/);
- assert.doesNotMatch(html,/type="time"/);
+ assert.match(html,/tt-ot-start" name="start" type="time"/);
+ assert.match(html,/value="18:00"/);
+ assert.match(html,/tt-ot-end" name="end" type="time"/);
+ assert.match(html,/value="20:00"/);
 });
 test('admin date-time display is 12-hour and converts to same server instant',()=>{
  const value='2026-11-20T18:05';

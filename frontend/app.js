@@ -200,7 +200,7 @@ import {applyTimeTrackerOverviewFilters,filterTimeTrackerOverviewRows,syncTimeTr
 import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,timeTrackerLogRowsForSnapshot,retainTimeTrackerLogDetailIds,TT_LOG_DEFAULT_FILTERS} from './time-tracker-log.js';
 import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAULT_FILTERS} from './time-tracker-reports.js';
 import {timeTrackerCalendarMonth,shiftTimeTrackerCalendarMonth} from './time-tracker-calendar.js';
-import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED,TT_OT_MAX_WEEK_OFFSET,timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate} from './time-tracker-overtime.js';
+import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED,TT_OT_MAX_WEEK_OFFSET,timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate,updateTimeTrackerOvertimePreview} from './time-tracker-overtime.js';
 import {parseTimeTrackerClockInput} from './time-tracker-time-format.js';
 import {timeTrackerMyHoursWeek} from './time-tracker-my-hours.js';
 import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
@@ -10536,8 +10536,8 @@ async function action(name,button){
  case 'tt-ot-close':{
   if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='ot'||
      state.ttBusy||state.ttAttendance?.status!=='VERIFIED_READ')return;
-  if(name==='tt-ot-open')state.ttOtModalOpen=true;
-  if(name==='tt-ot-close')state.ttOtModalOpen=false;
+  if(name==='tt-ot-open'){state.ttOtDraft={};state.ttOtModalOpen=true;}
+  if(name==='tt-ot-close'){state.ttOtModalOpen=false;state.ttOtDraft={};}
   if(name==='tt-ot-current')state.ttOtFilters={...state.ttOtFilters,weekOffset:0};
   if(name==='tt-ot-prev'||name==='tt-ot-next'){
    const offset=state.ttOtFilters.weekOffset+(name==='tt-ot-prev'?-1:1);
@@ -10549,7 +10549,10 @@ async function action(name,button){
   if(name==='tt-ot-sort')
    state.ttOtFilters={...state.ttOtFilters,
     sort:state.ttOtFilters.sort==='oldest'?'newest':'oldest'};
-  render();break;
+  render();
+  if(name==='tt-ot-open')root.querySelector('#tt-ot-date')?.focus();
+  if(name==='tt-ot-close')root.querySelector('[data-action="tt-ot-open"]')?.focus();
+  break;
  }
  case 'tt-ot-approve':
  case 'tt-ot-reject':{
@@ -12879,6 +12882,26 @@ document.addEventListener('keydown',event=>{
 window.addEventListener('scroll',()=>closeBoardColumnContext(),true);
 window.addEventListener('resize',()=>closeBoardColumnContext());
 root.addEventListener('keydown',event=>{
+ const overtimeDialog=root.querySelector('.tt-ot-modal');
+ if(overtimeDialog){
+  if(event.key==='Escape'){
+   event.preventDefault();
+   if(state.ttBusy)return;
+   state.ttOtModalOpen=false;state.ttOtDraft={};render();
+   root.querySelector('[data-action="tt-ot-open"]')?.focus();
+   return;
+  }
+  if(event.key==='Tab'){
+   const focusable=[...overtimeDialog.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])')]
+    .filter(node=>!node.hidden);
+   if(!focusable.length){event.preventDefault();overtimeDialog.focus();return;}
+   const first=focusable[0],last=focusable[focusable.length-1];
+   if(!overtimeDialog.contains(event.target)){event.preventDefault();first.focus();}
+   else if(event.shiftKey&&event.target===first){event.preventDefault();last.focus();}
+   else if(!event.shiftKey&&event.target===last){event.preventDefault();first.focus();}
+   return;
+  }
+ }
  const dialog=root.querySelector('[data-tt-admin-dialog]')||
   root.querySelector('[data-tt-log-detail-dialog]');
  if(!dialog)return;
@@ -12957,6 +12980,14 @@ root.addEventListener('click',event=>{
  }
  const checkbox=event.target.closest('[data-board-select-item]');
  if(checkbox)checkbox.dataset.shiftSelect=event.shiftKey?'true':'false';
+ if(event.target.matches?.('[data-tt-ot-backdrop]')){
+  event.preventDefault();
+  if(!state.ttBusy&&state.ttOtModalOpen){
+   state.ttOtModalOpen=false;state.ttOtDraft={};render();
+   root.querySelector('[data-action="tt-ot-open"]')?.focus();
+  }
+  return;
+ }
  if(event.target.matches?.('[data-tt-log-detail-backdrop]')){
   event.preventDefault();Promise.resolve(action('tt-log-detail-close',event.target)).catch(notice);
   return;
@@ -13742,11 +13773,17 @@ root.addEventListener('submit',event=>{
    draft.start=parseTimeTrackerClockInput(draft.start);
    draft.end=parseTimeTrackerClockInput(draft.end);
   }catch(error){toast(error.message,true);return;}
-  state.ttBusy=true;
-  Promise.resolve(timeTracker.submitOvertime(state.boardId,draft))
+  state.ttOtDraft={...draft};
+  state.ttBusy=true;render();
+  root.querySelector('.tt-ot-modal')?.focus({preventScroll:true});
+  Promise.resolve().then(()=>timeTracker.submitOvertime(state.boardId,draft))
    .then(async()=>{state.ttOtModalOpen=false;state.ttOtDraft={};
      await loadTimeTracker();toast('OT request submitted for bootstrap review.');})
-   .catch(notice).finally(()=>{state.ttBusy=false;render();});
+   .catch(notice).finally(()=>{
+    state.ttBusy=false;render();
+    if(state.ttOtModalOpen)root.querySelector('#tt-ot-date')?.focus({preventScroll:true});
+    else root.querySelector('[data-action="tt-ot-open"]')?.focus();
+   });
   return;
  }
  if(event.target.id==='login-form'){event.preventDefault();login(event.target);return;}
@@ -13863,6 +13900,18 @@ root.addEventListener('invalid',event=>{
 },true);
 root.addEventListener('input',event=>{
  if(syncTradeLinkFinanceInput(event))return;
+ const overtimeForm=event.target.closest?.('#tt-ot-form');
+ if(overtimeForm&&state.view==='board'&&state.tab==='attendance'&&
+    state.ttView==='ot'&&state.ttOtModalOpen&&!state.ttBusy){
+  state.ttOtDraft={
+   date:overtimeForm.querySelector('#tt-ot-date')?.value||'',
+   start:overtimeForm.querySelector('#tt-ot-start')?.value||'',
+   end:overtimeForm.querySelector('#tt-ot-end')?.value||'',
+   reason:overtimeForm.querySelector('#tt-ot-reason')?.value||''
+  };
+  updateTimeTrackerOvertimePreview(overtimeForm);
+  return;
+ }
  if(preserveManualAttendanceDraft(event))return;
  if(event.target.id==='tt-note'&&event.target.closest('#tt-clock-form')){
   ttWorkNoteDraft.write(timeTrackerWorkNoteScope(),event.target.value);
