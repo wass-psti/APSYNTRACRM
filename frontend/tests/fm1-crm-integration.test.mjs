@@ -38,7 +38,7 @@ test("FM1 is integrated into the existing CRM sidebar and hash router", () => {
   assert.equal(fm1?.icon, "ticket");
   assert.match(
     app,
-    /if\(parts\[0\]==='fm1'\)fm1Module=await import\('\.\/fm1\/index\.js'\)/,
+    /if\(parts\[0\]==='fm1'\)\{\s*const routeRead=beginApplicationRouteRead\('FM1 Ticketing'\);\s*try\{fm1Module=await import\('\.\/fm1\/index\.js'\);\}/,
   );
   assert.match(
     app,

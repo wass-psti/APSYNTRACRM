@@ -116,6 +116,13 @@ test('visible Clock polling uses signed reads, revision guard and no automatic w
  assert.match(scope,/fresh\.access\?\.userId!==actor/);
  assert.match(scope,/Number\(fresh\.revision\)<=Number\(state\.ttAttendance\?\.revision\)/);
  assert.match(scope,/state\.ttAttendance=fresh/);
+ assert.match(scope,/syncTimeTrackerClockView\(root/);
+ assert.doesNotMatch(scope,/\brender\s*\(/);
+ const ui=readFileSync('frontend/time-tracker-ui.js','utf8');
+ assert.match(ui,/function morphClockNode\(/);
+ assert.match(ui,/morphClockNode\(current,next\)/);
+ assert.match(ui,/export function syncTimeTrackerClockView\(/);
+ assert.doesNotMatch(ui,/current\.replaceWith\(|current\.innerHTML\s*=/);
  assert.doesNotMatch(scope,/\.commit\(|mutateAttendanceRecords\(/);
  assert.match(app,/TT_CLOCK_CORRECTION_POLL_MS=45000/);
  assert.match(app,/if\(!document\.hidden\)void refreshCorrectedTimeTrackerClock\(\{onFocus:true\}\)/);

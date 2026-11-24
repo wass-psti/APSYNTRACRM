@@ -190,7 +190,7 @@ import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT
 import {FundTrackerNativeClient} from './fund-tracker-native.js';
 import {renderFundTrackerNative} from './fund-tracker-ui.js';
 import {findFundTrackerBoard,FUND_TRACKER_APPLICATION_ROUTE,parseFundTrackerRecordRoute,fundTrackerRecordHref} from './fund-tracker-application.js';
-import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock,syncTimeTrackerSidebar} from './time-tracker-ui.js';
+import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock,syncTimeTrackerClockView,syncTimeTrackerSidebar} from './time-tracker-ui.js';
 import {isTimeTrackerHomeNoteRequired,createTimeTrackerWorkNoteDraft} from './time-tracker-offsite-note.js';
 import {mountTimeTrackerPixi,stopTimeTrackerPixi} from './time-tracker-pixi-scene.js';
 import {startSelectExperience} from './select-experience.js';
@@ -499,6 +499,7 @@ async function talkBoxAttachments(){
 function talkBoxCurrent(scope){return auth.isSignedIn&&state.view==='talkbox'&&state.tab==='talkbox'&&state.context?.user_id===auth.userId&&
  [auth.userId,state.context.workspace_id,state.boardId].join('|')===scope;}
 function renderTalkBoxNativeApplication(){
+ if(state.loading||state.nativeInitialRead==='talkbox'||(talkBoxState.busy&&!talkBoxState.page))return sharedApplicationLoading();
  return renderTalkBoxApplication({
   page:talkBoxState.page,selected:talkBoxState.selected,
   busy:talkBoxState.busy||state.loading,
@@ -590,6 +591,25 @@ async function openTalkBoxIssue(issueId){
 const trashPermanentDelete=new BoardTrashPermanentDeleteClient(db);
 const trashBoardSelection=new Set();
 let routeSerial=0;
+let applicationRouteRead=null;
+function beginApplicationRouteRead(label){
+ const token={label,hash:location.hash,userId:auth.userId,workspaceId:state.context?.workspace_id};
+ applicationRouteRead=token;
+ routeSerial++;
+ render();
+ return token;
+}
+function finishApplicationRouteRead(token){
+ if(applicationRouteRead!==token||location.hash!==token.hash||
+    !auth.isSignedIn||auth.userId!==token.userId||state.context?.workspace_id!==token.workspaceId)return false;
+ applicationRouteRead=null;
+ return true;
+}
+function sharedApplicationLoading(){
+ return renderBoardLoading({hidden:document.hidden,
+  lowPower:navigator.connection?.saveData===true||
+   (Number.isFinite(navigator.deviceMemory)&&navigator.deviceMemory<=4)});
+}
 let orderIntakeRoute=null,orderIntakeRecord=null,orderIntakeRecordRun=0;
 let orderIntakeCreateSave=null,orderIntakeCreateScope=null,orderIntakeEditorGeneration=0;
 const orderIntakeScope=()=>[state.context?.user_id,state.context?.workspace_id].join('|');
@@ -711,22 +731,36 @@ async function refreshCorrectedTimeTrackerClock({onFocus=false}={}){
      fresh.access?.workspaceId!==workspace||fresh.access?.boardId!==boardId||
      Number(fresh.revision)<=Number(state.ttAttendance?.revision))return;
   const previous=state.ttAttendance;
-  const startChanged=previous.active?.id===fresh.active?.id&&
-   previous.active?.clockIn!==fresh.active?.clockIn;
-  const changed=previous.records.length!==fresh.records.length||
+  const changed=previous.active?.id!==fresh.active?.id||
+   previous.active?.clockIn!==fresh.active?.clockIn||
+   previous.active?.location!==fresh.active?.location||
+   previous.active?.department!==fresh.active?.department||
+   previous.active?.workNote!==fresh.active?.workNote||
+   previous.records.length!==fresh.records.length||
    previous.records.some((record,index)=>{
     const next=fresh.records[index];
     return !next||record.id!==next.id||record.clockIn!==next.clockIn||
       record.clockOut!==next.clockOut||record.status!==next.status||
-      record.creditedMs!==next.creditedMs;
-   })||previous.autoClockout?.nextAt!==fresh.autoClockout?.nextAt;
+      record.creditedMs!==next.creditedMs||record.location!==next.location||
+      record.department!==next.department||record.workNote!==next.workNote;
+   })||previous.autoClockout?.status!==fresh.autoClockout?.status||
+   previous.autoClockout?.nextAt!==fresh.autoClockout?.nextAt||
+   previous.autoClockout?.cutoffAt!==fresh.autoClockout?.cutoffAt||
+   previous.autoClockoutUnavailable!==fresh.autoClockoutUnavailable;
   state.ttAttendance=fresh;
   if(changed){
-   state.ttSuccess='';
-   state.ttClockCorrectionNotice=startChanged?
-    'Your recorded Clock-In time was corrected. The active session timer is now synchronized.':
-    'Your attendance record was updated. Clock is showing the latest verified session.';
-   render();
+   syncTimeTrackerClockView(root,{
+    result:fresh,now:new Date(),clockPending:!!state.ttClockPending,
+    clockPendingAction:state.ttClockPending?.action||'clock-out',
+    locationPreference:readTimeTrackerLocationPreference(
+     typeof localStorage==='undefined'?null:localStorage,
+     {userId:actor,workspaceId:workspace}
+    ),
+    workPlanDraft:ttWorkNoteDraft.read(timeTrackerWorkNoteScope()),
+    success:state.ttSuccess,clockCorrectionNotice:state.ttClockCorrectionNotice,
+    geoPromptVisible:state.ttGeoPromptVisible,geoPermission:state.ttGeoPermission,
+    geoMessage:state.ttGeoMessage,clockStage:state.ttClockStage
+   });
   }
  }catch{
   // Keep the previous signed view on transient read failures. Never guess
@@ -766,7 +800,7 @@ function renderLogin(message='',{mode=authViewFromHash(),notice='',emailValue=''
  syncFuelTrans({container:null});
  stopAuthVisuals();
  stopSidebarSelection();
- sidebarMobileOpen=false;sidebarManualCollapsed=false;
+ sidebarMobileOpen=false;sidebarManualCollapsed=false;timeTrackerSubmenuOpen=true;
  stopOverviewMotion();
  stopBoardCatalogMotion();
  stopFoundationMotion();
@@ -795,6 +829,7 @@ function sidebarNav(href,label,icon,active,{count=null}={}){
 // Session-local navigation presentation. No permissions or routes are changed.
 let sidebarManualCollapsed=false;
 let sidebarMobileOpen=false;
+let timeTrackerSubmenuOpen=true;
 function syncSidebarLayout(){
  const shellElement=root.querySelector(':scope > .shell');
  if(!shellElement)return;
@@ -809,7 +844,8 @@ function syncSidebarLayout(){
   toggle.setAttribute('title',expanded?'Collapse navigation':'Expand navigation');
  }
  syncTimeTrackerSidebar(shellElement,{enabled:state.ttStandalone===true&&state.ttAttendance?.status==='VERIFIED_READ',
-  expanded:!window.matchMedia('(max-width:820px)').matches&&!sidebarManualCollapsed});
+  expanded:!window.matchMedia('(max-width:820px)').matches&&!sidebarManualCollapsed,
+  submenuOpen:timeTrackerSubmenuOpen});
 }
 /** Canonical navigation selection shared by initial render and cached-shell updates. */
 function currentSidebarNavigation(){
@@ -856,6 +892,7 @@ async function loadPaseoManagement(cursor=null){
 
 function renderPaseoNative(){
  const current=state.paseoManagement||{status:'LOADING'};
+ if(current.status==='LOADING')return sharedApplicationLoading();
  const verified=current.status==='VERIFIED';
  const heading=verified?'Booking overview':current.status==='DENIED'?'Administrator access unavailable':'Booking overview';
  const summary=verified?`<section class="pdl-crm-summary" aria-label="Signed booking administration">
@@ -1014,13 +1051,13 @@ let shellSidebarSignature=null;
 let shellRoute=null;
 function shell(body){
  stopAuthVisuals();
- const crumb=state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.fuelTrackStandalone?'FuelTrack+':state.fuelTransStandalone?'FuelTrans':state.view==='paseo'?'Paseo de Lomboy':state.view==='order-intake'?'Order Intake':currentSidebarNavigation()==='talkbox'?'TalkBox':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'Teams':state.view==='invitation'?'Workspace invitation':'Settings';
+ const crumb=applicationRouteRead?.label||(state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.fuelTrackStandalone?'FuelTrack+':state.fuelTransStandalone?'FuelTrans':state.view==='paseo'?'Paseo de Lomboy':state.view==='order-intake'?'Order Intake':currentSidebarNavigation()==='talkbox'?'TalkBox':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'Teams':state.view==='invitation'?'Workspace invitation':'Settings');
  const identity=[state.context?.user_id,state.context?.workspace_id].join('|');
- const sidebarSignature=JSON.stringify([state.ttStandalone,state.frtStandalone,state.tlStandalone,state.fuelTrackStandalone,state.fuelTransStandalone,state.roleVerified,state.adminVerified,state.boardCatalogError,name(),
+ const sidebarSignature=JSON.stringify([state.workspaceTransitionPending,state.roleVerified,state.adminVerified,state.boardCatalogError,name(),
   state.context?.profile?.platform_role,state.crmRoleSnapshot?.effectiveRole,
   state.workspaceRelationSnapshot?.relation,workspaceName(),
   state.boards.filter(board=>!isStandaloneApplicationBoard(board)).map(board=>[board.id,board.name]),
-  state.boards.length]);
+  state.boards.map(board=>[board.id,board.name])]);
  const route=[state.view,state.boardId,state.tab,state.ttStandalone,state.frtStandalone,state.tlStandalone,state.fuelTrackStandalone,state.fuelTransStandalone].join('|');
  // Preserve each group's horizontal position only across same-signed-view renders.
  const scrollPositions=state.view==='board'&&shellIdentity===identity&&shellRoute===route?
@@ -1028,7 +1065,7 @@ function shell(body){
  disposeTimeTrackerMaps();
  const existing=root.querySelector(':scope > .shell');
  const reusable=existing&&shellIdentity===identity;
- if(shellIdentity!==identity)closeWorkspacePanels();
+ if(shellIdentity!==identity){closeWorkspacePanels();timeTrackerSubmenuOpen=true;}
  if(reusable){
   const oldSidebar=existing.querySelector('.aps-sidebar');
   if(shellSidebarSignature!==sidebarSignature){
@@ -1697,8 +1734,9 @@ function timeTrackerOjtAdminScope(){
  return {userId:a.userId,workspaceId:a.workspaceId,boardId:a.boardId};
 }
 function renderTimeTrackerApplication(){
+ if(state.ttReadLoading||state.nativeInitialRead==='attendance')return sharedApplicationLoading();
  return renderTimeTrackerNative({
-  displayName:name(),
+  displayName:name(),referenceShell:state.ttStandalone===true,
   ojtSelected:timeTrackerOjtScope()?state.ttOjtSelected:null,
   ojtAttendance:timeTrackerOjtScope()?state.ttOjtSnapshot:null,
   ojtBusy:state.ttOjtBusy||state.ttOjtPending,
@@ -1743,7 +1781,8 @@ function renderTimeTrackerApplication(){
  });
 }
 function renderFundTrackerApplication(){
-  return renderFundTrackerNative({
+ if(state.frtFinanceBusy||state.nativeInitialRead==='finance')return sharedApplicationLoading();
+ return renderFundTrackerNative({
    result:state.frtFinance,busy:state.frtFinanceBusy,
    detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,
    selectedRequestId:state.frtFinanceDetailId,statusFilter:state.frtStatusFilter,
@@ -1751,6 +1790,7 @@ function renderFundTrackerApplication(){
   });
  }
  function renderFuelTrackApplication(){
+ if(state.fuelTrackBackendBusy||state.nativeInitialRead==='fueltrack')return sharedApplicationLoading();
  return renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,
   actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,
   analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,
@@ -1817,6 +1857,11 @@ function boardPage(){
  const b=state.board.board;
  if(state.fuelTrackStandalone&&isFuelTrackV3ApplicationBoard(b))return renderFuelTrackApplication();
  if(moduleByBoardName(b.name)?.key==='fueltrans')return '<div id="fueltrans-native-host"></div>';
+ if(state.tlStandalone&&isTradeLinkBoard(b)&&(
+  (state.tradeLinkActivityBusy&&!state.tradeLinkActivity)||
+  (state.tradeLinkAnalyticsBusy&&!state.tradeLinkAnalytics)||
+  (state.tradeLinkDraft.busy&&state.tradeLinkDraft.status==='LOADING')))
+  return sharedApplicationLoading();
  if(state.tlStandalone&&isTradeLinkBoard(b))return renderTradeLinkApplication({
   detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,
   activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},
@@ -2125,7 +2170,8 @@ function render(){
   state.boardItemSearch='';state.boardItemSearchBoard=null;
   boardItemFilterScope=filterScope;
  }
- if(!state.context){fm1Module?.unmountFm1Application();closeTradeLinkSavedDocumentOutput();renderLogin();return;}
+ if(!state.context){applicationRouteRead=null;fm1Module?.unmountFm1Application();closeTradeLinkSavedDocumentOutput();renderLogin();return;}
+ if(applicationRouteRead){shell(sharedApplicationLoading());return;}
  if(state.view!=='fm1')fm1Module?.unmountFm1Application();
  preserveTimeTrackerLogExpansion();
  captureTradeLinkTabMotion(root);
@@ -2159,7 +2205,8 @@ function render(){
  else if(state.view==='paseo')shell(renderPaseoNative());
  else if(state.view==='order-intake'&&orderIntakeRoute){
   const scope=orderIntakeScope();
-  shell(renderOrderIntake({route:orderIntakeRoute,snapshot:orderIntakeCurrent(scope)?orderIntakeRead.read(scope):null,
+  const snapshot=orderIntakeCurrent(scope)?orderIntakeRead.read(scope):null;
+  shell(!snapshot||(snapshot.busy&&!snapshot.rows?.length)?sharedApplicationLoading():renderOrderIntake({route:orderIntakeRoute,snapshot,
    record:orderIntakeCurrent(scope)?orderIntakeRecord:null}));
  }
  else if(state.view==='tradelink')shell(renderTradeLinkRouteUnavailable(state.error));
@@ -3362,6 +3409,7 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
    await loadTradeLinkDrafts(seq);
   return;
  }
+ state.nativeInitialRead=['attendance','finance','fueltrack','talkbox'].includes(tab)?tab:null;state.ttReadLoading=false;
  if(tab==='talkbox')state.view='talkbox';else state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true;state.board=null;state.boardUi=null;state.boardPageBusy=false;state.boardPageError='';state.boardManage=false;state.error=null;state.issues=[];state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;state.frtFinanceView='tracker';state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
  render();
  try{
@@ -3395,7 +3443,8 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
      workspaceId:state.context.workspace_id,boardId});
  }catch(err){if(seq!==routeSerial)return;state.error=errorMessage(err);}
  finally{if(seq===routeSerial){state.loading=false;render();}}
- if(seq!==routeSerial||!state.board)return;
+ if(seq!==routeSerial||!state.board){if(seq===routeSerial)state.nativeInitialRead=null;return;}
+ state.nativeInitialRead=null;
  if(tab==='items'&&TT_BOARD_GPS_PROJECTION_ENABLED&&
     moduleByBoardName(state.board.board?.name)?.key==='timetracker'){
    const identity=state.context?.user_id,workspace=state.context?.workspace_id;
@@ -4689,7 +4738,7 @@ async function loadTimeTracker(seq=routeSerial){
   state.ttClockPending=null;
  state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';
  state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
- state.ttBusy=true;state.ttError='';render();
+ state.ttReadLoading=true;state.ttBusy=true;state.ttError='';render();
  try{
   const snapshot=await timeTracker.snapshot(state.boardId,{clockOnly:state.ttView==='clock'});
   if(run===state.ttRunId&&seq===routeSerial&&auth.isSignedIn&&
@@ -4747,8 +4796,8 @@ async function loadTimeTracker(seq=routeSerial){
   }
  }finally{
   if(run===state.ttRunId&&seq===routeSerial){
-   state.ttBusy=false;render();
-   // The first platform reconciliation can be deferred while this signed
+   state.ttReadLoading=false;state.ttBusy=false;render();
+    // The first platform reconciliation can be deferred while this signed
    // attendance snapshot protects the visible TimeTracker controls. Resume it
    // immediately after the read, unless another local edit is still active.
    if(shouldResumeDeferredReconciliation(platformSync.lastStatus,{
@@ -5595,6 +5644,7 @@ async function openPendingNativeSearchRecord(boardId){
 }
 
 async function onRoute(){
+ applicationRouteRead=null;state.nativeInitialRead=null;state.ttReadLoading=false;
  closeTradeLinkSavedDocumentOutput();
  syncFuelTrans({container:null});
  if(!state.context)return;
@@ -5661,7 +5711,17 @@ async function onRoute(){
  if(parts[0]==='paseo'){
   state.view='paseo';await loadPaseoManagement();return;
  }
- if(parts[0]==='fm1')fm1Module=await import('./fm1/index.js');
+ if(parts[0]==='fm1'){
+  const routeRead=beginApplicationRouteRead('FM1 Ticketing');
+  try{fm1Module=await import('./fm1/index.js');}
+  catch{
+   if(finishApplicationRouteRead(routeRead)){
+    state.view='fm1';shell(renderBoardLoadingError('FM1 Ticketing could not load. Refresh to retry.'));
+   }
+   return;
+  }
+  if(!finishApplicationRouteRead(routeRead))return;
+ }
  if(parts[0]==='fm1'&&parts[1]==='ticket'&&parts[2]){
   let recordId='';try{recordId=decodeURIComponent(parts[2]);}catch{}
   if(recordId&&recordId.length<=180)pendingNativeSearchSelection={applicationId:'fm1',recordId,boardId:null,
@@ -5700,13 +5760,16 @@ async function onRoute(){
   if(!tradeLinkRoute){state.view='tradelink';state.error='Invalid TradeLink application route.';render();return;}
   if(tradeLinkRoute.canonicalHash!==routePath)
    history.replaceState(null,'',location.pathname+location.search+tradeLinkRoute.canonicalHash);
+  const routeRead=beginApplicationRouteRead('TradeLink');
   let tradeLinkContext;
   try{tradeLinkContext=await db.nativeApplicationBoardContext('tradelink');}
   catch(error){
+   if(!finishApplicationRouteRead(routeRead))return;
    routeSerial++;state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
    state.boardManage=false;state.edit=false;state.tradeLinkModuleRole='';state.error='TradeLink native application access is unavailable: '+errorMessage(error);
    state.view='tradelink';render();return;
   }
+  if(!finishApplicationRouteRead(routeRead))return;
   const tradeLinkBoard=tradeLinkContext.board;
   state.tradeLinkSection=tradeLinkRoute.section;
   state.tradeLinkModuleRole=tradeLinkContext.role||'';
@@ -5734,13 +5797,16 @@ async function onRoute(){
   if(!fuelTrackRoute){state.error='Invalid FuelTrack application route.';state.view='board';render();return;}
   if(fuelTrackRoute.canonicalHash!==routePath)
    history.replaceState(null,'',location.pathname+location.search+fuelTrackRoute.canonicalHash);
+  const routeRead=beginApplicationRouteRead('FuelTrack+');
   let fuelTrackContext;
   try{fuelTrackContext=await db.nativeApplicationBoardContext('fueltrack-plus');}
   catch(error){
+   if(!finishApplicationRouteRead(routeRead))return;
    routeSerial++;state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
    state.boardManage=false;state.edit=false;state.error='FuelTrack+ native application access is unavailable: '+errorMessage(error);
    state.view='board';render();return;
   }
+  if(!finishApplicationRouteRead(routeRead))return;
   const fuelTrackBoard=fuelTrackContext.board;
   state.fuelTrackSection=fuelTrackRoute.section;
   state.fuelTrackAnalyticsView=fuelTrackRoute.analyticsView;
@@ -5779,15 +5845,18 @@ async function onRoute(){
  }
  if(parts[0]==='fund-tracker'){
   state.frtStandalone=true;
+  const routeRead=beginApplicationRouteRead('Fund Tracker');
   let fundTrackerContext;
   try{fundTrackerContext=await db.nativeApplicationBoardContext('fund-released-tracker');}
   catch(error){
+   if(!finishApplicationRouteRead(routeRead))return;
    routeSerial++;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;
    state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;
    state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
    state.error='Fund Tracker native application access is unavailable: '+errorMessage(error);
    state.view='board';render();return;
   }
+  if(!finishApplicationRouteRead(routeRead))return;
   const fundTrackerBoard=fundTrackerContext.board;
   const selectedRecord=parseFundTrackerRecordRoute(parts);
   if(fundTrackerBoard&&selectedRecord){
@@ -5810,13 +5879,16 @@ async function onRoute(){
  }
  if(parts[0]==='time-tracker'){
   state.ttStandalone=true;
+  const routeRead=beginApplicationRouteRead('TimeTracker');
   let timeTrackerContext;
   try{timeTrackerContext=await db.nativeApplicationBoardContext('time-tracker');}
   catch(error){
+   if(!finishApplicationRouteRead(routeRead))return;
    routeSerial++;state.ttRunId++;state.ttAttendance=null;clearTimeTrackerOjtSelection();state.ttBusy=false;
    state.ttError='TimeTracker native application access is unavailable: '+errorMessage(error);
    state.boardId=null;state.board=null;state.boardUi=null;state.view='time-tracker';render();return;
   }
+  if(!finishApplicationRouteRead(routeRead))return;
   const attendanceBoard=timeTrackerContext.board;
   const attendanceRecordId=parts[1]==='attendance'&&validUuid(parts[2])?parts[2]:null;
   const overtimeRecordId=parts[1]==='overtime'&&validUuid(parts[2])?parts[2]:null;
@@ -7911,6 +7983,12 @@ async function action(name,button){
       workspace===state.context?.workspace_id)render();
   }
   break;
+ }
+ case 'tt-sidebar-disclosure':{
+   if(!state.context||!auth.isSignedIn||state.ttStandalone!==true||state.ttAttendance?.status!=='VERIFIED_READ')return;
+   timeTrackerSubmenuOpen=!timeTrackerSubmenuOpen;
+   syncSidebarLayout();
+   break;
  }
  case 'sidebar-toggle':{
    if(!state.context||!auth.isSignedIn)return;
@@ -10308,12 +10386,62 @@ async function action(name,button){
   state.ttLogSelectedIds=[...selected];render();
   root.querySelector('[data-action="tt-log-detail-toggle-select"]')?.focus();break;
  }
+ case 'tt-log-row-select':{
+  if(!timeTrackerAdminLogReady()||state.ttAttendance.access.moduleRole!=='System Admin'||state.ttLogAdminBusy)return;
+  const id=button.dataset.recordId;
+  const record=timeTrackerLogRowsForSnapshot(state.ttAttendance).find(r=>r.id===id);
+  if(!record)return;
+  if(record.isOjt){
+   state.ttLogSelectedIds=state.ttLogSelectedIds.includes(id)?[]:[id];
+  }else{
+   const selected=new Set(state.ttLogSelectedIds.filter(value=>!String(value).startsWith('ojt:')));
+   if(selected.has(id))selected.delete(id);
+   else if(selected.size<TT_ADMIN_RECORD_LIMIT)selected.add(id);
+   else {toast('Select at most '+TT_ADMIN_RECORD_LIMIT+' attendance records.',true);return;}
+   state.ttLogSelectedIds=[...selected];
+  }
+  render();
+  [...root.querySelectorAll('[data-action="tt-log-row-select"]')].find(row=>row.dataset.recordId===id)?.focus();
+  break;
+ }
+ case 'tt-log-view':
+ case 'tt-log-filter-reset':
+ case 'tt-log-filter-apply':{
+  if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='log'||state.ttAttendance?.status!=='VERIFIED_READ')return;
+  let next={...TT_LOG_DEFAULT_FILTERS,...state.ttLogFilters};
+  if(name==='tt-log-view'){
+   if(!['all','today','Completed','Active'].includes(button.dataset.target))return;
+   next.view=button.dataset.target;
+  }else if(name==='tt-log-filter-reset'){
+   next={...TT_LOG_DEFAULT_FILTERS,view:next.view,search:next.search,employeeId:next.employeeId};
+  }else{
+   const panel=button.closest('.tt-log-filter-panel');
+   if(!panel)return;
+   for(const key of ['period','status','location','department','sort','start','end'])next[key]=panel.querySelector('#tt-log-'+key)?.value||TT_LOG_DEFAULT_FILTERS[key];
+   if(next.period==='custom'&&(!next.start||!next.end||next.start>next.end)){toast('Select a valid start and end date.',true);return;}
+  }
+  state.ttLogFilters=next;
+  const visible=new Set(filterTimeTrackerLogRows(timeTrackerLogRowsForSnapshot(state.ttAttendance),next).map(r=>r.id));
+  state.ttLogSelectedIds=state.ttLogSelectedIds.filter(id=>visible.has(id));
+  state.ttLogExpandedIds=[];
+  render();
+  if(name!=='tt-log-view')root.querySelector('.tt-log-filter-trigger')?.focus();
+  break;
+ }
+ case 'tt-log-insights':{
+  const insights=root.querySelector('.tt-log-secondary-analytics');
+  if(insights){insights.open=!insights.open;if(insights.open)insights.scrollIntoView({block:'nearest'});}
+  break;
+ }
  case 'tt-log-admin-select-visible':{
   if(!timeTrackerAdminLogReady()||state.ttAttendance.access.moduleRole!=='System Admin'||state.ttLogAdminBusy)return;
   const standardIds=new Set(state.ttAttendance.log?.rows?.map(row=>row.id)||[]);
   const selected=new Set(state.ttLogSelectedIds.filter(id=>standardIds.has(id)));
   const ids=[...root.querySelectorAll('.tt-log-filterable:not([hidden])')]
    .map(row=>row.dataset.recordId).filter(id=>standardIds.has(id));
+  if(ids.length&&ids.every(id=>selected.has(id))){
+   ids.forEach(id=>selected.delete(id));state.ttLogSelectedIds=[...selected];render();break;
+  }
   for(const id of ids){
    if(selected.size>=TT_ADMIN_RECORD_LIMIT&&!selected.has(id))break;
    selected.add(id);
@@ -13017,6 +13145,9 @@ document.addEventListener('keydown',event=>{
 window.addEventListener('scroll',()=>closeBoardColumnContext(),true);
 window.addEventListener('resize',()=>closeBoardColumnContext());
 root.addEventListener('keydown',event=>{
+ if(event.key===' '&&event.target.closest?.('[data-action="tt-sidebar-disclosure"]')){
+  event.preventDefault();event.target.closest('[data-action="tt-sidebar-disclosure"]').click();return;
+ }
  const overtimeDialog=root.querySelector('.tt-ot-modal');
  if(overtimeDialog){
   if(event.key==='Escape'){
@@ -13595,17 +13726,9 @@ root.addEventListener('change',event=>{
    render();
   }
  }
- if(['tt-log-period','tt-log-status','tt-log-location','tt-log-sort'].includes(event.target.id)&&
-    state.view==='board'&&state.ttView==='log'&&state.ttAttendance?.status==='VERIFIED_READ'){
-  const key=event.target.id.slice('tt-log-'.length);
-  const value=event.target.value;
-  if(key==='period'&&['all','today','week','month'].includes(value)||
-     key==='status'&&['all','Active','Completed','Late','Administrative closure'].includes(value)||
-     key==='sort'&&['newest','oldest'].includes(value)||
-     key==='location'&&(value==='all'||timeTrackerLogRowsForSnapshot(state.ttAttendance).some(r=>r.location===value))){
-    state.ttLogFilters={...state.ttLogFilters,[key]:value};
-    render();
-  }
+ if(event.target.id==='tt-log-period'&&state.ttView==='log'){
+  const range=event.target.closest('.tt-log-filter-panel')?.querySelector('.tt-log-custom-range');
+  if(range)range.hidden=event.target.value!=='custom';
  }
  if(event.target.id==='tt-report-period'&&
     state.ttView==='reports'&&['all','today','week','month','custom'].includes(event.target.value)){

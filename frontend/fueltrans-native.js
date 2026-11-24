@@ -22,7 +22,9 @@ export function syncFuelTrans({container,auth,api,boardId,workspaceId,userId,rou
  stationStyles.href=new URL('./fueltrans/station-design03.css',import.meta.url).href;
  const reconcileStyles=document.createElement('link');reconcileStyles.rel='stylesheet';
  reconcileStyles.href=new URL('./fueltrans/station-reconcile04.css',import.meta.url).href;
- const root=document.createElement('div');shadow.append(stylesheet,referenceStyles,operationalStyles,stationStyles,reconcileStyles,root);container.append(element);
+ const loaderStyles=document.createElement('link');loaderStyles.rel='stylesheet';
+ loaderStyles.href=new URL('./board-loading.css',import.meta.url).href;
+ const root=document.createElement('div');shadow.append(stylesheet,referenceStyles,operationalStyles,stationStyles,reconcileStyles,loaderStyles,root);container.replaceChildren(element);
  const appBase=base||('#/boards/'+boardId+'/fueltrans');
  const context={auth,api,boardId,workspaceId,userId,onMutation,
   isCurrent:()=>element.isConnected&&auth.userId===userId&&

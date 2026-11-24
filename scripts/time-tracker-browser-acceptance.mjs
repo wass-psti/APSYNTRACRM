@@ -785,50 +785,78 @@ try {
       }),
     { result: adminResult, directory: adminDirectory },
   );
-  await page.getByText("Manage attendance records", { exact: true }).waitFor();
-  await page.getByRole("button", { name: "Select visible" }).waitFor();
+  const toolbar = page.getByRole("region", {
+    name: "System Admin attendance record management",
+  });
+  await toolbar.waitFor();
+  const selectVisible = toolbar.getByRole("checkbox", {
+    name: "Select visible standard employee records",
+  });
+  await selectVisible.waitFor();
+  assert.equal(await selectVisible.getAttribute("aria-checked"), "false");
   await page.locator(".tt-log-row-summary").waitFor();
-  assert.equal(await page.locator('input[type="checkbox"]').count(), 0);
+  const rowCheckbox = page.getByRole("checkbox", {
+    name: "Select Test Employee",
+  });
+  await rowCheckbox.waitFor();
+  assert.equal(await rowCheckbox.getAttribute("aria-checked"), "false");
+  await page.getByRole("button", { name: "Add Log", exact: true }).waitFor();
   await page.getByRole("button", { name: "Edit selected" }).waitFor();
   await page.getByRole("button", { name: "Delete selected" }).waitFor();
-  const managementSurface = await page
-    .locator(".tt-log-admin-toolbar")
-    .evaluate((element) => {
-      const toolbar = getComputedStyle(element);
-      const heading = getComputedStyle(
-        element.querySelector(".tt-log-admin-toolbar-heading"),
-      );
-      const action = getComputedStyle(
-        element.querySelector(".tt-log-admin-toolbar-actions button"),
-      );
-      const selection = getComputedStyle(
-        element.querySelector(".tt-log-admin-selection-status"),
-      );
-      return {
-        display: toolbar.display,
-        borderRadius: toolbar.borderRadius,
-        background: toolbar.backgroundImage,
-        headingDisplay: heading.display,
-        actionsDisplay: getComputedStyle(
-          element.querySelector(".tt-log-admin-toolbar-actions"),
-        ).display,
-        actionBackground: action.backgroundImage,
-        actionBorderRadius: action.borderRadius,
-        selectionBorderRadius: selection.borderRadius,
-      };
-    });
   assert.equal(
-    managementSurface.display,
-    "grid",
-    "System Admin toolbar stylesheet must be present in the generated bundle",
+    await page.getByRole("button", { name: "Edit selected" }).isDisabled(),
+    true,
   );
-  assert.equal(managementSurface.borderRadius, "16px");
-  assert.ok(managementSurface.background.includes("linear-gradient"));
-  assert.equal(managementSurface.headingDisplay, "flex");
+  assert.deepEqual(
+    await page.locator(".tt-log-table thead th").allTextContents(),
+    ["", "Clock In", "Employee", "Working Location", "Department", "Clock Out"],
+  );
+  assert.match(
+    await page.locator(".tt-log-row-clock").textContent(),
+    /08:00:00/,
+  );
+  assert.match(
+    await page.locator(".tt-log-row-department").textContent(),
+    /Information Technology/,
+  );
+  await page.locator(".tt-log-filter-trigger").click();
+  await page.locator(".tt-log-filter-panel").waitFor();
+  for (const id of ["period", "status", "location", "department", "sort"]) {
+    await page.locator("#tt-log-" + id).waitFor();
+  }
+  await page.getByRole("button", { name: "Reset", exact: true }).waitFor();
+  await page
+    .getByRole("button", { name: "Apply filters", exact: true })
+    .waitFor();
+  await page.locator(".tt-log-filter-trigger").click();
+  assert.equal(await page.locator(".tt-log-filter-panel").isVisible(), false);
+  const managementSurface = await toolbar.evaluate((element) => {
+    const toolbarStyle = getComputedStyle(element);
+    const action = getComputedStyle(
+      element.querySelector(".tt-log-admin-toolbar-actions button"),
+    );
+    const selection = getComputedStyle(
+      element.querySelector(".tt-log-admin-selection-status"),
+    );
+    return {
+      display: toolbarStyle.display,
+      borderRadius: toolbarStyle.borderRadius,
+      background: toolbarStyle.backgroundImage,
+      actionsDisplay: getComputedStyle(
+        element.querySelector(".tt-log-admin-toolbar-actions"),
+      ).display,
+      actionBackground: action.backgroundImage,
+      actionBorderRadius: action.borderRadius,
+      selectionBorderRadius: selection.borderRadius,
+    };
+  });
+  assert.equal(managementSurface.display, "flex");
+  assert.equal(managementSurface.borderRadius, "0px");
+  assert.equal(managementSurface.background, "none");
   assert.equal(managementSurface.actionsDisplay, "flex");
-  assert.ok(managementSurface.actionBackground.includes("linear-gradient"));
-  assert.equal(managementSurface.actionBorderRadius, "9px");
-  assert.equal(managementSurface.selectionBorderRadius, "10px");
+  assert.equal(managementSurface.actionBackground, "none");
+  assert.equal(managementSurface.actionBorderRadius, "50%");
+  assert.equal(managementSurface.selectionBorderRadius, "0px");
   await page.evaluate(
     ({ result, directory, recordId }) =>
       window.__timeTrackerRender({
@@ -1102,6 +1130,119 @@ try {
     "mobile layout overflows by " + mobileOverflow + "px",
   );
   await checkAccessibility("TimeTracker mobile view");
+
+  // Render the real standalone shell with production CSS, not just the
+  // isolated legacy component. Catch missing styles, horizontal overflow,
+  // duplicate headers, and a fallback font before this redesign is merged.
+  await page.setViewportSize({ width: 1440, height: 960 });
+  const referenceLayout = await page.evaluate(async () => {
+    const { renderTimeTrackerNative, syncTimeTrackerSidebar } =
+      await import("/frontend/time-tracker-ui.js");
+    const app = document.querySelector("#app");
+    app.innerHTML =
+      '<div class="shell"><aside class="sidebar aps-sidebar"><div class="sidebar-nav-scroll"><nav class="nav-list"><a class="nav-link active" href="#/time-tracker">TimeTracker</a></nav></div></aside><main class="main aps-board-shell aps-time-tracker-shell"><header class="topbar"><div class="breadcrumb"><strong>TimeTracker</strong></div></header><div class="main-content"></div></main></div>';
+    const shell = app.querySelector(".shell");
+    shell.querySelector(".main-content").innerHTML = renderTimeTrackerNative({
+      result: {
+        status: "VERIFIED_READ",
+        access: { moduleRole: "Employee", attendanceWritesAccepted: false },
+        records: [],
+        active: null,
+        otRequests: [],
+      },
+      referenceShell: true,
+      displayName: "Example Employee",
+      now: new Date("2026-11-24T09:15:00Z"),
+    });
+    syncTimeTrackerSidebar(shell, { enabled: true, expanded: true });
+    const faces = await document.fonts.load("600 38px Montserrat");
+    const nav = shell.querySelector(".aps-sidebar .tt-navigation-scroll");
+    const tabs = [...nav.querySelectorAll(".tt-nav-tab")];
+    const greeting = shell.querySelector(".tt-reference-welcome");
+    const card = shell.querySelector(".tt-clock-compact");
+    const main = shell.querySelector("main");
+    const bounds = (node) => node.getBoundingClientRect();
+    const center = (node) => bounds(node).left + bounds(node).width / 2;
+    const positions = tabs.map((tab) => bounds(tab).top);
+    return {
+      header: Boolean(shell.querySelector(".tt-app-header")),
+      greeting: greeting.textContent,
+      font: getComputedStyle(greeting).fontFamily,
+      loadedFont: faces.some((face) => face.status === "loaded"),
+      textAlign: getComputedStyle(greeting).textAlign,
+      navDisplay: getComputedStyle(nav).display,
+      overflow: nav.scrollWidth - nav.clientWidth,
+      vertical: positions.every((top, i) => i === 0 || top > positions[i - 1]),
+      cardWidth: bounds(card).width,
+      centerOffset: Math.abs(center(card) - center(main)),
+      employeeTab: tabs.some((tab) => tab.dataset.target === "employees"),
+    };
+  });
+  assert.equal(referenceLayout.header, false);
+  assert.equal(referenceLayout.greeting, "Good evening, Example!");
+  assert.match(referenceLayout.font, /^Montserrat/);
+  assert.equal(referenceLayout.loadedFont, true);
+  assert.equal(referenceLayout.textAlign, "center");
+  assert.equal(referenceLayout.navDisplay, "grid");
+  assert.ok(referenceLayout.overflow <= 1);
+  assert.equal(referenceLayout.vertical, true);
+  assert.ok(Math.abs(referenceLayout.cardWidth - 462) <= 1);
+  assert.ok(referenceLayout.centerOffset <= 2);
+  assert.equal(referenceLayout.employeeTab, false);
+
+  const sidebarStates = await page.evaluate(async () => {
+    const { syncTimeTrackerSidebar } =
+      await import("/frontend/time-tracker-ui.js");
+    const shell = document.querySelector("#app .shell");
+    const sidebar = shell.querySelector(".aps-sidebar");
+    const parent = sidebar.querySelector('a[href="#/time-tracker"]');
+    const nav = sidebar.querySelector(".tt-navigation");
+    const measure = () => ({
+      width: sidebar.getBoundingClientRect().width,
+      background: getComputedStyle(sidebar).backgroundColor,
+      radius: getComputedStyle(parent).borderRadius,
+      fontSize: getComputedStyle(parent).fontSize,
+      grid: getComputedStyle(shell).gridTemplateColumns,
+    });
+    const open = measure();
+    syncTimeTrackerSidebar(shell, {
+      enabled: true,
+      expanded: true,
+      submenuOpen: false,
+    });
+    const closed = measure();
+    const hidden = getComputedStyle(nav).display === "none";
+    const expanded = parent.getAttribute("aria-expanded");
+    syncTimeTrackerSidebar(shell, {
+      enabled: true,
+      expanded: true,
+      submenuOpen: true,
+    });
+    const reopened = getComputedStyle(nav).display !== "none";
+    syncTimeTrackerSidebar(shell, { enabled: false, expanded: true });
+    const outside = measure();
+    syncTimeTrackerSidebar(shell, { enabled: true, expanded: true });
+    return { open, closed, outside, hidden, expanded, reopened };
+  });
+  assert.deepEqual(sidebarStates.open, sidebarStates.closed);
+  assert.deepEqual(sidebarStates.open, sidebarStates.outside);
+  assert.equal(sidebarStates.hidden, true);
+  assert.equal(sidebarStates.expanded, "false");
+  assert.equal(sidebarStates.reopened, true);
+
+  await page.evaluate(async () => {
+    const { syncTimeTrackerSidebar } =
+      await import("/frontend/time-tracker-ui.js");
+    syncTimeTrackerSidebar(document.querySelector("#app .shell"), {
+      enabled: true,
+      expanded: false,
+    });
+  });
+  assert.equal(
+    await page.locator(".main-content .tt-navigation").count(),
+    1,
+    "headerless Clock must retain navigation when the sidebar collapses",
+  );
 
   assert.deepEqual(
     pageErrors,

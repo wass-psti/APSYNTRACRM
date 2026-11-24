@@ -6,58 +6,19 @@ const escapeText=value=>String(value??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[c]));
 
-export function renderBoardLoading({hidden=false,lowPower=false,application='Board'}={}){
- const title=application==='TimeTracker'?'TimeTracker':'Board';
- const isTimeTracker=title==='TimeTracker';
- const description=isTimeTracker?'Preparing your TimeTracker attendance workspace.':'Preparing your authorized board workspace.';
- const caption=isTimeTracker?'Loading the existing attendance data. No changes are being made.':'Loading the latest permitted board data. No changes are being made.';
- const loadingTitle=isTimeTracker?'Loading TimeTracker…':'Loading board…';
- const eyebrow=isTimeTracker?'APSYNTRA / TIMETRACKER':'APSYNTRA / SECURE BOARD';
- const preparation=isTimeTracker?'Preparing your TimeTracker':'Preparing your board';
- return `<div class="page-head aps-board-loading-head">
-  <div><span class="label-top">Workspace / ${title}</span>
-   <h1>${loadingTitle}</h1>
-   <p>${description}</p></div>
- </div>
- <section class="panel aps-board-loading" aria-label="${title} initialization"
+const logoUrl=new URL('../../apsyntra-logo.webp',import.meta.url).href;
+
+/** One brand-neutral splash for boards and embedded applications. */
+export function renderBoardLoading({hidden=false,lowPower=false}={}){
+ return `<div class="apx-loader" role="status" aria-live="polite" aria-atomic="true"
   data-paused="${hidden?'true':'false'}" data-quality="${lowPower?'low':'full'}">
-  <div class="aps-board-loading-stage">
-   <div class="aps-board-loading-visual" aria-hidden="true">
-    <span class="aps-board-loading-halo"></span>
-    <span class="aps-board-loading-orbit aps-board-loading-orbit-outer"></span>
-    <span class="aps-board-loading-orbit aps-board-loading-orbit-inner"></span>
-    <span class="aps-board-loading-core"><span class="aps-board-loading-glyph">A</span></span>
-    <span class="aps-board-loading-satellite aps-board-loading-satellite-a"></span>
-    <span class="aps-board-loading-satellite aps-board-loading-satellite-b"></span>
-   </div>
-   <div class="aps-board-loading-copy" role="status" aria-live="polite" aria-atomic="true">
-    <span class="aps-board-loading-eyebrow">${eyebrow}</span>
-    <h2>${preparation}</h2>
-    <p class="aps-board-loading-message">${title==='TimeTracker'?'Retrieving the existing attendance board and records…':'Retrieving authorized board details…'}</p>
-    <div class="aps-board-loading-progress" aria-hidden="true">
-     <span class="aps-board-loading-progress-beam"></span>
-    </div>
-    <p class="aps-board-loading-caption">${caption}</p>
-   </div>
+  <div class="apx-loader__inner">
+   <img class="apx-loader__logo" src="${logoUrl}" alt="" width="64" height="64">
+   <div><p class="apx-loader__title">APSYNTRA <span>CRM</span></p>
+    <p class="apx-loader__sub">Loading your workspace…</p></div>
+   <div class="apx-loader__track" aria-hidden="true"><div class="apx-loader__bar"></div></div>
   </div>
-  <div class="aps-board-loading-preview" aria-hidden="true">
-   <div class="aps-board-loading-preview-header">
-    <span class="aps-board-loading-preview-chip"></span>
-    <span class="aps-board-loading-preview-chip aps-board-loading-preview-chip-short"></span>
-    <span class="aps-board-loading-preview-chip aps-board-loading-preview-chip-short"></span>
-   </div>
-   <div class="aps-board-loading-preview-row">
-    <span class="aps-board-loading-preview-bar aps-board-loading-preview-bar-long"></span>
-    <span class="aps-board-loading-preview-bar"></span>
-    <span class="aps-board-loading-preview-bar aps-board-loading-preview-bar-short"></span>
-   </div>
-   <div class="aps-board-loading-preview-row">
-    <span class="aps-board-loading-preview-bar aps-board-loading-preview-bar-medium"></span>
-    <span class="aps-board-loading-preview-bar aps-board-loading-preview-bar-short"></span>
-    <span class="aps-board-loading-preview-bar"></span>
-   </div>
-  </div>
- </section>`;
+ </div>`;
 }
 
 export function renderBoardLoadingError(message,{application='Board'}={}){
@@ -74,6 +35,6 @@ export function renderBoardLoadingError(message,{application='Board'}={}){
  * Detached loading markup has no event listeners or GPU resources to dispose.
  */
 export function setBoardLoadingVisibility(root,hidden=false){
- const panel=root?.querySelector?.('.aps-board-loading');
+ const panel=root?.querySelector?.('.apx-loader');
  if(panel)panel.dataset.paused=hidden?'true':'false';
 }
