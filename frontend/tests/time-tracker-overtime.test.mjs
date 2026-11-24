@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate,overtimeDurationMinutes,
  validateOvertimeDraft,validateManualOvertimeDraft,timeTrackerOtMetrics,
- renderTimeTrackerOvertime,TT_OT_WRITES_ACCEPTED}
+ renderTimeTrackerOvertime,timeTrackerOtDurationLabel,updateTimeTrackerOvertimePreview,
+ TT_OT_WRITES_ACCEPTED}
  from '../time-tracker-overtime.js';
 import {TimeTrackerNativeClient} from '../time-tracker-native.js';
 
@@ -64,7 +65,7 @@ test('staged modal is visible but submission and ordinary approvals fail closed'
  const employee=renderTimeTrackerOvertime({
   requests:rows,access:{bootstrapApprover:false},modalOpen:true,now});
  for(const text of ['Overtime','OT BY DAY','TOP REQUESTORS','Pending',
-  'Approved','Rejected','Submit Overtime Request','DURATION'])
+  'Approved','Rejected','Submit overtime request','Estimated duration'])
   assert.ok(employee.includes(text),text);
  assert.match(employee,/type="submit" disabled/);
  assert.doesNotMatch(employee,/tt-ot-review-actions/);
@@ -292,4 +293,81 @@ test('signed bootstrap client decides self-submitted OT and reads former members
   assert.equal(result.status,decision);
   assert.equal(decideArgs.p_request_id,self.id);
  }
+});
+
+
+test('employee OT request markup uses native time controls and clear user guidance',()=>{
+ const html=renderTimeTrackerOvertime({
+  requests:rows,access:{bootstrapApprover:false,otContractActive:true},modalOpen:true,now
+ });
+ assert.match(html,/id="tt-ot-start" name="start" type="time"/);
+ assert.match(html,/id="tt-ot-end" name="end" type="time"/);
+ assert.match(html,/value="18:00"/);
+ assert.match(html,/value="20:00"/);
+ assert.match(html,/min="2026-10-03"/);
+ assert.match(html,/max="2026-11-09"/);
+ assert.match(html,/data-tt-ot-duration-progress/);
+ assert.match(html,/Your request will be sent for approval/);
+ assert.match(html,/You can check its status in OT requests/);
+ assert.doesNotMatch(html,/signed OT RPC|audit workflow/i);
+ assert.match(html,/maxlength="500"/);
+ assert.match(html,/past 30 days or next 7 days/);
+ assert.match(html,/Provide at least 10 characters/);
+});
+test('OT duration preview updates the duration, progress, reason count and inline validity',()=>{
+ const control=value=>({
+  value,textContent:'',validationMessage:'',attributes:{},
+  setAttribute(name,next){this.attributes[name]=next;},
+  removeAttribute(name){delete this.attributes[name];},
+  setCustomValidity(message){this.validationMessage=message;}
+ });
+ const nodes={
+  '#tt-ot-start':control('18:00'),
+  '#tt-ot-end':control('20:00'),
+  '#tt-ot-reason':control('Emergency maintenance work'),
+  '[data-tt-ot-duration-value]':control(''),
+  '[data-tt-ot-duration-progress]':control(''),
+  '[data-tt-ot-duration-message]':control(''),
+  '[data-tt-ot-reason-count]':control('')
+ };
+ const form={id:'tt-ot-form',querySelector:selector=>nodes[selector]||null};
+ assert.equal(updateTimeTrackerOvertimePreview(form),true);
+ assert.equal(nodes['[data-tt-ot-duration-value]'].textContent,'2 hr 00 min');
+ assert.equal(nodes['[data-tt-ot-duration-progress]'].value,120);
+ assert.equal(nodes['[data-tt-ot-duration-message]'].textContent,
+  '240 minutes remaining within the 6-hour maximum.');
+ assert.equal(nodes['[data-tt-ot-reason-count]'].textContent,'26 / 500');
+ assert.equal(nodes['#tt-ot-end'].validationMessage,'');
+ assert.equal(nodes['#tt-ot-reason'].validationMessage,'');
+ nodes['#tt-ot-start'].value='20:00';
+ nodes['#tt-ot-end'].value='19:00';
+ nodes['#tt-ot-reason'].value='     ';
+ updateTimeTrackerOvertimePreview(form);
+ assert.match(nodes['#tt-ot-reason'].validationMessage,/at least 10 characters/);
+ nodes['#tt-ot-reason'].value='Short';
+ updateTimeTrackerOvertimePreview(form);
+ assert.equal(nodes['[data-tt-ot-duration-value]'].textContent,'—');
+ assert.equal(nodes['[data-tt-ot-duration-progress]'].value,0);
+ assert.match(nodes['#tt-ot-end'].validationMessage,/30 minutes and 6 hours/);
+ assert.match(nodes['#tt-ot-reason'].validationMessage,/at least 10 characters/);
+ assert.equal(nodes['[data-tt-ot-reason-count]'].textContent,'5 / 500');
+});
+test('OT duration labels remain readable and bounded by the existing six-hour rule',()=>{
+ assert.equal(timeTrackerOtDurationLabel(30),'30 min');
+ assert.equal(timeTrackerOtDurationLabel(120),'2 hr 00 min');
+ assert.equal(timeTrackerOtDurationLabel(360),'6 hr 00 min');
+ assert.equal(timeTrackerOtDurationLabel(361),'—');
+ assert.equal(updateTimeTrackerOvertimePreview({id:'other-form'}),false);
+});
+
+test('employee OT modal wiring captures edits, preserves retry drafts and manages focus',()=>{
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(app,/const overtimeForm=event\.target\.closest\?\.\('#tt-ot-form'\)/);
+ assert.match(app,/state\.ttOtDraft=\{\s*date:overtimeForm\.querySelector\('#tt-ot-date'\)/);
+ assert.match(app,/updateTimeTrackerOvertimePreview\(overtimeForm\)/);
+ assert.match(app,/state\.ttOtDraft=\{\.\.\.draft\};\s*state\.ttBusy=true;render\(\)/);
+ assert.match(app,/\.catch\(notice\)\.finally\(\(\)=>\{\s*state\.ttBusy=false;render\(\)/);
+ assert.match(app,/if\(state\.ttOtModalOpen\)root\.querySelector\('#tt-ot-date'\)/);
+ assert.match(app,/data-tt-ot-backdrop/);
+ assert.match(app,/const overtimeDialog=root\.querySelector\('\.tt-ot-modal'\)/);
 });

@@ -1,5 +1,5 @@
 import {formatTimeTrackerDurationMinutes} from './time-tracker-duration-format.js';
-import {formatTimeTrackerWallClock} from './time-tracker-time-format.js';
+import {formatTimeTrackerWallClock,parseTimeTrackerClockInput} from './time-tracker-time-format.js';
 /** OT records use the signed PostgreSQL workflow and existing request table. */
 export const TT_OT_WRITES_ACCEPTED=true;
 export const TT_OT_MAX_WEEK_OFFSET=5200;
@@ -146,28 +146,95 @@ const row=(r,access,query='',expandedRequestIds=[],otContractActive=false)=>'<de
    '<button type="button" data-action="tt-ot-reject" data-id="'+esc(r.id)+'"'+
     (!(TT_OT_WRITES_ACCEPTED&&otContractActive)?' disabled title="Signed OT contract unavailable"':'')+'>Reject</button>'+
   '</div>':'')+'</div></details>';
-function requestForm({date,start='18:00',end='20:00',reason=''}={},now=new Date(),otContractActive=false){
- const amount=overtimeDurationMinutes(start,end);
- return '<div class="tt-ot-backdrop"><section class="tt-ot-modal" role="dialog" aria-modal="true"'+
- ' aria-labelledby="tt-ot-modal-title"><header><div><h3 id="tt-ot-modal-title">'+
- 'Submit Overtime Request</h3><p>Request approval for overtime work</p></div>'+
- '<button type="button" data-action="tt-ot-close" aria-label="Close">×</button></header>'+
- '<form id="tt-ot-form"><div class="tt-ot-form-grid">'+
- '<label>DATE<input id="tt-ot-date" type="date" required value="'+esc(date||phtDay(now))+'"></label>'+
- '<div class="tt-ot-duration"><small>DURATION · 6 h maximum</small><strong>'+
- esc(amount===null?'Invalid interval':minutesLabel(amount))+'</strong></div>'+
- '<label>START (12-hour)<input id="tt-ot-start" type="text" required inputmode="text"'+
- ' placeholder="07:00 PM" aria-label="Overtime start, 12-hour AM or PM"'+
- ' value="'+esc(formatTimeTrackerWallClock(start))+'"></label>'+
- '<label>END (12-hour)<input id="tt-ot-end" type="text" required inputmode="text"'+
- ' placeholder="09:00 PM" aria-label="Overtime end, 12-hour AM or PM"'+
- ' value="'+esc(formatTimeTrackerWallClock(end))+'"></label>'+
- '<label class="tt-ot-reason">REASON<textarea id="tt-ot-reason" maxlength="500" rows="4"'+
- ' required placeholder="Explain why overtime was necessary…">'+esc(reason)+'</textarea>'+
- '<small>'+String(reason).length+'/500</small></label></div>'+
- '<p class="tt-ot-gate">'+(otContractActive?'Submission uses the signed OT RPC and existing audit workflow.':'Signed OT write contract is currently unavailable.')+'</p>'+
- '<footer><button type="button" data-action="tt-ot-close">Cancel</button>'+
- '<button type="submit"'+(!(TT_OT_WRITES_ACCEPTED&&otContractActive)?' disabled':'')+'>Submit Request</button></footer></form></section></div>';
+const shiftPhtDay=(day,offset)=>new Date(Date.parse(day+'T00:00:00Z')+offset*msDay).toISOString().slice(0,10);
+const timeInputValue=value=>{
+ if(value===undefined||value===null||value==='')return '';
+ try{return parseTimeTrackerClockInput(value);}catch{return '';}
+};
+export function timeTrackerOtDurationLabel(minutes){
+ if(!Number.isInteger(minutes)||minutes<0||minutes>360)return '—';
+ const hours=Math.floor(minutes/60),remaining=minutes%60;
+ return hours?hours+' hr '+String(remaining).padStart(2,'0')+' min':remaining+' min';
+}
+export function updateTimeTrackerOvertimePreview(form){
+ if(!form||form.id!=='tt-ot-form')return false;
+ const start=form.querySelector('#tt-ot-start')?.value||'';
+ const end=form.querySelector('#tt-ot-end')?.value||'';
+ const minutes=overtimeDurationMinutes(start,end);
+ const duration=form.querySelector('[data-tt-ot-duration-value]');
+ const progress=form.querySelector('[data-tt-ot-duration-progress]');
+ const message=form.querySelector('[data-tt-ot-duration-message]');
+ if(duration)duration.textContent=minutes===null?'—':timeTrackerOtDurationLabel(minutes);
+ if(progress){
+  progress.value=minutes===null?0:minutes;
+  progress.setAttribute('aria-valuetext',minutes===null?'Duration not calculated':timeTrackerOtDurationLabel(minutes)+' of 6 hours');
+ }
+ if(message)message.textContent=minutes===null?
+  (start&&end?'Choose a same-day range from 30 minutes up to 6 hours.':'Choose a start and end time to calculate duration.'):
+  (360-minutes)+' minutes remaining within the 6-hour maximum.';
+ const endInput=form.querySelector('#tt-ot-end');
+ if(endInput){
+  const invalid=Boolean(start&&end&&minutes===null);
+  endInput.setCustomValidity(invalid?'Use a same-day range between 30 minutes and 6 hours.':'');
+  if(invalid)endInput.setAttribute('aria-invalid','true');
+  else endInput.removeAttribute('aria-invalid');
+ }
+ const reasonInput=form.querySelector('#tt-ot-reason');
+ const reason=reasonInput?.value||'';
+ if(reasonInput){
+  const invalid=reason.length>0&&reason.trim().length<10;
+  reasonInput.setCustomValidity(invalid?'Enter at least 10 characters for the overtime reason.':'');
+  if(invalid)reasonInput.setAttribute('aria-invalid','true');
+  else reasonInput.removeAttribute('aria-invalid');
+ }
+ const count=form.querySelector('[data-tt-ot-reason-count]');
+ if(count)count.textContent=reason.length+' / 500';
+ return true;
+}
+function requestForm({date,start='18:00',end='20:00',reason=''}={},now=new Date(),otContractActive=false,busy=false){
+ const selectedDate=date===undefined?phtDay(now):date;
+ const startValue=timeInputValue(start),endValue=timeInputValue(end);
+ const amount=overtimeDurationMinutes(startValue,endValue);
+ const active=TT_OT_WRITES_ACCEPTED&&otContractActive===true;
+ const disabled=!active||busy;
+ return '<div class="tt-ot-backdrop" data-tt-ot-backdrop>'+
+  '<section class="tt-ot-modal" role="dialog" aria-modal="true" tabindex="-1"'+(busy?' aria-busy="true"':'')+' aria-labelledby="tt-ot-modal-title" aria-describedby="tt-ot-modal-description">'+
+   '<header class="tt-ot-modal-header"><div><span class="tt-ot-modal-eyebrow">TIME TRACKER · OVERTIME</span>'+
+    '<h3 id="tt-ot-modal-title">Submit overtime request</h3>'+
+    '<p id="tt-ot-modal-description">Share your overtime schedule and why the additional work is needed.</p></div>'+
+    '<button type="button" data-action="tt-ot-close" aria-label="Close overtime request"'+(busy?' disabled':'')+'>×</button></header>'+
+   '<form id="tt-ot-form"><div class="tt-ot-form-grid">'+
+    '<label class="tt-ot-date-field" for="tt-ot-date"><span>Overtime date</span>'+
+     '<input id="tt-ot-date" name="date" type="date" required'+(busy?' disabled':'')+' min="'+esc(shiftPhtDay(phtDay(now),-30))+
+     '" max="'+esc(shiftPhtDay(phtDay(now),7))+'" value="'+esc(selectedDate)+'" aria-describedby="tt-ot-date-help">'+
+     '<small id="tt-ot-date-help">Requests are accepted for the past 30 days or next 7 days. Philippine time.</small></label>'+
+    '<section class="tt-ot-schedule" aria-labelledby="tt-ot-schedule-title">'+
+     '<div class="tt-ot-schedule-heading"><div><h4 id="tt-ot-schedule-title">Overtime hours</h4>'+
+      '<p>Choose when your overtime work will begin and end.</p></div><span>Same day</span></div>'+
+     '<div class="tt-ot-time-grid">'+
+      '<label for="tt-ot-start"><span>Start time</span><input id="tt-ot-start" name="start" type="time" step="60" required'+(busy?' disabled':'')+' value="'+esc(startValue)+
+       '" aria-label="Overtime start time"></label>'+
+      '<label for="tt-ot-end"><span>End time</span><input id="tt-ot-end" name="end" type="time" step="60" required'+(busy?' disabled':'')+' value="'+esc(endValue)+
+       '" aria-label="Overtime end time"></label></div>'+
+     '<div class="tt-ot-duration" aria-label="Calculated overtime duration">'+
+      '<div class="tt-ot-duration-top"><span>Estimated duration</span><strong data-tt-ot-duration-value>'+
+       esc(amount===null?'—':timeTrackerOtDurationLabel(amount))+'</strong></div>'+
+      '<progress data-tt-ot-duration-progress max="360" value="'+(amount===null?0:amount)+
+       '" aria-label="Overtime duration against the six-hour maximum" aria-valuetext="'+
+       esc(amount===null?'Duration not calculated':timeTrackerOtDurationLabel(amount)+' of 6 hours')+'"></progress>'+
+      '<div class="tt-ot-duration-foot"><small>30-minute minimum · 6-hour maximum</small><small data-tt-ot-duration-message aria-live="polite">'+
+       esc(amount===null?'Choose a start and end time to calculate duration.':(360-amount)+' minutes remaining within the 6-hour maximum.')+
+       '</small></div></div></section>'+
+    '<label class="tt-ot-reason" for="tt-ot-reason"><span>Reason for overtime</span>'+
+     '<textarea id="tt-ot-reason" name="reason" maxlength="500" rows="3" required'+(busy?' disabled':'')+' placeholder="Briefly explain the work that needs to be completed…" aria-describedby="tt-ot-reason-help tt-ot-reason-count">'+esc(reason)+'</textarea>'+
+     '<span class="tt-ot-reason-meta"><small id="tt-ot-reason-help">Provide at least 10 characters, up to 500.</small>'+
+      '<small data-tt-ot-reason-count aria-live="polite">'+String(reason).length+' / 500</small></span></label></div>'+
+   '<p class="tt-ot-gate" role="status">'+(active?
+    'Your request will be sent for approval. You can check its status in OT requests.':
+    'Overtime requests are temporarily unavailable. Please try again later.')+'</p>'+
+   '<footer class="tt-ot-modal-footer"><button type="button" data-action="tt-ot-close"'+(busy?' disabled':'')+'>Cancel</button>'+
+    '<button type="submit"'+(disabled?' disabled':'')+'>'+(busy?'Submitting…':'Submit OT request')+'</button></footer></form>'+
+  '</section></div>';
 }
 function manualOtForm({employeeId='',date='',start='',end='',reason=''}={},access={},now=new Date(),busy=false,manualRows=[],manualVisibleCount=50){
  const directory=Array.isArray(access.overviewDirectory)?access.overviewDirectory:[];
@@ -280,5 +347,5 @@ export function renderTimeTrackerOvertime({
   canManageManualOt?'System Admins can review manually submitted OT only. ':
   'Employees have read-only access to their visible OT records. ')+
   'Manual entries are identified separately and use the existing approval workflow.</p>'+
- '</section>'+(modalOpen?requestForm(form,now,access?.otContractActive===true):'')+'</section>';
+ '</section>'+(modalOpen?requestForm(form,now,access?.otContractActive===true,busy):'')+'</section>';
 }
