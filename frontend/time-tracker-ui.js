@@ -408,6 +408,83 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
  '</div>';
  return html;
 }
+
+/**
+ * Reconcile a fresh signed Clock snapshot into the existing Clock DOM.
+ * The outer Clock stage and compatible child nodes remain mounted, preserving
+ * focus, scroll position, controls, and the current visual state.
+ */
+function compatibleClockNode(current,next){
+ if(current.nodeType!==next.nodeType)return false;
+ return current.nodeType!==1||current.tagName===next.tagName;
+}
+function morphClockNode(current,next){
+ if(!compatibleClockNode(current,next))return next.cloneNode(true);
+ if(current.nodeType===3||current.nodeType===8){
+  if(current.nodeValue!==next.nodeValue)current.nodeValue=next.nodeValue;
+  return current;
+ }
+ for(const attribute of [...current.attributes]){
+  if(!next.hasAttribute(attribute.name))current.removeAttribute(attribute.name);
+ }
+ for(const attribute of [...next.attributes]){
+  if(current.getAttribute(attribute.name)!==attribute.value)
+   current.setAttribute(attribute.name,attribute.value);
+ }
+ const previousChildren=[...current.childNodes];
+ const nextChildren=[...next.childNodes];
+ const retained=new Set();
+ nextChildren.forEach((nextChild,index)=>{
+  let match=null;
+  if(nextChild.nodeType===1&&nextChild.id){
+   match=previousChildren.find(child=>!retained.has(child)&&
+    child.nodeType===1&&child.id===nextChild.id&&compatibleClockNode(child,nextChild))||null;
+  }
+  if(!match){
+   const candidate=previousChildren[index];
+   if(candidate&&!retained.has(candidate)&&
+      !(candidate.nodeType===1&&candidate.id)&&compatibleClockNode(candidate,nextChild))
+    match=candidate;
+  }
+  if(!match&&!(nextChild.nodeType===1&&nextChild.id)){
+   match=previousChildren.find(child=>!retained.has(child)&&
+    !(child.nodeType===1&&child.id)&&compatibleClockNode(child,nextChild))||null;
+  }
+  const updated=match?morphClockNode(match,nextChild):nextChild.cloneNode(true);
+  if(match&&updated!==match&&match.parentNode===current)current.replaceChild(updated,match);
+  const reference=current.childNodes[index]||null;
+  if(updated!==reference)current.insertBefore(updated,reference);
+  retained.add(updated);
+ });
+ for(const child of [...current.childNodes]){
+  if(!retained.has(child))current.removeChild(child);
+ }
+ return current;
+}
+
+/**
+ * Update only the Clock stage after a background attendance refresh.
+ * This intentionally does not call the application renderer or replace the
+ * Clock tab. Structural changes are reconciled locally when the signed active
+ * session genuinely changes from idle to active or active to idle.
+ */
+export function syncTimeTrackerClockView(root,{
+ result,now=new Date(),clockPending=false,clockPendingAction='clock-out',
+ locationPreference='',workPlanDraft='',success='',clockCorrectionNotice='',
+ geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle'
+}={}){
+ const current=root?.querySelector?.('.tt-clock-stage');
+ if(!current||result?.status!=='VERIFIED_READ')return false;
+ const template=document.createElement('template');
+ template.innerHTML=clockPage(result,false,now,clockPending,clockPendingAction,
+  locationPreference,{success,clockCorrectionNotice,geoPromptVisible,geoPermission,
+   geoMessage,clockStage,workPlanDraft});
+ const next=template.content.firstElementChild;
+ if(!next||!next.classList.contains('tt-clock-stage'))return false;
+ morphClockNode(current,next);
+ return true;
+}
+
 function attendanceTable(records){
  return '<div class="table-scroll"><table class="board-table">'+
   '<thead><tr><th>Clock In</th><th>Clock Out</th><th>Location</th>'+

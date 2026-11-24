@@ -86,6 +86,7 @@ test('refined stylesheet remains scoped, responsive and uses native controls',()
  assert.match(css,/@media \(max-width: 480px\)/);
  assert.match(css,/@media \(prefers-reduced-motion: reduce\)/);
  assert.match(css,/focus-visible/);
+ assert.match(css,/@keyframes tt-work-plan-reveal \{ from \{ transform:translateY\(-4px\); \} to \{ transform:translateY\(0\); \} \}/);
  assert.doesNotMatch(css,/@import|url\(|animation:.*infinite|!important/);
  assert.match(manifest,/frontend\/apps\/TimeTracker\/time-tracker-refined\.css/);
 });
