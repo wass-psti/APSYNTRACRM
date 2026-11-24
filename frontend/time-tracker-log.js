@@ -383,7 +383,7 @@ const icons={
 const iconButton=(action,label,icon,disabled=false,cls='')=>'<button type="button" class="tt-log-icon '+cls+'" aria-label="'+esc(label)+'" title="'+esc(label)+'" data-action="'+action+'"'+(disabled?' disabled':'')+'>'+icons[icon]+'</button>';
 const field=(label,id,values,selected)=>'<label class="tt-log-filter-field"><span>'+label+'</span>'+choices(id,values,selected)+'</label>';
 
-const TT_LOG_COLUMNS=Object.freeze([["in","Clock In"],["person","Employee"],["location","Working Location"],["department","Department"],["out","Clock Out"],["status","Status"]]);
+const TT_LOG_COLUMNS=Object.freeze([["in","Clock In"],["person","Employee"],["location","Working Location"],["department","Department"],["out","Clock Out"],["duration","Work Duration"],["status","Status"]]);
 const LOG_WIDTH_MIN=96,LOG_WIDTH_MAX=960,LOG_WIDTH_STEP=16;
 export function boundTimeTrackerLogWidth(value){
  return Math.max(LOG_WIDTH_MIN,Math.min(LOG_WIDTH_MAX,Math.round((Number(value)||LOG_WIDTH_MIN)/LOG_WIDTH_STEP)*LOG_WIDTH_STEP));
@@ -462,6 +462,28 @@ export function startTimeTrackerLogColumnResize(root){
  };
 }
 
+/** Work duration uses the same unpaid-break calculation as Clock.
+ * A signed completed record is authoritative, including admin overrides.
+ */
+export function timeTrackerLogWorkDuration(row,now=new Date()){
+ if(!row||!validTime(row.clockIn))return '—';
+ if(row.status==='Active'&&!row.clockOut)
+  return durationLabel(creditedAttendanceMs(row.clockIn,now));
+ if(validTime(row.clockOut)&&Number.isFinite(row.creditedMs)&&row.creditedMs>=0)
+  return durationLabel(row.creditedMs);
+ return '—';
+}
+
+/** Refresh only active duration text; no data write or independent status claim. */
+export function syncTimeTrackerLogDurations(root,now=new Date()){
+ for(const cell of root?.querySelectorAll?.('[data-tt-log-active-duration]')||[]){
+  const value=timeTrackerLogWorkDuration({
+   clockIn:cell.dataset.ttLogActiveDuration,clockOut:null,status:'Active'
+  },now);
+  if(cell.textContent!==value)cell.textContent=value;
+ }
+}
+
 const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
  const hidden=query&&!searchText(r).includes(query.toLocaleLowerCase().trim());
  const selected=gpsOptions.selectedIds?.includes(r.id)===true||
@@ -473,7 +495,7 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
   '" aria-selected="'+selected+'" data-record-id="'+esc(r.id)+'" data-log-search="'+esc(searchText(r))+'"'+
   (hidden?' hidden':'')+'>'+
   '<td class="tt-log-check-cell">'+(gpsOptions.adminFullAccess?'<button type="button" class="tt-log-checkbox" role="checkbox" aria-checked="'+selected+'" aria-label="Select '+esc(r.name||'employee')+'" data-action="tt-log-row-select" data-record-id="'+esc(r.id)+'"'+(gpsOptions.adminBusy?' disabled':'')+'>'+(selected?'✓':'')+'</button>':'')+'</td>'+
-  '<td colspan="6"><details class="tt-log-detail" data-record-id="'+esc(r.id)+'">'+
+  '<td colspan="7"><details class="tt-log-detail" data-record-id="'+esc(r.id)+'">'+
    '<summary class="tt-log-row-summary" data-action="tt-log-open-detail" data-record-id="'+esc(r.id)+
     '" aria-haspopup="dialog" aria-label="Open attendance details for '+esc(r.name||'employee')+'">'+
    '<span class="tt-log-row-clock" title="'+esc(phtDate(r.clockIn))+'"><strong>'+esc(logRowTime(r.clockIn))+'</strong>'+
@@ -481,7 +503,10 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
    '<span class="tt-log-row-person"><span class="tt-log-avatar" aria-hidden="true">'+esc(logInitials(r.name))+'</span><strong title="'+esc(r.name||'Signed member')+'">'+esc(r.name||'Signed member')+'</strong><small class="tt-log-row-date">'+esc(logRowDate(r.clockIn))+'</small></span>'+
    '<span class="tt-log-row-location" title="'+esc(r.location||'Unspecified')+'">'+esc(locationLabel(r.location||'Unspecified'))+'</span>'+
    '<span class="tt-log-row-department" title="'+esc(r.isOjt?'OJT intern · Shared login':r.department||'Unassigned')+'">'+esc(r.department||'Unassigned')+'</span>'+
-   '<span class="tt-log-row-out" title="'+esc(validTime(r.clockOut)?phtDate(r.clockOut):'')+'">'+esc(validTime(r.clockOut)?formatTimeTrackerClock(r.clockOut,{seconds:true}):'—')+'</span><span class="tt-log-row-status"><span class="tt-log-badge '+(done?'tt-log-badge-done':
+   '<span class="tt-log-row-out" title="'+esc(validTime(r.clockOut)?phtDate(r.clockOut):'')+'">'+esc(validTime(r.clockOut)?formatTimeTrackerClock(r.clockOut,{seconds:true}):'—')+'</span>'+
+   '<span class="tt-log-row-duration" title="Credited working duration (unpaid break excluded)"'+
+    (state==='Active'&&!r.clockOut?' data-tt-log-active-duration="'+esc(r.clockIn)+'"':'')+'>'+
+    esc(timeTrackerLogWorkDuration(r,now))+'</span><span class="tt-log-row-status"><span class="tt-log-badge '+(done?'tt-log-badge-done':
     state==='Active'?'tt-log-badge-active':'tt-log-badge-unknown')+'">'+esc(state)+'</span></span>'+
   '</summary>'+(gpsOptions.expandedRecordIds?.includes(r.id)?'':safeSessionDetails(r,now,gpsOptions))+'</details></td></tr>';
 };
@@ -550,7 +575,7 @@ export function renderTimeTrackerLog({
    (adminError&&!adminEditor?'<p class="tt-log-admin-feedback is-error" role="alert">'+esc(adminError)+'</p>':'')+
    (adminSuccess?'<p class="tt-log-admin-feedback is-success" role="status">'+esc(adminSuccess)+'</p>':'')+
    (rows.length?'<div class="tt-log-day"><div class="tt-log-table-scroll">'+
-     '<table class="board-table tt-log-table"><colgroup><col class="tt-log-col-check"><col class="tt-log-col-in"><col class="tt-log-col-person"><col class="tt-log-col-location"><col class="tt-log-col-department"><col class="tt-log-col-out"><col class="tt-log-col-status"></colgroup><thead><tr>'+
+     '<table class="board-table tt-log-table"><colgroup><col class="tt-log-col-check"><col class="tt-log-col-in"><col class="tt-log-col-person"><col class="tt-log-col-location"><col class="tt-log-col-department"><col class="tt-log-col-out"><col class="tt-log-col-duration"><col class="tt-log-col-status"></colgroup><thead><tr>'+
      '<th class="tt-log-check-heading" aria-label="Selection"></th>'+TT_LOG_COLUMNS.map(([key,label])=>
       '<th>'+label+'<span class="tt-log-resize" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize '+label+' column" aria-valuemin="96" aria-valuemax="960" aria-valuenow="160" data-tt-log-resize="'+key+'"></span></th>').join('')+'</tr></thead>'+
      '<tbody>'+rows.map(r=>sessionRow(r,query,now,{
