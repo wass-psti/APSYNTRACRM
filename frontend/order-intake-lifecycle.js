@@ -3,9 +3,9 @@ import {ORDER_INTAKE_STATUSES} from './order-intake-native.js';
 const terminal=new Set(['Closed','Cancelled']);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 export function lifecycleActions(row){
- const native=row?.record_kind==='native'&&Number.isSafeInteger(row.revision)&&row.revision>0;
- return {status:Boolean(native&&row.archived===false&&!terminal.has(row.status)),
-  archive:Boolean(native&&row.archived===false),restore:Boolean(native&&row.archived===true)};
+ const operational=['native','legacy'].includes(row?.record_kind)&&Number.isSafeInteger(row.revision)&&row.revision>0;
+ return {status:Boolean(operational&&row.archived!==true&&!terminal.has(row.status)),
+  archive:Boolean(operational&&row.archived!==true),restore:Boolean(operational&&row.archived===true)};
 }
 export function lifecycleControls(row,{card=false}={}){
  const actions=lifecycleActions(row);
@@ -21,10 +21,10 @@ export function lifecycleFields(row,action,target){
  return '<p>'+esc(row.po_number)+(action==='archive'?' will be archived. The record and its activity will be retained.':' will return to the active registry with its existing status.')+'</p>';
 }
 function expected(row,action,target){
- return {revision:row.revision+1,status:action==='status'?target:row.status,archived:action==='archive'};
+ return {revision:row.revision+1,status:action==='status'?target:row.status,archived:action==='archive'?true:action==='restore'?false:row.archived};
 }
 function matches(actual,row,wanted){
- return actual?.record_kind==='native'&&actual.id===row.id&&actual.workspace_id===row.workspace_id&&
+ return actual?.record_kind===row.record_kind&&actual.id===row.id&&actual.workspace_id===row.workspace_id&&
   actual.revision===wanted.revision&&actual.status===wanted.status&&actual.archived===wanted.archived;
 }
 // Commit-first: no guessed card movement, no automatic mutation replay.
@@ -35,7 +35,8 @@ export async function saveLifecycle({client,row,action,target,isCurrent=()=>true
  const wanted=expected(row,action,target);
  let mutationError;
  try{
-  if(action==='status')await client.updateStatus(row.id,row.revision,target);
+  if(row.record_kind==='legacy')await client.changeLegacy(row,action,target??null);
+  else if(action==='status')await client.updateStatus(row.id,row.revision,target);
   else if(action==='archive')await client.archive(row.id,row.revision);
   else await client.restore(row.id,row.revision);
  }catch(error){mutationError=error;}
@@ -52,7 +53,7 @@ export function renderOrderActivity(activity){
  const rows=activity.rows||[];
  return '<section class="oi-panel"><h3>Order activity</h3>'+
   (activity.hasMore?'<p>Showing latest 50 activity entries.</p>':'')+
-  (rows.length?'<ol class="oi-activity">'+rows.map(row=>'<li><strong>'+esc(row.type)+'</strong><p>'+esc(row.message)+'</p><time>'+esc(row.created_at)+'</time></li>').join('')+'</ol>':'<p>No recorded activity.</p>')+'</section>';
+  (rows.length?'<ol class="oi-activity">'+rows.map(row=>'<li><strong>'+esc(row.type)+'</strong><p>'+esc(row.message)+'</p>'+(row.delivery_state==='UNRESOLVED'?'<p>Notification not routed — confirm recipient for future transitions.</p>':row.delivery_state==='INBOX_AVAILABLE'?'<p>Notification available in recipient inbox.</p>':'')+'<time>'+esc(row.created_at)+'</time></li>').join('')+'</ol>':'<p>No recorded activity.</p>')+'</section>';
 }
 
 // Delegated drag handling is shared by the CRM host and browser acceptance.
