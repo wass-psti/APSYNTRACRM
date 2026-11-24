@@ -17643,6 +17643,16 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-ot-refer
 .oi-editor [data-oi-editor-error]:empty { display:none; }
 @media(max-width:600px) { .oi-editor { grid-template-columns:minmax(0,1fr); } .oi-header { flex-wrap:wrap; } }
 
+.oi-sales-dashboard { display:grid; gap:16px; min-width:0; }
+.oi-dashboard-coverage { font-size:13px; line-height:1.5; }
+.oi-analytics-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.oi-chart-scroll { display:grid; gap:10px; max-height:340px; overflow:auto; padding:3px; }
+.oi-distribution span { overflow-wrap:anywhere; }
+.oi-table-scroll .oi-finance-table { min-width:560px; }
+.oi-finance-table td { vertical-align:top; font-variant-numeric:tabular-nums; }
+.oi-finance-table td small { display:block; margin-top:4px; font-size:11px; }
+@media(max-width:720px) { .oi-analytics-grid { grid-template-columns:minmax(0,1fr); } }
+
 /* frontend/tradelink-reference-ui.css */
 /* CP-TL-03D — Reference-led TradeLink surface, scoped to its portal only.
    Visual authority: user's 2026-11-06 source screenshots (six document modules).

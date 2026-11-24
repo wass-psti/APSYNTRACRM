@@ -2,36 +2,54 @@
 export function createOrderIntakeReadState({ clientFor, isCurrent, onChange }) {
   let generation = 0;
   let snapshot = null;
+  let completeRun = null;
   const emit = next => { snapshot = next; onChange(); };
   const current = (scope, run) => generation === run && isCurrent(scope);
   const same = scope => snapshot?.scope === scope;
-  async function load(scope, { more = false, refresh = false } = {}) {
+  async function load(scope, { more = false, refresh = false, complete = false } = {}) {
     if (!isCurrent(scope)) return;
-    if (same(scope) && !refresh && !more) return;
+    if (complete && !refresh && completeRun?.scope === scope && completeRun.run === generation) return completeRun.promise;
+    if (same(scope) && !refresh && !more && (!complete || (!snapshot.hasMore && !snapshot.error && !snapshot.busy))) return;
     if (more && (!same(scope) || snapshot.busy || !snapshot.hasMore)) return;
     const previous = same(scope) ? snapshot : null;
     const run = ++generation;
-    const rows = more ? previous.rows : [];
+    const rows = more ? previous.rows.slice() : [];
     emit({ scope, rows: previous?.rows || [], busy: true, hasMore: previous?.hasMore ?? true, error: '' });
-    try {
-      const page = await clientFor(scope).list({ offset: rows.length, limit: 100 });
-      if (!current(scope, run)) return;
-      const combined = [...rows, ...page.items];
-      if (new Set(combined.map(row => row.id)).size !== combined.length) {
-        throw new Error('Orders changed while paging. Refresh to reconcile.');
+    const fetchPages = async () => {
+      try {
+        if (!current(scope, run)) return;
+        const client = clientFor(scope);
+        const seen = new Set(rows.map(row => row.id));
+        let hasMore;
+        do {
+          const page = await client.list({ offset: rows.length, limit: 100 });
+          if (!current(scope, run)) return;
+          if (page.hasMore && !page.items.length) throw new Error('Incomplete order page. Refresh to reconcile.');
+          for (const row of page.items) {
+            if (seen.has(row.id)) throw new Error('Orders changed while paging. Refresh to reconcile.');
+            seen.add(row.id);
+            rows.push(row);
+          }
+          hasMore = page.hasMore;
+        } while (complete && hasMore);
+        emit({ scope, rows, busy: false, hasMore, error: '' });
+      } catch (error) {
+        if (current(scope, run)) emit({ scope, rows: previous?.rows || [], busy: false,
+          hasMore: previous?.hasMore ?? true, error: error?.message || 'Order retrieval failed' });
+      } finally {
+        if (completeRun?.run === run) completeRun = null;
       }
-      emit({ scope, rows: combined, busy: false, hasMore: page.hasMore, error: '' });
-    } catch (error) {
-      if (current(scope, run)) emit({ scope, rows: previous?.rows || [], busy: false,
-        hasMore: previous?.hasMore ?? true, error: error?.message || 'Order retrieval failed' });
-    }
+    };
+    const promise = Promise.resolve().then(fetchPages);
+    if (complete) completeRun = { scope, run, promise };
+    return promise;
   }
   return {
-    open: scope => load(scope),
-    refresh: scope => load(scope, { refresh: true }),
+    open: (scope, complete = false) => load(scope, { complete }),
+    refresh: (scope, complete = false) => load(scope, { refresh: true, complete }),
     more: scope => load(scope, { more: true }),
     read: scope => same(scope) ? snapshot : null,
-    clear() { generation++; snapshot = null; }
+    clear() { generation++; snapshot = null; completeRun = null; }
   };
 }
 

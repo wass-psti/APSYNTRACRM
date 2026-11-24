@@ -17,10 +17,10 @@ const host=document.querySelector('#host');
 let route=parseOrderIntakeRoute(location.hash),record=null,run=0;
 const state=createOrderIntakeReadState({isCurrent:()=>true,onChange:render,clientFor:()=>client});
 function render(){host.innerHTML=renderOrderIntake({route,snapshot:state.read('fixture'),record});}
-async function navigate(){const current=++run;route=parseOrderIntakeRoute(location.hash);record=route.recordId?{busy:true}:null;render();if(route.recordId){try{const row=await client.detail(route.recordId);if(current===run)record={row};}catch(error){if(current===run)record={error:error.message};}if(current===run)render();}await state.open('fixture');}
+async function navigate(){const current=++run;route=parseOrderIntakeRoute(location.hash);record=route.recordId?{busy:true}:null;render();if(route.recordId){try{const row=await client.detail(route.recordId);if(current===run)record={row};}catch(error){if(current===run)record={error:error.message};}if(current===run)render();}await state.open('fixture',route.section==='dashboard');}
 window.addEventListener('hashchange',()=>void navigate());
 host.addEventListener('submit',e=>{e.preventDefault();location.hash=orderIntakeHref(route.section,Object.fromEntries(new FormData(e.target)));});
-host.addEventListener('click',e=>{const action=e.target.closest('[data-oi-action]')?.dataset.oiAction;if(action==='more')void state.more('fixture');if(action==='refresh')void state.refresh('fixture');});
+host.addEventListener('click',e=>{const action=e.target.closest('[data-oi-action]')?.dataset.oiAction;if(action==='more')void state.more('fixture');if(action==='refresh')void state.refresh('fixture',route.section==='dashboard');});
 void navigate();
 </script></body></html>`;
  const vite=await createVite({configFile:false,server:{middlewareMode:true,hmr:false},appType:'custom'});
@@ -42,20 +42,21 @@ void navigate();
    catch(error){await route.fulfill({status:error.status||500,json:{error:'Registry request failed'}});}
   });
   await page.goto('http://127.0.0.1:'+server.address().port+'/__oi#/order-intake');
-  await page.getByText('100 matching of 100 loaded orders',{exact:false}).waitFor();
-  assert.equal(requests,1);
+  await page.getByText('910 matching of 910 loaded orders',{exact:false}).waitFor();
+  assert.equal(requests,10);
+  await page.getByText('All available registry pages retrieved.',{exact:false}).waitFor();
   await page.getByRole('link',{name:'All Orders',exact:true}).click();
   await page.locator('.oi-tabs a[aria-current=page]',{hasText:'All Orders'}).waitFor();
-  for(let count=200;count<=1000;count+=100){
-   await page.getByRole('button',{name:'Load more orders'}).click();
-   const expected=Math.min(count,910);
-   await page.getByText(expected+' matching of '+expected+' loaded orders',{exact:false}).waitFor();
-   if(expected===910)break;
-  }
-  assert.equal(requests,10);
   assert.equal(await page.locator('.oi-table-scroll tbody tr').count(),910);
   await page.getByRole('link',{name:'Dashboard',exact:true}).click();
-  await page.getByText('USD reported order value: USD 185352.889 (18 of 18 records)',{exact:true}).waitFor();
+  await page.locator('.oi-table-scroll[aria-label="historical financial totals"] tbody tr').filter({has:page.getByRole('rowheader',{name:'USD',exact:true})}).locator('td').first().getByText('USD 185352.889',{exact:false}).waitFor();
+  await page.getByText('Monthly orders by date received',{exact:true}).waitFor();
+  assert.equal(requests,10);
+  await page.locator('select[name=year]').selectOption('2026');
+  await page.getByRole('button',{name:'Apply filters'}).click();
+  await page.getByText('166 matching of 910 loaded orders',{exact:false}).waitFor();
+  await page.getByRole('link',{name:'Clear',exact:true}).click();
+  await page.getByText('910 matching of 910 loaded orders',{exact:false}).waitFor();
   assert.equal(requests,10);
   await page.getByRole('link',{name:'Workflow',exact:true}).click();
   await page.locator('.oi-stage').filter({hasText:'Please select'}).waitFor();
@@ -78,6 +79,6 @@ void navigate();
   await page.setViewportSize({width:390,height:900});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1));
   assert.deepEqual(errors,[]);
-  console.log('PASS: signed browser registry, 910 rows, 10 page reads, no repeat tab reads, detail, filter, refresh, mobile, zero page errors');
+  console.log('PASS: signed browser automatic dashboard completeness, 910 rows, 10 page reads, fiscal filter, no repeat tab reads, detail, refresh, mobile, zero page errors');
  }finally{await browser?.close();await vite.close();await new Promise(resolve=>server.close(resolve));}
 }

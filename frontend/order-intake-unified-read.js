@@ -28,7 +28,7 @@ export function createUnifiedOrderIntakeReader({workspaceId,nativeRows,legacyRow
 }
 
 // Exact decimal addition, including historical amounts with more than two places.
-function addExact(left,right) {
+export function addExact(left,right) {
   const parts = value => /^(-?)(\d+)(?:\.(\d+))?$/.exec(String(value));
   const a=parts(left), b=parts(right);
   if (!a||!b) throw new Error('Invalid source decimal');

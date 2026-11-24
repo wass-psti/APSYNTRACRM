@@ -4,6 +4,7 @@ import {captureRecoveryFields} from './tradelink/draft-recovery-state.js';
 import {syncFuelTrans} from './fueltrans-lazy.js';
 import {OrderIntakeRegistryClient} from './order-intake-registry-client.js';
 import {nativeEditable,orderEditorDraft,orderEditorMarkup,updateOrderEditorPreview,createOrderEditorSave} from './order-intake-editor.js';
+import {readOrderIntakePreference,saveOrderIntakePreference} from './order-intake-preference.js';
 import {parseOrderIntakeRoute,orderIntakeHref} from './order-intake-route.js';
 import {createOrderIntakeReadState} from './order-intake-read-state.js';
 import {renderOrderIntake} from './order-intake-ui.js';
@@ -657,7 +658,7 @@ function openOrderIntakeEditor(edit=false){
    const saved=await save(Object.fromEntries(fd));
    if(!edit&&orderIntakeCreateSave===save){orderIntakeCreateSave=null;}
    if(!current())return;
-   if(modal!==view){void orderIntakeRead.refresh(scope);return;}
+   if(modal!==view){void orderIntakeRead.refresh(scope,orderIntakeRoute?.section==='dashboard');return;}
    toast('Purchase order saved and verified.');
    if(orderIntakeRoute?.recordId===saved.id){
     orderIntakeRecordRun++;orderIntakeRecord={row:saved};
@@ -5728,8 +5729,13 @@ async function onRoute(){
    userId:auth.userId,workspaceId:state.context?.workspace_id};
  }else if(parts[0]==='fm1'&&pendingNativeSearchSelection?.applicationId==='fm1')pendingNativeSearchSelection=null;
  if(parts[0]==='order-intake'){
-  const nextRoute=parseOrderIntakeRoute(hash);
+  let nextRoute=parseOrderIntakeRoute(hash);
   if(!nextRoute)return;
+  const entering=state.view!=='order-intake';
+  if(entering&&hash==='#/order-intake'){
+   const saved=readOrderIntakePreference(orderIntakeScope());
+   if(saved)nextRoute=parseOrderIntakeRoute(saved)||nextRoute;
+  }
   if(modal?.dataset.oiEditor&&orderIntakeRoute?.canonicalHash!==nextRoute.canonicalHash)hideModal();
   if(nextRoute.canonicalHash!==hash)history.replaceState(null,'',location.pathname+location.search+nextRoute.canonicalHash);
   if(state.view!=='order-intake'){clearOrderIntake();routeSerial++;stopTimeTrackerClock();}
@@ -5737,7 +5743,8 @@ async function onRoute(){
   state.boardManage=false;state.edit=false;state.error='';
   orderIntakeRoute=nextRoute;
   const scope=orderIntakeScope();
-  const read=orderIntakeRead.open(scope);
+  if(orderIntakeCurrent(scope))saveOrderIntakePreference(scope,nextRoute);
+  const read=orderIntakeRead.open(scope,nextRoute.section==='dashboard');
   const record=loadOrderIntakeRecord(nextRoute,scope);
   render();
   await Promise.all([read,record]);
@@ -13247,7 +13254,7 @@ root.addEventListener('click',event=>{
   if(orderAction.dataset.oiAction==='create')openOrderIntakeEditor();
   else if(orderAction.dataset.oiAction==='edit')openOrderIntakeEditor(true);
   else if(orderAction.dataset.oiAction==='refresh'){
-   void orderIntakeRead.refresh(scope);
+   void orderIntakeRead.refresh(scope,orderIntakeRoute.section==='dashboard');
    void loadOrderIntakeRecord(orderIntakeRoute,scope);
   }else if(orderAction.dataset.oiAction==='more')void orderIntakeRead.more(scope);
   return;

@@ -1,6 +1,7 @@
 import { ORDER_INTAKE_SECTIONS, orderIntakeHref } from './order-intake-route.js';
 import { ORDER_INTAKE_STATUSES } from './order-intake-native.js';
 import { filterOrderIntakeRows } from './order-intake-read-state.js';
+import { renderSalesDashboard } from './order-intake-dashboard.js';
 import { nativeEditable } from './order-intake-editor.js';
 import { projectUnifiedOrders } from './order-intake-unified-read.js';
 
@@ -21,7 +22,7 @@ function filterForm(rows, route) {
   return '<form id="oi-filter-form" class="oi-filters">' +
     input('PO number, client or account manager', 'q') +
     select('Fiscal year', 'year', values('fiscal_year').filter(v=>v!=null).map(String).concat(f.year).sort().reverse()) +
-    (route.section === 'search' ? select('Status', 'status', [...ORDER_INTAKE_STATUSES, ...values('status'), f.status]) +
+    (['search','dashboard'].includes(route.section) ? select('Status', 'status', [...ORDER_INTAKE_STATUSES, ...values('status'), f.status]) +
       input('Received from', 'from', 'date') + input('Received to', 'to', 'date') +
       select('Company', 'company', [...values('company'), f.company]) +
       select('Industry', 'industry', [...values('industry'), f.industry]) +
@@ -35,17 +36,6 @@ function orderTable(rows, route) {
     ['PO Number','Client','Currency','Status','PO Amount','Gross Profit','Industry','Company','Account Manager','Date Received','Delivery Date'].map(v => '<th scope="col">'+v+'</th>').join('') +
     '</tr></thead><tbody>' + rows.map(row => '<tr><td><a href="' + esc(orderIntakeHref('all-orders',route.filters,row.id)) + '">' + show(row.po_number) + '</a>'+origin(row)+'</td>' +
       [row.client_name,row.currency,row.status,row.po_amount,row.gross_profit,row.industry,row.company,row.account_manager,row.date_received,row.delivery_date].map((v,i) => '<td>'+show(v)+(history(row)&&i===4?' <small>Source</small>':history(row)&&i===5?' <small>Reported</small>':'')+'</td>').join('') + '</tr>').join('') + '</tbody></table></div>';
-}
-function dashboard(rows, route) {
-  const projection = projectUnifiedOrders(rows);
-  const managers = new Map();
-  for (const row of rows) { const name = row.account_manager || 'Unassigned'; managers.set(name, (managers.get(name) || 0) + 1); }
-  const legacyMetrics=projection.legacyCount ? '<section class="oi-panel"><h2>Historical source figures (not CRM VAT-derived)</h2><p>'+projection.legacyCount+' historical orders; '+projection.legacyUnknownCurrency+' unknown currency; '+projection.legacyUnknownArchive+' unknown archive state. Figures exclude unknown currencies and only cover available values. Historical profit is not included in CRM profit totals.</p>'+projection.legacyTotals.map(t=>'<p>'+show(t.currency)+' reported order value: '+money(t.amount,t.currency)+' ('+t.amountCount+' of '+t.rows+' records)</p>').join('')+'</section>' : '';
-  return '<div class="oi-metrics"><article><span>Matching orders</span><strong>'+projection.totalOrders+'</strong></article>' +
-    projection.currencyTotals.map(total => '<article><span>'+show(total.currency)+' order value</span><strong>'+money(total.amount,total.currency)+'</strong><small>Expenses '+money(total.expenses,total.currency)+' · Gross profit '+money(total.grossProfit,total.currency)+'</small></article>').join('') +
-    '</div>'+legacyMetrics+'<div class="oi-insights"><section class="oi-panel"><h2>Account distribution</h2>' +
-    ([...managers].sort((a,b)=>b[1]-a[1]).map(([name,count])=>'<div class="oi-distribution"><span>'+show(name)+'</span><meter min="0" max="'+Math.max(rows.length,1)+'" value="'+count+'">'+count+'</meter><strong>'+count+'</strong></div>').join('') || '<p>No orders.</p>') +
-    '</section><section class="oi-panel"><h2>Recent orders</h2>'+orderTable(rows.slice(0,10),route)+'</section></div>';
 }
 function workflow(rows, route) {
   return '<div class="oi-workflow" tabindex="0" aria-label="Order workflow">' + projectUnifiedOrders(rows).workflow.map(stage =>
@@ -64,7 +54,7 @@ export function renderOrderIntake({ route, snapshot, record = null }) {
   const partial = !snapshot || snapshot.hasMore || snapshot.busy || Boolean(snapshot.error);
   let content = '';
   try {
-    if (snapshot && !snapshot.busy || rows.length) content = route.section === 'dashboard' ? dashboard(filtered,route) :
+    if (snapshot && !snapshot.busy || rows.length) content = route.section === 'dashboard' ? renderSalesDashboard(filtered,{recentOrders:orderTable(filtered.slice(0,10),route),complete:!partial}) :
       route.section === 'workflow' ? workflow(filtered,route) : orderTable(filtered,route);
   } catch (error) { content = '<p role="alert">'+esc(error.message)+'</p>'; }
   return '<section class="oi-app" aria-label="Order Intake"><header class="oi-header"><div><h1>Order Intake</h1><p>Sales Operations Intelligence</p></div><div class="oi-header-actions"><button class="primary" type="button" data-oi-action="create">New purchase order</button><button class="secondary" type="button" data-oi-action="refresh"'+(snapshot?.busy?' disabled':'')+'>Refresh</button></div></header>' +
