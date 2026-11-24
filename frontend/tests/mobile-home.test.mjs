@@ -32,7 +32,10 @@ test('mobile shell JavaScript parses and uses the signed rendered navigation cat
 test('favorites and visit history are scoped to the mounted signed workspace', () => {
   assert.match(script, /if \(shell !== lastShell \|\| workspace !== lastContext\)/);
   assert.match(script, /favorites = null;\s*visited = \[\];\s*searchText = ''/);
-  assert.match(script, /Visited this session/);
+  // Recent rows omit repetitive visible visit metadata, but still come only from actual visits.
+  assert.match(script, /visited = \[\{href, when: Date\.now\(\)\}/);
+  assert.match(script, /recentList\.map\(recentRow\)/);
+  assert.doesNotMatch(script, /Visited this session/);
   assert.match(script, /items\.all\.find\(item => item\.href === entry\.href\)/);
   assert.doesNotMatch(script, /localStorage|sessionStorage/);
 });
