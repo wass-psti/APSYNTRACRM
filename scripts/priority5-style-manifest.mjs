@@ -27,6 +27,7 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/time-tracker-reports-command.css",
  "frontend/time-tracker-calendar-command.css",
  "frontend/time-tracker-overtime-command.css",
+ "frontend/time-tracker-ot-reference.css",
  "frontend/time-tracker-my-hours-command.css",
  "frontend/time-tracker-team-command.css",
  "frontend/time-tracker-monitor-command.css",
@@ -77,7 +78,6 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/dark-attendance-admin.css",
  "frontend/dark-workspace-account-completion.css",
  "frontend/dark-simplified-system.css",
- "frontend/board-overhaul-experience.css",
- "frontend/time-tracker-ot-reference.css"
+ "frontend/board-overhaul-experience.css"
 ]);
 export const STYLE_BUNDLE="frontend/apsyntra-styles.bundle.css";
