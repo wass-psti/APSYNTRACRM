@@ -91,4 +91,4 @@ jobs:
       - name: Verify TimeTracker application views, responsive layout and WCAG 2.2 AA
         run: npm run test:time-tracker:e2e
       - name: Verify CP-TT-CLOCK-A11Y-01 background refresh stability
-        run: npm run test:tt-clock-a11y-01
+        run: node scripts/cp-tt-clock-a11y-01-browser.mjs

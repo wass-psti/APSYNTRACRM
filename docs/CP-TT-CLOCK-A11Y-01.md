@@ -29,7 +29,7 @@ Correct the existing TimeTracker Clock Work Plan reveal contrast behavior and el
 - Changed-module ESLint: passed.
 - Prettier checks for the added script, documentation, package manifest, and workflow: passed.
 - CSS source manifest: `CSS_BUNDLE_UP_TO_DATE`, 80 files.
-- `npm run test:tt-clock-a11y-01`: passed in Chromium with zero WCAG 2.2 AA violations in active and idle Clock states. Existing Clock DOM nodes, focus, scroll, and layout were retained during a simulated signed correction.
+- node scripts/cp-tt-clock-a11y-01-browser.mjs: passed in Chromium with zero WCAG 2.2 AA violations in active and idle Clock states. Existing Clock DOM nodes, focus, scroll, and layout were retained during a simulated signed correction.
 - `npm run test:time-tracker:e2e`: passed.
 
 ## Data, deployment, and training
