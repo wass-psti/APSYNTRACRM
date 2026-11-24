@@ -1,3 +1,6 @@
+import {renderRecoveryChoices} from './tradelink/draft-recovery-ui.js';
+import {TradeLinkRecoveryController} from './tradelink/draft-recovery-controller.js';
+import {captureRecoveryFields} from './tradelink/draft-recovery-state.js';
 import {syncFuelTrans} from './fueltrans-lazy.js';
 import {applySearchVisibility} from './interaction-search.js';
 import {createFrameCoalescer} from './frame-coalescer.js';
@@ -81,7 +84,7 @@ import {TradeLinkAttachmentClient,TL03_ATTACHMENTS_ENABLED}
  from './tradelink-attachments.js';
 import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftForm,parseTradeLinkDraftForm,
  tradeLinkDraftValidationMessage,tradeLinkDraftReady,tradeLinkDraftSaveFailureMessage,
- tradeLinkDraftHasUnsavedChanges,reconcileTradeLinkSavedListing,
+ tradeLinkDraftHasUnsavedChanges,reconcileTradeLinkSavedListing,tradeLinkSaveDefinitelyRejected,
  serializeTradeLinkDocumentCsv,
  prepareTradeLinkDraftCommand,
  renderTradeLinkDraftLineItem,snapshotTradeLinkDraftLineItems,updateTradeLinkDraftLocalAmounts,
@@ -2083,6 +2086,8 @@ function render(){
  if(state.view==='settings')root.querySelector('.aps-settings')?.insertAdjacentHTML('afterbegin',mobileAccountMarkup());
  if(state.view==='overview')void readMobileHomeClock();
  mountTradeLinkTabMotion(root);
+ paintTradeLinkRecoveryStatus();
+ void refreshTradeLinkRecoveryChoices();
  if(state.view==='settings')mountAvatarPreview(root,{
   client:profileAvatarClient,
   userId:state.context.user_id,
@@ -3538,7 +3543,7 @@ async function openTradeLinkDraft(documentId){
    throw new ApiError('Document revision or editability changed. Refresh the signed list.',409);
   state.tradeLinkDraft={...state.tradeLinkDraft,mode:'edit',
    selected:{documentId,record},canEditOwnDraft:record.created_by===actor&&record.workflow_state==='draft',
-   reviewStages,pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,formValues:null,unsavedChanges:false,error:'',message:'Signed document loaded. Unsaved edits remain local.'};
+   reviewStages,pendingCreateId:null,pendingCreateDraft:null,pendingSave:null,lineDrafts:null,formValues:null,unsavedChanges:false,error:'',message:'Signed document loaded. Unsaved edits remain local.'};
  }catch{
   if(seq===routeSerial&&tradeLinkDraftRoute())state.tradeLinkDraft.error=
    'Draft read or authorization failed. Refresh the signed list.';
@@ -3803,42 +3808,63 @@ async function commitTradeLinkDraft(form){
  const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
  const same=()=>seq===routeSerial&&tradeLinkDraftRoute()&&
   auth.userId===actor&&state.context.workspace_id===ws;
- // Retain the form on validation failure without browser/local storage.
- const fields=new FormData(form),formValues=Object.fromEntries(fields);
- let command;
- try{
-  command=prepareTradeLinkDraftCommand(state.tradeLinkDraft,fields);
- }catch(err){
-  if(same()){
-   state.tradeLinkDraft={...state.tradeLinkDraft,formValues,
-    lineDrafts:snapshotTradeLinkDraftLineItems(form),
-    error:err?.message||'Invalid Draft input. Nothing saved.',message:''};
-   render();
+ // Keep the complete original command and receipt in memory until reconciled.
+ const previous=state.tradeLinkDraft.pendingSave;
+ let recoveryId=tradeLinkRecoveryEnabled&&state.tradeLinkDraft.mode==='create'?tradeLinkRecoveryEditor?.id:null;
+ let pending=previous;
+ if(!pending){
+  const fields=new FormData(form),formValues=Object.fromEntries(fields);
+  if(tradeLinkRecoveryEnabled&&state.tradeLinkDraft.mode==='create'){
+   captureTradeLinkRecovery(captureRecoveryFields(fields),snapshotTradeLinkDraftLineItems(form));
+   recoveryId=tradeLinkRecoveryEditor?.id;
   }
-  return;
+  let command;
+  try{
+   command=prepareTradeLinkDraftCommand(state.tradeLinkDraft,fields);
+  }catch(err){
+   if(same()){
+    state.tradeLinkDraft={...state.tradeLinkDraft,formValues,
+     lineDrafts:snapshotTradeLinkDraftLineItems(form),
+     error:err?.message||'Invalid Draft input. Nothing saved.',message:''};
+    render();
+   }
+   return;
+  }
+  const initialState=String(fields.get('documentStatus')||'for-approval');
+  if(!['draft','for-approval'].includes(initialState))
+   throw new ApiError('Choose For Approval or explicitly choose Draft. Other statuses cannot bypass dual validation.',400);
+  pending={command:{documentId:command.documentId,expectedRevision:command.expectedRevision,
+   draft:command.draft,initialState,
+   reviseApproved:state.tradeLinkDraft.selected?.record?.workflow_state==='approved'},
+   receipt:null,uncertain:false};
+  state.tradeLinkDraft={...state.tradeLinkDraft,
+   pendingCreateId:command.expectedRevision===0?command.documentId:null,
+   pendingCreateDraft:command.pendingCreateDraft,
+   pendingSave:pending,reviewStages:null,
+   lineDrafts:command.expectedRevision===0&&command.draft.items?.length?
+    command.draft.items:snapshotTradeLinkDraftLineItems(form),formValues};
  }
- const {documentId,expectedRevision,draft}=command;
- const initialState=String(fields.get('documentStatus')||'for-approval');
- if(!['draft','for-approval'].includes(initialState))
-  throw new ApiError('Choose For Approval or explicitly choose Draft. Other statuses cannot bypass dual validation.',400);
+ const {documentId,expectedRevision,draft,initialState}=pending.command;
  const workflowState=initialState;
- state.tradeLinkDraft={...state.tradeLinkDraft,
-  pendingCreateId:expectedRevision===0?documentId:null,
-  pendingCreateDraft:command.pendingCreateDraft,
-  reviewStages:null,
-  lineDrafts:expectedRevision===0&&draft.items?.length?
-   draft.items:snapshotTradeLinkDraftLineItems(form),
-  formValues,busy:true,error:'',message:'Saving document to the signed database…'};
+ state.tradeLinkDraft={...state.tradeLinkDraft,busy:true,error:'',
+  message:pending.receipt?'Verifying saved document…':'Saving document to the signed database…'};
  render();
- let committed=false;
+ let committed=!!pending.receipt;
+ let dispatched=false;
  try{
-  // The existing server transaction atomically writes the document, Board item
-  // and audit event; no second Board-item creation is permitted in the client.
-  const receipt=await tradeLinkDraftWorkspace.save({
-   documentId,expectedRevision,draft,initialState,
-   reviseApproved:state.tradeLinkDraft.selected?.record?.workflow_state==='approved'});
+  // A retained receipt means the mutation must not be repeated.
+  if(tradeLinkRecoveryEnabled&&expectedRevision===0){
+   if(!recoveryId||!await tradeLinkRecovery.checkpointSave(recoveryId,pending))
+    throw new ApiError('Local save checkpoint failed. No new request was sent.',400);
+   if(!same())return;
+  }
+  dispatched=!pending.receipt;
+  const receipt=pending.receipt||await tradeLinkDraftWorkspace.save(pending.command);
   committed=true;
+  pending={...pending,receipt};
+  if(tradeLinkRecoveryEnabled&&recoveryId)await tradeLinkRecovery.checkpointSave(recoveryId,pending);
   if(!same())return;
+  state.tradeLinkDraft.pendingSave=pending;
   const [record,list,board]=await Promise.all([
    tradeLinkDraftWorkspace.read(documentId),tradeLinkDraftWorkspace.list(),
    tradeLinkDraftWorkspace.boardProjection(documentId)
@@ -3859,6 +3885,11 @@ async function commitTradeLinkDraft(form){
   // The original signed list is bounded to 50. Its absence is not proof
   // that an exactly read and Board-verified saved document was not committed.
   const verifiedList=reconcileTradeLinkSavedListing(list,record,receipt);
+  if(tradeLinkRecoveryEnabled&&recoveryId){
+   try{if(!await tradeLinkRecovery.discard(recoveryId))toast('Saved; local recovery cleanup needs attention.',true);}catch{toast('Saved; local recovery cleanup needs attention.',true);}
+   if(!same())return;
+   tradeLinkRecoveryEditor=null;
+  }
   state.tradeLinkDraft={...initialTradeLinkDraftView(),
    status:'AUTHORIZED_READ',rows:verifiedList.rows,
    message:'Saved '+(workflowState==='draft'?'Draft':'For Approval document')+' revision '+receipt.revision+'; TradeLink, Board items and All Documents are synchronized.'};
@@ -3866,7 +3897,19 @@ async function commitTradeLinkDraft(form){
   location.hash=tradeLinkApplicationHref('documents');
  }catch(err){
   if(same()){
-   state.tradeLinkDraft.error=tradeLinkDraftSaveFailureMessage(err,{committed});
+   // A rejection of a retry does not prove the original uncertain write failed.
+   if(!committed&&!previous?.uncertain&&dispatched&&tradeLinkSaveDefinitelyRejected(err)&&
+      (!tradeLinkRecoveryEnabled||!recoveryId||await tradeLinkRecovery.checkpointSave(recoveryId,null))){
+    if(!same())return;
+    state.tradeLinkDraft.pendingSave=null;
+    state.tradeLinkDraft.pendingCreateId=null;
+    state.tradeLinkDraft.pendingCreateDraft=null;
+   }else{
+    state.tradeLinkDraft.pendingSave={...pending,uncertain:!committed&&(dispatched||!!previous?.uncertain)};
+   }
+   state.tradeLinkDraft.error=!dispatched&&!committed?
+    'Local preservation failed. No new save request was sent. Retry Save to preserve the original command.':
+    previous?.uncertain&&!committed?'Original save outcome remains uncertain. Retry the original transaction.':tradeLinkDraftSaveFailureMessage(err,{committed});
    state.tradeLinkDraft.message='';
   }
  }finally{
@@ -8433,10 +8476,16 @@ async function action(name,button){
   remaining?.focus({preventScroll:true});
   break;
  }
+ case 'tradelink-recovery-resume':
+ case 'tradelink-recovery-remove':{
+  await selectTradeLinkRecovery(button.dataset.id,name==='tradelink-recovery-remove');break;
+ }
  case 'tradelink-draft-clear':{
-  if(!tradeLinkDraftRoute()||state.tradeLinkDraft.busy)break;
+  if(!tradeLinkDraftRoute()||state.tradeLinkDraft.busy||state.tradeLinkDraft.pendingSave)break;
   if(tradeLinkDraftHasUnsavedChanges(state.tradeLinkDraft)&&
     !confirm(unsavedTradeLinkWarning))break;
+  const clearRoute=routeSerial;
+  if(!await discardTradeLinkRecovery()||clearRoute!==routeSerial||!tradeLinkDraftRoute())break;
   state.tradeLinkDraft.unsavedChanges=false;
   if(state.tradeLinkDraft.editRequestId){
    const type=state.tradeLinkDraft.selected?.record?.document_type||'quotation';
@@ -8456,13 +8505,15 @@ async function action(name,button){
   if(tradeLinkDraftRoute()&&!state.tradeLinkDraft.busy){
    if(tradeLinkDraftHasUnsavedChanges(state.tradeLinkDraft)&&
      !confirm(unsavedTradeLinkWarning))break;
+   checkpointTradeLinkRecovery();
+   tradeLinkRecoveryEditor=null;
    state.tradeLinkDraft.unsavedChanges=false;
    if(state.tradeLinkDraft.editRequestId){
     location.hash=tradeLinkApplicationHref('drafts/'+
      (state.tradeLinkDraft.selected?.record?.document_type||'quotation'));
     break;
    }
-   state.tradeLinkDraft={...state.tradeLinkDraft,mode:'create',selected:null,pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,formValues:null,error:'',message:''};
+   state.tradeLinkDraft={...state.tradeLinkDraft,mode:'create',selected:null,pendingCreateId:null,pendingCreateDraft:null,pendingSave:null,lineDrafts:null,formValues:null,error:'',message:''};
    render();
   }
   break;
@@ -8800,7 +8851,9 @@ async function action(name,button){
  case 'tradelink-draft-submit':{
   if(tradeLinkDraftRoute()&&tradeLinkDraftReady()&&
      tradeLinkCanCreate()&&!state.tradeLinkDraft.busy){
-   root.querySelector('[data-tradelink-draft-form]')?.requestSubmit();
+   const form=root.querySelector('[data-tradelink-draft-form]');
+   if(form&&state.tradeLinkDraft.pendingSave)await commitTradeLinkDraft(form);
+   else form?.requestSubmit();
   }
   break;
  }
@@ -12999,22 +13052,128 @@ function captureTradeLinkDraftListFilters(event){
  updateTradeLinkDocumentSelection(container);
  return true;
 }
+// Staged locally until restoration and interrupted-save reconciliation are complete.
+const tradeLinkRecoveryEnabled=true;
+let tradeLinkRecoveryEditor=null;
+const tradeLinkRecoveryMessages={
+ pending:'Inputs awaiting local preservation…',saving:'Preserving inputs on this device…',
+ saved:'Inputs preserved on this device.',failed:'Local preservation failed. Your inputs are still in this editor.'
+};
+const tradeLinkRecovery=new TradeLinkRecoveryController({onStatus:(id,status)=>{
+ if(tradeLinkRecoveryEditor?.id!==id)return;
+ tradeLinkRecoveryEditor.status=status;
+ paintTradeLinkRecoveryStatus();
+}});
+function paintTradeLinkRecoveryStatus(){
+ const pending=state.tradeLinkDraft?.pendingSave;
+ const form=root.querySelector('[data-tradelink-draft-form]');
+ if(form&&pending&&tradeLinkDraftRoute()){
+  const button=root.querySelector('[data-action="tradelink-draft-submit"]');
+  for(const control of form.elements)if(control!==button)control.disabled=true;
+  if(button){button.disabled=state.tradeLinkDraft.busy===true;button.textContent=pending.receipt?'Retry Verification':'Retry Original Save';}
+ }
+
+ const output=root.querySelector('[data-tradelink-recovery-status]');
+ if(!output)return;
+ const active=tradeLinkRecoveryEnabled&&tradeLinkDraftRoute()&&
+  tradeLinkRecoveryEditor?.route===routeSerial&&
+  tradeLinkRecoveryEditor?.userId===auth.userId&&
+  tradeLinkRecoveryEditor?.workspaceId===state.context?.workspace_id;
+ output.hidden=!active;
+ output.textContent=active?tradeLinkRecoveryMessages[tradeLinkRecoveryEditor.status]||'':'';
+}
+let tradeLinkRecoveryChoices=[];
+let tradeLinkRecoveryReadSerial=0;
+function tradeLinkRecoveryScope(){
+ if(!tradeLinkRecoveryEnabled||!tradeLinkDraftRoute()||!tradeLinkCanCreate()||
+    state.tradeLinkDraft.mode!=='create'||state.tradeLinkDraft.editRequestId)return null;
+ const documentType=root.querySelector('[data-tradelink-draft-form] [name="documentType"]')?.value;
+ if(!documentType)return null;
+ return {userId:auth.userId,workspaceId:state.context.workspace_id,documentType,route:routeSerial};
+}
+function sameTradeLinkRecoveryScope(scope){
+ const current=tradeLinkRecoveryScope();
+ return current&&Object.keys(scope).every(key=>scope[key]===current[key]);
+}
+async function refreshTradeLinkRecoveryChoices(){
+ const serial=++tradeLinkRecoveryReadSerial;
+ const scope=tradeLinkRecoveryScope();
+ const host=root.querySelector('[data-tradelink-recovery-choices]');
+ tradeLinkRecoveryChoices=[];
+ if(!host||!scope)return;
+ try{
+  const rows=await tradeLinkRecovery.store.list(scope.userId,scope.workspaceId,scope.documentType);
+  if(serial!==tradeLinkRecoveryReadSerial||!sameTradeLinkRecoveryScope(scope)||!host.isConnected)return;
+  tradeLinkRecoveryChoices=rows.filter(row=>row.instanceId!==tradeLinkRecoveryEditor?.id);
+  host.innerHTML=renderRecoveryChoices(tradeLinkRecoveryChoices);
+ }catch{
+  if(serial===tradeLinkRecoveryReadSerial&&host.isConnected&&sameTradeLinkRecoveryScope(scope))
+   host.textContent='Local recovery records are unavailable.';
+ }
+}
+async function selectTradeLinkRecovery(id,remove=false){
+ const scope=tradeLinkRecoveryScope();
+ if(!scope||state.tradeLinkDraft.busy)return;
+ const row=tradeLinkRecoveryChoices.find(item=>item.instanceId===id);
+ if(!row||row.userId!==scope.userId||row.workspaceId!==scope.workspaceId||row.documentType!==scope.documentType)return;
+ try{
+  if(remove){
+   if(row.pendingSave)throw new Error('Resolve the original Save before discarding.');
+   if(!confirm('Discard this unfinished document from this device?'))return;
+   if(!await tradeLinkRecovery.store.remove(scope.userId,scope.workspaceId,scope.documentType,id,row.version))
+    throw new Error('Recovery record changed. Refresh and retry.');
+   await refreshTradeLinkRecoveryChoices();return;
+  }
+  if(state.tradeLinkDraft.unsavedChanges&&!confirm('Preserve current inputs and resume this unfinished document?'))return;
+  if(tradeLinkRecoveryEditor&&!await tradeLinkRecovery.flush(tradeLinkRecoveryEditor.id))
+   throw new Error('Current inputs could not be preserved.');
+  if(!sameTradeLinkRecoveryScope(scope))return;
+  const latest=(await tradeLinkRecovery.store.list(scope.userId,scope.workspaceId,scope.documentType)).find(item=>item.instanceId===id);
+  if(!sameTradeLinkRecoveryScope(scope)||!latest||latest.version!==row.version)
+   throw new Error('Recovery record changed. Refresh and retry.');
+  tradeLinkRecovery.resume(latest);
+  tradeLinkRecoveryEditor={id,route:scope.route,userId:scope.userId,workspaceId:scope.workspaceId,documentType:scope.documentType,status:'saved'};
+  state.tradeLinkDraft={...state.tradeLinkDraft,formValues:latest.fields,lineDrafts:latest.lines,
+   pendingSave:latest.pendingSave?{...latest.pendingSave,uncertain:!latest.pendingSave.receipt}:null,
+   pendingCreateId:latest.pendingSave?.command.documentId||null,
+   pendingCreateDraft:latest.pendingSave?.command.draft||null,
+   unsavedChanges:true,draftNotice:'Unfinished inputs restored from this device.',error:'',message:''};
+  render();
+ }catch{if(sameTradeLinkRecoveryScope(scope))toast('Unable to complete local recovery. Refresh the recovery choices and try again.',true);}
+}
+function checkpointTradeLinkRecovery(){
+ if(tradeLinkRecoveryEnabled&&tradeLinkRecoveryEditor)
+  void tradeLinkRecovery.flush(tradeLinkRecoveryEditor.id);
+}
+function captureTradeLinkRecovery(values,lines){
+ if(!tradeLinkRecoveryEnabled||!tradeLinkCanCreate()||state.tradeLinkDraft.mode!=='create'||
+    !values.documentType||!auth.isSignedIn||state.context?.user_id!==auth.userId)return;
+ const userId=auth.userId,workspaceId=state.context.workspace_id,documentType=values.documentType;
+ const previous=tradeLinkRecoveryEditor;
+ if(!previous||previous.route!==routeSerial||previous.userId!==userId||
+    previous.workspaceId!==workspaceId||previous.documentType!==documentType){
+  checkpointTradeLinkRecovery();
+  tradeLinkRecoveryEditor={id:crypto.randomUUID(),route:routeSerial,userId,workspaceId,documentType,status:'pending'};
+ }
+ tradeLinkRecovery.capture({instanceId:tradeLinkRecoveryEditor.id,userId,workspaceId,documentType},values,lines);
+}
+async function discardTradeLinkRecovery(){
+ const previous=tradeLinkRecoveryEditor;
+ if(!tradeLinkRecoveryEnabled||!previous)return true;
+ try{
+  if(!await tradeLinkRecovery.discard(previous.id))throw new Error('Recovery record changed.');
+  if(tradeLinkRecoveryEditor===previous)tradeLinkRecoveryEditor=null;
+  return true;
+ }catch{toast('Local recovery record could not be discarded. Inputs retained.',true);return false;}
+}
 function captureTradeLinkDraftFields(event){
  const form=event.target?.closest?.('[data-tradelink-draft-form]');
- if(!form||!tradeLinkDraftRoute()||state.tradeLinkDraft.busy)return false;
- const fd=new FormData(form),values={};
- for(const key of ['documentType','documentNumber','customerName','referenceNumber',
-  'currency','vatType','lineDescription','lineQuantity','lineUnitPrice','lineUnit',
-  'lineSerialNumber','checkedBy','deliveredBy','receivedBy','verifiedBy',
-  'verifiedByEmail','approvedByEmail','paymentParticulars','cashAmount','chequeAmount',
-  'bankName','chequeNumber','customerTin','customerEmail','customerPhone','validity',
-  'deliveryCommitment','paymentTerms','targetDeliveryDate','poNumber','approvedBy',
-  'documentStatus','discountType','discountValue','exchangeRate','remarks']){
-  values[key]=String(fd.get(key)??'').slice(0,5000);
- }
+ if(!form||!tradeLinkDraftRoute()||state.tradeLinkDraft.busy||state.tradeLinkDraft.pendingSave)return false;
+ const values=captureRecoveryFields(new FormData(form));
  state.tradeLinkDraft.formValues=values;
  state.tradeLinkDraft.lineDrafts=snapshotTradeLinkDraftLineItems(form);
  state.tradeLinkDraft.unsavedChanges=true;
+ if(event.target?.name!=='documentType')captureTradeLinkRecovery(values,state.tradeLinkDraft.lineDrafts);
  state.tradeLinkDraft.draftNotice='';
  updateTradeLinkDraftLocalSummary(form);
  updateTradeLinkDraftInputCurrencyLabels(form);
@@ -13215,6 +13374,8 @@ root.addEventListener('change',event=>{
   }
   // Never transfer the previous module's customer, financial, or reviewer inputs.
   if(event.target?.matches?.('[data-tradelink-draft-form] select[name="documentType"]')){
+   checkpointTradeLinkRecovery();
+   tradeLinkRecoveryEditor=null;
    state.tradeLinkDraft=resetTradeLinkDraftForm(state.tradeLinkDraft,event.target.value);
    render();
    root.querySelector('.tl-reference-document-tabs a.active')?.focus({preventScroll:true});
@@ -13893,6 +14054,7 @@ root.addEventListener('input',event=>{
  }else if(event.target.id==='search-board-items')syncBoardSelectionUi();
 });
 document.addEventListener('visibilitychange',()=>{
+ if(document.hidden)checkpointTradeLinkRecovery();
  platformSync.visibilityChanged();
  setBoardLoadingVisibility(root,document.hidden);
  if(!document.hidden)void refreshCorrectedTimeTrackerClock({onFocus:true});
@@ -13963,10 +14125,13 @@ window.addEventListener('hashchange',()=>{
   location.replace(approvedRouteHash);
   return;
  }
+ checkpointTradeLinkRecovery();
+ tradeLinkRecoveryEditor=null;
  approvedRouteHash=nextHash;
  onRoute().catch(notice);
 });
 window.addEventListener('pagehide',closeTradeLinkSavedDocumentOutput);
+window.addEventListener('pagehide',checkpointTradeLinkRecovery);
 window.addEventListener('beforeunload',event=>{
  if(state.context&&tradeLinkDraftRoute()&&
     tradeLinkDraftHasUnsavedChanges(state.tradeLinkDraft)){

@@ -1,3 +1,4 @@
+import {RECOVERY_FIELDS,captureRecoveryFields} from '../tradelink/draft-recovery-state.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -270,10 +271,11 @@ test('Payment AR local readiness enforces positive cash or cheque and responsibi
 
 test('module switching updates ephemeral fields without storage, network or workflow actions',()=>{
  const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/captureRecoveryFields\(new FormData\(form\)\)/);
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
  for(const key of ['lineSerialNumber','checkedBy','deliveredBy','receivedBy','verifiedBy',
   'verifiedByEmail','approvedByEmail','paymentParticulars','cashAmount','chequeAmount','bankName','chequeNumber'])
-  assert.match(app,new RegExp("'"+key+"'"));
+  assert.ok(RECOVERY_FIELDS.includes(key),key);
  assert.match(app,/select\[name="documentType"\]/);
  assert.match(app,/if\(captureTradeLinkDraftFields\(event\)\)\{/);
  assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
@@ -360,9 +362,10 @@ test('commercial UI redraw and signed client boundaries do not persist or leak d
  }
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
  const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/captureRecoveryFields\(new FormData\(form\)\)/);
  for(const key of ['customerTin','customerEmail','customerPhone','validity',
   'verifiedByEmail','approvedByEmail','deliveryCommitment','paymentTerms','targetDeliveryDate','poNumber','approvedBy'])
-  assert.ok(app.includes("'"+key+"'"),key);
+  assert.ok(RECOVERY_FIELDS.includes(key),key);
  assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
@@ -438,7 +441,7 @@ test('local validation feedback is specific, sanitized and reset after edited in
  assert.match(app,/form\.querySelector\(':invalid'\)/);
  assert.match(app,/resetTradeLinkDraftForm\(state\.tradeLinkDraft,event\.target\.value\)/);
  assert.match(app,/case 'tradelink-draft-clear'/);
- assert.match(app,/if\(!tradeLinkDraftRoute\(\)\|\|state\.tradeLinkDraft\.busy\)break;/);
+ assert.match(app,/if\(!tradeLinkDraftRoute\(\)\|\|state\.tradeLinkDraft\.busy\|\|state\.tradeLinkDraft\.pendingSave\)break;/);
 });
 
 
@@ -587,8 +590,9 @@ test('commercial estimate rerender restores source-calculated amount and remains
  assert.match(invalid,/data-tradelink-draft-amount="total">—/);
  assert.doesNotMatch(invalid,/12,000\.00/);
  const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/captureRecoveryFields\(new FormData\(form\)\)/);
  for(const key of ['discountType','discountValue','exchangeRate'])
-  assert.ok(app.includes("'"+key+"'"));
+  assert.ok(RECOVERY_FIELDS.includes(key),key);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
 });
@@ -1087,13 +1091,13 @@ test('operational save and read handlers retain signed linkage, backend receipt 
  assert.match(app,/record\.board_item_id!==listed\.boardItemId/);
  assert.match(app,/state\.tradeLinkDraft\.documentPreview=\{/);
  assert.match(app,/revisions:bundle\.revisions/);
- assert.match(app,/const receipt=await tradeLinkDraftWorkspace\.save/);
+ assert.match(app,/const receipt=pending\.receipt\|\|await tradeLinkDraftWorkspace\.save/);
  assert.match(app,/committed=true/);
  assert.match(app,/tradeLinkDraftWorkspace\.revisionBundle\(documentId,revision\)/);
  assert.match(app,/tradeLinkDraftWorkspace\.list\(\)/);
  assert.match(app,/board\.items\?\.some\(item=>item\.id===receipt\.boardItemId/);
  assert.match(app,/location\.hash=tradeLinkApplicationHref\('documents'\)/);
- assert.match(app,/root\.querySelector\('\[data-tradelink-draft-form\]'\)\?\.requestSubmit\(\)/);
+ assert.match(app,/if\(form&&state\.tradeLinkDraft\.pendingSave\)await commitTradeLinkDraft\(form\);\s*else form\?\.requestSubmit\(\)/);
  assert.match(ui,/return renderTradeLinkDocumentRepository\(\{detail,workspaceId,view:draftView,canManage,canReview,actorEmail,canCreate,actorId\}\)/);
  assert.match(draft,/data-action="tradelink-document-open"/);
  assert.match(draft,/renderTradeLinkSavedDocumentPreview/);
@@ -1147,4 +1151,11 @@ test('app integration is session-cleared and route-scoped, with no new credentia
  assert.match(app,/event\.target\.matches\('\[data-tradelink-draft-form\]'\)/);
  assert.doesNotMatch(source,/localStorage|sessionStorage|service_role|sb_secret|fetch\(/);
  assert.doesNotMatch(source,/\b(?:indexedDB|setItem|document\.cookie)\b/);
+});
+
+test('shared recovery field capture preserves raw values and excludes unknown inputs',()=>{
+ const input=new Map(RECOVERY_FIELDS.map(key=>[key,'  '+key+' Ω  ']));
+ input.set('unexpected','not captured');
+ assert.deepEqual(captureRecoveryFields(input),Object.fromEntries(RECOVERY_FIELDS.map(key=>[key,input.get(key)])));
+ assert.deepEqual(captureRecoveryFields(new Map([['remarks','']])),{remarks:''});
 });

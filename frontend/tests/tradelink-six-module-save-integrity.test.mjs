@@ -94,7 +94,7 @@ test('deep JSON fields survive signed readback without losing exact-value verifi
 test('signed post-commit success requires persisted content parity before showing success toast',()=>{
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const guard=source.indexOf('!tradeLinkSavedDraftMatches(record,savedDraft)');
- const receipt=source.indexOf('const receipt=await tradeLinkDraftWorkspace.save(');
+ const receipt=source.indexOf('const receipt=pending.receipt||await tradeLinkDraftWorkspace.save(');
  const success=source.indexOf("toast('Document '+savedDraft.documentNumber+' saved. Board item and All Documents verified.')");
  assert.ok(receipt>0&&guard>receipt&&success>guard);
  assert.match(source,/tradeLinkDraftSaveFailureMessage\(err,\{committed\}\)/);

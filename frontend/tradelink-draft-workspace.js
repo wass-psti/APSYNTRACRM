@@ -80,7 +80,7 @@ export function initialTradeLinkDraftView(documentType=null){
  // This is transient UI state, never browser or server persistence.
  const selected=typeLabels.some(([key])=>key===documentType)?documentType:null;
  return {status:'READ_PENDING',rows:[],selected:null,documentPreview:null,busy:false,error:'',
-  message:'',draftNotice:'',mode:'create',editRequestId:null,pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,unsavedChanges:false,
+  message:'',draftNotice:'',mode:'create',editRequestId:null,pendingCreateId:null,pendingCreateDraft:null,pendingSave:null,lineDrafts:null,unsavedChanges:false,
   listFilters:initialTradeLinkDraftListFilters(),listPage:null,selectedDocumentIds:[],
   formValues:selected?{documentType:selected}:null};
 }
@@ -91,7 +91,7 @@ export function initialTradeLinkDraftView(documentType=null){
 export function resetTradeLinkDraftForm(view=initialTradeLinkDraftView(),documentType=null){
  const requested=documentType??view?.formValues?.documentType??'quotation';
  const safeType=typeLabels.some(([id])=>id===requested)?requested:'quotation';
- return {...view,mode:'create',selected:null,documentPreview:null,pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,error:'',message:'',
+ return {...view,mode:'create',selected:null,documentPreview:null,pendingCreateId:null,pendingCreateDraft:null,pendingSave:null,lineDrafts:null,error:'',message:'',
   draftNotice:'Unsaved local fields cleared. Nothing saved or transmitted.',unsavedChanges:false,
   formValues:{documentType:safeType}};
 }
@@ -109,9 +109,20 @@ export function tradeLinkDraftValidationMessage(error){
   error.message:'Invalid Draft input.';
 }
 /** Deliberately sanitize server failures: no SQL details or private record data. */
+export function tradeLinkSaveDefinitelyRejected(error){
+ return Number(error?.status)===400&&['22023','23514','23502'].includes(String(error?.code||''));
+}
+/** Deliberately sanitize server failures: no SQL details or private record data. */
 export function tradeLinkDraftSaveFailureMessage(error,{committed=false}={}){
- if(committed)return 'Document saved, but Board and All Documents could not be verified. Refresh the signed listing before editing or retrying.';
+ if(committed)return 'Document saved, but Board and All Documents could not be verified. Select Save again to retry verification only.';
  const code=String(error?.code||''),status=Number(error?.status);
+ if(tradeLinkSaveDefinitelyRejected(error)){
+  if(error.message==='Two different assigned TradeLink reviewers are required')
+   return 'Document rejected: select two different assigned TradeLink reviewers, then save again.';
+  if(error.message==='Both assigned reviewers must be active confirmed TradeLink accounts in this workspace')
+   return 'Document rejected: select two active, confirmed TradeLink reviewer accounts in this workspace.';
+  return 'Document rejected: check the required document fields and reviewer selections, then save again.';
+ }
  if(status===401||status===403||code==='42501')
   return 'Saving is not authorized for this session or workspace. Nothing was confirmed. Sign in again or ask your administrator.';
  if(status===409||code==='40001'||code==='23505')
@@ -1211,6 +1222,8 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
    '</div>':'')+
   (mode==='edit'&&!editing?'<p role="alert">This record cannot be edited with the bounded Phase 1 editor.</p>':'')+
   (draftNotice?'<p class="tl-draft-feedback" role="status">'+escape(draftNotice)+'</p>':'')+
+  '<div data-tradelink-recovery-choices></div>'+
+  '<p hidden data-tradelink-recovery-status class="tl-draft-feedback" role="status" aria-live="polite"></p>'+
   '<div class="tl-reference-editor-content">'+
    (editing&&row.workflow_state==='approved'?'<p role="status" class="tl-draft-feedback">Revise Approved: the existing approved revision remains printable. Saving creates a new For Approval revision requiring both assigned reviewers again.</p>':'')+
    (showModuleTabs?referenceDraftTabs(type):'')+
