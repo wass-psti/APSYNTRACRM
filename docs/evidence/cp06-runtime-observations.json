@@ -1,0 +1,291 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-11-23T10:34:25Z",
+  "project": {
+    "ref": "jtlusodorfnyzgyuewkz",
+    "plan": "Pro"
+  },
+  "databaseReport": {
+    "range": "Last 60 minutes",
+    "workingPanels": {
+      "memoryUsageMb": 863.13,
+      "memoryCommitmentGb": 1.4,
+      "cpuUsagePercent": 2.27,
+      "networkThroughputKbPerSecond": 79.8,
+      "databaseSizeGb": 0.45,
+      "provisionedDiskGb": 2
+    },
+    "failedPanels": [
+      "Disk IOPS",
+      "Disk throughput",
+      "Database Connections",
+      "Dedicated Pooler Client Connections",
+      "Shared Pooler Client Connections",
+      "Disk Usage"
+    ],
+    "reportRequestStatus": "not exposed by available browser page inspection",
+    "reportTraceId": null
+  },
+  "postgresActivity": {
+    "capturedAt": "2026-11-23T10:34:25.510382Z",
+    "connectionsTotal": 23,
+    "idleClientRead": 13,
+    "active": 2,
+    "idleInTransaction": 0,
+    "activeWalSenderWait": 1,
+    "deadlocksSinceStatsReset": 0
+  },
+  "statementDeltas": {
+    "windowStart": "2026-11-23T10:16:24Z",
+    "windowEnd": "2026-11-23T10:34:25Z",
+    "wm_list_boards": {
+      "calls": 13,
+      "totalExecutionMs": 181.5
+    },
+    "apsyntra_crm_my_effective_access": {
+      "calls": 77,
+      "totalExecutionMs": 2660.56
+    },
+    "wm_get_board_items_page": {
+      "calls": 18,
+      "totalExecutionMs": 94.74
+    },
+    "wm_auth_access_context": {
+      "calls": 551,
+      "totalExecutionMs": 1600.75
+    },
+    "wm_get_board_shell": {
+      "calls": 27,
+      "totalExecutionMs": 116.79
+    },
+    "work_board_access": {
+      "calls": 295,
+      "totalExecutionMs": 359.98
+    },
+    "realtime.authorize": {
+      "calls": 334,
+      "totalExecutionMs": 759.93
+    }
+  },
+  "sessionRecovery": {
+    "route": "#/time-tracker",
+    "sameTabReload": true,
+    "signedWorkspaceVerified": true,
+    "signedClockWritesActive": true,
+    "signInVisible": false,
+    "liveRealtimeRestored": true,
+    "failedAuthOrWorkspaceRequests": 0,
+    "requests": [
+      {
+        "path": "/auth/v1/user",
+        "status": 200,
+        "durationMs": 268
+      },
+      {
+        "path": "/rest/v1/rpc/wm_auth_access_context",
+        "status": 200,
+        "durationMs": 210
+      },
+      {
+        "path": "/rest/v1/rpc/wm_list_boards",
+        "status": 200,
+        "durationMs": 266
+      },
+      {
+        "path": "/rest/v1/rpc/apsyntra_role_is_bootstrap",
+        "status": 200,
+        "durationMs": 207
+      },
+      {
+        "path": "/rest/v1/rpc/apsyntra_role_is_admin",
+        "status": 200,
+        "durationMs": 220
+      },
+      {
+        "path": "/rest/v1/rpc/apsyntra_crm_my_effective_access",
+        "status": 200,
+        "durationMs": 308
+      },
+      {
+        "path": "/rest/v1/rpc/native_application_board_context",
+        "status": 200,
+        "durationMs": 262
+      }
+    ],
+    "attendanceMutationPerformed": false,
+    "sessionArchitectureChanged": false
+  },
+  "metricsCapture": {
+    "requestedSamples": 31,
+    "intervalMs": 60000,
+    "successfulSamples": 0,
+    "reason": "existing Secret API key was not supplied through a secret-safe execution path",
+    "collectorImplemented": true,
+    "focusedTestsPassed": 10,
+    "fullFrontendTestsPassed": 3553,
+    "collectorErrorHandlingTested": true,
+    "metricCatalogVerified": "Supabase Grafana metrics.md; node_cpu_seconds_total service_type=db; process_cpu_seconds_total service_type=postgresql/gotrue; pg_stat_database *_total; pg_stat_database_num_backends; pgbouncer_pools_*_active_connections",
+    "successPathTested": true
+  },
+  "resumedObservationNov24": {
+    "capturedAt": "2026-11-24T02:55:00Z",
+    "dashboardRoute": "/observability/database",
+    "globalNotice": "We are investigating a technical issue",
+    "statusPageLinkPresent": true,
+    "failedMetricPanels": [
+      "Memory usage",
+      "Memory commitment",
+      "CPU usage",
+      "Network throughput",
+      "Disk IOPS",
+      "Disk throughput",
+      "Database Connections",
+      "Dedicated Pooler Client Connections",
+      "Shared Pooler Client Connections",
+      "Disk Usage"
+    ],
+    "databaseSize": {
+      "usedGb": 0.45,
+      "provisionedGb": 2
+    },
+    "sameTenPanelFailureAfterReload": true,
+    "fetchXhrRequestsBeforeReload": [
+      "auth refresh",
+      "ConfigCat configuration",
+      "Dashboard profile",
+      "Dashboard permissions"
+    ],
+    "reportSpecificFetchXhrObserved": false,
+    "fetchXhrCountAfterReload": 0,
+    "networkTraceCompleteness": "Resource Timing only; not a full network trace",
+    "projectLogs": {
+      "windowStart": "2026-11-24T01:45:00Z",
+      "windowEnd": "2026-11-24T02:55:00Z",
+      "edgeEvents": 4965,
+      "postgresEvents": 1076,
+      "postgresErrorFatalMatches": 0,
+      "edgeHttp4xx5xxMatches": 0
+    },
+    "metricsCredentialEnvironment": "SUPABASE_METRICS_SECRET_KEY unset",
+    "metricsCollectorFix": "requestStartedAt is now defined before the request and used by sanitized failure records",
+    "focusedTestsPassed": 9,
+    "fullFrontendTestsPassed": 3550,
+    "statementBaseline": {
+      "capturedAt": "2026-11-24T02:57:05.326686Z",
+      "source": "pg_stat_statements cumulative counters; use only subsequent deltas, not totals as an interval rate",
+      "workloads": [
+        {
+          "name": "wm_list_boards",
+          "calls": 37669,
+          "totalExecMs": 6955858.58,
+          "meanExecMs": 184.66
+        },
+        {
+          "name": "apsyntra_crm_my_effective_access",
+          "calls": 19371,
+          "totalExecMs": 2202345.81,
+          "meanExecMs": 113.69
+        },
+        {
+          "name": "wm_get_board_items_page",
+          "calls": 21519,
+          "totalExecMs": 928606.89,
+          "meanExecMs": 43.15
+        },
+        {
+          "name": "wm_auth_access_context",
+          "calls": 109239,
+          "totalExecMs": 755603.96,
+          "meanExecMs": 6.92
+        },
+        {
+          "name": "wm_get_board_shell",
+          "calls": 22270,
+          "totalExecMs": 599822.39,
+          "meanExecMs": 26.93
+        },
+        {
+          "name": "work_board_access",
+          "calls": 93070,
+          "totalExecMs": 581416.17,
+          "meanExecMs": 6.25
+        },
+        {
+          "name": "realtime.authorize",
+          "calls": 198321,
+          "totalExecMs": 401923.39,
+          "meanExecMs": 2.03
+        }
+      ]
+    },
+    "statementWindow": {
+      "start": "2026-11-24T02:57:05.326686Z",
+      "end": "2026-11-24T03:03:44.992985Z",
+      "durationSeconds": 399.666,
+      "workloadDeltas": [
+        {
+          "name": "wm_list_boards",
+          "calls": 14,
+          "executionMs": 153.94,
+          "meanMsPerCall": 11.0,
+          "callsPerMinute": 2.1
+        },
+        {
+          "name": "apsyntra_crm_my_effective_access",
+          "calls": 31,
+          "executionMs": 1144.28,
+          "meanMsPerCall": 36.91,
+          "callsPerMinute": 4.65
+        },
+        {
+          "name": "wm_get_board_items_page",
+          "calls": 9,
+          "executionMs": 39.46,
+          "meanMsPerCall": 4.38,
+          "callsPerMinute": 1.35
+        },
+        {
+          "name": "wm_auth_access_context",
+          "calls": 271,
+          "executionMs": 991.91,
+          "meanMsPerCall": 3.66,
+          "callsPerMinute": 40.68
+        },
+        {
+          "name": "wm_get_board_shell",
+          "calls": 18,
+          "executionMs": 62.3,
+          "meanMsPerCall": 3.46,
+          "callsPerMinute": 2.7
+        },
+        {
+          "name": "work_board_access",
+          "calls": 128,
+          "executionMs": 182.34,
+          "meanMsPerCall": 1.42,
+          "callsPerMinute": 19.22
+        },
+        {
+          "name": "realtime.authorize",
+          "calls": 193,
+          "executionMs": 291.64,
+          "meanMsPerCall": 1.51,
+          "callsPerMinute": 28.97
+        }
+      ]
+    },
+    "currentCrmSession": {
+      "capturedAtLocal": "2026-11-24T11:03:26+08:00",
+      "route": "#/time-tracker",
+      "secureSession": true,
+      "signedWorkspaceVerified": true,
+      "signedClockWritesActive": true,
+      "liveRealtimeConnected": true,
+      "signInVisible": false
+    }
+  },
+  "separateDefect": {
+    "workItem": "CP-BOARD-GROUP-VIEW-01B",
+    "includedInCp06": false
+  }
+}
