@@ -83,9 +83,9 @@ export class TradeLinkRecoveryController{
   if(!entry)return true;
   if(entry.timer!==null)this.cancel(entry.timer);
   entry.timer=null;
-  this.entries.delete(id);
   if(entry.running)await entry.running;
-  if(!entry.version)return true;
-  return this.store.remove(entry.identity.userId,entry.identity.workspaceId,entry.identity.documentType,id,entry.version);
+  const removed=!entry.version||await this.store.remove(entry.identity.userId,entry.identity.workspaceId,entry.identity.documentType,id,entry.version);
+  if(removed&&this.entries.get(id)===entry)this.entries.delete(id);
+  return removed;
  }
 }

@@ -8480,7 +8480,8 @@ async function action(name,button){
   if(!tradeLinkDraftRoute()||state.tradeLinkDraft.busy||state.tradeLinkDraft.pendingSave)break;
   if(tradeLinkDraftHasUnsavedChanges(state.tradeLinkDraft)&&
     !confirm(unsavedTradeLinkWarning))break;
-  await discardTradeLinkRecovery();
+  const clearRoute=routeSerial;
+  if(!await discardTradeLinkRecovery()||clearRoute!==routeSerial||!tradeLinkDraftRoute())break;
   state.tradeLinkDraft.unsavedChanges=false;
   if(state.tradeLinkDraft.editRequestId){
    const type=state.tradeLinkDraft.selected?.record?.document_type||'quotation';
@@ -13046,7 +13047,7 @@ function captureTradeLinkDraftListFilters(event){
  return true;
 }
 // Staged locally until restoration and interrupted-save reconciliation are complete.
-const tradeLinkRecoveryEnabled=false;
+const tradeLinkRecoveryEnabled=true;
 let tradeLinkRecoveryEditor=null;
 const tradeLinkRecoveryMessages={
  pending:'Inputs awaiting local preservation…',saving:'Preserving inputs on this device…',
@@ -13061,9 +13062,9 @@ function paintTradeLinkRecoveryStatus(){
  const pending=state.tradeLinkDraft?.pendingSave;
  const form=root.querySelector('[data-tradelink-draft-form]');
  if(form&&pending&&tradeLinkDraftRoute()){
-  for(const control of form.elements)control.disabled=true;
   const button=root.querySelector('[data-action="tradelink-draft-submit"]');
-  if(button)button.textContent=pending.receipt?'Retry Verification':'Retry Original Save';
+  for(const control of form.elements)if(control!==button)control.disabled=true;
+  if(button){button.disabled=state.tradeLinkDraft.busy===true;button.textContent=pending.receipt?'Retry Verification':'Retry Original Save';}
  }
 
  const output=root.querySelector('[data-tradelink-recovery-status]');
@@ -13152,11 +13153,12 @@ function captureTradeLinkRecovery(values,lines){
 }
 async function discardTradeLinkRecovery(){
  const previous=tradeLinkRecoveryEditor;
- tradeLinkRecoveryEditor=null;
- if(!tradeLinkRecoveryEnabled||!previous)return;
+ if(!tradeLinkRecoveryEnabled||!previous)return true;
  try{
-  if(!await tradeLinkRecovery.discard(previous.id))toast('Local recovery record could not be discarded.',true);
- }catch{toast('Local recovery record could not be discarded.',true);}
+  if(!await tradeLinkRecovery.discard(previous.id))throw new Error('Recovery record changed.');
+  if(tradeLinkRecoveryEditor===previous)tradeLinkRecoveryEditor=null;
+  return true;
+ }catch{toast('Local recovery record could not be discarded. Inputs retained.',true);return false;}
 }
 function captureTradeLinkDraftFields(event){
  const form=event.target?.closest?.('[data-tradelink-draft-form]');
