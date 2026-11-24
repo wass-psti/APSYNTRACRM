@@ -1,101 +1,4 @@
-/* TimeTracker Log command view: one optional Pixi scene, all data as semantic DOM. */
-#app .aps-board-shell .tt-native .tt-log.tt-log-command{
- padding:clamp(13px,2vw,26px);gap:17px;
- background:linear-gradient(155deg,#f1f5fd,#f9fbff 60%,#f3f7ff);
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero.tt-log-command-hero{
- position:relative;isolation:isolate;overflow:hidden;
- display:grid;grid-template-columns:minmax(0,1.1fr) minmax(250px,.75fr);
- align-items:center;gap:clamp(18px,3vw,42px);
- min-height:298px;padding:clamp(23px,3vw,38px);
- border:1px solid #5678b68a;border-radius:22px;
- background:radial-gradient(ellipse at 78% 39%,#396cc05e,transparent 52%),linear-gradient(122deg,#0b1939,#192f61 56%,#38418b);
- box-shadow:0 17px 40px #1d35702a,inset 0 1px #ffffff22;
- color:#f3f8ff;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero::before{
- content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
- background-image:linear-gradient(#b6d7ff0b 1px,transparent 1px),linear-gradient(90deg,#b6d7ff0b 1px,transparent 1px);
- background-size:38px 38px;mask-image:linear-gradient(105deg,#0001,transparent 85%);
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-graphics{
- position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-graphics .tt-pixi-backdrop{
- position:absolute;inset:0;pointer-events:none;
- background:radial-gradient(circle at 77% 48%,#47afff2a,transparent 35%);
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-graphics .tt-pixi-backdrop::after{
- width:200px;height:200px;top:49%;left:77%;border-color:#83d2ff40;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-graphics .tt-pixi-backdrop canvas{
- position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none;opacity:.9;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-orbit{
- position:absolute;top:50%;left:77%;width:320px;height:320px;
- border:1px solid #83d6ff24;border-radius:50%;transform:translate(-50%,-50%) rotate(21deg) scaleY(.7);
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-orbit-outer{width:520px;height:520px;border-color:#a5aaff1b}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-orbit-inner{width:210px;height:210px;border-color:#8ceaff2e}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero-content,
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero-telemetry{
- position:relative;z-index:1;min-width:0;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-eyebrow{
- display:flex;align-items:center;gap:9px;margin-bottom:23px;
- color:#a5c7f3;font-size:10px;letter-spacing:.18em;font-weight:830;line-height:1.6;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-live-dot{
- width:7px;height:7px;flex:none;border-radius:50%;background:#69e1cd;box-shadow:0 0 0 4px #6ae1cc20;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero h3{
- font:830 clamp(29px,3.3vw,43px)/1.12 Inter,system-ui,sans-serif;
- color:#fff;letter-spacing:-.05em;margin:0 0 17px;text-shadow:0 6px 25px #030b2680;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero-content p{
- margin:0;color:#c0d3ee;font-size:12px;line-height:1.6;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero-scope{
- display:inline-flex;align-items:center;max-width:100%;margin-top:24px;
- padding:10px 13px;border:1px solid #9ac9ed5b;border-radius:999px;
- background:#a9dfff13;color:#c8e5fc;font-size:11px;line-height:1.5;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero-telemetry{
- display:grid;gap:14px;border:1px solid #b5d5ff42;
- border-radius:16px;padding:clamp(16px,2.4vw,24px);
- background:linear-gradient(145deg,#d6eaff16,#c4d9ff0d);
- box-shadow:0 9px 27px #040e2a38,inset 0 1px #fff2;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-label{
- color:#a9c6eb;letter-spacing:.13em;font-weight:820;font-size:9px;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-total{
- display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-total strong{
- font-size:clamp(42px,4.5vw,63px);font-weight:840;line-height:1;color:#fff;font-variant-numeric:tabular-nums;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-total span{
- color:#bad4f1;font-size:11px;max-width:135px;line-height:1.5;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-grid{
- display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
- border:1px solid #accdff2b;border-radius:11px;overflow:hidden;background:#d9e8ff0b;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-grid div{
- display:grid;text-align:center;gap:6px;padding:13px 6px;min-width:0;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-grid div+div{border-left:1px solid #accdff25}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-grid strong{
- color:#f6fbff;font-size:19px;font-weight:820;font-variant-numeric:tabular-nums;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-grid span{
- color:#acc9e9;font-size:9px;line-height:1.4;
-}
-#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero-telemetry .tt-log-readonly{
- justify-self:start;background:#4eb6a41b;border-color:#7fd5bd4a;color:#c5f4e7;
- border-radius:999px;
-}
+/* Attendance Log supporting controls, details and optional insights. */
 #app .aps-board-shell .tt-native .tt-log-command .tt-log-controls{
  border:1px solid #dce6f6;border-radius:14px;padding:17px;
  background:#fff;box-shadow:0 8px 23px #152f620e;gap:13px;
@@ -148,22 +51,6 @@
 #app .aps-board-shell .tt-native .tt-log-command .tt-log-table td{
  border-color:#e5ecf7;
 }
-@media(max-width:1100px){
- #app .aps-board-shell .tt-native .tt-log-command .tt-log-hero.tt-log-command-hero{
-  grid-template-columns:1fr;min-height:0;
- }
- #app .aps-board-shell .tt-native .tt-log-command .tt-log-hero-telemetry{max-width:100%}
-}
-@media(max-width:650px){
- #app .aps-board-shell .tt-native .tt-log.tt-log-command{padding:12px;gap:12px}
- #app .aps-board-shell .tt-native .tt-log-command .tt-log-hero.tt-log-command-hero{
-  padding:21px 17px;border-radius:17px;gap:22px;
- }
- #app .aps-board-shell .tt-native .tt-log-command .tt-log-eyebrow{font-size:9px;margin-bottom:17px}
- #app .aps-board-shell .tt-native .tt-log-command .tt-log-hero h3{font-size:30px}
- #app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-total strong{font-size:49px}
- #app .aps-board-shell .tt-native .tt-log-command .tt-log-controls{padding:13px}
-}
 @media(prefers-reduced-motion:reduce){
  #app .aps-board-shell .tt-native .tt-log-command,
  #app .aps-board-shell .tt-native .tt-log-command *{
@@ -171,7 +58,73 @@
  }
 }
 @media(prefers-contrast:more){
- #app .aps-board-shell .tt-native .tt-log-command .tt-log-hero{border-color:#d8eaff}
- #app .aps-board-shell .tt-native .tt-log-command .tt-log-hero h3{color:#fff}
  #app .aps-board-shell .tt-native .tt-log-command .tt-log-panel{border-color:#7f90b2}
+}
+
+/* Flat attendance history: retain the signed detail and editor surfaces. */
+#app .aps-board-shell .tt-native .tt-log.tt-log-command{
+ --tt-log-bg:#fafafa;--tt-log-ink:#191a1c;--tt-log-muted:#555960;--tt-log-line:#dedfe3;
+ --tt-log-accent:#5145bd;--tt-log-hover:#f0f1f5;
+ background:var(--tt-log-bg);color:var(--tt-log-ink);padding:clamp(12px,2vw,24px);gap:16px;
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log.tt-log-command{
+ --tt-log-bg:#191b23;--tt-log-ink:#f1f2f5;--tt-log-muted:#b9beca;--tt-log-line:#414550;
+ --tt-log-accent:#b6adff;--tt-log-hover:#282c39;
+ background:var(--tt-log-bg);color:var(--tt-log-ink);
+}
+#app .aps-board-shell .tt-native [data-tt-view="log"] .tt-refresh-button{width:40px;height:40px;display:grid;place-items:center;padding:8px}
+#app .aps-board-shell .tt-native [data-tt-view="log"] .tt-refresh-button svg{width:20px;height:20px}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-flat-stats{
+ display:flex;flex-wrap:wrap;align-items:center;gap:0;padding:2px 0 22px;border-bottom:1px solid var(--tt-log-line);
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-flat-stats>div{
+ display:grid;gap:5px;padding:0 clamp(12px,2.5vw,28px);min-width:0;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-flat-stats>div:first-child{padding-left:0}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-flat-stats>div+div{border-left:1px solid var(--tt-log-line)}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-flat-stats strong{font:700 clamp(24px,3vw,32px)/1.1 Inter,system-ui,sans-serif;color:var(--tt-log-ink);font-variant-numeric:tabular-nums}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-flat-stats>div:last-child strong{color:var(--tt-log-accent)}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-flat-stats span{font-size:12px;color:var(--tt-log-muted)}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-controls{display:flex;align-items:center;gap:9px;padding:0;background:transparent;border:0;box-shadow:none;border-radius:0}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-controls label{position:relative;display:block;flex:1 1 120px;min-width:0}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-controls .tt-log-search{flex:2 1 230px}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-filter-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-search svg{position:absolute;width:18px;height:18px;left:12px;top:50%;transform:translateY(-50%);color:var(--tt-log-muted);pointer-events:none}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-controls :is(input,select,button){min-height:40px;border:1px solid var(--tt-log-line);border-radius:8px;background:var(--tt-log-bg);color:var(--tt-log-ink);font-size:13px;box-shadow:none}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-search input{padding-left:38px}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-search input::placeholder{color:var(--tt-log-muted);opacity:1}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-records{border:0;border-radius:0;background:transparent;box-shadow:none}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-table-scroll{border:0;border-radius:0;overflow-x:auto}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-table{width:100%;min-width:540px;table-layout:fixed;border:0;border-collapse:collapse;background:transparent}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-table th{padding:10px 8px;text-transform:none;letter-spacing:0;font-size:12px;font-weight:500;background:var(--tt-log-bg);color:var(--tt-log-muted);border-bottom:1px solid var(--tt-log-line)}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-table th:nth-child(1){width:26%}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-table th:nth-child(2){width:20%}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-table th:nth-child(3){width:22%}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-table th:nth-child(4){width:19%}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-table th:nth-child(5){width:13%;text-align:right}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-row-summary{grid-template-columns:26% 20% 22% 19% 13%;min-height:58px;background:var(--tt-log-bg);color:var(--tt-log-ink);border-bottom:1px solid var(--tt-log-line)}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-row-summary:hover{background:var(--tt-log-hover)}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-row-summary>span{font-size:13px;padding:9px 8px;color:var(--tt-log-ink)}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-row-person{display:flex;align-items:center;gap:8px}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-row-person strong{font-size:13px;color:var(--tt-log-ink);font-weight:650;overflow-wrap:anywhere}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-row-person small{color:var(--tt-log-muted);font-size:11px}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-avatar{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:50%;background:#ececf3;color:#454353;font-size:11px;font-weight:650}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-row-summary>.tt-log-badge{justify-self:end;max-width:100%;white-space:normal;text-align:center;font-size:11px;padding:5px 8px;border:0;border-radius:999px}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-row-summary>.tt-log-badge-done{background:#e5efd9;color:#27541c}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-row-summary>.tt-log-badge-active{background:#ece9fc;color:#423398}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-row-summary>.tt-log-badge-unknown{background:#e9e9ed;color:#40434c}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-results-count{padding:12px 0 0;margin:0;text-align:right;font:400 12px Inter,system-ui,sans-serif;color:var(--tt-log-muted)}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-secondary-analytics{border-top:1px solid var(--tt-log-line);padding-top:12px;color:var(--tt-log-muted)}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-secondary-analytics>summary{cursor:pointer;font-size:12px;padding:5px 0}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-secondary-analytics[open]>section,
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-secondary-analytics[open]>.tt-log-shift-strip{margin-top:12px}
+@media(max-width:900px){
+ #app .aps-board-shell .tt-native .tt-log-command .tt-log-controls .tt-log-search{flex-basis:100%}
+}
+@media(max-width:650px){
+ #app .aps-board-shell .tt-native .tt-log-command .tt-log-flat-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0}
+ #app .aps-board-shell .tt-native .tt-log-command .tt-log-flat-stats>div{padding:0 7px}
+ #app .aps-board-shell .tt-native .tt-log-command .tt-log-flat-stats span{font-size:11px;overflow-wrap:anywhere}
+ #app .aps-board-shell .tt-native .tt-log-command .tt-log-controls label{flex:1 1 100%}
+ #app .aps-board-shell .tt-native .tt-log-command .tt-log-controls button{min-height:40px}
 }

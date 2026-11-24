@@ -321,6 +321,8 @@ function renderTimeTrackerLogDetailDialog({row,now,gpsEligible=false,gpsData=nul
     '<button type="button" class="primary" data-action="tt-log-detail-close">Close details</button></div></footer>'+
   '</section></div>';
 }
+const logInitials=name=>String(name||'Signed member').trim().split(/\s+/).filter(Boolean).slice(0,2).map(word=>Array.from(word)[0].toUpperCase()).join('');
+const logRowTime=(value,now)=>validTime(value)&&manilaDay(value)===manilaDay(now)?phtTime(value):dateTime(value);
 const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
  const hidden=query&&!searchText(r).includes(query.toLocaleLowerCase().trim());
  const selected=gpsOptions.selectedIds?.includes(r.id)===true||
@@ -331,20 +333,16 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
  return '<tr class="tt-log-filterable aps-record-selectable'+(selected?' is-selected board-row-selected':'')+
   '" aria-selected="'+selected+'" data-record-id="'+esc(r.id)+'" data-log-search="'+esc(searchText(r))+'"'+
   (hidden?' hidden':'')+'>'+
-  '<td colspan="9"><details class="tt-log-detail" data-record-id="'+esc(r.id)+'">'+
+  '<td colspan="5"><details class="tt-log-detail" data-record-id="'+esc(r.id)+'">'+
    '<summary class="tt-log-row-summary" data-action="tt-log-open-detail" data-record-id="'+esc(r.id)+
     '" aria-haspopup="dialog" aria-label="Open attendance details for '+esc(r.name||'employee')+'">'+
-   '<span class="tt-log-row-person"><strong>'+esc(r.name||'Signed member')+
-    '</strong><small>'+esc(r.isOjt?'OJT intern · Shared login':r.department||'Unassigned')+'</small></span>'+
-   '<span title="'+esc(phtDate(r.clockIn))+'">'+esc(dateTime(r.clockIn))+'</span>'+
-   '<span>'+esc(dateTime(r.clockOut))+'</span>'+
-   '<span class="tt-log-row-location">'+esc(r.location||'Unspecified')+'</span>'+
-   '<span>'+esc(r.department||'Unassigned')+'</span>'+
-   '<span class="tt-log-row-arrival">'+esc(r.classification||'Unknown')+'</span>'+
+   '<span class="tt-log-row-person"><span class="tt-log-avatar" aria-hidden="true">'+esc(logInitials(r.name))+'</span><span><strong>'+esc(r.name||'Signed member')+'</strong>'+
+    (r.isOjt?'<small>OJT intern · Shared login</small>':'')+'</span></span>'+
+   '<span title="'+esc(phtDate(r.clockIn))+'">'+esc(logRowTime(r.clockIn,now))+'</span>'+
+   '<span title="'+esc(validTime(r.clockOut)?phtDate(r.clockOut):'')+'">'+esc(logRowTime(r.clockOut,now))+'</span>'+
+   '<span class="tt-log-row-location" title="'+esc(r.location||'Unspecified')+'">'+esc(r.location==='Office-Base Duty'?'Office':r.location==='Offsite (Home)'?'Offsite · Home':r.location||'Unspecified')+'</span>'+
    '<span class="tt-log-badge '+(done?'tt-log-badge-done':
     state==='Active'?'tt-log-badge-active':'tt-log-badge-unknown')+'">'+esc(state)+'</span>'+
-   '<span class="tt-log-hours">'+esc(creditedHours(r.creditedMs))+'</span>'+
-   '<span class="tt-log-disclosure" aria-hidden="true">↗</span>'+
   '</summary>'+(gpsOptions.expandedRecordIds?.includes(r.id)?'':safeSessionDetails(r,now,gpsOptions))+'</details></td></tr>';
 };
 export function renderTimeTrackerLog({
@@ -361,60 +359,31 @@ export function renderTimeTrackerLog({
  const standardSelected=selectedIds.filter(id=>rows.some(row=>row.id===id&&!row.isOjt));
  const query=String(options.search??'').slice(0,120);
  const summary=timeTrackerLogSummary(rows,now);
- const team=scope==='AUTHORIZED_WORKSPACE_TEAM';
  const places=[...new Set(safeRows(records).map(r=>r.location).
   filter(v=>TT_LOCATIONS.includes(v)))].sort();
- return '<section class="tt-log tt-log-command" aria-label="Signed attendance Log">'+
-  '<header class="tt-log-hero tt-log-command-hero" aria-label="Authorized attendance history">'+
-   '<div class="tt-log-graphics" aria-hidden="true">'+
-    '<div class="tt-pixi-backdrop" data-pixi="fallback"></div>'+
-    '<span class="tt-log-orbit tt-log-orbit-outer"></span>'+
-    '<span class="tt-log-orbit tt-log-orbit-inner"></span>'+
-   '</div>'+
-   '<div class="tt-log-hero-content">'+
-    '<div class="tt-log-eyebrow"><span class="tt-log-live-dot" aria-hidden="true"></span>'+
-     'APSYNTRA / ATTENDANCE INTELLIGENCE</div>'+
-    '<h3>Attendance Log</h3>'+
-    '<p>'+esc(phtDate(now))+'</p>'+
-    '<div class="tt-log-hero-scope">'+
-     (adminEligible?(adminFullAccess?'System Admin record management':'IT Administrator time corrections')+' · Authorized team history':'Read-only · '+(team?'Authorized team history':'Your attendance history'))+
-     ' · Today and earlier sessions</div>'+
-   '</div>'+
-   '<div class="tt-log-hero-telemetry" aria-label="Signed attendance history snapshot">'+
-    '<span class="tt-log-telemetry-label">AUTHORIZED SESSION HISTORY</span>'+
-    '<div class="tt-log-telemetry-total"><strong>'+summary.sessions+
-     '</strong><span>Sessions in selected period</span></div>'+
-    '<div class="tt-log-telemetry-grid">'+
-     '<div><strong>'+summary.today+'</strong><span>Today</span></div>'+
-     '<div><strong>'+summary.completed+'</strong><span>Completed</span></div>'+
-     '<div><strong>'+summary.active+'</strong><span>Active</span></div>'+
-    '</div>'+
-    '<span class="tt-log-readonly">'+(adminEligible?(adminFullAccess?'System Admin · Record management':'IT Administrator · Time correction'):'Signed account · Read-only')+'</span>'+
-   '</div>'+
-  '</header>'+
+ const scopeLabel=scope==='AUTHORIZED_WORKSPACE_TEAM'?'Authorized team history':'Your attendance history';
+ return '<section class="tt-log tt-log-command" aria-label="'+scopeLabel+'">'+
+  '<div class="tt-log-flat-stats" aria-label="Signed attendance history snapshot">'+
+   '<div><strong>'+summary.sessions+'</strong><span>Sessions in selected period</span></div>'+
+   '<div><strong>'+summary.today+'</strong><span>Today</span></div>'+
+   '<div><strong>'+summary.completed+'</strong><span>Completed</span></div>'+
+   '<div><strong>'+summary.active+'</strong><span>Active</span></div>'+
+  '</div>'+
   '<section class="tt-log-controls" aria-label="Attendance Log filters">'+
-   '<label class="tt-log-search">Search employee or department'+
+   '<label class="tt-log-search"><span class="tt-log-filter-label">Search employee or department</span>'+
+   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>'+
    '<input type="search" id="tt-log-search" maxlength="120" value="'+esc(options.search)+
-    '" placeholder="Search employee, department or location…" autocomplete="off"></label>'+
+    '" placeholder="Search employee or department" autocomplete="off"></label>'+
    (options.employeeId?'<button class="tt-log-employee-clear" type="button" data-action="tt-log-employee-clear">Clear employee filter</button>':'')+
-   '<label>Date range'+choices('tt-log-period',periods,options.period)+'</label>'+
-   '<label>Status'+choices('tt-log-status',statuses,options.status)+'</label>'+
-   '<label>Location'+choices('tt-log-location',[
+   '<label><span class="tt-log-filter-label">Date range</span>'+choices('tt-log-period',periods,options.period)+'</label>'+
+   '<label><span class="tt-log-filter-label">Status</span>'+choices('tt-log-status',statuses,options.status)+'</label>'+
+   '<label><span class="tt-log-filter-label">Location</span>'+choices('tt-log-location',[
     ['all','All locations'],...places.map(v=>[v,v])
    ],options.location)+'</label>'+
-   '<label>Sort'+choices('tt-log-sort',sortModes,options.sort)+'</label>'+
-   '<span class="tt-log-results-count">'+visible.length+' of '+summary.sessions+
-   ' authorized sessions</span>'+
+   '<label><span class="tt-log-filter-label">Sort</span>'+choices('tt-log-sort',sortModes,options.sort)+'</label>'+
    '<button class="secondary" type="button" data-action="tt-log-export"'+
     (busy||!visible.length?' disabled':'')+'>Export CSV</button></section>'+
-  locationDistribution(rows)+dailyOperations(rows,now)+shiftProgress(rows,now)+
-  '<section class="tt-log-panel tt-log-records">'+
-   '<div class="tt-log-panel-top"><div><h4>Attendance Records</h4>'+
-    '<p>Attendance history · <span id="tt-log-visible-count">'+visible.length+'</span> of '+
-    summary.sessions+' sessions match filters · '+summary.people+
-    ' authorized employee'+(summary.people===1?'':'s')+'</p></div>'+
-    '<span class="tt-log-readonly">'+summary.historical+
-    ' earlier · '+summary.today+' today</span></div>'+
+  '<section class="tt-log-panel tt-log-records" aria-label="Attendance Records">'+
    (adminEligible?'<p class="tt-log-footnote">Click any record to view its details in a popup. Standard employee records support authorized editing and multi-selection; OJT intern records can be corrected individually by authorized admins; bulk operations remain for standard employees. Intern attendance is drawn from the latest signed OJT snapshot (up to 100 entries).</p>':'')+
    (adminFullAccess?'<div class="tt-log-admin-toolbar" role="region" aria-label="System Admin attendance record management">'+
     '<div class="tt-log-admin-toolbar-copy"><div class="tt-log-admin-toolbar-heading"><span class="tt-log-admin-toolbar-icon" aria-hidden="true">✦</span><div><strong>Manage attendance records</strong><span>Click a record to highlight it; no checkboxes required</span></div></div>'+
@@ -430,8 +399,7 @@ export function renderTimeTrackerLog({
    (rows.length?'<div class="tt-log-day"><div class="tt-log-table-scroll">'+
      '<table class="board-table tt-log-table"><thead><tr>'+
      '<th>Employee</th><th>Clock In</th><th>Clock Out</th>'+
-     '<th>Location</th><th>Department</th><th>Arrival</th>'+
-     '<th>Status</th><th>Hours</th><th>Details</th></tr></thead>'+
+     '<th>Location</th><th>Status</th></tr></thead>'+
      '<tbody>'+rows.map(r=>sessionRow(r,query,now,{
       gpsEligible:!r.isOjt&&gpsEligible,gpsData:r.isOjt?null:gpsData,gpsBusy,gpsError,gpsErrorRecordId,
       expandedRecordIds,mapEnabled:!r.isOjt&&mapEnabled,mapTheme,
@@ -441,9 +409,12 @@ export function renderTimeTrackerLog({
      '<p class="tt-log-empty">No authorized attendance sessions match these filters.</p>')+
    (rows.length?'<p id="tt-log-empty-search" class="tt-log-empty"'+
     (visible.length?' hidden':'')+'>No sessions match the current search.</p>':'')+
-   '<p class="tt-log-footnote">Daily operations are based on the current Philippine date. Location and shift summaries reflect the selected date, status and location. Search narrows records and CSV only.</p>'+
-   '<p class="tt-log-footnote">Exact GPS positions are shown only after a bootstrap administrator or assigned Supervisor receives a valid signed server GPS snapshot. Audit scores, satellite imagery, device fingerprints and manual-edit evidence are not inferred.</p>'+
-  '</section>'+(adminEditor||adminDeleteConfirm?'':renderTimeTrackerLogDetailDialog({row:rows.find(r=>expandedRecordIds.includes(r.id))||null,now,
+   '<p class="tt-log-results-count" role="status"><span id="tt-log-visible-count">'+visible.length+'</span> of '+summary.sessions+' authorized sessions</p>'+
+  '</section>'+
+  '<details class="tt-log-secondary-analytics"><summary>Attendance insights · '+summary.historical+' earlier · '+summary.today+' today</summary>'+
+   locationDistribution(rows)+dailyOperations(rows,now)+shiftProgress(rows,now)+
+   '<p class="tt-log-footnote">Daily operations use the current Philippine date. Search narrows records and CSV only.</p>'+
+  '</details>'+(adminEditor||adminDeleteConfirm?'':renderTimeTrackerLogDetailDialog({row:rows.find(r=>expandedRecordIds.includes(r.id))||null,now,
     gpsEligible,gpsData,gpsBusy,gpsError,gpsErrorRecordId,mapEnabled,mapTheme,
     adminEligible,adminFullAccess,adminBusy,selectedIds}))+
    (adminFullAccess&&adminEditor?.mode==='manual'?renderManualAttendanceEditor({editor:adminEditor,busy:adminBusy,error:adminError,now}):adminEditor?.ojt?renderTimeTrackerOjtAdminEditor({editor:adminEditor,busy:adminBusy,error:adminError}):
@@ -485,7 +456,7 @@ export function applyTimeTrackerLogSearch(root,query=''){
  const counter=section.querySelector('#tt-log-visible-count');
  if(counter)counter.textContent=String(count);
  const empty=section.querySelector('#tt-log-empty-search');
- if(empty){empty.hidden=count!==0;empty.textContent='No signed sessions match this search.';}
+ if(empty){empty.hidden=count!==0;empty.textContent='No sessions match the current search.';}
  const exportButton=section.querySelector('[data-action="tt-log-export"]');
  if(exportButton)exportButton.disabled=count===0;
  return true;

@@ -21,16 +21,11 @@ const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 const styleManifest=readFileSync('scripts/priority5-style-manifest.mjs','utf8');
 const styleBundle=readFileSync('frontend/apsyntra-styles.bundle.css','utf8');
 
-test('Log creates a distinct graphical command hero and one decorative Pixi host',()=>{
+test('Log renders one flat summary without decorative hero or Pixi host',()=>{
  const html=render();
  assert.match(html,/class="tt-log tt-log-command"/);
- assert.match(html,/class="tt-log-hero tt-log-command-hero"/);
- assert.match(html,/aria-label="Authorized attendance history"/);
- assert.match(html,/class="tt-log-hero-telemetry" aria-label="Signed attendance history snapshot"/);
- assert.match(html,/class="tt-log-graphics" aria-hidden="true"/);
- assert.match(html,/class="tt-pixi-backdrop" data-pixi="fallback"/);
- assert.equal((html.match(/class="tt-pixi-backdrop"/g)||[]).length,1);
- assert.doesNotMatch(html,/<canvas|<script|style=|onclick=/);
+ assert.match(html,/class="tt-log-flat-stats" aria-label="Signed attendance history snapshot"/);
+ assert.doesNotMatch(html,/tt-log-command-hero|tt-log-hero-telemetry|tt-pixi-backdrop|<canvas|<script|style=|onclick=/);
 });
 
 test('Hero counters use only selected, authorized Log records',()=>{
@@ -44,7 +39,7 @@ test('Hero counters use only selected, authorized Log records',()=>{
  assert.match(html,/>1<\/strong><span>Today<\/span>/);
  assert.match(html,/>1<\/strong><span>Completed<\/span>/);
  assert.match(html,/>1<\/strong><span>Active<\/span>/);
- assert.match(html,/Authorized team history|Your attendance history/);
+ assert.match(html,/authorized sessions/);
  const filtered=render({filters:{period:'today'}});
  assert.match(filtered,/>1<\/strong><span>Sessions in selected period<\/span>/);
  assert.equal(filterTimeTrackerLogRows(records,{period:'today'},now).length,1);
@@ -66,19 +61,24 @@ test('Existing filters, export, audit expansion and GPS authorization remain unc
  assert.doesNotMatch(injected,/<img src=x|10\.9|123\.8/);
 });
 
-test('New styling is scoped and adaptive without expensive perpetual effects',()=>{
- assert.match(css,/\.tt-log-hero\.tt-log-command-hero\{\s*position:relative/);
- assert.match(css,/linear-gradient\(122deg,#0b1939/);
+test('Flat styling is scoped, adaptive and dark-mode aware',()=>{
+ assert.match(css,/\.tt-log-flat-stats/);
  assert.match(css,/\.tt-log-command \.tt-log-controls/);
- assert.match(css,/\.tt-log-command \.tt-log-panel/);
- assert.match(css,/@media\(max-width:1100px\)/);
+ assert.match(css,/\.tt-log-command \.tt-log-table/);
+ assert.match(css,/data-aps-monday-theme="dark"/);
  assert.match(css,/@media\(max-width:650px\)/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  assert.match(css,/@media\(prefers-contrast:more\)/);
  assert.doesNotMatch(css,/@keyframes|animation:.*infinite|will-change|@import|url\(https?:/);
- assert.ok(css.split('\n').filter(x=>x.trim().startsWith('#app '))
-  .every(x=>x.includes('.aps-board-shell .tt-native .tt-log-command')||
-   x.includes('.aps-board-shell .tt-native .tt-log.tt-log-command')));
+});
+
+test('Record list has five compact columns, initials and a single live results count',()=>{
+ const html=render();
+ assert.match(html,/<th>Employee<\/th><th>Clock In<\/th><th>Clock Out<\/th><th>Location<\/th><th>Status<\/th>/);
+ assert.match(html,/class="tt-log-avatar" aria-hidden="true">SE<\/span>/);
+ assert.equal((html.match(/id="tt-log-visible-count"/g)||[]).length,1);
+ assert.ok(html.indexOf('tt-log-table')<html.indexOf('tt-log-secondary-analytics'));
+ assert.match(html,/<details class="tt-log-secondary-analytics">/);
 });
 
 test('Attendance Log renders only the applicable empty state',()=>{
