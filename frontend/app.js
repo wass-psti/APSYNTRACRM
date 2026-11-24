@@ -1,3 +1,6 @@
+import {renderRecoveryChoices} from './tradelink/draft-recovery-ui.js';
+import {TradeLinkRecoveryController} from './tradelink/draft-recovery-controller.js';
+import {captureRecoveryFields} from './tradelink/draft-recovery-state.js';
 import {syncFuelTrans} from './fueltrans-lazy.js';
 import {OrderIntakeRegistryClient} from './order-intake-registry-client.js';
 import {parseOrderIntakeRoute,orderIntakeHref} from './order-intake-route.js';
@@ -85,7 +88,7 @@ import {TradeLinkAttachmentClient,TL03_ATTACHMENTS_ENABLED}
  from './tradelink-attachments.js';
 import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftForm,parseTradeLinkDraftForm,
  tradeLinkDraftValidationMessage,tradeLinkDraftReady,tradeLinkDraftSaveFailureMessage,
- tradeLinkDraftHasUnsavedChanges,reconcileTradeLinkSavedListing,
+ tradeLinkDraftHasUnsavedChanges,reconcileTradeLinkSavedListing,tradeLinkSaveDefinitelyRejected,
  serializeTradeLinkDocumentCsv,
  prepareTradeLinkDraftCommand,
  renderTradeLinkDraftLineItem,snapshotTradeLinkDraftLineItems,updateTradeLinkDraftLocalAmounts,
@@ -201,7 +204,7 @@ import {applyTimeTrackerOverviewFilters,filterTimeTrackerOverviewRows,syncTimeTr
 import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,timeTrackerLogRowsForSnapshot,retainTimeTrackerLogDetailIds,TT_LOG_DEFAULT_FILTERS} from './time-tracker-log.js';
 import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAULT_FILTERS} from './time-tracker-reports.js';
 import {timeTrackerCalendarMonth,shiftTimeTrackerCalendarMonth} from './time-tracker-calendar.js';
-import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED,TT_OT_MAX_WEEK_OFFSET,timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate} from './time-tracker-overtime.js';
+import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED,TT_OT_MAX_WEEK_OFFSET,timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate,updateTimeTrackerOvertimePreview} from './time-tracker-overtime.js';
 import {parseTimeTrackerClockInput} from './time-tracker-time-format.js';
 import {timeTrackerMyHoursWeek} from './time-tracker-my-hours.js';
 import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
@@ -213,6 +216,7 @@ import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
 import {TT_BOARD_GPS_PROJECTION_ENABLED,loadTimeTrackerBoardGps,renderTimeTrackerBoardGps} from './time-tracker-board-projection.js';
 import {renderTimeTrackerMainGroup} from './time-tracker-main-group.js';
 import {findTimeTrackerAttendanceBoard,TIMETRACKER_APPLICATION_ROUTE} from './time-tracker-application.js';
+import {canViewTimeTrackerEmployees} from './time-tracker-application.js';
 import {FUELTRANS_APPLICATION_ROUTE,FUELTRANS_BOARD_ID,fuelTransApplicationHref,parseFuelTransApplicationRoute} from './fueltrans-application-route.js';
 import {openTimeTrackerAddDepartmentModal} from './apps/TimeTracker/time-tracker-add-department-modal.js';
 import {TimeTrackerOjtClient,isEligibleTimeTrackerSharedOjtAccount,TIMETRACKER_SHARED_OJT_USER_ID} from './apps/TimeTracker/time-tracker-ojt.js';
@@ -2117,6 +2121,8 @@ function render(){
  if(state.view==='settings')root.querySelector('.aps-settings')?.insertAdjacentHTML('afterbegin',mobileAccountMarkup());
  if(state.view==='overview')void readMobileHomeClock();
  mountTradeLinkTabMotion(root);
+ paintTradeLinkRecoveryStatus();
+ void refreshTradeLinkRecoveryChoices();
  if(state.view==='settings')mountAvatarPreview(root,{
   client:profileAvatarClient,
   userId:state.context.user_id,
@@ -3574,7 +3580,7 @@ async function openTradeLinkDraft(documentId){
    throw new ApiError('Document revision or editability changed. Refresh the signed list.',409);
   state.tradeLinkDraft={...state.tradeLinkDraft,mode:'edit',
    selected:{documentId,record},canEditOwnDraft:record.created_by===actor&&record.workflow_state==='draft',
-   reviewStages,pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,formValues:null,unsavedChanges:false,error:'',message:'Signed document loaded. Unsaved edits remain local.'};
+   reviewStages,pendingCreateId:null,pendingCreateDraft:null,pendingSave:null,lineDrafts:null,formValues:null,unsavedChanges:false,error:'',message:'Signed document loaded. Unsaved edits remain local.'};
  }catch{
   if(seq===routeSerial&&tradeLinkDraftRoute())state.tradeLinkDraft.error=
    'Draft read or authorization failed. Refresh the signed list.';
@@ -3839,42 +3845,63 @@ async function commitTradeLinkDraft(form){
  const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
  const same=()=>seq===routeSerial&&tradeLinkDraftRoute()&&
   auth.userId===actor&&state.context.workspace_id===ws;
- // Retain the form on validation failure without browser/local storage.
- const fields=new FormData(form),formValues=Object.fromEntries(fields);
- let command;
- try{
-  command=prepareTradeLinkDraftCommand(state.tradeLinkDraft,fields);
- }catch(err){
-  if(same()){
-   state.tradeLinkDraft={...state.tradeLinkDraft,formValues,
-    lineDrafts:snapshotTradeLinkDraftLineItems(form),
-    error:err?.message||'Invalid Draft input. Nothing saved.',message:''};
-   render();
+ // Keep the complete original command and receipt in memory until reconciled.
+ const previous=state.tradeLinkDraft.pendingSave;
+ let recoveryId=tradeLinkRecoveryEnabled&&state.tradeLinkDraft.mode==='create'?tradeLinkRecoveryEditor?.id:null;
+ let pending=previous;
+ if(!pending){
+  const fields=new FormData(form),formValues=Object.fromEntries(fields);
+  if(tradeLinkRecoveryEnabled&&state.tradeLinkDraft.mode==='create'){
+   captureTradeLinkRecovery(captureRecoveryFields(fields),snapshotTradeLinkDraftLineItems(form));
+   recoveryId=tradeLinkRecoveryEditor?.id;
   }
-  return;
+  let command;
+  try{
+   command=prepareTradeLinkDraftCommand(state.tradeLinkDraft,fields);
+  }catch(err){
+   if(same()){
+    state.tradeLinkDraft={...state.tradeLinkDraft,formValues,
+     lineDrafts:snapshotTradeLinkDraftLineItems(form),
+     error:err?.message||'Invalid Draft input. Nothing saved.',message:''};
+    render();
+   }
+   return;
+  }
+  const initialState=String(fields.get('documentStatus')||'for-approval');
+  if(!['draft','for-approval'].includes(initialState))
+   throw new ApiError('Choose For Approval or explicitly choose Draft. Other statuses cannot bypass dual validation.',400);
+  pending={command:{documentId:command.documentId,expectedRevision:command.expectedRevision,
+   draft:command.draft,initialState,
+   reviseApproved:state.tradeLinkDraft.selected?.record?.workflow_state==='approved'},
+   receipt:null,uncertain:false};
+  state.tradeLinkDraft={...state.tradeLinkDraft,
+   pendingCreateId:command.expectedRevision===0?command.documentId:null,
+   pendingCreateDraft:command.pendingCreateDraft,
+   pendingSave:pending,reviewStages:null,
+   lineDrafts:command.expectedRevision===0&&command.draft.items?.length?
+    command.draft.items:snapshotTradeLinkDraftLineItems(form),formValues};
  }
- const {documentId,expectedRevision,draft}=command;
- const initialState=String(fields.get('documentStatus')||'for-approval');
- if(!['draft','for-approval'].includes(initialState))
-  throw new ApiError('Choose For Approval or explicitly choose Draft. Other statuses cannot bypass dual validation.',400);
+ const {documentId,expectedRevision,draft,initialState}=pending.command;
  const workflowState=initialState;
- state.tradeLinkDraft={...state.tradeLinkDraft,
-  pendingCreateId:expectedRevision===0?documentId:null,
-  pendingCreateDraft:command.pendingCreateDraft,
-  reviewStages:null,
-  lineDrafts:expectedRevision===0&&draft.items?.length?
-   draft.items:snapshotTradeLinkDraftLineItems(form),
-  formValues,busy:true,error:'',message:'Saving document to the signed database…'};
+ state.tradeLinkDraft={...state.tradeLinkDraft,busy:true,error:'',
+  message:pending.receipt?'Verifying saved document…':'Saving document to the signed database…'};
  render();
- let committed=false;
+ let committed=!!pending.receipt;
+ let dispatched=false;
  try{
-  // The existing server transaction atomically writes the document, Board item
-  // and audit event; no second Board-item creation is permitted in the client.
-  const receipt=await tradeLinkDraftWorkspace.save({
-   documentId,expectedRevision,draft,initialState,
-   reviseApproved:state.tradeLinkDraft.selected?.record?.workflow_state==='approved'});
+  // A retained receipt means the mutation must not be repeated.
+  if(tradeLinkRecoveryEnabled&&expectedRevision===0){
+   if(!recoveryId||!await tradeLinkRecovery.checkpointSave(recoveryId,pending))
+    throw new ApiError('Local save checkpoint failed. No new request was sent.',400);
+   if(!same())return;
+  }
+  dispatched=!pending.receipt;
+  const receipt=pending.receipt||await tradeLinkDraftWorkspace.save(pending.command);
   committed=true;
+  pending={...pending,receipt};
+  if(tradeLinkRecoveryEnabled&&recoveryId)await tradeLinkRecovery.checkpointSave(recoveryId,pending);
   if(!same())return;
+  state.tradeLinkDraft.pendingSave=pending;
   const [record,list,board]=await Promise.all([
    tradeLinkDraftWorkspace.read(documentId),tradeLinkDraftWorkspace.list(),
    tradeLinkDraftWorkspace.boardProjection(documentId)
@@ -3895,6 +3922,11 @@ async function commitTradeLinkDraft(form){
   // The original signed list is bounded to 50. Its absence is not proof
   // that an exactly read and Board-verified saved document was not committed.
   const verifiedList=reconcileTradeLinkSavedListing(list,record,receipt);
+  if(tradeLinkRecoveryEnabled&&recoveryId){
+   try{if(!await tradeLinkRecovery.discard(recoveryId))toast('Saved; local recovery cleanup needs attention.',true);}catch{toast('Saved; local recovery cleanup needs attention.',true);}
+   if(!same())return;
+   tradeLinkRecoveryEditor=null;
+  }
   state.tradeLinkDraft={...initialTradeLinkDraftView(),
    status:'AUTHORIZED_READ',rows:verifiedList.rows,
    message:'Saved '+(workflowState==='draft'?'Draft':'For Approval document')+' revision '+receipt.revision+'; TradeLink, Board items and All Documents are synchronized.'};
@@ -3902,7 +3934,19 @@ async function commitTradeLinkDraft(form){
   location.hash=tradeLinkApplicationHref('documents');
  }catch(err){
   if(same()){
-   state.tradeLinkDraft.error=tradeLinkDraftSaveFailureMessage(err,{committed});
+   // A rejection of a retry does not prove the original uncertain write failed.
+   if(!committed&&!previous?.uncertain&&dispatched&&tradeLinkSaveDefinitelyRejected(err)&&
+      (!tradeLinkRecoveryEnabled||!recoveryId||await tradeLinkRecovery.checkpointSave(recoveryId,null))){
+    if(!same())return;
+    state.tradeLinkDraft.pendingSave=null;
+    state.tradeLinkDraft.pendingCreateId=null;
+    state.tradeLinkDraft.pendingCreateDraft=null;
+   }else{
+    state.tradeLinkDraft.pendingSave={...pending,uncertain:!committed&&(dispatched||!!previous?.uncertain)};
+   }
+   state.tradeLinkDraft.error=!dispatched&&!committed?
+    'Local preservation failed. No new save request was sent. Retry Save to preserve the original command.':
+    previous?.uncertain&&!committed?'Original save outcome remains uncertain. Retry the original transaction.':tradeLinkDraftSaveFailureMessage(err,{committed});
    state.tradeLinkDraft.message='';
   }
  }finally{
@@ -4604,6 +4648,9 @@ async function loadTimeTracker(seq=routeSerial){
   if(run===state.ttRunId&&seq===routeSerial&&auth.isSignedIn&&
     state.context?.user_id===identity&&state.context?.workspace_id===ws)
    {state.ttAttendance=snapshot;
+    if(state.ttView==='employees'&&(snapshot?.status!=='VERIFIED_READ'||!canViewTimeTrackerEmployees(snapshot.access))){
+     state.ttView='clock';state.ttEmployeesTab='directory';state.ttEmployeesSearch='';state.ttEmployeesDepartment='';
+    }
     const ojtScope=timeTrackerOjtScope();
     if(!ojtScope||!state.ttOjtSelected||
       state.ttOjtSelected.scope.userId!==ojtScope.userId||
@@ -8490,10 +8537,16 @@ async function action(name,button){
   remaining?.focus({preventScroll:true});
   break;
  }
+ case 'tradelink-recovery-resume':
+ case 'tradelink-recovery-remove':{
+  await selectTradeLinkRecovery(button.dataset.id,name==='tradelink-recovery-remove');break;
+ }
  case 'tradelink-draft-clear':{
-  if(!tradeLinkDraftRoute()||state.tradeLinkDraft.busy)break;
+  if(!tradeLinkDraftRoute()||state.tradeLinkDraft.busy||state.tradeLinkDraft.pendingSave)break;
   if(tradeLinkDraftHasUnsavedChanges(state.tradeLinkDraft)&&
     !confirm(unsavedTradeLinkWarning))break;
+  const clearRoute=routeSerial;
+  if(!await discardTradeLinkRecovery()||clearRoute!==routeSerial||!tradeLinkDraftRoute())break;
   state.tradeLinkDraft.unsavedChanges=false;
   if(state.tradeLinkDraft.editRequestId){
    const type=state.tradeLinkDraft.selected?.record?.document_type||'quotation';
@@ -8513,13 +8566,15 @@ async function action(name,button){
   if(tradeLinkDraftRoute()&&!state.tradeLinkDraft.busy){
    if(tradeLinkDraftHasUnsavedChanges(state.tradeLinkDraft)&&
      !confirm(unsavedTradeLinkWarning))break;
+   checkpointTradeLinkRecovery();
+   tradeLinkRecoveryEditor=null;
    state.tradeLinkDraft.unsavedChanges=false;
    if(state.tradeLinkDraft.editRequestId){
     location.hash=tradeLinkApplicationHref('drafts/'+
      (state.tradeLinkDraft.selected?.record?.document_type||'quotation'));
     break;
    }
-   state.tradeLinkDraft={...state.tradeLinkDraft,mode:'create',selected:null,pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,formValues:null,error:'',message:''};
+   state.tradeLinkDraft={...state.tradeLinkDraft,mode:'create',selected:null,pendingCreateId:null,pendingCreateDraft:null,pendingSave:null,lineDrafts:null,formValues:null,error:'',message:''};
    render();
   }
   break;
@@ -8857,7 +8912,9 @@ async function action(name,button){
  case 'tradelink-draft-submit':{
   if(tradeLinkDraftRoute()&&tradeLinkDraftReady()&&
      tradeLinkCanCreate()&&!state.tradeLinkDraft.busy){
-   root.querySelector('[data-tradelink-draft-form]')?.requestSubmit();
+   const form=root.querySelector('[data-tradelink-draft-form]');
+   if(form&&state.tradeLinkDraft.pendingSave)await commitTradeLinkDraft(form);
+   else form?.requestSubmit();
   }
   break;
  }
@@ -10067,13 +10124,14 @@ async function action(name,button){
   if(state.ttBusy||state.ttOjtBusy||state.ttView!=='employees'||state.ttAttendance?.status!=='VERIFIED_READ')return;
   const next=button.dataset.target;
   if(!['directory','departments','ojt'].includes(next))return;
-  if(next!=='directory'&&!['System Admin','IT Administrator'].includes(state.ttAttendance.access.moduleRole))return;
+  if(!canViewTimeTrackerEmployees(state.ttAttendance.access))return;
   state.ttEmployeesTab=next;render();
   root.querySelector('[data-action="tt-employees-section"][aria-pressed="true"]')?.focus();
   break;
  }
  case 'tt-employees-refresh':{
-  if(state.ttBusy||state.ttView!=='employees'||state.ttAttendance?.status!=='VERIFIED_READ')return;
+  if(state.ttBusy||state.ttView!=='employees'||state.ttAttendance?.status!=='VERIFIED_READ'||
+     !canViewTimeTrackerEmployees(state.ttAttendance.access))return;
   await loadTimeTracker();break;
  }
  case 'tt-tab':{
@@ -10083,6 +10141,7 @@ async function action(name,button){
   if(!['overview','clock','employees','log','reports','calendar','ot','hours','team','monitor','gps'].includes(next))return;
   if(next==='gps'&&state.roleVerified!==true&&state.ttAttendance.access?.moduleRole!=='Supervisor')return;
   if(next==='team'&&state.roleVerified!==true)return;
+  if(next==='employees'&&!canViewTimeTrackerEmployees(state.ttAttendance.access))return;
   if(next!=='ot')state.ttOtModalOpen=false;
   if(next===state.ttView)return;
   state.ttGeoPromptVisible=false;state.ttGeoMessage='';
@@ -10538,8 +10597,8 @@ async function action(name,button){
  case 'tt-ot-close':{
   if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='ot'||
      state.ttBusy||state.ttAttendance?.status!=='VERIFIED_READ')return;
-  if(name==='tt-ot-open')state.ttOtModalOpen=true;
-  if(name==='tt-ot-close')state.ttOtModalOpen=false;
+  if(name==='tt-ot-open'){state.ttOtDraft={};state.ttOtModalOpen=true;}
+  if(name==='tt-ot-close'){state.ttOtModalOpen=false;state.ttOtDraft={};}
   if(name==='tt-ot-current')state.ttOtFilters={...state.ttOtFilters,weekOffset:0};
   if(name==='tt-ot-prev'||name==='tt-ot-next'){
    const offset=state.ttOtFilters.weekOffset+(name==='tt-ot-prev'?-1:1);
@@ -10551,7 +10610,10 @@ async function action(name,button){
   if(name==='tt-ot-sort')
    state.ttOtFilters={...state.ttOtFilters,
     sort:state.ttOtFilters.sort==='oldest'?'newest':'oldest'};
-  render();break;
+  render();
+  if(name==='tt-ot-open')root.querySelector('#tt-ot-date')?.focus();
+  if(name==='tt-ot-close')root.querySelector('[data-action="tt-ot-open"]')?.focus();
+  break;
  }
  case 'tt-ot-approve':
  case 'tt-ot-reject':{
@@ -12881,6 +12943,26 @@ document.addEventListener('keydown',event=>{
 window.addEventListener('scroll',()=>closeBoardColumnContext(),true);
 window.addEventListener('resize',()=>closeBoardColumnContext());
 root.addEventListener('keydown',event=>{
+ const overtimeDialog=root.querySelector('.tt-ot-modal');
+ if(overtimeDialog){
+  if(event.key==='Escape'){
+   event.preventDefault();
+   if(state.ttBusy)return;
+   state.ttOtModalOpen=false;state.ttOtDraft={};render();
+   root.querySelector('[data-action="tt-ot-open"]')?.focus();
+   return;
+  }
+  if(event.key==='Tab'){
+   const focusable=[...overtimeDialog.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])')]
+    .filter(node=>!node.hidden);
+   if(!focusable.length){event.preventDefault();overtimeDialog.focus();return;}
+   const first=focusable[0],last=focusable[focusable.length-1];
+   if(!overtimeDialog.contains(event.target)){event.preventDefault();first.focus();}
+   else if(event.shiftKey&&event.target===first){event.preventDefault();last.focus();}
+   else if(!event.shiftKey&&event.target===last){event.preventDefault();first.focus();}
+   return;
+  }
+ }
  const dialog=root.querySelector('[data-tt-admin-dialog]')||
   root.querySelector('[data-tt-log-detail-dialog]');
  if(!dialog)return;
@@ -12969,6 +13051,14 @@ root.addEventListener('click',event=>{
  }
  const checkbox=event.target.closest('[data-board-select-item]');
  if(checkbox)checkbox.dataset.shiftSelect=event.shiftKey?'true':'false';
+ if(event.target.matches?.('[data-tt-ot-backdrop]')){
+  event.preventDefault();
+  if(!state.ttBusy&&state.ttOtModalOpen){
+   state.ttOtModalOpen=false;state.ttOtDraft={};render();
+   root.querySelector('[data-action="tt-ot-open"]')?.focus();
+  }
+  return;
+ }
  if(event.target.matches?.('[data-tt-log-detail-backdrop]')){
   event.preventDefault();Promise.resolve(action('tt-log-detail-close',event.target)).catch(notice);
   return;
@@ -13064,22 +13154,128 @@ function captureTradeLinkDraftListFilters(event){
  updateTradeLinkDocumentSelection(container);
  return true;
 }
+// Staged locally until restoration and interrupted-save reconciliation are complete.
+const tradeLinkRecoveryEnabled=true;
+let tradeLinkRecoveryEditor=null;
+const tradeLinkRecoveryMessages={
+ pending:'Inputs awaiting local preservation…',saving:'Preserving inputs on this device…',
+ saved:'Inputs preserved on this device.',failed:'Local preservation failed. Your inputs are still in this editor.'
+};
+const tradeLinkRecovery=new TradeLinkRecoveryController({onStatus:(id,status)=>{
+ if(tradeLinkRecoveryEditor?.id!==id)return;
+ tradeLinkRecoveryEditor.status=status;
+ paintTradeLinkRecoveryStatus();
+}});
+function paintTradeLinkRecoveryStatus(){
+ const pending=state.tradeLinkDraft?.pendingSave;
+ const form=root.querySelector('[data-tradelink-draft-form]');
+ if(form&&pending&&tradeLinkDraftRoute()){
+  const button=root.querySelector('[data-action="tradelink-draft-submit"]');
+  for(const control of form.elements)if(control!==button)control.disabled=true;
+  if(button){button.disabled=state.tradeLinkDraft.busy===true;button.textContent=pending.receipt?'Retry Verification':'Retry Original Save';}
+ }
+
+ const output=root.querySelector('[data-tradelink-recovery-status]');
+ if(!output)return;
+ const active=tradeLinkRecoveryEnabled&&tradeLinkDraftRoute()&&
+  tradeLinkRecoveryEditor?.route===routeSerial&&
+  tradeLinkRecoveryEditor?.userId===auth.userId&&
+  tradeLinkRecoveryEditor?.workspaceId===state.context?.workspace_id;
+ output.hidden=!active;
+ output.textContent=active?tradeLinkRecoveryMessages[tradeLinkRecoveryEditor.status]||'':'';
+}
+let tradeLinkRecoveryChoices=[];
+let tradeLinkRecoveryReadSerial=0;
+function tradeLinkRecoveryScope(){
+ if(!tradeLinkRecoveryEnabled||!tradeLinkDraftRoute()||!tradeLinkCanCreate()||
+    state.tradeLinkDraft.mode!=='create'||state.tradeLinkDraft.editRequestId)return null;
+ const documentType=root.querySelector('[data-tradelink-draft-form] [name="documentType"]')?.value;
+ if(!documentType)return null;
+ return {userId:auth.userId,workspaceId:state.context.workspace_id,documentType,route:routeSerial};
+}
+function sameTradeLinkRecoveryScope(scope){
+ const current=tradeLinkRecoveryScope();
+ return current&&Object.keys(scope).every(key=>scope[key]===current[key]);
+}
+async function refreshTradeLinkRecoveryChoices(){
+ const serial=++tradeLinkRecoveryReadSerial;
+ const scope=tradeLinkRecoveryScope();
+ const host=root.querySelector('[data-tradelink-recovery-choices]');
+ tradeLinkRecoveryChoices=[];
+ if(!host||!scope)return;
+ try{
+  const rows=await tradeLinkRecovery.store.list(scope.userId,scope.workspaceId,scope.documentType);
+  if(serial!==tradeLinkRecoveryReadSerial||!sameTradeLinkRecoveryScope(scope)||!host.isConnected)return;
+  tradeLinkRecoveryChoices=rows.filter(row=>row.instanceId!==tradeLinkRecoveryEditor?.id);
+  host.innerHTML=renderRecoveryChoices(tradeLinkRecoveryChoices);
+ }catch{
+  if(serial===tradeLinkRecoveryReadSerial&&host.isConnected&&sameTradeLinkRecoveryScope(scope))
+   host.textContent='Local recovery records are unavailable.';
+ }
+}
+async function selectTradeLinkRecovery(id,remove=false){
+ const scope=tradeLinkRecoveryScope();
+ if(!scope||state.tradeLinkDraft.busy)return;
+ const row=tradeLinkRecoveryChoices.find(item=>item.instanceId===id);
+ if(!row||row.userId!==scope.userId||row.workspaceId!==scope.workspaceId||row.documentType!==scope.documentType)return;
+ try{
+  if(remove){
+   if(row.pendingSave)throw new Error('Resolve the original Save before discarding.');
+   if(!confirm('Discard this unfinished document from this device?'))return;
+   if(!await tradeLinkRecovery.store.remove(scope.userId,scope.workspaceId,scope.documentType,id,row.version))
+    throw new Error('Recovery record changed. Refresh and retry.');
+   await refreshTradeLinkRecoveryChoices();return;
+  }
+  if(state.tradeLinkDraft.unsavedChanges&&!confirm('Preserve current inputs and resume this unfinished document?'))return;
+  if(tradeLinkRecoveryEditor&&!await tradeLinkRecovery.flush(tradeLinkRecoveryEditor.id))
+   throw new Error('Current inputs could not be preserved.');
+  if(!sameTradeLinkRecoveryScope(scope))return;
+  const latest=(await tradeLinkRecovery.store.list(scope.userId,scope.workspaceId,scope.documentType)).find(item=>item.instanceId===id);
+  if(!sameTradeLinkRecoveryScope(scope)||!latest||latest.version!==row.version)
+   throw new Error('Recovery record changed. Refresh and retry.');
+  tradeLinkRecovery.resume(latest);
+  tradeLinkRecoveryEditor={id,route:scope.route,userId:scope.userId,workspaceId:scope.workspaceId,documentType:scope.documentType,status:'saved'};
+  state.tradeLinkDraft={...state.tradeLinkDraft,formValues:latest.fields,lineDrafts:latest.lines,
+   pendingSave:latest.pendingSave?{...latest.pendingSave,uncertain:!latest.pendingSave.receipt}:null,
+   pendingCreateId:latest.pendingSave?.command.documentId||null,
+   pendingCreateDraft:latest.pendingSave?.command.draft||null,
+   unsavedChanges:true,draftNotice:'Unfinished inputs restored from this device.',error:'',message:''};
+  render();
+ }catch{if(sameTradeLinkRecoveryScope(scope))toast('Unable to complete local recovery. Refresh the recovery choices and try again.',true);}
+}
+function checkpointTradeLinkRecovery(){
+ if(tradeLinkRecoveryEnabled&&tradeLinkRecoveryEditor)
+  void tradeLinkRecovery.flush(tradeLinkRecoveryEditor.id);
+}
+function captureTradeLinkRecovery(values,lines){
+ if(!tradeLinkRecoveryEnabled||!tradeLinkCanCreate()||state.tradeLinkDraft.mode!=='create'||
+    !values.documentType||!auth.isSignedIn||state.context?.user_id!==auth.userId)return;
+ const userId=auth.userId,workspaceId=state.context.workspace_id,documentType=values.documentType;
+ const previous=tradeLinkRecoveryEditor;
+ if(!previous||previous.route!==routeSerial||previous.userId!==userId||
+    previous.workspaceId!==workspaceId||previous.documentType!==documentType){
+  checkpointTradeLinkRecovery();
+  tradeLinkRecoveryEditor={id:crypto.randomUUID(),route:routeSerial,userId,workspaceId,documentType,status:'pending'};
+ }
+ tradeLinkRecovery.capture({instanceId:tradeLinkRecoveryEditor.id,userId,workspaceId,documentType},values,lines);
+}
+async function discardTradeLinkRecovery(){
+ const previous=tradeLinkRecoveryEditor;
+ if(!tradeLinkRecoveryEnabled||!previous)return true;
+ try{
+  if(!await tradeLinkRecovery.discard(previous.id))throw new Error('Recovery record changed.');
+  if(tradeLinkRecoveryEditor===previous)tradeLinkRecoveryEditor=null;
+  return true;
+ }catch{toast('Local recovery record could not be discarded. Inputs retained.',true);return false;}
+}
 function captureTradeLinkDraftFields(event){
  const form=event.target?.closest?.('[data-tradelink-draft-form]');
- if(!form||!tradeLinkDraftRoute()||state.tradeLinkDraft.busy)return false;
- const fd=new FormData(form),values={};
- for(const key of ['documentType','documentNumber','customerName','referenceNumber',
-  'currency','vatType','lineDescription','lineQuantity','lineUnitPrice','lineUnit',
-  'lineSerialNumber','checkedBy','deliveredBy','receivedBy','verifiedBy',
-  'verifiedByEmail','approvedByEmail','paymentParticulars','cashAmount','chequeAmount',
-  'bankName','chequeNumber','customerTin','customerEmail','customerPhone','validity',
-  'deliveryCommitment','paymentTerms','targetDeliveryDate','poNumber','approvedBy',
-  'documentStatus','discountType','discountValue','exchangeRate','remarks']){
-  values[key]=String(fd.get(key)??'').slice(0,5000);
- }
+ if(!form||!tradeLinkDraftRoute()||state.tradeLinkDraft.busy||state.tradeLinkDraft.pendingSave)return false;
+ const values=captureRecoveryFields(new FormData(form));
  state.tradeLinkDraft.formValues=values;
  state.tradeLinkDraft.lineDrafts=snapshotTradeLinkDraftLineItems(form);
  state.tradeLinkDraft.unsavedChanges=true;
+ if(event.target?.name!=='documentType')captureTradeLinkRecovery(values,state.tradeLinkDraft.lineDrafts);
  state.tradeLinkDraft.draftNotice='';
  updateTradeLinkDraftLocalSummary(form);
  updateTradeLinkDraftInputCurrencyLabels(form);
@@ -13280,6 +13476,8 @@ root.addEventListener('change',event=>{
   }
   // Never transfer the previous module's customer, financial, or reviewer inputs.
   if(event.target?.matches?.('[data-tradelink-draft-form] select[name="documentType"]')){
+   checkpointTradeLinkRecovery();
+   tradeLinkRecoveryEditor=null;
    state.tradeLinkDraft=resetTradeLinkDraftForm(state.tradeLinkDraft,event.target.value);
    render();
    root.querySelector('.tl-reference-document-tabs a.active')?.focus({preventScroll:true});
@@ -13651,11 +13849,17 @@ root.addEventListener('submit',event=>{
    draft.start=parseTimeTrackerClockInput(draft.start);
    draft.end=parseTimeTrackerClockInput(draft.end);
   }catch(error){toast(error.message,true);return;}
-  state.ttBusy=true;
-  Promise.resolve(timeTracker.submitOvertime(state.boardId,draft))
+  state.ttOtDraft={...draft};
+  state.ttBusy=true;render();
+  root.querySelector('.tt-ot-modal')?.focus({preventScroll:true});
+  Promise.resolve().then(()=>timeTracker.submitOvertime(state.boardId,draft))
    .then(async()=>{state.ttOtModalOpen=false;state.ttOtDraft={};
      await loadTimeTracker();toast('OT request submitted for bootstrap review.');})
-   .catch(notice).finally(()=>{state.ttBusy=false;render();});
+   .catch(notice).finally(()=>{
+    state.ttBusy=false;render();
+    if(state.ttOtModalOpen)root.querySelector('#tt-ot-date')?.focus({preventScroll:true});
+    else root.querySelector('[data-action="tt-ot-open"]')?.focus();
+   });
   return;
  }
  if(event.target.id==='login-form'){event.preventDefault();login(event.target);return;}
@@ -13772,6 +13976,18 @@ root.addEventListener('invalid',event=>{
 },true);
 root.addEventListener('input',event=>{
  if(syncTradeLinkFinanceInput(event))return;
+ const overtimeForm=event.target.closest?.('#tt-ot-form');
+ if(overtimeForm&&state.view==='board'&&state.tab==='attendance'&&
+    state.ttView==='ot'&&state.ttOtModalOpen&&!state.ttBusy){
+  state.ttOtDraft={
+   date:overtimeForm.querySelector('#tt-ot-date')?.value||'',
+   start:overtimeForm.querySelector('#tt-ot-start')?.value||'',
+   end:overtimeForm.querySelector('#tt-ot-end')?.value||'',
+   reason:overtimeForm.querySelector('#tt-ot-reason')?.value||''
+  };
+  updateTimeTrackerOvertimePreview(overtimeForm);
+  return;
+ }
  if(preserveManualAttendanceDraft(event))return;
  if(event.target.id==='tt-note'&&event.target.closest('#tt-clock-form')){
   ttWorkNoteDraft.write(timeTrackerWorkNoteScope(),event.target.value);
@@ -13963,6 +14179,7 @@ root.addEventListener('input',event=>{
  }else if(event.target.id==='search-board-items')syncBoardSelectionUi();
 });
 document.addEventListener('visibilitychange',()=>{
+ if(document.hidden)checkpointTradeLinkRecovery();
  platformSync.visibilityChanged();
  setBoardLoadingVisibility(root,document.hidden);
  if(!document.hidden)void refreshCorrectedTimeTrackerClock({onFocus:true});
@@ -14033,10 +14250,13 @@ window.addEventListener('hashchange',()=>{
   location.replace(approvedRouteHash);
   return;
  }
+ checkpointTradeLinkRecovery();
+ tradeLinkRecoveryEditor=null;
  approvedRouteHash=nextHash;
  onRoute().catch(notice);
 });
 window.addEventListener('pagehide',closeTradeLinkSavedDocumentOutput);
+window.addEventListener('pagehide',checkpointTradeLinkRecovery);
 window.addEventListener('beforeunload',event=>{
  if(state.context&&tradeLinkDraftRoute()&&
     tradeLinkDraftHasUnsavedChanges(state.tradeLinkDraft)){

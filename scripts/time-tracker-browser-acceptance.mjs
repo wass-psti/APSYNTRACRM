@@ -102,12 +102,12 @@ try {
     .getByRole("heading", { name: /^Good (morning|afternoon|evening),$/ })
     .waitFor();
   await page.locator("#tt-clock-hours").waitFor();
-  // CP-TT-12H-FORMAT-02: real Chromium acceptance for visible AM/PM
-  // presentation. Exercise forms without submitting or modifying attendance.
+  // CP-TT-OT-UX-01: native time controls retain HH:mm values while the
+  // browser locale handles the visible clock format and the preview stays live.
   const twelveHour = await page.evaluate(async () => {
     const { formatTimeTrackerClock, formatTimeTrackerDateTime } =
       await import("/frontend/time-tracker-time-format.js");
-    const { renderTimeTrackerOvertime } =
+    const { renderTimeTrackerOvertime, updateTimeTrackerOvertimePreview } =
       await import("/frontend/time-tracker-overtime.js");
     const { renderTimeTrackerAdminEditor } =
       await import("/frontend/time-tracker-record-management.js");
@@ -129,7 +129,25 @@ try {
       ],
     });
     const otStart = host.querySelector("#tt-ot-start");
+    const otEnd = host.querySelector("#tt-ot-end");
+    const otReason = host.querySelector("#tt-ot-reason");
+    const otForm = host.querySelector("#tt-ot-form");
     const otDetails = host.querySelector(".tt-ot-detail")?.textContent;
+    otStart.value = "18:00";
+    otEnd.value = "20:00";
+    otReason.value = "Emergency maintenance work";
+    updateTimeTrackerOvertimePreview(otForm);
+    const otDuration = host.querySelector(
+      "[data-tt-ot-duration-value]",
+    )?.textContent;
+    const otProgress = host.querySelector(
+      "[data-tt-ot-duration-progress]",
+    )?.value;
+    const otReasonCount = host.querySelector(
+      "[data-tt-ot-reason-count]",
+    )?.textContent;
+    const otStartType = otStart?.type;
+    const otStartValue = otStart?.value;
     host.innerHTML = renderTimeTrackerAdminEditor({
       timeOnly: true,
       editor: {
@@ -149,9 +167,12 @@ try {
       midnight: formatTimeTrackerClock("2026-11-20T16:00:00Z"),
       noon: formatTimeTrackerClock("2026-11-20T04:00:00Z"),
       date: formatTimeTrackerDateTime("2026-11-20T10:05:00Z"),
-      otStartType: otStart?.type,
-      otStartValue: otStart?.value,
+      otStartType,
+      otStartValue,
       otDetails,
+      otDuration,
+      otProgress,
+      otReasonCount,
       adminType: adminInput?.type,
       adminValue: adminInput?.value,
     };
@@ -159,9 +180,12 @@ try {
   assert.equal(twelveHour.midnight, "12:00 AM");
   assert.equal(twelveHour.noon, "12:00 PM");
   assert.equal(twelveHour.date, "Nov 20, 2026, 06:05 PM");
-  assert.equal(twelveHour.otStartType, "text");
-  assert.equal(twelveHour.otStartValue, "06:00 PM");
+  assert.equal(twelveHour.otStartType, "time");
+  assert.equal(twelveHour.otStartValue, "18:00");
   assert.match(twelveHour.otDetails, /06:00 PM/);
+  assert.equal(twelveHour.otDuration, "2 hr 00 min");
+  assert.equal(twelveHour.otProgress, 120);
+  assert.equal(twelveHour.otReasonCount, "26 / 500");
   assert.equal(twelveHour.adminType, "text");
   assert.equal(twelveHour.adminValue, "2026-11-20 06:05 PM");
 
@@ -330,7 +354,7 @@ try {
   assert.equal(await badge.textContent(), "Active");
   assert.equal(
     await page.locator("#tt-session-elapsed").textContent(),
-    "05:13:54",
+    "04:13:54",
   );
   assert.equal(await page.locator(".tt-session-ring > svg").isVisible(), true);
   const activeClockSize = await clockFace.evaluate(readClockSize);

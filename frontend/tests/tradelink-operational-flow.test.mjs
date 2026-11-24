@@ -189,7 +189,7 @@ test('unauthorized actor, wrong workspace and invalid response cannot reveal sav
 test('app wiring keeps server receipt -> exact Board item -> All Documents and logs no fake writes',()=>{
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(source,/prepareTradeLinkDraftCommand\(state\.tradeLinkDraft,fields\)/);
- assert.match(source,/const receipt=await tradeLinkDraftWorkspace\.save/);
+ assert.match(source,/const receipt=pending\.receipt\|\|await tradeLinkDraftWorkspace\.save/);
  assert.match(source,/tradeLinkDraftWorkspace\.read\(documentId\)/);
  assert.match(source,/tradeLinkDraftWorkspace\.list\(\)/);
  assert.match(source,/item\.id===receipt\.boardItemId/);

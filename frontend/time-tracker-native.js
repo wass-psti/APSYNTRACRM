@@ -5,7 +5,7 @@ import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-
 import {projectTimeTrackerLog} from './time-tracker-history.js';
 import {projectTimeTrackerOtRows,validateOvertimeDraft,validateManualOvertimeDraft,TT_OT_WRITES_ACCEPTED} from './time-tracker-overtime.js';
 import {projectTimeTrackerTeamDirectory,projectTimeTrackerTeamDepartments,TT_TEAM_DEPARTMENTS,validTimeTrackerDepartmentName} from './time-tracker-team.js';
-import {projectTimeTrackerEmployees,projectTimeTrackerEmployeeDepartments,projectTimeTrackerDepartmentCatalog} from './time-tracker-application.js';
+import {projectTimeTrackerEmployees,projectTimeTrackerEmployeeDepartments,projectTimeTrackerDepartmentCatalog,canViewTimeTrackerEmployees} from './time-tracker-application.js';
 import {validateTimeTrackerGps} from './time-tracker-gps.js';
 import {projectOjtRoster,projectOjtAdmin,projectOjtAdminAttendance,TIMETRACKER_SHARED_OJT_USER_ID} from './apps/TimeTracker/time-tracker-ojt.js';
 /**
@@ -148,7 +148,7 @@ export class TimeTrackerNativeClient{
   // A corrupt optional roster must never interrupt Clock In/Out or My Hours.
   // Render Employees unavailable rather than exposing or guessing directory rows.
   let employees=null;
-  try{
+  if(canViewTimeTrackerEmployees({moduleRole:self.module_role}))try{
    employees=projectTimeTrackerEmployees(users,{
     userId:who.id,workspaceId:ctx.workspace_id,boardId,validRoles:TT_ROLES
    });
