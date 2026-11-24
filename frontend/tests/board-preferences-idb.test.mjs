@@ -57,7 +57,15 @@ test('existing signed application uses scoped adapter after verified board acces
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(source,/const boardPreferences=new BoardPreferenceStore\(\)/);
  assert.match(source,/if\(!view\)throw new ApiError\('Board view access changed\.'/);
- assert.match(source,/await boardPreferences\.hydrate\(state\.context,boardId\)/);
+ const loadBoard=source.slice(source.indexOf('async function loadBoard('),
+  source.indexOf('async function loadTimeTracker('));
+ assert.match(loadBoard,/const view=await viewRead/);
+ assert.match(loadBoard,/boardPreferences\.hydrate\(state\.context,boardId\)\.catch\(\(\)=>false\)/);
+ assert.ok(loadBoard.indexOf('if(!view)throw new ApiError')<
+  loadBoard.indexOf('const preferencesRead='),'preferences start only after signed board-view confirmation');
+ assert.ok(loadBoard.indexOf('const preferencesRead=')<
+  loadBoard.indexOf('await Promise\.all\(\[remainingReads,preferencesRead\]\)'),
+  'local preference hydration overlaps the outstanding board reads');
  assert.match(source,/loadBoardLayout\(state\.context,state\.boardId,tabs,columns,boardPreferences\)/);
  assert.match(source,/resetBoardLayout\(state\.context,state\.boardId,boardPreferences\)/);
  assert.match(source,/auth\.onExpired=\(\)=>\{boardCacheChannel\.stop\(\);db\.invalidateBoardCache\(\);boardPreferences\.clearMemory\(\)/);

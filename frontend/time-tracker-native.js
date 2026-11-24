@@ -124,25 +124,28 @@ async function checkIdentity(auth,api,expected,boardId){
 }
 export class TimeTrackerNativeClient{
  constructor({auth,api}){this.auth=auth;this.api=api;}
- async access(boardId){
+ async access(boardId,{nativeContext=null}={}){
   const {auth,api}=this;
-  const [who,ctx]=await Promise.all([auth.getVerifiedUser(),api.context()]);
-  verifiedContext(auth,ctx,boardId);
-  if(who?.id!==ctx.user_id)deny('Signed identity mismatch');
-  const [native,granted]=await Promise.all([
-   api.nativeApplicationBoardContext(moduleId),
-   api.rpc('has_module_access',{p_module_id:moduleId,p_user_id:who.id})
+  // The canonical native resolver already verifies active workspace membership,
+  // TimeTracker module access, the module role and the exact canonical board.
+  // Reuse its route result when available instead of repeating those signed reads.
+  const [who,native]=await Promise.all([
+   auth.getVerifiedUser(),
+   nativeContext?Promise.resolve(nativeContext):api.nativeApplicationBoardContext(moduleId)
   ]);
-  if(native?.userId!==who.id||native?.workspaceId!==ctx.workspace_id||
-     native?.board?.id!==boardId||native.board.name!=='TimeTracker Attendance')
+  if(native?.userId!==who?.id||!uuid.test(who?.id||'')||
+     !uuid.test(native?.workspaceId||'')||native?.board?.id!==boardId||
+     (native.board?.workspace_id&&native.board.workspace_id!==native.workspaceId)||
+     native.board?.name!=='TimeTracker Attendance')
    deny('TimeTracker native application identity or workspace mismatch');
-  if(granted!==true)deny('TimeTracker application grant required');
   const users=await api.rpc('list_module_directory',{p_module_id:moduleId});
   if(!Array.isArray(users))deny('TimeTracker central directory unavailable');
   const self=users.find(x=>x?.id===who.id&&x.status==='active');
   if(!self||!TT_ROLES.includes(self.module_role))
    deny('Central TimeTracker role assignment unavailable');
-  await checkIdentity(auth,api,{userId:who.id,workspaceId:ctx.workspace_id},boardId);
+  const ctx=await checkIdentity(auth,api,{
+   userId:who.id,workspaceId:native.workspaceId
+  },boardId);
   const overviewDirectory=users.filter(u=>u&&u.status==='active'&&
     typeof u.id==='string'&&(u.id===who.id||TT_TEAM_OVERVIEW_ROLES.includes(self.module_role)))
     .map(u=>Object.freeze({id:u.id,status:'active',
@@ -177,8 +180,8 @@ export class TimeTrackerNativeClient{
    return false;
   }
  }
- async snapshot(boardId,{clockOnly=false}={}){
-  const access=await this.access(boardId);
+ async snapshot(boardId,{clockOnly=false,nativeContext=null}={}){
+  const access=await this.access(boardId,{nativeContext});
   const canManageOjt=['System Admin','IT Administrator'].includes(access.moduleRole);
   // Issue independent, read-only RPCs together AFTER signed access verification.
   // Backend scope checks remain authoritative; identity is checked again below.
