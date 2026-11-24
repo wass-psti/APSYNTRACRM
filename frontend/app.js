@@ -2852,9 +2852,9 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   }
  }
  if(view==='board'&&boardId){
-  let detail,edit,manage,boardUi;
+  let detail,edit,manage,boardUi,resolvedNative=null;
   try{
-   const [resolvedNative,genericDetail,editResult,manageResult,uiResult]=await Promise.all([
+   const [nativeResult,genericDetail,editResult,manageResult,uiResult]=await Promise.all([
     nativeModuleId?db.nativeApplicationBoardContext(nativeModuleId):Promise.resolve(null),
     nativeModuleId?Promise.resolve(null):readVisibleBoardSnapshot(boardId,tab,{
      itemCount:state.board?.items?.length||BOARD_ITEM_PAGE_SIZE
@@ -2863,11 +2863,12 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
     nativeModuleId?db.allowed(boardId,'manage').catch(()=>false):db.allowed(boardId,'manage'),
     nativeModuleId?Promise.resolve(null):boardStructureClient.read(boardId)
    ]);
-   if(nativeModuleId&&(!resolvedNative||resolvedNative.moduleId!==nativeModuleId||
-      resolvedNative.userId!==userId||resolvedNative.workspaceId!==workspaceId||
-      resolvedNative.board?.id!==boardId||
-      resolvedNative.detail?.board?.workspace_id!==workspaceId))
+   if(nativeModuleId&&(!nativeResult||nativeResult.moduleId!==nativeModuleId||
+      nativeResult.userId!==userId||nativeResult.workspaceId!==workspaceId||
+      nativeResult.board?.id!==boardId||
+      nativeResult.detail?.board?.workspace_id!==workspaceId))
     throw new ApiError('Native application context changed during background refresh.',409);
+   resolvedNative=nativeResult;
    detail=nativeModuleId?resolvedNative.detail:genericDetail;
    edit=editResult;manage=manageResult;boardUi=uiResult;
   }catch(error){
@@ -2905,7 +2906,9 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   if(tab==='issues')state.issues=await db.issues(boardId,workspaceId);
   if(tab==='talkbox')await loadTalkBox();
   if(tab==='attendance'&&moduleByBoardName(detail.board.name)?.key==='timetracker'){
-   const fresh=await timeTracker.snapshot(boardId);
+   const fresh=await timeTracker.snapshot(boardId,{
+    nativeContext:nativeModuleId==='time-tracker'?resolvedNative:null
+   });
    if(!isCurrent()||platformSyncEditInProgress())return false;
    state.ttAttendance=fresh;
    if(state.ttClockPending)reconcileTimeTrackerClock(fresh,{allowRetry:true});
@@ -3159,9 +3162,10 @@ async function refreshWorkspace(){
  // overview/native routes may continue through their own signed data contracts.
  const signedId=state.context?.user_id,signedWorkspace=state.context?.workspace_id;
  const allowBoardListFailure=workspaceRouteAllowsBoardCatalogFallback(location.hash);
- const {boards,bootstrapVerified,boardCatalogError}=await readWorkspaceStartup({
+ const {boards,bootstrapVerified,adminVerified,boardCatalogError}=await readWorkspaceStartup({
   listBoards:()=>startupCriticalPath.measure('board-list',()=>db.boards('active')),
   verifyBootstrap:()=>startupCriticalPath.measure('bootstrap-role',()=>roleConfig.bootstrapVerified()),
+  verifyAdmin:()=>startupCriticalPath.measure('admin-role',()=>roleConfig.adminVerified()),
   isCurrent:()=>auth.isSignedIn&&auth.userId===signedId&&
     state.context?.user_id===signedId&&state.context?.workspace_id===signedWorkspace,
   allowBoardListFailure
@@ -3169,9 +3173,9 @@ async function refreshWorkspace(){
  state.boardCatalogError=boardCatalogError?errorMessage(boardCatalogError):'';
  state.boards=boards;
  state.user=auth.session?.user;
- // This role check is still signed and server-authoritative, never cached.
+ // Both role classifications remain fresh, signed, server-authoritative reads.
  state.roleVerified=bootstrapVerified;
- state.adminVerified=await roleConfig.adminVerified().catch(()=>false);
+ state.adminVerified=adminVerified;
  void refreshSignedCrmRole({force:true}).catch(()=>{});
  void refreshSignedWorkspaceRelation().catch(()=>{});
  if(!state.roleVerified){state.roleData=null;state.roleError='';state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.ttTeam=null;state.ttTeamRunId++;state.ttTeamError='';}
@@ -3598,28 +3602,33 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
  if(tab==='talkbox')state.view='talkbox';else state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true;state.board=null;state.boardUi=null;state.boardPageBusy=false;state.boardPageError='';state.boardManage=false;state.error=null;state.issues=[];state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;state.frtFinanceView='tracker';state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
  render();
  try{
-   const [resolvedNative,genericDetail,view,edit,manage,boardUi]=await Promise.all([
+   const viewRead=nativeModuleId?Promise.resolve(true):db.allowed(boardId,'view');
+   const remainingReads=Promise.all([
     nativeModuleId?(nativeContext?Promise.resolve(nativeContext):
-      db.nativeApplicationBoardContext(nativeModuleId)):Promise.resolve(null),
-    nativeModuleId?Promise.resolve(null):readVisibleBoardSnapshot(boardId,tab),
-    nativeModuleId?Promise.resolve(true):db.allowed(boardId,'view'),
+      db.nativeApplicationBoardContext(nativeModuleId)):readVisibleBoardSnapshot(boardId,tab),
     db.allowed(boardId,'edit').catch(()=>false),
     db.allowed(boardId,'manage').catch(()=>false),
     nativeModuleId?Promise.resolve(null):boardStructureClient.read(boardId)
-   ]);
+   ]).then(values=>({values}),error=>({error}));
+   // Start the other independent server reads immediately. Layout preferences
+   // are local-only and are started as soon as signed board-view access resolves.
+   const view=await viewRead;
+   if(!view)throw new ApiError('Board view access changed.',403);
+   if(seq!==routeSerial)return;
+   const preferencesRead=nativeModuleId?Promise.resolve(false):
+    boardPreferences.hydrate(state.context,boardId).catch(()=>false);
+   const [readResult]=await Promise.all([remainingReads,preferencesRead]);
+   if(readResult.error)throw readResult.error;
+   const [resolvedNative,genericDetail,edit,manage,boardUi]=readResult.values;
    const detail=nativeModuleId?resolvedNative?.detail:genericDetail;
    if(nativeModuleId&&(!resolvedNative||resolvedNative.moduleId!==nativeModuleId||
       resolvedNative.userId!==state.context?.user_id||
       resolvedNative.workspaceId!==state.context?.workspace_id||
       resolvedNative.board?.id!==boardId))
     throw new ApiError('Native application context changed during initialization.',409);
-   if(!view)throw new ApiError('Board view access changed.',403);
    if(!auth.isSignedIn||state.context?.user_id!==auth.userId||
       detail?.board?.workspace_id!==state.context?.workspace_id)
     throw new ApiError('Signed board cache scope changed.',403);
-   if(seq!==routeSerial)return;
-   // Generic layout hydration is intentionally separate from native module access.
-   if(!nativeModuleId)await boardPreferences.hydrate(state.context,boardId);
    if(seq!==routeSerial||!auth.isSignedIn||auth.userId!==state.context?.user_id||
       detail.board.workspace_id!==state.context?.workspace_id)return;
    state.board=detail;state.edit=edit;state.boardManage=manage;state.boardUi=boardUi;
@@ -3693,7 +3702,8 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
  if(tab==='tradelink'&&['drafts','documents'].includes(state.tradeLinkSection)&&
     TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID)
   await loadTradeLinkDrafts(seq);
- if(tab==='attendance'&&moduleByBoardName(state.board.board?.name)?.key==='timetracker')await loadTimeTracker(seq);
+ if(tab==='attendance'&&moduleByBoardName(state.board.board?.name)?.key==='timetracker')
+  await loadTimeTracker(seq,nativeModuleId==='time-tracker'?nativeContext:null);
  if(tab==='finance'&&moduleByBoardName(state.board.board?.name)?.key==='frt'){
   const pending=pendingNativeSearchSelection?.applicationId==='frt'&&
    pendingNativeSearchSelection.userId===auth.userId&&
@@ -4911,7 +4921,7 @@ async function loadTradeLinkAnalytics(seq=routeSerial){
   }
  }
 }
-async function loadTimeTracker(seq=routeSerial){
+async function loadTimeTracker(seq=routeSerial,nativeContext=null){
  if(state.view!=='board'||state.tab!=='attendance'||
     moduleByBoardName(state.board?.board?.name)?.key!=='timetracker')return;
  const run=++state.ttRunId,identity=state.context?.user_id,ws=state.context?.workspace_id;
@@ -4925,7 +4935,9 @@ async function loadTimeTracker(seq=routeSerial){
  state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
  state.ttReadLoading=true;state.ttBusy=true;state.ttError='';render();
  try{
-  const snapshot=await timeTracker.snapshot(state.boardId,{clockOnly:state.ttView==='clock'});
+  const snapshot=await timeTracker.snapshot(state.boardId,{
+   clockOnly:state.ttView==='clock',nativeContext
+  });
   if(run===state.ttRunId&&seq===routeSerial&&auth.isSignedIn&&
     state.context?.user_id===identity&&state.context?.workspace_id===ws)
    {state.ttAttendance=snapshot;

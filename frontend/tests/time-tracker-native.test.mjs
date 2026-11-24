@@ -21,23 +21,36 @@ const example=(ownerId=user)=>({
 });
 function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=workspace,
  records=[],malformed=false,writeReady=false,foreignCapability=false,autoClockoutSnapshot=null,departmentValue='HR',email='employee@example.test'}={}){
- let commitCount=0, lastWrite=null,autoCompleteCount=0,autoCompleteArgs=null;
+ let commitCount=0,lastWrite=null,autoCompleteCount=0,autoCompleteArgs=null;
+ let contextReadCount=0,nativeContextReadCount=0,moduleAccessReadCount=0;
  const auth={userId:activeUser,getVerifiedUser:async()=>({id:activeUser,email})};
  let currentRecords=records;
+ const nativeContext=()=> {
+  const boardRecord={id:board,workspace_id:ctxWs,name:'TimeTracker Attendance',
+   status:'active',description:'[APSYNTRA:MODULE:timetracker:v1]',
+   archived_at:null,trashed_at:null};
+  return {contract:'native-app-board-v1',moduleId:'time-tracker',
+   userId:activeUser,workspaceId:ctxWs,role,board:boardRecord,
+   detail:{board:boardRecord}};
+ };
  const api={
-  context:async()=>({user_id:activeUser,workspace_id:ctxWs,profile:{status:'active',platform_role:'hr'}}),
+  context:async()=>{
+   contextReadCount++;
+   return {user_id:activeUser,workspace_id:ctxWs,
+    profile:{status:'active',platform_role:'hr'}};
+  },
   nativeApplicationBoardContext:async moduleId=>{
+   nativeContextReadCount++;
    assert.equal(moduleId,'time-tracker');
-   return {userId:activeUser,workspaceId:ctxWs,role,
-    board:{id:board,workspace_id:ctxWs,name:'TimeTracker Attendance',
-     status:'active',description:'[APSYNTRA:MODULE:timetracker:v1]',
-     archived_at:null,trashed_at:null}};
+   await api.context();
+   if(!grant)throw Error('TimeTracker application grant required');
+   return nativeContext();
   },
   board:async()=>{throw Error('Generic board reads must not gate native TimeTracker access');},
   allowed:async()=>{throw Error('Generic board permissions must not gate native TimeTracker access');},
   rpc:async(name,args)=>{
    switch(name){
-    case 'has_module_access':return grant;
+    case 'has_module_access':moduleAccessReadCount++;return grant;
     case 'list_module_directory':return [{id:activeUser,status:'active',module_role:role,
      display_name:'Test signed employee'}];
     case 'list_module_state':return [{state_key:'timetracker.attendance.v1',
@@ -78,7 +91,9 @@ function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=works
  };
  return {client:new TimeTrackerNativeClient({auth,api}),auth,api,commits:()=>commitCount,
   lastWrite:()=>lastWrite,autoCompletes:()=>autoCompleteCount,
-  lastAutoComplete:()=>autoCompleteArgs};
+  lastAutoComplete:()=>autoCompleteArgs,nativeContext,
+  contextReads:()=>contextReadCount,nativeContextReads:()=>nativeContextReadCount,
+  moduleAccessReads:()=>moduleAccessReadCount};
 }
 
 test('source 08:00 late threshold and unpaid 12:00–13:00 credit policy',()=>{
@@ -120,6 +135,37 @@ test('signed module role and native workspace context guard access without gener
  await assert.rejects(setup({role:'invalid'}).client.snapshot(board),/role assignment/);
  const s=setup();s.auth.userId=other;
  await assert.rejects(s.client.snapshot(board),/signed|identity/i);
+});
+
+test('TimeTracker reuses the route native context and removes redundant access round trips',async()=>{
+ const ordinary=setup();
+ const fresh=await ordinary.client.snapshot(board);
+ assert.equal(fresh.status,'VERIFIED_READ');
+ assert.equal(ordinary.nativeContextReads(),1,'resolve the native application context once');
+ assert.equal(ordinary.contextReads(),3,
+  'one resolver context read plus the existing access and snapshot identity rechecks');
+ assert.equal(ordinary.moduleAccessReads(),0,'the native resolver already checks module access');
+
+ const reused=setup();
+ const snapshot=await reused.client.snapshot(board,{nativeContext:reused.nativeContext()});
+ assert.equal(snapshot.status,'VERIFIED_READ');
+ assert.equal(reused.nativeContextReads(),0,'reuse the context already resolved by the route');
+ assert.equal(reused.contextReads(),2,
+  'retain both existing signed identity/workspace rechecks');
+ assert.equal(reused.moduleAccessReads(),0);
+});
+
+test('TimeTracker rejects a supplied native context from another workspace',async()=>{
+ const s=setup();
+ const stale={...s.nativeContext(),workspaceId:foreign};
+ await assert.rejects(s.client.snapshot(board,{nativeContext:stale}),
+  /native application identity or workspace mismatch/i);
+});
+
+test('initial TimeTracker route passes its canonical native context into the first snapshot',()=>{
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(app,/await loadTimeTracker\(seq,nativeModuleId==='time-tracker'\?nativeContext:null\)/);
+ assert.match(app,/timeTracker\.snapshot\(state\.boardId,\{\s*clockOnly:state\.ttView==='clock',nativeContext\s*\}\)/);
 });
 
 test('read projects existing authoritative state and rejects malformed state',async()=>{

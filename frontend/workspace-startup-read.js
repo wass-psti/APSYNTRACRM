@@ -10,13 +10,16 @@ export function transientBoardCatalogFailure(error){
   ['NETWORK_UNAVAILABLE','REQUEST_TIMEOUT'].includes(error?.code);
 }
 
-/** Two independent, signed, post-context read operations. No caching,
- * background work, identity data, or permission fallbacks. */
+/** Independent signed reads after the authoritative workspace context.
+ * No caching, background work, identity data, or permission fallbacks.
+ * The optional administrator read is included in the same startup fan-out. */
 export async function readWorkspaceStartup({
- listBoards,verifyBootstrap,isCurrent,allowBoardListFailure=false
+ listBoards,verifyBootstrap,verifyAdmin,isCurrent,allowBoardListFailure=false
 }){
  if(typeof listBoards!=='function'||typeof verifyBootstrap!=='function'||
-    typeof isCurrent!=='function')throw Error('Invalid signed workspace startup inputs');
+    typeof isCurrent!=='function'||
+    (verifyAdmin!==undefined&&typeof verifyAdmin!=='function'))
+  throw Error('Invalid signed workspace startup inputs');
  const boardRead=Promise.resolve().then(listBoards).then(
   boards=>({boards,boardCatalogError:null}),
   error=>{
@@ -27,11 +30,15 @@ export async function readWorkspaceStartup({
  // Generic board routes still require a successful signed catalog read.
  // Native standalone routes may continue only through their separate signed
  // canonical application resolver; this fallback never grants board access.
- const [boardResult,bootstrapVerified]=await Promise.all([
-  boardRead,Promise.resolve().then(verifyBootstrap).catch(()=>false)
- ]);
+ const reads=[
+  boardRead,
+  Promise.resolve().then(verifyBootstrap).catch(()=>false)
+ ];
+ if(verifyAdmin)reads.push(Promise.resolve().then(verifyAdmin).catch(()=>false));
+ const [boardResult,bootstrapVerified,adminVerified]=await Promise.all(reads);
  if(!isCurrent())throw Error('Signed workspace changed during initialization.');
  const result={boards:boardResult.boards,bootstrapVerified:bootstrapVerified===true};
+ if(verifyAdmin)result.adminVerified=adminVerified===true;
  if(boardResult.boardCatalogError)result.boardCatalogError=boardResult.boardCatalogError;
  return result;
 }

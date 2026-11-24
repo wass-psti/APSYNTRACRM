@@ -188,7 +188,7 @@ test('attendance error feedback names Clock In and Clock Out correctly',()=>{
 
 test('verified signed TimeTracker reload clears stale bootstrap errors without unlocking pending writes',()=>{
  const app=readFileSync('frontend/app.js','utf8');
- const start=app.indexOf('async function loadTimeTracker(seq=routeSerial)');
+ const start=app.indexOf('async function loadTimeTracker(seq=routeSerial,nativeContext=null)');
  const end=app.indexOf('function timeTrackerAdminLogReady()',start);
  const load=app.slice(start,end);
  assert.ok(start>=0&&end>start);
