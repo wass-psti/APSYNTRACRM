@@ -138,19 +138,29 @@ function navigation(view,busy,bootstrapEligible=false,gpsEligible=false){
   ).join('')+'</div></nav>';
 }
 function head(access,busy=false,view='clock'){
+ const role=access?.moduleRole||'';
+ const roleLabel=role==='System Admin'?'System admin':role||(busy?'Checking signed access…':'Signed access required');
+ const initials=role?role.trim().split(/\s+/).slice(0,2).map(word=>word.charAt(0).toUpperCase()).join(''):'—';
+ const icon=body=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+body+'</svg>';
+ const clock=icon('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>');
+ const refresh=icon('<path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 8a7 7 0 0 1 11.6-2L20 12M4 12l2.3 6A7 7 0 0 0 18 16"/>');
+ const calendar=icon('<rect x="3" y="5" width="15" height="15" rx="2"/><path d="M7 3v4m7-4v4M3 10h15"/><circle cx="18" cy="17" r="5"/><path d="M18 14.5V17l1.5 1"/>');
+ const chevron=icon('<path d="m7 10 5 5 5-5"/>');
  return '<header class="tt-app-header fm1-app-header">'+
   '<div class="tt-pixi-backdrop" aria-hidden="true" data-pixi="fallback"></div>'+
-  '<div class="tt-app-brand"><span class="tt-brand-icon" aria-hidden="true">◷</span>'+
+  '<div class="tt-app-brand"><span class="tt-brand-icon" aria-hidden="true">'+clock+'</span>'+
    '<div><span class="fm1-eyebrow">APSYNTRA CRM · ATTENDANCE OPERATIONS</span>'+
     '<h1>TimeTracker <span>Attendance</span></h1>'+
-    '<p>Attendance, scheduling &amp; team management</p></div></div>'+
+    '<p>Attendance, scheduling and team management</p></div></div>'+
   '<div class="tt-header-actions fm1-header-status">'+
+   '<div class="tt-header-utilities">'+
    (view==='clock'?'<button type="button" class="tt-header-refresh" data-action="tt-refresh"'+
-    (busy?' disabled':'')+' aria-label="Refresh TimeTracker attendance">↻ Refresh</button>':'')+
+    (busy?' disabled':'')+' aria-label="Refresh TimeTracker attendance" title="Refresh attendance">'+refresh+'</button>':'')+
    '<button type="button" class="tt-header-link" data-action="tt-tab" data-target="hours"'+
-    (busy?' disabled':'')+'>▦ &nbsp; My Hours <span aria-hidden="true">›</span></button>'+
-   '<span class="tt-role-pill" title="Existing centralized TimeTracker role">'+
-    esc(access?.moduleRole||(busy?'Checking signed access…':'Signed access required'))+'</span>'+
+    (busy?' disabled':'')+'>'+calendar+'<span>My hours</span><span class="tt-header-chevron" aria-hidden="true">'+chevron+'</span></button></div>'+
+   '<span class="tt-header-identity" title="Existing centralized TimeTracker role">'+
+    '<span class="tt-header-avatar" aria-hidden="true">'+esc(initials)+'</span>'+
+    '<span class="tt-header-role">'+esc(roleLabel)+'</span></span>'+
   '</div></header>';
 }
 function applicationHeading(view,busy){

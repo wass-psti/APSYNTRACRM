@@ -156,3 +156,21 @@ test('Uncertain Clock In uses the shared verify-only recovery control',()=>{
  assert.match(pending,/data-action="tt-clock-verify"/);
  assert.doesNotMatch(pending,/name="tt-action" value="clock-in"/);
 });
+
+test('header uses role-derived identity and retains accessible signed navigation actions',()=>{
+ const markup=renderTimeTrackerNative({
+  result:{status:'VERIFIED_READ',access:{...access,moduleRole:'System Admin'},records:[],active:null},
+  view:'clock',now:at
+ });
+ assert.match(markup,/class="tt-header-avatar" aria-hidden="true">SA<\/span>/);
+ assert.match(markup,/class="tt-header-role">System admin<\/span>/);
+ assert.match(markup,/data-action="tt-refresh" aria-label="Refresh TimeTracker attendance"/);
+ assert.match(markup,/data-action="tt-tab" data-target="hours"[^>]*>[\s\S]*?<span>My hours<\/span>/);
+ assert.match(markup,/class="tt-header-chevron"/);
+ assert.doesNotMatch(markup,/class="tt-role-pill"/);
+ assert.match(markup,/aria-selected="true" data-action="tt-tab" data-target="clock"/);
+ assert.match(render(),/class="tt-header-avatar" aria-hidden="true">S<\/span>/);
+ const loading=renderTimeTrackerNative({busy:true});
+ assert.match(loading,/Checking signed access/);
+ assert.match(loading,/data-action="tt-refresh" disabled/);
+});
