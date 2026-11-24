@@ -10,6 +10,7 @@ const workspace='00000000-0000-4000-8000-000000000001';
 const board='46bf4ee7-368a-4c35-842c-8593ea1f6ac3';
 const catalogId='70000000-0000-4000-8000-000000000003';
 const nativeSource=readFileSync('frontend/time-tracker-native.js','utf8');
+const gpsDiagnosticsSource=readFileSync('frontend/time-tracker-gps-diagnostics.js','utf8');
 const appSource=readFileSync('frontend/app.js','utf8');
 const css=readFileSync('frontend/apps/TimeTracker/time-tracker-refined.css','utf8');
 
@@ -118,7 +119,7 @@ test('only explicit Clock action requests GPS; entry, refresh and permission cha
  assert.ok(begin>=0&&end>begin);
  const action=appSource.slice(begin,end);
  assert.match(action,/state\.ttGeoPromptVisible=true/);
- assert.match(action,/await captureAttendanceGeo\(navigator\.geolocation\)/);
+ assert.match(action,/await captureAttendanceGeo\(navigator\.geolocation,\{/);
  assert.match(action,/state\.ttGeoPromptVisible=false/);
  assert.match(appSource,/state\.ttGeoPromptVisible=false;state\.ttGeoMessage='';state\.ttGeoPermission='unknown'/);
 });
@@ -183,13 +184,14 @@ test('Clock write still preserves fresh GPS and signed read-after-write requirem
  assert.match(nativeSource,/maximumAge:freshOnly===true\?0:25000/);
  assert.match(nativeSource,/maximumAge:freshOnly===true\?0:45000/);
  assert.match(nativeSource,/freshOnly===true/);
- assert.match(nativeSource,/now-capturedAt>60000/);
+ assert.match(nativeSource,/gpsPositionFailureReason\(position\)/);
+ assert.match(gpsDiagnosticsSource,/now-capturedAt>60000/);
  assert.match(nativeSource,/retryUnauthorized:false/);
  assert.match(appSource,/clockOnly:state\.ttView==='clock'/);
  assert.match(appSource,/clockOnly:true/);
  assert.match(appSource,/requiresDetail=next!=='clock'/);
  assert.doesNotMatch(appSource,/case 'tt-location-check'/);
- assert.match(appSource,/await captureAttendanceGeo\(navigator\.geolocation\)/);
+ assert.match(appSource,/await captureAttendanceGeo\(navigator\.geolocation,\{/);
  assert.match(appSource,/verifiedAccess:state\.ttAttendance\.access/);
  assert.doesNotMatch(appSource,/await loadTimeTracker\(seq\);\s*if\(state\.ttAttendance\?\.access\?\.employees\?\.members/);
 });

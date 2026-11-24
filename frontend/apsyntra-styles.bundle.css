@@ -11523,6 +11523,19 @@ html[data-aps-monday-theme="dark"] .apx-loader,
  }
 }
 
+/* Local-only TimeTracker GPS diagnostics export. */
+#app .aps-board-shell .tt-native .tt-gps-diagnostics-tools {
+ display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0 0;
+}
+#app .aps-board-shell .tt-native .tt-gps-diagnostics-tools button {
+ min-height:34px;padding:7px 12px;border:1px solid var(--tt-border,rgba(120,130,145,.28));
+ border-radius:9px;background:var(--tt-surface,transparent);color:inherit;
+ font:inherit;font-size:12px;font-weight:600;cursor:pointer;
+}
+#app .aps-board-shell .tt-native .tt-gps-diagnostics-tools small {
+ color:var(--tt-muted,currentColor);font-size:11px;line-height:1.4;
+}
+
 /* frontend/time-tracker-overview-command.css */
 /* CP-TT-OVERVIEW-VIS01 · Native workforce intelligence dashboard.
  * Shares the optional Pixi v8 scene with Clock and uses no fake KPI telemetry.

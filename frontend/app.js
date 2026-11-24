@@ -189,6 +189,8 @@ import {renderFRTVoucherDocument} from './frt-voucher-document.js';
 import {renderFRTCompanyProfileEditor,hydrateFRTCompanyProfileForm} from './frt-company-profile.js';
 import {FRT_BOARD_ID,isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED,TT_DEPARTMENTS} from './time-tracker-native.js';
+import {recordTimeTrackerGpsDiagnostic,exportTimeTrackerGpsDiagnostics,
+ getTimeTrackerGpsDiagnostics,clearTimeTrackerGpsDiagnostics} from './time-tracker-gps-diagnostics.js';
 import {FundTrackerNativeClient} from './fund-tracker-native.js';
 import {renderFundTrackerNative} from './fund-tracker-ui.js';
 import {findFundTrackerBoard,FUND_TRACKER_APPLICATION_ROUTE,parseFundTrackerRecordRoute,fundTrackerRecordHref} from './fund-tracker-application.js';
@@ -1825,7 +1827,8 @@ function renderTimeTrackerApplication(){
   mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
   gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',
   gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,
-  gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError
+  gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError,
+  gpsDiagnosticsAvailable:getTimeTrackerGpsDiagnostics().events.length>0
  });
 }
 function renderFundTrackerApplication(){
@@ -5410,6 +5413,7 @@ async function submitTimeTrackerAction(form,actionName){
  }
  const seq=routeSerial,run=++state.ttRunId,identity=state.context.user_id,
   ws=state.context.workspace_id,boardId=state.boardId;
+ recordTimeTrackerGpsDiagnostic({phase:'attendance-submit',action:actionName});
  const context={action:actionName,recordId:active?.id||null,userId:identity,workspaceId:ws,boardId,
   baselineRevision:Number(state.ttAttendance.revision)||0,
   previousRecordIds:state.ttAttendance.records.map(row=>row.id),location,department};
@@ -5422,18 +5426,31 @@ async function submitTimeTrackerAction(form,actionName){
  state.ttGeoPromptVisible=true;state.ttGeoPermission='unknown';state.ttGeoMessage='';
  state.ttBusy=true;state.ttClockStage='location';state.ttError='';state.ttSuccess='';render();
  try{
-  const geo=await captureAttendanceGeo(navigator.geolocation);
+  const geo=await captureAttendanceGeo(navigator.geolocation,{
+   diagnosticContext:{action:actionName}
+  });
+  recordTimeTrackerGpsDiagnostic({phase:'gps-fix-ready',action:actionName,
+   accuracyMeters:geo.accuracy,positionAgeMs:Math.max(0,Date.now()-Date.parse(geo.capturedAt))});
   if(sameSession()){
    state.ttGeoPermission='granted';state.ttGeoMessage='';
    state.ttClockStage='saving';render();
   }
-  if(!sameSession())throw new Error('Attendance session changed before commit');
+  if(!sameSession()){
+   recordTimeTrackerGpsDiagnostic({phase:'session-context-changed-before-commit',action:actionName});
+   throw new Error('Attendance session changed before commit');
+  }
+  recordTimeTrackerGpsDiagnostic({phase:'attendance-commit-start',action:actionName});
   commitAttempted=true;
   rememberTimeTrackerClockPending({...context,receiptVerified:false});
   const receipt=await timeTracker.commit(boardId,{
    action:actionName,location,department,workNote,geo
   });
-  if(!sameSession())return;
+  recordTimeTrackerGpsDiagnostic({phase:'attendance-commit-success',action:actionName,
+   result:'committed'});
+  if(!sameSession()){
+   recordTimeTrackerGpsDiagnostic({phase:'session-context-changed-after-commit',action:actionName});
+   return;
+  }
   // A verified commit receipt confirms persistence even if refresh later fails.
   if(actionName==='clock-in')ttWorkNoteDraft.clear(timeTrackerWorkNoteScope());
   state.ttGeoPromptVisible=false;state.ttGeoMessage='';
@@ -5444,16 +5461,26 @@ async function submitTimeTrackerAction(form,actionName){
   rememberTimeTrackerClockPending({...context,recordId:receipt.recordId,receiptVerified:true});
   try{
    const snapshot=await timeTracker.snapshot(boardId,{clockOnly:true});
-   if(!sameSession())return;
+   recordTimeTrackerGpsDiagnostic({phase:'attendance-readback-success',action:actionName,
+    result:snapshot?.status==='VERIFIED_READ'?'verified':'unverified'});
+   if(!sameSession()){
+    recordTimeTrackerGpsDiagnostic({phase:'session-context-changed-after-readback',action:actionName});
+    return;
+   }
    state.ttAttendance=snapshot;
    if(reconcileTimeTrackerClock(snapshot)!=='CONFIRMED')
     state.ttError=(actionName==='clock-in'?'Clock In':'Clock Out')+
      ' was committed, but the current session view is not reconciled. Select Verify session status.';
   }catch{
+   recordTimeTrackerGpsDiagnostic({phase:'attendance-readback-failed',action:actionName,
+    result:'unavailable'});
    if(sameSession())state.ttError=(actionName==='clock-out'?'Clock Out':'Clock In')+
     ' was committed, but the refreshed session is unavailable. Select Verify session status.';
   }
  }catch(err){
+  recordTimeTrackerGpsDiagnostic({phase:commitAttempted?'attendance-commit-failed':'attendance-action-failed',
+   action:actionName,errorCode:typeof err?.code==='string'?err.code:undefined,
+   httpStatus:err?.status});
   if(!sameSession())return;
   if(commitAttempted){
    rememberTimeTrackerClockPending({...context,receiptVerified:false});
@@ -8141,7 +8168,7 @@ async function action(name,button){
       state.ws02dB3HandoffPending=true;
       await auth.signOut({scope:'local'});
     }
-    clearOrderIntake();paseoReadRunId++;state.paseoManagement=null;    state.row01Busy=false;state.row01Result=null;state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;if(!isB3LocalRevoke&&!isTl03LocalRevoke&&!isB3RlsHandoff){if(isMobileSwitch)await auth.signOut({scope:'local'});else await auth.signOut();}ttWorkNoteDraft.clear();timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;clearTimeTrackerOjtSelection();state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtManualVisibleCount=50;state.ttOtExpandedRequestIds=[];state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};boardCacheChannel.stop();db.invalidateBoardCache();state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;state.tl03ReadRunId++;state.tl03ReadBusy=false;state.tl03ReadResult=null;state.context=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.ws02dB3RevokeArmed=false;state.ws02dB3RevokedReport=revoked;state.b2QaRunId++;state.b2QaBusy=false;state.b2QaReport=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';state.tl03RevokeArmed=false;state.tl03RevokedReport=isTl03LocalRevoke?state.tl03RevokedReport:null;renderLogin();toast(isB3RlsHandoff?'Local sign-out complete. Sign in as another existing user in another workspace; then click B3 Step 2 without refreshing.':
+    clearOrderIntake();paseoReadRunId++;state.paseoManagement=null;    state.row01Busy=false;state.row01Result=null;state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;if(!isB3LocalRevoke&&!isTl03LocalRevoke&&!isB3RlsHandoff){if(isMobileSwitch)await auth.signOut({scope:'local'});else await auth.signOut();}ttWorkNoteDraft.clear();clearTimeTrackerGpsDiagnostics();timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;clearTimeTrackerOjtSelection();state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtManualVisibleCount=50;state.ttOtExpandedRequestIds=[];state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};boardCacheChannel.stop();db.invalidateBoardCache();state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;state.tl03ReadRunId++;state.tl03ReadBusy=false;state.tl03ReadResult=null;state.context=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.ws02dB3RevokeArmed=false;state.ws02dB3RevokedReport=revoked;state.b2QaRunId++;state.b2QaBusy=false;state.b2QaReport=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';state.tl03RevokeArmed=false;state.tl03RevokedReport=isTl03LocalRevoke?state.tl03RevokedReport:null;renderLogin();toast(isB3RlsHandoff?'Local sign-out complete. Sign in as another existing user in another workspace; then click B3 Step 2 without refreshing.':
      isTl03LocalRevoke?'Signed out of this session only. TradeLink revocation: '+(state.tl03RevokedReport?.status||'BLOCKED')+'.':
      isB3LocalRevoke?'Signed out of this session only. B3 revocation: '+(revoked?.status||'BLOCKED')+'.':isMobileSwitch?'Sign in to the existing account to continue.':'Signed out successfully.');break;}
  case 'ws01-open':{
@@ -10091,6 +10118,7 @@ async function action(name,button){
   try{
    // Deliberate user action: browser GPS is never queried on page load.
    const geo=await captureAttendanceGeo(navigator.geolocation,{
+    diagnosticContext:{action:'ojt-attendance'},
     onProgress:message=>{
      if(timeTrackerOjtScope()&&state.ttOjtSelected===selected&&state.ttOjtBusy){
       state.ttOjtGeoProgress=message;render();
@@ -10166,6 +10194,17 @@ async function action(name,button){
   break;
  }
  case 'tt-clock-verify':{await verifyTimeTrackerAttendance();break;}
+ case 'tt-gps-diagnostics-copy':{
+  const report=exportTimeTrackerGpsDiagnostics();
+  try{
+   if(!navigator.clipboard?.writeText)throw new Error('Clipboard API unavailable');
+   await navigator.clipboard.writeText(report);
+   toast('GPS diagnostics copied. Precise coordinates are not included.');
+  }catch{
+   window.prompt('Copy the local TimeTracker GPS diagnostic report. Precise coordinates are not included:',report);
+  }
+  break;
+ }
  case 'tt-refresh':{if(!state.ttBusy&&!state.ttLogAdminBusy){const team=state.ttView==='team',gps=state.ttView==='gps',log=state.ttView==='log';await loadTimeTracker();if(team&&state.roleVerified===true&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerTeam();if(gps&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerGps();if(log&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerLogGps();}break;}
  case 'tt-employees-department-edit':{
    if(state.ttBusy||state.ttView!=='employees'||state.ttAttendance?.status!=='VERIFIED_READ'||
@@ -14155,7 +14194,11 @@ root.addEventListener('submit',event=>{
  }
  if(event.target.id==='tt-clock-form'){
   event.preventDefault();
-  const kind=event.submitter?.value;
+  const submitter=event.submitter||null;
+  const kind=submitter?.value||'';
+  recordTimeTrackerGpsDiagnostic({phase:submitter?'submit-event':'submitter-missing',
+   action:kind,submitterAvailable:!!submitter});
+  if(!submitter)render();
   Promise.resolve(submitTimeTrackerAction(event.target,kind)).catch(notice);
  }
 });
@@ -14579,7 +14622,7 @@ window.addEventListener('keydown',event=>{
   if(state.groupEditId&&!state.groupEditBusy){state.groupEditId=null;render();}
   if(state.ttOtModalOpen){state.ttOtModalOpen=false;render();}
 }});
-auth.onExpired=()=>{boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();ttWorkNoteDraft.clear();mobileAccountChoices.clear();clearOrderIntake();mobileAccountEmail='';mobileClockRead=null;paseoReadRunId++;state.paseoManagement=null;timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;globalSearchController?.close({restoreFocus:false});pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;invitationAcceptanceStatus='';// Keep an open invitation through session expiry so the user can sign in again.
+auth.onExpired=()=>{boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();ttWorkNoteDraft.clear();clearTimeTrackerGpsDiagnostics();mobileAccountChoices.clear();clearOrderIntake();mobileAccountEmail='';mobileClockRead=null;paseoReadRunId++;state.paseoManagement=null;timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;globalSearchController?.close({restoreFocus:false});pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;invitationAcceptanceStatus='';// Keep an open invitation through session expiry so the user can sign in again.
  startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;clearTimeTrackerOjtSelection();state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtManualVisibleCount=50;state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
 let workspacePreferenceSyncPending=false;
 let workspacePreferenceSyncQueued=null;
