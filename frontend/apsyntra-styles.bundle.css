@@ -17850,6 +17850,16 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-ot-refer
 .oi-detail dd { margin: 4px 0; overflow-wrap: anywhere; }
 @media(max-width: 720px) { .oi-insights { grid-template-columns: minmax(0,1fr); } .oi-header { padding: 14px; } }
 
+.oi-header-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.oi-editor-modal { width:min(760px,96vw); max-width:96vw; }
+.oi-editor { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.oi-editor label { display:grid; gap:5px; min-width:0; font-size:13px; }
+.oi-editor input,.oi-editor select,.oi-editor textarea { width:100%; min-width:0; box-sizing:border-box; }
+.oi-editor label:has(textarea),.oi-editor-preview,.oi-editor [data-oi-editor-error] { grid-column:1/-1; }
+.oi-editor-preview { border:1px solid var(--border,#ccd5df); padding:12px; border-radius:8px; overflow-wrap:anywhere; }
+.oi-editor [data-oi-editor-error]:empty { display:none; }
+@media(max-width:600px) { .oi-editor { grid-template-columns:minmax(0,1fr); } .oi-header { flex-wrap:wrap; } }
+
 /* frontend/tradelink-reference-ui.css */
 /* CP-TL-03D — Reference-led TradeLink surface, scoped to its portal only.
    Visual authority: user's 2026-11-06 source screenshots (six document modules).

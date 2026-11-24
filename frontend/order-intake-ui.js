@@ -1,6 +1,7 @@
 import { ORDER_INTAKE_SECTIONS, orderIntakeHref } from './order-intake-route.js';
 import { ORDER_INTAKE_STATUSES } from './order-intake-native.js';
 import { filterOrderIntakeRows } from './order-intake-read-state.js';
+import { nativeEditable } from './order-intake-editor.js';
 import { projectUnifiedOrders } from './order-intake-unified-read.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
@@ -55,7 +56,7 @@ function detail(record, route) {
   if (!route.recordId) return '';
   return '<section class="oi-panel"><h2>Purchase order details</h2><a href="'+esc(orderIntakeHref('all-orders',route.filters))+'">Close details</a>' +
     (record?.busy ? '<p role="status">Loading order…</p>' : record?.error ? '<p role="alert">'+esc(record.error)+'</p>' :
-      record?.row ? (history(record.row)?'<p>Historical record — original reported financial values; VAT and archive state may be unknown. Historical client evidence is not a verified current client.</p>':'')+'<dl class="oi-detail">'+Object.entries(record.row).filter(([key])=>!['id','workspace_id'].includes(key)&&(key!=='archived'||history(record.row))).map(([key,value])=>'<div><dt>'+esc(key.replaceAll('_',' '))+'</dt><dd>'+show(value)+'</dd></div>').join('')+'</dl>' : '<p>Order unavailable.</p>') + '</section>';
+      record?.row ? (nativeEditable(record.row)?'<button type="button" class="secondary" data-oi-action="edit">Edit purchase order</button>':'')+(history(record.row)?'<p>Historical record — original reported financial values; VAT and archive state may be unknown. Historical client evidence is not a verified current client.</p>':'')+'<dl class="oi-detail">'+Object.entries(record.row).filter(([key])=>!['id','workspace_id'].includes(key)&&(key!=='archived'||history(record.row))).map(([key,value])=>'<div><dt>'+esc(key.replaceAll('_',' '))+'</dt><dd>'+show(value)+'</dd></div>').join('')+'</dl>' : '<p>Order unavailable.</p>') + '</section>';
 }
 export function renderOrderIntake({ route, snapshot, record = null }) {
   const rows = snapshot?.rows || [];
@@ -66,7 +67,7 @@ export function renderOrderIntake({ route, snapshot, record = null }) {
     if (snapshot && !snapshot.busy || rows.length) content = route.section === 'dashboard' ? dashboard(filtered,route) :
       route.section === 'workflow' ? workflow(filtered,route) : orderTable(filtered,route);
   } catch (error) { content = '<p role="alert">'+esc(error.message)+'</p>'; }
-  return '<section class="oi-app" aria-label="Order Intake"><header class="oi-header"><div><h1>Order Intake</h1><p>Sales Operations Intelligence</p></div><button class="secondary" type="button" data-oi-action="refresh"'+(snapshot?.busy?' disabled':'')+'>Refresh</button></header>' +
+  return '<section class="oi-app" aria-label="Order Intake"><header class="oi-header"><div><h1>Order Intake</h1><p>Sales Operations Intelligence</p></div><div class="oi-header-actions"><button class="primary" type="button" data-oi-action="create">New purchase order</button><button class="secondary" type="button" data-oi-action="refresh"'+(snapshot?.busy?' disabled':'')+'>Refresh</button></div></header>' +
     '<nav class="oi-tabs" aria-label="Order Intake views">'+ORDER_INTAKE_SECTIONS.map((section,i)=>'<a href="'+esc(orderIntakeHref(section,route.filters))+'"'+(section===route.section?' aria-current="page"':'')+'>'+labels[i]+'</a>').join('')+'</nav>' +
     filterForm(rows,route) + detail(record,route) +
     '<p class="oi-count" role="status">'+(snapshot?.busy?'Loading orders… ': '')+filtered.length+' matching of '+rows.length+' loaded orders. '+(partial?'Partial or unconfirmed results; counts and totals cover loaded records only.':'All available pages loaded; refresh for current records.')+'</p>' +

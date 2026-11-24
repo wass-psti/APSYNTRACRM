@@ -3,6 +3,7 @@ import {TradeLinkRecoveryController} from './tradelink/draft-recovery-controller
 import {captureRecoveryFields} from './tradelink/draft-recovery-state.js';
 import {syncFuelTrans} from './fueltrans-lazy.js';
 import {OrderIntakeRegistryClient} from './order-intake-registry-client.js';
+import {nativeEditable,orderEditorDraft,orderEditorMarkup,updateOrderEditorPreview,createOrderEditorSave} from './order-intake-editor.js';
 import {parseOrderIntakeRoute,orderIntakeHref} from './order-intake-route.js';
 import {createOrderIntakeReadState} from './order-intake-read-state.js';
 import {renderOrderIntake} from './order-intake-ui.js';
@@ -590,6 +591,7 @@ const trashPermanentDelete=new BoardTrashPermanentDeleteClient(db);
 const trashBoardSelection=new Set();
 let routeSerial=0;
 let orderIntakeRoute=null,orderIntakeRecord=null,orderIntakeRecordRun=0;
+let orderIntakeCreateSave=null,orderIntakeCreateScope=null,orderIntakeEditorGeneration=0;
 const orderIntakeScope=()=>[state.context?.user_id,state.context?.workspace_id].join('|');
 const orderIntakeCurrent=scope=>!state.workspaceTransitionPending&&auth.isSignedIn&&state.context?.user_id===auth.userId&&
  state.view==='order-intake'&&Boolean(parseOrderIntakeRoute(location.hash))&&scope===orderIntakeScope();
@@ -598,6 +600,8 @@ const orderIntakeRead=createOrderIntakeReadState({
  isCurrent:orderIntakeCurrent,onChange:()=>render()
 });
 function clearOrderIntake(){
+ if(modal?.dataset.oiEditor)hideModal();
+ orderIntakeEditorGeneration++;orderIntakeCreateSave=null;orderIntakeCreateScope=null;
  orderIntakeRead.clear();orderIntakeRecordRun++;orderIntakeRecord=null;orderIntakeRoute=null;
 }
 async function loadOrderIntakeRecord(route,scope){
@@ -613,6 +617,43 @@ async function loadOrderIntakeRecord(route,scope){
   if(run===orderIntakeRecordRun&&orderIntakeCurrent(scope))orderIntakeRecord={error:errorMessage(error)};
  }
  if(run===orderIntakeRecordRun&&orderIntakeCurrent(scope))render();
+}
+function openOrderIntakeEditor(edit=false){
+ const scope=orderIntakeScope();
+ if(!orderIntakeCurrent(scope))return;
+ const row=edit?orderIntakeRecord?.row:null;
+ if(edit&&!nativeEditable(row))return;
+ const client=new OrderIntakeRegistryClient({auth,api:db,workspaceId:scope.split('|')[1]});
+ const generation=orderIntakeEditorGeneration;
+ const current=()=>generation===orderIntakeEditorGeneration&&orderIntakeCurrent(scope);
+ if(!edit&&orderIntakeCreateScope!==scope){orderIntakeCreateScope=scope;orderIntakeCreateSave=null;}
+ const save=edit?createOrderEditorSave({client,row,isCurrent:current}):
+  (orderIntakeCreateSave??=createOrderEditorSave({client,isCurrent:current}));
+ let view;
+ openModal(edit?'Edit purchase order':'New purchase order',orderEditorMarkup(save.pendingDraft()||orderEditorDraft(row)),async fd=>{
+  const feedback=view.querySelector('[data-oi-editor-error]');
+  feedback.textContent='';
+  try{
+   const saved=await save(Object.fromEntries(fd));
+   if(!edit&&orderIntakeCreateSave===save){orderIntakeCreateSave=null;}
+   if(!current())return;
+   if(modal!==view){void orderIntakeRead.refresh(scope);return;}
+   toast('Purchase order saved and verified.');
+   if(orderIntakeRoute?.recordId===saved.id){
+    orderIntakeRecordRun++;orderIntakeRecord={row:saved};
+   }else location.hash=orderIntakeHref('all-orders',{},saved.id);
+   await orderIntakeRead.refresh(scope);
+  }catch(error){
+   const message=errorMessage(error);
+   feedback.textContent=message.includes('ORDER_INTAKE_REVISION_CONFLICT')?'This order changed elsewhere. Close, refresh and reopen it before editing again.':message;
+   throw error;
+  }
+ },{submitLabel:edit?'Save changes':'Create order',successMessage:''});
+ view=modal;view.dataset.oiEditor='true';
+ view.querySelector('.modal')?.classList.add('oi-editor-modal');
+ const form=view.querySelector('form');
+ form.addEventListener('input',()=>updateOrderEditorPreview(form));
+ updateOrderEditorPreview(form);
 }
 let avatarHydrationPromise=Promise.resolve({attempted:0,loaded:0,failed:0,stale:0});
 let ttClockTimer=null;
@@ -5629,6 +5670,7 @@ async function onRoute(){
  if(parts[0]==='order-intake'){
   const nextRoute=parseOrderIntakeRoute(hash);
   if(!nextRoute)return;
+  if(modal?.dataset.oiEditor&&orderIntakeRoute?.canonicalHash!==nextRoute.canonicalHash)hideModal();
   if(nextRoute.canonicalHash!==hash)history.replaceState(null,'',location.pathname+location.search+nextRoute.canonicalHash);
   if(state.view!=='order-intake'){clearOrderIntake();routeSerial++;stopTimeTrackerClock();}
   state.view='order-intake';state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
@@ -13071,7 +13113,9 @@ root.addEventListener('click',event=>{
  if(orderAction&&state.view==='order-intake'&&orderIntakeRoute){
   event.preventDefault();
   const scope=orderIntakeScope();
-  if(orderAction.dataset.oiAction==='refresh'){
+  if(orderAction.dataset.oiAction==='create')openOrderIntakeEditor();
+  else if(orderAction.dataset.oiAction==='edit')openOrderIntakeEditor(true);
+  else if(orderAction.dataset.oiAction==='refresh'){
    void orderIntakeRead.refresh(scope);
    void loadOrderIntakeRecord(orderIntakeRoute,scope);
   }else if(orderAction.dataset.oiAction==='more')void orderIntakeRead.more(scope);
