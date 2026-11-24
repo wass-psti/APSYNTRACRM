@@ -23,6 +23,14 @@ function isSupabaseHost(hostname) {
   );
 }
 
+function safeHost(hostname) {
+  const host = hostname.toLowerCase();
+  if (host.endsWith(".supabase.co") && host !== "supabase.co") {
+    return "[project].supabase.co";
+  }
+  return host;
+}
+
 function safePath(pathname) {
   return pathname
     .replace(
@@ -92,7 +100,7 @@ function summarizeEntry(entry) {
 
   return {
     startedAt: String(entry.startedDateTime || ""),
-    host: url.hostname,
+    host: safeHost(url.hostname),
     path,
     method: String(request.method || "GET").toUpperCase(),
     status,

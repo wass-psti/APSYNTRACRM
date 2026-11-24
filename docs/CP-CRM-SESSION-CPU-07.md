@@ -22,19 +22,19 @@ No database schema, function, index, role, permission, RLS policy, project setti
 
 ### 2.1 Implemented runner
 
-`scripts/cp07/run-metrics-capture.zsh`:
+`scripts/cp07/run-metrics-capture.mjs`:
 
-- Prompts for the existing Supabase Secret API key using zsh `read -s`, which suppresses terminal echo.
+- Prompts for the existing Supabase Secret API key using Node.js terminal raw mode, which suppresses terminal echo.
 - Does not accept the key as a command-line argument.
-- Exports the key only to the child capture process.
-- Uses a shell exit trap to unset the variable after the process finishes.
+- Passes the key only through the child capture process environment; it is not written to source, shell history, or evidence files.
+- Clears the parent variable and temporary child-environment object immediately after process launch.
 - Invokes the CP-06 finite 31-sample collector.
 - Does not write the key to the repository or metrics evidence file.
 
 Run it from the repository root in a local Terminal window:
 
 ```zsh
-scripts/cp07/run-metrics-capture.zsh
+node scripts/cp07/run-metrics-capture.mjs
 ```
 
 Enter the existing `sb_secret_...` key only at the silent local prompt. Do not paste it into ChatGPT, source files, shell command arguments, screenshots, or HAR exports. The run takes approximately 30 minutes and writes sanitized metric samples to `/tmp/cp06-metrics-samples.json` with file mode `0600`.
@@ -68,7 +68,7 @@ It does not retain:
 
 - Authorization headers, cookies, request bodies, response bodies, or query strings.
 - Arbitrary response headers or arbitrary error messages.
-- Raw project UUIDs or long opaque identifiers in URL paths.
+- Raw project UUIDs, long opaque identifiers in URL paths, or project references in project API hostnames.
 
 The output file is created with mode `0600`.
 
@@ -106,7 +106,7 @@ Verified behavior:
 
 This verifies the sanitizer implementation only. It is not evidence that the production Supabase Dashboard returned HTTP 503.
 
-The local runner was also tested with an empty prompt input. It exited with code 2, made no Metrics API request, and created no metrics evidence file.
+The runner was tested without an interactive TTY and exited with code 2 before making a request. Terminal input behavior, backspace, cancellation cleanup, and key-format validation are covered by deterministic tests.
 
 ## 4. Current production observations
 
@@ -130,13 +130,16 @@ The CRM browser remained signed in at `#/time-tracker`. At 11:23:09 AM Philippin
 
 | Acceptance area                                                   | Status                                          |
 | ----------------------------------------------------------------- | ----------------------------------------------- |
-| Silent local key prompt implemented                               | VERIFIED by code review and empty-input test    |
-| Empty prompt exits without a metrics request                      | VERIFIED — exit 2                               |
+| Silent local key prompt implemented                               | VERIFIED by terminal-input tests                |
+| Invalid/empty key exits without a metrics request                 | VERIFIED by key validation and non-TTY tests    |
 | Secret omitted from command arguments and source                  | VERIFIED                                        |
 | Metrics capture 31/31 successful samples                          | PENDING — key must be entered locally           |
 | Authoritative CPU mean/p50/p95/max, I/O wait, steal               | PENDING — requires live metrics samples         |
 | Service process CPU grouped by `service_type`                     | VERIFIED by CP-06 tests; live values pending    |
-| HAR parser and sanitizer                                          | VERIFIED — 5/5 focused tests                    |
+| HAR parser and sanitizer                                          | VERIFIED — 6/6 focused tests                    |
+| Silent terminal prompt and key validation                         | VERIFIED — 4/4 focused tests                    |
+| CP-07 focused tests                                               | VERIFIED — 10/10 PASS                           |
+| Full frontend test suite                                          | VERIFIED — 3,564/3,564 PASS                     |
 | HAR output excludes secrets, cookies, query strings, and payloads | VERIFIED by synthetic fixture                   |
 | Real Dashboard HAR captured                                       | PENDING — browser export not yet available      |
 | Report HTTP status/error code/trace IDs                           | PENDING — requires real HAR/provider trace      |

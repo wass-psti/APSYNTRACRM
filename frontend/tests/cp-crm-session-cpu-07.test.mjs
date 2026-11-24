@@ -1,6 +1,11 @@
 import test from "node:test";
+import { EventEmitter } from "node:events";
 import assert from "node:assert/strict";
 import { analyzeDashboardHar } from "../../scripts/cp07/analyze-dashboard-har.mjs";
+import {
+  isValidSecretApiKey,
+  readSecretFromTerminal,
+} from "../../scripts/cp07/run-metrics-capture.mjs";
 
 function createHarEntry({
   url,
@@ -132,6 +137,24 @@ test("ignores non-Supabase hosts and unrelated successful requests", () => {
   assert.equal(result.reportRequestsFound, 0);
 });
 
+test("redacts project references in Supabase project API hostnames", () => {
+  const har = {
+    log: {
+      entries: [
+        createHarEntry({
+          url: "https://jtlusodorfnyzgyuewkz.supabase.co/rest/v1/rpc/metrics",
+          status: 503,
+        }),
+      ],
+    },
+  };
+
+  const result = analyzeDashboardHar(har);
+  assert.equal(result.reportRequestsFound, 1);
+  assert.equal(result.reportRequests[0].host, "[project].supabase.co");
+  assert.equal(JSON.stringify(result).includes("jtlusodorfnyzgyuewkz"), false);
+});
+
 test("retains failed Supabase requests even when the path is not report-related", () => {
   const har = {
     log: {
@@ -156,4 +179,138 @@ test("retains failed Supabase requests even when the path is not report-related"
 
 test("rejects an invalid HAR structure", () => {
   assert.throws(() => analyzeDashboardHar({ log: {} }), /log.entries/);
+});
+
+function createTerminalInput() {
+  const input = new EventEmitter();
+  input.isTTY = true;
+  input.rawMode = false;
+  input.paused = false;
+  input.setRawMode = (enabled) => {
+    input.rawMode = enabled;
+  };
+  input.resume = () => {
+    input.paused = false;
+  };
+  input.pause = () => {
+    input.paused = true;
+  };
+  return input;
+}
+
+test("reads the existing API key without echoing it and restores terminal mode", async () => {
+  const input = createTerminalInput();
+  let outputText = "";
+  const output = {
+    write: (value) => {
+      outputText += value;
+    },
+  };
+  const result = readSecretFromTerminal({ input, output });
+  input.emit("data", Buffer.from("sb_secret_test123\r"));
+
+  const secret = await result;
+  assert.equal(secret, "sb_secret_test123");
+  assert.equal(outputText.includes(secret), false);
+  assert.equal(input.rawMode, false);
+  assert.equal(input.paused, true);
+});
+
+test("supports backspace without echoing secret characters", async () => {
+  const input = createTerminalInput();
+  let outputText = "";
+  const output = {
+    write: (value) => {
+      outputText += value;
+    },
+  };
+  const result = readSecretFromTerminal({ input, output });
+  input.emit("data", Buffer.from("sb_secret_wrong\u007f123\r"));
+
+  const secret = await result;
+  assert.equal(secret, "sb_secret_wron123");
+  assert.equal(outputText.includes("sb_secret"), false);
+  assert.equal(input.rawMode, false);
+});
+
+test("restores terminal mode when the user cancels the secret prompt", async () => {
+  const input = createTerminalInput();
+  const output = { write: () => {} };
+  const result = readSecretFromTerminal({ input, output });
+  input.emit("data", Buffer.from("\u0003"));
+
+  await assert.rejects(result, /Cancelled/);
+  assert.equal(input.rawMode, false);
+  assert.equal(input.paused, true);
+});
+
+test("accepts only the existing Supabase Secret API key format", () => {
+  assert.equal(isValidSecretApiKey("sb_secret_existingKey_123"), true);
+  assert.equal(isValidSecretApiKey(""), false);
+  assert.equal(isValidSecretApiKey("service_role"), false);
+  assert.equal(isValidSecretApiKey("sb_secret_"), false);
+});
+
+test("validates existing Supabase Secret API key format without logging it", () => {
+  assert.equal(isValidSecretApiKey("sb_secret_existingKey_123"), true);
+  assert.equal(isValidSecretApiKey("service_role_key"), false);
+  assert.equal(isValidSecretApiKey(""), false);
+  assert.equal(isValidSecretApiKey(undefined), false);
+});
+
+test("reads the key in raw terminal mode without echoing the entered value", async () => {
+  class FakeInput extends EventEmitter {
+    isTTY = true;
+    rawModeChanges = [];
+
+    setRawMode(enabled) {
+      this.rawModeChanges.push(enabled);
+    }
+
+    resume() {}
+    pause() {}
+  }
+
+  const input = new FakeInput();
+  let outputText = "";
+  const pendingSecret = readSecretFromTerminal({
+    input,
+    output: { write: (value) => (outputText += value) },
+  });
+  input.emit("data", Buffer.from("sb_secret_hidden-value\n"));
+
+  const secret = await pendingSecret;
+  assert.equal(secret, "sb_secret_hidden-value");
+  assert.deepEqual(input.rawModeChanges, [true, false]);
+  assert.equal(outputText.includes(secret), false);
+});
+
+test("an empty terminal entry fails key validation before capture", async () => {
+  class FakeInput extends EventEmitter {
+    isTTY = true;
+    setRawMode() {}
+    resume() {}
+    pause() {}
+  }
+
+  const input = new FakeInput();
+  const pendingSecret = readSecretFromTerminal({
+    input,
+    output: { write() {} },
+  });
+  input.emit("data", Buffer.from("\n"));
+
+  const secret = await pendingSecret;
+  assert.equal(secret, "");
+  assert.equal(isValidSecretApiKey(secret), false);
+});
+
+test("rejects secret input when the process is not attached to a terminal", async () => {
+  await assert.rejects(
+    readSecretFromTerminal({
+      input: { isTTY: false },
+      output: { write() {} },
+    }),
+    /interactive Terminal window/,
+  );
 });

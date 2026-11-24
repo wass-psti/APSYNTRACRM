@@ -121,11 +121,12 @@
     "successfulSamples": 0,
     "reason": "existing Secret API key was not supplied through a secret-safe execution path",
     "collectorImplemented": true,
-    "focusedTestsPassed": 10,
-    "fullFrontendTestsPassed": 3553,
+    "focusedTestsPassed": 11,
+    "fullFrontendTestsPassed": 3564,
     "collectorErrorHandlingTested": true,
     "metricCatalogVerified": "Supabase Grafana metrics.md; node_cpu_seconds_total service_type=db; process_cpu_seconds_total service_type=postgresql/gotrue; pg_stat_database *_total; pg_stat_database_num_backends; pgbouncer_pools_*_active_connections",
-    "successPathTested": true
+    "successPathTested": true,
+    "processCpuSeriesChurnHandling": "Process CPU attribution is omitted for any interval with counter resets or process-series changes."
   },
   "resumedObservationNov24": {
     "capturedAt": "2026-11-24T02:55:00Z",
@@ -168,8 +169,8 @@
     },
     "metricsCredentialEnvironment": "SUPABASE_METRICS_SECRET_KEY unset",
     "metricsCollectorFix": "requestStartedAt is now defined before the request and used by sanitized failure records",
-    "focusedTestsPassed": 9,
-    "fullFrontendTestsPassed": 3550,
+    "focusedTestsPassed": 11,
+    "fullFrontendTestsPassed": 3564,
     "statementBaseline": {
       "capturedAt": "2026-11-24T02:57:05.326686Z",
       "source": "pg_stat_statements cumulative counters; use only subsequent deltas, not totals as an interval rate",
@@ -282,10 +283,54 @@
       "signedClockWritesActive": true,
       "liveRealtimeConnected": true,
       "signInVisible": false
+    },
+    "laterPartialRecovery": {
+      "capturedAtLocal": "2026-11-24T11:22:00+08:00",
+      "capturedAtUtc": "2026-11-24T03:22:00Z",
+      "route": "/observability/database",
+      "globalTechnicalIssueNoticeVisible": true,
+      "successfulPanels": [
+        {
+          "name": "Memory usage",
+          "displayedValue": "869.95 MB"
+        },
+        {
+          "name": "Memory commitment",
+          "displayedValue": "1.46 GB"
+        },
+        {
+          "name": "CPU usage",
+          "displayedValue": "3.65%",
+          "window": "Last 60 minutes",
+          "source": "Dashboard UI, not independent Metrics API sample"
+        },
+        {
+          "name": "Network throughput",
+          "displayedValue": "133.4 KB/s"
+        }
+      ],
+      "failedPanels": [
+        "Disk Input/Output operations per second (IOPS)",
+        "Disk throughput",
+        "Database Connections",
+        "Dedicated Pooler Client Connections",
+        "Shared Pooler (Supavisor) client connections",
+        "Disk Usage"
+      ],
+      "databaseSize": {
+        "usedGb": 0.45,
+        "provisionedGb": 2
+      },
+      "reportSpecificRequestStatusOrTraceIdCaptured": false,
+      "evidenceSource": "Authenticated Supabase Dashboard UI text and screenshot captured after page reload"
     }
   },
   "separateDefect": {
     "workItem": "CP-BOARD-GROUP-VIEW-01B",
     "includedInCp06": false
+  },
+  "dashboardHarAnalyzer": {
+    "focusedTestsPassed": 6,
+    "projectRefRedaction": "Project references are redacted from project API hostnames and opaque path segments."
   }
 }

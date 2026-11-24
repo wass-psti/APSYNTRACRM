@@ -231,6 +231,58 @@ test("handles counter resets without reporting negative utilization", () => {
   assert.equal(result.cpu, null);
 });
 
+test("omits process CPU attribution when process series change between samples", () => {
+  const samples = [
+    {
+      capturedAt: "2026-11-23T10:00:00.000Z",
+      metrics: [
+        {
+          name: "node_cpu_seconds_total",
+          labels: { service_type: "db", cpu: "0", mode: "idle" },
+          value: 100,
+        },
+        {
+          name: "node_cpu_seconds_total",
+          labels: { service_type: "db", cpu: "0", mode: "user" },
+          value: 20,
+        },
+        {
+          name: "process_cpu_seconds_total",
+          labels: { service_type: "postgresql", pid: "100" },
+          value: 5,
+        },
+      ],
+    },
+    {
+      capturedAt: "2026-11-23T10:01:00.000Z",
+      metrics: [
+        {
+          name: "node_cpu_seconds_total",
+          labels: { service_type: "db", cpu: "0", mode: "idle" },
+          value: 154,
+        },
+        {
+          name: "node_cpu_seconds_total",
+          labels: { service_type: "db", cpu: "0", mode: "user" },
+          value: 32,
+        },
+        {
+          name: "process_cpu_seconds_total",
+          labels: { service_type: "postgresql", pid: "101" },
+          value: 11,
+        },
+      ],
+    },
+  ];
+
+  const result = analyzeMetricSamples(samples);
+  assert.equal(result.cpu.validIntervals, 1);
+  assert.deepEqual(result.processCpu, {});
+  assert.equal(result.intervals[0].processCpuComplete, false);
+  assert.equal(result.intervals[0].processCpuSeriesChanges, 2);
+  assert.deepEqual(result.intervals[0].processCpuPercentOfOneCore, {});
+});
+
 test("requires at least two successful metrics samples", () => {
   assert.throws(() => analyzeMetricSamples([]), /At least two/);
 });
