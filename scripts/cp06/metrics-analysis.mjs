@@ -191,10 +191,16 @@ export function analyzeMetricSamples(rawSamples) {
     );
     counterResets += processResult.resets;
     seriesChanges += processResult.seriesChanges;
+    const processCpuComplete =
+      processResult.resets === 0 &&
+      processResult.seriesChanges === 0 &&
+      processResult.deltas.length > 0;
     const processDeltas = {};
-    for (const item of processResult.deltas) {
-      const service = item.group || "unattributed";
-      processDeltas[service] = (processDeltas[service] || 0) + item.delta;
+    if (processCpuComplete) {
+      for (const item of processResult.deltas) {
+        const service = item.group || "unattributed";
+        processDeltas[service] = (processDeltas[service] || 0) + item.delta;
+      }
     }
 
     const counterDeltas = {};
@@ -236,6 +242,9 @@ export function analyzeMetricSamples(rawSamples) {
             stealPercent: Math.max(0, (100 * steal) / totalCpuSeconds),
           }
         : null,
+      processCpuComplete,
+      processCpuCounterResets: processResult.resets,
+      processCpuSeriesChanges: processResult.seriesChanges,
       processCpuPercentOfOneCore: Object.fromEntries(
         Object.entries(processDeltas).map(([name, delta]) => [
           name,
@@ -267,9 +276,11 @@ export function analyzeMetricSamples(rawSamples) {
   const processSummary = {};
   for (const name of processNames) {
     const oneCoreValues = intervals
+      .filter((interval) => interval.processCpuComplete)
       .map((interval) => interval.processCpuPercentOfOneCore[name])
       .filter(Number.isFinite);
     processSummary[name] = {
+      validIntervals: oneCoreValues.length,
       meanPercentOfOneCore: oneCoreValues.length
         ? oneCoreValues.reduce((sum, value) => sum + value, 0) /
           oneCoreValues.length

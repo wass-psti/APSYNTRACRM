@@ -57,6 +57,7 @@ A direct unauthenticated Management API probe returned HTTP 401 (`No access toke
   - Reports non-idle CPU, active execution excluding I/O wait and steal, I/O wait, and steal separately.
   - Does not add the separate `node_cpu_guest_seconds_total` series to the CPU denominator because it is a subset of user/nice time.
   - Calculates process CPU per documented `service_type` (for example `postgresql` and `gotrue`) as percent of one core.
+  - Omits process CPU attribution for an interval if any process counter resets or process series appear/disappear, preventing process churn from creating under-attributed values.
   - Does not subtract process counters from host CPU or claim an unattributed residual because the published process series are not an exhaustive host-process inventory.
   - Uses the published PostgreSQL counter names (`*_total`), database backend gauge (`pg_stat_database_num_backends`), and PgBouncer client/server gauges.
   - Detects counter resets and series churn instead of reporting negative or misleading deltas.
@@ -84,19 +85,15 @@ A direct unauthenticated Management API probe returned HTTP 401 (`No access toke
 | Parser syntax               | PASS                                                                                          |
 | Analysis syntax             | PASS                                                                                          |
 | Collector syntax            | PASS                                                                                          |
-| Focused CP-06 tests         | 10/10 PASS                                                                                    |
+| Focused CP-06 tests         | 11/11 PASS                                                                                    |
 | Missing-key preflight       | PASS — exits 2 without network access                                                         |
 | New runtime dependencies    | None                                                                                          |
 | 31-sample production scrape | NOT RUN — existing Secret API key was not made available through a secret-safe execution path |
 
-The collector can be run locally without placing the secret in shell history or source code. From a zsh terminal, the existing key can be entered through a silent prompt:
+The collector can be run locally without placing the secret in shell history or source code. From an interactive Terminal window, run the CP-07 Node.js prompt wrapper to enter the existing key without echo:
 
-```zsh
-(
-  read -s "SUPABASE_METRICS_SECRET_KEY?Enter the existing Supabase Secret API key: "
-  export SUPABASE_METRICS_SECRET_KEY
-  node scripts/cp06/capture-metrics.mjs
-)
+```sh
+node scripts/cp07/run-metrics-capture.mjs
 ```
 
 The prompt suppresses terminal echo. The variable exists only in the child shell for the capture process; no key value is written to the repository or evidence file. The run takes approximately 30 minutes. Do not create or rotate a key solely to bypass this prerequisite.
@@ -161,6 +158,19 @@ The project-side unified logs for 01:45–02:55 UTC contained 4,965 Edge events 
 The Dashboard notice itself is direct evidence of a platform-reported technical issue, but it does not name the affected service or provide a correlation ID. No claim is made that the project database, Postgres, or API Gateway caused the report failures.
 
 **Result: PARTIAL.** The failure is reproducible across a reload, affects all ten report charts, and is accompanied by a Supabase Dashboard technical-issue notice. Provider-side request/trace correlation remains outstanding.
+
+### 3.5 Later partial recovery — November 24, 03:22 UTC (11:22 AM Philippine Time)
+
+A subsequent authenticated browser inspection of the same Database Observability route showed partial recovery:
+
+- Memory usage, Memory commitment, CPU usage, and Network throughput rendered values and charts.
+- Six panels still displayed `Unable to load data`: Disk IOPS, Disk throughput, Database Connections, Dedicated Pooler Client Connections, Shared Pooler Client Connections, and Disk Usage.
+- The page still displayed the global Supabase Dashboard technical-issue notice.
+- The visible CPU card showed 3.65% for its selected 60-minute window. This is a Dashboard UI value, not an independently captured Metrics API host sample.
+- The visible memory usage was approximately 869.95 MB, memory commitment approximately 1.46 GB, and database size remained 0.45 GB of 2 GB provisioned.
+- No report-specific request status or provider trace identifier was obtained from this later view.
+
+This later observation supersedes the earlier ten-panel count as the most recent visible UI state, but it does not invalidate the timestamped 02:55 UTC observation. The failure is intermittent/partially recovered rather than a continuously identical ten-panel failure. The six remaining failures still require request-level correlation.
 
 ## 4. Workload-normalized Supabase evidence
 
@@ -262,7 +272,7 @@ This defect is deliberately excluded from CP-06. Recommended separate work item:
 | Authoritative CPU mean, p50, p95, max, I/O wait, and steal   | PENDING — requires completed Metrics API capture                                                        |
 | Service CPU attribution                                      | PENDING — requires actual Metrics API series and labels                                                 |
 | PostgreSQL workload deltas                                   | VERIFIED for the documented 18-minute and 6m40s intervals                                               |
-| Database report failed panels identified                     | VERIFIED — six on Nov 23; ten on Nov 24                                                                 |
+| Database report failed panels identified                     | VERIFIED — six on Nov 23; ten at 02:55 UTC, six at 03:22 UTC Nov 24                                     |
 | Plan-entitlement discrepancy documented                      | VERIFIED from current Supabase documentation                                                            |
 | Report-service HTTP status/request ID/trace ID               | NOT CAPTURED — no report-specific fetch/XHR surfaced in Resource Timing; full network trace unavailable |
 | Same-tab signed session restored                             | VERIFIED                                                                                                |
@@ -277,7 +287,7 @@ This defect is deliberately excluded from CP-06. Recommended separate work item:
 
 CP-CRM-SESSION-CPU-06 is **PARTIAL — NOT CLOSED**.
 
-The finite Metrics API collector, Prometheus parser, CPU/service analysis, and regression tests are implemented. Focused tests pass 10/10. The full frontend suite passes 3,553/3,553; repository check, lint, formatting, and production build also pass. Production database activity has been normalized using approximately 18-minute and 6m40s `pg_stat_statements` deltas. All ten report metric panels remained unavailable in the resumed November 24 observation. The Dashboard did not expose a report-specific request in Resource Timing, so internal HTTP status and trace identifiers remain unavailable.
+The finite Metrics API collector, Prometheus parser, CPU/service analysis, and regression tests are implemented. Focused tests pass 11/11. The full frontend suite passes 3,566/3,566; repository check, lint, formatting, and production build also pass. Production database activity has been normalized using approximately 18-minute and 6m40s `pg_stat_statements` deltas. Ten report metric panels failed at 02:55 UTC; a later 03:22 UTC observation showed partial recovery with six remaining failures. The Dashboard did not expose a report-specific request in Resource Timing, so internal HTTP status and trace identifiers remain unavailable.
 
 The current production CRM browser successfully recovered its signed session after a same-tab reload, restored workspace context, and returned to Live Realtime synchronization. The existing session architecture was not modified.
 
