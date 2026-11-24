@@ -27,6 +27,7 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/time-tracker-reports-command.css",
  "frontend/time-tracker-calendar-command.css",
  "frontend/time-tracker-overtime-command.css",
+ "frontend/time-tracker-ot-reference.css",
  "frontend/time-tracker-my-hours-command.css",
  "frontend/time-tracker-team-command.css",
  "frontend/time-tracker-monitor-command.css",

@@ -121,6 +121,39 @@ expect(await rpc(admin,'timetracker_ot_decide',{p_board_id:board,p_request_id:pe
 const dup=await rpc(bootstrap,'timetracker_ot_decide',{p_board_id:board,p_request_id:a.id,p_decision:'Rejected'});
 assert.ok(dup.status>=400&&dup.status<500,'repeated status must be rejected');checks++;
 console.log('SIGNED_RECONNECT_VISIBILITY_AND_EXISTING_DENIALS PASS');
+const withdraw=(actor,id)=>rpc(actor,'timetracker_ot_withdraw',{p_board_id:board,p_request_id:id});
+const workerPendingSnapshot=receipt(await rpc(worker,'timetracker_ot_snapshot',{p_board_id:board}),'worker pending capability');
+assert.equal(workerPendingSnapshot.rows.find(row=>row.id===pending.id).canWithdraw,true);
+const adminPendingSnapshot=receipt(await rpc(bootstrap,'timetracker_ot_snapshot',{p_board_id:board}),'bootstrap pending capability');
+assert.equal(adminPendingSnapshot.rows.find(row=>row.id===pending.id).canWithdraw,false);
+expect(await withdraw(bootstrap,pending.id),403,'other actor withdrawal denied even for bootstrap');
+expect(await withdraw(worker,c.id),403,'approved request withdrawal denied');
+expect(await withdraw(worker,d.id),403,'rejected request withdrawal denied');
+const removed=receipt(await withdraw(worker,pending.id),'creator withdraws pending request');
+assert.equal(removed.status,'Withdrawn');assert.equal(removed.withdrawnBy,worker.id);
+assertDatabase(pending.id,'Withdrawn',worker.id);
+expect(await withdraw(worker,pending.id),403,'repeated withdrawal denied');
+const afterWithdrawal=receipt(await rpc(worker,'timetracker_ot_snapshot',{p_board_id:board}),'read after withdrawal');
+assert.ok(!afterWithdrawal.rows.some(row=>row.id===pending.id));
+const manual=receipt(await rpc(admin,'timetracker_ot_submit_manual',{
+ p_board_id:board,p_owner_id:worker.id,p_date:'2025-01-02',p_start:'18:00',p_end:'19:00',
+ p_reason:'Manual historical work entered by the administrator'
+}),'manual creator entry');
+expect(await withdraw(worker,manual.id),403,'manual beneficiary cannot remove administrator-created request');
+const manualRemoved=receipt(await withdraw(admin,manual.id),'manual creator withdrawal');
+assert.equal(manualRemoved.withdrawnBy,admin.id);
+assert.equal(sql(`SELECT event||'|'||actor_id::text FROM public.timetracker_ot_audit WHERE request_id='${manual.id}' ORDER BY event_id`),
+ `submitted|${admin.id}\nwithdrawn|${admin.id}`);
+const racing=receipt(await submit(worker,'14:00','15:00','concurrent decision'),'race request');
+const outcomes=await Promise.all([
+ withdraw(worker,racing.id),
+ rpc(bootstrap,'timetracker_ot_decide',{p_board_id:board,p_request_id:racing.id,p_decision:'Approved'})
+]);
+assert.equal(outcomes.filter(x=>x.status===200).length,1,'withdrawal and approval must not both commit');
+assert.equal(outcomes.filter(x=>x.status>=400&&x.status<500).length,1);
+const winner=outcomes.find(x=>x.status===200).data;
+assertDatabase(racing.id,winner.status,winner.status==='Approved'?bootstrap.id:worker.id);
+console.log('SIGNED_CREATOR_WITHDRAWAL_AUTHORIZATION_AUDIT_AND_RACE PASS');
 console.log(`SIGNED_OT_HTTP_AND_SQL_CHECKS_PASS count=${checks}`);
 if(process.env.CP_TT_OT03_BROWSER==='1'){
  const selfPending=receipt(await submit(bootstrap,'22:00','23:00','browser self approval'),'browser self submit');

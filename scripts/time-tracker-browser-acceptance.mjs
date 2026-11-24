@@ -624,6 +624,7 @@ try {
         result,
         now: new Date("2026-11-17T12:00:00Z"),
         otFilters: { status: "Submitted" },
+        otModalOpen: "manual",
       }),
     manualAdminFixture,
   );
@@ -666,9 +667,12 @@ try {
       },
     },
   );
-  assert.equal(await page.locator(".tt-ot-manual-section").count(), 1);
+  assert.equal(await page.locator(".tt-ot-manual-section").count(), 0);
   assert.equal(await page.locator("#tt-ot-manual-form").count(), 0);
-  assert.equal(await page.locator(".tt-ot-manual-readonly-note").count(), 1);
+  assert.equal(
+    await page.locator('[data-action="tt-ot-manual-open"]').count(),
+    0,
+  );
   assert.equal(await page.locator(".tt-ot-review-actions").count(), 0);
 
   await page.evaluate(
