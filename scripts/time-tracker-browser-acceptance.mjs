@@ -175,6 +175,18 @@ try {
     return {
       appDisplay: getComputedStyle(app).display,
       headerRadius: getComputedStyle(header).borderRadius,
+      brandColor: getComputedStyle(
+        header.querySelector(".tt-brand-icon"),
+      ).backgroundColor,
+      roleLabel: header.querySelector(".tt-header-role").textContent,
+      roleInitials: header.querySelector(".tt-header-avatar").textContent,
+      refreshText: header.querySelector(".tt-header-refresh").textContent,
+      shortcutColor: getComputedStyle(
+        header.querySelector(".tt-header-link"),
+      ).backgroundColor,
+      activeUnderline: getComputedStyle(
+        document.querySelector(".tt-nav-tab.is-current"),
+      ).borderBottomColor,
       headerBackground: getComputedStyle(header).backgroundColor,
       navOverflow: getComputedStyle(navScroll).overflowX,
       clockLayout: getComputedStyle(clockLayout).flexDirection,
@@ -190,7 +202,13 @@ try {
   // These assertions intentionally validate the new white, centered,
   // accessible TimeTracker layout instead of the retired gradient dashboard.
   assert.equal(desktopLayout.appDisplay, "flex");
-  assert.equal(desktopLayout.headerRadius, "0px");
+  assert.equal(desktopLayout.headerRadius, "16px 16px 0px 0px");
+  assert.equal(desktopLayout.brandColor, "rgb(83, 74, 183)");
+  assert.equal(desktopLayout.roleLabel, "Employee");
+  assert.equal(desktopLayout.roleInitials, "E");
+  assert.equal(desktopLayout.refreshText, "");
+  assert.equal(desktopLayout.shortcutColor, "rgb(238, 235, 252)");
+  assert.equal(desktopLayout.activeUnderline, "rgb(83, 74, 183)");
   assert.equal(desktopLayout.headerBackground, "rgb(255, 255, 255)");
   assert.equal(desktopLayout.navOverflow, "auto");
   assert.equal(desktopLayout.clockLayout, "column");
