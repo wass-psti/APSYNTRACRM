@@ -131,9 +131,8 @@ try {
   assert.deepEqual(activeAccessibility.violations, []);
 
   const update = await page.evaluate(async () => {
-    const { syncTimeTrackerClockView } = await import(
-      "/frontend/time-tracker-ui.js"
-    );
+    const { syncTimeTrackerClockView } =
+      await import("/frontend/time-tracker-ui.js");
     const root = document.querySelector("#app");
     const selectors = [
       ".tt-native",
@@ -142,8 +141,12 @@ try {
       ".tt-clock-stage",
       ".tt-command-layout",
       ".tt-time-dashboard",
+      ".tt-clock-face",
       ".tt-clock-card",
       "#tt-clock-form",
+      "#tt-session-elapsed",
+      "#tt-session-progress",
+      ".tt-start-button",
       "#tt-note",
     ];
     const before = Object.fromEntries(
@@ -200,8 +203,16 @@ try {
     };
   });
   assert.equal(update.patched, true);
-  assert.equal(update.stable, true, "Background refresh must retain Clock DOM nodes");
-  assert.equal(update.focused, true, "Background refresh must preserve focused control");
+  assert.equal(
+    update.stable,
+    true,
+    "Background refresh must retain Clock DOM nodes",
+  );
+  assert.equal(
+    update.focused,
+    true,
+    "Background refresh must preserve focused control",
+  );
   assert.equal(update.scrollAfter, update.scrollBefore);
   assert.equal(update.stageTopDelta, 0);
   assert.equal(update.stageHeightDelta, 0);
@@ -210,9 +221,8 @@ try {
   assert.equal(update.noteValue, "Offsite development");
 
   const transition = await page.evaluate(async () => {
-    const { syncTimeTrackerClockView } = await import(
-      "/frontend/time-tracker-ui.js"
-    );
+    const { syncTimeTrackerClockView } =
+      await import("/frontend/time-tracker-ui.js");
     const root = document.querySelector("#app");
     const selectors = [
       ".tt-native",
@@ -267,7 +277,8 @@ try {
       stable: selectors.every(
         (selector) => before[selector] === after[selector],
       ),
-      sessionState: root.querySelector(".tt-command-layout")?.dataset.sessionState,
+      sessionState:
+        root.querySelector(".tt-command-layout")?.dataset.sessionState,
       badge: root.querySelector(".tt-idle-badge")?.textContent,
       action: root.querySelector('[name="tt-action"]')?.value,
       ringCount: root.querySelectorAll("#tt-session-progress").length,
@@ -275,7 +286,11 @@ try {
     };
   });
   assert.equal(transition.patched, true);
-  assert.equal(transition.stable, true, "Idle/active transition must retain the Clock shell");
+  assert.equal(
+    transition.stable,
+    true,
+    "Idle/active transition must retain the Clock shell",
+  );
   assert.equal(transition.sessionState, "idle");
   assert.equal(transition.badge, "Not clocked in");
   assert.equal(transition.action, "clock-in");
