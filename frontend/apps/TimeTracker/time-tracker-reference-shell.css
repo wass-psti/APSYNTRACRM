@@ -234,7 +234,7 @@ html[data-aps-monday-theme="dark"] #app#app .shell .main.aps-time-tracker-shell 
 
 /* Attendance Log reference: flat, full-width, scoped to the signed Log only. */
 #app#app .tt-log-reference-header {
- display:flex;align-items:center;gap:20px;min-width:0;flex:1 1 auto;padding:8px 16px;background:var(--tt-shell-surface,#fff);color:var(--tt-shell-ink,#14123a);border-bottom:1px solid var(--tt-shell-line,#e7e4ef);
+ display:flex;align-items:center;gap:20px;min-width:0;flex:0 0 auto;padding:12px 16px;background:var(--tt-shell-surface,#fff);color:var(--tt-shell-ink,#14123a);border-bottom:1px solid var(--tt-shell-line,#e7e4ef);
 }
 #app#app .tt-log-reference-header h2 {
  flex:none;margin:0;font:600 17px/1.3 Montserrat,Inter,system-ui,sans-serif;white-space:nowrap;letter-spacing:-.01em;color:inherit;
@@ -263,11 +263,6 @@ html[data-aps-monday-theme="dark"] #app#app .shell .main.aps-time-tracker-shell 
 #app#app .tt-log-reference-header .tt-log-filter-footer {display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 #app#app .tt-log-reference-header .tt-log-filter-footer button {height:32px;min-height:32px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:inherit;font-size:13px;font-weight:600}
 #app#app .tt-log-reference-header [data-action="tt-log-filter-apply"] {background:#4f3fb8;color:#fff}
-#app#app .shell > .main > .topbar.tt-log-topbar {padding:4px 16px;min-height:56px;gap:12px;overflow:visible}
-#app#app .tt-log-topbar > :is(.breadcrumb,.ws01-topbar-launch),#app#app .tt-log-topbar .aps-global-search-trigger {display:none}
-#app#app .tt-log-topbar .tt-log-reference-header {padding:0;border:0}
-#app#app .tt-log-topbar .top-actions {gap:8px;flex-wrap:wrap}
-#app#app .tt-log-topbar .top-actions :is(.top-pill,.aps-sync,.topbar-signout) {border-radius:8px;min-height:34px}
 #app#app .shell.tt-sidebar-mounted > .main.aps-time-tracker-shell:has(.tt-log[data-tt-log-reference]) > .main-content {padding:0}
 #app#app .tt-native .tt-application[data-tt-view="log"]:has([data-tt-log-reference]) {gap:0}
 #app#app .tt-native .tt-log[data-tt-log-reference] {--tt-log-bg:var(--tt-shell-surface,#fff);--tt-log-ink:var(--tt-shell-ink,#14123a);--tt-log-muted:var(--tt-shell-muted,#4a4860);--tt-log-line:var(--tt-shell-line,#e7e4ef);--tt-log-accent:var(--tt-shell-accent,#3b2fa0);--tt-log-hover:var(--tt-shell-hover,#f6f4fd);--tt-log-selected:var(--tt-shell-selected,#dfd9f9);padding:0;gap:0;min-width:0;min-height:calc(100dvh - 56px);background:var(--tt-log-bg);color:var(--tt-log-ink)}
@@ -332,7 +327,6 @@ html[data-aps-monday-theme="dark"] #app#app .shell .main.aps-time-tracker-shell 
 @media(max-width:900px) {
  #app#app .tt-log-reference-header {flex-wrap:wrap;gap:8px}
  #app#app .tt-log-reference-header .tt-log-controls {flex-basis:100%;max-width:none}
- #app#app .tt-log-topbar .tt-log-reference-header {flex-basis:100%}
 }
 @media(max-width:450px) {
  #app#app .tt-log-reference-header .tt-log-filter-panel {padding:12px}
