@@ -168,3 +168,12 @@ test('Attendance Log keeps status separate from clock-out time and defines all s
  assert.equal(boundTimeTrackerLogWidth(99999),960);
  assert.equal(boundTimeTrackerLogWidth(207),208);
  });
+
+test('Log clock-out uses Philippine 12-hour time with seconds while clock-in and active placeholder stay unchanged',()=>{
+ const rows=[...records,{...records[1],id:'noon',clockOut:'2026-11-03T04:00:00Z'},
+  {...records[1],id:'midnight',clockOut:'2026-11-03T16:00:00Z'}];
+ const html=render({records:rows});
+ const times=[...html.matchAll(/class="tt-log-row-out"[^>]*>([^<]+)<\/span>/g)].map(match=>match[1]);
+ assert.deepEqual(times.sort(),['—','05:00:00 PM','12:00:00 AM','12:00:00 PM'].sort());
+ assert.match(html,/class="tt-log-row-clock"[^>]*><strong>09:00:00<\/strong>/);
+});
