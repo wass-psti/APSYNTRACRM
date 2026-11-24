@@ -37,3 +37,15 @@ test('mobile settings actions preserve signed security revocation and login clea
  const login=app.slice(app.indexOf('function renderLogin('),app.indexOf('function renderLogin(')+800);
  assert.match(login,/stopTimeTrackerPixi\(\);\n \/\/ Clear detached protected item values on every signed-out transition\.\n hideModal\(\);\n if\(mode==='login'&&!emailValue\)emailValue=mobileAccountEmail;/);
 });
+
+test('mobile account styles use a new cache key and override desktop settings visibility',()=>{
+ const entry=readFileSync('index.html','utf8');
+ const bundle=readFileSync('frontend/apsyntra-styles.bundle.css','utf8');
+ assert.match(entry,/apsyntra-styles\.bundle\.css\?v=cp-mobile-workspace-switch-01-account-02/);
+ assert.match(entry,/mobile-home\.js\?v=cp-mobile-workspace-switch-01-account-02/);
+ assert.ok(bundle.includes(css));
+ assert.match(css,/\.aps-settings:not\(\.apsm-profile-expanded\):not\(\.apsm-security-expanded\) \.settings-grid\s*\{\s*display: none !important/);
+ assert.match(css,/\.apsm-account-list button \+ button \{ border-top:/);
+ assert.match(css,/\.apsm-clock-card\[data-status="idle"\] \.apsm-clock-badge/);
+ assert.match(mobile,/data-status=/);
+});
