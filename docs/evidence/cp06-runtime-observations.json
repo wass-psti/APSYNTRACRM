@@ -323,6 +323,23 @@
       },
       "reportSpecificRequestStatusOrTraceIdCaptured": false,
       "evidenceSource": "Authenticated Supabase Dashboard UI text and screenshot captured after page reload"
+    },
+    "projectMetadata": {
+      "region": "ap-southeast-2",
+      "status": "ACTIVE_HEALTHY"
+    },
+    "publicStatusContext": {
+      "incident": "API endpoint degradation observed Nov 13-16",
+      "status": "Monitoring",
+      "lastUpdate": "2026-11-23T17:58:00Z",
+      "dataApiAffectedRegions": 18,
+      "managementApiAffectedRegions": [
+        "ap-southeast-1",
+        "eu-west-1",
+        "us-east-1",
+        "us-west-1"
+      ],
+      "causalLinkToDashboardReports": "not established"
     }
   },
   "separateDefect": {

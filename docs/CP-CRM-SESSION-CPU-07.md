@@ -124,6 +124,8 @@ A full HAR export has not yet been captured, so no production report HTTP status
 
 Project-side unified logs from 01:45–02:55 UTC showed no PostgreSQL error/fatal matches and no Edge HTTP 4xx/5xx matches in the targeted queries. These project logs do not expose the Dashboard control-plane/report-service trace.
 
+The Supabase project metadata currently reports region `ap-southeast-2` and status `ACTIVE_HEALTHY`. The public Supabase Status page has one ongoing monitoring item, **“API endpoint degradation observed Nov 13–16”**, describing intermittent Management API and Data API delays/timeouts during Nov 13–16 with mitigations and broad improvement. Its affected Data API components list includes `ap-southeast-2`; its Management API component list names `ap-southeast-1`, `eu-west-1`, `us-east-1`, and `us-west-1`, not this project's region. This is relevant platform context but does not establish that the open monitoring incident caused the Database Observability report failures. No current public status item specifically identifies the Database Observability report service.
+
 The CRM browser remained signed in at `#/time-tracker`. At 11:23:09 AM Philippine Time, the browser reported `navigator.onLine === true`, secure session, signed workspace verification, signed Clock writes active, and `Live synced · Authorized Realtime connected`; no failed Auth refresh resource was present in the current resource timing list. A preceding console view briefly showed `ERR_INTERNET_DISCONNECTED` refresh-token requests, but the subsequent authoritative sync check recovered without a code change or forced sign-out. No session code was changed.
 
 ## 5. Verification matrix
