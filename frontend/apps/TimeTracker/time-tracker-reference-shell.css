@@ -231,3 +231,99 @@ html[data-aps-monday-theme="dark"] #app#app .shell .main.aps-time-tracker-shell 
 @media (max-width: 820px) {
   #app#app .shell .main.aps-time-tracker-shell .tt-application[data-tt-reference-shell][data-tt-view="clock"] .tt-clock-stage.tt-command-center { padding: 24px 10px; gap: 20px; }
 }
+
+/* Attendance Log reference: flat, full-width, scoped to the signed Log only. */
+#app#app .tt-log-reference-header {
+ display:flex;align-items:center;gap:20px;min-width:0;flex:1 1 auto;padding:8px 16px;background:var(--tt-shell-surface,#fff);color:var(--tt-shell-ink,#14123a);border-bottom:1px solid var(--tt-shell-line,#e7e4ef);
+}
+#app#app .tt-log-reference-header h2 {
+ flex:none;margin:0;font:600 17px/1.3 Montserrat,Inter,system-ui,sans-serif;white-space:nowrap;letter-spacing:-.01em;color:inherit;
+}
+#app#app .tt-log-reference-header .tt-log-controls {
+ position:relative;display:flex;align-items:center;flex:1 1 320px;min-width:0;max-width:760px;gap:8px;height:40px;padding:0 6px 0 14px;background:var(--tt-shell-hover,#f3f1fa);border:0;border-radius:12px;box-shadow:none;
+}
+#app#app .tt-log-reference-header .tt-log-search {position:relative;flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:10px;margin:0}
+#app#app .tt-log-reference-header .tt-log-search svg {position:static;transform:none;width:18px;height:18px;flex:none;color:var(--tt-shell-muted,#4a4860)}
+#app#app .tt-log-reference-header .tt-log-filter-label {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+#app#app .tt-log-reference-header .tt-log-search input {width:100%;min-width:0;min-height:0;padding:0;border:0;background:transparent;color:inherit;box-shadow:none;font:400 14px Inter,system-ui,sans-serif}
+#app#app .tt-log-reference-header .tt-log-filter-trigger {display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border:1px solid var(--tt-shell-line,#e3e0ee);border-radius:8px;background:var(--tt-shell-surface,#fff);color:inherit;font-size:13px;font-weight:500;cursor:pointer;list-style:none;white-space:nowrap}
+#app#app .tt-log-reference-header .tt-log-filter-trigger::-webkit-details-marker {display:none}
+#app#app .tt-log-reference-header .tt-log-filter-trigger svg {width:16px;height:16px}
+#app#app .tt-log-reference-header .tt-log-filter-popover[open] .tt-log-filter-trigger {background:var(--tt-shell-selected,#e7e3fa);color:var(--tt-shell-accent,#3b2fa0)}
+#app#app .tt-log-reference-header .tt-log-filter-panel {position:absolute;z-index:50;top:calc(100% + 8px);left:0;right:0;min-width:min(300px,100%);padding:18px 20px;border:1px solid var(--tt-shell-line,#e3e0ee);border-radius:16px;background:var(--tt-shell-surface,#fff);box-shadow:0 10px 30px #14123a24}
+#app#app .tt-log-reference-header .tt-log-filter-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px}
+#app#app .tt-log-reference-header .tt-log-filter-field {display:flex;flex-direction:column;gap:6px;min-width:0;font:600 12px Inter,system-ui,sans-serif;color:var(--tt-shell-muted,#4a4860)}
+#app#app .tt-log-reference-header .tt-log-filter-field :is(select,input) {height:36px;min-height:36px;width:100%;padding:0 10px;border:1px solid var(--tt-shell-line,#e3e0ee);border-radius:8px;background:var(--tt-shell-surface,#fff);color:var(--tt-shell-ink,#14123a);font:400 13px Inter,system-ui,sans-serif}
+#app#app .tt-log-reference-header .tt-log-custom-range {display:grid;grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#app#app .tt-log-reference-header .tt-log-custom-range[hidden] {display:none}
+#app#app .tt-log-reference-header .tt-log-filter-footer {display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+#app#app .tt-log-reference-header .tt-log-filter-footer button {height:32px;min-height:32px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:inherit;font-size:13px;font-weight:600}
+#app#app .tt-log-reference-header [data-action="tt-log-filter-apply"] {background:#4f3fb8;color:#fff}
+#app#app .shell > .main > .topbar.tt-log-topbar {padding:4px 16px;min-height:56px;gap:12px;overflow:visible}
+#app#app .tt-log-topbar > :is(.breadcrumb,.ws01-topbar-launch),#app#app .tt-log-topbar .aps-global-search-trigger {display:none}
+#app#app .tt-log-topbar .tt-log-reference-header {padding:0;border:0}
+#app#app .tt-log-topbar .top-actions {gap:8px;flex-wrap:wrap}
+#app#app .tt-log-topbar .top-actions :is(.top-pill,.aps-sync,.topbar-signout) {border-radius:8px;min-height:34px}
+#app#app .shell.tt-sidebar-mounted > .main.aps-time-tracker-shell:has(.tt-log[data-tt-log-reference]) > .main-content {padding:0}
+#app#app .tt-native .tt-application[data-tt-view="log"]:has([data-tt-log-reference]) {gap:0}
+#app#app .tt-native .tt-log[data-tt-log-reference] {--tt-log-bg:var(--tt-shell-surface,#fff);--tt-log-ink:var(--tt-shell-ink,#14123a);--tt-log-muted:var(--tt-shell-muted,#4a4860);--tt-log-line:var(--tt-shell-line,#e7e4ef);--tt-log-accent:var(--tt-shell-accent,#3b2fa0);--tt-log-hover:var(--tt-shell-hover,#f6f4fd);--tt-log-selected:var(--tt-shell-selected,#dfd9f9);padding:0;gap:0;min-width:0;min-height:calc(100dvh - 56px);background:var(--tt-log-bg);color:var(--tt-log-ink)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-flat-stats {display:flex;flex-wrap:nowrap;gap:0;padding:0 8px;overflow-x:auto;border-bottom:1px solid var(--tt-log-line)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-view-tab {display:flex;align-items:center;gap:8px;height:46px;flex:none;padding:0 18px;border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;color:var(--tt-log-muted);box-shadow:none;font:600 13.5px Inter,system-ui,sans-serif}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-view-tab.is-current {border-bottom-color:#4f3fb8;color:var(--tt-log-accent)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-view-tab span {padding:1px 8px;border-radius:999px;background:var(--tt-log-selected);color:var(--tt-log-accent);font-size:11.5px;font-weight:600}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-records {margin:0;padding:0;border:0;background:transparent;box-shadow:none}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-reference-toolbar {display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:4px 12px;border-bottom:1px solid var(--tt-log-line);flex-wrap:wrap}
+#app#app .tt-native .tt-log[data-tt-log-reference] :is(.tt-log-admin-toolbar,.tt-log-admin-toolbar-copy,.tt-log-admin-toolbar-actions,.tt-log-reference-actions) {display:flex;align-items:center;gap:4px;min-width:0;width:auto;padding:0;margin:0;border:0;background:transparent;box-shadow:none;flex-direction:row}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-admin-selection-status {display:flex;align-items:center;gap:4px;padding:0 10px;margin:0 4px;border:0;border-left:1px solid var(--tt-log-line);border-radius:0;background:transparent;font-size:13px;color:var(--tt-log-accent)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-admin-selection-status strong {font-size:13px;color:inherit}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-icon {display:inline-flex;align-items:center;justify-content:center;flex:none;width:34px;height:34px;min-height:34px;padding:7px;border:0;border-radius:50%;background:transparent;color:var(--tt-log-muted);box-shadow:none}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-icon svg {width:18px;height:18px}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-icon:hover:not(:disabled) {background:var(--tt-log-hover)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-icon.tt-log-admin-delete {color:#b42318}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-icon:disabled {opacity:.4}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-add {display:flex;align-items:center;gap:6px;height:32px;min-height:32px;padding:0 12px;border:1px solid var(--tt-log-line);border-radius:8px;background:var(--tt-log-selected);color:var(--tt-log-accent);font:600 13px Inter,system-ui,sans-serif}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-add svg {width:15px;height:15px}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-checkbox {display:grid;place-items:center;flex:none;width:16px;height:16px;min-height:16px;padding:0;margin:0;border:1px solid #94929e;border-radius:3px;background:var(--tt-log-bg);color:#fff;font-size:13px;font-weight:700;line-height:1;box-shadow:none}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-checkbox:is([aria-checked="true"],[aria-checked="mixed"]) {background:#4f3fb8;border-color:#4f3fb8}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-admin-toolbar-copy > .tt-log-checkbox {margin:0 14px 0 8px}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table-scroll {max-width:100%;overflow-x:auto;border:0;border-radius:0}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table {width:100%;min-width:1020px;table-layout:fixed;border-collapse:collapse}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th {height:32px;padding:0 12px;text-align:left;background:var(--tt-log-bg);color:var(--tt-log-muted);font:600 12px Inter,system-ui,sans-serif;border-bottom:1px solid var(--tt-log-line)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th:nth-child(1) {width:40px}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th:nth-child(2) {width:calc((100% - 40px)*.21)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th:nth-child(3) {width:calc((100% - 40px)*.29)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th:nth-child(4) {width:calc((100% - 40px)*.18)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th:nth-child(5) {width:calc((100% - 40px)*.19)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th:nth-child(6) {width:calc((100% - 40px)*.13)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-filterable > td {padding:0;border:0;border-bottom:1px solid var(--tt-log-line);background:var(--tt-log-bg)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-filterable > .tt-log-check-cell {padding-left:16px;vertical-align:middle}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-summary {display:grid;grid-template-columns:21% 29% 18% 19% 13%;align-items:center;gap:0;min-height:44px;padding:0;border:0;background:transparent;color:var(--tt-log-ink);cursor:pointer}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-summary > span {min-width:0;padding:0 12px;font:400 13.5px Inter,system-ui,sans-serif;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-summary > .tt-log-row-clock {font-variant-numeric:tabular-nums}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-clock strong,#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-work-plan {font-weight:600}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-work-plan {color:var(--tt-log-accent)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-person {display:flex;align-items:center;gap:10px}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-person strong {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:inherit;font:600 13.5px Inter,system-ui,sans-serif}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-date {flex:none;color:var(--tt-log-muted);font-size:12.5px}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-avatar {width:24px;height:24px;background:var(--tt-log-selected);color:var(--tt-log-accent);font:600 10px Inter,system-ui,sans-serif}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-out {display:flex;align-items:center;gap:8px}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-badge {padding:2px 9px;border:0;border-radius:999px;font:600 11.5px Inter,system-ui,sans-serif;white-space:nowrap}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-badge-active {background:var(--tt-log-selected);color:var(--tt-log-accent)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-filterable:hover > td {background:var(--tt-log-hover)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-filterable.is-selected > td {background:var(--tt-log-selected);border-color:var(--tt-log-line)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-filterable.is-selected :is(.tt-log-avatar,.tt-log-badge-active) {background:var(--tt-log-bg)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-results-count {padding:8px 16px}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-secondary-analytics:not([open]) {display:none}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-secondary-analytics[open] {padding:16px}
+#app#app .tt-application[data-tt-view="log"]:has([data-tt-log-reference]) .tt-application-footer {display:none}
+#app#app :is(.tt-log-reference-header,.tt-log[data-tt-log-reference]) :is(button,input,select,summary):focus-visible {outline:2px solid var(--tt-shell-accent,#4f3fb8);outline-offset:2px}
+@media(max-width:900px) {
+ #app#app .tt-log-reference-header {flex-wrap:wrap;gap:8px}
+ #app#app .tt-log-reference-header .tt-log-controls {flex-basis:100%;max-width:none}
+ #app#app .tt-log-topbar .tt-log-reference-header {flex-basis:100%}
+}
+@media(max-width:450px) {
+ #app#app .tt-log-reference-header .tt-log-filter-panel {padding:12px}
+ #app#app .tt-log-reference-header .tt-log-filter-grid {grid-template-columns:1fr}
+ #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-view-tab {padding:0 12px}
+}

@@ -10288,12 +10288,62 @@ async function action(name,button){
   state.ttLogSelectedIds=[...selected];render();
   root.querySelector('[data-action="tt-log-detail-toggle-select"]')?.focus();break;
  }
+ case 'tt-log-row-select':{
+  if(!timeTrackerAdminLogReady()||state.ttAttendance.access.moduleRole!=='System Admin'||state.ttLogAdminBusy)return;
+  const id=button.dataset.recordId;
+  const record=timeTrackerLogRowsForSnapshot(state.ttAttendance).find(r=>r.id===id);
+  if(!record)return;
+  if(record.isOjt){
+   state.ttLogSelectedIds=state.ttLogSelectedIds.includes(id)?[]:[id];
+  }else{
+   const selected=new Set(state.ttLogSelectedIds.filter(value=>!String(value).startsWith('ojt:')));
+   if(selected.has(id))selected.delete(id);
+   else if(selected.size<TT_ADMIN_RECORD_LIMIT)selected.add(id);
+   else {toast('Select at most '+TT_ADMIN_RECORD_LIMIT+' attendance records.',true);return;}
+   state.ttLogSelectedIds=[...selected];
+  }
+  render();
+  [...root.querySelectorAll('[data-action="tt-log-row-select"]')].find(row=>row.dataset.recordId===id)?.focus();
+  break;
+ }
+ case 'tt-log-view':
+ case 'tt-log-filter-reset':
+ case 'tt-log-filter-apply':{
+  if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='log'||state.ttAttendance?.status!=='VERIFIED_READ')return;
+  let next={...TT_LOG_DEFAULT_FILTERS,...state.ttLogFilters};
+  if(name==='tt-log-view'){
+   if(!['all','today','Completed','Active'].includes(button.dataset.target))return;
+   next.view=button.dataset.target;
+  }else if(name==='tt-log-filter-reset'){
+   next={...TT_LOG_DEFAULT_FILTERS,view:next.view,search:next.search,employeeId:next.employeeId};
+  }else{
+   const panel=button.closest('.tt-log-filter-panel');
+   if(!panel)return;
+   for(const key of ['period','status','location','department','sort','start','end'])next[key]=panel.querySelector('#tt-log-'+key)?.value||TT_LOG_DEFAULT_FILTERS[key];
+   if(next.period==='custom'&&(!next.start||!next.end||next.start>next.end)){toast('Select a valid start and end date.',true);return;}
+  }
+  state.ttLogFilters=next;
+  const visible=new Set(filterTimeTrackerLogRows(timeTrackerLogRowsForSnapshot(state.ttAttendance),next).map(r=>r.id));
+  state.ttLogSelectedIds=state.ttLogSelectedIds.filter(id=>visible.has(id));
+  state.ttLogExpandedIds=[];
+  render();
+  if(name!=='tt-log-view')root.querySelector('.tt-log-filter-trigger')?.focus();
+  break;
+ }
+ case 'tt-log-insights':{
+  const insights=root.querySelector('.tt-log-secondary-analytics');
+  if(insights){insights.open=!insights.open;if(insights.open)insights.scrollIntoView({block:'nearest'});}
+  break;
+ }
  case 'tt-log-admin-select-visible':{
   if(!timeTrackerAdminLogReady()||state.ttAttendance.access.moduleRole!=='System Admin'||state.ttLogAdminBusy)return;
   const standardIds=new Set(state.ttAttendance.log?.rows?.map(row=>row.id)||[]);
   const selected=new Set(state.ttLogSelectedIds.filter(id=>standardIds.has(id)));
   const ids=[...root.querySelectorAll('.tt-log-filterable:not([hidden])')]
    .map(row=>row.dataset.recordId).filter(id=>standardIds.has(id));
+  if(ids.length&&ids.every(id=>selected.has(id))){
+   ids.forEach(id=>selected.delete(id));state.ttLogSelectedIds=[...selected];render();break;
+  }
   for(const id of ids){
    if(selected.size>=TT_ADMIN_RECORD_LIMIT&&!selected.has(id))break;
    selected.add(id);
@@ -13576,17 +13626,9 @@ root.addEventListener('change',event=>{
    render();
   }
  }
- if(['tt-log-period','tt-log-status','tt-log-location','tt-log-sort'].includes(event.target.id)&&
-    state.view==='board'&&state.ttView==='log'&&state.ttAttendance?.status==='VERIFIED_READ'){
-  const key=event.target.id.slice('tt-log-'.length);
-  const value=event.target.value;
-  if(key==='period'&&['all','today','week','month'].includes(value)||
-     key==='status'&&['all','Active','Completed','Late','Administrative closure'].includes(value)||
-     key==='sort'&&['newest','oldest'].includes(value)||
-     key==='location'&&(value==='all'||timeTrackerLogRowsForSnapshot(state.ttAttendance).some(r=>r.location===value))){
-    state.ttLogFilters={...state.ttLogFilters,[key]:value};
-    render();
-  }
+ if(event.target.id==='tt-log-period'&&state.ttView==='log'){
+  const range=event.target.closest('.tt-log-filter-panel')?.querySelector('.tt-log-custom-range');
+  if(range)range.hidden=event.target.value!=='custom';
  }
  if(event.target.id==='tt-report-period'&&
     state.ttView==='reports'&&['all','today','week','month','custom'].includes(event.target.value)){

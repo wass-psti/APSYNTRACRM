@@ -196,6 +196,14 @@ export function syncTimeTrackerSidebar(shell,{enabled=false,expanded=false,fresh
   }else if(!application)previous?.remove();
  }
  shell.classList.toggle('tt-sidebar-mounted',mounted);
+ const topbar=shell.querySelector('.topbar');
+ const logHeader=application?.querySelector('.tt-log-reference-header');
+ const oldLogHeader=topbar?.querySelector('.tt-log-reference-header');
+ if(topbar&&logHeader&&mounted){
+  oldLogHeader?.remove();
+  topbar.prepend(logHeader);
+ }else if(oldLogHeader&&!logHeader&&application?.dataset?.ttView!=='log')oldLogHeader.remove();
+ topbar?.classList.toggle('tt-log-topbar',Boolean(mounted&&application?.dataset?.ttView==='log'&&topbar.querySelector('.tt-log-reference-header')));
  const breadcrumb=shell.querySelector('.breadcrumb');
  const old=breadcrumb?.querySelector('.tt-section-crumb');
  const label=enabled?nav?.querySelector('[aria-selected="true"]')?.textContent:'';
@@ -554,7 +562,7 @@ export function renderTimeTrackerNative({
   (reference?'':head(verified?result.access:null,busy,selected))+
   (sharedOjt?'<nav class="tt-ojt-navigation" aria-label="Intern attendance"><strong>OJT attendance</strong></nav>':
    navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true,employeesEligible))+
-  (sharedOjt||selected==='employees'?'':applicationHeading(selected,busy,verified&&adminEligible,verified&&adminFullAccess)+((verified&&(selected==='log'||(selected==='clock'&&TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&result.access?.attendanceWritesAccepted===true)))?'':notifications(verified,verified&&result.access?.attendanceWritesAccepted===true,busy)));
+  (sharedOjt||selected==='employees'||(verified&&selected==='log')?'':applicationHeading(selected,busy,verified&&adminEligible,verified&&adminFullAccess)+((verified&&(selected==='log'||(selected==='clock'&&TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&result.access?.attendanceWritesAccepted===true)))?'':notifications(verified,verified&&result.access?.attendanceWritesAccepted===true,busy)));
  if(busy&&verified&&selected==='clock')html+='<div class="tt-clock-sync-status" role="status" aria-live="polite">'+
   '<span class="tt-inline-spinner" aria-hidden="true"></span>Synchronizing signed attendance…</div>';
  if(error)html+='<div class="tt-feedback tt-feedback-error" role="alert">'+esc(error)+'</div>';
