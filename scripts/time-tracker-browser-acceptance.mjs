@@ -785,50 +785,65 @@ try {
       }),
     { result: adminResult, directory: adminDirectory },
   );
-  await page.getByText("Manage attendance records", { exact: true }).waitFor();
-  await page.getByRole("button", { name: "Select visible" }).waitFor();
+  const toolbar = page.getByRole("region", {
+    name: "System Admin attendance record management",
+  });
+  await toolbar.waitFor();
+  const selectVisible = toolbar.getByRole("checkbox", {
+    name: "Select visible standard employee records",
+  });
+  await selectVisible.waitFor();
+  assert.equal(await selectVisible.getAttribute("aria-checked"), "false");
   await page.locator(".tt-log-row-summary").waitFor();
-  assert.equal(await page.locator('input[type="checkbox"]').count(), 0);
+  const rowCheckbox = page.getByRole("checkbox", { name: "Select Test Employee" });
+  await rowCheckbox.waitFor();
+  assert.equal(await rowCheckbox.getAttribute("aria-checked"), "false");
+  await page.getByRole("button", { name: "Add Log", exact: true }).waitFor();
   await page.getByRole("button", { name: "Edit selected" }).waitFor();
   await page.getByRole("button", { name: "Delete selected" }).waitFor();
-  const managementSurface = await page
-    .locator(".tt-log-admin-toolbar")
-    .evaluate((element) => {
-      const toolbar = getComputedStyle(element);
-      const heading = getComputedStyle(
-        element.querySelector(".tt-log-admin-toolbar-heading"),
-      );
-      const action = getComputedStyle(
-        element.querySelector(".tt-log-admin-toolbar-actions button"),
-      );
-      const selection = getComputedStyle(
-        element.querySelector(".tt-log-admin-selection-status"),
-      );
-      return {
-        display: toolbar.display,
-        borderRadius: toolbar.borderRadius,
-        background: toolbar.backgroundImage,
-        headingDisplay: heading.display,
-        actionsDisplay: getComputedStyle(
-          element.querySelector(".tt-log-admin-toolbar-actions"),
-        ).display,
-        actionBackground: action.backgroundImage,
-        actionBorderRadius: action.borderRadius,
-        selectionBorderRadius: selection.borderRadius,
-      };
-    });
-  assert.equal(
-    managementSurface.display,
-    "grid",
-    "System Admin toolbar stylesheet must be present in the generated bundle",
+  assert.equal(await page.getByRole("button", { name: "Edit selected" }).isDisabled(), true);
+  assert.deepEqual(
+    await page.locator(".tt-log-table thead th").allTextContents(),
+    ["", "Clock In", "Employee", "Working Location", "Department", "Clock Out"],
   );
-  assert.equal(managementSurface.borderRadius, "16px");
-  assert.ok(managementSurface.background.includes("linear-gradient"));
-  assert.equal(managementSurface.headingDisplay, "flex");
+  assert.match(await page.locator(".tt-log-row-clock").textContent(), /08:00:00/);
+  assert.match(await page.locator(".tt-log-row-department").textContent(), /Information Technology/);
+  await page.locator(".tt-log-filter-trigger").click();
+  await page.locator(".tt-log-filter-panel").waitFor();
+  for (const id of ["period", "status", "location", "department", "sort"]) {
+    await page.locator("#tt-log-" + id).waitFor();
+  }
+  await page.getByRole("button", { name: "Reset", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Apply filters", exact: true }).waitFor();
+  await page.locator(".tt-log-filter-trigger").click();
+  assert.equal(await page.locator(".tt-log-filter-panel").isVisible(), false);
+  const managementSurface = await toolbar.evaluate((element) => {
+    const toolbarStyle = getComputedStyle(element);
+    const action = getComputedStyle(
+      element.querySelector(".tt-log-admin-toolbar-actions button"),
+    );
+    const selection = getComputedStyle(
+      element.querySelector(".tt-log-admin-selection-status"),
+    );
+    return {
+      display: toolbarStyle.display,
+      borderRadius: toolbarStyle.borderRadius,
+      background: toolbarStyle.backgroundImage,
+      actionsDisplay: getComputedStyle(
+        element.querySelector(".tt-log-admin-toolbar-actions"),
+      ).display,
+      actionBackground: action.backgroundImage,
+      actionBorderRadius: action.borderRadius,
+      selectionBorderRadius: selection.borderRadius,
+    };
+  });
+  assert.equal(managementSurface.display, "flex");
+  assert.equal(managementSurface.borderRadius, "0px");
+  assert.equal(managementSurface.background, "none");
   assert.equal(managementSurface.actionsDisplay, "flex");
-  assert.ok(managementSurface.actionBackground.includes("linear-gradient"));
-  assert.equal(managementSurface.actionBorderRadius, "9px");
-  assert.equal(managementSurface.selectionBorderRadius, "10px");
+  assert.equal(managementSurface.actionBackground, "none");
+  assert.equal(managementSurface.actionBorderRadius, "50%");
+  assert.equal(managementSurface.selectionBorderRadius, "0px");
   await page.evaluate(
     ({ result, directory, recordId }) =>
       window.__timeTrackerRender({
