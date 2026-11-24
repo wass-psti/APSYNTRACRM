@@ -171,6 +171,7 @@ try {
     const navScroll = document.querySelector(".tt-navigation-scroll");
     const clockLayout = document.querySelector(".tt-command-layout");
     const sessionCard = document.querySelector(".tt-attendance-console");
+    const clockFace = document.querySelector(".tt-clock-face");
     return {
       appDisplay: getComputedStyle(app).display,
       headerRadius: getComputedStyle(header).borderRadius,
@@ -178,8 +179,8 @@ try {
       navOverflow: getComputedStyle(navScroll).overflowX,
       clockLayout: getComputedStyle(clockLayout).flexDirection,
       sessionCardBackground: getComputedStyle(sessionCard).backgroundColor,
-      clockSize: getComputedStyle(document.querySelector(".tt-clock-face")).fontSize,
-      clockWeight: getComputedStyle(document.querySelector(".tt-clock-face")).fontWeight,
+      clockSize: getComputedStyle(clockFace).fontSize,
+      clockWeight: getComputedStyle(clockFace).fontWeight,
       statsCount: document.querySelector(".tt-session-summary").children.length,
       badges: clockLayout.querySelectorAll(".tt-idle-badge").length,
       compact: clockLayout.classList.contains("tt-clock-compact"),
