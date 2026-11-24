@@ -209,14 +209,7 @@ export function syncTimeTrackerSidebar(shell,{enabled=false,expanded=false,fresh
   }else if(!application)previous?.remove();
  }
  shell.classList.toggle('tt-sidebar-mounted',mounted);
- const topbar=shell.querySelector('.topbar');
- const logHeader=application?.querySelector('.tt-log-reference-header');
- const oldLogHeader=topbar?.querySelector('.tt-log-reference-header');
- if(topbar&&logHeader&&mounted){
-  oldLogHeader?.remove();
-  topbar.prepend(logHeader);
- }else if(oldLogHeader&&!logHeader&&application?.dataset?.ttView!=='log')oldLogHeader.remove();
- topbar?.classList.toggle('tt-log-topbar',Boolean(mounted&&application?.dataset?.ttView==='log'&&topbar.querySelector('.tt-log-reference-header')));
+ // Attendance Log controls belong to its content; keep the global topbar uniform.
  const breadcrumb=shell.querySelector('.breadcrumb');
  const old=breadcrumb?.querySelector('.tt-section-crumb');
  const label=enabled?nav?.querySelector('[aria-selected="true"]')?.textContent:'';
