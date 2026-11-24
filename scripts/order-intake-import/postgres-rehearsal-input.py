@@ -12,8 +12,11 @@ module=run_path(str(Path(__file__).with_name("legacy-local-store.py")))
 manifest=json.loads(Path(sys.argv[1]).read_bytes())
 rows=list(module["materialize"](manifest))
 workspace=module["WORKSPACE"]
+print(r"\set ON_ERROR_STOP on")
 print("BEGIN;")
-print("CREATE TEMP TABLE import_stage (LIKE public.order_intake_legacy_orders INCLUDING CONSTRAINTS INCLUDING DEFAULTS) ON COMMIT DROP;")
+print("SET LOCAL lock_timeout = '5s'; SET LOCAL statement_timeout = '60s';")
+print("LOCK TABLE public.order_intake_orders, public.order_intake_legacy_orders IN SHARE ROW EXCLUSIVE MODE;")
+print("CREATE TEMP TABLE import_stage (LIKE public.order_intake_legacy_orders INCLUDING CONSTRAINTS INCLUDING DEFAULTS INCLUDING INDEXES) ON COMMIT DROP;")
 print("COPY import_stage(id,workspace_id,source_key,payload) FROM STDIN WITH (FORMAT csv);")
 out=io.StringIO()
 writer=csv.writer(out,lineterminator="\n")
@@ -25,6 +28,9 @@ print("""
 DO $$ BEGIN
  IF EXISTS (SELECT 1 FROM import_stage s JOIN public.order_intake_orders n ON n.id=s.id)
  THEN RAISE EXCEPTION 'Native ID collision'; END IF;
+ IF EXISTS (SELECT 1 FROM import_stage s JOIN public.order_intake_orders n
+  ON n.workspace_id=s.workspace_id AND upper(btrim(n.po_number))=upper(btrim(s.payload#>>'{values,poNumber}')))
+ THEN RAISE EXCEPTION 'Native PO collision'; END IF;
  IF EXISTS (SELECT 1 FROM import_stage s JOIN public.order_intake_legacy_orders l
   ON l.workspace_id=s.workspace_id AND l.source_key=s.source_key
   WHERE l.id<>s.id OR l.payload<>s.payload)

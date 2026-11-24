@@ -5,9 +5,11 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 MANIFEST="${1:?Pass the private local compatibility manifest}"
 ID="cpoi02f-$$"; NET="$ID-net"; DB="$ID-pg"; AUTH="$ID-auth"; REST="$ID-rest"
+umask 077
+TMP=$(mktemp -d "${TMPDIR:-/tmp}/cpoi02f-XXXXXX")
 DB_PASSWORD=$(openssl rand -hex 24)
 JWT_SECRET=$(openssl rand -hex 48)
-cleanup(){ docker rm -fv "$REST" "$AUTH" "$DB" >/dev/null 2>&1 || true; docker network rm "$NET" >/dev/null 2>&1 || true; }
+cleanup(){ docker rm -fv "$REST" "$AUTH" "$DB" >/dev/null 2>&1 || true; docker network rm "$NET" >/dev/null 2>&1 || true; rm -rf "$TMP"; }
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
@@ -55,6 +57,31 @@ END $$;
 SQL
 python3 scripts/order-intake-import/postgres-rehearsal-input.py "$MANIFEST" | run
 printf 'PASS: transaction rollback and exact snapshot readback\n'
+# Negative import cases use temporary copies only, never change the reviewed source.
+python3 - "$MANIFEST" "$TMP" <<'PY_FIXTURE'
+import json, sys
+from pathlib import Path
+source=Path(sys.argv[1])
+folder=Path(sys.argv[2])
+for filename, field, value in (
+    ("changed.json", "notes", "disposable changed-payload fixture"),
+    ("collision.json", "poNumber", "CP02F-FIXTURE"),
+):
+    manifest=json.loads(source.read_bytes())
+    manifest["records"][0]["values"][field]=value
+    (folder/filename).write_text(json.dumps(manifest))
+PY_FIXTURE
+if python3 scripts/order-intake-import/postgres-rehearsal-input.py "$TMP/changed.json" | run > "$TMP/changed.log" 2>&1; then
+ echo 'FAIL: changed payload accepted'; exit 1
+fi
+grep -q 'Changed source payload' "$TMP/changed.log"
+if python3 scripts/order-intake-import/postgres-rehearsal-input.py "$TMP/collision.json" | run > "$TMP/collision.log" 2>&1; then
+ echo 'FAIL: native PO collision accepted'; exit 1
+fi
+grep -q 'Native PO collision' "$TMP/collision.log"
+python3 scripts/order-intake-import/postgres-rehearsal-input.py "$MANIFEST" | run
+printf 'PASS: changed payload and native PO collision rejected; exact replay preserved\n'
+
 
 run <<SQL
 CREATE ROLE authenticator LOGIN PASSWORD '$DB_PASSWORD';
