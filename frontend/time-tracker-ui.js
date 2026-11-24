@@ -18,7 +18,7 @@ import {renderTimeTrackerOvertime} from './time-tracker-overtime.js';
 import {renderTimeTrackerMyHours} from './time-tracker-my-hours.js';
 import {renderTimeTrackerTeam} from './time-tracker-team.js';
 import {renderTimeTrackerEmployees} from './time-tracker-application.js';
-import {renderTimeTrackerOjtClock,renderTimeTrackerOjtAdmin} from './apps/TimeTracker/time-tracker-ojt.js';
+import {renderTimeTrackerOjtClock} from './apps/TimeTracker/time-tracker-ojt.js';
 import {renderTimeTrackerMonitor} from './time-tracker-monitor.js';
 import {renderTimeTrackerGps} from './time-tracker-gps.js';
 
@@ -103,6 +103,17 @@ export function syncTimeTrackerClock(root,at=new Date()){
   if(elapsed.textContent!==session.label)elapsed.textContent=session.label;
   const progress=root.querySelector('#tt-session-progress');
   progress?.setAttribute?.('stroke-dashoffset',String((339.292*(1-session.progress)).toFixed(3)));
+ }
+ const total=root.querySelector('[data-tt-live-total]');
+ if(total?.dataset?.ttLiveTotal){
+  const value=total.querySelector('strong');
+  if(value)value.textContent=hrs(Number(total.dataset.creditedBase||0)+creditedAttendanceMs(total.dataset.ttLiveTotal,at));
+ }
+ const goal=root.querySelector('[data-tt-goal-remaining]');
+ if(goal?.dataset?.ttGoalRemaining){
+  const elapsedMs=Math.max(0,new Date(at).getTime()-Date.parse(goal.dataset.ttGoalRemaining));
+  const minutes=Math.ceil(Math.max(0,TT_POLICY.requiredWorkMs-elapsedMs)/60000);
+  goal.textContent=minutes?Math.floor(minutes/60)+'h '+minutes%60+'m to goal':'9h goal reached';
  }
  const countdown=root?.querySelector?.('[data-tt-auto-clockout-countdown]');
  if(countdown?.dataset?.deadline){
@@ -197,7 +208,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
  const todayRows=records.filter(r=>timeTrackerManilaDay(r.clockIn)===today);
  const credited=todayRows.reduce((sum,r)=>sum+(r.creditedMs===null?
   creditedAttendanceMs(r.clockIn,now):r.creditedMs||0),0);
- const status=active?'Active':'Idle';
+ const status=active?'Active':'Not clocked in';
  const locationEnabled=geoPermission==='granted';
  const geoWarning=geoPermission==='denied'||geoPermission==='unavailable';
  const automaticGps=clockStage==='auto-location'||clockStage==='auto-saving';
@@ -218,8 +229,9 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
   'Enable device Location Services and check connectivity, then press Start Session or End Session again.':
   'Please press Start Session or End Session to request a fresh location fix.');
  const employeeDepartment=access?.employeeDepartment||null;
- const location=TT_LOCATIONS.includes(locationPreference)?locationPreference:'';
+ const location=TT_LOCATIONS.includes(locationPreference)?locationPreference:'Office-Base Duty';
  const requireHomeNote=isTimeTrackerHomeNoteRequired(location,access?.email,access?.userId);
+ // Exempt employees have no Home note field, whether starting or ending a session.
  const showHomeNote=location==='Offsite (Home)'&&requireHomeNote;
  const showActiveHomeNote=active?.location==='Offsite (Home)'&&
   isTimeTrackerHomeNoteRequired(active.location,access?.email,access?.userId);
@@ -236,8 +248,10 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
   autoClockout.status==='PENDING_GPS'?'Automatic clock-out pending · fresh foreground GPS required':
   autoClockout.status==='DUE'?'Automatic clock-out due · scheduled cutoff ':
   'Automatic clock-out monitoring unavailable';
- const statusClass=active?'is-active':'is-idle';
- let html='<div class="tt-clock-stage tt-clock-rework">'+
+ const goalMinutes=session?Math.ceil(TT_POLICY.requiredWorkMs*(1-session.progress)/60000):0;
+ const goalLabel=session?.progress>=1?'9h goal reached':
+  Math.floor(goalMinutes/60)+'h '+goalMinutes%60+'m to goal';
+ let html='<div class="tt-clock-stage tt-clock-rework" data-session-state="'+(active?'active':'idle')+'">'+
   '<section class="tt-clock-rework-hero" aria-label="Current time and attendance summary">'+
    '<div class="tt-clock-rework-heading">'+
     '<div class="tt-clock-rework-greeting-block">'+
@@ -257,11 +271,6 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
      '<span class="tt-clock-rework-timezone">Asia/Manila · UTC +08:00</span>'+
     '</div>'+
    '</div>'+
-   '<div class="tt-clock-rework-stats" aria-label="Today’s attendance summary">'+
-    '<div class="tt-clock-rework-stat"><span>Sessions today</span><strong>'+todayRows.length+'</strong></div>'+
-    '<div class="tt-clock-rework-stat"><span>Hours logged</span><strong>'+hrs(credited)+'</strong></div>'+
-    '<div class="tt-clock-rework-stat"><span>Status</span><strong class="tt-clock-rework-status '+statusClass+'">'+status+'</strong></div>'+
-   '</div>'+
   '</section>'+
   '<section class="tt-clock-rework-workspace tt-attendance-console" aria-label="Attendance workspace">'+
    (success?'<div class="tt-clock-confirmed" role="status" aria-live="polite">'+
@@ -279,8 +288,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
     '<div class="tt-clock-rework-session">'+
      (active?
       '<div class="tt-clock-rework-session-state is-active"><span aria-hidden="true"></span> SESSION IN PROGRESS</div>'+
-      '<span class="tt-clock-rework-session-label">ELAPSED THIS SESSION</span>'+
-      '<div class="tt-clock-rework-session-time">'+
+      '<div class="tt-session-progress-wrap tt-clock-rework-session-time">'+
        '<div class="tt-session-ring" aria-hidden="true">'+
         '<svg viewBox="0 0 128 128" focusable="false">'+
          '<circle class="tt-session-ring-track" cx="64" cy="64" r="54"></circle>'+
@@ -288,12 +296,16 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
           ' stroke-dasharray="339.292" stroke-dashoffset="'+
           (339.292*(1-session.progress)).toFixed(3)+'"></circle></svg>'+
         '<span class="tt-compact-clock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span></div>'+
-       '<strong id="tt-session-elapsed" data-clock-in="'+esc(active.clockIn)+'" role="timer" aria-label="Elapsed time for active attendance session">'+session.label+'</strong>'+
+       '<div class="tt-compact-elapsed" role="timer" aria-label="Elapsed time for active attendance session">'+
+        '<span class="tt-clock-rework-session-label">Elapsed this session</span>'+
+        '<strong id="tt-session-elapsed" data-clock-in="'+esc(active.clockIn)+'">'+session.label+'</strong>'+
+        '<span class="tt-session-goal">of 9h goal</span></div>'+
       '</div>'+
-      '<div class="tt-clock-rework-session-meta"><span>Started '+esc(formatTimeTrackerAutoClockoutTime(active.clockIn))+'</span>'+
-       (autoDeadline?'<span>Scheduled clock-out '+esc(formatTimeTrackerAutoClockoutTime(autoDeadline))+'</span>':'')+
-      '</div>'+
-      ((autoClockout||autoUnavailable)?'<p class="tt-clock-rework-auto-state" role="status">'+esc(autoLabel)+
+      '<p class="tt-active-copy tt-clock-rework-session-meta">Started '+esc(formatTimeTrackerAutoClockoutTime(active.clockIn))+
+       (autoDeadline?' · auto clock-out '+esc(formatTimeTrackerAutoClockoutTime(autoDeadline)):'')+
+       ' · <span data-tt-goal-remaining="'+esc(active.clockIn)+'">'+goalLabel+'</span></p>'+
+      '<span class="tt-compact-sr">Session duration · credited hours may differ</span>'+
+      ((autoClockout||autoUnavailable)?'<p class="tt-clock-rework-auto-state tt-auto-clockout-state" role="status">'+esc(autoLabel)+
        (autoDeadline?'<strong>'+esc(formatTimeTrackerAutoClockoutTime(autoDeadline))+'</strong> · '+
         '<span data-tt-auto-clockout-countdown data-deadline="'+esc(autoDeadline)+'">—</span> remaining':'')+'</p>':''):
       '<div class="tt-clock-rework-session-state is-idle"><span aria-hidden="true"></span> READY TO CLOCK IN</div>'+
@@ -307,7 +319,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
        '<div><span>Location</span><strong>'+esc(active.location==='Offsite (Home)'?'Offsite · Home':active.location)+'</strong></div>'+
        '<div><span>Department</span><strong>'+esc(active.department)+'</strong></div>'+
       '</div>':
-      '<label class="tt-clock-rework-field" for="tt-location">Work location'+select('tt-location',TT_LOCATIONS,'Select location…',location)+'</label>'+
+      '<label class="tt-clock-rework-field" for="tt-location">Work Location'+select('tt-location',TT_LOCATIONS,'Select location…',location)+'</label>'+
       '<div class="tt-quick-location tt-clock-rework-quick-location"><span>Quick select</span>'+
        '<button type="button" data-action="tt-location-shortcut" data-location="Office-Base Duty" aria-pressed="'+
         (location==='Office-Base Duty')+'" class="'+(location==='Office-Base Duty'?'is-selected':'')+'">◴ &nbsp; Office</button>'+
@@ -315,15 +327,16 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
         (location==='Offsite (Home)')+'" class="'+(location==='Offsite (Home)'?'is-selected':'')+'">⌖ &nbsp; Home</button>'+
       '</div>'+
       '<div class="tt-employee-department tt-clock-rework-department" aria-label="Assigned employee department">'+
-       '<span>Assigned department</span><strong>'+esc(employeeDepartment||'Not assigned')+'</strong>'+
+       '<span>Department</span><strong>'+esc(employeeDepartment||'Not assigned')+'</strong>'+
        (employeeDepartment?'':'<small>Ask your TimeTracker administrator to assign your department before clocking in.</small>')+
       '</div>')+
      '<label for="tt-note" class="tt-note-field tt-clock-rework-field" id="tt-note-wrap"'+
       ((active?showActiveHomeNote:showHomeNote)?'':' hidden')+'>'+
-      'Offsite Work Note'+(!active?'<span id="tt-note-requirement">'+(requireHomeNote?' (required)':' (optional)')+'</span>':'')+
+      'Work Plan'+(!active?'<span id="tt-note-requirement">'+(requireHomeNote?' (required)':' (optional)')+'</span>':'')+
       '<textarea id="tt-note"'+((!active&&requireHomeNote)?' required':'')+
-      (active?' readonly':'')+' maxlength="500" rows="3" placeholder="Describe your offsite work">'+
-      (active?esc(active.workNote||''):esc(workPlanDraft))+'</textarea></label>'+
+      (active?' readonly':'')+' maxlength="500" rows="3" aria-describedby="tt-work-plan-validation" placeholder="Describe your offsite work plan">'+
+      (active?esc(active.workNote||''):esc(workPlanDraft))+'</textarea>'+
+      '<span id="tt-work-plan-validation" class="tt-work-plan-validation" role="alert" hidden>Work Plan is required for Offsite (Home).</span></label>'+
      (geoPromptVisible?'<div class="tt-location-readiness '+(locationEnabled?'is-ready':geoWarning?'needs-action':'needs-permission')+
       '" role="status" aria-live="polite">'+
       '<span class="tt-location-indicator" aria-hidden="true">'+(locationEnabled?'✓':'⌖')+'</span>'+
@@ -347,6 +360,11 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
       '<p class="tt-write-restriction" role="status">Live writes remain disabled until server-side offsite work-note, dedicated-board authorization and audit logging are accepted.</p>':
       '')+
     '</form>'+
+   '</div>'+
+   '<div class="tt-clock-rework-stats tt-session-summary" aria-label="Today’s attendance summary">'+
+    '<div class="tt-clock-rework-stat"><span>Sessions today</span><strong>'+todayRows.length+'</strong></div>'+
+    '<div class="tt-clock-rework-stat"'+(active&&todayRows.some(r=>r.id===active.id&&r.creditedMs===null)?' data-tt-live-total="'+esc(active.clockIn)+'" data-credited-base="'+todayRows.filter(r=>r.id!==active.id).reduce((sum,r)=>sum+(r.creditedMs||0),0)+'"':'')+'><span>Hours logged</span><strong>'+hrs(credited)+'</strong></div>'+
+    '<div class="tt-clock-rework-stat"><span>Status</span><strong class="tt-clock-rework-status '+(active?'is-active':'is-idle')+'">'+status+'</strong></div>'+
    '</div>'+
    '<p class="tt-clock-footnote">'+(writeReady?'Session is secured with a fresh GPS fix on start and end.':'Clock actions require signed workspace and backend verification.')+'</p>'+
   '</section>'+
@@ -385,7 +403,7 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',workPlanDraft='',ojtWorkPlanDraft='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',clockCorrectionNotice='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otManualVisibleCount=50,otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
+ result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',workPlanDraft='',ojtWorkPlanDraft='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',clockCorrectionNotice='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',employeesTab='directory',employeesDepartment='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otManualVisibleCount=50,otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError='',
  adminEligible=false,adminFullAccess=adminEligible,adminDirectory=[],adminSelectedIds=[],adminEditor=null,adminDeleteConfirm=null,adminBusy=false,adminError='',adminSuccess='',
  ojtSelected=null,ojtAttendance=null,ojtBusy=false,ojtError='',ojtSuccess='',
@@ -400,7 +418,7 @@ export function renderTimeTrackerNative({
   head(verified?result.access:null,busy,selected)+
   (sharedOjt?'<nav class="tt-ojt-navigation" aria-label="Intern attendance"><strong>OJT attendance</strong></nav>':
    navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true))+
-  (sharedOjt?'':applicationHeading(selected,busy)+((selected==='clock'&&verified&&TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&result.access?.attendanceWritesAccepted===true)?'':notifications(verified,verified&&result.access?.attendanceWritesAccepted===true,busy)));
+  (sharedOjt||selected==='employees'?'':applicationHeading(selected,busy)+((selected==='clock'&&verified&&TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&result.access?.attendanceWritesAccepted===true)?'':notifications(verified,verified&&result.access?.attendanceWritesAccepted===true,busy)));
  if(busy&&verified&&selected==='clock')html+='<div class="tt-clock-sync-status" role="status" aria-live="polite">'+
   '<span class="tt-inline-spinner" aria-hidden="true"></span>Synchronizing signed attendance…</div>';
  if(error)html+='<div class="tt-feedback tt-feedback-error" role="alert">'+esc(error)+'</div>';
@@ -431,12 +449,10 @@ export function renderTimeTrackerNative({
  });
  if(selected==='employees'){
   html+=renderTimeTrackerEmployees({
-   directory:result.access?.employees,access:result.access,search:employeesSearch,loading:busy
+   directory:result.access?.employees,access:result.access,search:employeesSearch,
+   tab:employeesTab,department:employeesDepartment,loading:busy,ojtAdmin:result.ojtAdmin,
+   ojtAttendance:result.ojtAdminAttendance,ojtBusy
   });
-  if(['System Admin','IT Administrator'].includes(result.access?.moduleRole))
-   html+=renderTimeTrackerOjtAdmin({admin:result.ojtAdmin,
-    attendance:result.ojtAdminAttendance,
-    employees:result.access?.employees?.members||[]});
  }
  if(selected==='log')html+=renderTimeTrackerLog({
   records:timeTrackerLogRowsForSnapshot(result),

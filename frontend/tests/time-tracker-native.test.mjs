@@ -510,7 +510,8 @@ test('active Clock Out reuses signed Clock In context and requires a fresh GPS f
   location:'Offsite (Home)'}};
  const home=setup({records:[offsite],writeReady:true});
  const homeView=renderTimeTrackerNative({result:await home.client.snapshot(board)});
- assert.match(homeView,/Offsite Work Note/);
+ assert.match(homeView,/Work Plan/);
+ assert.match(homeView,/textarea id="tt-note" readonly/);
  assert.doesNotMatch(homeView,/id="tt-note-wrap" hidden/);
  const clockOut=await home.client.commit(board,{action:'clock-out',geo:gps});
  assert.equal(clockOut.action,'clock-out');

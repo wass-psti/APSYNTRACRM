@@ -226,3 +226,26 @@ test('signed catalog client checks current assignment count and verifies actual 
  assert.equal(result.departments.length,0);
  assert.equal(calls.find(x=>x.name==='timetracker_department_catalog_mutate').args.p_expected_count,2);
 });
+
+test('unified Employees shell retains authorized actions, exposes selected sections and filters dynamically',()=>{
+ const directory=projectTimeTrackerEmployeeDepartments(projectTimeTrackerEmployees(rows,scope),{
+  contract:'tt-department-directory-1',actorId:actor,workspaceId:workspace,boardId:board,
+  assignments:[{userId:colleague,department:'Engineering'}]
+ });
+ const departmentCatalog=projectTimeTrackerDepartmentCatalog({
+  contract:'tt-department-catalog-1',actorId:actor,workspaceId:workspace,boardId:board,revision:1,
+  departments:[{id:'70000000-0000-4000-8000-000000000001',name:'Engineering',assignedCount:1}]
+ },scope);
+ const access={...scope,moduleRole:'IT Administrator',departmentCatalog};
+ const html=renderTimeTrackerEmployees({directory,access,tab:'departments',department:'Engineering'});
+ assert.match(html,/data-target="departments" aria-pressed="true"/);
+ assert.match(html,/data-tt-employees-panel="directory" hidden/);
+ assert.match(html,/data-tt-employees-panel="departments">/);
+ assert.match(html,/Role · department/);
+ assert.match(html,/aria-label="Edit department for Jamie &amp; Taylor"/);
+ assert.doesNotMatch(html,/tt-employee-active|<th scope="col">Access/);
+ assert.match(html,/id="tt-employees-department-filter"/);
+ const plain=renderTimeTrackerEmployees({directory,access:{...scope,moduleRole:'Employee'},tab:'ojt'});
+ assert.doesNotMatch(plain,/data-target="ojt"|tt-departments-add/);
+ assert.match(plain,/data-target="directory" aria-pressed="true"/);
+});

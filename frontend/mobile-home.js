@@ -53,6 +53,12 @@ let lastShell = null;
 let lastContext = '';
 let searchText = '';
 let renderQueued = false;
+let clockSnapshot = null;
+let clockShell = null;
+let clockTimer = null;
+function stopHomeClock(){if(clockTimer!==null)clearInterval(clockTimer);clockTimer=null;}
+function updateHomeElapsed(){const el=root.querySelector('.apsm-clock-elapsed');if(!el||!clockSnapshot?.clockIn)return;const secs=Math.max(0,Math.floor((Date.now()-Date.parse(clockSnapshot.clockIn))/1000));if(!Number.isFinite(secs))return;el.textContent=[Math.floor(secs/3600),Math.floor(secs/60)%60,secs%60].map(n=>String(n).padStart(2,'0')).join(':');}
+function clockCard(items){const tt=items.apps.find(item=>/time.?tracker/i.test(item.label));if(!tt||!isHome()||homeSection()==='favorites')return '';const s=clockSnapshot;const active=s?.status==='active';const label=active?'Active':s?.status==='idle'?'Not clocked in':s?.status==='ojt'?'Shared login':s?.status==='pending'?'Needs verification':s?.status==='unavailable'?'Unavailable':'Checking…';const action=s?.status==='pending'?'Verify session':s?.status==='ojt'?'Select intern':s?.writeReady?(active?'End session':'Clock in'):'Open TimeTracker';return '<section class="apsm-clock-card" data-status="'+escapeHtml(s?.status||'loading')+'" aria-label="TimeTracker quick access"><div><span>TimeTracker</span><span class="apsm-clock-badge">'+label+'</span></div><strong>'+(active?'Clocked in · <span class="apsm-clock-elapsed">—</span>':s?.status==='idle'?'Ready for your shift':s?.status==='ojt'?'Choose your name':s?.status==='pending'?'Check the signed attendance record':'Attendance status')+'</strong><a href="'+escapeHtml(tt.href)+'">'+svg('clock',18)+' '+action+'</a></section>';}
 
 function catalog(shell) {
   const apps = [], boards = [], seen = new Set();
@@ -89,7 +95,7 @@ function itemCard(item, index) {
     '<span class="apsm-card-icon">' + svg(iconFor(item), 26) + '</span>' +
     '<span class="apsm-card-meta">' + escapeHtml(item.type) + '</span>' +
     '<strong>' + escapeHtml(item.label) + '</strong>' +
-    '<span class="apsm-card-footer">Open ' + svg('open', 19) + '</span></a>' +
+    '</a>' +
     '<button class="apsm-star" type="button" data-apsm-favorite="' + escapeHtml(item.href) +
     '" aria-label="' + (fav ? 'Remove ' : 'Add ') + escapeHtml(item.label) +
     (fav ? ' from favorites' : ' to favorites') + '" aria-pressed="' + fav +
@@ -113,8 +119,7 @@ function itemRow(item, index) {
 function recentRow(item) {
   return '<a class="apsm-recent-row" href="' + escapeHtml(item.href) + '">' +
     '<span class="apsm-recent-icon">' + svg(iconFor(item), 22) + '</span>' +
-    '<span><strong>' + escapeHtml(item.label) + '</strong><small>' +
-    escapeHtml(item.type) + ' · Visited this session</small></span>' +
+    '<span><strong>' + escapeHtml(item.label) + '</strong></span>' +
     '<span class="apsm-recent-arrow">' + svg('open', 19) + '</span></a>';
 }
 function bottomNavigation() {
@@ -135,7 +140,7 @@ function renderHome(shell, items) {
   const monogram = shell.querySelector('.top-avatar [data-avatar-initials]')?.textContent?.trim() || 'A';
   const signature = JSON.stringify([workspace, monogram, homeSection(),
     items.all.map(item => [item.href,item.label,item.type]), [...favorites],
-    visited.map(item => item.href)]);
+    visited.map(item => item.href),clockSnapshot]);
   if (home.dataset.apsmSignature === signature) return;
   home.dataset.apsmSignature = signature;
   const favoritesList = items.all.filter(item => favorites.has(item.href));
@@ -149,6 +154,7 @@ function renderHome(shell, items) {
       workspaceSwitchButton(workspace, 'home') +
       '<a href="#/settings" class="apsm-settings" aria-label="Open account settings">' +
       svg('settings') + '</a></div>' +
+    clockCard(items) +
     '<div class="apsm-search" role="search">' + svg('search', 20) +
       '<input type="text" id="apsm-home-search" name="apsm-home-search" inputmode="search" autocomplete="off" data-apsm-search' +
       ' aria-label="Search applications and boards" placeholder="Search apps and boards…" value="' +
@@ -178,6 +184,8 @@ function renderHome(shell, items) {
     '<p class="apsm-no-results" data-apsm-no-results hidden>No matching apps or boards.</p>' +
     bottomNavigation();
   applyFilter(home);
+  stopHomeClock();
+  if(mobile()&&home.querySelector('.apsm-clock-elapsed')){updateHomeElapsed();clockTimer=setInterval(updateHomeElapsed,1000);}
 }
 function applyFilter(home) {
   const q = searchText.trim().toLocaleLowerCase();
@@ -213,11 +221,12 @@ function titleFor(route, items, shell) {
 }
 function synchronize() {
   const shell = root?.querySelector(':scope > .shell');
-  if (!shell) { lastShell = null; lastContext = ''; favorites = null; visited = []; return; }
+  if (!shell) { lastShell = null; lastContext = ''; favorites = null; visited = []; clockSnapshot=null;stopHomeClock();return; }
   const workspace = shell.querySelector('.aps-sidebar .workspace-name')?.textContent?.trim() || '';
   // A replaced authenticated shell indicates a different account or workspace.
   // Never carry a board history into another signed context.
   if (shell !== lastShell || workspace !== lastContext) {
+    if(clockShell!==shell)clockSnapshot=null;
     lastShell = shell;
     lastContext = workspace;
     favorites = null;
@@ -256,7 +265,7 @@ function synchronize() {
   const title = header.querySelector('[data-apsm-route-title]');
   const nextTitle = titleFor(path(), items, shell);
   if (title && title.textContent !== nextTitle) title.textContent = nextTitle;
-  if (homeRoute) renderHome(shell, items);
+  if (homeRoute) renderHome(shell, items);else{clockSnapshot=null;clockShell=null;stopHomeClock();}
 }
 function scheduleSync() {
   if (renderQueued) return;
@@ -264,6 +273,8 @@ function scheduleSync() {
   queueMicrotask(() => { renderQueued = false; synchronize(); });
 }
 if (root) {
+  root.addEventListener('apsm-clock-snapshot',event=>{clockSnapshot=event.detail;clockShell=root.querySelector(':scope > .shell');scheduleSync();});
+  window.addEventListener('resize',()=>{if(!mobile())stopHomeClock();});
   const observer = new MutationObserver(records => {
     if (records.some(record => record.target === root ||
       record.target.classList?.contains('shell') ||

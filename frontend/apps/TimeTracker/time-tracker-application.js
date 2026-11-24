@@ -1,4 +1,5 @@
 /** CRM-native TimeTracker application route and existing-board discovery. */
+import {renderTimeTrackerOjtAdmin} from './time-tracker-ojt.js';
 import {validTimeTrackerDepartmentName} from '../../time-tracker-team.js';
 import {WORK_MANAGEMENT_BOARD_IDS} from '../../workspace-application-ownership.js';
 export const TIMETRACKER_APPLICATION_ROUTE = "#/time-tracker";
@@ -97,10 +98,16 @@ export function projectTimeTrackerDepartmentCatalog(snapshot,{userId,workspaceId
   userId,workspaceId,boardId,revision:Number(snapshot.revision),
   departments:Object.freeze(departments)});
 }
-export function renderTimeTrackerEmployees({directory=null,access={},search='',loading=false}={}){
+const employeeIcons={
+ refresh:'<path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 8a7 7 0 0 1 12-2l2 6M4 12l2 6a7 7 0 0 0 12-2"/>',
+ edit:'<path d="M12 5H5v14h14v-7M13 11l6-6 2 2-6 6-4 1z"/>',
+ delete:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5m4-5v5"/>',
+ attendance:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18m-9 3v4l3 1"/>'
+};
+const employeeIcon=name=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+employeeIcons[name]+'</svg>';
+export function renderTimeTrackerEmployees({directory=null,access={},search='',department='',tab='directory',loading=false,ojtAdmin=null,ojtAttendance=null,ojtBusy=false}={}){
  const verified=directory?.scope==='SIGNED_TIMETRACKER_EMPLOYEES'&&
-  directory.userId===access.userId&&
-  directory.workspaceId===access.workspaceId&&
+  directory.userId===access.userId&&directory.workspaceId===access.workspaceId&&
   directory.boardId===access.boardId&&Array.isArray(directory.members);
  const manager=['System Admin','IT Administrator'].includes(access.moduleRole);
  const catalog=access?.departmentCatalog;
@@ -110,73 +117,61 @@ export function renderTimeTrackerEmployees({directory=null,access={},search='',l
  const canEdit=verified&&manager&&directory.departmentsReady===true&&catalogReady;
  const q=String(search||'').trim().toLocaleLowerCase().slice(0,120);
  const members=verified?directory.members:[];
+ const selected=manager&&['departments','ojt'].includes(tab)?tab:'directory';
+ const departments=catalogReady?catalog.departments:[];
+ const filterDepartment=canEdit&&departments.some(d=>d.name===department)?department:'';
  const searchValue=member=>(member.name+' '+member.role+' '+(canEdit?member.department||'':'')).toLocaleLowerCase();
- const visible=members.filter(m=>searchValue(m).includes(q));
- return '<section class="tt-employees-board" aria-label="Registered TimeTracker employees">'+
-  '<header class="tt-employees-heading">'+
-   '<div><p class="tt-employees-eyebrow">TIME TRACKER / WORKSPACE DIRECTORY</p>'+
-    '<h3>Employees</h3>'+
-    '<p>Active employees registered for TimeTracker in this workspace.</p></div>'+
-   '<button type="button" data-action="tt-employees-refresh"'+
-    (loading?' disabled':'')+' aria-label="Refresh registered TimeTracker employees">↻ Refresh</button>'+
-  '</header>'+
+ const visible=members.filter(m=>searchValue(m).includes(q)&&(!filterDepartment||m.department===filterDepartment));
+ const interns=manager&&Array.isArray(ojtAdmin?.groups)?ojtAdmin.groups.reduce((n,g)=>n+g.interns.length,0):null;
+ const hidden=key=>selected===key?'':' hidden';
+ const panel=(key,content)=>'<div class="tt-employees-panel" data-tt-employees-panel="'+key+'"'+hidden(key)+'>'+content+'</div>';
+ const action=(name,label,attrs,icon)=>'<button type="button" class="tt-employee-icon" data-action="'+name+'" '+attrs+' aria-label="'+esc(label)+'" title="'+esc(label)+'"'+(loading?' disabled':'')+'>'+employeeIcon(icon)+'</button>';
+ return '<section class="tt-employees-board tt-employees-unified" aria-label="Registered TimeTracker employees">'+
+  '<header class="tt-employees-heading"><div><h3>Employees</h3>'+
+   (verified?'<p aria-label="Registered active TimeTracker users"><strong>'+members.length+'</strong> registered'+
+    (catalogReady?' · '+departments.length+' departments':'')+
+    (interns!==null?' · '+interns+' OJT interns':'')+'</p>':
+    '<p>Active employees registered for TimeTracker in this workspace.</p>')+'</div>'+
+   action('tt-employees-refresh','Refresh registered TimeTracker employees','','refresh')+'</header>'+
   (verified?
-   '<div class="tt-employees-summary"><div><strong>'+members.length+'</strong>'+
-    '<span>Registered active TimeTracker users</span></div>'+
-    '<p>Synced from the current signed Supabase directory</p></div>'+
-   (manager?'<p class="tt-employees-department-notice">'+
-    (canEdit?'Edit employee assignments here, manage department names below, or open Attendance to correct times.':
-     'Department assignments unavailable until the signed Supabase read is deployed.')+
-    '</p>':'')+
-    (manager?'<section class="tt-departments-management" aria-label="Department Management">'+
-     '<div class="tt-departments-head"><div><h4>Department Management</h4>'+
-     '<p>Workspace departments are stored and audited in Supabase.</p></div>'+
-     (catalogReady?'<button type="button" data-action="tt-departments-add">+ Add department</button>':'')+
-     '</div>'+
-     (catalogReady?'<div class="tt-departments-list">'+
-       catalog.departments.map(dep=>'<div class="tt-department-item">'+
-        '<div><strong>'+esc(dep.name)+'</strong><span>'+dep.assignedCount+
-        ' employee'+(dep.assignedCount===1?'':'s')+' assigned</span></div>'+
-        '<div class="tt-department-actions">'+
-        '<button type="button" data-action="tt-departments-rename" data-department-id="'+esc(dep.id)+'">Rename</button>'+
-        '<button type="button" class="tt-department-danger" data-action="tt-departments-delete" data-department-id="'+esc(dep.id)+'">Delete</button>'+
-        '</div></div>').join('')+'</div>':
-       '<p role="status" class="tt-employees-department-notice">Signed department catalog unavailable. Editing is disabled.</p>')+
-     '</section>':'')+
+   '<div class="tt-employees-segments" role="group" aria-label="Employees sections">'+
+    (manager?[['directory','Directory'],['departments','Departments'],['ojt','OJT interns']]:[['directory','Directory']]).map(([key,label])=>
+     '<button type="button" data-action="tt-employees-section" data-target="'+key+'" aria-pressed="'+(selected===key)+'"'+(loading?' disabled':'')+'>'+label+'</button>').join('')+'</div>'+
    '<div class="tt-employees-toolbar">'+
-    '<label for="tt-employees-search">Find employee'+
-     '<input type="search" id="tt-employees-search" maxlength="120" autocomplete="off" '+
-      'placeholder="Search name or TimeTracker role…" value="'+esc(search)+'"></label>'+
-    '<span role="status" aria-live="polite" data-tt-employees-count>'+
-     visible.length+' of '+members.length+' employees</span>'+
-   '</div>'+
-   '<div class="tt-employees-table-wrap"><table class="tt-employees-table">'+
-    '<thead><tr><th scope="col">Employee</th><th scope="col">TimeTracker role</th>'+
-     (manager?'<th scope="col">Department</th>':'')+
-     '<th scope="col">Access</th>'+
+    '<label for="tt-employees-search"><span class="tt-employees-visually-hidden">Search employees</span>'+
+     '<input type="search" id="tt-employees-search" maxlength="120" autocomplete="off" placeholder="Search…" value="'+esc(search)+'"></label>'+
+    (canEdit?'<select id="tt-employees-department-filter" aria-label="Filter directory by department"'+(selected==='directory'?'':' disabled')+'>'+
+     '<option value="">All departments</option>'+departments.map(d=>'<option value="'+esc(d.name)+'"'+(d.name===filterDepartment?' selected':'')+'>'+esc(d.name)+'</option>').join('')+'</select>':'')+
+    '<span role="status" aria-live="polite" data-tt-employees-count'+hidden('directory')+'>'+visible.length+' of '+members.length+' employees</span></div>'+
+   (manager&&!canEdit?'<p class="tt-employees-department-notice" role="status">Department assignments unavailable until the signed Supabase read is deployed.</p>':'')+
+   panel('directory','<div class="tt-employees-table-wrap"><table class="tt-employees-table"><thead><tr><th scope="col">Employee</th><th scope="col">'+(manager?'Role · department':'Role')+'</th>'+
      (manager?'<th scope="col">Actions</th>':'')+'</tr></thead><tbody>'+
     members.map(member=>{
      const searchText=searchValue(member);
-     return '<tr class="tt-employee-row" data-search-text="'+esc(searchText)+'"'+
-      (q&&!searchText.includes(q)?' hidden':'')+'>'+
-      '<td><span class="tt-employee-avatar" aria-hidden="true">'+
-        esc(member.name.split(/\\s+/).slice(0,2).map(v=>v[0]||'').join('').toUpperCase())+
-       '</span><strong>'+esc(member.name)+'</strong></td>'+
-      '<td>'+esc(member.role)+'</td>'+
-      (manager?'<td>'+esc(canEdit?(member.department||'Not assigned'):'Unavailable')+'</td>':'')+
-      '<td><span class="tt-employee-active">Active</span></td>'+
+     const privileged=member.role!=='Employee';
+     const role=member.role==='System Admin'?'System admin':member.role;
+     const words=member.name.trim().split(/\s+/);
+     const initials=(words[0]?.[0]||'')+(words.length>1?words.at(-1)?.[0]||'':'');
+     return '<tr class="tt-employee-row" data-tt-employee-search-row data-department="'+esc(canEdit?member.department||'':'')+'" data-search-text="'+esc(searchText)+'"'+
+      ((!searchText.includes(q)||(filterDepartment&&member.department!==filterDepartment))?' hidden':'')+'>'+
+      '<td><span class="tt-employee-avatar'+(privileged?' is-privileged':'')+'" aria-hidden="true">'+esc(initials.toUpperCase())+'</span><strong>'+esc(member.name)+'</strong></td>'+
+      '<td><span class="tt-employee-role'+(privileged?' is-privileged':'')+'">'+esc(role)+'</span>'+
+      (manager?'<span class="tt-employee-department-text">'+esc(canEdit?(member.department||'Not assigned'):'Unavailable')+'</span>':'')+'</td>'+
       (manager?'<td class="tt-employee-actions">'+
-       (canEdit?'<button type="button" data-action="tt-employees-department-edit" data-user-id="'+esc(member.id)+'">Edit department</button>':'')+
-       '<button type="button" data-action="tt-employees-attendance" data-user-id="'+esc(member.id)+'">Attendance</button>'+
-       '</td>':'')+'</tr>';
-    }).join('')+'</tbody></table>'+
-    '<p data-tt-employees-empty'+(visible.length?' hidden':'')+
-     '>No employees match this search.</p></div>'+
-   '<p class="tt-employees-footnote">Count includes active members with an assigned TimeTracker role. '+
-    'Supabase accounts without TimeTracker access are not counted. '+
-    'Department changes use the audited server API, never a local personnel registry.</p>':
-   '<p class="tt-employees-unavailable" role="status">'+
-    (loading?'Loading current registered employees…':
-     'The signed TimeTracker employee directory is unavailable.')+'</p>')+
- '</section>';
+       (canEdit?action('tt-employees-department-edit','Edit department for '+member.name,'data-user-id="'+esc(member.id)+'"','edit'):'')+
+       action('tt-employees-attendance','Attendance for '+member.name,'data-user-id="'+esc(member.id)+'"','attendance')+'</td>':'')+'</tr>';
+    }).join('')+'</tbody></table><p data-tt-employees-empty'+(visible.length?' hidden':'')+'>No employees match this search.</p></div>'+
+    '<p class="tt-employees-footnote">Scroll for more · Registered active TimeTracker users only.</p>')+
+   (manager?panel('departments','<section class="tt-departments-management" aria-label="Department Management">'+
+    '<div class="tt-departments-head"><h4>Department Management</h4>'+
+    (catalogReady?'<button type="button" data-action="tt-departments-add"'+(loading?' disabled':'')+'>+ Add department</button>':'')+'</div>'+
+    (catalogReady?'<div class="tt-departments-list">'+departments.map(dep=>'<div class="tt-department-item" data-tt-employee-search-row data-search-text="'+esc(dep.name.toLocaleLowerCase())+'"'+(!dep.name.toLocaleLowerCase().includes(q)?' hidden':'')+'>'+
+     '<div><strong>'+esc(dep.name)+'</strong><span>'+dep.assignedCount+' employee'+(dep.assignedCount===1?'':'s')+' assigned</span></div><div class="tt-department-actions">'+
+     action('tt-departments-rename','Rename '+dep.name,'data-department-id="'+esc(dep.id)+'"','edit')+
+     action('tt-departments-delete','Delete '+dep.name,'data-department-id="'+esc(dep.id)+'"','delete')+'</div></div>').join('')+'</div>'+
+     '<p class="tt-employees-footnote">'+departments.length+' departments · Scroll for more</p>':
+     '<p role="status" class="tt-employees-department-notice">Signed department catalog unavailable. Editing is disabled.</p>')+'</section>')+
+    panel('ojt',renderTimeTrackerOjtAdmin({admin:ojtAdmin,attendance:ojtAttendance,employees:members,search,busy:loading||ojtBusy})):'')+
+   '<p class="tt-employees-visually-hidden">Count includes active members with an assigned TimeTracker role. Supabase accounts without TimeTracker access are not counted. Department changes use the audited server API, never a local personnel registry.</p>':
+   '<p class="tt-employees-unavailable" role="status">'+(loading?'Loading current registered employees…':'The signed TimeTracker employee directory is unavailable.')+'</p>')+'</section>';
 }

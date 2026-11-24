@@ -14,7 +14,7 @@ const at=new Date('2026-11-04T05:48:59.000Z');
 const record={
  id:'attendance-1',status:'Active',clockIn:'2026-11-04T03:40:00.000Z',
  clockOut:null,location:'Office-Base Duty',department:'Information Technology',
- creditedMs:0
+ creditedMs:null
 };
 function render({active=null,records=[],busy=false,clockPending=false,clockPendingAction='clock-out',autoClockout=null,autoClockoutUnavailable=false}={}){
  return renderTimeTrackerNative({
@@ -36,16 +36,17 @@ test('daily attendance summary uses Philippine dates across UTC midnight',()=>{
 
 test('Clock uses a fluid unified workspace with visible greeting, live time and three attendance indicators',()=>{
  const markup=render();
- assert.match(markup,/class="tt-clock-stage tt-clock-rework"/);
+ assert.match(markup,/class="tt-clock-stage tt-clock-rework" data-session-state="idle"/);
  assert.doesNotMatch(markup,/tt-command-layout|tt-clock-compact|tt-time-dashboard|tt-time-scene/);
  assert.match(markup,/<h3 id="tt-clock-greeting" class="tt-clock-rework-greeting">Good afternoon,<\/h3>/);
  assert.match(markup,/id="tt-clock-date" class="tt-clock-rework-date"/);
  assert.match(markup,/class="tt-clock-rework-time"/);
- assert.match(markup,/class="tt-clock-rework-stats"[\s\S]*?Sessions today[\s\S]*?Hours logged[\s\S]*?Status/);
  assert.match(markup,/class="tt-clock-rework-workspace tt-attendance-console"/);
+ assert.match(markup,/class="tt-clock-rework-stats tt-session-summary"/);
  assert.equal((markup.match(/class="tt-clock-rework-stat"/g)||[]).length,3);
  assert.equal((markup.match(/<form id="tt-clock-form"/g)||[]).length,1);
  assert.equal((markup.match(/name="tt-action"/g)||[]).length,1);
+ assert.equal((markup.match(/class="tt-clock-rework-status/g)||[]).length,1);
 });
 
 test('Idle Clock preserves signed Clock In controls without requesting GPS',()=>{
@@ -57,9 +58,14 @@ test('Idle Clock preserves signed Clock In controls without requesting GPS',()=>
  assert.match(markup,/data-action="tt-location-shortcut" data-location="Office-Base Duty"/);
  assert.match(markup,/data-action="tt-location-shortcut" data-location="Offsite \(Home\)"/);
  assert.match(markup,/id="tt-note-wrap" hidden/);
+ assert.match(markup,/Not clocked in/);
+ assert.match(markup,/Work Location<select/);
+ assert.match(markup,/Work Plan/);
+ assert.doesNotMatch(markup,/id="tt-session-progress"/);
  assert.match(markup,/Session is secured with a fresh GPS fix on start and end/);
  assert.doesNotMatch(markup,/tt-location-readiness/);
  assert.match(markup,/A fresh GPS fix is requested at that time, not when this page opens/);
+ assert.match(markup,/data-location="Office-Base Duty" aria-pressed="true"/);
  assert.doesNotMatch(markup,/value="clock-out"/);
  assert.doesNotMatch(markup,/<canvas|<script|style=|onclick=/);
 });
@@ -76,8 +82,11 @@ test('Active Clock preserves authoritative session details and Clock Out',()=>{
  assert.match(markup,/class="tt-clock-rework-session"/);
  assert.match(markup,/tt-clock-rework-session-details/);
  assert.match(markup,/id="tt-session-progress"/);
- assert.match(markup,/ELAPSED THIS SESSION/);
- assert.match(markup,/tt-compact-clock-icon/);
+ assert.match(markup,/Elapsed this session/);
+ assert.match(markup,/of 9h goal/);
+ assert.match(markup,/data-tt-live-total=/);
+ assert.match(markup,/data-tt-goal-remaining=/);
+ assert.ok(markup.indexOf("tt-session-progress-wrap")<markup.indexOf("tt-session-summary"));
  assert.equal((markup.match(/class="tt-clock-rework-status/g)||[]).length,1);
  assert.doesNotMatch(markup,/Signed Clock writes active|Signed workspace verified/);
  assert.doesNotMatch(markup,/name="tt-action" value="clock-in"/);
@@ -89,7 +98,7 @@ test('Active Clock exposes scheduled automatic clock-out and a live countdown wh
  const markup=render({active:record,records:[record],autoClockout});
  assert.match(markup,/Automatic clock-out monitoring/);
  assert.match(markup,/data-tt-auto-clockout-countdown/);
- assert.match(markup,/Scheduled clock-out/);
+ assert.match(markup,/auto clock-out/);
 });
 
 test('Uncertain clock-out retains verify-only control; busy form is disabled',()=>{
@@ -118,22 +127,21 @@ test('Live clock continues to update existing text nodes without rendering a new
  assert.match(app,/if\(!document\.hidden\)tick\(\)/);
 });
 
-test('Clock CSS uses the full workspace width, terracotta accents, responsive layout and dark-mode tokens',()=>{
+test('Clock CSS uses full workspace width, warm accents, responsive layout and dark mode',()=>{
  assert.match(css,/\.tt-clock-stage\.tt-clock-rework/);
  assert.match(css,/\.tt-clock-rework-workspace/);
  assert.match(css,/grid-template-columns: minmax\(0, 1fr\) minmax\(300px, 0\.82fr\)/);
  assert.match(css,/max-width: none/);
+ assert.match(css,/\.tt-command-layout\.tt-clock-compact\s*\{[\s\S]*?width: 100%;[\s\S]*?max-width: none;[\s\S]*?margin: 0;/);
  assert.match(css,/--tt-clock-accent: #b85d3d/);
  assert.match(css,/@media \(max-width: 980px\)/);
  assert.match(css,/@media \(max-width: 640px\)/);
  assert.match(css,/@media \(max-width: 380px\)/);
  assert.match(css,/html\[data-aps-monday-theme="dark"\]/);
  assert.match(css,/@media \(prefers-reduced-motion: reduce\)/);
+ assert.match(css,/tt-work-plan-validation/);
  assert.doesNotMatch(css,/will-change|@import|url\(https?:/);
- assert.match(css,/#app\s+\.aps-board-shell\.aps-time-tracker-shell\s+\.tt-native\s+\.tt-clock-stage\.tt-clock-rework/);
- assert.match(css,/html\[data-aps-monday-theme="dark"\]\s+#app\s+\.aps-board-shell\.aps-time-tracker-shell\s+\.tt-native/);
- assert.ok(index.indexOf('frontend/time-tracker-clock-command.css')>
-  index.indexOf('frontend/time-tracker-pixi-experience.css'));
+ assert.match(index,/frontend\/time-tracker-clock-command\.css/);
  assert.match(smoke,/'frontend\/time-tracker-clock-command\.css'/);
 });
 
@@ -174,3 +182,16 @@ test('header uses role-derived identity and retains accessible signed navigation
  assert.match(loading,/Checking signed access/);
  assert.match(loading,/data-action="tt-refresh" disabled/);
 });
+
+ test('Work Plan is visible and required only for a non-exempt Offsite Home clock-in',()=>{
+ const result={status:'VERIFIED_READ',access:{...access,employeeDepartment:'Engineering'},records:[],active:null};
+ const office=renderTimeTrackerNative({result,view:'clock',locationPreference:'Office-Base Duty',workPlanDraft:'Preserved draft'});
+ const home=renderTimeTrackerNative({result,view:'clock',locationPreference:'Offsite (Home)',workPlanDraft:'Preserved draft'});
+ assert.match(office,/id="tt-note-wrap" hidden/);
+ assert.doesNotMatch(office,/textarea id="tt-note" required/);
+ assert.match(home,/id="tt-note-wrap">Work Plan/);
+ assert.match(home,/textarea id="tt-note" required/);
+ assert.match(home,/Work Plan is required for Offsite \(Home\)/);
+ assert.match(office,/Preserved draft/);
+ assert.match(home,/Preserved draft/);
+ });

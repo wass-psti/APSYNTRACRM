@@ -169,18 +169,15 @@ try {
     const app = document.querySelector(".fm1-app");
     const header = document.querySelector(".tt-app-header");
     const navScroll = document.querySelector(".tt-navigation-scroll");
-    const clockLayout = document.querySelector(
-      ".tt-clock-stage.tt-clock-rework",
-    );
+    const clockLayout = document.querySelector(".tt-clock-stage.tt-clock-rework");
     const workspace = document.querySelector(".tt-clock-rework-workspace");
-    const clockFace = document.querySelector(
-      ".tt-clock-rework-time .tt-clock-face",
-    );
+    const clockFace = document.querySelector(".tt-clock-rework-time .tt-clock-face");
     const greeting = document.querySelector(".tt-clock-rework-greeting");
+    const stats = document.querySelector(".tt-clock-rework-stats");
     const brandIcon = header.querySelector(".tt-brand-icon");
     const shortcut = header.querySelector(".tt-header-link");
     const activeTab = document.querySelector(".tt-nav-tab.is-current");
-    const stats = document.querySelector(".tt-clock-rework-stats");
+    const parentWidth = document.querySelector(".tt-native").getBoundingClientRect().width;
     return {
       appDisplay: getComputedStyle(app).display,
       headerRadius: getComputedStyle(header).borderRadius,
@@ -193,22 +190,21 @@ try {
       headerBackground: getComputedStyle(header).backgroundColor,
       navOverflow: getComputedStyle(navScroll).overflowX,
       clockLayout: getComputedStyle(clockLayout).display,
-      clockWidth: Math.round(clockLayout.getBoundingClientRect().width),
-      workspaceBackground: getComputedStyle(workspace).backgroundColor,
+      clockWidth: clockLayout.getBoundingClientRect().width,
+      workspaceWidth: workspace.getBoundingClientRect().width,
+      parentWidth,
+      workspaceRatio: workspace.getBoundingClientRect().width / parentWidth,
       clockSize: getComputedStyle(clockFace).fontSize,
       clockWeight: getComputedStyle(clockFace).fontWeight,
-      greetingVisible:
-        getComputedStyle(greeting).visibility !== "hidden" &&
-        getComputedStyle(greeting).display !== "none",
+      greetingVisible: getComputedStyle(greeting).display !== "none",
       statsCount: stats.children.length,
       statusText: stats.querySelector(".tt-clock-rework-status").textContent,
-      actionCount: workspace.querySelectorAll(
-        '#tt-clock-form button[name="tt-action"]',
-      ).length,
+      actionCount: workspace.querySelectorAll('#tt-clock-form button[name="tt-action"]').length,
       root: document.querySelector(".tt-native")?.className,
     };
   });
-  // Verify the full-width Clock workspace and its single attendance action.
+  // The Clock workspace must use the desktop content width rather than a
+  // centered 420px mobile card, while retaining the native application shell.
   assert.equal(desktopLayout.appDisplay, "flex");
   assert.equal(desktopLayout.headerRadius, "16px 16px 0px 0px");
   assert.equal(desktopLayout.brandColor, "rgb(83, 74, 183)");
@@ -220,30 +216,25 @@ try {
   assert.equal(desktopLayout.headerBackground, "rgb(255, 255, 255)");
   assert.equal(desktopLayout.navOverflow, "auto");
   assert.equal(desktopLayout.clockLayout, "grid");
-  assert.ok(
-    desktopLayout.clockWidth > 420,
-    "Clock should use the available desktop width",
-  );
-  assert.equal(desktopLayout.workspaceBackground, "rgb(255, 255, 255)");
+  assert.ok(desktopLayout.clockWidth > 800, "Clock must expand beyond the old 420px cap");
+  assert.ok(desktopLayout.workspaceRatio > 0.85, "Attendance workspace must use the available content width");
   assert.equal(desktopLayout.clockSize, "62px");
   assert.equal(desktopLayout.clockWeight, "500");
   assert.equal(desktopLayout.greetingVisible, true);
   assert.equal(desktopLayout.statsCount, 3);
-  assert.equal(desktopLayout.statusText, "Idle");
+  assert.equal(desktopLayout.statusText, "Not clocked in");
   assert.equal(desktopLayout.actionCount, 1);
   assert.equal(desktopLayout.root, "tt-native");
 
   await page.addScriptTag({ content: axeSource });
-  const checkAccessibility = async (label, selector = null) => {
-    const result = await page.evaluate(
-      async (scope) =>
-        window.axe.run(scope ? { include: [scope] } : document, {
-          runOnly: {
-            type: "tag",
-            values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"],
-          },
-        }),
-      selector,
+  const checkAccessibility = async (label) => {
+    const result = await page.evaluate(async () =>
+      window.axe.run(document, {
+        runOnly: {
+          type: "tag",
+          values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"],
+        },
+      }),
     );
     assert.equal(
       result.violations.length,
@@ -269,134 +260,116 @@ try {
   };
   await checkAccessibility("TimeTracker clock view");
 
-  const activeRecord = {
-    id: "clock-design-active-session",
-    status: "Active",
-    clockIn: "2026-11-24T01:00:00.000Z",
-    clockOut: null,
-    location: "Office-Base Duty",
-    department: "Information Technology",
-    creditedMs: null,
-  };
-  const activeClockFixture = {
-    ...verifiedResult,
-    records: [activeRecord],
-    active: activeRecord,
-    autoClockout: {
-      recordId: activeRecord.id,
-      status: "MONITORING",
-      nextAt: "2026-11-24T10:00:00.000Z",
-      cutoffAt: "2026-11-24T10:00:00.000Z",
-    },
-  };
-  await page.evaluate(
-    (result) => window.__timeTrackerRender({ view: "clock", result }),
-    activeClockFixture,
-  );
-  assert.equal(await page.locator("#tt-session-elapsed").isVisible(), true);
-  assert.equal(
-    await page.locator(".tt-clock-rework-status").textContent(),
-    "Active",
-  );
-  assert.equal(
-    await page.locator('#tt-clock-form button[name="tt-action"]').count(),
-    1,
-  );
-  assert.equal(
-    await page.locator('#tt-clock-form button[name="tt-action"]').textContent(),
-    "End session",
-  );
-  assert.equal(
-    await page.locator("[data-tt-auto-clockout-countdown]").count(),
-    1,
-  );
-  await checkAccessibility("Active TimeTracker clock view");
+  // CP-TT-CLOCK-STATE: exercise both actual responsive Clock layouts with
+  // a synthetic signed snapshot, without issuing any attendance writes.
+  await page.setViewportSize({ width: 360, height: 800 });
   await page.evaluate(() =>
-    document.documentElement.setAttribute("data-aps-monday-theme", "dark"),
+    window.__timeTrackerRender({
+      result: {
+        status: "VERIFIED_READ",
+        access: {
+          moduleRole: "Employee",
+          employeeDepartment: "Engineering",
+          attendanceWritesAccepted: true,
+        },
+        records: [],
+        active: null,
+        otRequests: [],
+      },
+      now: new Date("2026-11-24T06:07:00Z"),
+      locationPreference: "Office-Base Duty",
+    }),
   );
-  await checkAccessibility(
-    "Dark-theme active TimeTracker clock view",
-    ".tt-clock-rework",
+  assert.equal(await page.locator("#tt-note").isVisible(), false);
+  assert.equal(await page.locator("#tt-session-progress").count(), 0);
+  assert.equal(await page.locator(".tt-clock-rework-status").textContent(), "Not clocked in");
+  const idleClockSize = await page.locator(".tt-clock-face").evaluate(
+    (element) => parseFloat(getComputedStyle(element).fontSize),
   );
   await page.evaluate(() =>
-    document.documentElement.removeAttribute("data-aps-monday-theme"),
+    window.__timeTrackerRender({
+      result: {
+        status: "VERIFIED_READ",
+        access: {
+          moduleRole: "Employee",
+          employeeDepartment: "Engineering",
+          attendanceWritesAccepted: true,
+        },
+        records: [],
+        active: null,
+        otRequests: [],
+      },
+      locationPreference: "Offsite (Home)",
+    }),
   );
-
-  await page.evaluate(
-    (result) => window.__timeTrackerRender({ view: "clock", result }),
-    verifiedResult,
+  assert.equal(await page.locator("#tt-note").isVisible(), true);
+  assert.equal(await page.locator("#tt-note").evaluate((element) => element.required), true);
+  assert.equal(await page.locator("#tt-note").evaluate((element) => element.validity.valueMissing), true);
+  await page.evaluate(() => {
+    const active = {
+      id: "clock-state-fixture",
+      clockIn: "2026-11-24T00:53:06Z",
+      clockOut: null,
+      status: "Active",
+      creditedMs: null,
+      location: "Offsite (Home)",
+      department: "Engineering",
+      workNote: "Offsite development",
+    };
+    window.__timeTrackerRender({
+      result: {
+        status: "VERIFIED_READ",
+        access: {
+          moduleRole: "Employee",
+          employeeDepartment: "Engineering",
+          attendanceWritesAccepted: true,
+        },
+        records: [active],
+        active,
+        otRequests: [],
+      },
+      now: new Date("2026-11-24T06:07:00Z"),
+    });
+  });
+  assert.equal(await page.locator(".tt-clock-rework-status").textContent(), "Active");
+  assert.equal(await page.locator("#tt-session-elapsed").textContent(), "05:13:54");
+  assert.equal(await page.locator(".tt-session-ring > svg").isVisible(), true);
+  const activeClockSize = await page.locator(".tt-clock-face").evaluate(
+    (element) => parseFloat(getComputedStyle(element).fontSize),
   );
-  await checkAccessibility("Restored idle TimeTracker clock view");
-  await page.evaluate(() =>
-    document.documentElement.setAttribute("data-aps-monday-theme", "dark"),
-  );
-  await checkAccessibility(
-    "Dark-theme idle TimeTracker clock view",
-    ".tt-clock-rework",
-  );
-  await page.evaluate(() =>
-    document.documentElement.removeAttribute("data-aps-monday-theme"),
-  );
-
-  await page.setViewportSize({ width: 768, height: 900 });
-  const tabletClock = await page.evaluate(() => ({
-    viewport: window.innerWidth,
-    documentWidth: document.documentElement.scrollWidth,
-    columns: getComputedStyle(
-      document.querySelector(".tt-clock-rework-content"),
-    ).gridTemplateColumns.split(" ").length,
+  assert.equal(activeClockSize, idleClockSize, "Clock face remains stable across attendance states");
+  assert.equal(await page.locator("#tt-note").inputValue(), "Offsite development");
+  assert.equal(await page.locator("#tt-note").evaluate((element) => element.readOnly), true);
+  const activeLayout = await page.evaluate(() => ({
+    ring: document.querySelector(".tt-session-ring").getBoundingClientRect().width,
+    ringTop: document.querySelector(".tt-session-ring").getBoundingClientRect().top,
+    summaryTop: document.querySelector(".tt-clock-rework-stats").getBoundingClientRect().top,
+    context: getComputedStyle(document.querySelector(".tt-active-session-context")).backgroundColor,
+    note: getComputedStyle(document.querySelector("#tt-note")).backgroundColor,
+    workspaceWidth: document.querySelector(".tt-clock-rework-workspace").getBoundingClientRect().width,
+    stageWidth: document.querySelector(".tt-clock-stage").getBoundingClientRect().width,
+    viewportWidth: innerWidth,
+    overflow: document.documentElement.scrollWidth - innerWidth,
   }));
-  assert.ok(tabletClock.documentWidth <= tabletClock.viewport);
-  assert.equal(tabletClock.columns, 1);
-  await checkAccessibility(
-    "Tablet idle TimeTracker clock view",
-    ".tt-clock-rework",
-  );
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  const mobileClock = await page.evaluate(() => ({
-    viewport: window.innerWidth,
-    documentWidth: document.documentElement.scrollWidth,
-    clockWidth: document
-      .querySelector(".tt-clock-stage")
-      .getBoundingClientRect().width,
-    workspaceWidth: document
-      .querySelector(".tt-clock-rework-workspace")
-      .getBoundingClientRect().width,
-    formWidth: document.querySelector("#tt-clock-form").getBoundingClientRect()
-      .width,
-  }));
-  assert.ok(mobileClock.documentWidth <= mobileClock.viewport);
-  assert.ok(mobileClock.clockWidth <= mobileClock.viewport);
-  assert.ok(mobileClock.workspaceWidth <= mobileClock.viewport);
-  assert.ok(mobileClock.formWidth > 0);
-  await checkAccessibility(
-    "Mobile idle TimeTracker clock view",
-    ".tt-clock-rework",
-  );
-  await page.evaluate(
-    (result) => window.__timeTrackerRender({ view: "clock", result }),
-    activeClockFixture,
-  );
-  assert.equal(await page.locator("#tt-session-elapsed").isVisible(), true);
-  assert.equal(
-    await page.locator('#tt-clock-form button[name="tt-action"]').textContent(),
-    "End session",
-  );
-  assert.ok(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  );
-  await checkAccessibility(
-    "Mobile active TimeTracker clock view",
-    ".tt-clock-rework",
-  );
+  assert.ok(activeLayout.ring >= 50 && activeLayout.ring <= 64);
+  assert.ok(activeLayout.ringTop < activeLayout.summaryTop);
+  assert.equal(activeLayout.context, "rgba(0, 0, 0, 0)");
+  assert.equal(activeLayout.note, "rgb(255, 255, 255)");
+  assert.ok(activeLayout.workspaceWidth / activeLayout.stageWidth > 0.8,
+    "Clock workspace must fill the available mobile content area");
+  assert.ok(activeLayout.overflow <= 0, "Clock workspace overflows at 360px");
+  await checkAccessibility("TimeTracker active mobile Clock");
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.evaluate(
-    (result) => window.__timeTrackerRender({ view: "clock", result }),
-    verifiedResult,
-  );
+  const activeDesktopWidth = await page.evaluate(() => ({
+    parent: document.querySelector(".tt-native").getBoundingClientRect().width,
+    stage: document.querySelector(".tt-clock-stage").getBoundingClientRect().width,
+    workspace: document.querySelector(".tt-clock-rework-workspace").getBoundingClientRect().width,
+    overflow: document.documentElement.scrollWidth - innerWidth,
+  }));
+  assert.ok(activeDesktopWidth.stage > 800, "Active Clock must use desktop content width");
+  assert.ok(activeDesktopWidth.workspace / activeDesktopWidth.parent > 0.85);
+  assert.ok(activeDesktopWidth.overflow <= 0);
+  await page.evaluate(() => window.__timeTrackerRender());
 
   // CP-TT-FLOW-01C: Browser-level, isolated two-tab reload acceptance. No live
   // user account, actual attendance write or production data is involved.

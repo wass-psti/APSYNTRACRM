@@ -32,7 +32,8 @@ test('rendering matches the unified warm Clock workspace without weakening signe
  assert.match(html,/class="tt-clock-stage tt-clock-rework"/);
  assert.match(html,/class="tt-clock-rework-workspace tt-attendance-console"/);
  assert.match(html,/class="tt-clock-rework-greeting">Good afternoon,/);
- assert.match(html,/class="tt-clock-rework-stats"/);
+ assert.match(html,/class="tt-clock-rework-stats tt-session-summary"/);
+ assert.doesNotMatch(html,/tt-command-layout|tt-clock-compact/);
  assert.match(html,/class="tt-session-ring"/);
  assert.match(html,/id="tt-session-elapsed" data-clock-in="2026-11-19T00:00:00.000Z"[\s\S]*?>07:55:00/);
  assert.match(html,/id="tt-session-progress"/);
@@ -81,11 +82,11 @@ test('refined stylesheet remains scoped, responsive and uses native controls',()
  const manifest=readFileSync('scripts/priority5-style-manifest.mjs','utf8');
  assert.match(css,/#app \.aps-board-shell\.aps-time-tracker-shell \.tt-native/);
  assert.match(css,/\.tt-session-ring-progress/);
- assert.doesNotMatch(css,/CP-TT-CLOCK-COMPACT|tt-clock-compact|width:min\(100%,420px\)/);
  assert.match(clockCss,/\.tt-clock-rework/);
  assert.match(clockCss,/--tt-clock-accent: #b85d3d/);
  assert.match(clockCss,/max-width: none/);
  assert.match(clockCss,/grid-template-columns: minmax\(0, 1fr\) minmax\(300px, 0\.82fr\)/);
+ assert.match(clockCss,/tt-work-plan-validation/);
  assert.match(clockCss,/@media \(max-width: 640px\)/);
  assert.match(clockCss,/@media \(prefers-reduced-motion: reduce\)/);
  assert.match(clockCss,/focus-visible/);

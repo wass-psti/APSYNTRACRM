@@ -95,3 +95,15 @@ test('volatility and length bounds avoid persisting sensitive work plans',()=>{
  const draftBody=helper.split('export function createTimeTrackerWorkNoteDraft(){')[1];
  assert.doesNotMatch(draftBody,/localStorage|sessionStorage|fetch\(/);
 });
+
+ test('OJT Work Plan is conditional while retaining the signed-scope draft',()=>{
+ const options={roster:{mode:'SHARED_LOGIN',interns:[]},selected:{id:'intern-A',name:'Intern A'},workPlanDraft:'Saved draft'};
+ const office=renderTimeTrackerOjtClock({...options,locationSelection:'Office-Base Duty'});
+ const home=renderTimeTrackerOjtClock({...options,locationSelection:'Offsite (Home)'});
+ assert.match(office,/id="tt-ojt-note-wrap" hidden/);
+ assert.match(home,/id="tt-ojt-note-wrap"><label for="tt-ojt-note">Work Plan \(required\)/);
+ assert.match(home,/id="tt-ojt-note" required/);
+ assert.match(office,/Saved draft/);
+ const invalid=renderTimeTrackerOjtClock({...options,locationSelection:'Offsite (Home)',error:'Work Plan is required for Offsite (Home).'});
+ assert.match(invalid,/id="tt-ojt-work-plan-validation" class="tt-work-plan-validation" role="alert">/);
+ });
