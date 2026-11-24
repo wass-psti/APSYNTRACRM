@@ -90,6 +90,7 @@ export function projectTimeTrackerOtRows(rows=[]){
    id:r.id.slice(0,140),ownerId:String(r.ownerId||'').slice(0,48),
    name:String(r.name||'Signed employee').slice(0,100),
    date:r.date,status:r.status,
+   canWithdraw:r.status==='Submitted'&&r.canWithdraw===true,
    decidedAt:typeof r.decidedAt==='string'&&Number.isFinite(Date.parse(r.decidedAt))?r.decidedAt:null,
    decidedBy:typeof r.decidedBy==='string'?r.decidedBy:null,
    submittedBy:typeof r.submittedBy==='string'?r.submittedBy:null,
@@ -145,7 +146,8 @@ const row=(r,access,query='',expandedRequestIds=[],otContractActive=false)=>'<de
     (!(TT_OT_WRITES_ACCEPTED&&otContractActive)?' disabled title="Signed OT contract unavailable"':'')+'>Approve</button>'+
    '<button type="button" data-action="tt-ot-reject" data-id="'+esc(r.id)+'"'+
     (!(TT_OT_WRITES_ACCEPTED&&otContractActive)?' disabled title="Signed OT contract unavailable"':'')+'>Reject</button>'+
-  '</div>':'')+'</div></details>';
+  '</div>':'')+
+ (r.canWithdraw&&otContractActive?'<button type="button" data-action="tt-ot-withdraw" data-id="'+esc(r.id)+'">Remove</button>':'')+'</div></details>';
 const shiftPhtDay=(day,offset)=>new Date(Date.parse(day+'T00:00:00Z')+offset*msDay).toISOString().slice(0,10);
 const timeInputValue=value=>{
  if(value===undefined||value===null||value==='')return '';

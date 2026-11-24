@@ -10554,6 +10554,20 @@ async function action(name,button){
   if(name==='tt-ot-close')root.querySelector('[data-action="tt-ot-open"]')?.focus();
   break;
  }
+ case 'tt-ot-withdraw':{
+  if(!TT_OT_WRITES_ACCEPTED||state.ttBusy||state.view!=='board'||state.tab!=='attendance'||
+     state.ttView!=='ot'||state.ttAttendance?.status!=='VERIFIED_READ')return;
+  const requestId=button.dataset.id;
+  if(!state.ttAttendance.otRequests?.some(row=>row.id===requestId&&row.status==='Submitted'&&row.canWithdraw===true))return;
+  if(!confirm('Remove this pending overtime request? This action cannot be undone.'))return;
+  state.ttBusy=true;render();
+  try{
+   await timeTracker.withdrawOvertime(state.boardId,requestId);
+   await loadTimeTracker();
+   toast('Overtime request removed.');
+  }finally{state.ttBusy=false;render();}
+  break;
+ }
  case 'tt-ot-approve':
  case 'tt-ot-reject':{
   if(!TT_OT_WRITES_ACCEPTED||state.ttBusy||
