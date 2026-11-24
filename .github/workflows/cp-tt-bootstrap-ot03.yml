@@ -11,6 +11,7 @@ on:
       - "scripts/cp-tt-bootstrap-ot03-browser.mjs"
       - "scripts/time-tracker-browser-acceptance.mjs"
       - "supabase/migrations/20261123180000_cp_tt_bootstrap_ot_self_review_01.sql"
+      - "supabase/migrations/20261124170000_cp_tt_ot_creator_withdrawal.sql"
       - "supabase/migration-source-manifest.json"
   push:
     branches: [main]
@@ -46,7 +47,7 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Validate TimeTracker OT contract and migration manifest
         run: |
-          node --test frontend/tests/time-tracker-overtime.test.mjs
+          node --test frontend/tests/time-tracker-overtime.test.mjs frontend/tests/time-tracker-ot-withdrawal.test.mjs
           node scripts/verify-migration-source-manifest.mjs
           node --check scripts/cp-tt-bootstrap-ot03-browser.mjs
           bash -n scripts/cp-tt-bootstrap-ot02-signed-disposable.sh

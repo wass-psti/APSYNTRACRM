@@ -39,7 +39,8 @@ for migration in \
  sql/cp-tt-ot01-staged-bootstrap-approval.sql \
  supabase/migrations/20261123160000_cp_tt_manual_ot_01_manual_submission_and_scoped_review.sql \
  supabase/migrations/20261123170000_cp_tt_hr_ot_all_user_log_01.sql \
- supabase/migrations/20261123180000_cp_tt_bootstrap_ot_self_review_01.sql; do
+ supabase/migrations/20261123180000_cp_tt_bootstrap_ot_self_review_01.sql \
+ supabase/migrations/20261124170000_cp_tt_ot_creator_withdrawal.sql; do
  docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -f "/repo/$migration"
 done
 docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -c "CREATE ROLE authenticator LOGIN PASSWORD '$PASSWORD'; GRANT authenticated,anon TO authenticator; GRANT USAGE ON SCHEMA public TO authenticator,authenticated;"
