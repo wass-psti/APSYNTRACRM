@@ -363,7 +363,7 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
     (r.location==='Offsite (Home)'&&r.workNote?' <span class="tt-log-work-plan">- [Work Plan]</span>':'')+'</span>'+
    '<span class="tt-log-row-person"><span class="tt-log-avatar" aria-hidden="true">'+esc(logInitials(r.name))+'</span><strong title="'+esc(r.name||'Signed member')+'">'+esc(r.name||'Signed member')+'</strong><small class="tt-log-row-date">'+esc(logRowDate(r.clockIn))+'</small></span>'+
    '<span class="tt-log-row-location" title="'+esc(r.location||'Unspecified')+'">'+esc(locationLabel(r.location||'Unspecified'))+'</span>'+
-   '<span class="tt-log-row-department" title="'+esc(r.department||'Unassigned')+'">'+esc(r.department||'Unassigned')+'</span>'+
+   '<span class="tt-log-row-department" title="'+esc(r.isOjt?'OJT intern · Shared login':r.department||'Unassigned')+'">'+esc(r.department||'Unassigned')+'</span>'+
    '<span class="tt-log-row-out" title="'+esc(validTime(r.clockOut)?phtDate(r.clockOut):'')+'">'+esc(logRowTime(r.clockOut))+' <span class="tt-log-badge '+(done?'tt-log-badge-done':
     state==='Active'?'tt-log-badge-active':'tt-log-badge-unknown')+'">'+esc(state)+'</span></span>'+
   '</summary>'+(gpsOptions.expandedRecordIds?.includes(r.id)?'':safeSessionDetails(r,now,gpsOptions))+'</details></td></tr>';
@@ -446,7 +446,8 @@ export function renderTimeTrackerLog({
   '</section>'+
   '<details class="tt-log-secondary-analytics"><summary>Attendance insights · '+summary.historical+' earlier · '+summary.today+' today</summary>'+
    locationDistribution(rows)+dailyOperations(rows,now)+shiftProgress(rows,now)+
-   '<p class="tt-log-footnote">Daily operations use the current Philippine date. Search narrows records and CSV only. Click a row for details. Authorized standard employee records can be selected in bulk; OJT corrections are individual. Intern attendance is drawn from the latest signed OJT snapshot (up to 100 entries).</p>'+
+   (!adminEligible?'<p class="tt-log-footnote">Read-only history of authorized sessions, today and earlier.</p>':'')+
+   '<p class="tt-log-footnote">Daily operations use the current Philippine date. Search narrows records and CSV only. Click any record to view its details in a popup. Authorized standard employee records can be selected in bulk; OJT corrections are individual. Intern attendance is drawn from the latest signed OJT snapshot (up to 100 entries).</p>'+
   '</details>'+(adminEditor||adminDeleteConfirm?'':renderTimeTrackerLogDetailDialog({row:rows.find(r=>expandedRecordIds.includes(r.id))||null,now,
     gpsEligible,gpsData,gpsBusy,gpsError,gpsErrorRecordId,mapEnabled,mapTheme,
     adminEligible,adminFullAccess,adminBusy,selectedIds}))+
