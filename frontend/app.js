@@ -13567,8 +13567,8 @@ function preserveManualAttendanceDraft(event){
 }
 root.addEventListener('change',preserveManualAttendanceDraft);
 root.addEventListener('input',event=>{
- if(preserveManualAttendanceDraft(event))return;
  if(syncTradeLinkFinanceInput(event))return;
+ if(preserveManualAttendanceDraft(event))return;
  if(event.target.id==='tt-note'&&event.target.closest('#tt-clock-form')){
   ttWorkNoteDraft.write(timeTrackerWorkNoteScope(),event.target.value);
   return;
