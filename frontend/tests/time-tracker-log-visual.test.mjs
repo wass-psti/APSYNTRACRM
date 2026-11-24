@@ -189,3 +189,27 @@ test('admin edit or delete dialog temporarily replaces attendance details modal'
  const detail=renderTimeTrackerLog(input);
  assert.match(detail,/data-tt-log-detail-dialog/);
 });
+
+test('selected record uses responsive shift-first cards and live signed values',()=>{
+ const note='<script>work plan</script>';
+ const html=renderTimeTrackerLog({records:[{...records[1],location:'Offsite (Home)',workNote:note}],now,
+  expandedRecordIds:['older'],adminEligible:true,adminFullAccess:true,selectedIds:['older']});
+ const dialog=html.slice(html.indexOf('data-tt-log-detail-dialog'));
+ assert.match(dialog,/tt-record-avatar" aria-hidden="true">ET<\/span>/);
+ assert.match(dialog,/tt-record-chip-green">Completed/);
+ assert.match(dialog,/tt-record-card tt-record-shift/);
+ assert.match(dialog,/tt-record-card tt-record-details/);
+ assert.match(dialog,/tt-record-card tt-record-evidence/);
+ assert.match(dialog,/tt-record-card tt-record-location/);
+ assert.match(dialog,/07:00 AM/);
+ assert.match(dialog,/05:00 PM/);
+ assert.match(dialog,/09:00:00/);
+ assert.match(dialog,/&lt;script&gt;work plan&lt;\/script&gt;/);
+ assert.doesNotMatch(dialog,/<script>|style="/);
+ assert.match(dialog,/Not independently verified/);
+ assert.match(dialog,/Remove selection/);
+ assert.match(dialog,/data-action="tt-log-admin-correct-time"/);
+ const css=readFileSync('frontend/time-tracker-log-admin.css','utf8');
+ assert.match(css,/\.tt-record-body\{[^}]*overflow-x:hidden/);
+ assert.match(css,/\.tt-record-grid\{display:flex;flex-direction:column/);
+});

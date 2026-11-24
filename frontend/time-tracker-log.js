@@ -204,7 +204,7 @@ function shiftProgress(rows,now){
    '" aria-label="Completed sessions among today clock-ins"></progress>'+
    '<strong>'+complete+' / '+todays.length+'</strong></div></div>';
 }
-function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=false,gpsError='',gpsErrorRecordId='',mapEnabled=false,mapTheme='map',adminEligible=false,adminFullAccess=false,adminBusy=false}={}){
+function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=false,gpsError='',gpsErrorRecordId='',mapEnabled=false,mapTheme='map',adminEligible=false,adminFullAccess=false,adminBusy=false,modal=false}={}){
  const start=Date.parse(row.clockIn),end=Date.parse(row.clockOut||now);
  const elapsed=Math.max(0,end-start);
  const active=row.status==='Active';
@@ -247,6 +247,50 @@ function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=fals
   (gpsError&&(!gpsErrorRecordId||gpsErrorRecordId===row.id)?
    '<p class="tt-log-gps-error" role="alert">'+esc(gpsError)+'</p>':''):
   '<span>Exact coordinates are restricted to bootstrap administrators and assigned TimeTracker Supervisors.</span>';
+
+ const mapMarkup=(gpsEligible&&available?
+     '<div class="tt-log-map-modes" role="group" aria-label="Street map style">'+
+      '<button type="button" data-action="tt-map-style" data-theme="map" aria-pressed="'+(mapTheme!=='dark')+
+      '" class="'+(mapTheme!=='dark'?'is-active':'')+'">Street</button>'+
+      '<button type="button" data-action="tt-map-style" data-theme="dark" aria-pressed="'+(mapTheme==='dark')+
+      '" class="'+(mapTheme==='dark'?'is-active':'')+'">Dark</button></div>':'')+
+    (gpsEligible?mapFrame({hasPoints:available,enabled:mapEnabled,scope:'log'}):
+     '<div class="tt-map-empty">Precise GPS maps require a privileged signed session.</div>')+
+    (available?'<p class="tt-map-note">Green: Clock In · Orange: Clock Out. Connecting lines show straight-line distance, not a tracked route.</p>':'');
+ const adminActions=(adminEligible?'<div class="tt-log-admin-row-actions"><span>'+
+    (adminFullAccess?'System Admin record management':'Authorized time correction')+'</span>'+
+   '<button type="button" data-action="tt-log-admin-correct-time" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'><span aria-hidden="true">✎</span> Correct time</button>'+
+   (adminFullAccess?'<button type="button" data-action="tt-log-admin-edit" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'>Edit record</button>':'')+
+   (adminFullAccess?'<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-delete" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'><span aria-hidden="true">⌫</span> Delete record</button>':'')+'</div>':'');
+ if(modal){
+  const field=(label,value,tone='')=>'<div class="tt-record-field"><small>'+esc(label)+'</small><span class="'+tone+'">'+esc(value)+'</span></div>';
+  const evidence=(label,value,tone='neutral')=>'<div class="tt-record-evidence-row"><span>'+esc(label)+'</span><strong class="tt-record-tone-'+tone+'">'+esc(value)+'</strong></div>';
+  const location=row.location||'Unspecified';
+  const arrival=row.classification||'Unknown';
+  const status=row.status||'Unknown';
+  return '<div class="tt-record-grid">'+
+   '<section class="tt-record-card tt-record-shift"><div class="tt-record-card-head"><h4>Shift</h4><span>'+esc(validTime(row.clockIn)?logRowDate(row.clockIn):'—')+'</span></div>'+
+    '<div class="tt-record-timeline"><div><small>Clock in</small><strong>'+esc(phtTime(row.clockIn))+'</strong></div>'+
+    '<div class="tt-record-track" aria-hidden="true"></div><div><small>Clock out</small><strong>'+esc(active?'Active':phtTime(row.clockOut))+'</strong></div></div>'+
+    '<div class="tt-record-metrics"><div><small>'+esc(duration)+'</small><strong>'+esc(durationLabel(elapsed))+'</strong></div>'+
+    '<div class="tt-record-credit"><small>Credited hours</small><strong>'+esc(credit)+'</strong></div></div></section>'+
+   '<section class="tt-record-card tt-record-details"><h4>Details</h4><div class="tt-record-fields">'+
+    field('Department',row.department||'Unassigned')+field('Location',location)+
+    field('Arrival',arrival,arrival==='Late'?'tt-record-tone-amber':arrival==='On time'?'tt-record-tone-green':'')+
+    field('Status',status,status==='Completed'?'tt-record-tone-green':active?'tt-record-tone-accent':'')+'</div>'+
+    (row.location==='Offsite (Home)'&&row.workNote?'<div class="tt-record-note"><small>Offsite work note</small><p>'+esc(row.workNote)+'</p></div>':'')+'</section>'+
+   '<section class="tt-record-card tt-record-evidence"><div class="tt-record-card-head"><h4>Evidence</h4><span class="tt-record-chip tt-record-chip-amber">Not independently verified</span></div>'+
+    '<div class="tt-record-evidence-list">'+evidence('GPS',gpsStatus,available?'green':'neutral')+evidence('Timing','Recorded','green')+
+    evidence('Edits','Not verified','amber')+evidence('Device','Unavailable')+evidence('Audit score','N/A')+'</div>'+
+    '<p class="tt-record-disclaimer">Read-only view. Edit history and independent audit are not available.</p></section>'+
+   '<section class="tt-record-card tt-record-location'+(gpsEligible?' tt-record-location-privileged':'')+'"><h4>Location</h4>'+
+    (gpsEligible&&available?'<div class="tt-record-map">'+mapMarkup+'</div>':
+     '<div class="tt-record-map-placeholder" role="img" aria-label="Map unavailable">'+logIcon('<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>')+'Map unavailable</div>')+
+    '<div class="tt-record-location-summary"><span>'+esc(location)+'</span><small>'+esc('GPS '+gpsStatus.toLowerCase())+'</small></div>'+
+    '<div class="tt-record-location-access">'+locationEvidence+'</div></section>'+
+   (adminActions?'<div class="tt-record-admin">'+adminActions+'</div>':'')+
+   '</div>';
+ }
  return '<div class="tt-log-expanded">'+
   '<div class="tt-log-evidence-title"><strong>AUDIT DETAILS</strong>'+
    '<span class="tt-log-evidence-unverified">Evidence not independently verified</span></div>'+
@@ -284,21 +328,9 @@ function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=fals
    '<h6>LOCATION EVIDENCE</h6><p>'+esc(row.location||'Unspecified')+'</p>'+
    locationEvidence+
    '</div><div class="tt-log-street-map">'+
-    (gpsEligible&&available?
-     '<div class="tt-log-map-modes" role="group" aria-label="Street map style">'+
-      '<button type="button" data-action="tt-map-style" data-theme="map" aria-pressed="'+(mapTheme!=='dark')+
-      '" class="'+(mapTheme!=='dark'?'is-active':'')+'">Street</button>'+
-      '<button type="button" data-action="tt-map-style" data-theme="dark" aria-pressed="'+(mapTheme==='dark')+
-      '" class="'+(mapTheme==='dark'?'is-active':'')+'">Dark</button></div>':'')+
-    (gpsEligible?mapFrame({hasPoints:available,enabled:mapEnabled,scope:'log'}):
-     '<div class="tt-map-empty">Precise GPS maps require a privileged signed session.</div>')+
-    (available?'<p class="tt-map-note">Green: Clock In · Orange: Clock Out. Connecting lines show straight-line distance, not a tracked route.</p>':'')+
+    mapMarkup+
    '</div></div>'+
-  (adminEligible?'<div class="tt-log-admin-row-actions"><span>'+
-    (adminFullAccess?'System Admin record management':'Authorized time correction')+'</span>'+
-   '<button type="button" data-action="tt-log-admin-correct-time" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'><span aria-hidden="true">✎</span> Correct time</button>'+
-   (adminFullAccess?'<button type="button" data-action="tt-log-admin-edit" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'>Edit record</button>':'')+
-   (adminFullAccess?'<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-delete" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'><span aria-hidden="true">⌫</span> Delete record</button>':'')+'</div>':'')+
+  adminActions+
   '</div>';
 }
 /** One authorized attendance detail at a time. Reuse the existing dialog shell and
@@ -312,18 +344,22 @@ function renderTimeTrackerLogDetailDialog({row,now,gpsEligible=false,gpsData=nul
  const details=safeSessionDetails(row,now,{gpsEligible:!row.isOjt&&gpsEligible,
   gpsData:row.isOjt?null:gpsData,gpsBusy,gpsError,gpsErrorRecordId,
   mapEnabled:!row.isOjt&&mapEnabled,mapTheme,
-  adminEligible,adminFullAccess,adminBusy});
- return '<div class="tt-admin-editor-backdrop tt-log-details-backdrop" data-tt-log-detail-backdrop>'+
-  '<section class="tt-admin-editor tt-log-details-dialog" data-tt-log-detail-dialog data-record-id="'+esc(row.id)+'" role="dialog" aria-modal="true" aria-labelledby="tt-log-modal-title" tabindex="-1">'+
-   '<header class="tt-admin-editor-head"><div class="tt-admin-editor-title-group">'+
-    '<span class="tt-admin-eyebrow">'+(row.isOjt?'SIGNED OJT ATTENDANCE':'SIGNED ATTENDANCE RECORD')+'</span>'+
-    '<h3 id="tt-log-modal-title">'+esc(row.name||'Attendance details')+'</h3>'+
-    '<p>'+esc(dateTime(row.clockIn))+' · '+esc(row.status||'Attendance record')+
-     (selected?' · Selected':'')+'</p></div>'+
-    '<button type="button" class="tt-admin-close" data-action="tt-log-detail-close" aria-label="Close attendance details">×</button>'+
-   '</header>'+
-   '<div class="tt-admin-editor-body">'+details+'</div>'+
-   '<footer class="tt-admin-editor-actions"><span class="tt-admin-editor-footnote">'+(row.isOjt?'Shared-login OJT attendance · Admin corrections are audited':'Signed attendance details · '+esc(row.department||'Unassigned'))+'</span>'+
+  adminEligible,adminFullAccess,adminBusy,modal:true});
+ const status=row.status||'Unknown';
+ const arrival=row.classification||'Unknown';
+ const chip=(value,tone)=>'<span class="tt-record-chip tt-record-chip-'+tone+'">'+esc(value)+'</span>';
+ return '<div class="tt-log-details-backdrop" data-tt-log-detail-backdrop>'+
+  '<section class="tt-log-details-dialog" data-tt-log-detail-dialog data-record-id="'+esc(row.id)+'" role="dialog" aria-modal="true" aria-labelledby="tt-log-modal-title" tabindex="-1">'+
+   '<div class="tt-record-grip" aria-hidden="true"></div><header class="tt-record-header">'+
+    '<span class="tt-record-avatar" aria-hidden="true">'+esc(logInitials(row.name))+'</span>'+
+    '<div class="tt-record-heading"><span class="tt-record-eyebrow">'+(row.isOjt?'SIGNED OJT ATTENDANCE':'SIGNED ATTENDANCE RECORD')+'</span>'+
+    '<h3 id="tt-log-modal-title">'+esc(row.name||'Attendance details')+'</h3></div>'+
+    '<button type="button" class="tt-record-close" data-action="tt-log-detail-close" aria-label="Close attendance details">'+logIcon('<path d="M6 6l12 12M18 6L6 18"/>')+'</button>'+
+    '<div class="tt-record-chips">'+chip(status,status==='Completed'?'green':status==='Active'?'accent':'neutral')+
+    chip(arrival==='Late'?'Late arrival':arrival,arrival==='Late'?'amber':arrival==='On time'?'green':'neutral')+
+    chip(row.location||'Unspecified','neutral')+'</div></header>'+
+   '<div class="tt-record-body">'+details+'</div>'+
+   '<footer class="tt-record-footer"><span class="tt-record-footnote">'+(row.isOjt?'Shared-login OJT attendance · Admin corrections are audited':'Signed attendance details')+'</span>'+
     '<div>'+(adminFullAccess?'<button type="button" class="secondary" data-action="tt-log-detail-toggle-select" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+' aria-pressed="'+selected+'">'+(selected?'Remove selection':'Select record')+'</button>':'')+
     '<button type="button" class="primary" data-action="tt-log-detail-close">Close details</button></div></footer>'+
   '</section></div>';
