@@ -287,7 +287,9 @@ test('native TimeTracker application shell preserves attendance rendering and es
   access:{moduleRole:'Employee',platformRole:'hr',name:'<script>bad</script>'},
   records:[{...projectOwnAttendance({version:1,records:[example()]},user)[0],
    location:'<img src=x onerror=evil()>',department:'HR'}]},view:'log'});
- assert.match(log,/Attendance history/);
+ assert.match(log,/Read-only history of authorized sessions, today and earlier\./);
+ assert.match(log,/<h2>Attendance Log<\/h2>/);
+ assert.doesNotMatch(log,/Signed Clock writes active|Signed workspace verified|tt-log-command-hero/);
  assert.doesNotMatch(log,/<img src=x/);
  const denied=renderTimeTrackerNative({error:'No module access'});
  assert.doesNotMatch(denied,/tt-clock-form/);

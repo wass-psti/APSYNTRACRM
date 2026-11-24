@@ -12369,6 +12369,7 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log.tt-l
 #app .aps-board-shell .tt-native .tt-log-command .tt-log-row-summary>span{font-size:13px;padding:9px 8px;color:var(--tt-log-ink)}
 #app .aps-board-shell .tt-native .tt-log-command .tt-log-row-person{display:flex;align-items:center;gap:8px}
 #app .aps-board-shell .tt-native .tt-log-command .tt-log-row-person strong{font-size:13px;color:var(--tt-log-ink);font-weight:650;overflow-wrap:anywhere}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-row-person small{color:var(--tt-log-muted);font-size:11px}
 #app .aps-board-shell .tt-native .tt-log-command .tt-log-avatar{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:50%;background:#ececf3;color:#454353;font-size:11px;font-weight:650}
 #app .aps-board-shell .tt-native .tt-log-command .tt-log-row-summary>.tt-log-badge{justify-self:end;max-width:100%;white-space:normal;text-align:center;font-size:11px;padding:5px 8px;border:0;border-radius:999px}
 #app .aps-board-shell .tt-native .tt-log-command .tt-log-row-summary>.tt-log-badge-done{background:#e5efd9;color:#27541c}

@@ -336,7 +336,8 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
   '<td colspan="5"><details class="tt-log-detail" data-record-id="'+esc(r.id)+'">'+
    '<summary class="tt-log-row-summary" data-action="tt-log-open-detail" data-record-id="'+esc(r.id)+
     '" aria-haspopup="dialog" aria-label="Open attendance details for '+esc(r.name||'employee')+'">'+
-   '<span class="tt-log-row-person"><span class="tt-log-avatar" aria-hidden="true">'+esc(logInitials(r.name))+'</span><span><strong>'+esc(r.name||'Signed member')+'</strong></span></span>'+
+   '<span class="tt-log-row-person"><span class="tt-log-avatar" aria-hidden="true">'+esc(logInitials(r.name))+'</span><span><strong>'+esc(r.name||'Signed member')+'</strong>'+
+    (r.isOjt?'<small>OJT intern · Shared login</small>':'')+'</span></span>'+
    '<span title="'+esc(phtDate(r.clockIn))+'">'+esc(logRowTime(r.clockIn,now))+'</span>'+
    '<span title="'+esc(validTime(r.clockOut)?phtDate(r.clockOut):'')+'">'+esc(logRowTime(r.clockOut,now))+'</span>'+
    '<span class="tt-log-row-location" title="'+esc(r.location||'Unspecified')+'">'+esc(r.location==='Office-Base Duty'?'Office':r.location==='Offsite (Home)'?'Offsite · Home':r.location||'Unspecified')+'</span>'+
@@ -360,7 +361,8 @@ export function renderTimeTrackerLog({
  const summary=timeTrackerLogSummary(rows,now);
  const places=[...new Set(safeRows(records).map(r=>r.location).
   filter(v=>TT_LOCATIONS.includes(v)))].sort();
- return '<section class="tt-log tt-log-command" aria-label="Signed attendance Log">'+
+ const scopeLabel=scope==='AUTHORIZED_WORKSPACE_TEAM'?'Authorized team history':'Your attendance history';
+ return '<section class="tt-log tt-log-command" aria-label="'+scopeLabel+'">'+
   '<div class="tt-log-flat-stats" aria-label="Signed attendance history snapshot">'+
    '<div><strong>'+summary.sessions+'</strong><span>Sessions in selected period</span></div>'+
    '<div><strong>'+summary.today+'</strong><span>Today</span></div>'+
