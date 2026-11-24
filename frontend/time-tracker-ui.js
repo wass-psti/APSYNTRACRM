@@ -157,9 +157,20 @@ function navigation(view,busy,bootstrapEligible=false,gpsEligible=false,employee
 /** Reparent the existing authorized tabs; never synthesize a second set of actions.
  * Narrow screens and the collapsed icon rail retain the original in-content navigation.
  */
+// Load only the same-origin font when the standalone reference Clock is mounted.
+let referenceFont;
+function loadTimeTrackerReferenceFont(documentRef){
+ if(!documentRef?.fonts||typeof FontFace==='undefined')return;
+ if(referenceFont)return;
+ const url=new URL('./assets/fonts/Montserrat-SemiBold.woff2',import.meta.url);
+ referenceFont=new FontFace('Montserrat','url("'+url.href+'")',{weight:'600',style:'normal',display:'swap'});
+ documentRef.fonts.add(referenceFont);
+ referenceFont.load().catch(()=>{documentRef.fonts.delete(referenceFont);referenceFont=null;});
+}
 export function syncTimeTrackerSidebar(shell,{enabled=false,expanded=false,fresh=false}={}){
  const sidebar=shell.querySelector('.aps-sidebar');
  const application=shell.querySelector('.main-content .tt-application');
+ if(enabled&&application?.hasAttribute?.('data-tt-reference-shell'))loadTimeTrackerReferenceFont(shell.ownerDocument);
  const parent=sidebar?.querySelector('a.nav-link[href="#/time-tracker"]');
  const previous=sidebar?.querySelector('.tt-navigation');
  if(fresh)previous?.remove();
@@ -172,7 +183,9 @@ export function syncTimeTrackerSidebar(shell,{enabled=false,expanded=false,fresh
  }else{
   parent?.removeAttribute('aria-expanded');
   if(nav&&application&&sidebar?.contains(nav)){
-   application.querySelector('.tt-app-header')?.after(nav);
+   const header=application.querySelector('.tt-app-header');
+   if(header)header.after(nav);
+   else application.prepend(nav);
    nav.querySelector('[role="tablist"]')?.removeAttribute('aria-orientation');
   }else if(!application)previous?.remove();
  }
@@ -241,7 +254,7 @@ function heading(title,desc){
   esc(desc)+'</p></div></div>';
 }
 function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-out',locationPreference='',{
- success='',clockCorrectionNotice='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',workPlanDraft='',displayName=''
+ success='',clockCorrectionNotice='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',workPlanDraft='',displayName='',referenceShell=false
 }={}){
  const {access,records,active}=result;
  const writeReady=TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&access?.attendanceWritesAccepted===true;
@@ -292,7 +305,8 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
   'Automatic clock-out monitoring unavailable';
  let html='<div class="tt-clock-stage tt-command-center">'+
   '<h2 class="tt-reference-welcome"><span data-tt-welcome-greeting>'+t.greeting+'</span> '+
-   esc(displayName||(access?.moduleRole==='System Admin'?'System admin':access?.moduleRole)||'')+'</h2>'+
+   esc(referenceShell?(String(displayName||'').trim().split(/\s+/)[0]||'there'):(displayName||(access?.moduleRole==='System Admin'?'System admin':access?.moduleRole)||''))+(referenceShell?'!':'')+'</h2>'+
+  (referenceShell?'<button type="button" class="tt-reference-refresh" data-action="tt-refresh"'+(busy?' disabled':'')+'>Refresh attendance</button>':'')+
   '<div class="tt-command-layout tt-clock-compact" data-session-state="'+(active?'active':'idle')+'">'+
    '<section class="tt-time-dashboard" aria-label="Live time and attendance summary">'+
     '<div class="tt-time-scene" aria-hidden="true">'+
@@ -440,7 +454,7 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,displayName='',busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',workPlanDraft='',ojtWorkPlanDraft='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',clockCorrectionNotice='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',employeesTab='directory',employeesDepartment='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otManualVisibleCount=50,otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
+ result=null,displayName='',referenceShell=false,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',workPlanDraft='',ojtWorkPlanDraft='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',clockCorrectionNotice='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',employeesTab='directory',employeesDepartment='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otManualVisibleCount=50,otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError='',
  adminEligible=false,adminFullAccess=adminEligible,adminDirectory=[],adminSelectedIds=[],adminEditor=null,adminDeleteConfirm=null,adminBusy=false,adminError='',adminSuccess='',
  ojtSelected=null,ojtAttendance=null,ojtBusy=false,ojtError='',ojtSuccess='',
@@ -452,8 +466,9 @@ export function renderTimeTrackerNative({
   (view==='gps'&&gpsEligible!==true))?'clock':
  ['overview','clock','employees','log','reports','calendar','ot','hours','team','monitor','gps'].includes(view)?view:'clock';
  const sharedOjt=verified&&['SHARED_LOGIN','SHARED_DISABLED','SERVICE_UNAVAILABLE','SETUP_REQUIRED'].includes(result.ojtRoster?.mode);
- let html='<section class="tt-native" aria-label="TimeTracker attendance application"><div class="fm1-app tt-application" data-tt-view="'+selected+'" data-tt-application-root>'+
-  head(verified?result.access:null,busy,selected)+
+ const reference=referenceShell&&verified&&!sharedOjt;
+ let html='<section class="tt-native" aria-label="TimeTracker attendance application"><div class="fm1-app tt-application" data-tt-view="'+selected+'" data-tt-application-root'+(reference?' data-tt-reference-shell':'')+'>'+
+  (reference?'':head(verified?result.access:null,busy,selected))+
   (sharedOjt?'<nav class="tt-ojt-navigation" aria-label="Intern attendance"><strong>OJT attendance</strong></nav>':
    navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true,employeesEligible))+
   (sharedOjt||selected==='employees'?'':applicationHeading(selected,busy,verified&&adminEligible,verified&&adminFullAccess)+((verified&&(selected==='log'||(selected==='clock'&&TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&result.access?.attendanceWritesAccepted===true)))?'':notifications(verified,verified&&result.access?.attendanceWritesAccepted===true,busy)));
@@ -483,7 +498,7 @@ export function renderTimeTrackerNative({
   overview:result.overview,access:result.access,now,filters:overviewFilters
  });
  if(selected==='clock')html+=clockPage(result,busy,new Date(now),clockPending,clockPendingAction,locationPreference,{
-  success,clockCorrectionNotice,geoPromptVisible,geoPermission,geoMessage,clockStage,workPlanDraft,displayName
+  success,clockCorrectionNotice,geoPromptVisible,geoPermission,geoMessage,clockStage,workPlanDraft,displayName,referenceShell:reference
  });
  if(selected==='employees'){
   html+=renderTimeTrackerEmployees({

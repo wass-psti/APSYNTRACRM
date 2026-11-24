@@ -1657,7 +1657,7 @@ function timeTrackerOjtAdminScope(){
 }
 function renderTimeTrackerApplication(){
  return renderTimeTrackerNative({
-  displayName:name(),
+  displayName:name(),referenceShell:state.ttStandalone===true,
   ojtSelected:timeTrackerOjtScope()?state.ttOjtSelected:null,
   ojtAttendance:timeTrackerOjtScope()?state.ttOjtSnapshot:null,
   ojtBusy:state.ttOjtBusy||state.ttOjtPending,

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {syncTimeTrackerSidebar} from '../time-tracker-ui.js';
+import {syncTimeTrackerSidebar,renderTimeTrackerNative} from '../time-tracker-ui.js';
 
 // Minimal DOM tree for the real reparenting contract. Moving a node preserves
 // its permission-filtered children and event-delegation attributes.
@@ -82,4 +82,24 @@ test('disabled placement never mounts the tabs or leaves a stale breadcrumb',()=
  assert.equal(syncTimeTrackerSidebar(f.shell,{enabled:false,expanded:true}),false);
  assert.equal(f.location(),'application');
  assert.equal(f.crumb(),null);
+});
+
+test('standalone verified Clock has no duplicate application header and greets the escaped employee name',()=>{
+ const result={status:'VERIFIED_READ',access:{moduleRole:'Employee',attendanceWritesAccepted:false},records:[],active:null,otRequests:[]};
+ const html=renderTimeTrackerNative({result,referenceShell:true,displayName:'  A<B Employee  ',now:new Date('2026-11-24T09:15:00Z')});
+ assert.match(html,/data-tt-reference-shell/);
+ assert.doesNotMatch(html,/class="tt-app-header/);
+ assert.match(html,/Good evening,<\/span> A&lt;B!<\/h2>/);
+ assert.doesNotMatch(html,/data-target="employees"/);
+ assert.match(html,/name="tt-action" value="clock-in"/);
+ assert.match(html,/data-action="tt-refresh"/);
+ const denied=renderTimeTrackerNative({referenceShell:true});
+ assert.match(denied,/class="tt-app-header/);
+});
+
+test('first-name greeting trims whitespace and handles missing names without exposing a role',()=>{
+ const result={status:'VERIFIED_READ',access:{moduleRole:'Employee',attendanceWritesAccepted:false},records:[],active:null,otRequests:[]};
+ const render=displayName=>renderTimeTrackerNative({result,referenceShell:true,displayName,now:new Date('2026-11-24T01:15:00Z')});
+ assert.match(render('  Lucky   Ampalayohan  '),/Good morning,<\/span> Lucky!<\/h2>/);
+ assert.match(render(''),/Good morning,<\/span> there!<\/h2>/);
 });
