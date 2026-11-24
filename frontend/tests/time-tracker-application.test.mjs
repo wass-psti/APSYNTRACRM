@@ -161,11 +161,15 @@ test("all legacy TimeTracker board URLs resolve to the dedicated application rou
   assert.doesNotMatch(route, /roleVerified|adminVerified|roleConfig/);
 });
 
-test("TimeTracker loading and error states use application language rather than board language", () => {
+test("TimeTracker uses the shared branded loader and retains application-specific errors", () => {
   const loading = renderBoardLoading({ application: "TimeTracker" });
-  assert.match(loading, /Loading TimeTracker/);
-  assert.match(loading, /Preparing your timetracker attendance workspace/i);
-  assert.match(loading, /existing attendance board and records/);
+  assert.equal(loading, renderBoardLoading({ application: "Board" }));
+  assert.match(loading, /APSYNTRA <span>CRM<\/span>/);
+  assert.match(loading, /Loading your workspace…/);
+  assert.doesNotMatch(
+    loading,
+    /TimeTracker|Preparing your board|aps-board-loading-preview/,
+  );
   const error = renderBoardLoadingError("Existing board is unavailable", {
     application: "TimeTracker",
   });
@@ -199,7 +203,7 @@ test("TimeTracker stays in the existing CRM module graph without a new frontend 
   );
   assert.match(
     app,
-    /function renderTimeTrackerApplication\(\)\s*\{\s*return renderTimeTrackerNative\(/,
+    /function renderTimeTrackerApplication\(\)\s*\{\s*if\(state\.ttReadLoading\|\|state\.nativeInitialRead==='attendance'\)return sharedApplicationLoading\(\);\s*return renderTimeTrackerNative\(/,
   );
   assert.match(
     app,

@@ -1,3 +1,4 @@
+import {renderBoardLoading} from './board/presentation/loading.js';
 /** Demand-load the FuelTrans feature, never the signed CRM startup path.
  * Invalidated routes cannot mount after an asynchronous module import.
  * The underlying module owns auth, backend reads, listeners and teardown.
@@ -13,6 +14,7 @@ export function createLazyFuelTransSync({load=()=>import('./fueltrans-native.js'
    return;
   }
   if(module){module.syncFuelTrans(options);return;}
+  container.innerHTML=renderBoardLoading();
   // One in-flight import shared between fast redraws; no speculative preload.
   if(!pending)pending=Promise.resolve().then(load).then(value=>{
    if(typeof value?.syncFuelTrans!=='function')throw Error('FuelTrans feature unavailable');

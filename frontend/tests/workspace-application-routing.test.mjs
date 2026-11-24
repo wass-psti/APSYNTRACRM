@@ -222,10 +222,20 @@ test("app shell consumes the ownership manifest for sidebar and checks route own
   const routeGuard = app.indexOf(
     "const applicationRoute=workspaceApplicationRouteAccess",
   );
-  const fm1Import = app.indexOf(
-    "if(parts[0]==='fm1')fm1Module=await import('./fm1/index.js')",
+  const fm1Route = app.indexOf("if(parts[0]==='fm1'){", routeGuard);
+  const fm1Loading = app.indexOf(
+    "beginApplicationRouteRead('FM1 Ticketing')",
+    fm1Route,
   );
-  assert.ok(routeGuard > 0 && fm1Import > routeGuard);
+  const fm1Import = app.indexOf(
+    "fm1Module=await import('./fm1/index.js')",
+    fm1Loading,
+  );
+  assert.ok(routeGuard > 0 && fm1Route > routeGuard);
+  assert.ok(fm1Loading > fm1Route && fm1Import > fm1Loading);
+  const guardBranch = app.slice(routeGuard, fm1Route);
+  assert.match(guardBranch, /if\(!applicationRoute\.allowed\)\{/);
+  assert.match(guardBranch, /await onRoute\(\);[\s\S]*?return;/);
 });
 
 test("workspace switch reconciles the new signed workspace in place without a page reload", () => {

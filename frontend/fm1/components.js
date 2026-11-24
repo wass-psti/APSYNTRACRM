@@ -1,3 +1,4 @@
+import { renderBoardLoading } from "../board/presentation/loading.js";
 import { FM1_CONTRACT, FM1_NAVIGATION, FM1_SLA_TARGETS } from "./constants.js";
 import { fm1Store } from "./state.js";
 import { listFm1Drafts, saveFm1Draft, deleteFm1Draft } from "./draft-store.js";
@@ -165,10 +166,10 @@ class Fm1Application {
     }
     this.root.addEventListener("click", this.handleClick);
     this.root.addEventListener("submit", this.handleSubmit);
-    this.unsubscribe = fm1Store.subscribe(() => this.render());
-    if (!fm1Store.get().draftsLoaded) void this.hydrateDrafts();
     if (this.api) void this.loadServerData();
     else updateStore({ serverError: "FM1 server connection is unavailable." });
+    this.unsubscribe = fm1Store.subscribe(() => this.render());
+    if (!fm1Store.get().draftsLoaded) void this.hydrateDrafts();
   }
 
   disconnect() {
@@ -1676,6 +1677,10 @@ class Fm1Application {
   render() {
     const state = fm1Store.get();
     const view = state.view || "overview";
+    if (state.serverLoading && view !== "new-ticket") {
+      this.root.innerHTML = renderBoardLoading();
+      return;
+    }
     const title =
       view === "new-ticket"
         ? "New ticket intake"
