@@ -739,7 +739,7 @@ function renderLogin(message='',{mode=authViewFromHash(),notice='',emailValue=''
  syncFuelTrans({container:null});
  stopAuthVisuals();
  stopSidebarSelection();
- sidebarMobileOpen=false;sidebarManualCollapsed=false;
+ sidebarMobileOpen=false;sidebarManualCollapsed=false;timeTrackerSubmenuOpen=true;
  stopOverviewMotion();
  stopBoardCatalogMotion();
  stopFoundationMotion();
@@ -768,6 +768,7 @@ function sidebarNav(href,label,icon,active,{count=null}={}){
 // Session-local navigation presentation. No permissions or routes are changed.
 let sidebarManualCollapsed=false;
 let sidebarMobileOpen=false;
+let timeTrackerSubmenuOpen=true;
 function syncSidebarLayout(){
  const shellElement=root.querySelector(':scope > .shell');
  if(!shellElement)return;
@@ -782,7 +783,8 @@ function syncSidebarLayout(){
   toggle.setAttribute('title',expanded?'Collapse navigation':'Expand navigation');
  }
  syncTimeTrackerSidebar(shellElement,{enabled:state.ttStandalone===true&&state.ttAttendance?.status==='VERIFIED_READ',
-  expanded:!window.matchMedia('(max-width:820px)').matches&&!sidebarManualCollapsed});
+  expanded:!window.matchMedia('(max-width:820px)').matches&&!sidebarManualCollapsed,
+  submenuOpen:timeTrackerSubmenuOpen});
 }
 /** Canonical navigation selection shared by initial render and cached-shell updates. */
 function currentSidebarNavigation(){
@@ -989,11 +991,11 @@ function shell(body){
  stopAuthVisuals();
  const crumb=state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.fuelTrackStandalone?'FuelTrack+':state.fuelTransStandalone?'FuelTrans':state.view==='paseo'?'Paseo de Lomboy':state.view==='order-intake'?'Order Intake':currentSidebarNavigation()==='talkbox'?'TalkBox':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'Teams':state.view==='invitation'?'Workspace invitation':'Settings';
  const identity=[state.context?.user_id,state.context?.workspace_id].join('|');
- const sidebarSignature=JSON.stringify([state.ttStandalone,state.frtStandalone,state.tlStandalone,state.fuelTrackStandalone,state.fuelTransStandalone,state.roleVerified,state.adminVerified,state.boardCatalogError,name(),
+ const sidebarSignature=JSON.stringify([state.workspaceTransitionPending,state.roleVerified,state.adminVerified,state.boardCatalogError,name(),
   state.context?.profile?.platform_role,state.crmRoleSnapshot?.effectiveRole,
   state.workspaceRelationSnapshot?.relation,workspaceName(),
   state.boards.filter(board=>!isStandaloneApplicationBoard(board)).map(board=>[board.id,board.name]),
-  state.boards.length]);
+  state.boards.map(board=>[board.id,board.name])]);
  const route=[state.view,state.boardId,state.tab,state.ttStandalone,state.frtStandalone,state.tlStandalone,state.fuelTrackStandalone,state.fuelTransStandalone].join('|');
  // Preserve each group's horizontal position only across same-signed-view renders.
  const scrollPositions=state.view==='board'&&shellIdentity===identity&&shellRoute===route?
@@ -1001,7 +1003,7 @@ function shell(body){
  disposeTimeTrackerMaps();
  const existing=root.querySelector(':scope > .shell');
  const reusable=existing&&shellIdentity===identity;
- if(shellIdentity!==identity)closeWorkspacePanels();
+ if(shellIdentity!==identity){closeWorkspacePanels();timeTrackerSubmenuOpen=true;}
  if(reusable){
   const oldSidebar=existing.querySelector('.aps-sidebar');
   if(shellSidebarSignature!==sidebarSignature){
@@ -7884,6 +7886,12 @@ async function action(name,button){
   }
   break;
  }
+ case 'tt-sidebar-disclosure':{
+   if(!state.context||!auth.isSignedIn||state.ttStandalone!==true||state.ttAttendance?.status!=='VERIFIED_READ')return;
+   timeTrackerSubmenuOpen=!timeTrackerSubmenuOpen;
+   syncSidebarLayout();
+   break;
+ }
  case 'sidebar-toggle':{
    if(!state.context||!auth.isSignedIn)return;
    const mobile=window.matchMedia('(max-width:810px)').matches;
@@ -12989,6 +12997,9 @@ document.addEventListener('keydown',event=>{
 window.addEventListener('scroll',()=>closeBoardColumnContext(),true);
 window.addEventListener('resize',()=>closeBoardColumnContext());
 root.addEventListener('keydown',event=>{
+ if(event.key===' '&&event.target.closest?.('[data-action="tt-sidebar-disclosure"]')){
+  event.preventDefault();event.target.closest('[data-action="tt-sidebar-disclosure"]').click();return;
+ }
  const overtimeDialog=root.querySelector('.tt-ot-modal');
  if(overtimeDialog){
   if(event.key==='Escape'){

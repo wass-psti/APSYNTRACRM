@@ -54,7 +54,7 @@ function fixture(){
   },
   classList:{toggle(key,value){assert.equal(key,'tt-sidebar-mounted');mounted=value;}}
  };
- return {shell,selected,attrs,orientation,location:()=>location,mounted:()=>mounted,crumb:()=>crumb,
+ return {shell,nav,selected,attrs,orientation,location:()=>location,mounted:()=>mounted,crumb:()=>crumb,
   newBody(){location='application';}};
 }
 
@@ -102,4 +102,21 @@ test('first-name greeting trims whitespace and handles missing names without exp
  const render=displayName=>renderTimeTrackerNative({result,referenceShell:true,displayName,now:new Date('2026-11-24T01:15:00Z')});
  assert.match(render('  Lucky   Ampalayohan  '),/Good morning,<\/span> Lucky!<\/h2>/);
  assert.match(render(''),/Good morning,<\/span> there!<\/h2>/);
+});
+
+test('TimeTracker disclosure hides only the submenu and preserves active view and shell',()=>{
+ const f=fixture();
+ syncTimeTrackerSidebar(f.shell,{enabled:true,expanded:true,submenuOpen:false});
+ assert.equal(f.nav.hidden,true);
+ assert.equal(f.attrs.get('aria-expanded'),'false');
+ assert.equal(f.attrs.get('data-action'),'tt-sidebar-disclosure');
+ assert.equal(f.mounted(),true);
+ assert.equal(f.crumb().textContent,'› Clock');
+ syncTimeTrackerSidebar(f.shell,{enabled:true,expanded:true,submenuOpen:true});
+ assert.equal(f.nav.hidden,false);
+ assert.equal(f.attrs.get('aria-expanded'),'true');
+ syncTimeTrackerSidebar(f.shell,{enabled:true,expanded:false,submenuOpen:false});
+ assert.equal(f.nav.hidden,false);
+ assert.equal(f.attrs.has('data-action'),false);
+ assert.equal(f.location(),'application');
 });

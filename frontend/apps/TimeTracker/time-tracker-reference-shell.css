@@ -1,7 +1,7 @@
-/* Desktop Clock reference, 1440 × 960 export. Scope the new shell to the
- * mounted, signed TimeTracker navigation; leave mobile and OJT layouts intact. */
+/* Shared desktop CRM navigation skin and standalone TimeTracker content reference.
+ * Route-independent sidebar; mobile and collapsed icon rail retain existing layouts. */
 #app .tt-reference-welcome { display: none; }
-#app#app .shell.tt-sidebar-mounted {
+#app#app .shell {
   --tt-shell-bg: #f6f4f1;
   --tt-shell-surface: #fff;
   --tt-shell-ink: #14123a;
@@ -11,26 +11,27 @@
   --tt-shell-selected: #e9e6fb;
   --tt-shell-hover: #f1effa;
   --tt-shell-title: #2b2170;
-  grid-template-columns: 280px minmax(0, 1fr);
 }
-#app#app .shell.tt-sidebar-mounted > .aps-sidebar {
+@media (min-width: 821px) {
+#app#app .shell:not(.sidebar-user-collapsed) { grid-template-columns: 280px minmax(0, 1fr); }
+#app#app .shell:not(.sidebar-user-collapsed) > .aps-sidebar {
   width: 280px;
   background: var(--tt-shell-surface);
   border-right: 1px solid var(--tt-shell-line);
   box-shadow: none;
 }
-#app#app .shell.tt-sidebar-mounted .aps-sidebar .sidebar-brand-wrap {
+#app#app .shell:not(.sidebar-user-collapsed) .aps-sidebar .sidebar-brand-wrap {
   padding: 16px 14px 12px;
   border-bottom: 0;
 }
-#app#app .shell.tt-sidebar-mounted .aps-sidebar .sidebar-brand-subtitle { display: none; }
-#app#app .shell.tt-sidebar-mounted .aps-sidebar .brand {
+#app#app .shell:not(.sidebar-user-collapsed) .aps-sidebar .sidebar-brand-subtitle { display: none; }
+#app#app .shell:not(.sidebar-user-collapsed) .aps-sidebar .brand {
   font-size: 15px;
   color: var(--tt-shell-ink);
   letter-spacing: 0;
 }
-#app#app .shell.tt-sidebar-mounted .aps-sidebar .brand-mark { width: 36px; height: 36px; border-radius: 8px; box-shadow: none; }
-#app#app .shell.tt-sidebar-mounted .aps-sidebar .workspace-switcher {
+#app#app .shell:not(.sidebar-user-collapsed) .aps-sidebar .brand-mark { width: 36px; height: 36px; border-radius: 8px; box-shadow: none; }
+#app#app .shell:not(.sidebar-user-collapsed) .aps-sidebar .workspace-switcher {
   margin: 12px 14px 10px;
   padding: 10px;
   background: var(--tt-shell-surface);
@@ -38,33 +39,35 @@
   border-radius: 12px;
   box-shadow: none;
 }
-#app#app .shell.tt-sidebar-mounted .aps-sidebar .workspace-switcher::after { display: none; }
-#app#app .shell.tt-sidebar-mounted .aps-sidebar .workspace-icon {
+#app#app .shell:not(.sidebar-user-collapsed) .aps-sidebar .workspace-switcher::after { display: none; }
+#app#app .shell:not(.sidebar-user-collapsed) .aps-sidebar .workspace-icon {
   width: 34px; height: 34px; border-radius: 50%;
   background: var(--tt-shell-selected); color: var(--tt-shell-accent); box-shadow: none;
 }
-#app#app .shell.tt-sidebar-mounted .aps-sidebar .workspace-name { font-size: 13.5px; font-weight: 600; color: var(--tt-shell-ink); }
-#app#app .shell.tt-sidebar-mounted .aps-sidebar .workspace-sub { font-size: 11px; color: var(--tt-shell-muted); }
-#app#app .shell.tt-sidebar-mounted .aps-sidebar .nav-list { gap: 2px; padding-inline: 14px; }
-#app#app .shell.tt-sidebar-mounted .aps-sidebar .side-section {
+#app#app .shell:not(.sidebar-user-collapsed) .aps-sidebar .workspace-name { font-size: 13.5px; font-weight: 600; color: var(--tt-shell-ink); }
+#app#app .shell:not(.sidebar-user-collapsed) .aps-sidebar .workspace-sub { font-size: 11px; color: var(--tt-shell-muted); }
+#app#app .shell:not(.sidebar-user-collapsed) .aps-sidebar .nav-list { gap: 2px; padding-inline: 14px; }
+#app#app .shell:not(.sidebar-user-collapsed) .aps-sidebar .side-section {
   margin: 13px 12px 5px; font-size: 11px; font-weight: 700;
   text-transform: none; letter-spacing: .04em; color: var(--tt-shell-muted);
 }
-#app#app .shell.tt-sidebar-mounted .aps-sidebar .nav-link {
+#app#app .shell:not(.sidebar-user-collapsed) .aps-sidebar .nav-link {
   min-height: 40px; padding: 7px 12px; border: 0; border-radius: 10px;
   background: transparent; box-shadow: none; color: var(--tt-shell-muted);
   font-size: 14px; font-weight: 500;
 }
-#app#app .shell.tt-sidebar-mounted .aps-sidebar .nav-link::before { display: none; }
-#app#app .shell.tt-sidebar-mounted .aps-sidebar .nav-link:hover { background: var(--tt-shell-hover); }
-#app#app .shell.tt-sidebar-mounted .aps-sidebar .nav-link.active {
+#app#app .shell:not(.sidebar-user-collapsed) .aps-sidebar .nav-link::before { display: none; }
+#app#app .shell:not(.sidebar-user-collapsed) .aps-sidebar .nav-link:hover { background: var(--tt-shell-hover); }
+#app#app .shell:not(.sidebar-user-collapsed) .aps-sidebar .nav-link.active {
   background: var(--tt-shell-selected); color: var(--tt-shell-accent); font-weight: 600;
 }
-#app#app .shell.tt-sidebar-mounted .aps-sidebar .nav-link[aria-expanded="true"]::after {
+}
+#app#app .shell.tt-sidebar-mounted .aps-sidebar .nav-link[aria-expanded]::after {
   content: ""; flex: none; width: 7px; height: 7px; margin-left: auto; margin-right: 4px;
   border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
-  transform: rotate(45deg) translateY(-2px);
+  transform: rotate(-45deg);
 }
+#app#app .shell.tt-sidebar-mounted .aps-sidebar .nav-link[aria-expanded="true"]::after { transform: rotate(45deg) translateY(-2px); }
 #app#app .shell.tt-sidebar-mounted .aps-sidebar .tt-navigation.fm1-tabs {
   display: block; min-width: 0; margin: 2px 0 6px 21px; padding: 0 0 0 10px;
   border: 0; border-left: 1px solid var(--tt-shell-line); border-radius: 0;
@@ -162,7 +165,7 @@
   color: var(--tt-shell-muted); background: var(--tt-shell-surface); text-transform: none; letter-spacing: 0;
 }
 #app#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-attendance-console .tt-start-button { background: var(--tt-shell-accent); }
-html[data-aps-monday-theme="dark"] #app#app .shell.tt-sidebar-mounted {
+html[data-aps-monday-theme="dark"] #app#app .shell {
   --tt-shell-bg: #191c23; --tt-shell-surface: #242832; --tt-shell-ink: #edf0f7;
   --tt-shell-muted: #bec8d9; --tt-shell-line: #495365; --tt-shell-accent: #b5abff;
   --tt-shell-selected: #373d64; --tt-shell-hover: #30364a; --tt-shell-title: #d7d0ff;
@@ -196,7 +199,11 @@ html[data-aps-monday-theme="dark"] #app#app .shell.tt-sidebar-mounted .topbar .t
 #app#app .shell .main.aps-time-tracker-shell .tt-application[data-tt-reference-shell] .tt-reference-refresh:focus-visible {
   position: absolute; top: 4px; right: 4px; z-index: 3; outline: 2px solid #5144b8;
 }
-#app#app .shell.tt-sidebar-mounted > .aps-sidebar .sidebar-nav-scroll { overflow-x: hidden; overflow-y: auto; }
+@media (min-width: 821px) {
+  #app#app .shell:not(.sidebar-user-collapsed) > .aps-sidebar .sidebar-nav-scroll { overflow-x: hidden; overflow-y: auto; }
+  #app#app .shell:not(.sidebar-user-collapsed) > .aps-sidebar .ws01-context-relation { display: none; }
+}
+#app#app .shell.tt-sidebar-mounted > .aps-sidebar .tt-navigation[hidden] { display: none !important; }
 #app#app .shell.tt-sidebar-mounted > .aps-sidebar .tt-navigation.fm1-tabs {
   display: block; width: auto; max-width: 100%; min-width: 0; overflow: hidden;
   scrollbar-width: none; scroll-snap-type: none;
@@ -216,7 +223,6 @@ html[data-aps-monday-theme="dark"] #app#app .shell.tt-sidebar-mounted .topbar .t
 #app#app .shell.tt-sidebar-mounted > .aps-sidebar .tt-navigation.fm1-tabs .tt-nav-tab.fm1-tab.is-current {
   background: var(--tt-shell-selected); color: var(--tt-shell-accent); border: 0;
 }
-#app#app .shell.tt-sidebar-mounted > .aps-sidebar .ws01-context-relation { display: none; }
 #app#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-time-dashboard .tt-session-ring > svg {
   transform: rotate(-90deg) scale(1.07);
 }

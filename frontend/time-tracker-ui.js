@@ -167,7 +167,7 @@ function loadTimeTrackerReferenceFont(documentRef){
  documentRef.fonts.add(referenceFont);
  referenceFont.load().catch(()=>{documentRef.fonts.delete(referenceFont);referenceFont=null;});
 }
-export function syncTimeTrackerSidebar(shell,{enabled=false,expanded=false,fresh=false}={}){
+export function syncTimeTrackerSidebar(shell,{enabled=false,expanded=false,fresh=false,submenuOpen=true}={}){
  const sidebar=shell.querySelector('.aps-sidebar');
  const application=shell.querySelector('.main-content .tt-application');
  if(enabled&&application?.hasAttribute?.('data-tt-reference-shell'))loadTimeTrackerReferenceFont(shell.ownerDocument);
@@ -178,10 +178,16 @@ export function syncTimeTrackerSidebar(shell,{enabled=false,expanded=false,fresh
  const mounted=Boolean(enabled&&expanded&&parent&&application&&nav);
  if(mounted){
   if(parent.nextElementSibling!==nav)parent.after(nav);
-  parent.setAttribute('aria-expanded','true');
+  nav.hidden=!submenuOpen;
+  nav.setAttribute?.('id','tt-sidebar-submenu');
+  parent.setAttribute('aria-expanded',String(submenuOpen));
+  parent.setAttribute('aria-controls','tt-sidebar-submenu');
+  parent.setAttribute('role','button');
+  parent.setAttribute('data-action','tt-sidebar-disclosure');
   nav.querySelector('[role="tablist"]')?.setAttribute('aria-orientation','vertical');
  }else{
-  parent?.removeAttribute('aria-expanded');
+  for(const attr of ['aria-expanded','aria-controls','role','data-action'])parent?.removeAttribute(attr);
+  if(nav){nav.hidden=false;nav.removeAttribute?.('id');}
   if(nav&&application&&sidebar?.contains(nav)){
    const header=application.querySelector('.tt-app-header');
    if(header)header.after(nav);
