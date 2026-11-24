@@ -548,7 +548,7 @@ export class TimeTrackerNativeClient{
    directory:Object.freeze(directory),actorId:access.userId,workspaceId:access.workspaceId,boardId});
  }
  /** Atomic compare-and-swap edit/delete. A lost response must be reconciled by a fresh read. */
- async mutateAttendanceRecords(boardId,{action,recordIds,patch={},reason='',expectedRevision}={}){
+ async mutateAttendanceRecords(boardId,{action,recordIds,patch={},reason='',expectedRevision,manualClockout=false}={}){
   const access=await this.access(boardId);
   if(!['System Admin','IT Administrator'].includes(access.moduleRole))
    deny('TimeTracker administrator attendance management required');
@@ -564,7 +564,13 @@ export class TimeTrackerNativeClient{
      !isRecord(patch)||typeof reason!=='string'||reason.length>500)
    deny('Attendance management request is invalid');
   await checkIdentity(this.auth,this.api,access,boardId);
-  const result=await this.api.rpc('timetracker_attendance_admin_mutate',{
+  if(manualClockout&&(access.moduleRole!=='System Admin'||action!=='edit'||recordIds.length!==1||
+     Object.keys(patch).length!==1||!safeTime(patch.clockOutAt)||!reason.trim()))
+   deny('System Admin manual clock-out requires a verified timestamp and reason');
+  const result=manualClockout?await this.api.rpc('timetracker_attendance_admin_clock_out',{
+   p_board_id:boardId,p_record_id:recordIds[0],p_clock_out_at:patch.clockOutAt,
+   p_reason:reason,p_expected_revision:expectedRevision
+  },{retryUnauthorized:false}):await this.api.rpc('timetracker_attendance_admin_mutate',{
    p_board_id:boardId,p_action:action,p_record_ids:recordIds,
    p_patch:patch,p_reason:reason,p_expected_revision:expectedRevision
   },{retryUnauthorized:false});

@@ -6,7 +6,7 @@ import {TT_LOCATIONS,creditedAttendanceMs,completedLogWorkDurationMs,manilaClock
 import {filterMyAttendancePeriod} from './time-tracker-native.js';
 import {manilaDay} from './time-tracker-overview.js';
 import {mapFrame} from './time-tracker-map.js';
-import {renderTimeTrackerAdminEditor,renderTimeTrackerAdminDeleteDialog,TT_ADMIN_RECORD_LIMIT} from './time-tracker-record-management.js';
+import {renderTimeTrackerAdminEditor,renderTimeTrackerAdminDeleteDialog,renderTimeTrackerManualClockOut,TT_ADMIN_RECORD_LIMIT} from './time-tracker-record-management.js';
 import {renderTimeTrackerOjtAdminEditor} from './apps/TimeTracker/time-tracker-ojt-admin-editor.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({
@@ -260,6 +260,7 @@ function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=fals
  const adminActions=(adminEligible?'<div class="tt-log-admin-row-actions"><span>'+
     (adminFullAccess?'System Admin record management':'Authorized time correction')+'</span>'+
    '<button type="button" data-action="tt-log-admin-correct-time" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'><span aria-hidden="true">✎</span> Correct time</button>'+
+   (adminFullAccess&&active?'<button type="button" data-action="tt-log-admin-manual-clock-out" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'>Manual clock-out</button>':'')+
    (adminFullAccess?'<button type="button" data-action="tt-log-admin-edit" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'>Edit record</button>':'')+
    (adminFullAccess?'<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-delete" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'><span aria-hidden="true">⌫</span> Delete record</button>':'')+'</div>':'');
  if(modal){
@@ -582,7 +583,7 @@ export function renderTimeTrackerLog({
   '</details>'+(adminEditor||adminDeleteConfirm?'':renderTimeTrackerLogDetailDialog({row:rows.find(r=>expandedRecordIds.includes(r.id))||null,now,
     gpsEligible,gpsData,gpsBusy,gpsError,gpsErrorRecordId,mapEnabled,mapTheme,
     adminEligible,adminFullAccess,adminBusy,selectedIds}))+
-   (adminFullAccess&&adminEditor?.mode==='manual'?renderManualAttendanceEditor({editor:adminEditor,busy:adminBusy,error:adminError,now}):adminEditor?.ojt?renderTimeTrackerOjtAdminEditor({editor:adminEditor,busy:adminBusy,error:adminError}):
+   (adminFullAccess&&adminEditor?.manualClockout?renderTimeTrackerManualClockOut({editor:adminEditor,busy:adminBusy,error:adminError}):adminFullAccess&&adminEditor?.mode==='manual'?renderManualAttendanceEditor({editor:adminEditor,busy:adminBusy,error:adminError,now}):adminEditor?.ojt?renderTimeTrackerOjtAdminEditor({editor:adminEditor,busy:adminBusy,error:adminError}):
     renderTimeTrackerAdminEditor({editor:adminEditor,directory:adminDirectory,busy:adminBusy,error:adminEditor?adminError:'',timeOnly:adminEditor?.timeOnly===true}))+
    renderTimeTrackerAdminDeleteDialog({confirmation:adminDeleteConfirm,busy:adminBusy})+'</section>';
 }
