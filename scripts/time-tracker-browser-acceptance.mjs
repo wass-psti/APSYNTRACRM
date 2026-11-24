@@ -809,7 +809,15 @@ try {
   );
   assert.deepEqual(
     await page.locator(".tt-log-table thead th").allTextContents(),
-    ["", "Clock In", "Employee", "Working Location", "Department", "Clock Out"],
+    [
+      "",
+      "Clock In",
+      "Employee",
+      "Working Location",
+      "Department",
+      "Clock Out",
+      "Status",
+    ],
   );
   assert.match(
     await page.locator(".tt-log-row-clock").textContent(),
@@ -819,6 +827,41 @@ try {
     await page.locator(".tt-log-row-department").textContent(),
     /Information Technology/,
   );
+  assert.equal(
+    await page.locator(".tt-log-row-status").textContent(),
+    "Completed",
+  );
+  assert.doesNotMatch(
+    await page.locator(".tt-log-row-out").textContent(),
+    /Completed|Active/,
+  );
+  const logGeometry = await page.locator(".tt-log-table").evaluate((table) => {
+    const headers = [...table.querySelectorAll("thead th")].slice(1);
+    const cells = [...table.querySelectorAll(".tt-log-row-summary > span")];
+    return {
+      deltas: headers.map((header, index) =>
+        Math.abs(
+          header.getBoundingClientRect().left -
+            cells[index].getBoundingClientRect().left,
+        ),
+      ),
+      clockSize: getComputedStyle(cells[0].querySelector("strong")).fontSize,
+      bodySize: getComputedStyle(cells[2]).fontSize,
+    };
+  });
+  assert.ok(logGeometry.deltas.every((delta) => delta <= 2));
+  assert.equal(logGeometry.clockSize, logGeometry.bodySize);
+  await page.evaluate(async () => {
+    const { startSearchExperience } = await import(
+      "/frontend/search-experience.js"
+    );
+    window.__stopLogSearchTest = startSearchExperience(
+      document.querySelector(".tt-log-reference-header"),
+    );
+  });
+  await page.locator(".tt-log-search .aps-search-mark").waitFor();
+  assert.equal(await page.locator(".tt-log-search > svg").isVisible(), false);
+  await page.evaluate(() => window.__stopLogSearchTest());
   await page.locator(".tt-log-filter-trigger").click();
   await page.locator(".tt-log-filter-panel").waitFor();
   for (const id of ["period", "status", "location", "department", "sort"]) {
