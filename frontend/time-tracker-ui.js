@@ -220,7 +220,6 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
  const employeeDepartment=access?.employeeDepartment||null;
  const location=TT_LOCATIONS.includes(locationPreference)?locationPreference:'';
  const requireHomeNote=isTimeTrackerHomeNoteRequired(location,access?.email,access?.userId);
- // Exempt employees have no Home note field, whether starting or ending a session.
  const showHomeNote=location==='Offsite (Home)'&&requireHomeNote;
  const showActiveHomeNote=active?.location==='Offsite (Home)'&&
   isTimeTrackerHomeNoteRequired(active.location,access?.email,access?.userId);
@@ -237,23 +236,17 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
   autoClockout.status==='PENDING_GPS'?'Automatic clock-out pending · fresh foreground GPS required':
   autoClockout.status==='DUE'?'Automatic clock-out due · scheduled cutoff ':
   'Automatic clock-out monitoring unavailable';
- let html='<div class="tt-clock-stage tt-command-center">'+
-  '<div class="tt-command-layout tt-clock-compact">'+
-   '<section class="tt-time-dashboard" aria-label="Live time and attendance summary">'+
-    '<div class="tt-time-scene" aria-hidden="true">'+
-     '<div class="tt-pixi-backdrop" data-pixi="fallback"></div>'+
-     '<span class="tt-time-orbit tt-time-orbit-outer"></span>'+
-     '<span class="tt-time-orbit tt-time-orbit-inner"></span>'+
-     '<span class="tt-time-orbit tt-time-orbit-horizon"></span>'+
+ const statusClass=active?'is-active':'is-idle';
+ let html='<div class="tt-clock-stage tt-clock-rework">'+
+  '<section class="tt-clock-rework-hero" aria-label="Current time and attendance summary">'+
+   '<div class="tt-clock-rework-heading">'+
+    '<div class="tt-clock-rework-greeting-block">'+
+     '<span class="tt-clock-rework-eyebrow">APSYNTRA <span aria-hidden="true">/</span> TIMEKEEPING</span>'+
+     '<h3 id="tt-clock-greeting" class="tt-clock-rework-greeting">'+t.greeting+'</h3>'+
+     '<p id="tt-clock-date" class="tt-clock-rework-date">'+t.day+'</p>'+
     '</div>'+
-    '<div class="tt-time-dashboard-head">'+
-     '<span class="tt-dashboard-kicker">APSYNTRA <span class="tt-kicker-separator">/</span> TIMEKEEPING</span>'+
-     '<span class="tt-timezone-pill">UTC +08:00</span>'+
-    '</div>'+
-    '<div class="tt-clock-hero">'+
-     '<span class="tt-clock-eyebrow">PHILIPPINE STANDARD TIME</span>'+
-     '<h3 id="tt-clock-greeting" class="tt-compact-sr">'+t.greeting+'</h3>'+
-     '<div class="tt-compact-header"><p id="tt-clock-date">'+t.day+'</p><span class="tt-idle-badge '+(active?'tt-badge-active':'')+'">'+status+'</span></div>'+
+    '<div class="tt-clock-rework-time" aria-label="Current Philippine time">'+
+     '<span class="tt-clock-rework-time-label">PHILIPPINE STANDARD TIME</span>'+
      '<div class="tt-clock-face" role="timer" aria-label="Current Philippine time">'+
       '<span id="tt-clock-hours">'+t.hours+'</span>'+
       '<span class="tt-clock-colon" aria-hidden="true">:</span>'+
@@ -261,65 +254,74 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
       '<span class="tt-clock-suffix"><span id="tt-clock-seconds">'+t.seconds+
       '</span><span id="tt-clock-period">'+t.period+'</span></span>'+
      '</div>'+
-     '<p class="tt-clock-source">Live device time displayed in the organization’s timezone</p>'+
+     '<span class="tt-clock-rework-timezone">Asia/Manila · UTC +08:00</span>'+
     '</div>'+
-    '<div class="tt-dashboard-section-label">TODAY’S ATTENDANCE</div>'+
-    '<div class="tt-session-summary" aria-label="My attendance today">'+
-     '<div><span>Sessions today</span><strong>'+todayRows.length+'</strong></div>'+
-     '<div><span>Hours logged</span><strong>'+hrs(credited)+'</strong></div>'+
-    '</div>'+
-    '<p class="tt-dashboard-source">Attendance totals use your authorized TimeTracker records.</p>'+
-   '</section>'+
-   '<section class="tt-clock-card tt-attendance-console'+(active?' tt-compact-active':'')+'" aria-label="Attendance clock form">'+
-    (success?'<div class="tt-clock-confirmed" role="status" aria-live="polite">'+
-     '<span class="tt-clock-confirmed-icon" aria-hidden="true">✓</span>'+
-     '<div><strong>'+(success.startsWith('Clock Out')?'Successfully clocked out':'Successfully clocked in')+
-     '</strong><p>'+esc(success)+'</p></div></div>':'')+
-    (clockCorrectionNotice?'<p class="tt-clock-sync-status" role="status" aria-live="polite">'+esc(clockCorrectionNotice)+'</p>':'')+
-    '<div class="tt-console-kicker"><span class="tt-console-kicker-mark" aria-hidden="true"></span> ATTENDANCE CONTROL</div>'+
-    (active?'':'<div class="tt-clock-card-head"><h4>Clock In</h4></div>')+
-    '<p class="tt-console-description">'+(active?
-     'End the current signed attendance session using a fresh GPS fix.':
-     'Start your work session with a signed record and a fresh GPS fix.')+'</p>'+
-    (active?'<div class="tt-session-progress-wrap">'+
-      '<div class="tt-session-ring" aria-hidden="true">'+
-       '<svg viewBox="0 0 128 128" focusable="false">'+
-        '<circle class="tt-session-ring-track" cx="64" cy="64" r="54"></circle>'+
-        '<circle id="tt-session-progress" class="tt-session-ring-progress" cx="64" cy="64" r="54"'+
-         ' stroke-dasharray="339.292" stroke-dashoffset="'+
-         (339.292*(1-session.progress)).toFixed(3)+'"></circle></svg>'+
-       '<span class="tt-compact-clock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span></div>'+
-      '<div class="tt-compact-elapsed" role="timer" aria-label="Elapsed time for active attendance session">'+
-       '<span>Elapsed this session</span><strong id="tt-session-elapsed" data-clock-in="'+
-        esc(active.clockIn)+'">'+session.label+'</strong>'+
-       '<p class="tt-active-copy">Started '+esc(formatTimeTrackerAutoClockoutTime(active.clockIn))+
-       (autoDeadline?' · auto clock-out '+esc(formatTimeTrackerAutoClockoutTime(autoDeadline)):'')+'</p>'+
-       '<span class="tt-compact-sr">Session duration · credited hours may differ</span>'+
-       ((autoClockout||autoUnavailable)?'<p class="tt-clock-hint tt-auto-clockout-state'+
-        (autoUnavailable||autoClockout?.status!=='MONITORING'?'':' tt-compact-sr')+'" role="status">'+esc(autoLabel)+
-        (autoDeadline?'<strong>'+esc(formatTimeTrackerAutoClockoutTime(autoDeadline))+'</strong> · '+
-         '<span data-tt-auto-clockout-countdown data-deadline="'+esc(autoDeadline)+'">—</span> remaining':'')+'</p>':'')+
-      '</div></div>':'')+
-    '<form id="tt-clock-form">'+
+   '</div>'+
+   '<div class="tt-clock-rework-stats" aria-label="Today’s attendance summary">'+
+    '<div class="tt-clock-rework-stat"><span>Sessions today</span><strong>'+todayRows.length+'</strong></div>'+
+    '<div class="tt-clock-rework-stat"><span>Hours logged</span><strong>'+hrs(credited)+'</strong></div>'+
+    '<div class="tt-clock-rework-stat"><span>Status</span><strong class="tt-clock-rework-status '+statusClass+'">'+status+'</strong></div>'+
+   '</div>'+
+  '</section>'+
+  '<section class="tt-clock-rework-workspace tt-attendance-console" aria-label="Attendance workspace">'+
+   (success?'<div class="tt-clock-confirmed" role="status" aria-live="polite">'+
+    '<span class="tt-clock-confirmed-icon" aria-hidden="true">✓</span>'+
+    '<div><strong>'+(success.startsWith('Clock Out')?'Successfully clocked out':'Successfully clocked in')+
+    '</strong><p>'+esc(success)+'</p></div></div>':'')+
+   (clockCorrectionNotice?'<p class="tt-clock-sync-status" role="status" aria-live="polite">'+esc(clockCorrectionNotice)+'</p>':'')+
+   '<div class="tt-clock-rework-workspace-heading">'+
+    '<div><span class="tt-clock-rework-eyebrow">DAILY ATTENDANCE</span>'+
+     '<h4>'+(active?'Your active session':'Start your workday')+'</h4>'+
+     '<p>'+(active?'Your attendance session is running. Review its details before ending the session.':
+      'Choose your work location and start your attendance session.')+'</p></div>'+
+   '</div>'+
+   '<div class="tt-clock-rework-content">'+
+    '<div class="tt-clock-rework-session">'+
      (active?
-      '<div class="tt-active-session-context" aria-label="Active attendance details">'+
-       '<div><span><span aria-hidden="true">⌖</span> Location</span><strong>'+esc(active.location==='Offsite (Home)'?'Offsite · Home':active.location)+'</strong></div>'+
-       '<div><span><span aria-hidden="true">▦</span> Department</span><strong>'+esc(active.department)+'</strong></div>'+
+      '<div class="tt-clock-rework-session-state is-active"><span aria-hidden="true"></span> SESSION IN PROGRESS</div>'+
+      '<span class="tt-clock-rework-session-label">ELAPSED THIS SESSION</span>'+
+      '<div class="tt-clock-rework-session-time">'+
+       '<div class="tt-session-ring" aria-hidden="true">'+
+        '<svg viewBox="0 0 128 128" focusable="false">'+
+         '<circle class="tt-session-ring-track" cx="64" cy="64" r="54"></circle>'+
+         '<circle id="tt-session-progress" class="tt-session-ring-progress" cx="64" cy="64" r="54"'+
+          ' stroke-dasharray="339.292" stroke-dashoffset="'+
+          (339.292*(1-session.progress)).toFixed(3)+'"></circle></svg>'+
+        '<span class="tt-compact-clock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span></div>'+
+       '<strong id="tt-session-elapsed" data-clock-in="'+esc(active.clockIn)+'" role="timer" aria-label="Elapsed time for active attendance session">'+session.label+'</strong>'+
+      '</div>'+
+      '<div class="tt-clock-rework-session-meta"><span>Started '+esc(formatTimeTrackerAutoClockoutTime(active.clockIn))+'</span>'+
+       (autoDeadline?'<span>Scheduled clock-out '+esc(formatTimeTrackerAutoClockoutTime(autoDeadline))+'</span>':'')+
+      '</div>'+
+      ((autoClockout||autoUnavailable)?'<p class="tt-clock-rework-auto-state" role="status">'+esc(autoLabel)+
+       (autoDeadline?'<strong>'+esc(formatTimeTrackerAutoClockoutTime(autoDeadline))+'</strong> · '+
+        '<span data-tt-auto-clockout-countdown data-deadline="'+esc(autoDeadline)+'">—</span> remaining':'')+'</p>':''):
+      '<div class="tt-clock-rework-session-state is-idle"><span aria-hidden="true"></span> READY TO CLOCK IN</div>'+
+      '<h5>Make today count.</h5>'+
+      '<p class="tt-clock-rework-session-intro">Your attendance starts when you submit the session. A fresh GPS fix is requested at that time, not when this page opens.</p>'+
+      '<div class="tt-clock-rework-session-note"><span aria-hidden="true">⌖</span><span>Location is captured independently for each attendance action.</span></div>')+
+    '</div>'+
+    '<form id="tt-clock-form" class="tt-clock-rework-form">'+
+     (active?
+      '<div class="tt-active-session-context tt-clock-rework-session-details" aria-label="Active attendance details">'+
+       '<div><span>Location</span><strong>'+esc(active.location==='Offsite (Home)'?'Offsite · Home':active.location)+'</strong></div>'+
+       '<div><span>Department</span><strong>'+esc(active.department)+'</strong></div>'+
       '</div>':
-      '<label for="tt-location">Location'+select('tt-location',TT_LOCATIONS,'Select location…',location)+'</label>'+
-      '<div class="tt-quick-location"><span>Quick select</span>'+
+      '<label class="tt-clock-rework-field" for="tt-location">Work location'+select('tt-location',TT_LOCATIONS,'Select location…',location)+'</label>'+
+      '<div class="tt-quick-location tt-clock-rework-quick-location"><span>Quick select</span>'+
        '<button type="button" data-action="tt-location-shortcut" data-location="Office-Base Duty" aria-pressed="'+
         (location==='Office-Base Duty')+'" class="'+(location==='Office-Base Duty'?'is-selected':'')+'">◴ &nbsp; Office</button>'+
        '<button type="button" data-action="tt-location-shortcut" data-location="Offsite (Home)" aria-pressed="'+
         (location==='Offsite (Home)')+'" class="'+(location==='Offsite (Home)'?'is-selected':'')+'">⌖ &nbsp; Home</button>'+
       '</div>'+
-      '<div class="tt-employee-department" aria-label="Assigned employee department">'+
-       '<span>Department</span><strong>'+esc(employeeDepartment||'Not assigned')+'</strong>'+
+      '<div class="tt-employee-department tt-clock-rework-department" aria-label="Assigned employee department">'+
+       '<span>Assigned department</span><strong>'+esc(employeeDepartment||'Not assigned')+'</strong>'+
        (employeeDepartment?'':'<small>Ask your TimeTracker administrator to assign your department before clocking in.</small>')+
       '</div>')+
-     '<label for="tt-note" class="tt-note-field" id="tt-note-wrap"'+
+     '<label for="tt-note" class="tt-note-field tt-clock-rework-field" id="tt-note-wrap"'+
       ((active?showActiveHomeNote:showHomeNote)?'':' hidden')+'>'+
-      'Offsite Work Note'+(!active?'<span id="tt-note-requirement">'+(requireHomeNote?' (required)':' (optional)')+'</span>':'')+'<textarea id="tt-note"'+((!active&&requireHomeNote)?' required':'')+
+      'Offsite Work Note'+(!active?'<span id="tt-note-requirement">'+(requireHomeNote?' (required)':' (optional)')+'</span>':'')+
+      '<textarea id="tt-note"'+((!active&&requireHomeNote)?' required':'')+
       (active?' readonly':'')+' maxlength="500" rows="3" placeholder="Describe your offsite work">'+
       (active?esc(active.workNote||''):esc(workPlanDraft))+'</textarea></label>'+
      (geoPromptVisible?'<div class="tt-location-readiness '+(locationEnabled?'is-ready':geoWarning?'needs-action':'needs-permission')+
@@ -345,9 +347,9 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
       '<p class="tt-write-restriction" role="status">Live writes remain disabled until server-side offsite work-note, dedicated-board authorization and audit logging are accepted.</p>':
       '')+
     '</form>'+
-   '</section>'+
+   '</div>'+
    '<p class="tt-clock-footnote">'+(writeReady?'Session is secured with a fresh GPS fix on start and end.':'Clock actions require signed workspace and backend verification.')+'</p>'+
-  '</div>'+
+  '</section>'+
  '</div>';
  return html;
 }
