@@ -34,6 +34,10 @@ SQL
  run < supabase/migrations/20261020022044_m19511_order_intake_create_rpc_permission_disabled.sql
  run < supabase/migrations/20261022093930_order_intake_update_details_authorized_20261022.sql
  run < supabase/migrations/20261023032352_order_intake_idempotent_create.sql
+ run < supabase/migrations/20261021064459_order_intake_status_and_archive_lifecycle_default_deny_20261021.sql
+ run < supabase/migrations/20261021064529_order_intake_lifecycle_audit_contract_correction_20261021.sql
+ run < supabase/migrations/20261021064556_order_intake_status_archive_authenticated_activation_20261021.sql
+ run < supabase/migrations/20261022093333_order_intake_restore_authorized_revision_20261022.sql
 fi
 
 run <<'SQL'

@@ -79,7 +79,7 @@ test('all views render actual records and honest partial scope; HTML is escaped'
 test('host wiring retains scope cleanup and uses native route without deleting board', () => {
   const src=readFileSync(new URL('../app.js',import.meta.url),'utf8');
   assert.match(src,/state.view='order-intake';state.boardId=null/);
-  assert.match(src,/orderIntakeRead.open\(scope,nextRoute.section==='dashboard'\)/);
+  assert.match(src,/currentOrderIntakeRead\(\).open\(scope,completeOrderIntakeView\(\)\)/);
   assert.match(src,/clearOrderIntake\(\);\s*trashBoardSelection.clear/);
   assert.match(src,/data-oi-action/);
 });

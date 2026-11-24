@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
+import {verifyLifecycleSigned} from './cp-oi-native-05-signed.mjs';
 import {verifyOrderEditorBrowser} from './cp-oi-native-03-editor-browser.mjs';
 import {verifyOrderEditorSigned} from './cp-oi-native-03-signed.mjs';
 import {verifySignedRegistryBrowser} from './cp-oi-native-02f-signed-browser.mjs';
@@ -93,4 +94,5 @@ await verifySignedRegistryBrowser({workspaceId:workspace,signedAuth:auth});
 if(process.env.OI_VERIFY_MUTATIONS==='1'){
  await verifyOrderEditorSigned({client,auth,api,sql,workspace});
  await verifyOrderEditorBrowser({auth,api,workspace});
+ await verifyLifecycleSigned({auth,api,workspace,sql});
 }

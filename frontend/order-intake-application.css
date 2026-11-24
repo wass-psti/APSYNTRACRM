@@ -55,3 +55,11 @@
 .oi-finance-table td { vertical-align:top; font-variant-numeric:tabular-nums; }
 .oi-finance-table td small { display:block; margin-top:4px; font-size:11px; }
 @media(max-width:720px) { .oi-analytics-grid { grid-template-columns:minmax(0,1fr); } }
+
+.oi-lifecycle-controls { display:flex; flex-wrap:wrap; gap:8px; }
+.oi-lifecycle-controls:empty { display:none; }
+.oi-stage [draggable="true"] { cursor:grab; }
+.oi-stage.oi-drop-target { outline:2px solid #2874ce; outline-offset:-2px; }
+.oi-activity { display:grid; gap:10px; padding-inline-start:24px; margin:0; }
+.oi-activity li { overflow-wrap:anywhere; }
+.oi-activity time { font-size:12px; }

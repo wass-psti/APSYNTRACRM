@@ -28,10 +28,18 @@ export class OrderIntakeRegistryClient extends OrderIntakeClient {
     if (rows.length>limit+1) throw new Error('Invalid Order Intake registry page');
     return {items:rows.slice(0,limit),hasMore:rows.length>limit};
   }
-  async detail(id) {
-    const rows=await this.read(new URLSearchParams({workspace_id:'eq.'+this.workspaceId,id:'eq.'+id,limit:'2',
-      or:'(archived.eq.false,archived.is.null)'}));
+  async detail(id,{includeArchived=false}={}) {
+    const params=new URLSearchParams({workspace_id:'eq.'+this.workspaceId,id:'eq.'+id,limit:'2'});
+    if(!includeArchived)params.set('or','(archived.eq.false,archived.is.null)');
+    const rows=await this.read(params);
     if (rows.length!==1||rows[0].id!==id) throw new Error('Order record unavailable.');
     return rows[0];
+  }
+  async activity(id) {
+    const params=new URLSearchParams({workspace_id:'eq.'+this.workspaceId,order_id:'eq.'+id,
+      select:'id,workspace_id,order_id,type,message,created_at',order:'created_at.desc,id.desc',limit:'51'});
+    const rows=await this.request(()=>this.auth.authorized('/rest/v1/order_intake_activity?'+params,{retryableRead:true}));
+    if(!Array.isArray(rows)||rows.length>51||rows.some(row=>row.workspace_id!==this.workspaceId||row.order_id!==id))throw new Error('Invalid order activity response');
+    return {rows:rows.slice(0,50),hasMore:rows.length>50};
   }
 }

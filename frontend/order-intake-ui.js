@@ -2,12 +2,13 @@ import { ORDER_INTAKE_SECTIONS, orderIntakeHref } from './order-intake-route.js'
 import { ORDER_INTAKE_STATUSES } from './order-intake-native.js';
 import { filterOrderIntakeRows } from './order-intake-read-state.js';
 import { renderSalesDashboard } from './order-intake-dashboard.js';
+import { lifecycleActions,lifecycleControls,renderOrderActivity } from './order-intake-lifecycle.js';
 import { nativeEditable } from './order-intake-editor.js';
 import { projectUnifiedOrders } from './order-intake-unified-read.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
 const show = value => esc(value === null || value === undefined || value === '' ? '—' : value);
-const labels = ['Dashboard', 'Workflow', 'Search', 'All Orders'];
+const labels = ['Dashboard', 'Workflow', 'Search', 'All Orders', 'Archived'];
 const money = (value, currency) => (currency ? show(currency) : 'Unknown currency') + ' ' + show(value);
 const history = row => row.record_kind === 'legacy';
 const origin = row => history(row) ? ' <small>Historical</small>' : '';
@@ -34,19 +35,19 @@ function orderTable(rows, route) {
   if (!rows.length) return '<p class="oi-empty">No matching orders in the loaded records.</p>';
   return '<div class="oi-table-scroll" tabindex="0" aria-label="Purchase orders"><table><thead><tr>' +
     ['PO Number','Client','Currency','Status','PO Amount','Gross Profit','Industry','Company','Account Manager','Date Received','Delivery Date'].map(v => '<th scope="col">'+v+'</th>').join('') +
-    '</tr></thead><tbody>' + rows.map(row => '<tr><td><a href="' + esc(orderIntakeHref('all-orders',route.filters,row.id)) + '">' + show(row.po_number) + '</a>'+origin(row)+'</td>' +
+    '</tr></thead><tbody>' + rows.map(row => '<tr><td><a href="' + esc(orderIntakeHref(route.section==='archived'?'archived':'all-orders',route.filters,row.id)) + '">' + show(row.po_number) + '</a>'+origin(row)+'</td>' +
       [row.client_name,row.currency,row.status,row.po_amount,row.gross_profit,row.industry,row.company,row.account_manager,row.date_received,row.delivery_date].map((v,i) => '<td>'+show(v)+(history(row)&&i===4?' <small>Source</small>':history(row)&&i===5?' <small>Reported</small>':'')+'</td>').join('') + '</tr>').join('') + '</tbody></table></div>';
 }
 function workflow(rows, route) {
   return '<div class="oi-workflow" tabindex="0" aria-label="Order workflow">' + projectUnifiedOrders(rows).workflow.map(stage =>
-    '<section class="oi-stage"><h2>'+show(stage.status)+' <span>'+stage.orders.length+'</span></h2>' +
-    (stage.orders.map(row => '<article><a href="'+esc(orderIntakeHref('all-orders',route.filters,row.id))+'">'+show(row.po_number)+'</a>'+origin(row)+'<p>'+show(row.company)+'</p><strong>'+money(row.po_amount,row.currency)+'</strong><p>'+show(row.account_manager)+'</p></article>').join('') || '<p class="oi-empty">No orders</p>') + '</section>').join('') + '</div>';
+    '<section class="oi-stage" data-oi-stage="'+esc(stage.status)+'"><h2>'+show(stage.status)+' <span>'+stage.orders.length+'</span></h2>' +
+    (stage.orders.map(row => '<article'+(lifecycleActions(row).status?' draggable="true" data-oi-drag="'+esc(row.id)+'"':'')+'><a href="'+esc(orderIntakeHref(route.section==='archived'?'archived':'all-orders',route.filters,row.id))+'">'+show(row.po_number)+'</a>'+origin(row)+'<p>'+show(row.company)+'</p><strong>'+money(row.po_amount,row.currency)+'</strong><p>'+show(row.account_manager)+'</p>'+lifecycleControls(row,{card:true})+'</article>').join('') || '<p class="oi-empty">No orders</p>') + '</section>').join('') + '</div>';
 }
 function detail(record, route) {
   if (!route.recordId) return '';
-  return '<section class="oi-panel"><h2>Purchase order details</h2><a href="'+esc(orderIntakeHref('all-orders',route.filters))+'">Close details</a>' +
+  return '<section class="oi-panel"><h2>Purchase order details</h2><a href="'+esc(orderIntakeHref(route.section==='archived'?'archived':'all-orders',route.filters))+'">Close details</a>' +
     (record?.busy ? '<p role="status">Loading order…</p>' : record?.error ? '<p role="alert">'+esc(record.error)+'</p>' :
-      record?.row ? (nativeEditable(record.row)?'<button type="button" class="secondary" data-oi-action="edit">Edit purchase order</button>':'')+(history(record.row)?'<p>Historical record — original reported financial values; VAT and archive state may be unknown. Historical client evidence is not a verified current client.</p>':'')+'<dl class="oi-detail">'+Object.entries(record.row).filter(([key])=>!['id','workspace_id'].includes(key)&&(key!=='archived'||history(record.row))).map(([key,value])=>'<div><dt>'+esc(key.replaceAll('_',' '))+'</dt><dd>'+show(value)+'</dd></div>').join('')+'</dl>' : '<p>Order unavailable.</p>') + '</section>';
+      record?.row ? (nativeEditable(record.row)?'<button type="button" class="secondary" data-oi-action="edit">Edit purchase order</button>':'')+(history(record.row)?'<p>Historical record — original reported financial values; lifecycle actions apply to native orders; VAT and archive state may be unknown. Historical client evidence is not a verified current client.</p>':'')+'<dl class="oi-detail">'+Object.entries(record.row).filter(([key])=>!['id','workspace_id'].includes(key)&&(key!=='archived'||history(record.row))).map(([key,value])=>'<div><dt>'+esc(key.replaceAll('_',' '))+'</dt><dd>'+show(value)+'</dd></div>').join('')+'</dl>'+lifecycleControls(record.row)+renderOrderActivity(record.activity) : '<p>Order unavailable.</p>') + '</section>';
 }
 export function renderOrderIntake({ route, snapshot, record = null }) {
   const rows = snapshot?.rows || [];
