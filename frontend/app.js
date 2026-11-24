@@ -209,6 +209,7 @@ import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
 import {TT_BOARD_GPS_PROJECTION_ENABLED,loadTimeTrackerBoardGps,renderTimeTrackerBoardGps} from './time-tracker-board-projection.js';
 import {renderTimeTrackerMainGroup} from './time-tracker-main-group.js';
 import {findTimeTrackerAttendanceBoard,TIMETRACKER_APPLICATION_ROUTE} from './time-tracker-application.js';
+import {canViewTimeTrackerEmployees} from './time-tracker-application.js';
 import {FUELTRANS_APPLICATION_ROUTE,FUELTRANS_BOARD_ID,fuelTransApplicationHref,parseFuelTransApplicationRoute} from './fueltrans-application-route.js';
 import {openTimeTrackerAddDepartmentModal} from './apps/TimeTracker/time-tracker-add-department-modal.js';
 import {TimeTrackerOjtClient,isEligibleTimeTrackerSharedOjtAccount,TIMETRACKER_SHARED_OJT_USER_ID} from './apps/TimeTracker/time-tracker-ojt.js';
@@ -4567,6 +4568,9 @@ async function loadTimeTracker(seq=routeSerial){
   if(run===state.ttRunId&&seq===routeSerial&&auth.isSignedIn&&
     state.context?.user_id===identity&&state.context?.workspace_id===ws)
    {state.ttAttendance=snapshot;
+    if(state.ttView==='employees'&&(snapshot?.status!=='VERIFIED_READ'||!canViewTimeTrackerEmployees(snapshot.access))){
+     state.ttView='clock';state.ttEmployeesTab='directory';state.ttEmployeesSearch='';state.ttEmployeesDepartment='';
+    }
     const ojtScope=timeTrackerOjtScope();
     if(!ojtScope||!state.ttOjtSelected||
       state.ttOjtSelected.scope.userId!==ojtScope.userId||
@@ -10006,13 +10010,14 @@ async function action(name,button){
   if(state.ttBusy||state.ttOjtBusy||state.ttView!=='employees'||state.ttAttendance?.status!=='VERIFIED_READ')return;
   const next=button.dataset.target;
   if(!['directory','departments','ojt'].includes(next))return;
-  if(next!=='directory'&&!['System Admin','IT Administrator'].includes(state.ttAttendance.access.moduleRole))return;
+  if(!canViewTimeTrackerEmployees(state.ttAttendance.access))return;
   state.ttEmployeesTab=next;render();
   root.querySelector('[data-action="tt-employees-section"][aria-pressed="true"]')?.focus();
   break;
  }
  case 'tt-employees-refresh':{
-  if(state.ttBusy||state.ttView!=='employees'||state.ttAttendance?.status!=='VERIFIED_READ')return;
+  if(state.ttBusy||state.ttView!=='employees'||state.ttAttendance?.status!=='VERIFIED_READ'||
+     !canViewTimeTrackerEmployees(state.ttAttendance.access))return;
   await loadTimeTracker();break;
  }
  case 'tt-tab':{
@@ -10022,6 +10027,7 @@ async function action(name,button){
   if(!['overview','clock','employees','log','reports','calendar','ot','hours','team','monitor','gps'].includes(next))return;
   if(next==='gps'&&state.roleVerified!==true&&state.ttAttendance.access?.moduleRole!=='Supervisor')return;
   if(next==='team'&&state.roleVerified!==true)return;
+  if(next==='employees'&&!canViewTimeTrackerEmployees(state.ttAttendance.access))return;
   if(next!=='ot')state.ttOtModalOpen=false;
   if(next===state.ttView)return;
   state.ttGeoPromptVisible=false;state.ttGeoMessage='';
