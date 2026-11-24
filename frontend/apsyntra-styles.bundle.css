@@ -17674,6 +17674,11 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-ot-refer
 .oi-activity li { overflow-wrap:anywhere; }
 .oi-activity time { font-size:12px; }
 
+.oi-bulk-toolbar,.oi-page-controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:8px 0; }
+.oi-bulk-toolbar span,.oi-page-controls span { font-size:13px; }
+.oi-table-scroll input[type="checkbox"] { width:18px; height:18px; accent-color:#2874ce; }
+.oi-filters small { flex-basis:100%; font-size:12px; }
+
 /* frontend/tradelink-reference-ui.css */
 /* CP-TL-03D — Reference-led TradeLink surface, scoped to its portal only.
    Visual authority: user's 2026-11-06 source screenshots (six document modules).

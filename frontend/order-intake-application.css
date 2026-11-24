@@ -63,3 +63,8 @@
 .oi-activity { display:grid; gap:10px; padding-inline-start:24px; margin:0; }
 .oi-activity li { overflow-wrap:anywhere; }
 .oi-activity time { font-size:12px; }
+
+.oi-bulk-toolbar,.oi-page-controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:8px 0; }
+.oi-bulk-toolbar span,.oi-page-controls span { font-size:13px; }
+.oi-table-scroll input[type="checkbox"] { width:18px; height:18px; accent-color:#2874ce; }
+.oi-filters small { flex-basis:100%; font-size:12px; }

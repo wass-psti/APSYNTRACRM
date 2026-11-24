@@ -5,10 +5,13 @@ import {syncFuelTrans} from './fueltrans-lazy.js';
 import {OrderIntakeOperationalClient as OrderIntakeRegistryClient} from './order-intake-operational-client.js';
 import {recipientFields,notificationInbox} from './order-intake-notifications.js';
 import {nativeEditable,orderEditorDraft,orderEditorMarkup,updateOrderEditorPreview,createOrderEditorSave} from './order-intake-editor.js';
+import {orderTablePage,orderExportCsv,compareOrderDecimals,decimalParts} from './order-intake-search.js';
+import {runOrderBulk,validateBulkRequest} from './order-intake-bulk.js';
+import {bulkFields} from './order-intake-bulk-ui.js';
 import {lifecycleActions,lifecycleFields,saveLifecycle,bindWorkflowDrag} from './order-intake-lifecycle.js';
 import {readOrderIntakePreference,saveOrderIntakePreference} from './order-intake-preference.js';
 import {parseOrderIntakeRoute,orderIntakeHref} from './order-intake-route.js';
-import {createOrderIntakeReadState} from './order-intake-read-state.js';
+import {createOrderIntakeReadState,filterOrderIntakeRows} from './order-intake-read-state.js';
 import {renderOrderIntake} from './order-intake-ui.js';
 import {applySearchVisibility} from './interaction-search.js';
 import {createFrameCoalescer} from './frame-coalescer.js';
@@ -629,13 +632,17 @@ const orderIntakeArchived=createOrderIntakeReadState({
  isCurrent:orderIntakeCurrent,onChange:()=>render()
 });
 const currentOrderIntakeRead=()=>orderIntakeRoute?.section==='archived'?orderIntakeArchived:orderIntakeRead;
-const completeOrderIntakeView=()=>['dashboard','workflow'].includes(orderIntakeRoute?.section);
+const completeOrderIntakeView=()=>Boolean(orderIntakeRoute);
 let orderIntakeLifecycleBusy=false;
+const orderIntakeTable={page:0,selected:new Set(),results:[],busy:false};
+function resetOrderIntakeTable(){orderIntakeTable.page=0;orderIntakeTable.selected.clear();orderIntakeTable.results=[];orderIntakeTable.busy=false;}
+function orderIntakeMatching(){const snapshot=currentOrderIntakeRead().read(orderIntakeScope());return filterOrderIntakeRows(snapshot?.rows||[],orderIntakeRoute?.filters);}
+function orderIntakeTableReady(){const scope=orderIntakeScope(),snapshot=currentOrderIntakeRead().read(scope);return orderIntakeCurrent(scope)&&snapshot&&!snapshot.busy&&!snapshot.hasMore&&!snapshot.error&&!orderIntakeTable.busy&&!orderIntakeLifecycleBusy;}
 let resetOrderIntakeDrag=()=>{};
 function clearOrderIntake(){
  if(modal?.dataset.oiEditor)hideModal();
  orderIntakeEditorGeneration++;orderIntakeCreateSave=null;orderIntakeCreateScope=null;
- orderIntakeRead.clear();orderIntakeArchived.clear();orderIntakeLifecycleBusy=false;resetOrderIntakeDrag();orderIntakeRecordRun++;orderIntakeRecord=null;orderIntakeRoute=null;
+ orderIntakeRead.clear();orderIntakeArchived.clear();resetOrderIntakeTable();orderIntakeLifecycleBusy=false;resetOrderIntakeDrag();orderIntakeRecordRun++;orderIntakeRecord=null;orderIntakeRoute=null;
 }
 async function loadOrderIntakeRecord(route,scope){
  const run=++orderIntakeRecordRun;
@@ -656,7 +663,7 @@ async function loadOrderIntakeRecord(route,scope){
 }
 function openOrderIntakeEditor(edit=false){
  const scope=orderIntakeScope();
- if(!orderIntakeCurrent(scope))return;
+ if(!orderIntakeCurrent(scope)||orderIntakeTable.busy)return;
  const row=edit?orderIntakeRecord?.row:null;
  if(edit&&!nativeEditable(row))return;
  const client=new OrderIntakeRegistryClient({auth,api:db,workspaceId:scope.split('|')[1]});
@@ -678,7 +685,7 @@ function openOrderIntakeEditor(edit=false){
    if(orderIntakeRoute?.recordId===saved.id){
     await loadOrderIntakeRecord(orderIntakeRoute,scope);
    }else location.hash=orderIntakeHref('all-orders',{},saved.id);
-   await orderIntakeRead.refresh(scope);
+   await orderIntakeRead.refresh(scope,true);
   }catch(error){
    const message=errorMessage(error);
    feedback.textContent=message.includes('ORDER_INTAKE_REVISION_CONFLICT')?'This order changed elsewhere. Close, refresh and reopen it before editing again.':message;
@@ -693,7 +700,7 @@ function openOrderIntakeEditor(edit=false){
 }
 function openOrderIntakeLifecycle(action,id,target=null){
  const scope=orderIntakeScope(),generation=orderIntakeEditorGeneration;
- if(!orderIntakeCurrent(scope)||orderIntakeLifecycleBusy)return;
+ if(!orderIntakeCurrent(scope)||orderIntakeLifecycleBusy||orderIntakeTable.busy)return;
  const row=orderIntakeRecord?.row?.id===id?orderIntakeRecord.row:currentOrderIntakeRead().read(scope)?.rows.find(item=>item.id===id);
  if(!lifecycleActions(row)[action])return;
  const client=new OrderIntakeRegistryClient({auth,api:db,workspaceId:scope.split('|')[1]});
@@ -776,6 +783,49 @@ async function openOrderIntakeInbox(){
   finally{busy=false;}
  });
  await load();
+}
+function openOrderIntakeBulk(action){
+ if(!orderIntakeTableReady())return;
+ const scope=orderIntakeScope(),generation=orderIntakeEditorGeneration;
+ const rows=orderIntakeMatching().filter(row=>orderIntakeTable.selected.has(row.id));
+ if(!rows.length)return;
+ const client=new OrderIntakeRegistryClient({auth,api:db,workspaceId:scope.split('|')[1]});
+ const current=()=>generation===orderIntakeEditorGeneration&&orderIntakeCurrent(scope);
+ let view;
+ openModal('Bulk '+(action==='details'?'edit native details':action),bulkFields(action,rows),async fd=>{
+  const values=Object.fromEntries(fd);
+  validateBulkRequest(action,values);
+  if(!orderIntakeTableReady())throw Error('Refresh the complete order list before starting a batch.');
+  orderIntakeTable.busy=true;orderIntakeTable.results=[];render();
+  try{
+   const results=await runOrderBulk({client,rows,action,values,isCurrent:()=>current()&&modal===view,onProgress:results=>{
+    if(current()&&modal===view)view.querySelector('[data-oi-bulk-progress]').textContent=results.length+' of '+rows.length+' processed';
+   }});
+   if(!current())return;
+   orderIntakeTable.results=results;orderIntakeTable.selected.clear();
+   if(orderIntakeRoute.section==='archived')orderIntakeRead.clear();else orderIntakeArchived.clear();
+   await currentOrderIntakeRead().refresh(scope,true);
+   if(orderIntakeRoute.recordId)await loadOrderIntakeRecord(orderIntakeRoute,scope);
+   if(current())toast(results.filter(r=>r.state==='verified').length+' orders verified. Review bulk operation results.');
+  }finally{if(current()){orderIntakeTable.busy=false;render();}}
+ },{submitLabel:'Confirm batch',successMessage:''});
+ view=modal;view.dataset.oiEditor='true';
+}
+function handleOrderIntakeTableAction(action){
+ if(orderIntakeTable.busy)return;
+ const matching=orderIntakeMatching(),page=orderTablePage(matching,orderIntakeTable.page);
+ if(action==='prev-page'||action==='next-page'){orderIntakeTable.page=page.page+(action==='next-page'?1:-1);render();return;}
+ if(action==='clear-selection'){orderIntakeTable.selected.clear();render();return;}
+ if(!orderIntakeTableReady())return;
+ if(action==='select-page'||action==='select-all'){
+  for(const row of action==='select-page'?page.rows:matching)orderIntakeTable.selected.add(row.id);
+  render();return;
+ }
+ if(action==='export'){
+  const url=URL.createObjectURL(new Blob([orderExportCsv(matching)],{type:'text/csv;charset=utf-8'}));
+  const link=document.createElement('a');link.href=url;link.download='order-intake-matching.csv';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);return;
+ }
+ if(action.startsWith('bulk-'))openOrderIntakeBulk(action.slice(5));
 }
 let avatarHydrationPromise=Promise.resolve({attempted:0,loaded:0,failed:0,stale:0});
 let ttClockTimer=null;
@@ -2310,7 +2360,7 @@ function render(){
   const scope=orderIntakeScope();
   const snapshot=orderIntakeCurrent(scope)?currentOrderIntakeRead().read(scope):null;
   shell(!snapshot||(snapshot.busy&&!snapshot.rows?.length)?sharedApplicationLoading():renderOrderIntake({route:orderIntakeRoute,snapshot,
-   record:orderIntakeCurrent(scope)?orderIntakeRecord:null}));
+   record:orderIntakeCurrent(scope)?orderIntakeRecord:null,tableState:orderIntakeTable}));
  }
  else if(state.view==='tradelink')shell(renderTradeLinkRouteUnavailable(state.error));
  else if(state.view==='settings')shell(settingsPage());
@@ -5867,6 +5917,7 @@ async function onRoute(){
   if(state.view!=='order-intake'){clearOrderIntake();routeSerial++;stopTimeTrackerClock();}
   state.view='order-intake';state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
   state.boardManage=false;state.edit=false;state.error='';
+  if(orderIntakeRoute?.section!==nextRoute.section||JSON.stringify(orderIntakeRoute?.filters)!==JSON.stringify(nextRoute.filters)){orderIntakeTable.page=0;orderIntakeTable.selected.clear();}
   orderIntakeRoute=nextRoute;
   const scope=orderIntakeScope();
   resetOrderIntakeDrag();
@@ -13401,12 +13452,15 @@ root.addEventListener('click',event=>{
  if(orderAction&&state.view==='order-intake'&&orderIntakeRoute){
   event.preventDefault();
   const scope=orderIntakeScope();
+  if(['select-page','select-all','clear-selection','prev-page','next-page','export','bulk-status','bulk-details','bulk-archive','bulk-restore'].includes(orderAction.dataset.oiAction)){handleOrderIntakeTableAction(orderAction.dataset.oiAction);return;}
+  if(orderIntakeTable.busy)return;
   if(orderAction.dataset.oiAction==='create')openOrderIntakeEditor();
   else if(orderAction.dataset.oiAction==='edit')openOrderIntakeEditor(true);
   else if(orderAction.dataset.oiAction==='recipient')void openOrderIntakeRecipient(orderAction.dataset.oiId);
   else if(orderAction.dataset.oiAction==='inbox')void openOrderIntakeInbox();
   else if(['status','archive','restore'].includes(orderAction.dataset.oiAction))openOrderIntakeLifecycle(orderAction.dataset.oiAction,orderAction.dataset.oiId);
   else if(orderAction.dataset.oiAction==='refresh'){
+   orderIntakeTable.selected.clear();
    void currentOrderIntakeRead().refresh(scope,completeOrderIntakeView());
    void loadOrderIntakeRecord(orderIntakeRoute,scope);
   }else if(orderAction.dataset.oiAction==='more')void currentOrderIntakeRead().more(scope);
@@ -13668,6 +13722,15 @@ function syncTradeLinkFinanceInput(event){
 }
 root.addEventListener('change',event=>{
  if(syncTradeLinkFinanceInput(event))return;
+ const select=event.target.closest?.('[data-oi-select]');
+ if(select&&state.view==='order-intake'){
+  const id=select.dataset.oiSelect;
+  if(orderIntakeTableReady()&&orderIntakeMatching().some(row=>row.id===id)){
+   if(select.checked)orderIntakeTable.selected.add(id);else orderIntakeTable.selected.delete(id);
+   render();[...root.querySelectorAll('[data-oi-select]')].find(node=>node.dataset.oiSelect===id)?.focus();
+  }
+  return;
+ }
  const inline=event.target?.closest?.('[data-tb-inline-status]');
  if(inline){
   const scope=talkBoxState.scope;
@@ -13950,7 +14013,11 @@ root.addEventListener('change',event=>{
 root.addEventListener('submit',event=>{
  if(event.target.id==='oi-filter-form'&&state.view==='order-intake'&&orderIntakeRoute){
   event.preventDefault();
-  location.hash=orderIntakeHref(orderIntakeRoute.section,Object.fromEntries(new FormData(event.target)));
+  const filters=Object.fromEntries(new FormData(event.target));
+  for(const key of ['minAmount','maxAmount']){filters[key]=String(filters[key]||'').trim();if(filters[key]&&!decimalParts(filters[key])){toast('Enter a valid decimal amount.',true);return;}}
+  if(filters.minAmount&&filters.maxAmount&&compareOrderDecimals(filters.minAmount,filters.maxAmount)>0){toast('Minimum amount cannot exceed maximum amount.',true);return;}
+  if(filters.from&&filters.to&&filters.from>filters.to){toast('Select a valid received date range.',true);return;}
+  location.hash=orderIntakeHref(orderIntakeRoute.section,filters);
   return;
  }
  if(event.target.id==='tt-attendance-admin-form'){
