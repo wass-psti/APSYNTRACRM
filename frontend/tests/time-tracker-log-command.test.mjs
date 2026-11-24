@@ -35,13 +35,13 @@ test('Hero counters use only selected, authorized Log records',()=>{
  assert.equal(summary.today,1);
  assert.equal(summary.completed,1);
  assert.equal(summary.active,1);
- assert.match(html,/>2<\/strong><span>Sessions in selected period<\/span>/);
- assert.match(html,/>1<\/strong><span>Today<\/span>/);
- assert.match(html,/>1<\/strong><span>Completed<\/span>/);
- assert.match(html,/>1<\/strong><span>Active<\/span>/);
+ assert.match(html,/>All sessions<span>2<\/span>/);
+ assert.match(html,/>Today<span>1<\/span>/);
+ assert.match(html,/>Completed<span>1<\/span>/);
+ assert.match(html,/>Active<span>1<\/span>/);
  assert.match(html,/authorized sessions/);
  const filtered=render({filters:{period:'today'}});
- assert.match(filtered,/>1<\/strong><span>Sessions in selected period<\/span>/);
+ assert.match(filtered,/id="tt-log-visible-count">1<\/span>/);
  assert.equal(filterTimeTrackerLogRows(records,{period:'today'},now).length,1);
 });
 
@@ -72,9 +72,9 @@ test('Flat styling is scoped, adaptive and dark-mode aware',()=>{
  assert.doesNotMatch(css,/@keyframes|animation:.*infinite|will-change|@import|url\(https?:/);
 });
 
-test('Record list has five compact columns, initials and a single live results count',()=>{
+test('Record list has five mockup columns plus selection, initials and a single live results count',()=>{
  const html=render();
- assert.match(html,/<th>Employee<\/th><th>Clock In<\/th><th>Clock Out<\/th><th>Location<\/th><th>Status<\/th>/);
+ assert.match(html,/<th>Clock In<\/th><th>Employee<\/th><th>Working Location<\/th><th>Department<\/th><th>Clock Out<\/th>/);
  assert.match(html,/class="tt-log-avatar" aria-hidden="true">SE<\/span>/);
  assert.equal((html.match(/id="tt-log-visible-count"/g)||[]).length,1);
  assert.ok(html.indexOf('tt-log-table')<html.indexOf('tt-log-secondary-analytics'));
@@ -124,4 +124,15 @@ test('Pages includes new style after Overview without requiring a new build tool
  assert.match(adminCss,/@media\(max-width:650px\)/);
  assert.match(smoke,/'frontend\/time-tracker-log-command\.css'/);
  assert.match(index,/script type="module" src="\.\/frontend\/app\.js"/);
+});
+
+test('Reference Log filters combine signed view, department, location, and inclusive Manila dates',()=>{
+ assert.deepEqual(filterTimeTrackerLogRows(records,{view:'Active',department:'Engineering',period:'custom',start:'2026-11-04',end:'2026-11-04'},now).map(r=>r.id),['a']);
+ assert.deepEqual(filterTimeTrackerLogRows(records,{view:'Completed',location:'Local Field Works',period:'last7'},now).map(r=>r.id),['b']);
+ assert.equal(filterTimeTrackerLogRows(records,{department:'Finance'},now).length,0);
+ const html=render({adminFullAccess:true,selectedIds:['a']});
+ for(const token of ['tt-log-filter-popover','tt-log-department','tt-log-filter-apply','tt-log-filter-reset','tt-log-row-select','aria-checked="mixed"','tt-log-reference-header','tt-log-row-date'])assert.ok(html.includes(token),token);
+ assert.match(html,/09:00:00/);
+ assert.match(html,/Nov 4, 2026/);
+ assert.doesNotMatch(render(),/data-action="tt-log-row-select"/);
 });

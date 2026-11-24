@@ -30,8 +30,8 @@ test('reference Log sections render on the existing signed history',()=>{
   'Before 8 AM','Late Today','Still Working','No Time-Out',
   'Manual Edits','Stagnant (14h+)'
  ])assert.ok(html.includes(heading),heading);
- assert.match(html,/October 28/);
- assert.match(html,/November 2/);
+ assert.match(html,/Oct 28, 2026/);
+ assert.match(html,/Nov 2, 2026/);
  assert.match(html,/Employee One/);
  assert.match(html,/Employee Two/);
  assert.match(html,/class="tt-log-detail"/);
