@@ -13,7 +13,8 @@ const active={
  location:'Office-Base Duty',department:'Engineering',creditedMs:null
 };
 const access={moduleRole:'IT Administrator',attendanceWritesAccepted:true};
-const at=new Date('2026-11-19T06:55:00.000Z');
+// 3:55 PM PHT: 7h55m gross, 6h55m credited after the lunch break.
+const at=new Date('2026-11-19T07:55:00.000Z');
 
 test('active elapsed timer is based on signed clock-in time, not local storage',()=>{
  const elapsed=timeTrackerSessionElapsed(active.clockIn,at);
