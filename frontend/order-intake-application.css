@@ -68,3 +68,11 @@
 .oi-bulk-toolbar span,.oi-page-controls span { font-size:13px; }
 .oi-table-scroll input[type="checkbox"] { width:18px; height:18px; accent-color:#2874ce; }
 .oi-filters small { flex-basis:100%; font-size:12px; }
+
+.oi-confirmation-form { display:grid; gap:12px; min-width:0; }
+.oi-confirmation-form label { display:grid; gap:4px; min-width:0; }
+.oi-confirmation-form input,.oi-confirmation-form select,.oi-confirmation-form textarea { width:100%; box-sizing:border-box; min-width:0; }
+.oi-confirmation-form input[type="checkbox"] { width:18px; }
+.oi-confirmation-item { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; border:1px solid var(--border,#ccd5df); padding:10px; min-width:0; margin:0 0 8px; }
+.oi-confirmation-item label:first-of-type { grid-column:1/-1; }
+@media(max-width:600px){.oi-confirmation-item{grid-template-columns:minmax(0,1fr);}}

@@ -3,6 +3,8 @@ import {TradeLinkRecoveryController} from './tradelink/draft-recovery-controller
 import {captureRecoveryFields} from './tradelink/draft-recovery-state.js';
 import {syncFuelTrans} from './fueltrans-lazy.js';
 import {OrderIntakeOperationalClient as OrderIntakeRegistryClient} from './order-intake-operational-client.js';
+import {buildConfirmation} from './order-intake-confirmation.js';
+import {confirmationFields,bindConfirmationForm,readConfirmationForm} from './order-intake-confirmation-ui.js';
 import {recipientFields,notificationInbox} from './order-intake-notifications.js';
 import {nativeEditable,orderEditorDraft,orderEditorMarkup,updateOrderEditorPreview,createOrderEditorSave} from './order-intake-editor.js';
 import {orderTablePage,orderExportCsv,compareOrderDecimals,decimalParts} from './order-intake-search.js';
@@ -826,6 +828,36 @@ function handleOrderIntakeTableAction(action){
   const link=document.createElement('a');link.href=url;link.download='order-intake-matching.csv';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);return;
  }
  if(action.startsWith('bulk-'))openOrderIntakeBulk(action.slice(5));
+}
+function openOrderIntakeConfirmation(){
+ const scope=orderIntakeScope(),row=orderIntakeRecord?.row,generation=orderIntakeEditorGeneration;
+ if(!row||!orderIntakeCurrent(scope)||orderIntakeTable.busy)return;
+ const client=new OrderIntakeRegistryClient({auth,api:db,workspaceId:scope.split('|')[1]});
+ let view,prepared;
+ const current=()=>generation===orderIntakeEditorGeneration&&orderIntakeCurrent(scope)&&orderIntakeRoute?.recordId===row.id&&modal===view;
+ openModal('Purchase order confirmation',confirmationFields(row),async()=>{
+  if(!current())throw Error('Order context changed. Reopen the confirmation.');
+  const form=view.querySelector('form'),doc=buildConfirmation(row,readConfirmationForm(form,row));
+  const serialized=JSON.stringify(doc);
+  if(prepared&&prepared.serialized!==serialized&&prepared.auditAttempted)throw Error('Previous PDF audit outcome may be uncertain. Retry unchanged fields or reopen the confirmation.');
+  const latest=await client.detail(row.id,{includeArchived:true});
+  if(!current()||latest.revision!==row.revision||latest.record_kind!==row.record_kind)throw Error('Order changed. Refresh the order and reopen the confirmation.');
+  const engine=await import('./order-intake-confirmation-pdf.js');
+  if(!prepared||prepared.serialized!==serialized){
+   const logo=await engine.loadConfirmationLogo(doc.entity);
+   const blob=await engine.createConfirmationPdf(doc,logo);
+   prepared={serialized,blob,sha256:await engine.confirmationDigest(blob),id:crypto.randomUUID(),auditAttempted:false};
+  }
+  if(!current())throw Error('Order context changed.');
+  prepared.auditAttempted=true;
+  await client.recordConfirmation(doc,prepared.id,prepared.sha256);
+  if(!current())return;
+  const url=URL.createObjectURL(prepared.blob);
+  const link=document.createElement('a');link.href=url;link.download=engine.confirmationFilename(doc);document.body.append(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+ },{submitLabel:'Generate and download PDF',successMessage:'Confirmation PDF generated; audit receipt verified.'});
+ view=modal;view.dataset.oiEditor='true';view.querySelector('.modal')?.classList.add('oi-editor-modal');
+ bindConfirmationForm(view.querySelector('form'),row);
 }
 let avatarHydrationPromise=Promise.resolve({attempted:0,loaded:0,failed:0,stale:0});
 let ttClockTimer=null;
@@ -13456,6 +13488,7 @@ root.addEventListener('click',event=>{
   if(orderIntakeTable.busy)return;
   if(orderAction.dataset.oiAction==='create')openOrderIntakeEditor();
   else if(orderAction.dataset.oiAction==='edit')openOrderIntakeEditor(true);
+  else if(orderAction.dataset.oiAction==='confirmation')openOrderIntakeConfirmation();
   else if(orderAction.dataset.oiAction==='recipient')void openOrderIntakeRecipient(orderAction.dataset.oiId);
   else if(orderAction.dataset.oiAction==='inbox')void openOrderIntakeInbox();
   else if(['status','archive','restore'].includes(orderAction.dataset.oiAction))openOrderIntakeLifecycle(orderAction.dataset.oiAction,orderAction.dataset.oiId);
