@@ -1162,6 +1162,46 @@ try {
   assert.ok(referenceLayout.centerOffset <= 2);
   assert.equal(referenceLayout.employeeTab, false);
 
+  const sidebarStates = await page.evaluate(async () => {
+    const { syncTimeTrackerSidebar } =
+      await import("/frontend/time-tracker-ui.js");
+    const shell = document.querySelector("#app .shell");
+    const sidebar = shell.querySelector(".aps-sidebar");
+    const parent = sidebar.querySelector('a[href="#/time-tracker"]');
+    const nav = sidebar.querySelector(".tt-navigation");
+    const measure = () => ({
+      width: sidebar.getBoundingClientRect().width,
+      background: getComputedStyle(sidebar).backgroundColor,
+      radius: getComputedStyle(parent).borderRadius,
+      fontSize: getComputedStyle(parent).fontSize,
+      grid: getComputedStyle(shell).gridTemplateColumns,
+    });
+    const open = measure();
+    syncTimeTrackerSidebar(shell, {
+      enabled: true,
+      expanded: true,
+      submenuOpen: false,
+    });
+    const closed = measure();
+    const hidden = getComputedStyle(nav).display === "none";
+    const expanded = parent.getAttribute("aria-expanded");
+    syncTimeTrackerSidebar(shell, {
+      enabled: true,
+      expanded: true,
+      submenuOpen: true,
+    });
+    const reopened = getComputedStyle(nav).display !== "none";
+    syncTimeTrackerSidebar(shell, { enabled: false, expanded: true });
+    const outside = measure();
+    syncTimeTrackerSidebar(shell, { enabled: true, expanded: true });
+    return { open, closed, outside, hidden, expanded, reopened };
+  });
+  assert.deepEqual(sidebarStates.open, sidebarStates.closed);
+  assert.deepEqual(sidebarStates.open, sidebarStates.outside);
+  assert.equal(sidebarStates.hidden, true);
+  assert.equal(sidebarStates.expanded, "false");
+  assert.equal(sidebarStates.reopened, true);
+
   await page.evaluate(async () => {
     const { syncTimeTrackerSidebar } =
       await import("/frontend/time-tracker-ui.js");
