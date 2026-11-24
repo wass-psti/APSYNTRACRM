@@ -208,7 +208,8 @@ import {manualAttendanceToday} from './apps/TimeTracker/time-tracker-manual-atte
 import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
 import {TT_BOARD_GPS_PROJECTION_ENABLED,loadTimeTrackerBoardGps,renderTimeTrackerBoardGps} from './time-tracker-board-projection.js';
 import {renderTimeTrackerMainGroup} from './time-tracker-main-group.js';
-import {findTimeTrackerAttendanceBoard,TIMETRACKER_APPLICATION_ROUTE,canViewTimeTrackerEmployees} from './time-tracker-application.js';
+import {findTimeTrackerAttendanceBoard,TIMETRACKER_APPLICATION_ROUTE} from './time-tracker-application.js';
+import {canViewTimeTrackerEmployees} from './time-tracker-application.js';
 import {FUELTRANS_APPLICATION_ROUTE,FUELTRANS_BOARD_ID,fuelTransApplicationHref,parseFuelTransApplicationRoute} from './fueltrans-application-route.js';
 import {openTimeTrackerAddDepartmentModal} from './apps/TimeTracker/time-tracker-add-department-modal.js';
 import {TimeTrackerOjtClient,isEligibleTimeTrackerSharedOjtAccount,TIMETRACKER_SHARED_OJT_USER_ID} from './apps/TimeTracker/time-tracker-ojt.js';
