@@ -2,7 +2,7 @@
  * Only trust central signed workspace/module/board access established by native client.
  * A broad module role cannot elevate another role or reveal raw GPS/audit payloads.
  */
-import {TT_LOCATIONS,creditedAttendanceRecordMs,manilaClockMinutes} from './time-tracker-policy.js';
+import {TT_LOCATIONS,creditedAttendanceRecordMs,completedLogWorkDurationMs,manilaClockMinutes} from './time-tracker-policy.js';
 import {TT_TEAM_OVERVIEW_ROLES} from './time-tracker-overview.js';
 
 const isObject=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -58,7 +58,8 @@ export function projectTimeTrackerLog({value,directory=[],userId,moduleRole}={})
    department:text(record.clockIn.department||'Unassigned',80),
    location,status,classification,
    workNote:typeof record.clockIn.workNote==='string'?record.clockIn.workNote.slice(0,500):'',
-   creditedMs:outTime?creditedAttendanceRecordMs(record,inTime,outTime):null
+   creditedMs:outTime?creditedAttendanceRecordMs(record,inTime,outTime):null,
+   workDurationMs:outTime?completedLogWorkDurationMs(inTime,outTime,record.creditedMsOverride):null
   }));
  }
  rows.sort((a,b)=>Date.parse(b.clockIn)-Date.parse(a.clockIn));

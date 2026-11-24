@@ -2,7 +2,7 @@ import {renderManualAttendanceEditor} from './apps/TimeTracker/time-tracker-manu
 import {formatTimeTrackerDurationMs} from './time-tracker-duration-format.js';
 import {formatTimeTrackerClock,formatTimeTrackerShortDateTime,formatTimeTrackerDateTime} from './time-tracker-time-format.js';
 /** Native signed TimeTracker Log. System Admin mutations use the dedicated signed RPC; other roles remain read-only. */
-import {TT_LOCATIONS,creditedAttendanceMs,manilaClockMinutes} from './time-tracker-policy.js';
+import {TT_LOCATIONS,creditedAttendanceMs,completedLogWorkDurationMs,manilaClockMinutes} from './time-tracker-policy.js';
 import {filterMyAttendancePeriod} from './time-tracker-native.js';
 import {manilaDay} from './time-tracker-overview.js';
 import {mapFrame} from './time-tracker-map.js';
@@ -462,26 +462,13 @@ export function startTimeTrackerLogColumnResize(root){
  };
 }
 
-/** Work duration uses the same unpaid-break calculation as Clock.
- * A signed completed record is authoritative, including admin overrides.
- */
-export function timeTrackerLogWorkDuration(row,now=new Date()){
- if(!row||!validTime(row.clockIn))return '—';
- if(row.status==='Active'&&!row.clockOut)
-  return durationLabel(creditedAttendanceMs(row.clockIn,now));
- if(validTime(row.clockOut)&&Number.isFinite(row.creditedMs)&&row.creditedMs>=0)
-  return durationLabel(row.creditedMs);
- return '—';
-}
-
-/** Refresh only active duration text; no data write or independent status claim. */
-export function syncTimeTrackerLogDurations(root,now=new Date()){
- for(const cell of root?.querySelectorAll?.('[data-tt-log-active-duration]')||[]){
-  const value=timeTrackerLogWorkDuration({
-   clockIn:cell.dataset.ttLogActiveDuration,clockOut:null,status:'Active'
-  },now);
-  if(cell.textContent!==value)cell.textContent=value;
- }
+/** Show only finalized Work Duration in the attendance Log. */
+export function timeTrackerLogWorkDuration(row){
+ if(!row||row.status!=='Completed'||!validTime(row.clockIn)||!validTime(row.clockOut)||
+    Date.parse(row.clockOut)<Date.parse(row.clockIn))return '';
+ const ms=Number.isSafeInteger(row.workDurationMs)&&row.workDurationMs>=0?
+  row.workDurationMs:completedLogWorkDurationMs(row.clockIn,row.clockOut);
+ return durationLabel(ms);
 }
 
 const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
@@ -504,9 +491,8 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
    '<span class="tt-log-row-location" title="'+esc(r.location||'Unspecified')+'">'+esc(locationLabel(r.location||'Unspecified'))+'</span>'+
    '<span class="tt-log-row-department" title="'+esc(r.isOjt?'OJT intern · Shared login':r.department||'Unassigned')+'">'+esc(r.department||'Unassigned')+'</span>'+
    '<span class="tt-log-row-out" title="'+esc(validTime(r.clockOut)?phtDate(r.clockOut):'')+'">'+esc(validTime(r.clockOut)?formatTimeTrackerClock(r.clockOut,{seconds:true}):'—')+'</span>'+
-   '<span class="tt-log-row-duration" title="Credited working duration (unpaid break excluded)"'+
-    (state==='Active'&&!r.clockOut?' data-tt-log-active-duration="'+esc(r.clockIn)+'"':'')+'>'+
-    esc(timeTrackerLogWorkDuration(r,now))+'</span><span class="tt-log-row-status"><span class="tt-log-badge '+(done?'tt-log-badge-done':
+   '<span class="tt-log-row-duration" title="Completed work duration; short sessions have no lunch deduction">'+
+    esc(timeTrackerLogWorkDuration(r))+'</span><span class="tt-log-row-status"><span class="tt-log-badge '+(done?'tt-log-badge-done':
     state==='Active'?'tt-log-badge-active':'tt-log-badge-unknown')+'">'+esc(state)+'</span></span>'+
   '</summary>'+(gpsOptions.expandedRecordIds?.includes(r.id)?'':safeSessionDetails(r,now,gpsOptions))+'</details></td></tr>';
 };

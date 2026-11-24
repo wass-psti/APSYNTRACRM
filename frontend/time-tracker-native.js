@@ -1,5 +1,5 @@
 import {isTimeTrackerHomeNoteRequired} from './time-tracker-offsite-note.js';
-import {TT_LOCATIONS,creditedAttendanceMs,creditedAttendanceRecordMs,manilaClockMinutes,TT_PHT_OFFSET_MS} from './time-tracker-policy.js';
+import {TT_LOCATIONS,creditedAttendanceMs,creditedAttendanceRecordMs,completedLogWorkDurationMs,manilaClockMinutes,TT_PHT_OFFSET_MS} from './time-tracker-policy.js';
 export {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
 import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-overview.js';
 import {projectTimeTrackerLog} from './time-tracker-history.js';
@@ -60,6 +60,7 @@ export function projectOwnAttendance(value,userId){
    workNote:typeof x.clockIn.workNote==='string'?x.clockIn.workNote.slice(0,500):'',
    status:label,classification:attendanceClassification(x),
    creditedMs:out?creditedAttendanceRecordMs(x,x.clockIn.timestamp,out.timestamp):null,
+   workDurationMs:out?completedLogWorkDurationMs(x.clockIn.timestamp,out.timestamp,x.creditedMsOverride):null,
    automatic:out?.automatic===true
   });
  });
