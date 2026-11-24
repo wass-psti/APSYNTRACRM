@@ -79,6 +79,7 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/dark-attendance-admin.css",
  "frontend/dark-workspace-account-completion.css",
  "frontend/dark-simplified-system.css",
- "frontend/board-overhaul-experience.css"
+ "frontend/board-overhaul-experience.css",
+ "frontend/apps/TimeTracker/time-tracker-reference-shell.css"
 ]);
 export const STYLE_BUNDLE="frontend/apsyntra-styles.bundle.css";

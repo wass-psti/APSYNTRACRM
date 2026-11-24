@@ -1103,6 +1103,76 @@ try {
   );
   await checkAccessibility("TimeTracker mobile view");
 
+  // Render the real standalone shell with production CSS, not just the
+  // isolated legacy component. Catch missing styles, horizontal overflow,
+  // duplicate headers, and a fallback font before this redesign is merged.
+  await page.setViewportSize({ width: 1440, height: 960 });
+  const referenceLayout = await page.evaluate(async (result) => {
+    const { renderTimeTrackerNative, syncTimeTrackerSidebar } =
+      await import("/frontend/time-tracker-ui.js");
+    const app = document.querySelector("#app");
+    app.innerHTML =
+      '<div class="shell"><aside class="sidebar aps-sidebar"><div class="sidebar-nav-scroll"><nav class="nav-list"><a class="nav-link active" href="#/time-tracker">TimeTracker</a></nav></div></aside><main class="main aps-board-shell aps-time-tracker-shell"><header class="topbar"><div class="breadcrumb"><strong>TimeTracker</strong></div></header><div class="main-content"></div></main></div>';
+    const shell = app.querySelector(".shell");
+    shell.querySelector(".main-content").innerHTML = renderTimeTrackerNative({
+      result,
+      referenceShell: true,
+      displayName: "Example Employee",
+      now: new Date("2026-11-24T09:15:00Z"),
+    });
+    syncTimeTrackerSidebar(shell, { enabled: true, expanded: true });
+    const faces = await document.fonts.load("600 38px Montserrat");
+    const nav = shell.querySelector(".aps-sidebar .tt-navigation-scroll");
+    const tabs = [...nav.querySelectorAll(".tt-nav-tab")];
+    const greeting = shell.querySelector(".tt-reference-welcome");
+    const card = shell.querySelector(".tt-clock-compact");
+    const main = shell.querySelector("main");
+    const bounds = (node) => node.getBoundingClientRect();
+    return {
+      header: Boolean(shell.querySelector(".tt-app-header")),
+      greeting: greeting.textContent,
+      font: getComputedStyle(greeting).fontFamily,
+      loadedFont: faces.some((face) => face.status === "loaded"),
+      textAlign: getComputedStyle(greeting).textAlign,
+      navDisplay: getComputedStyle(nav).display,
+      overflow: nav.scrollWidth - nav.clientWidth,
+      vertical: tabs.every(
+        (tab, i) => i === 0 || bounds(tab).top > bounds(tabs[i - 1]).top,
+      ),
+      cardWidth: bounds(card).width,
+      centerOffset: Math.abs(
+        bounds(card).left + bounds(card).width / 2 -
+          (bounds(main).left + bounds(main).width / 2),
+      ),
+      employeeTab: tabs.some((tab) => tab.dataset.target === "employees"),
+    };
+  }, verifiedResult);
+  assert.equal(referenceLayout.header, false);
+  assert.equal(referenceLayout.greeting, "Good evening, Example Employee!");
+  assert.match(referenceLayout.font, /^Montserrat/);
+  assert.equal(referenceLayout.loadedFont, true);
+  assert.equal(referenceLayout.textAlign, "center");
+  assert.equal(referenceLayout.navDisplay, "grid");
+  assert.ok(referenceLayout.overflow <= 1);
+  assert.equal(referenceLayout.vertical, true);
+  assert.ok(Math.abs(referenceLayout.cardWidth - 462) <= 1);
+  assert.ok(referenceLayout.centerOffset <= 2);
+  assert.equal(referenceLayout.employeeTab, false);
+
+  await page.evaluate(async () => {
+    const { syncTimeTrackerSidebar } =
+      await import("/frontend/time-tracker-ui.js");
+    syncTimeTrackerSidebar(document.querySelector("#app .shell"), {
+      enabled: true,
+      expanded: false,
+    });
+  });
+  assert.equal(
+    await page.locator(".main-content .tt-navigation").count(),
+    1,
+    "headerless Clock must retain navigation when the sidebar collapses",
+  );
+
   assert.deepEqual(
     pageErrors,
     [],
