@@ -88,6 +88,17 @@ function timeTrackerGoalRemaining(clockIn,at){
  return minutes?Math.floor(minutes/60)+'h '+minutes%60+'m to goal':'9h goal reached';
 }
 
+/** Change a text node in place instead of replacing the element's children. */
+function updateClockText(node,value){
+ if(!node)return false;
+ const next=String(value??'');
+ if(node.textContent===next)return false;
+ if(node.childNodes?.length===1&&node.firstChild?.nodeType===3)
+  node.firstChild.nodeValue=next;
+ else node.textContent=next;
+ return true;
+}
+
 /** Synchronize the clock and elapsed-time ring without rerendering or refetching. */
 export function syncTimeTrackerClock(root,at=new Date()){
  const hours=root?.querySelector?.('#tt-clock-hours');
@@ -100,25 +111,27 @@ export function syncTimeTrackerClock(root,at=new Date()){
  };
  for(const [id,value] of Object.entries(nodes)){
   const node=root.querySelector('#'+id);
-  if(node&&node.textContent!==value)node.textContent=value;
+  if(node)updateClockText(node,value);
  }
  const welcome=root.querySelector('[data-tt-welcome-greeting]');
- if(welcome&&welcome.textContent!==parts.greeting)welcome.textContent=parts.greeting;
+ if(welcome)updateClockText(welcome,parts.greeting);
  const elapsed=root.querySelector('#tt-session-elapsed');
  if(elapsed?.dataset?.clockIn){
   const session=timeTrackerSessionElapsed(elapsed.dataset.clockIn,at);
-  if(elapsed.textContent!==session.label)elapsed.textContent=session.label;
+  updateClockText(elapsed,session.label);
   const progress=root.querySelector('#tt-session-progress');
-  progress?.setAttribute?.('stroke-dashoffset',String((339.292*(1-session.progress)).toFixed(3)));
+  const dashOffset=String((339.292*(1-session.progress)).toFixed(3));
+  if(progress&&progress.getAttribute?.('stroke-dashoffset')!==dashOffset)
+   progress.setAttribute('stroke-dashoffset',dashOffset);
  }
  const total=root.querySelector('[data-tt-live-total]');
  if(total?.dataset?.ttLiveTotal){
   const value=total.querySelector('strong');
-  if(value)value.textContent=hrs(Number(total.dataset.creditedBase||0)+creditedAttendanceMs(total.dataset.ttLiveTotal,at));
+  if(value)updateClockText(value,hrs(Number(total.dataset.creditedBase||0)+creditedAttendanceMs(total.dataset.ttLiveTotal,at)));
  }
  const goal=root.querySelector('[data-tt-goal-remaining]');
  if(goal?.dataset?.ttGoalRemaining){
-  goal.textContent=timeTrackerGoalRemaining(goal.dataset.ttGoalRemaining,at);
+  updateClockText(goal,timeTrackerGoalRemaining(goal.dataset.ttGoalRemaining,at));
  }
  const countdown=root?.querySelector?.('[data-tt-auto-clockout-countdown]');
  if(countdown?.dataset?.deadline){
@@ -126,7 +139,7 @@ export function syncTimeTrackerClock(root,at=new Date()){
   const seconds=Math.floor(remaining/1000);
   const hours=Math.floor(seconds/3600),minutes=Math.floor((seconds%3600)/60),rest=seconds%60;
   const label=remaining<=0?'Due now':String(hours).padStart(2,'0')+':'+String(minutes).padStart(2,'0')+':'+String(rest).padStart(2,'0');
-  if(countdown.textContent!==label)countdown.textContent=label;
+  updateClockText(countdown,label);
  }
  return true;
 }
@@ -359,13 +372,19 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
         esc(active.clockIn)+'">'+session.label+'</strong>'+
        '<span class="tt-session-goal">of 9h goal</span></div></div>'+
        '<p class="tt-active-copy">Started '+esc(formatTimeTrackerAutoClockoutTime(active.clockIn))+
-       (autoDeadline?' · auto clock-out '+esc(formatTimeTrackerAutoClockoutTime(autoDeadline)):'')+
+       '<span data-tt-auto-clockout-inline'+(autoDeadline?'':' hidden')+'>'+
+        ' · auto clock-out <strong data-tt-auto-clockout-inline-time>'+
+         esc(autoDeadline?formatTimeTrackerAutoClockoutTime(autoDeadline):'')+'</strong></span>'+
        ' · <span data-tt-goal-remaining="'+esc(active.clockIn)+'">'+timeTrackerGoalRemaining(active.clockIn,now)+'</span></p>'+
        '<span class="tt-compact-sr">Elapsed working time excludes the unpaid 12 PM to 1 PM Philippine lunch break.</span>'+
-       ((autoClockout||autoUnavailable)?'<p class="tt-clock-hint tt-auto-clockout-state'+
-        (autoUnavailable||autoClockout?.status!=='MONITORING'?'':' tt-compact-sr')+'" role="status">'+esc(autoLabel)+
-        (autoDeadline?'<strong>'+esc(formatTimeTrackerAutoClockoutTime(autoDeadline))+'</strong> · '+
-         '<span data-tt-auto-clockout-countdown data-deadline="'+esc(autoDeadline)+'">—</span> remaining':'')+'</p>':'')+
+       '<p class="tt-clock-hint tt-auto-clockout-state'+
+        (autoUnavailable||autoClockout?.status!=='MONITORING'?'':' tt-compact-sr')+'" role="status"'+
+        ((autoClockout||autoUnavailable)?'':' hidden')+'>'+
+        '<span data-tt-auto-clockout-label>'+esc(autoLabel)+'</span>'+
+        (autoDeadline?'<span data-tt-auto-clockout-deadline-group>'+
+         '<strong data-tt-auto-clockout-time>'+esc(formatTimeTrackerAutoClockoutTime(autoDeadline))+'</strong> · '+
+         '<span data-tt-auto-clockout-countdown data-deadline="'+esc(autoDeadline)+'">—</span> remaining'+
+        '</span>':'')+'</p>'+
       '</div>':'')+
     '<div class="tt-dashboard-section-label">TODAY’S ATTENDANCE</div>'+
     '<div class="tt-session-summary" aria-label="My attendance today">'+
@@ -405,7 +424,8 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
      '<label for="tt-note" class="tt-note-field" id="tt-note-wrap"'+
       ((active?showActiveHomeNote:showHomeNote)?'':' hidden')+'>'+
       'Work Plan'+(!active?'<span id="tt-note-requirement">'+(requireHomeNote?' (required)':' (optional)')+'</span>':'')+'<textarea id="tt-note"'+((!active&&requireHomeNote)?' required':'')+
-      (active?' readonly':'')+' maxlength="500" rows="3" aria-describedby="tt-work-plan-validation" placeholder="Describe your offsite work plan">'+
+      (active?' readonly':'')+(active?' data-tt-synced-work-note="'+esc(active.workNote||'')+'"':'')+
+      ' maxlength="500" rows="3" aria-describedby="tt-work-plan-validation" placeholder="Describe your offsite work plan">'+
       (active?esc(active.workNote||''):esc(workPlanDraft))+'</textarea><span id="tt-work-plan-validation" class="tt-work-plan-validation" role="alert" hidden>Work Plan is required for Offsite (Home).</span></label>'+
      (geoPromptVisible?'<div class="tt-location-readiness '+(locationEnabled?'is-ready':geoWarning?'needs-action':'needs-permission')+
       '" role="status" aria-live="polite">'+
@@ -437,11 +457,6 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
  return html;
 }
 
-/**
- * Reconcile a fresh signed Clock snapshot into the existing Clock DOM.
- * The outer Clock stage and compatible child nodes remain mounted, preserving
- * focus, scroll position, controls, and the current visual state.
- */
 function compatibleClockNode(current,next){
  if(current.nodeType!==next.nodeType)return false;
  return current.nodeType!==1||current.tagName===next.tagName;
@@ -491,10 +506,8 @@ function morphClockNode(current,next){
 }
 
 /**
- * Update only the Clock stage after a background attendance refresh.
- * This intentionally does not call the application renderer or replace the
- * Clock tab. Structural changes are reconciled locally when the signed active
- * session genuinely changes from idle to active or active to idle.
+ * Apply a signed Clock snapshot without reconciling or moving the Clock DOM.
+ * A full local structure change is reserved for a real idle/active transition.
  */
 export function syncTimeTrackerClockView(root,{
  result,now=new Date(),clockPending=false,clockPendingAction='clock-out',
@@ -503,13 +516,134 @@ export function syncTimeTrackerClockView(root,{
 }={}){
  const current=root?.querySelector?.('.tt-clock-stage');
  if(!current||result?.status!=='VERIFIED_READ')return false;
- const template=document.createElement('template');
- template.innerHTML=clockPage(result,false,now,clockPending,clockPendingAction,
-  locationPreference,{success,clockCorrectionNotice,geoPromptVisible,geoPermission,
-   geoMessage,clockStage,workPlanDraft});
- const next=template.content.firstElementChild;
- if(!next||!next.classList.contains('tt-clock-stage'))return false;
- morphClockNode(current,next);
+
+ const active=result.active||null;
+ const currentLayout=current.querySelector('.tt-command-layout');
+ const currentIsActive=currentLayout?.dataset.sessionState==='active';
+ const nextIsActive=Boolean(active);
+
+ // The only structural reconciliation is a genuine session start/end.
+ if(currentIsActive!==nextIsActive){
+  const template=document.createElement('template');
+  template.innerHTML=clockPage(result,false,now,clockPending,clockPendingAction,
+   locationPreference,{success,clockCorrectionNotice,geoPromptVisible,geoPermission,
+    geoMessage,clockStage,workPlanDraft});
+  const next=template.content.firstElementChild;
+  if(!next||!next.classList.contains('tt-clock-stage'))return false;
+  morphClockNode(current,next);
+  return true;
+ }
+
+ if(!active)return true;
+
+ // Keep the existing ring and timer mounted. Update the timer's source only
+ // when a signed Clock-In correction actually changes it.
+ const elapsed=current.querySelector('#tt-session-elapsed');
+ if(elapsed&&elapsed.dataset.clockIn!==String(active.clockIn||'')){
+  elapsed.dataset.clockIn=String(active.clockIn||'');
+  const goal=current.querySelector('[data-tt-goal-remaining]');
+  if(goal)goal.dataset.ttGoalRemaining=String(active.clockIn||'');
+  const total=current.querySelector('[data-tt-live-total]');
+  if(total)total.dataset.ttLiveTotal=String(active.clockIn||'');
+ }
+ syncTimeTrackerClock(root,now);
+
+ // Session context is patched as text only. Never replace its containers.
+ const context=current.querySelector('.tt-active-session-context');
+ const values=context?.querySelectorAll('div > strong')||[];
+ const locationLabel=active.location==='Offsite (Home)'?'Offsite · Home':String(active.location||'');
+ const departmentLabel=String(active.department||'');
+ if(values[0])updateClockText(values[0],locationLabel);
+ if(values[1])updateClockText(values[1],departmentLabel);
+
+ // The active Work Plan is read-only. Apply a genuine remote correction only
+ // when the field is not focused and still matches its last signed value.
+ const note=current.querySelector('#tt-note');
+ if(note){
+  const lastSignedNote=note.dataset.ttSyncedWorkNote??'';
+  const nextSignedNote=String(active.workNote||'');
+  if(note.dataset.ttSyncedWorkNote!==nextSignedNote&&
+     note.value===lastSignedNote&&
+     root.ownerDocument?.activeElement!==note){
+   if(note.value!==nextSignedNote)note.value=nextSignedNote;
+   note.dataset.ttSyncedWorkNote=nextSignedNote;
+  }
+ }
+
+ // Keep today's summary values accurate without rebuilding their containers.
+ const todayKey=timeTrackerManilaDay(now);
+ const todayRows=(result.records||[]).filter(row=>
+  timeTrackerManilaDay(row.clockIn)===todayKey);
+ const summary=current.querySelector('.tt-session-summary');
+ const sessionCount=summary?.querySelector(':scope > div:first-child strong');
+ updateClockText(sessionCount,todayRows.length);
+ const totalRow=summary?.querySelector(':scope > div:nth-child(2)');
+ if(totalRow){
+  const creditedBase=todayRows.filter(row=>row.id!==active.id)
+   .reduce((sum,row)=>sum+(Number(row.creditedMs)||0),0);
+  const baseValue=String(creditedBase);
+  if(totalRow.dataset.creditedBase!==baseValue)
+   totalRow.dataset.creditedBase=baseValue;
+  const activeIsToday=todayRows.some(row=>
+   row.id===active.id&&row.creditedMs===null);
+  if(activeIsToday){
+   const liveStart=String(active.clockIn||'');
+   if(totalRow.dataset.ttLiveTotal!==liveStart)
+    totalRow.dataset.ttLiveTotal=liveStart;
+  }else{
+   delete totalRow.dataset.ttLiveTotal;
+   updateClockText(totalRow.querySelector('strong'),hrs(creditedBase));
+  }
+ }
+
+ // Reconcile automatic clock-out messaging in stable, pre-mounted nodes.
+ const autoClockout=result.autoClockout?.recordId===active.id?result.autoClockout:null;
+ const autoUnavailable=result.autoClockoutUnavailable===true;
+ const autoDeadline=autoClockout?.status==='PENDING_GPS'?'':
+  String(autoClockout?.nextAt||autoClockout?.cutoffAt||'');
+ const autoLabel=autoUnavailable?'Automatic clock-out status unavailable':
+  !autoClockout?'':autoClockout.status==='MONITORING'?
+  'Automatic clock-out monitoring · nine-hour threshold at ':
+  autoClockout.status==='GRACE'?'Grace period active · automatic clock-out at ':
+  autoClockout.status==='OVERTIME'?'Approved overtime active · automatic clock-out at ':
+  autoClockout.status==='PENDING_GPS'?'Automatic clock-out pending · fresh foreground GPS required':
+  autoClockout.status==='DUE'?'Automatic clock-out due · scheduled cutoff ':
+  'Automatic clock-out monitoring unavailable';
+ const inlineDeadline=current.querySelector('[data-tt-auto-clockout-inline]');
+ if(inlineDeadline){
+  inlineDeadline.hidden=!autoDeadline;
+  updateClockText(inlineDeadline.querySelector('[data-tt-auto-clockout-inline-time]'),
+   autoDeadline?formatTimeTrackerAutoClockoutTime(autoDeadline):'');
+ }
+ const autoState=current.querySelector('.tt-auto-clockout-state');
+ if(autoState){
+  autoState.hidden=!autoClockout&&!autoUnavailable;
+  autoState.classList.toggle('tt-compact-sr',!autoUnavailable&&autoClockout?.status==='MONITORING');
+  updateClockText(autoState.querySelector('[data-tt-auto-clockout-label]'),autoLabel);
+  let deadlineGroup=autoState.querySelector('[data-tt-auto-clockout-deadline-group]');
+  if(!autoDeadline&&deadlineGroup){
+   deadlineGroup.remove();
+   deadlineGroup=null;
+  }else if(autoDeadline&&!deadlineGroup){
+   deadlineGroup=root.ownerDocument.createElement('span');
+   deadlineGroup.dataset.ttAutoClockoutDeadlineGroup='';
+   const deadlineText=root.ownerDocument.createElement('strong');
+   deadlineText.dataset.ttAutoClockoutTime='';
+   const countdown=root.ownerDocument.createElement('span');
+   countdown.dataset.ttAutoClockoutCountdown='';
+   deadlineGroup.append(deadlineText,root.ownerDocument.createTextNode(' · '),countdown,
+    root.ownerDocument.createTextNode(' remaining'));
+   autoState.append(deadlineGroup);
+  }
+  if(deadlineGroup){
+   const deadlineText=deadlineGroup.querySelector('[data-tt-auto-clockout-time]');
+   const countdown=deadlineGroup.querySelector('[data-tt-auto-clockout-countdown]');
+   updateClockText(deadlineText,formatTimeTrackerAutoClockoutTime(autoDeadline));
+   if(countdown&&countdown.dataset.deadline!==autoDeadline)
+    countdown.dataset.deadline=autoDeadline;
+  }
+ }
+
  return true;
 }
 

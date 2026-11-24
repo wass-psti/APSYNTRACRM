@@ -22,6 +22,8 @@ on:
       - "docs/CP-TT-FM1-APP-*.md"
       - "docs/CP-TT-CLOCK-A11Y-01.md"
       - "scripts/cp-tt-clock-a11y-01-browser.mjs"
+      - "scripts/cp-tt-clock-a11y-02-browser.mjs"
+      - "docs/CP-TT-CLOCK-A11Y-02.md"
   push:
     branches: [main, feat/cp-tt-fm1-app-02]
     paths:
@@ -44,6 +46,8 @@ on:
       - "docs/CP-TT-FM1-APP-*.md"
       - "docs/CP-TT-CLOCK-A11Y-01.md"
       - "scripts/cp-tt-clock-a11y-01-browser.mjs"
+      - "scripts/cp-tt-clock-a11y-02-browser.mjs"
+      - "docs/CP-TT-CLOCK-A11Y-02.md"
   workflow_dispatch:
 
 permissions:
@@ -73,14 +77,15 @@ jobs:
           node --check scripts/pages-smoke.mjs
           node --check scripts/time-tracker-browser-acceptance.mjs
           node --check scripts/cp-tt-clock-a11y-01-browser.mjs
+          node --check scripts/cp-tt-clock-a11y-02-browser.mjs
       - name: Run complete frontend regression suite
         run: npm test
       - name: Verify deterministic CSS bundle and source manifest
         run: node scripts/build-priority5-styles.mjs --check
       - name: Verify formatting and changed-module lint
         run: |
-          npx prettier --check frontend/time-tracker-application.js frontend/time-tracker-application.css frontend/tests/time-tracker-application.test.mjs scripts/time-tracker-browser-acceptance.mjs scripts/cp-tt-clock-a11y-01-browser.mjs docs/CP-TT-FM1-APP-01.md docs/CP-TT-FM1-APP-02.md docs/CP-TT-CLOCK-A11Y-01.md package.json .github/workflows/cp-tt-fm1-app-02.yml
-          npx eslint frontend/app.js frontend/board/presentation/loading.js frontend/sidebar-visuals.js frontend/time-tracker-ui.js frontend/time-tracker-application.js frontend/tests/time-tracker-application.test.mjs frontend/tests/time-tracker-native.test.mjs scripts/time-tracker-browser-acceptance.mjs scripts/cp-tt-clock-a11y-01-browser.mjs
+          npx prettier --check frontend/time-tracker-application.js frontend/time-tracker-application.css frontend/tests/time-tracker-application.test.mjs scripts/time-tracker-browser-acceptance.mjs scripts/cp-tt-clock-a11y-01-browser.mjs scripts/cp-tt-clock-a11y-02-browser.mjs docs/CP-TT-CLOCK-A11Y-02.md docs/CP-TT-FM1-APP-01.md docs/CP-TT-FM1-APP-02.md docs/CP-TT-CLOCK-A11Y-01.md package.json .github/workflows/cp-tt-fm1-app-02.yml
+          npx eslint frontend/app.js frontend/board/presentation/loading.js frontend/sidebar-visuals.js frontend/time-tracker-ui.js frontend/time-tracker-application.js frontend/tests/time-tracker-application.test.mjs frontend/tests/time-tracker-native.test.mjs scripts/time-tracker-browser-acceptance.mjs scripts/cp-tt-clock-a11y-01-browser.mjs scripts/cp-tt-clock-a11y-02-browser.mjs
       - name: Build production frontend
         run: npm run build
       - name: Install Playwright Chromium
@@ -92,3 +97,5 @@ jobs:
         run: npm run test:time-tracker:e2e
       - name: Verify CP-TT-CLOCK-A11Y-01 background refresh stability
         run: node scripts/cp-tt-clock-a11y-01-browser.mjs
+      - name: Verify CP-TT-CLOCK-A11Y-02 live component stability
+        run: npm run test:tt-clock-a11y-02

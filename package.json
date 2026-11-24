@@ -38,7 +38,8 @@
     "test:boards-overhaul": "node scripts/cp-crm-ui-restore-01-boards-browser.mjs",
     "test:item-details-overlay": "node scripts/cp-crm-item-details-overlay-01-browser.mjs",
     "test:crm-ui-restore-01": "node scripts/cp-crm-ui-restore-01-browser.mjs && node scripts/cp-crm-ui-restore-01-boards-browser.mjs && node scripts/cp-crm-ui-restore-01-mobile-browser.mjs",
-    "test:mobile-workspace-switch": "node scripts/cp-mobile-workspace-switch-01-browser.mjs"
+    "test:mobile-workspace-switch": "node scripts/cp-mobile-workspace-switch-01-browser.mjs",
+    "test:tt-clock-a11y-02": "node scripts/cp-tt-clock-a11y-02-browser.mjs"
   },
   "type": "module",
   "name": "apsyntra-crm",
