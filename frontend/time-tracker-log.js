@@ -1,3 +1,4 @@
+import {renderManualAttendanceEditor} from './apps/TimeTracker/time-tracker-manual-attendance-ui.js';
 import {formatTimeTrackerDurationMs} from './time-tracker-duration-format.js';
 import {formatTimeTrackerClock,formatTimeTrackerShortDateTime,formatTimeTrackerDateTime} from './time-tracker-time-format.js';
 /** Native signed TimeTracker Log. System Admin mutations use the dedicated signed RPC; other roles remain read-only. */
@@ -419,6 +420,7 @@ export function renderTimeTrackerLog({
     '<div class="tt-log-admin-toolbar-copy"><div class="tt-log-admin-toolbar-heading"><span class="tt-log-admin-toolbar-icon" aria-hidden="true">✦</span><div><strong>Manage attendance records</strong><span>Click a record to highlight it; no checkboxes required</span></div></div>'+
     '<div class="tt-log-admin-selection-status"><strong class="tt-log-admin-selected">'+selectedIds.length+'</strong><span>selected <i>·</i> up to '+TT_ADMIN_RECORD_LIMIT+'</span></div></div>'+
     '<div class="tt-log-admin-toolbar-actions">'+
+    '<button type="button" data-action="tt-log-admin-add"'+(adminBusy||adminEditor||adminDeleteConfirm?' disabled':'')+'>+ Add Log</button>'+
     '<button type="button" data-action="tt-log-admin-select-visible"'+(!editableVisible||adminBusy?' disabled':'')+'>Select visible</button>'+
     '<button type="button" data-action="tt-log-admin-bulk-edit"'+(standardSelected.length&&!adminBusy?'':' disabled')+'><span aria-hidden="true">✎</span> Edit selected</button>'+
     '<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-bulk-delete"'+(standardSelected.length&&!adminBusy?'':' disabled')+'><span aria-hidden="true">⌫</span> Delete selected</button>'+
@@ -444,7 +446,7 @@ export function renderTimeTrackerLog({
   '</section>'+(adminEditor||adminDeleteConfirm?'':renderTimeTrackerLogDetailDialog({row:rows.find(r=>expandedRecordIds.includes(r.id))||null,now,
     gpsEligible,gpsData,gpsBusy,gpsError,gpsErrorRecordId,mapEnabled,mapTheme,
     adminEligible,adminFullAccess,adminBusy,selectedIds}))+
-   (adminEditor?.ojt?renderTimeTrackerOjtAdminEditor({editor:adminEditor,busy:adminBusy,error:adminError}):
+   (adminFullAccess&&adminEditor?.mode==='manual'?renderManualAttendanceEditor({editor:adminEditor,busy:adminBusy,error:adminError,now}):adminEditor?.ojt?renderTimeTrackerOjtAdminEditor({editor:adminEditor,busy:adminBusy,error:adminError}):
     renderTimeTrackerAdminEditor({editor:adminEditor,directory:adminDirectory,busy:adminBusy,error:adminEditor?adminError:'',timeOnly:adminEditor?.timeOnly===true}))+
    renderTimeTrackerAdminDeleteDialog({confirmation:adminDeleteConfirm,busy:adminBusy})+'</section>';
 }
