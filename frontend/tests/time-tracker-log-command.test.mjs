@@ -198,3 +198,12 @@ test('Work Duration is blank until completion and short shifts have no lunch ded
  assert.match(styles,/data-tt-log-width-duration="96"/);
  assert.match(styles,/data-tt-log-width-duration="960"/);
 });
+
+test('Manual clock-out is limited to active records and full System Admin controls',()=>{
+ const active=records[0],complete=records[1];
+ const html=render({records:[active],adminEligible:true,adminFullAccess:true});
+ assert.match(html,/data-action="tt-log-admin-manual-clock-out"/);
+ assert.doesNotMatch(render({records:[complete],adminEligible:true,adminFullAccess:true}),/data-action="tt-log-admin-manual-clock-out"/);
+ assert.doesNotMatch(render({records:[active],adminEligible:true,adminFullAccess:false}),/data-action="tt-log-admin-manual-clock-out"/);
+ assert.doesNotMatch(render({records:[active]}),/data-action="tt-log-admin-manual-clock-out"/);
+});

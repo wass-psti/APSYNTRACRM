@@ -2191,6 +2191,13 @@
       "file": "20261124193000_cp_tt_default_server_auto_clockout_9h.sql",
       "bytes": 15724,
       "sha256": "8a6e303beee9eba4a06e06f5d5af3e612407d883b297e2022b74f210d0717fa4"
+    },
+    {
+      "version": "20261124203000",
+      "name": "cp_tt_admin_manual_clockout",
+      "file": "20261124203000_cp_tt_admin_manual_clockout.sql",
+      "bytes": 7703,
+      "sha256": "0a341757b8f1ddb345b712a5a9f00c4bc0f07365aa270bb2dfd404ab47746c51"
     }
   ]
 }

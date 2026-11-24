@@ -840,7 +840,8 @@ try {
     await page.locator(".tt-log-row-duration").textContent(),
     "09:00:00",
   );
-  const logGeometry = await page.locator(".tt-log-table").evaluate((table) => {
+  const logTable = page.locator(".tt-log-table");
+  const logGeometry = await logTable.evaluate((table) => {
     const headers = [...table.querySelectorAll("thead th")].slice(1);
     const cells = [...table.querySelectorAll(".tt-log-row-summary > span")];
     return {

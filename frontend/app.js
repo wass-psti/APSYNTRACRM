@@ -220,7 +220,7 @@ import {parseTimeTrackerClockInput} from './time-tracker-time-format.js';
 import {timeTrackerMyHoursWeek} from './time-tracker-my-hours.js';
 import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
 import {probeTimeTrackerMonitor} from './time-tracker-monitor.js';
-import {buildTimeTrackerAdminPatch,TT_ADMIN_RECORD_LIMIT} from './time-tracker-record-management.js';
+import {buildTimeTrackerAdminPatch,buildTimeTrackerManualClockOut,TT_ADMIN_RECORD_LIMIT} from './time-tracker-record-management.js';
 import {manualAttendancePreviewRoster,syncManualAttendanceForm} from './apps/TimeTracker/time-tracker-manual-attendance-ui.js';
 import {manualAttendanceToday} from './apps/TimeTracker/time-tracker-manual-attendance.js';
 import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
@@ -5024,7 +5024,8 @@ function timeTrackerOjtLogAdminScope(){
  const a=state.ttAttendance.access;
  return {userId:a.userId,workspaceId:a.workspaceId,boardId:a.boardId};
 }
-async function openTimeTrackerAdminEditor(recordIds,mode='single',{timeOnly=false}={}){
+async function openTimeTrackerAdminEditor(recordIds,mode='single',{timeOnly=false,manualClockout=false}={}){
+ if(manualClockout&&state.ttAttendance?.access?.moduleRole!=='System Admin')return;
  if(!timeTrackerAdminLogReady()||state.ttLogAdminBusy)return;
  if(timeOnly&&mode!=='single')return;
  if(state.ttAttendance.access.moduleRole!=='System Admin'&&mode!=='single')return;
@@ -5037,7 +5038,7 @@ async function openTimeTrackerAdminEditor(recordIds,mode='single',{timeOnly=fals
    state.ttLogAdminError='Select one authorized intern attendance record.';render();return;
   }
   const identity=scope.userId,boardId=scope.boardId,seq=routeSerial;
-  const editor={ojt:true,mode:'single',
+  const editor={ojt:true,mode:'single',manualClockout,
    timeOnly:timeOnly||state.ttAttendance.access.moduleRole==='IT Administrator',
    record:preview,recordIds:ids,revision:null,verifying:true,
    actorId:identity,workspaceId:scope.workspaceId,boardId};
@@ -5079,7 +5080,7 @@ async function openTimeTrackerAdminEditor(recordIds,mode='single',{timeOnly=fals
   const snapshot=await timeTracker.attendanceAdminRecords(boardId,ids);
   if(seq!==routeSerial||!timeTrackerAdminLogReady()||state.context?.user_id!==identity||
      state.context?.workspace_id!==workspace||state.boardId!==boardId)return;
-  state.ttLogAdminEditor={mode,timeOnly:timeOnly||state.ttAttendance.access.moduleRole==='IT Administrator',
+  state.ttLogAdminEditor={mode,manualClockout,timeOnly:timeOnly||state.ttAttendance.access.moduleRole==='IT Administrator',
    recordIds:ids,records:snapshot.records,
    directory:snapshot.directory,revision:snapshot.revision,
    actorId:snapshot.actorId,workspaceId:snapshot.workspaceId,boardId:snapshot.boardId};
@@ -5102,6 +5103,11 @@ async function saveTimeTrackerAdminEditor(form){
     editor.boardId!==state.boardId){
   state.ttLogAdminError='Signed workspace changed. Reopen the attendance editor.';render();return;
  }
+ if(editor.manualClockout){
+  if(state.ttAttendance.access.moduleRole!=='System Admin')return;
+  editor.clockOutDraft=String(new FormData(form).get('clockOutAt')||'');
+  editor.reasonDraft=String(new FormData(form).get('reason')||'');
+ }
  if(editor.ojt){
   const scope=timeTrackerOjtLogAdminScope();
   if(!scope||editor.mode!=='single'||editor.actorId!==scope.userId||
@@ -5113,7 +5119,7 @@ async function saveTimeTrackerAdminEditor(form){
   }
   let ojtPlan;
   try{
-   ojtPlan=buildTimeTrackerOjtAdminPatch(new FormData(form),{
+   ojtPlan=editor.manualClockout?buildTimeTrackerManualClockOut(new FormData(form),editor.record):buildTimeTrackerOjtAdminPatch(new FormData(form),{
     record:editor.record,timeOnly:editor.timeOnly});
   }catch(err){state.ttLogAdminError=errorMessage(err);render();return;}
   const seq=routeSerial,boardId=scope.boardId;
@@ -5143,7 +5149,7 @@ async function saveTimeTrackerAdminEditor(form){
  }
  let plan;
  try{
-  plan=buildTimeTrackerAdminPatch(new FormData(form),{
+  plan=editor.manualClockout?buildTimeTrackerManualClockOut(new FormData(form),editor.records[0]):buildTimeTrackerAdminPatch(new FormData(form),{
    mode:editor.mode,record:editor.records[0]||null,records:editor.records
   });
   if(editor.timeOnly&&(
@@ -5155,7 +5161,7 @@ async function saveTimeTrackerAdminEditor(form){
  try{
   const receipt=await timeTracker.mutateAttendanceRecords(boardId,{
    action:editor.mode==='bulk'?'bulk-edit':'edit',recordIds:editor.recordIds,
-   patch:plan.patch,reason:plan.reason,expectedRevision:editor.revision
+   patch:plan.patch,reason:plan.reason,expectedRevision:editor.revision,manualClockout:editor.manualClockout===true
   });
   if(seq!==routeSerial||state.boardId!==boardId||!timeTrackerAdminLogReady())return;
   state.ttLogAdminEditor=null;state.ttLogSelectedIds=[];state.ttLogAdminBusy=false;
@@ -10714,6 +10720,11 @@ async function action(name,button){
    boardId:access.boardId,roster:manualAttendancePreviewRoster(state.ttAttendance),
    signedCreateReady:false,draft:{date:manualAttendanceToday(),status:'active'}};
   render();root.querySelector('#tt-attendance-admin-form select[name="employee"]')?.focus();break;
+ }
+ case 'tt-log-admin-manual-clock-out':{
+  if(!timeTrackerAdminLogReady()||state.ttAttendance.access.moduleRole!=='System Admin'||
+     !timeTrackerLogRowsForSnapshot(state.ttAttendance).some(row=>row.id===button.dataset.recordId&&row.status==='Active'&&!row.clockOut))return;
+  await openTimeTrackerAdminEditor([button.dataset.recordId],'single',{manualClockout:true});break;
  }
  case 'tt-log-admin-correct-time':{
   if(!timeTrackerAdminLogReady())return;
