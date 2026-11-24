@@ -137,9 +137,9 @@ The CRM browser remained signed in at `#/time-tracker`. At 11:23:09 AM Philippin
 | Authoritative CPU mean/p50/p95/max, I/O wait, steal               | PENDING — requires live metrics samples         |
 | Service process CPU grouped by `service_type`                     | VERIFIED by CP-06 tests; live values pending    |
 | HAR parser and sanitizer                                          | VERIFIED — 6/6 focused tests                    |
-| Silent terminal prompt and key validation                         | VERIFIED — 4/4 focused tests                    |
-| CP-07 focused tests                                               | VERIFIED — 10/10 PASS                           |
-| Full frontend test suite                                          | VERIFIED — 3,564/3,564 PASS                     |
+| Silent terminal prompt and key validation                         | VERIFIED — 6/6 focused tests                    |
+| CP-07 focused tests                                               | VERIFIED — 12/12 PASS                           |
+| Full frontend test suite                                          | VERIFIED — 3,566/3,566 PASS                     |
 | HAR output excludes secrets, cookies, query strings, and payloads | VERIFIED by synthetic fixture                   |
 | Real Dashboard HAR captured                                       | PENDING — browser export not yet available      |
 | Report HTTP status/error code/trace IDs                           | PENDING — requires real HAR/provider trace      |

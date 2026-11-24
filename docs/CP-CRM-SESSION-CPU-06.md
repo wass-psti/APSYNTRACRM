@@ -287,7 +287,7 @@ This defect is deliberately excluded from CP-06. Recommended separate work item:
 
 CP-CRM-SESSION-CPU-06 is **PARTIAL — NOT CLOSED**.
 
-The finite Metrics API collector, Prometheus parser, CPU/service analysis, and regression tests are implemented. Focused tests pass 11/11. The full frontend suite passes 3,564/3,564; repository check, lint, formatting, and production build also pass. Production database activity has been normalized using approximately 18-minute and 6m40s `pg_stat_statements` deltas. Ten report metric panels failed at 02:55 UTC; a later 03:22 UTC observation showed partial recovery with six remaining failures. The Dashboard did not expose a report-specific request in Resource Timing, so internal HTTP status and trace identifiers remain unavailable.
+The finite Metrics API collector, Prometheus parser, CPU/service analysis, and regression tests are implemented. Focused tests pass 11/11. The full frontend suite passes 3,566/3,566; repository check, lint, formatting, and production build also pass. Production database activity has been normalized using approximately 18-minute and 6m40s `pg_stat_statements` deltas. Ten report metric panels failed at 02:55 UTC; a later 03:22 UTC observation showed partial recovery with six remaining failures. The Dashboard did not expose a report-specific request in Resource Timing, so internal HTTP status and trace identifiers remain unavailable.
 
 The current production CRM browser successfully recovered its signed session after a same-tab reload, restored workspace context, and returned to Live Realtime synchronization. The existing session architecture was not modified.
 

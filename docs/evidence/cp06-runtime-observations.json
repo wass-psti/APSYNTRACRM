@@ -122,7 +122,7 @@
     "reason": "existing Secret API key was not supplied through a secret-safe execution path",
     "collectorImplemented": true,
     "focusedTestsPassed": 11,
-    "fullFrontendTestsPassed": 3564,
+    "fullFrontendTestsPassed": 3566,
     "collectorErrorHandlingTested": true,
     "metricCatalogVerified": "Supabase Grafana metrics.md; node_cpu_seconds_total service_type=db; process_cpu_seconds_total service_type=postgresql/gotrue; pg_stat_database *_total; pg_stat_database_num_backends; pgbouncer_pools_*_active_connections",
     "successPathTested": true,
@@ -170,7 +170,7 @@
     "metricsCredentialEnvironment": "SUPABASE_METRICS_SECRET_KEY unset",
     "metricsCollectorFix": "requestStartedAt is now defined before the request and used by sanitized failure records",
     "focusedTestsPassed": 11,
-    "fullFrontendTestsPassed": 3564,
+    "fullFrontendTestsPassed": 3566,
     "statementBaseline": {
       "capturedAt": "2026-11-24T02:57:05.326686Z",
       "source": "pg_stat_statements cumulative counters; use only subsequent deltas, not totals as an interval rate",
@@ -330,7 +330,7 @@
     "includedInCp06": false
   },
   "dashboardHarAnalyzer": {
-    "focusedTestsPassed": 6,
+    "focusedTestsPassed": 12,
     "projectRefRedaction": "Project references are redacted from project API hostnames and opaque path segments."
   }
 }

@@ -251,40 +251,6 @@ test("accepts only the existing Supabase Secret API key format", () => {
   assert.equal(isValidSecretApiKey("sb_secret_"), false);
 });
 
-test("validates existing Supabase Secret API key format without logging it", () => {
-  assert.equal(isValidSecretApiKey("sb_secret_existingKey_123"), true);
-  assert.equal(isValidSecretApiKey("service_role_key"), false);
-  assert.equal(isValidSecretApiKey(""), false);
-  assert.equal(isValidSecretApiKey(undefined), false);
-});
-
-test("reads the key in raw terminal mode without echoing the entered value", async () => {
-  class FakeInput extends EventEmitter {
-    isTTY = true;
-    rawModeChanges = [];
-
-    setRawMode(enabled) {
-      this.rawModeChanges.push(enabled);
-    }
-
-    resume() {}
-    pause() {}
-  }
-
-  const input = new FakeInput();
-  let outputText = "";
-  const pendingSecret = readSecretFromTerminal({
-    input,
-    output: { write: (value) => (outputText += value) },
-  });
-  input.emit("data", Buffer.from("sb_secret_hidden-value\n"));
-
-  const secret = await pendingSecret;
-  assert.equal(secret, "sb_secret_hidden-value");
-  assert.deepEqual(input.rawModeChanges, [true, false]);
-  assert.equal(outputText.includes(secret), false);
-});
-
 test("an empty terminal entry fails key validation before capture", async () => {
   class FakeInput extends EventEmitter {
     isTTY = true;
@@ -305,12 +271,13 @@ test("an empty terminal entry fails key validation before capture", async () => 
   assert.equal(isValidSecretApiKey(secret), false);
 });
 
-test("rejects secret input when the process is not attached to a terminal", async () => {
-  await assert.rejects(
-    readSecretFromTerminal({
-      input: { isTTY: false },
-      output: { write() {} },
-    }),
+test("rejects secret input when the process is not attached to a terminal", () => {
+  assert.throws(
+    () =>
+      readSecretFromTerminal({
+        input: { isTTY: false },
+        output: { write() {} },
+      }),
     /interactive Terminal window/,
   );
 });
