@@ -171,6 +171,7 @@ try {
     const navScroll = document.querySelector(".tt-navigation-scroll");
     const clockLayout = document.querySelector(".tt-command-layout");
     const sessionCard = document.querySelector(".tt-attendance-console");
+    const clockFace = document.querySelector(".tt-clock-face");
     return {
       appDisplay: getComputedStyle(app).display,
       headerRadius: getComputedStyle(header).borderRadius,
@@ -178,6 +179,11 @@ try {
       navOverflow: getComputedStyle(navScroll).overflowX,
       clockLayout: getComputedStyle(clockLayout).flexDirection,
       sessionCardBackground: getComputedStyle(sessionCard).backgroundColor,
+      clockSize: getComputedStyle(clockFace).fontSize,
+      clockWeight: getComputedStyle(clockFace).fontWeight,
+      statsCount: document.querySelector(".tt-session-summary").children.length,
+      badges: clockLayout.querySelectorAll(".tt-idle-badge").length,
+      compact: clockLayout.classList.contains("tt-clock-compact"),
       root: document.querySelector(".tt-native")?.className,
     };
   });
@@ -189,6 +195,11 @@ try {
   assert.equal(desktopLayout.navOverflow, "auto");
   assert.equal(desktopLayout.clockLayout, "column");
   assert.equal(desktopLayout.sessionCardBackground, "rgb(255, 255, 255)");
+  assert.equal(desktopLayout.clockSize, "32px");
+  assert.equal(desktopLayout.clockWeight, "500");
+  assert.equal(desktopLayout.statsCount, 2);
+  assert.equal(desktopLayout.badges, 1);
+  assert.equal(desktopLayout.compact, true);
   assert.equal(desktopLayout.root, "tt-native");
 
   await page.addScriptTag({ content: axeSource });

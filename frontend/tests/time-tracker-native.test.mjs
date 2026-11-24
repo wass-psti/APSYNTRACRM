@@ -397,11 +397,15 @@ test('Clock button activates only after signed backend capability is in snapshot
   records:[],active:null}});
  assert.match(html,/name="tt-action" value="clock-in"/);
  assert.doesNotMatch(html,/name="tt-action" value="clock-in" disabled/);
- assert.match(html,/Signed Clock writes active/);
+ assert.match(html,/Session is secured with a fresh GPS fix on start and end/);
+ assert.doesNotMatch(html,/Signed Clock writes active|Signed workspace verified/);
  assert.doesNotMatch(html,/Live writes remain disabled/);
  const inactive=renderTimeTrackerNative({result:{status:'VERIFIED_READ',
   access:{...access,attendanceWritesAccepted:false},records:[],active:null}});
  assert.match(inactive,/value="clock-in" disabled/);
+ assert.match(inactive,/Clock actions pending backend acceptance/);
+ assert.match(inactive,/Live writes remain disabled/);
+ assert.doesNotMatch(inactive,/Session is secured with a fresh GPS fix on start and end/);
 });
 
 test('active Clock Out reuses signed Clock In context and requires a fresh GPS fix',async()=>{
@@ -418,8 +422,8 @@ test('active Clock Out reuses signed Clock In context and requires a fresh GPS f
  const snap=await s.client.snapshot(board);
  const html=renderTimeTrackerNative({result:snap,view:'clock'});
  assert.match(html,/tt-active-session-context/);
- assert.match(html,/Recorded work location/);
- assert.match(html,/captures a new browser GPS fix/);
+ assert.match(html,/Location<\/span><strong>(?:Office-Base Duty|Offsite · Home)<\/strong>/);
+ assert.match(html,/Session is secured with a fresh GPS fix on start and end/);
  assert.doesNotMatch(html,/id="tt-location"/);
  assert.doesNotMatch(html,/id="tt-department"/);
  const offsite={...example(),clockIn:{...example().clockIn,
@@ -442,7 +446,7 @@ test('mvasquez active Home clock-out hides the exempt work note and retains End 
  const html=renderTimeTrackerNative({result:await s.client.snapshot(board),view:'clock'});
  assert.match(html,/id="tt-note-wrap" hidden/);
  assert.match(html,/name="tt-action" value="clock-out"/);
- assert.match(html,/Recorded work location/);
+ assert.match(html,/Location<\/span><strong>(?:Office-Base Duty|Offsite · Home)<\/strong>/);
 });
 
 test('Home requires a trimmed note for ordinary accounts including System Admin',async()=>{

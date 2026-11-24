@@ -23,7 +23,7 @@ test('active elapsed timer is based on signed clock-in time, not local storage',
  assert.equal(timeTrackerSessionElapsed('2026-11-18T00:00:00Z',at).progress,1);
 });
 
-test('rendering matches the warm clock reference without weakening signed actions',()=>{
+test('rendering matches the compact blue and purple clock reference without weakening signed actions',()=>{
  const html=renderTimeTrackerNative({
   result:{status:'VERIFIED_READ',access,records:[active],active,otRequests:[]},
   now:at,view:'clock'
@@ -76,6 +76,11 @@ test('refined stylesheet remains scoped, responsive and uses native controls',()
  const manifest=readFileSync('scripts/priority5-style-manifest.mjs','utf8');
  assert.match(css,/#app \.aps-board-shell\.aps-time-tracker-shell \.tt-native/);
  assert.match(css,/\.tt-session-ring-progress/);
+ assert.match(css,/\.tt-clock-compact/);
+ assert.match(css,/--tt-compact-panel:#e3effa/);
+ assert.match(css,/--tt-compact-button:#4f43b1/);
+ assert.match(css,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+ assert.match(css,/font-size:32px;font-weight:500/);
  assert.match(css,/@media \(max-width: 480px\)/);
  assert.match(css,/@media \(prefers-reduced-motion: reduce\)/);
  assert.match(css,/focus-visible/);
