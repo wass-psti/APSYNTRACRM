@@ -85,33 +85,27 @@ try {
 
   await page.addScriptTag({ content: axeSource });
   const activeAccessibility = await page.evaluate(async () => {
-    const element = document.querySelector("#tt-note-wrap");
-    const rules = [...document.styleSheets].flatMap((sheet) => {
-      try {
-        return [...sheet.cssRules];
-      } catch {
-        return [];
-      }
-    });
-    const keyframes = rules.find(
-      (rule) =>
-        rule.type === CSSRule.KEYFRAMES_RULE &&
-        rule.name === "tt-work-plan-reveal",
-    );
+    const workPlan = document.querySelector("#tt-note-wrap");
+    const ring = document.querySelector(".tt-session-ring");
+    const progress = document.querySelector("#tt-session-progress");
     const result = await window.axe.run(document, {
       runOnly: {
         type: "tag",
         values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"],
       },
     });
+    const workPlanStyle = getComputedStyle(workPlan);
+    const ringStyle = getComputedStyle(ring);
+    const progressStyle = getComputedStyle(progress);
     return {
-      animationName: getComputedStyle(element).animationName,
-      frames: keyframes
-        ? [...keyframes.cssRules].map((frame) => ({
-            opacity: frame.style.opacity,
-            transform: frame.style.transform,
-          }))
-        : [],
+      workPlanAnimation: workPlanStyle.animationName,
+      workPlanTransform: workPlanStyle.transform,
+      ringAnimation: ringStyle.animationName,
+      ringTransform: ringStyle.transform,
+      ringProgressTransition: progressStyle.transitionProperty,
+      ringProgressTransitionDuration: progressStyle.transitionDuration,
+      activeAnimations:
+        workPlan.getAnimations().length + ring.getAnimations().length,
       violations: result.violations.map((item) => ({
         id: item.id,
         nodes: item.nodes.map((node) => ({
@@ -121,14 +115,34 @@ try {
       })),
     };
   });
-  assert.equal(activeAccessibility.animationName, "tt-work-plan-reveal");
-  assert.deepEqual(
-    activeAccessibility.frames.map((frame) => frame.opacity),
-    ["", ""],
-    "Work Plan reveal must not animate text opacity",
-  );
-  assert.ok(activeAccessibility.frames.every((frame) => frame.transform));
+  assert.equal(activeAccessibility.workPlanAnimation, "none");
+  assert.equal(activeAccessibility.workPlanTransform, "none");
+  assert.equal(activeAccessibility.ringAnimation, "none");
+  assert.equal(activeAccessibility.ringTransform, "none");
+  assert.equal(activeAccessibility.ringProgressTransition, "none");
+  assert.equal(activeAccessibility.ringProgressTransitionDuration, "0s");
+  assert.equal(activeAccessibility.activeAnimations, 0);
   assert.deepEqual(activeAccessibility.violations, []);
+
+  const visualStability = await page.evaluate(async () => {
+    const workPlan = document.querySelector("#tt-note-wrap");
+    const ring = document.querySelector(".tt-session-ring");
+    const readRect = (element) => {
+      const rect = element.getBoundingClientRect();
+      return [rect.x, rect.y, rect.width, rect.height].map((value) =>
+        Number(value.toFixed(3)),
+      );
+    };
+    const before = [readRect(workPlan), readRect(ring)];
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    const after = [readRect(workPlan), readRect(ring)];
+    return { before, after };
+  });
+  assert.deepEqual(
+    visualStability.after,
+    visualStability.before,
+    "Work Plan and session ring geometry must remain fixed after initial render",
+  );
 
   await page.setViewportSize({ width: 862, height: 522 });
   await page.evaluate(() => {
@@ -610,9 +624,9 @@ try {
   assert.deepEqual(transition.violations, []);
   assert.deepEqual(pageErrors, []);
 
-  console.log("CP_TT_CLOCK_A11Y_02_BROWSER_PASS");
+  console.log("CP_TT_CLOCK_A11Y_03_BROWSER_PASS");
   console.log(
-    "WCAG 2.2 AA passed; routine live refresh performs zero child-list DOM mutations and does not restart timer-ring or Work Plan animations; focus, selection, textarea value, and scroll are preserved; remote Work Plan corrections apply after blur; active-to-idle reconciliation passed.",
+    "WCAG 2.2 AA passed; Clock Work Plan and session ring run no entrance animations or progress transitions; both element bounds remain unchanged across 400ms; routine live refresh preserves DOM identity, focus, selection, textarea value, and scroll; remote Work Plan corrections apply after blur; active-to-idle reconciliation passed.",
   );
 } finally {
   if (browser) await browser.close();

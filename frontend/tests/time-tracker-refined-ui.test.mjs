@@ -86,7 +86,13 @@ test('refined stylesheet remains scoped, responsive and uses native controls',()
  assert.match(css,/@media \(max-width: 480px\)/);
  assert.match(css,/@media \(prefers-reduced-motion: reduce\)/);
  assert.match(css,/focus-visible/);
- assert.match(css,/@keyframes tt-work-plan-reveal \{ from \{ transform:translateY\(-4px\); \} to \{ transform:translateY\(0\); \} \}/);
+ const clockStyles=css.slice(css.indexOf('/* CP-TT-CLOCK-STATE'),css.indexOf('#app .tt-native .tt-ojt'));
+ assert.doesNotMatch(clockStyles,/animation:\s*tt-(?:work-plan-reveal|clock-ring-reveal)/,
+  'Clock Work Plan and session ring must not run entrance animations');
+ assert.doesNotMatch(clockStyles,/transition:\s*stroke-dashoffset/,
+  'Clock progress must update without animated movement');
+ assert.match(css,/@keyframes tt-work-plan-reveal/,
+  'The separate OJT Work Plan reveal remains available');
  assert.doesNotMatch(css,/@import|url\(|animation:.*infinite|!important/);
  assert.match(manifest,/frontend\/apps\/TimeTracker\/time-tracker-refined\.css/);
 });
