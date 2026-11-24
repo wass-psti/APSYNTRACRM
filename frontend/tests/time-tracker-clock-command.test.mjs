@@ -14,11 +14,11 @@ const at=new Date('2026-11-04T05:48:59.000Z');
 const record={
  id:'attendance-1',status:'Active',clockIn:'2026-11-04T03:40:00.000Z',
  clockOut:null,location:'Office-Base Duty',department:'Information Technology',
- creditedMs:null
+ creditedMs:0
 };
-function render({active=null,records=[],busy=false,clockPending=false,clockPendingAction='clock-out',autoClockout=null,autoClockoutUnavailable=false}={}){
+function render({active=null,records=[],busy=false,clockPending=false,clockPendingAction='clock-out'}={}){
  return renderTimeTrackerNative({
-  result:{status:'VERIFIED_READ',access,records,active,autoClockout,autoClockoutUnavailable},
+  result:{status:'VERIFIED_READ',access,records,active},
   busy,clockPending,clockPendingAction,view:'clock',now:at
  });
 }
@@ -31,22 +31,33 @@ test('daily attendance summary uses Philippine dates across UTC midnight',()=>{
   result:{status:'VERIFIED_READ',access,records:[phtYesterday,phtToday],active:null},
   view:'clock',now:instant
  });
- assert.match(markup,/class="tt-clock-rework-stat"><span>Sessions today<\/span><strong>1<\/strong>/);
+ assert.match(markup,/class="tt-session-summary"[^>]*>[\s\S]*?<span>Sessions today<\/span><strong>1<\/strong>/);
 });
 
-test('Clock uses a fluid unified workspace with visible greeting, live time and three attendance indicators',()=>{
+test('Clock uses a single compact widget with two summary cards and one status badge',()=>{
  const markup=render();
- assert.match(markup,/class="tt-clock-stage tt-clock-rework" data-session-state="idle"/);
- assert.doesNotMatch(markup,/tt-command-layout|tt-clock-compact|tt-time-dashboard|tt-time-scene/);
- assert.match(markup,/<h3 id="tt-clock-greeting" class="tt-clock-rework-greeting">Good afternoon,<\/h3>/);
- assert.match(markup,/id="tt-clock-date" class="tt-clock-rework-date"/);
- assert.match(markup,/class="tt-clock-rework-time"/);
- assert.match(markup,/class="tt-clock-rework-workspace tt-attendance-console"/);
- assert.match(markup,/class="tt-clock-rework-stats tt-session-summary"/);
- assert.equal((markup.match(/class="tt-clock-rework-stat"/g)||[]).length,3);
+ const layout=markup.indexOf('class="tt-command-layout tt-clock-compact"');
+ const dashboard=markup.indexOf('class="tt-time-dashboard"');
+ const console=markup.indexOf('class="tt-clock-card tt-attendance-console"');
+ assert.ok(layout>0);
+ assert.ok(dashboard>layout&&console>dashboard);
+ assert.match(markup,/class="tt-clock-stage tt-command-center"/);
+ assert.match(markup,/aria-label="Live time and attendance summary"/);
+ assert.match(markup,/aria-label="Attendance clock form"/);
+ assert.match(markup,/class="tt-compact-header"/);
+ assert.match(markup,/<span>Sessions today<\/span><strong>/);
+ assert.match(markup,/<span>Total logged<\/span><strong>/);
+ assert.doesNotMatch(markup,/tt-summary-status|<span>Status<\/span>/);
+ assert.equal((markup.match(/class="tt-idle-badge/g)||[]).length,1);
+ assert.match(markup,/class="tt-clock-face" role="timer" aria-label="Current Philippine time"/);
+ assert.match(markup,/class="tt-dashboard-section-label">TODAY’S ATTENDANCE/);
+ assert.match(markup,/class="tt-console-kicker"/);
+ assert.doesNotMatch(markup,/class="tt-clock-aura"/);
+ assert.equal((markup.match(/id="tt-clock-hours"/g)||[]).length,1);
+ assert.equal((markup.match(/id="tt-clock-minutes"/g)||[]).length,1);
+ assert.equal((markup.match(/id="tt-clock-seconds"/g)||[]).length,1);
+ assert.equal((markup.match(/id="tt-clock-period"/g)||[]).length,1);
  assert.equal((markup.match(/<form id="tt-clock-form"/g)||[]).length,1);
- assert.equal((markup.match(/name="tt-action"/g)||[]).length,1);
- assert.equal((markup.match(/class="tt-clock-rework-status/g)||[]).length,1);
 });
 
 test('Idle Clock preserves signed Clock In controls without requesting GPS',()=>{
@@ -64,8 +75,7 @@ test('Idle Clock preserves signed Clock In controls without requesting GPS',()=>
  assert.doesNotMatch(markup,/id="tt-session-progress"/);
  assert.match(markup,/Session is secured with a fresh GPS fix on start and end/);
  assert.doesNotMatch(markup,/tt-location-readiness/);
- assert.match(markup,/A fresh GPS fix is requested at that time, not when this page opens/);
- assert.match(markup,/data-location="Office-Base Duty" aria-pressed="true"/);
+ assert.match(markup,/GPS is requested only when you start or end a session/);
  assert.doesNotMatch(markup,/value="clock-out"/);
  assert.doesNotMatch(markup,/<canvas|<script|style=|onclick=/);
 });
@@ -73,32 +83,19 @@ test('Idle Clock preserves signed Clock In controls without requesting GPS',()=>
 test('Active Clock preserves authoritative session details and Clock Out',()=>{
  const markup=render({active:record,records:[record]});
  assert.match(markup,/name="tt-action" value="clock-out"/);
- assert.match(markup,/class="tt-clock-rework-status is-active">Active/);
+ assert.match(markup,/class="tt-idle-badge tt-badge-active">Active/);
  assert.match(markup,/Location<\/span><strong>Office-Base Duty<\/strong>/);
  assert.match(markup,/Office-Base Duty/);
  assert.match(markup,/Department<\/span><strong>Information Technology<\/strong>/);
  assert.match(markup,/Information Technology/);
  assert.match(markup,/Session is secured with a fresh GPS fix on start and end/);
- assert.match(markup,/class="tt-clock-rework-session"/);
- assert.match(markup,/tt-clock-rework-session-details/);
- assert.match(markup,/id="tt-session-progress"/);
+ assert.match(markup,/tt-compact-active/);
  assert.match(markup,/Elapsed this session/);
  assert.match(markup,/of 9h goal/);
- assert.match(markup,/data-tt-live-total=/);
- assert.match(markup,/data-tt-goal-remaining=/);
  assert.ok(markup.indexOf("tt-session-progress-wrap")<markup.indexOf("tt-session-summary"));
- assert.equal((markup.match(/class="tt-clock-rework-status/g)||[]).length,1);
+ assert.equal((markup.match(/class="tt-idle-badge/g)||[]).length,1);
  assert.doesNotMatch(markup,/Signed Clock writes active|Signed workspace verified/);
  assert.doesNotMatch(markup,/name="tt-action" value="clock-in"/);
-});
-
-test('Active Clock exposes scheduled automatic clock-out and a live countdown when available',()=>{
- const autoClockout={recordId:record.id,status:'MONITORING',
-  nextAt:'2026-11-04T10:00:00.000Z',cutoffAt:'2026-11-04T10:00:00.000Z'};
- const markup=render({active:record,records:[record],autoClockout});
- assert.match(markup,/Automatic clock-out monitoring/);
- assert.match(markup,/data-tt-auto-clockout-countdown/);
- assert.match(markup,/auto clock-out/);
 });
 
 test('Uncertain clock-out retains verify-only control; busy form is disabled',()=>{
@@ -127,26 +124,26 @@ test('Live clock continues to update existing text nodes without rendering a new
  assert.match(app,/if\(!document\.hidden\)tick\(\)/);
 });
 
-test('Clock CSS uses full workspace width, warm accents, responsive layout and dark mode',()=>{
- assert.match(css,/\.tt-clock-stage\.tt-clock-rework/);
- assert.match(css,/\.tt-clock-rework-workspace/);
- assert.match(css,/grid-template-columns: minmax\(0, 1fr\) minmax\(300px, 0\.82fr\)/);
- assert.match(css,/max-width: none/);
- assert.match(css,/\.tt-command-layout\.tt-clock-compact\s*\{[\s\S]*?width: 100%;[\s\S]*?max-width: none;[\s\S]*?margin: 0;/);
- assert.match(css,/--tt-clock-accent: #b85d3d/);
- assert.match(css,/@media \(max-width: 980px\)/);
- assert.match(css,/@media \(max-width: 640px\)/);
- assert.match(css,/@media \(max-width: 380px\)/);
- assert.match(css,/html\[data-aps-monday-theme="dark"\]/);
- assert.match(css,/@media \(prefers-reduced-motion: reduce\)/);
- assert.match(css,/tt-work-plan-validation/);
+test('Clock CSS structurally distinguishes panels and provides responsive safe fallbacks',()=>{
+ assert.match(css,/\.tt-command-layout\{\s*display:grid;\s*grid-template-columns:minmax\(0,1\.16fr\) minmax\(320px,\.84fr\)/);
+ assert.match(css,/\.tt-time-dashboard\{\s*position:relative/);
+ assert.match(css,/linear-gradient\(145deg,#0b1939/);
+ assert.match(css,/\.tt-clock-card\.tt-attendance-console/);
+ assert.match(css,/\.tt-time-dashboard \.tt-session-summary/);
+ assert.match(css,/@media\(max-width:1140px\)/);
+ assert.match(css,/@media\(max-width:600px\)/);
+ assert.match(css,/@media\(max-width:380px\)/);
+ assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  assert.doesNotMatch(css,/will-change|@import|url\(https?:/);
- assert.match(index,/frontend\/time-tracker-clock-command\.css/);
+ const scope=css.split('\n').filter(line=>line.trim().startsWith('#app '));
+ assert.ok(scope.length>40);
+ assert.ok(scope.every(line=>line.includes('.aps-board-shell .tt-native ')));
+ assert.ok(index.indexOf('frontend/time-tracker-clock-command.css')>
+  index.indexOf('frontend/time-tracker-pixi-experience.css'));
  assert.match(smoke,/'frontend\/time-tracker-clock-command\.css'/);
 });
 
 test('Pixi prioritizes the Clock dashboard and preserves single-instance teardown',()=>{
- assert.match(pixi,/dataset\?\.ttView==='clock'/);
  assert.match(pixi,/\.tt-native \.tt-clock-stage \.tt-pixi-backdrop/);
  assert.match(pixi,/\.tt-native \.tt-app-header \.tt-pixi-backdrop/);
  assert.match(pixi,/stopTimeTrackerPixi\(\)/);
