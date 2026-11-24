@@ -1287,3 +1287,182 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell.aps-time-tracker-shell 
 html[data-aps-monday-theme="dark"] #app .tt-native .tt-ojt :is(#tt-ojt-note,.tt-ojt-work-plan) { background:#293d59;color:#edf5ff; }
 html[data-aps-monday-theme="dark"] #app .tt-native .tt-ojt .tt-work-plan-validation { color:#ffb4c0; }
 @media (prefers-reduced-motion: reduce) { #app .tt-native .tt-ojt #tt-ojt-note-wrap:not([hidden]) { animation:none; } }
+
+/* Desktop Clock reference, 1440 × 960 export. Scope the new shell to the
+ * mounted, signed TimeTracker navigation; leave mobile and OJT layouts intact. */
+#app .tt-reference-welcome { display: none; }
+#app .shell.tt-sidebar-mounted {
+  --tt-shell-bg: #f6f4f1;
+  --tt-shell-surface: #fff;
+  --tt-shell-ink: #14123a;
+  --tt-shell-muted: #4a4860;
+  --tt-shell-line: #e7e4ef;
+  --tt-shell-accent: #4f3fb8;
+  --tt-shell-selected: #e9e6fb;
+  --tt-shell-hover: #f1effa;
+  --tt-shell-title: #2b2170;
+  grid-template-columns: 280px minmax(0, 1fr);
+}
+#app .shell.tt-sidebar-mounted > .aps-sidebar {
+  width: 280px;
+  background: var(--tt-shell-surface);
+  border-right: 1px solid var(--tt-shell-line);
+  box-shadow: none;
+}
+#app .shell.tt-sidebar-mounted .aps-sidebar .sidebar-brand-wrap {
+  padding: 16px 14px 12px;
+  border-bottom: 0;
+}
+#app .shell.tt-sidebar-mounted .aps-sidebar .sidebar-brand-subtitle { display: none; }
+#app .shell.tt-sidebar-mounted .aps-sidebar .brand {
+  font-size: 15px;
+  color: var(--tt-shell-ink);
+  letter-spacing: 0;
+}
+#app .shell.tt-sidebar-mounted .aps-sidebar .brand-mark { width: 36px; height: 36px; border-radius: 8px; box-shadow: none; }
+#app .shell.tt-sidebar-mounted .aps-sidebar .workspace-switcher {
+  margin: 12px 14px 10px;
+  padding: 10px;
+  background: var(--tt-shell-surface);
+  border-color: var(--tt-shell-line);
+  border-radius: 12px;
+  box-shadow: none;
+}
+#app .shell.tt-sidebar-mounted .aps-sidebar .workspace-switcher::after { display: none; }
+#app .shell.tt-sidebar-mounted .aps-sidebar .workspace-icon {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--tt-shell-selected); color: var(--tt-shell-accent); box-shadow: none;
+}
+#app .shell.tt-sidebar-mounted .aps-sidebar .workspace-name { font-size: 13.5px; font-weight: 600; color: var(--tt-shell-ink); }
+#app .shell.tt-sidebar-mounted .aps-sidebar .workspace-sub { font-size: 11px; color: var(--tt-shell-muted); }
+#app .shell.tt-sidebar-mounted .aps-sidebar .nav-list { gap: 2px; padding-inline: 14px; }
+#app .shell.tt-sidebar-mounted .aps-sidebar .side-section {
+  margin: 13px 12px 5px; font-size: 11px; font-weight: 700;
+  text-transform: none; letter-spacing: .04em; color: var(--tt-shell-muted);
+}
+#app .shell.tt-sidebar-mounted .aps-sidebar .nav-link {
+  min-height: 40px; padding: 7px 12px; border: 0; border-radius: 10px;
+  background: transparent; box-shadow: none; color: var(--tt-shell-muted);
+  font-size: 14px; font-weight: 500;
+}
+#app .shell.tt-sidebar-mounted .aps-sidebar .nav-link::before { display: none; }
+#app .shell.tt-sidebar-mounted .aps-sidebar .nav-link:hover { background: var(--tt-shell-hover); }
+#app .shell.tt-sidebar-mounted .aps-sidebar .nav-link.active {
+  background: var(--tt-shell-selected); color: var(--tt-shell-accent); font-weight: 600;
+}
+#app .shell.tt-sidebar-mounted .aps-sidebar .nav-link[aria-expanded="true"]::after {
+  content: ""; flex: none; width: 7px; height: 7px; margin-left: auto; margin-right: 4px;
+  border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+}
+#app .shell.tt-sidebar-mounted .aps-sidebar .tt-navigation.fm1-tabs {
+  display: block; min-width: 0; margin: 2px 0 6px 21px; padding: 0 0 0 10px;
+  border: 0; border-left: 1px solid var(--tt-shell-line); border-radius: 0;
+  background: transparent; box-shadow: none; overflow: visible;
+}
+#app .shell.tt-sidebar-mounted .aps-sidebar .tt-navigation-scroll {
+  display: flex; flex-direction: column; align-items: stretch; gap: 1px; padding: 0; overflow: visible;
+}
+#app .shell.tt-sidebar-mounted .aps-sidebar .tt-nav-tab.fm1-tab {
+  display: block; width: 100%; min-height: 30px; margin: 0; padding: 6px 12px;
+  border: 0; border-radius: 8px; background: transparent; box-shadow: none;
+  color: var(--tt-shell-muted); font-family: inherit;
+  font-size: 13.5px; font-weight: 500; line-height: 1.3; text-align: left;
+  white-space: normal; letter-spacing: 0; text-transform: none;
+}
+#app .shell.tt-sidebar-mounted .aps-sidebar .tt-nav-tab:hover:not(:disabled) { background: var(--tt-shell-hover); }
+#app .shell.tt-sidebar-mounted .aps-sidebar .tt-nav-tab.is-current {
+  background: var(--tt-shell-selected); color: var(--tt-shell-accent); font-weight: 600;
+}
+#app .shell.tt-sidebar-mounted .aps-sidebar .tt-nav-tab:focus-visible { outline: 2px solid var(--tt-shell-accent); outline-offset: -2px; }
+#app .shell.tt-sidebar-mounted .aps-sidebar .tt-nav-tab:disabled { opacity: .55; cursor: not-allowed; }
+#app .shell.tt-sidebar-mounted > .main > .topbar {
+  min-height: 64px; height: auto; padding: 10px 24px;
+  background: var(--tt-shell-surface); border-color: var(--tt-shell-line); box-shadow: none;
+}
+#app .shell.tt-sidebar-mounted .breadcrumb, #app .shell.tt-sidebar-mounted .breadcrumb strong { font-size: 14px; }
+#app .shell .breadcrumb .tt-section-crumb { color: inherit; font-weight: 600; white-space: nowrap; }
+#app .shell.tt-sidebar-mounted .topbar :is(.top-pill,.aps-sync,.topbar-signout,.aps-global-search-trigger) { border-radius: 999px; min-height: 36px; }
+#app .shell.tt-sidebar-mounted .topbar .top-avatar { border-radius: 50%; background: var(--tt-shell-accent); color: #fff; }
+#app .shell.tt-sidebar-mounted > .main.aps-time-tracker-shell,
+#app .shell.tt-sidebar-mounted > .main.aps-time-tracker-shell > .main-content,
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native,
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-application {
+  background: var(--tt-shell-bg); box-shadow: none;
+}
+#app .shell.tt-sidebar-mounted > .main.aps-time-tracker-shell > .main-content { padding: 0 24px 36px; }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-application {
+  position: relative; border: 0; border-radius: 0; padding: 0; max-width: none;
+}
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app.tt-application .tt-app-header.fm1-app-header { display: none; }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app.tt-application[data-tt-view="clock"] .tt-app-header.fm1-app-header {
+  display: flex; position: absolute; top: 12px; right: 0; z-index: 2;
+  min-height: 0; width: auto; padding: 0; border: 0; background: transparent; box-shadow: none;
+}
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-app-header :is(.tt-app-brand,.tt-header-link,.tt-header-identity,.tt-pixi-backdrop) { display: none; }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-clock-stage.tt-command-center {
+  display: flex; flex-direction: column; align-items: center; gap: 24px;
+  padding: 32px 0 24px; background: transparent; border: 0; box-shadow: none;
+}
+#app .shell.tt-sidebar-mounted .tt-reference-welcome {
+  display: block; margin: 0; padding: 0 40px; text-align: center;
+  color: var(--tt-shell-title); font-family: Montserrat, Inter, system-ui, sans-serif;
+  font-size: clamp(25px, 3vw, 38px); font-weight: 600; line-height: 1.22;
+  letter-spacing: -.02em; overflow-wrap: anywhere;
+}
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact {
+  width: min(100%, 462px); max-width: 462px; padding: 28px 26px; gap: 22px;
+  border-radius: 24px; border-color: var(--tt-shell-line);
+  --tt-compact-surface: var(--tt-shell-surface);
+  --tt-compact-ink: var(--tt-shell-ink);
+  --tt-compact-text: var(--tt-shell-ink);
+  --tt-compact-muted: var(--tt-shell-muted);
+  --tt-compact-line: var(--tt-shell-line);
+  --tt-compact-purple: var(--tt-shell-accent);
+  --tt-compact-badge: var(--tt-shell-selected);
+  --tt-compact-stat: #efedf5;
+  --tt-session-data: #e6effb;
+  --tt-session-ink: var(--tt-shell-ink);
+  --tt-session-label: #44546f;
+}
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact[data-session-state="active"] .tt-time-dashboard .tt-clock-hero { margin-bottom: 22px; }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact[data-session-state="active"] .tt-time-dashboard .tt-clock-face {
+  font-size: 34px; font-weight: 600; letter-spacing: -.02em;
+}
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-compact-header #tt-clock-date { font-size: 14px; }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-clock-hero .tt-idle-badge { align-self: start; font-size: 13px; border: 1px solid var(--tt-shell-line); }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-time-dashboard .tt-session-progress-wrap { gap: 22px; margin-bottom: 22px; }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-time-dashboard .tt-session-ring { width: min(100%, 220px); }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-time-dashboard :is(.tt-session-ring-track,.tt-session-ring-progress) { stroke-width: 7; }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-time-dashboard .tt-compact-elapsed { color: var(--tt-shell-accent); font-size: 14px; }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-time-dashboard .tt-compact-elapsed #tt-session-elapsed { font-size: 34px; font-weight: 600; }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-time-dashboard .tt-active-copy { font-size: 12.5px; }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-time-dashboard .tt-session-summary { gap: 12px; }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-time-dashboard .tt-session-summary > div { min-height: 72px; padding: 14px 16px; }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-time-dashboard .tt-session-summary span { font-size: 13px; }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-time-dashboard .tt-session-summary strong { font-weight: 600; }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-attendance-console form { gap: 22px; }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-clock-card .tt-active-session-context { padding: 14px 16px; border-radius: 14px; }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-active-session-context > div > span > span { display: none; }
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-compact-active .tt-note-field:not([hidden]) {
+  color: var(--tt-shell-ink); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-compact-active #tt-note {
+  min-height: 42px; margin-top: 8px; padding: 12px 14px; resize: vertical;
+  color: var(--tt-shell-muted); background: var(--tt-shell-surface); text-transform: none; letter-spacing: 0;
+}
+#app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-attendance-console .tt-start-button { background: var(--tt-shell-accent); }
+html[data-aps-monday-theme="dark"] #app .shell.tt-sidebar-mounted {
+  --tt-shell-bg: #191c23; --tt-shell-surface: #242832; --tt-shell-ink: #edf0f7;
+  --tt-shell-muted: #bec8d9; --tt-shell-line: #495365; --tt-shell-accent: #b5abff;
+  --tt-shell-selected: #373d64; --tt-shell-hover: #30364a; --tt-shell-title: #d7d0ff;
+}
+html[data-aps-monday-theme="dark"] #app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact {
+  --tt-compact-stat: #303542; --tt-session-data: #293d59; --tt-session-label: #b8d9ff;
+}
+html[data-aps-monday-theme="dark"] #app .shell.tt-sidebar-mounted .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-attendance-console .tt-start-button { background: #6555ce; }
+html[data-aps-monday-theme="dark"] #app .shell.tt-sidebar-mounted .topbar .top-avatar { background: #6555ce; }
+@media (max-width: 1050px) {
+  #app .shell.tt-sidebar-mounted > .main.aps-time-tracker-shell > .main-content { padding-inline: 14px; }
+  #app .shell.tt-sidebar-mounted .tt-reference-welcome { padding-inline: 40px; }
+}

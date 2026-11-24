@@ -189,7 +189,7 @@ import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT
 import {FundTrackerNativeClient} from './fund-tracker-native.js';
 import {renderFundTrackerNative} from './fund-tracker-ui.js';
 import {findFundTrackerBoard,FUND_TRACKER_APPLICATION_ROUTE,parseFundTrackerRecordRoute,fundTrackerRecordHref} from './fund-tracker-application.js';
-import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock} from './time-tracker-ui.js';
+import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock,syncTimeTrackerSidebar} from './time-tracker-ui.js';
 import {isTimeTrackerHomeNoteRequired,createTimeTrackerWorkNoteDraft} from './time-tracker-offsite-note.js';
 import {mountTimeTrackerPixi,stopTimeTrackerPixi} from './time-tracker-pixi-scene.js';
 import {startSelectExperience} from './select-experience.js';
@@ -767,6 +767,8 @@ function syncSidebarLayout(){
   toggle.setAttribute('aria-label',expanded?'Collapse navigation':'Expand navigation');
   toggle.setAttribute('title',expanded?'Collapse navigation':'Expand navigation');
  }
+ syncTimeTrackerSidebar(shellElement,{enabled:state.ttStandalone===true&&state.ttAttendance?.status==='VERIFIED_READ',
+  expanded:!window.matchMedia('(max-width:820px)').matches&&!sidebarManualCollapsed});
 }
 /** Canonical navigation selection shared by initial render and cached-shell updates. */
 function currentSidebarNavigation(){
@@ -1017,6 +1019,9 @@ function shell(body){
  <div class="top-actions"><button type="button" class="aps-global-search-trigger" data-global-search-open aria-haspopup="dialog" aria-expanded="false" aria-label="Search APSYNTRA CRM"><span class="aps-global-search-trigger-icon" aria-hidden="true">⌕</span><span class="aps-global-search-trigger-label">Search</span><kbd data-global-search-key>⌘ K</kbd></button>${renderWorkspaceInviteLaunch({id:state.context?.workspace_id,name:workspaceName()},{placement:'topbar'})}<span class="top-pill"><span class="online-dot"></span> Secure session</span><button type="button" class="aps-sync" data-action="platform-sync-verify" data-sync-state="connecting" aria-label="Checking synchronization status" title="Checking signed workspace updates"><span class="aps-sync-orbit" aria-hidden="true"></span><span class="aps-sync-caption">Connecting</span></button><button type="button" class="secondary topbar-signout" data-action="logout" aria-label="Sign out of APSYNTRA CRM" title="Sign out of APSYNTRA CRM">Sign out</button><a href="#/settings" class="avatar top-avatar" title="Account settings"><span data-avatar-initials aria-hidden="true">${e(initials(name()))}</span><img data-avatar-current alt="" hidden /></a></div></header>
  <div class="main-content">${body}</div></main></div>`;
  }
+ // Discard previously mounted tabs before relocating the freshly rendered, signed tab set.
+ const shellElement=root.querySelector(':scope > .shell');
+ if(shellElement)syncTimeTrackerSidebar(shellElement,{enabled:state.ttStandalone===true&&state.ttAttendance?.status==='VERIFIED_READ',fresh:true});
  syncSidebarLayout();
  const previousRoute=shellRoute;
  shellIdentity=identity;
@@ -1652,6 +1657,7 @@ function timeTrackerOjtAdminScope(){
 }
 function renderTimeTrackerApplication(){
  return renderTimeTrackerNative({
+  displayName:name(),
   ojtSelected:timeTrackerOjtScope()?state.ttOjtSelected:null,
   ojtAttendance:timeTrackerOjtScope()?state.ttOjtSnapshot:null,
   ojtBusy:state.ttOjtBusy||state.ttOjtPending,
