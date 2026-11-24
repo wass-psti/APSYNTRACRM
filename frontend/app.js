@@ -204,7 +204,7 @@ import {applyTimeTrackerOverviewFilters,filterTimeTrackerOverviewRows,syncTimeTr
 import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,timeTrackerLogRowsForSnapshot,retainTimeTrackerLogDetailIds,TT_LOG_DEFAULT_FILTERS} from './time-tracker-log.js';
 import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAULT_FILTERS} from './time-tracker-reports.js';
 import {timeTrackerCalendarMonth,shiftTimeTrackerCalendarMonth} from './time-tracker-calendar.js';
-import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED,TT_OT_MAX_WEEK_OFFSET,timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate,updateTimeTrackerOvertimePreview} from './time-tracker-overtime.js';
+import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED,TT_OT_MAX_WEEK_OFFSET,timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate,updateTimeTrackerOvertimePreview,updateTimeTrackerManualOtPreview} from './time-tracker-overtime.js';
 import {parseTimeTrackerClockInput} from './time-tracker-time-format.js';
 import {timeTrackerMyHoursWeek} from './time-tracker-my-hours.js';
 import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
@@ -10594,10 +10594,15 @@ async function action(name,button){
  case 'tt-ot-status':
  case 'tt-ot-sort':
  case 'tt-ot-open':
+ case 'tt-ot-manual-open':
  case 'tt-ot-close':{
   if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='ot'||
      state.ttBusy||state.ttAttendance?.status!=='VERIFIED_READ')return;
   if(name==='tt-ot-open'){state.ttOtDraft={};state.ttOtModalOpen=true;}
+  if(name==='tt-ot-manual-open'){
+   if(state.ttAttendance.access?.manualOtManager!==true||state.ttAttendance.access?.moduleRole!=='System Admin')return;
+   state.ttOtDraft={};state.ttOtModalOpen='manual';
+  }
   if(name==='tt-ot-close'){state.ttOtModalOpen=false;state.ttOtDraft={};}
   if(name==='tt-ot-current')state.ttOtFilters={...state.ttOtFilters,weekOffset:0};
   if(name==='tt-ot-prev'||name==='tt-ot-next'){
@@ -10605,14 +10610,35 @@ async function action(name,button){
    if(Math.abs(offset)>TT_OT_MAX_WEEK_OFFSET)return;
    state.ttOtFilters={...state.ttOtFilters,weekOffset:offset};
   }
-  if(name==='tt-ot-status'&&['Submitted','Approved','Rejected'].includes(button.dataset.status))
+  if(name==='tt-ot-status'&&['All','Submitted','Approved','Rejected'].includes(button.dataset.status))
    state.ttOtFilters={...state.ttOtFilters,status:button.dataset.status};
   if(name==='tt-ot-sort')
    state.ttOtFilters={...state.ttOtFilters,
     sort:state.ttOtFilters.sort==='oldest'?'newest':'oldest'};
   render();
   if(name==='tt-ot-open')root.querySelector('#tt-ot-date')?.focus();
+  if(name==='tt-ot-manual-open')root.querySelector('#tt-ot-manual-employee')?.focus();
   if(name==='tt-ot-close')root.querySelector('[data-action="tt-ot-open"]')?.focus();
+  break;
+ }
+ case 'tt-ot-reason':{
+  if(state.ttBusy||state.ttOtModalOpen!=='manual')return;
+  const input=root.querySelector('#tt-ot-manual-reason');
+  if(input){input.value=button.dataset.reason||'';input.dispatchEvent(new Event('input',{bubbles:true}));input.focus();}
+  break;
+ }
+ case 'tt-ot-withdraw':{
+  if(!TT_OT_WRITES_ACCEPTED||state.ttBusy||state.view!=='board'||state.tab!=='attendance'||
+     state.ttView!=='ot'||state.ttAttendance?.status!=='VERIFIED_READ')return;
+  const requestId=button.dataset.id;
+  if(!state.ttAttendance.otRequests?.some(row=>row.id===requestId&&row.status==='Submitted'&&row.canWithdraw===true))return;
+  if(!confirm('Remove this pending overtime request? This action cannot be undone.'))return;
+  state.ttBusy=true;render();
+  try{
+   await timeTracker.withdrawOvertime(state.boardId,requestId);
+   await loadTimeTracker();
+   toast('Overtime request removed.');
+  }finally{state.ttBusy=false;render();}
   break;
  }
  case 'tt-ot-approve':
@@ -13822,10 +13848,11 @@ root.addEventListener('submit',event=>{
   let weekOffset;
   try{weekOffset=timeTrackerOtWeekOffsetForDate(draft.date);}
   catch(error){toast(error.message,true);return;}
-  state.ttBusy=true;render();
+  state.ttOtDraft={...draft};state.ttBusy=true;render();
   Promise.resolve(timeTracker.submitManualOvertime(state.boardId,draft))
    .then(async()=>{
-    state.ttOtFilters={...state.ttOtFilters,weekOffset,status:'Submitted',search:''};
+    state.ttOtFilters={...state.ttOtFilters,weekOffset,status:'All',search:''};
+    state.ttOtModalOpen=false;state.ttOtDraft={};
     await loadTimeTracker();
     toast('Manual OT submitted for employee review.');
    }).catch(notice).finally(()=>{state.ttBusy=false;render();});
@@ -13976,6 +14003,17 @@ root.addEventListener('invalid',event=>{
 },true);
 root.addEventListener('input',event=>{
  if(syncTradeLinkFinanceInput(event))return;
+ const manualOvertimeForm=event.target.closest?.('#tt-ot-manual-form');
+ if(manualOvertimeForm&&state.ttOtModalOpen==='manual'&&!state.ttBusy){
+  state.ttOtDraft={
+   employeeId:manualOvertimeForm.querySelector('#tt-ot-manual-employee')?.value||'',
+   date:manualOvertimeForm.querySelector('#tt-ot-manual-date')?.value||'',
+   start:manualOvertimeForm.querySelector('#tt-ot-manual-start')?.value||'',
+   end:manualOvertimeForm.querySelector('#tt-ot-manual-end')?.value||'',
+   reason:manualOvertimeForm.querySelector('#tt-ot-manual-reason')?.value||''
+  };
+  updateTimeTrackerManualOtPreview(manualOvertimeForm);return;
+ }
  const overtimeForm=event.target.closest?.('#tt-ot-form');
  if(overtimeForm&&state.view==='board'&&state.tab==='attendance'&&
     state.ttView==='ot'&&state.ttOtModalOpen&&!state.ttBusy){

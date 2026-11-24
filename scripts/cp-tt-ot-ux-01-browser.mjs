@@ -53,7 +53,7 @@ const errors=[];
 page.on('pageerror',error=>errors.push(error.message));
 try{
  await page.goto('http://127.0.0.1:'+address.port+'/',{waitUntil:'networkidle'});
- const dialog=page.getByRole('dialog',{name:'Submit overtime request'});
+ const dialog=page.getByRole('dialog',{name:'File Overtime'});
  await dialog.waitFor({state:'visible'});
  const desktop=await dialog.boundingBox();
  assert.ok(desktop&&desktop.width<=680.5,'desktop dialog must stay within the 680px design width');
@@ -96,7 +96,7 @@ try{
  assert.equal(darkStyles.inputText,'rgb(239, 239, 241)');
  assert.notEqual(darkStyles.gateBackground,'rgba(0, 0, 0, 0)');
  await page.goto('http://127.0.0.1:'+address.port+'/?inactive=1',{waitUntil:'networkidle'});
- assert.equal(await page.getByRole('button',{name:'Submit OT request'}).isDisabled(),true);
+ assert.equal(await page.locator('#tt-ot-form button[type=submit]').isDisabled(),true);
  assert.match(await page.locator('.tt-ot-gate').textContent(),/temporarily unavailable/);
  assert.deepEqual(errors,[]);
  console.log('PASS: desktop dimensions, native time controls, live duration, range/reason validation, character counter, mobile layout, dark theme, inactive contract messaging, zero page errors');

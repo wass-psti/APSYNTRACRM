@@ -619,6 +619,22 @@ export class TimeTrackerNativeClient{
   await checkIdentity(this.auth,this.api,before.access,boardId);
   return Object.freeze({id:receipt.id,status:receipt.status,ownerId:receipt.ownerId});
  }
+ async withdrawOvertime(boardId,requestId){
+  if(!TT_OT_WRITES_ACCEPTED||!uuid.test(requestId||''))deny('Invalid overtime withdrawal');
+  const before=await this.snapshot(boardId);
+  if(before.access.otContractActive!==true||
+     !before.otRequests.some(row=>row.id===requestId&&row.status==='Submitted'&&row.canWithdraw===true))
+   deny('Only the creator can remove a pending OT request');
+  await checkIdentity(this.auth,this.api,before.access,boardId);
+  const receipt=await this.api.rpc('timetracker_ot_withdraw',{
+   p_board_id:boardId,p_request_id:requestId
+  });
+  if(!isRecord(receipt)||receipt.id!==requestId||
+     receipt.workspaceId!==before.access.workspaceId||receipt.status!=='Withdrawn'||
+     receipt.withdrawnBy!==before.access.userId)deny('Invalid signed OT withdrawal receipt');
+  await checkIdentity(this.auth,this.api,before.access,boardId);
+  return Object.freeze({id:receipt.id,status:receipt.status});
+ }
  async decideOvertime(boardId,requestId,decision){
   if(!TT_OT_WRITES_ACCEPTED)deny('Overtime decisions require signed backend acceptance');
   if(!uuid.test(requestId||'')||!['Approved','Rejected'].includes(decision))
