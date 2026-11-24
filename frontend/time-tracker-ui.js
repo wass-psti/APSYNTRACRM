@@ -71,16 +71,21 @@ export function timeTrackerClockParts(at=new Date()){
  };
 }
 
-/** Elapsed session duration is presentation only, not credited work or payroll. */
+/** Live credited work for the signed session, using the same PHT lunch policy as attendance totals. */
 export function timeTrackerSessionElapsed(clockIn,at=new Date()){
  const start=Date.parse(clockIn);
  const now=new Date(at).getTime();
  if(!Number.isFinite(start)||!Number.isFinite(now))return {label:'00:00:00',progress:0};
- const elapsed=Math.max(0,now-start);
+ const elapsed=creditedAttendanceMs(clockIn,at);
  return {
   label:formatTimeTrackerDurationMs(elapsed),
   progress:Math.min(1,elapsed/TT_POLICY.requiredWorkMs)
  };
+}
+
+function timeTrackerGoalRemaining(clockIn,at){
+ const minutes=Math.ceil(Math.max(0,TT_POLICY.requiredWorkMs-creditedAttendanceMs(clockIn,at))/60000);
+ return minutes?Math.floor(minutes/60)+'h '+minutes%60+'m to goal':'9h goal reached';
 }
 
 /** Synchronize the clock and elapsed-time ring without rerendering or refetching. */
@@ -111,9 +116,7 @@ export function syncTimeTrackerClock(root,at=new Date()){
  }
  const goal=root.querySelector('[data-tt-goal-remaining]');
  if(goal?.dataset?.ttGoalRemaining){
-  const elapsedMs=Math.max(0,new Date(at).getTime()-Date.parse(goal.dataset.ttGoalRemaining));
-  const minutes=Math.ceil(Math.max(0,TT_POLICY.requiredWorkMs-elapsedMs)/60000);
-  goal.textContent=minutes?Math.floor(minutes/60)+'h '+minutes%60+'m to goal':'9h goal reached';
+  goal.textContent=timeTrackerGoalRemaining(goal.dataset.ttGoalRemaining,at);
  }
  const countdown=root?.querySelector?.('[data-tt-auto-clockout-countdown]');
  if(countdown?.dataset?.deadline){
@@ -290,8 +293,8 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
        '<span class="tt-session-goal">of 9h goal</span></div></div>'+
        '<p class="tt-active-copy">Started '+esc(formatTimeTrackerAutoClockoutTime(active.clockIn))+
        (autoDeadline?' · auto clock-out '+esc(formatTimeTrackerAutoClockoutTime(autoDeadline)):'')+
-       ' · <span data-tt-goal-remaining="'+esc(active.clockIn)+'">'+(session.progress>=1?'9h goal reached':Math.floor(Math.ceil(TT_POLICY.requiredWorkMs*(1-session.progress)/60000)/60)+'h '+Math.ceil(TT_POLICY.requiredWorkMs*(1-session.progress)/60000)%60+'m to goal')+'</span></p>'+
-       '<span class="tt-compact-sr">Session duration · credited hours may differ</span>'+
+       ' · <span data-tt-goal-remaining="'+esc(active.clockIn)+'">'+timeTrackerGoalRemaining(active.clockIn,now)+'</span></p>'+
+       '<span class="tt-compact-sr">Elapsed working time excludes the unpaid 12 PM to 1 PM Philippine lunch break.</span>'+
        ((autoClockout||autoUnavailable)?'<p class="tt-clock-hint tt-auto-clockout-state'+
         (autoUnavailable||autoClockout?.status!=='MONITORING'?'':' tt-compact-sr')+'" role="status">'+esc(autoLabel)+
         (autoDeadline?'<strong>'+esc(formatTimeTrackerAutoClockoutTime(autoDeadline))+'</strong> · '+

@@ -330,7 +330,7 @@ try {
   assert.equal(await badge.textContent(), "Active");
   assert.equal(
     await page.locator("#tt-session-elapsed").textContent(),
-    "05:13:54",
+    "04:13:54",
   );
   assert.equal(await page.locator(".tt-session-ring > svg").isVisible(), true);
   const activeClockSize = await clockFace.evaluate(readClockSize);

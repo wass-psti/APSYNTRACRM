@@ -23,8 +23,8 @@ test('manual duration HH:MM:SS parses into unchanged integer milliseconds',()=>{
  }
  for(const v of ['1.5','01:60:00','1:00:00','744:00:01','-01:00:00','foo'])assert.equal(parseTimeTrackerDuration(v),null);
 });
-test('live elapsed session includes seconds and passes 24 hours',()=>{
- assert.equal(timeTrackerSessionElapsed('2026-11-18T00:00:00Z',new Date('2026-11-19T01:30:05Z')).label,'25:30:05');
+test('live credited session retains seconds and applies lunch across calendar days',()=>{
+ assert.equal(timeTrackerSessionElapsed('2026-11-18T00:00:00Z',new Date('2026-11-19T01:30:05Z')).label,'24:30:05');
 });
 test('TimeTracker CSV export durations use HH:MM:SS',()=>{
  const row={clockIn:'2026-11-18T00:00:00Z',clockOut:'2026-11-19T01:30:00Z',creditedMs:91800000,name:'Employee',location:'Office-Base Duty',department:'IT',status:'Completed'};
