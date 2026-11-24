@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {renderTimeTrackerLog,timeTrackerLogSummary,filterTimeTrackerLogRows,boundTimeTrackerLogWidth,timeTrackerLogWorkDuration,syncTimeTrackerLogDurations} from '../time-tracker-log.js';
+import {renderTimeTrackerLog,timeTrackerLogSummary,filterTimeTrackerLogRows,boundTimeTrackerLogWidth,timeTrackerLogWorkDuration} from '../time-tracker-log.js';
 
 const now=new Date('2026-11-04T05:48:59Z');
 const records=[
@@ -178,22 +178,22 @@ test('Log clock-out uses Philippine 12-hour time with seconds while clock-in and
  assert.match(html,/class="tt-log-row-clock"[^>]*><strong>09:00:00<\/strong>/);
 });
 
-test('Work Duration shows credited live work, exact cutoff and frozen signed completion',()=>{
+test('Work Duration is blank until completion and short shifts have no lunch deduction',()=>{
  const active={...records[0],clockIn:'2026-11-04T00:00:00Z'};
- const atLunch=new Date('2026-11-04T04:30:00Z');
- assert.equal(timeTrackerLogWorkDuration(active,atLunch),'04:00:00');
- assert.equal(timeTrackerLogWorkDuration(active,'2026-11-04T10:00:00Z'),'09:00:00');
- const early={...active,clockOut:'2026-11-04T03:30:00Z',status:'Completed',creditedMs:12600000};
- assert.equal(timeTrackerLogWorkDuration(early,now),'03:30:00');
- const closed={...active,clockOut:'2026-11-04T10:00:00Z',status:'Completed',creditedMs:32400000};
- assert.equal(timeTrackerLogWorkDuration(closed,'2026-11-04T12:00:00Z'),'09:00:00');
- assert.equal(timeTrackerLogWorkDuration({...closed,creditedMs:3600000},now),'01:00:00');
- const html=render({records:[active,early],now:atLunch});
- assert.match(html,/data-tt-log-active-duration="2026-11-04T00:00:00Z">04:00:00<\/span>/);
- assert.match(html,/class="tt-log-row-duration"[^>]*>03:30:00<\/span>/);
- const cell={dataset:{ttLogActiveDuration:active.clockIn},textContent:'04:00:00'};
- syncTimeTrackerLogDurations({querySelectorAll:()=>[cell]},'2026-11-04T05:00:01Z');
- assert.equal(cell.textContent,'04:00:01');
+ assert.equal(timeTrackerLogWorkDuration(active),'');
+ const close=(clockOut,creditedMs)=>({...active,clockOut,status:'Completed',creditedMs});
+ assert.equal(timeTrackerLogWorkDuration(close('2026-11-04T05:30:00Z',16200000)),'05:30:00');
+ assert.equal(timeTrackerLogWorkDuration(close('2026-11-04T08:59:59Z',28799000)),'08:59:59');
+ assert.equal(timeTrackerLogWorkDuration(close('2026-11-04T09:00:00Z',28800000)),'09:00:00');
+ assert.equal(timeTrackerLogWorkDuration(close('2026-11-04T09:30:00Z',30600000)),'09:00:00');
+ const closed=close('2026-11-04T10:00:00Z',32400000);
+ assert.equal(timeTrackerLogWorkDuration(closed),'09:00:00');
+ assert.equal(timeTrackerLogWorkDuration(close('2026-11-04T11:00:00Z',36000000)),'10:00:00');
+ assert.equal(timeTrackerLogWorkDuration({...closed,workDurationMs:3600000}),'01:00:00');
+ const html=render({records:[active,close('2026-11-04T05:30:00Z',16200000)]});
+ assert.match(html,/class="tt-log-row-duration"[^>]*><\/span>/);
+ assert.match(html,/class="tt-log-row-duration"[^>]*>05:30:00<\/span>/);
+ assert.doesNotMatch(html,/data-tt-log-active-duration/);
  const styles=readFileSync('frontend/apps/TimeTracker/time-tracker-reference-shell.css','utf8');
  assert.match(styles,/data-tt-log-width-duration="96"/);
  assert.match(styles,/data-tt-log-width-duration="960"/);
