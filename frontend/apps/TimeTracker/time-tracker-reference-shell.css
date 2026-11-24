@@ -234,7 +234,7 @@ html[data-aps-monday-theme="dark"] #app#app .shell .main.aps-time-tracker-shell 
 
 /* Attendance Log reference: flat, full-width, scoped to the signed Log only. */
 #app#app .tt-log-reference-header {
- display:flex;align-items:center;gap:20px;min-width:0;flex:1 1 auto;padding:8px 16px;background:var(--tt-shell-surface,#fff);color:var(--tt-shell-ink,#14123a);border-bottom:1px solid var(--tt-shell-line,#e7e4ef);
+ display:flex;align-items:center;gap:20px;min-width:0;flex:0 0 auto;padding:12px 16px;background:var(--tt-shell-surface,#fff);color:var(--tt-shell-ink,#14123a);border-bottom:1px solid var(--tt-shell-line,#e7e4ef);
 }
 #app#app .tt-log-reference-header h2 {
  flex:none;margin:0;font:600 17px/1.3 Montserrat,Inter,system-ui,sans-serif;white-space:nowrap;letter-spacing:-.01em;color:inherit;
@@ -263,11 +263,6 @@ html[data-aps-monday-theme="dark"] #app#app .shell .main.aps-time-tracker-shell 
 #app#app .tt-log-reference-header .tt-log-filter-footer {display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 #app#app .tt-log-reference-header .tt-log-filter-footer button {height:32px;min-height:32px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:inherit;font-size:13px;font-weight:600}
 #app#app .tt-log-reference-header [data-action="tt-log-filter-apply"] {background:#4f3fb8;color:#fff}
-#app#app .shell > .main > .topbar.tt-log-topbar {padding:4px 16px;min-height:56px;gap:12px;overflow:visible}
-#app#app .tt-log-topbar > :is(.breadcrumb,.ws01-topbar-launch),#app#app .tt-log-topbar .aps-global-search-trigger {display:none}
-#app#app .tt-log-topbar .tt-log-reference-header {padding:0;border:0}
-#app#app .tt-log-topbar .top-actions {gap:8px;flex-wrap:wrap}
-#app#app .tt-log-topbar .top-actions :is(.top-pill,.aps-sync,.topbar-signout) {border-radius:8px;min-height:34px}
 #app#app .shell.tt-sidebar-mounted > .main.aps-time-tracker-shell:has(.tt-log[data-tt-log-reference]) > .main-content {padding:0}
 #app#app .tt-native .tt-application[data-tt-view="log"]:has([data-tt-log-reference]) {gap:0}
 #app#app .tt-native .tt-log[data-tt-log-reference] {--tt-log-bg:var(--tt-shell-surface,#fff);--tt-log-ink:var(--tt-shell-ink,#14123a);--tt-log-muted:var(--tt-shell-muted,#4a4860);--tt-log-line:var(--tt-shell-line,#e7e4ef);--tt-log-accent:var(--tt-shell-accent,#3b2fa0);--tt-log-hover:var(--tt-shell-hover,#f6f4fd);--tt-log-selected:var(--tt-shell-selected,#dfd9f9);padding:0;gap:0;min-width:0;min-height:calc(100dvh - 56px);background:var(--tt-log-bg);color:var(--tt-log-ink)}
@@ -291,10 +286,10 @@ html[data-aps-monday-theme="dark"] #app#app .shell .main.aps-time-tracker-shell 
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-checkbox:is([aria-checked="true"],[aria-checked="mixed"]) {background:#4f3fb8;border-color:#4f3fb8}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-admin-toolbar-copy > .tt-log-checkbox {margin:0 14px 0 8px}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table-scroll {max-width:100%;overflow-x:auto;border:0;border-radius:0}
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table {width:100%;min-width:1120px;table-layout:fixed;border-collapse:collapse}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table {width:100%;min-width:1280px;table-layout:fixed;border-collapse:collapse}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th {height:32px;padding:0 12px;text-align:left;background:var(--tt-log-bg);color:var(--tt-log-muted);font:600 12px Inter,system-ui,sans-serif;border-bottom:1px solid var(--tt-log-line)}
 /* Native table columns define the header widths; the spanning summary uses the same ratios. */
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table {--tt-log-in:14;--tt-log-person:29;--tt-log-location:17;--tt-log-department:17;--tt-log-out:9;--tt-log-status:11}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table {--tt-log-in:13;--tt-log-person:24;--tt-log-location:15;--tt-log-department:15;--tt-log-out:11;--tt-log-duration:10;--tt-log-status:9}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th:nth-child(n) {width:auto;box-sizing:border-box}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-col-check {width:3%}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-col-in {width:calc(var(--tt-log-in) * 1%)}
@@ -302,13 +297,14 @@ html[data-aps-monday-theme="dark"] #app#app .shell .main.aps-time-tracker-shell 
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-col-location {width:calc(var(--tt-log-location) * 1%)}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-col-department {width:calc(var(--tt-log-department) * 1%)}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-col-out {width:calc(var(--tt-log-out) * 1%)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-col-duration {width:calc(var(--tt-log-duration) * 1%)}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-col-status {width:calc(var(--tt-log-status) * 1%)}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-filterable > td {padding:0;border:0;border-bottom:1px solid var(--tt-log-line);background:var(--tt-log-bg)}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-filterable > .tt-log-check-cell {padding:0;vertical-align:middle;text-align:center}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-check-cell > .tt-log-checkbox {margin-inline:auto}
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-summary {display:grid;grid-template-columns:14fr 29fr 17fr 17fr 9fr 11fr;align-items:center;gap:0;min-height:44px;padding:0;border:0;background:transparent;color:var(--tt-log-ink);cursor:pointer}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-summary {display:grid;grid-template-columns:13fr 24fr 15fr 15fr 11fr 10fr 9fr;align-items:center;gap:0;min-height:44px;padding:0;border:0;background:transparent;color:var(--tt-log-ink);cursor:pointer}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-summary > span {min-width:0;padding:0 12px;font:400 13.5px Inter,system-ui,sans-serif;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-summary > :is(.tt-log-row-clock,.tt-log-row-out) {font-size:13.5px;font-variant-numeric:tabular-nums;line-height:1.35}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-summary > :is(.tt-log-row-clock,.tt-log-row-out,.tt-log-row-duration) {font-size:13.5px;font-variant-numeric:tabular-nums;line-height:1.35}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-clock strong {font-size:inherit;color:inherit;line-height:inherit}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-clock strong,#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-work-plan {font-weight:600}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-work-plan {color:var(--tt-log-accent)}
@@ -332,7 +328,6 @@ html[data-aps-monday-theme="dark"] #app#app .shell .main.aps-time-tracker-shell 
 @media(max-width:900px) {
  #app#app .tt-log-reference-header {flex-wrap:wrap;gap:8px}
  #app#app .tt-log-reference-header .tt-log-controls {flex-basis:100%;max-width:none}
- #app#app .tt-log-topbar .tt-log-reference-header {flex-basis:100%}
 }
 @media(max-width:450px) {
  #app#app .tt-log-reference-header .tt-log-filter-panel {padding:12px}
@@ -346,21 +341,22 @@ html[data-aps-monday-theme="dark"] #app#app .shell .main.aps-time-tracker-shell 
 html[data-aps-monday-theme="dark"] #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-date-picker input {color-scheme:dark}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-date-clear {flex:none;align-self:center;padding:5px 10px;border:0;background:transparent;color:var(--tt-log-accent);font-size:12px}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-work-plan {display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;line-height:16px}
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-summary {height:44px;min-height:44px;grid-template-columns:minmax(0,14fr) minmax(0,29fr) minmax(0,17fr) minmax(0,17fr) minmax(0,9fr) minmax(0,11fr)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-summary {height:44px;min-height:44px;grid-template-columns:minmax(0,13fr) minmax(0,24fr) minmax(0,15fr) minmax(0,15fr) minmax(0,11fr) minmax(0,10fr) minmax(0,9fr)}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-status .tt-log-badge {white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th {position:relative;overflow:visible}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-resize {position:absolute;z-index:2;right:0;top:0;bottom:0;width:10px;cursor:col-resize;touch-action:none;user-select:none;outline-offset:-2px}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-resize::after {content:"";position:absolute;right:0;top:6px;bottom:6px;width:2px;border-radius:2px;background:var(--tt-log-line)}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-resize:is(:hover,:focus-visible,:active)::after {background:var(--tt-log-accent)}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-resize:focus-visible {outline:2px solid var(--tt-log-accent)}
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table.tt-log-width-adjusted {min-width:0;width:calc(40px + var(--tt-log-px-in) + var(--tt-log-px-person) + var(--tt-log-px-location) + var(--tt-log-px-department) + var(--tt-log-px-out) + var(--tt-log-px-status))}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table.tt-log-width-adjusted {min-width:0;width:calc(40px + var(--tt-log-px-in) + var(--tt-log-px-person) + var(--tt-log-px-location) + var(--tt-log-px-department) + var(--tt-log-px-out) + var(--tt-log-px-duration) + var(--tt-log-px-status))}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-width-adjusted .tt-log-col-check {width:40px}
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-width-adjusted .tt-log-row-summary {grid-template-columns:minmax(0,var(--tt-log-px-in)) minmax(0,var(--tt-log-px-person)) minmax(0,var(--tt-log-px-location)) minmax(0,var(--tt-log-px-department)) minmax(0,var(--tt-log-px-out)) minmax(0,var(--tt-log-px-status))}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-width-adjusted .tt-log-row-summary {grid-template-columns:minmax(0,var(--tt-log-px-in)) minmax(0,var(--tt-log-px-person)) minmax(0,var(--tt-log-px-location)) minmax(0,var(--tt-log-px-department)) minmax(0,var(--tt-log-px-out)) minmax(0,var(--tt-log-px-duration)) minmax(0,var(--tt-log-px-status))}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-width-adjusted .tt-log-col-in {width:var(--tt-log-px-in)}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-width-adjusted .tt-log-col-person {width:var(--tt-log-px-person)}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-width-adjusted .tt-log-col-location {width:var(--tt-log-px-location)}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-width-adjusted .tt-log-col-department {width:var(--tt-log-px-department)}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-width-adjusted .tt-log-col-out {width:var(--tt-log-px-out)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-width-adjusted .tt-log-col-duration {width:var(--tt-log-px-duration)}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-width-adjusted .tt-log-col-status {width:var(--tt-log-px-status)}
 /* Bounded width tokens are static; no inline CSS or dynamically injected style sheets. */
 .tt-log-table[data-tt-log-width-in="96"] {--tt-log-px-in:96px}
@@ -693,3 +689,60 @@ html[data-aps-monday-theme="dark"] #app#app .tt-native .tt-log[data-tt-log-refer
 .tt-log-table[data-tt-log-width-status="928"] {--tt-log-px-status:928px}
 .tt-log-table[data-tt-log-width-status="944"] {--tt-log-px-status:944px}
 .tt-log-table[data-tt-log-width-status="960"] {--tt-log-px-status:960px}
+
+/* Work Duration uses the same bounded width-only tokens as the existing columns. */
+.tt-log-table[data-tt-log-width-duration="96"] {--tt-log-px-duration:96px}
+.tt-log-table[data-tt-log-width-duration="112"] {--tt-log-px-duration:112px}
+.tt-log-table[data-tt-log-width-duration="128"] {--tt-log-px-duration:128px}
+.tt-log-table[data-tt-log-width-duration="144"] {--tt-log-px-duration:144px}
+.tt-log-table[data-tt-log-width-duration="160"] {--tt-log-px-duration:160px}
+.tt-log-table[data-tt-log-width-duration="176"] {--tt-log-px-duration:176px}
+.tt-log-table[data-tt-log-width-duration="192"] {--tt-log-px-duration:192px}
+.tt-log-table[data-tt-log-width-duration="208"] {--tt-log-px-duration:208px}
+.tt-log-table[data-tt-log-width-duration="224"] {--tt-log-px-duration:224px}
+.tt-log-table[data-tt-log-width-duration="240"] {--tt-log-px-duration:240px}
+.tt-log-table[data-tt-log-width-duration="256"] {--tt-log-px-duration:256px}
+.tt-log-table[data-tt-log-width-duration="272"] {--tt-log-px-duration:272px}
+.tt-log-table[data-tt-log-width-duration="288"] {--tt-log-px-duration:288px}
+.tt-log-table[data-tt-log-width-duration="304"] {--tt-log-px-duration:304px}
+.tt-log-table[data-tt-log-width-duration="320"] {--tt-log-px-duration:320px}
+.tt-log-table[data-tt-log-width-duration="336"] {--tt-log-px-duration:336px}
+.tt-log-table[data-tt-log-width-duration="352"] {--tt-log-px-duration:352px}
+.tt-log-table[data-tt-log-width-duration="368"] {--tt-log-px-duration:368px}
+.tt-log-table[data-tt-log-width-duration="384"] {--tt-log-px-duration:384px}
+.tt-log-table[data-tt-log-width-duration="400"] {--tt-log-px-duration:400px}
+.tt-log-table[data-tt-log-width-duration="416"] {--tt-log-px-duration:416px}
+.tt-log-table[data-tt-log-width-duration="432"] {--tt-log-px-duration:432px}
+.tt-log-table[data-tt-log-width-duration="448"] {--tt-log-px-duration:448px}
+.tt-log-table[data-tt-log-width-duration="464"] {--tt-log-px-duration:464px}
+.tt-log-table[data-tt-log-width-duration="480"] {--tt-log-px-duration:480px}
+.tt-log-table[data-tt-log-width-duration="496"] {--tt-log-px-duration:496px}
+.tt-log-table[data-tt-log-width-duration="512"] {--tt-log-px-duration:512px}
+.tt-log-table[data-tt-log-width-duration="528"] {--tt-log-px-duration:528px}
+.tt-log-table[data-tt-log-width-duration="544"] {--tt-log-px-duration:544px}
+.tt-log-table[data-tt-log-width-duration="560"] {--tt-log-px-duration:560px}
+.tt-log-table[data-tt-log-width-duration="576"] {--tt-log-px-duration:576px}
+.tt-log-table[data-tt-log-width-duration="592"] {--tt-log-px-duration:592px}
+.tt-log-table[data-tt-log-width-duration="608"] {--tt-log-px-duration:608px}
+.tt-log-table[data-tt-log-width-duration="624"] {--tt-log-px-duration:624px}
+.tt-log-table[data-tt-log-width-duration="640"] {--tt-log-px-duration:640px}
+.tt-log-table[data-tt-log-width-duration="656"] {--tt-log-px-duration:656px}
+.tt-log-table[data-tt-log-width-duration="672"] {--tt-log-px-duration:672px}
+.tt-log-table[data-tt-log-width-duration="688"] {--tt-log-px-duration:688px}
+.tt-log-table[data-tt-log-width-duration="704"] {--tt-log-px-duration:704px}
+.tt-log-table[data-tt-log-width-duration="720"] {--tt-log-px-duration:720px}
+.tt-log-table[data-tt-log-width-duration="736"] {--tt-log-px-duration:736px}
+.tt-log-table[data-tt-log-width-duration="752"] {--tt-log-px-duration:752px}
+.tt-log-table[data-tt-log-width-duration="768"] {--tt-log-px-duration:768px}
+.tt-log-table[data-tt-log-width-duration="784"] {--tt-log-px-duration:784px}
+.tt-log-table[data-tt-log-width-duration="800"] {--tt-log-px-duration:800px}
+.tt-log-table[data-tt-log-width-duration="816"] {--tt-log-px-duration:816px}
+.tt-log-table[data-tt-log-width-duration="832"] {--tt-log-px-duration:832px}
+.tt-log-table[data-tt-log-width-duration="848"] {--tt-log-px-duration:848px}
+.tt-log-table[data-tt-log-width-duration="864"] {--tt-log-px-duration:864px}
+.tt-log-table[data-tt-log-width-duration="880"] {--tt-log-px-duration:880px}
+.tt-log-table[data-tt-log-width-duration="896"] {--tt-log-px-duration:896px}
+.tt-log-table[data-tt-log-width-duration="912"] {--tt-log-px-duration:912px}
+.tt-log-table[data-tt-log-width-duration="928"] {--tt-log-px-duration:928px}
+.tt-log-table[data-tt-log-width-duration="944"] {--tt-log-px-duration:944px}
+.tt-log-table[data-tt-log-width-duration="960"] {--tt-log-px-duration:960px}

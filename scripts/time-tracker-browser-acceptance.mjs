@@ -816,6 +816,7 @@ try {
       "Working Location",
       "Department",
       "Clock Out",
+      "Work Duration",
       "Status",
     ],
   );
@@ -834,6 +835,10 @@ try {
   assert.equal(
     await page.locator(".tt-log-row-out").textContent(),
     "05:00:00 PM",
+  );
+  assert.equal(
+    await page.locator(".tt-log-row-duration").textContent(),
+    "09:00:00",
   );
   const logGeometry = await page.locator(".tt-log-table").evaluate((table) => {
     const headers = [...table.querySelectorAll("thead th")].slice(1);
@@ -1311,6 +1316,52 @@ try {
     1,
     "headerless Clock must retain navigation when the sidebar collapses",
   );
+
+  const logHeaderLayout = await page.evaluate(async () => {
+    const { renderTimeTrackerNative, syncTimeTrackerSidebar } =
+      await import("/frontend/time-tracker-ui.js");
+    const shell = document.querySelector("#app .shell");
+    const content = shell.querySelector(".main-content");
+    content.innerHTML = renderTimeTrackerNative({
+      result: {
+        status: "VERIFIED_READ",
+        access: { moduleRole: "Employee", attendanceWritesAccepted: false },
+        records: [],
+        active: null,
+        otRequests: [],
+      },
+      view: "log",
+      referenceShell: true,
+    });
+    syncTimeTrackerSidebar(shell, { enabled: true, expanded: true });
+    const globalHeader = shell.querySelector(".topbar");
+    const logHeader = content.querySelector(".tt-log-reference-header");
+    const tabs = content.querySelector(".tt-log-flat-stats");
+    return {
+      insideContent: Boolean(logHeader),
+      globalContainsLog: Boolean(
+        globalHeader.querySelector(".tt-log-reference-header"),
+      ),
+      searchInside: Boolean(logHeader?.querySelector("#tt-log-search")),
+      filterInside: Boolean(
+        logHeader?.querySelector(".tt-log-filter-trigger"),
+      ),
+      belowTopbar:
+        logHeader?.getBoundingClientRect().top >=
+        globalHeader.getBoundingClientRect().bottom - 1,
+      aboveTabs:
+        logHeader?.getBoundingClientRect().bottom <=
+        tabs.getBoundingClientRect().top + 1,
+    };
+  });
+  assert.deepEqual(logHeaderLayout, {
+    insideContent: true,
+    globalContainsLog: false,
+    searchInside: true,
+    filterInside: true,
+    belowTopbar: true,
+    aboveTabs: true,
+  });
 
   assert.deepEqual(
     pageErrors,

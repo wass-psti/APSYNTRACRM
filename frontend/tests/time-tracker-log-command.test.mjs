@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {renderTimeTrackerLog,timeTrackerLogSummary,filterTimeTrackerLogRows,boundTimeTrackerLogWidth} from '../time-tracker-log.js';
+import {renderTimeTrackerLog,timeTrackerLogSummary,filterTimeTrackerLogRows,boundTimeTrackerLogWidth,timeTrackerLogWorkDuration,syncTimeTrackerLogDurations} from '../time-tracker-log.js';
 
 const now=new Date('2026-11-04T05:48:59Z');
 const records=[
@@ -72,9 +72,9 @@ test('Flat styling is scoped, adaptive and dark-mode aware',()=>{
  assert.doesNotMatch(css,/@keyframes|animation:.*infinite|will-change|@import|url\(https?:/);
 });
 
-test('Record list has five mockup columns plus selection, initials and a single live results count',()=>{
+test('Record list has seven data columns plus selection, initials and a single live results count',()=>{
  const html=render();
- assert.deepEqual([...html.matchAll(/<th>([^<]+)<span class="tt-log-resize"/g)].map(m=>m[1]),['Clock In','Employee','Working Location','Department','Clock Out','Status']);
+ assert.deepEqual([...html.matchAll(/<th>([^<]+)<span class="tt-log-resize"/g)].map(m=>m[1]),['Clock In','Employee','Working Location','Department','Clock Out','Work Duration','Status']);
  assert.match(html,/class="tt-log-avatar" aria-hidden="true">SE<\/span>/);
  assert.equal((html.match(/id="tt-log-visible-count"/g)||[]).length,1);
  assert.ok(html.indexOf('tt-log-table')<html.indexOf('tt-log-secondary-analytics'));
@@ -138,15 +138,15 @@ test('Reference Log filters combine signed view, department, location, and inclu
 });
 
 
-test('Attendance Log keeps status separate from clock-out time and defines all seven columns',()=>{
+test('Attendance Log keeps status separate from clock-out time and defines all eight columns',()=>{
  const source=readFileSync('frontend/time-tracker-log.js','utf8');
  const css=readFileSync('frontend/apps/TimeTracker/time-tracker-reference-shell.css','utf8');
- assert.match(source,/<colgroup>(?:<col class="tt-log-col-[a-z]+">){7}<\/colgroup>/);
- assert.match(source,/<td colspan="6"><details class="tt-log-detail"/);
+ assert.match(source,/<colgroup>(?:<col class="tt-log-col-[a-z]+">){8}<\/colgroup>/);
+ assert.match(source,/<td colspan="7"><details class="tt-log-detail"/);
  assert.match(source,/<\/span><span class="tt-log-row-status"><span class="tt-log-badge /);
  assert.match(css,/\.tt-log-search:has\(> \.aps-search-field\) > svg \{display:none\}/);
  assert.match(css,/\.tt-log-row-clock strong \{font-size:inherit/);
- assert.match(css,/grid-template-columns:14fr 29fr 17fr 17fr 9fr 11fr/);
+ assert.match(css,/grid-template-columns:13fr 24fr 15fr 15fr 11fr 10fr 9fr/);
 });
 
  test('Exact Manila date intersects signed status and filters, including midnight boundary',()=>{
@@ -162,8 +162,8 @@ test('Attendance Log keeps status separate from clock-out time and defines all s
  assert.doesNotMatch(html,/<script>|\[Work Plan\]/);
  assert.doesNotMatch(render({records:[{...records[0],workNote:note}]}),/class="tt-log-work-plan"/);
  });
- test('Six independent width-only handles use bounded static tokens',()=>{
- assert.equal((render().match(/data-tt-log-resize="/g)||[]).length,6);
+ test('Seven independent width-only handles use bounded static tokens',()=>{
+ assert.equal((render().match(/data-tt-log-resize="/g)||[]).length,7);
  assert.equal(boundTimeTrackerLogWidth(1),96);
  assert.equal(boundTimeTrackerLogWidth(99999),960);
  assert.equal(boundTimeTrackerLogWidth(207),208);
@@ -176,4 +176,25 @@ test('Log clock-out uses Philippine 12-hour time with seconds while clock-in and
  const times=[...html.matchAll(/class="tt-log-row-out"[^>]*>([^<]+)<\/span>/g)].map(match=>match[1]);
  assert.deepEqual(times.sort(),['—','05:00:00 PM','12:00:00 AM','12:00:00 PM'].sort());
  assert.match(html,/class="tt-log-row-clock"[^>]*><strong>09:00:00<\/strong>/);
+});
+
+test('Work Duration shows credited live work, exact cutoff and frozen signed completion',()=>{
+ const active={...records[0],clockIn:'2026-11-04T00:00:00Z'};
+ const atLunch=new Date('2026-11-04T04:30:00Z');
+ assert.equal(timeTrackerLogWorkDuration(active,atLunch),'04:00:00');
+ assert.equal(timeTrackerLogWorkDuration(active,'2026-11-04T10:00:00Z'),'09:00:00');
+ const early={...active,clockOut:'2026-11-04T03:30:00Z',status:'Completed',creditedMs:12600000};
+ assert.equal(timeTrackerLogWorkDuration(early,now),'03:30:00');
+ const closed={...active,clockOut:'2026-11-04T10:00:00Z',status:'Completed',creditedMs:32400000};
+ assert.equal(timeTrackerLogWorkDuration(closed,'2026-11-04T12:00:00Z'),'09:00:00');
+ assert.equal(timeTrackerLogWorkDuration({...closed,creditedMs:3600000},now),'01:00:00');
+ const html=render({records:[active,early],now:atLunch});
+ assert.match(html,/data-tt-log-active-duration="2026-11-04T00:00:00Z">04:00:00<\/span>/);
+ assert.match(html,/class="tt-log-row-duration"[^>]*>03:30:00<\/span>/);
+ const cell={dataset:{ttLogActiveDuration:active.clockIn},textContent:'04:00:00'};
+ syncTimeTrackerLogDurations({querySelectorAll:()=>[cell]},'2026-11-04T05:00:01Z');
+ assert.equal(cell.textContent,'04:00:01');
+ const styles=readFileSync('frontend/apps/TimeTracker/time-tracker-reference-shell.css','utf8');
+ assert.match(styles,/data-tt-log-width-duration="96"/);
+ assert.match(styles,/data-tt-log-width-duration="960"/);
 });

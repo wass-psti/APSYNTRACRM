@@ -210,7 +210,7 @@ import {createRemainingNativeSearchAdapters,readNativeSearchRecordDetail,renderN
 import {startInputExperience} from './input-experience.js';
 import {startMetricsExperience} from './metrics-experience.js';
 import {applyTimeTrackerOverviewFilters,filterTimeTrackerOverviewRows,syncTimeTrackerOverviewClock,timeTrackerOverviewCsv} from './time-tracker-overview.js';
-import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,timeTrackerLogRowsForSnapshot,retainTimeTrackerLogDetailIds,TT_LOG_DEFAULT_FILTERS,startTimeTrackerLogColumnResize} from './time-tracker-log.js';
+import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,timeTrackerLogRowsForSnapshot,retainTimeTrackerLogDetailIds,TT_LOG_DEFAULT_FILTERS,startTimeTrackerLogColumnResize,syncTimeTrackerLogDurations} from './time-tracker-log.js';
 import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAULT_FILTERS} from './time-tracker-reports.js';
 import {timeTrackerCalendarMonth,shiftTimeTrackerCalendarMonth} from './time-tracker-calendar.js';
 import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED,TT_OT_MAX_WEEK_OFFSET,timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate,updateTimeTrackerOvertimePreview,updateTimeTrackerManualOtPreview} from './time-tracker-overtime.js';
@@ -841,7 +841,8 @@ function maintainTimeTrackerClock(){
  const mounted=state.view==='board'&&state.tab==='attendance'&&
   state.ttAttendance?.status==='VERIFIED_READ'&&
   (state.ttView==='clock'&&root.querySelector('#tt-clock-hours')||
-   state.ttView==='overview'&&root.querySelector('#tt-overview-time'));
+   state.ttView==='overview'&&root.querySelector('#tt-overview-time')||
+   state.ttView==='log'&&root.querySelector('[data-tt-log-active-duration]'));
  if(!mounted){stopTimeTrackerClock();return;}
  const scope=[state.context?.workspace_id,state.context?.user_id,state.boardId].join(':');
  if(scope!==ttClockSyncScope){
@@ -850,6 +851,7 @@ function maintainTimeTrackerClock(){
  const tick=()=>{
   if(state.ttView==='clock')syncTimeTrackerClock(root);
   else if(state.ttView==='overview')syncTimeTrackerOverviewClock(root);
+  else if(state.ttView==='log')syncTimeTrackerLogDurations(root);
  };
  tick();
  if(ttClockTimer===null)ttClockTimer=setInterval(()=>{

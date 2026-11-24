@@ -9,7 +9,7 @@ import {
 
 export const TT_AUTO_CLOCKOUT_POLICY = Object.freeze({
   requiredWorkMs: 9 * 60 * 60 * 1000,
-  gracePeriodMs: 30 * 60 * 1000,
+  gracePeriodMs: 0,
   timezone: "Asia/Manila",
 });
 
@@ -90,7 +90,8 @@ function approvedIntervals(requests, ownerId, thresholdAt) {
 }
 
 /** Derive the durable state from the original Clock-In timestamp and signed OT snapshot.
- * Approval before the threshold bypasses grace. Approval during grace cancels it.
+ * Default grace is zero: approved OT must cover the nine-hour threshold.
+ * Explicit nonzero grace is retained for compatibility with historical schedules.
  * OT intervals only extend the cutoff when they continuously cover the current endpoint.
  */
 export function evaluateTimeTrackerAutoClockout({
