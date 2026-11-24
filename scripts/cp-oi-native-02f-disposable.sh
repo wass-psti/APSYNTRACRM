@@ -22,7 +22,7 @@ done
 run(){ docker exec -i "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres; }
 run < sql/tests/cp-oi-native-02f-prerequisites.sql
 run < supabase/migrations/20261019112718_m195_order_intake_readonly_foundation.sql
-run < supabase/migration-candidates/20261124075640_cp_oi_native_02f_legacy_read.sql
+run < supabase/migrations/20261124075640_cp_oi_native_02f_legacy_read.sql
 run <<'SQL'
 INSERT INTO public.order_intake_orders(workspace_id,po_number,client_name,po_date,date_received,delivery_date,currency,po_amount,vat_rate,vat_exclusive_amount,vat_amount,procurement_expenses,gross_profit,status,company,industry,fiscal_year)
 VALUES ('00000000-0000-4000-8000-000000000001','CP02F-FIXTURE','Fixture','2026-01-01','2026-01-02','2026-01-03','PHP',100,12,89.29,10.71,5,84.29,'Processed','Fixture','Fixture',2026),
