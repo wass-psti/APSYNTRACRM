@@ -189,7 +189,7 @@ import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT
 import {FundTrackerNativeClient} from './fund-tracker-native.js';
 import {renderFundTrackerNative} from './fund-tracker-ui.js';
 import {findFundTrackerBoard,FUND_TRACKER_APPLICATION_ROUTE,parseFundTrackerRecordRoute,fundTrackerRecordHref} from './fund-tracker-application.js';
-import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock,syncTimeTrackerSidebar} from './time-tracker-ui.js';
+import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock,syncTimeTrackerClockView,syncTimeTrackerSidebar} from './time-tracker-ui.js';
 import {isTimeTrackerHomeNoteRequired,createTimeTrackerWorkNoteDraft} from './time-tracker-offsite-note.js';
 import {mountTimeTrackerPixi,stopTimeTrackerPixi} from './time-tracker-pixi-scene.js';
 import {startSelectExperience} from './select-experience.js';
@@ -670,22 +670,36 @@ async function refreshCorrectedTimeTrackerClock({onFocus=false}={}){
      fresh.access?.workspaceId!==workspace||fresh.access?.boardId!==boardId||
      Number(fresh.revision)<=Number(state.ttAttendance?.revision))return;
   const previous=state.ttAttendance;
-  const startChanged=previous.active?.id===fresh.active?.id&&
-   previous.active?.clockIn!==fresh.active?.clockIn;
-  const changed=previous.records.length!==fresh.records.length||
+  const changed=previous.active?.id!==fresh.active?.id||
+   previous.active?.clockIn!==fresh.active?.clockIn||
+   previous.active?.location!==fresh.active?.location||
+   previous.active?.department!==fresh.active?.department||
+   previous.active?.workNote!==fresh.active?.workNote||
+   previous.records.length!==fresh.records.length||
    previous.records.some((record,index)=>{
     const next=fresh.records[index];
     return !next||record.id!==next.id||record.clockIn!==next.clockIn||
       record.clockOut!==next.clockOut||record.status!==next.status||
-      record.creditedMs!==next.creditedMs;
-   })||previous.autoClockout?.nextAt!==fresh.autoClockout?.nextAt;
+      record.creditedMs!==next.creditedMs||record.location!==next.location||
+      record.department!==next.department||record.workNote!==next.workNote;
+   })||previous.autoClockout?.status!==fresh.autoClockout?.status||
+   previous.autoClockout?.nextAt!==fresh.autoClockout?.nextAt||
+   previous.autoClockout?.cutoffAt!==fresh.autoClockout?.cutoffAt||
+   previous.autoClockoutUnavailable!==fresh.autoClockoutUnavailable;
   state.ttAttendance=fresh;
   if(changed){
-   state.ttSuccess='';
-   state.ttClockCorrectionNotice=startChanged?
-    'Your recorded Clock-In time was corrected. The active session timer is now synchronized.':
-    'Your attendance record was updated. Clock is showing the latest verified session.';
-   render();
+   syncTimeTrackerClockView(root,{
+    result:fresh,now:new Date(),clockPending:!!state.ttClockPending,
+    clockPendingAction:state.ttClockPending?.action||'clock-out',
+    locationPreference:readTimeTrackerLocationPreference(
+     typeof localStorage==='undefined'?null:localStorage,
+     {userId:actor,workspaceId:workspace}
+    ),
+    workPlanDraft:ttWorkNoteDraft.read(timeTrackerWorkNoteScope()),
+    success:state.ttSuccess,clockCorrectionNotice:state.ttClockCorrectionNotice,
+    geoPromptVisible:state.ttGeoPromptVisible,geoPermission:state.ttGeoPermission,
+    geoMessage:state.ttGeoMessage,clockStage:state.ttClockStage
+   });
   }
  }catch{
   // Keep the previous signed view on transient read failures. Never guess
