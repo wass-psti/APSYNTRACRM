@@ -10,7 +10,9 @@ trap cleanup EXIT INT TERM
 docker run -d --rm --name "$NAME" -e POSTGRES_PASSWORD=disposable postgres:17 >/dev/null
 ready=false
 for _ in $(seq 1 60); do
- if docker exec "$NAME" pg_isready -U postgres >/dev/null 2>&1; then ready=true;break;fi
+ # The Docker entrypoint starts a temporary socket-only server during initdb.
+ # Require a successful SQL query over TCP against the final server.
+ if docker exec -e PGPASSWORD=disposable "$NAME" psql -X -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -qAt -c "SELECT 1" >/dev/null 2>&1; then ready=true;break;fi
  sleep 1
 done
 if [[ "$ready" != true ]];then echo "Disposable PostgreSQL did not become ready." >&2;exit 1;fi
