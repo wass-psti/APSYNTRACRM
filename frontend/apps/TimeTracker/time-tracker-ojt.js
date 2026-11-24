@@ -68,7 +68,8 @@ export function projectOjtAttendance(raw,scope,internId){
    fail('Invalid intern attendance record');
   seen.add(x.id);
   return Object.freeze({id:x.id,clockIn:x.clockIn,clockOut:x.clockOut,
-   location:x.location,workNote:x.workNote||'',manualEntry:x.manualEntry===true,status:x.clockOut?'Completed':'Active'});
+   location:x.location,workNote:x.workNote||'',
+    ...(x.manualEntry===true?{manualEntry:true}:{}),status:x.clockOut?'Completed':'Active'});
  });
  if(records.filter(x=>x.status==='Active').length>1)
   fail('Conflicting OJT sessions require administrator review');
@@ -90,7 +91,7 @@ export function projectOjtAdminAttendance(raw,scope){
    clockIn:x.clockIn,clockOut:x.clockOut,location:String(x.location||''),
     workNote:typeof x.workNote==='string'?x.workNote.slice(0,500):'',
     revision:Number.isSafeInteger(x.revision)&&x.revision>=1?x.revision:null,
-     manualEntry:x.manualEntry===true});
+     ...(x.manualEntry===true?{manualEntry:true}:{})});
  }))});
 }
 export class TimeTrackerOjtClient{
