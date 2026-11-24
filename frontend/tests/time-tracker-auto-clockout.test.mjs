@@ -8,9 +8,13 @@ import {
 import {
   TT_AUTO_CLOCKOUT_POLICY,
   timeTrackerNineHourThreshold,
-  evaluateTimeTrackerAutoClockout,
+  evaluateTimeTrackerAutoClockout as evaluateDefaultClockout,
   formatTimeTrackerAutoClockoutTime,
 } from "../time-tracker-auto-clockout.js";
+
+// Historical explicit grace-policy scenarios remain valid for old receipts.
+const evaluateTimeTrackerAutoClockout = (options) =>
+  evaluateDefaultClockout({ gracePeriodMs: 30 * 60 * 1000, ...options });
 
 const owner = "cloud:20000000-0000-4000-8000-000000000001";
 const pht = (value) =>
@@ -274,7 +278,7 @@ test("invalid context never produces a clock-out deadline and display times use 
     formatTimeTrackerAutoClockoutTime("2026-11-20T10:30:00.000Z"),
     "06:30 PM",
   );
-  assert.equal(TT_AUTO_CLOCKOUT_POLICY.gracePeriodMs, 30 * 60 * 1000);
+  assert.equal(TT_AUTO_CLOCKOUT_POLICY.gracePeriodMs, 0);
 });
 
 test("Clock view shows the computed grace deadline and a live countdown without issuing writes", () => {
@@ -384,4 +388,34 @@ test("clock ticker resumes the persisted deadline countdown after a page refresh
   assert.equal(countdown.textContent, "00:20:00");
   syncTimeTrackerClock(root, "2026-11-20T10:30:00.000Z");
   assert.equal(countdown.textContent, "Due now");
+});
+
+test("default nine credited hours closes immediately with no grace", () => {
+  const input = { clockIn: "2026-11-20T00:00:00.000Z", ownerId: owner };
+  const before = evaluateDefaultClockout({ ...input, now: "2026-11-20T09:59:59.999Z" });
+  assert.equal(before.status, "MONITORING");
+  const due = evaluateDefaultClockout({ ...input, now: "2026-11-20T10:00:00.000Z" });
+  assert.equal(due.status, "DUE");
+  assert.equal(due.cutoffAt, "2026-11-20T10:00:00.000Z");
+  const ot = { id: "approved", ownerId: owner, status: "Approved", date: "2026-11-20",
+    start: "18:00", end: "19:00", decidedAt: "2026-11-20T09:30:00.000Z" };
+  const extension = evaluateDefaultClockout({ ...input, overtimeRequests: [ot], now: "2026-11-20T10:00:00.000Z" });
+  assert.equal(extension.status, "OVERTIME");
+  assert.equal(extension.nextAt, "2026-11-20T11:00:00.000Z");
+  const late = evaluateDefaultClockout({ ...input, overtimeRequests: [{ ...ot, decidedAt: "2026-11-20T10:00:01.000Z" }], now: "2026-11-20T10:00:02.000Z" });
+  assert.equal(late.status, "DUE");
+});
+
+test("default server migration closes pending GPS without inventing location", () => {
+  const sql = readFileSync(new URL("../../supabase/migrations/20261124193000_cp_tt_default_server_auto_clockout_9h.sql", import.meta.url), "utf8");
+  assert.match(sql, /v_grace_deadline:=v_threshold;/);
+  assert.match(sql, /v_clock_out_at:=v_threshold;/);
+  assert.match(sql, /'OVERTIME','PENDING_GPS','ERROR'/);
+  assert.match(sql, /'source','server-auto-clockout'/);
+  assert.match(sql, /'status','not_captured'/);
+  assert.match(sql, /'automatic',true/);
+  assert.match(sql, /tt_auto_clockout_project\(/);
+  assert.match(sql, /'tt-auto-clockout-processor','30 seconds'/);
+  assert.match(sql, /ON CONFLICT\(board_id,record_id\) DO NOTHING/);
+  assert.match(sql, /r.elem->'clockOut' IS NULL/);
 });
