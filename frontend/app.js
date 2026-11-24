@@ -1,4 +1,8 @@
 import {syncFuelTrans} from './fueltrans-lazy.js';
+import {OrderIntakeClient} from './order-intake-native.js';
+import {parseOrderIntakeRoute,orderIntakeHref} from './order-intake-route.js';
+import {createOrderIntakeReadState} from './order-intake-read-state.js';
+import {renderOrderIntake} from './order-intake-ui.js';
 import {applySearchVisibility} from './interaction-search.js';
 import {createFrameCoalescer} from './frame-coalescer.js';
 import {mountBoardHorizontalRail} from './board/presentation/horizontal-rail.js';
@@ -581,6 +585,32 @@ async function openTalkBoxIssue(issueId){
 const trashPermanentDelete=new BoardTrashPermanentDeleteClient(db);
 const trashBoardSelection=new Set();
 let routeSerial=0;
+let orderIntakeRoute=null,orderIntakeRecord=null,orderIntakeRecordRun=0;
+const orderIntakeScope=()=>[state.context?.user_id,state.context?.workspace_id].join('|');
+const orderIntakeCurrent=scope=>!state.workspaceTransitionPending&&auth.isSignedIn&&state.context?.user_id===auth.userId&&
+ state.view==='order-intake'&&Boolean(parseOrderIntakeRoute(location.hash))&&scope===orderIntakeScope();
+const orderIntakeRead=createOrderIntakeReadState({
+ clientFor:scope=>new OrderIntakeClient({auth,api:db,workspaceId:scope.split('|')[1]}),
+ isCurrent:orderIntakeCurrent,onChange:()=>render()
+});
+function clearOrderIntake(){
+ orderIntakeRead.clear();orderIntakeRecordRun++;orderIntakeRecord=null;orderIntakeRoute=null;
+}
+async function loadOrderIntakeRecord(route,scope){
+ const run=++orderIntakeRecordRun;
+ orderIntakeRecord=null;
+ if(!route.recordId)return;
+ orderIntakeRecord={busy:true};render();
+ try{
+  const row=await readNativeSearchRecordDetail({applicationId:'orders',recordId:route.recordId,
+   auth,api:db,workspaceId:state.context.workspace_id});
+  if(row.id!==route.recordId||row.workspace_id!==state.context?.workspace_id)throw new Error('Order record unavailable.');
+  if(run===orderIntakeRecordRun&&orderIntakeCurrent(scope))orderIntakeRecord={row};
+ }catch(error){
+  if(run===orderIntakeRecordRun&&orderIntakeCurrent(scope))orderIntakeRecord={error:errorMessage(error)};
+ }
+ if(run===orderIntakeRecordRun&&orderIntakeCurrent(scope))render();
+}
 let avatarHydrationPromise=Promise.resolve({attempted:0,loaded:0,failed:0,stale:0});
 let ttClockTimer=null;
 let ttClockSyncInFlight=false;
@@ -938,7 +968,7 @@ let shellSidebarSignature=null;
 let shellRoute=null;
 function shell(body){
  stopAuthVisuals();
- const crumb=state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.fuelTrackStandalone?'FuelTrack+':state.fuelTransStandalone?'FuelTrans':state.view==='paseo'?'Paseo de Lomboy':currentSidebarNavigation()==='talkbox'?'TalkBox':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'Teams':state.view==='invitation'?'Workspace invitation':'Settings';
+ const crumb=state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.fuelTrackStandalone?'FuelTrack+':state.fuelTransStandalone?'FuelTrans':state.view==='paseo'?'Paseo de Lomboy':state.view==='order-intake'?'Order Intake':currentSidebarNavigation()==='talkbox'?'TalkBox':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'Teams':state.view==='invitation'?'Workspace invitation':'Settings';
  const identity=[state.context?.user_id,state.context?.workspace_id].join('|');
  const sidebarSignature=JSON.stringify([state.ttStandalone,state.frtStandalone,state.tlStandalone,state.fuelTrackStandalone,state.fuelTransStandalone,state.roleVerified,state.adminVerified,state.boardCatalogError,name(),
   state.context?.profile?.platform_role,state.crmRoleSnapshot?.effectiveRole,
@@ -1001,6 +1031,7 @@ function shell(body){
  root.querySelector('.main')?.classList.toggle('aps-tradelink-shell',state.tlStandalone===true);
  root.querySelector('.main')?.classList.toggle('aps-fueltrack-shell',state.fuelTrackStandalone===true);
  root.querySelector('.main')?.classList.toggle('aps-fueltrans-shell',state.fuelTransStandalone===true);
+ root.querySelector('.main')?.classList.toggle('aps-order-intake-shell',state.view==='order-intake');
  root.querySelector('.main')?.classList.toggle('aps-overview-shell',state.view==='overview');
  root.querySelector('.main')?.classList.toggle('aps-fm1-shell',state.view==='fm1');
  root.querySelector('.main')?.classList.toggle('aps-talkbox-shell',state.view==='talkbox');
@@ -2076,6 +2107,11 @@ function render(){
  else if(state.view==='talkbox')shell(renderTalkBoxNativeApplication());
  else if(state.view==='time-tracker')shell(renderTimeTrackerRouteUnavailable());
  else if(state.view==='paseo')shell(renderPaseoNative());
+ else if(state.view==='order-intake'&&orderIntakeRoute){
+  const scope=orderIntakeScope();
+  shell(renderOrderIntake({route:orderIntakeRoute,snapshot:orderIntakeCurrent(scope)?orderIntakeRead.read(scope):null,
+   record:orderIntakeCurrent(scope)?orderIntakeRecord:null}));
+ }
  else if(state.view==='tradelink')shell(renderTradeLinkRouteUnavailable(state.error));
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
@@ -2399,6 +2435,7 @@ function platformSyncEditInProgress(){
  * only an independently failed Auth identity check returns to sign-in.
  */
 function invalidateSignedSyncView({preserveAuth=false,error=null}={}){
+ clearOrderIntake();
  startupCriticalPath.clear();
  performanceProfileAbort?.abort();performanceProfileAbort=null;
  state.performanceReport=null;state.performanceBusy=false;
@@ -2779,6 +2816,7 @@ async function refreshWorkspace(){
  const workspaceIdentityChanged=priorIdentity!==state.context?.user_id||
   priorWorkspace!==state.context?.workspace_id;
  if(workspaceIdentityChanged){
+  clearOrderIntake();
   trashBoardSelection.clear();
   crmRoleReadGeneration++;crmRoleLastReadAt=0;state.crmRoleSnapshot=null;
   workspaceRelationReadGeneration++;state.workspaceRelationSnapshot=null;
@@ -5352,7 +5390,13 @@ function navigateGlobalSearchResult(item){
   else location.hash=target;
   return;
  }
- if(item.native===true&&['tools','toolbox','materials','evaluation','charter','orders','aims'].includes(item.applicationId)&&
+ if(item.native===true&&item.applicationId==='orders'&&item.recordId){
+  const target=orderIntakeHref('all-orders',{},item.recordId);
+  if(location.hash===target)void onRoute().catch(notice);
+  else location.hash=target;
+  return;
+ }
+ if(item.native===true&&['tools','toolbox','materials','evaluation','charter','aims'].includes(item.applicationId)&&
    item.recordId){
   const module=BOARD_MODULES.find(entry=>entry.key===item.applicationId);
   const board=module&&state.boards.find(entry=>entry.name===module.name&&entry.status!=='trashed');
@@ -5462,6 +5506,7 @@ async function onRoute(){
  syncFuelTrans({container:null});
  if(!state.context)return;
  if(state.workspaceTransitionPending){
+  clearOrderIntake();
   history.replaceState(null,'',location.pathname+location.search+routeHome);
   approvedRouteHash=routeHome;
   state.view='overview';
@@ -5473,6 +5518,7 @@ async function onRoute(){
  const routePath=hash.split('?')[0];
  const routeQuery=new URLSearchParams(hash.split('?')[1]||'').get('q')||'';
  const parts=routePath.replace(/^#\/?/,'').split('/');
+ if(parts[0]!=='order-intake')clearOrderIntake();
  if(parts[0]!=='user-role-management')teamsController?.unmount();
  state.ttStandalone=false;state.frtStandalone=false;state.tlStandalone=false;state.fuelTrackStandalone=false;state.fuelTransStandalone=false;
  if(parts[0]!=='tradelink'){
@@ -5528,6 +5574,21 @@ async function onRoute(){
   if(recordId&&recordId.length<=180)pendingNativeSearchSelection={applicationId:'fm1',recordId,boardId:null,
    userId:auth.userId,workspaceId:state.context?.workspace_id};
  }else if(parts[0]==='fm1'&&pendingNativeSearchSelection?.applicationId==='fm1')pendingNativeSearchSelection=null;
+ if(parts[0]==='order-intake'){
+  const nextRoute=parseOrderIntakeRoute(hash);
+  if(!nextRoute)return;
+  if(nextRoute.canonicalHash!==hash)history.replaceState(null,'',location.pathname+location.search+nextRoute.canonicalHash);
+  if(state.view!=='order-intake'){clearOrderIntake();routeSerial++;stopTimeTrackerClock();}
+  state.view='order-intake';state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
+  state.boardManage=false;state.edit=false;state.error='';
+  orderIntakeRoute=nextRoute;
+  const scope=orderIntakeScope();
+  const read=orderIntakeRead.open(scope);
+  const record=loadOrderIntakeRecord(nextRoute,scope);
+  render();
+  await Promise.all([read,record]);
+  return;
+ }
  if(parts[0]==='fueltrans'){
   state.fuelTransStandalone=true;
   const fuelTransRoute=parseFuelTransApplicationRoute(parts);
@@ -7853,7 +7914,7 @@ async function action(name,button){
       state.ws02dB3HandoffPending=true;
       await auth.signOut({scope:'local'});
     }
-    paseoReadRunId++;state.paseoManagement=null;    state.row01Busy=false;state.row01Result=null;state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;if(!isB3LocalRevoke&&!isTl03LocalRevoke&&!isB3RlsHandoff){if(isMobileSwitch)await auth.signOut({scope:'local'});else await auth.signOut();}ttWorkNoteDraft.clear();timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;clearTimeTrackerOjtSelection();state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtManualVisibleCount=50;state.ttOtExpandedRequestIds=[];state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};boardCacheChannel.stop();db.invalidateBoardCache();state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;state.tl03ReadRunId++;state.tl03ReadBusy=false;state.tl03ReadResult=null;state.context=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.ws02dB3RevokeArmed=false;state.ws02dB3RevokedReport=revoked;state.b2QaRunId++;state.b2QaBusy=false;state.b2QaReport=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';state.tl03RevokeArmed=false;state.tl03RevokedReport=isTl03LocalRevoke?state.tl03RevokedReport:null;renderLogin();toast(isB3RlsHandoff?'Local sign-out complete. Sign in as another existing user in another workspace; then click B3 Step 2 without refreshing.':
+    clearOrderIntake();paseoReadRunId++;state.paseoManagement=null;    state.row01Busy=false;state.row01Result=null;state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;if(!isB3LocalRevoke&&!isTl03LocalRevoke&&!isB3RlsHandoff){if(isMobileSwitch)await auth.signOut({scope:'local'});else await auth.signOut();}ttWorkNoteDraft.clear();timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;clearTimeTrackerOjtSelection();state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtManualVisibleCount=50;state.ttOtExpandedRequestIds=[];state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};boardCacheChannel.stop();db.invalidateBoardCache();state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;state.tl03ReadRunId++;state.tl03ReadBusy=false;state.tl03ReadResult=null;state.context=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.ws02dB3RevokeArmed=false;state.ws02dB3RevokedReport=revoked;state.b2QaRunId++;state.b2QaBusy=false;state.b2QaReport=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';state.tl03RevokeArmed=false;state.tl03RevokedReport=isTl03LocalRevoke?state.tl03RevokedReport:null;renderLogin();toast(isB3RlsHandoff?'Local sign-out complete. Sign in as another existing user in another workspace; then click B3 Step 2 without refreshing.':
      isTl03LocalRevoke?'Signed out of this session only. TradeLink revocation: '+(state.tl03RevokedReport?.status||'BLOCKED')+'.':
      isB3LocalRevoke?'Signed out of this session only. B3 revocation: '+(revoked?.status||'BLOCKED')+'.':isMobileSwitch?'Sign in to the existing account to continue.':'Signed out successfully.');break;}
  case 'ws01-open':{
@@ -7889,6 +7950,7 @@ async function action(name,button){
        throw new ApiError('The verified workspace selection receipt is invalid.',409);
       const saved=writeWorkspacePreference(actor,receipt.workspaceId);
       if(!saved)toast('Workspace changed, but this browser could not save the preference.',true);
+      clearOrderIntake();
       state.workspaceTransitionPending=true;
       state.workspaceTransitionTargetId=receipt.workspaceId;
       state.workspaceTransitionTargetName=typeof targetWorkspace?.name==='string'?
@@ -12892,6 +12954,16 @@ root.addEventListener('keydown',event=>{
 });
 root.addEventListener('submit',event=>{if(teamsController?.handleSubmit(event))return;},true);
 root.addEventListener('click',event=>{
+ const orderAction=event.target.closest('[data-oi-action]');
+ if(orderAction&&state.view==='order-intake'&&orderIntakeRoute){
+  event.preventDefault();
+  const scope=orderIntakeScope();
+  if(orderAction.dataset.oiAction==='refresh'){
+   void orderIntakeRead.refresh(scope);
+   void loadOrderIntakeRecord(orderIntakeRoute,scope);
+  }else if(orderAction.dataset.oiAction==='more')void orderIntakeRead.more(scope);
+  return;
+ }
  const activeRefueling=root.querySelector('.ft3-refuel-dialog');
  if(activeRefueling&&!activeRefueling.contains(event.target)){
   event.preventDefault();event.stopPropagation();return;
@@ -13307,6 +13379,11 @@ root.addEventListener('change',event=>{
  }
 });
 root.addEventListener('submit',event=>{
+ if(event.target.id==='oi-filter-form'&&state.view==='order-intake'&&orderIntakeRoute){
+  event.preventDefault();
+  location.hash=orderIntakeHref(orderIntakeRoute.section,Object.fromEntries(new FormData(event.target)));
+  return;
+ }
  if(event.target.id==='tt-attendance-admin-form'){
   event.preventDefault();void saveTimeTrackerAdminEditor(event.target);return;
  }
@@ -13992,7 +14069,7 @@ window.addEventListener('keydown',event=>{
   if(state.groupEditId&&!state.groupEditBusy){state.groupEditId=null;render();}
   if(state.ttOtModalOpen){state.ttOtModalOpen=false;render();}
 }});
-auth.onExpired=()=>{boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();ttWorkNoteDraft.clear();mobileAccountChoices.clear();mobileAccountEmail='';mobileClockRead=null;paseoReadRunId++;state.paseoManagement=null;timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;globalSearchController?.close({restoreFocus:false});pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;invitationAcceptanceStatus='';// Keep an open invitation through session expiry so the user can sign in again.
+auth.onExpired=()=>{boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();ttWorkNoteDraft.clear();mobileAccountChoices.clear();clearOrderIntake();mobileAccountEmail='';mobileClockRead=null;paseoReadRunId++;state.paseoManagement=null;timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;globalSearchController?.close({restoreFocus:false});pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;invitationAcceptanceStatus='';// Keep an open invitation through session expiry so the user can sign in again.
  startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;clearTimeTrackerOjtSelection();state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtManualVisibleCount=50;state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
 let workspacePreferenceSyncPending=false;
 let workspacePreferenceSyncQueued=null;

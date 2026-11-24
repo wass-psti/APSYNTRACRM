@@ -69,8 +69,8 @@ const NAVIGATION = Object.freeze({
   },
   orders: {
     label: "Order Intake",
-    kind: "board",
-    route: "#/boards/:boardId",
+    kind: "native",
+    route: "#/order-intake",
     order: 110,
   },
   evaluation: {
