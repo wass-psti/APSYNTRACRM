@@ -287,21 +287,31 @@ export function renderTimeTrackerAdminDeleteDialog({confirmation=null,busy=false
     '</section></div>';
 }
 
-/** Explicit verified Philippine timestamp, including seconds; never infer a missing time. */
+/** Time-only administrative closure, anchored to the signed attendance date.
+ * For an earlier wall-clock time, use the following day (overnight session).
+ * The operator never supplies a date or audit reason.
+ */
 export function buildTimeTrackerManualClockOut(formData,record,now=new Date()){
  const raw=String(formData.get('clockOutAt')??'').trim();
- const match=/^(\d{4}-\d{2}-\d{2})\s+(0?[1-9]|1[0-2]):([0-5]\d)(?::([0-5]\d))?\s*(AM|PM)$/i.exec(raw);
- if(!match)throw Error('Enter the verified Philippine date and time (YYYY-MM-DD hh:mm:ss AM/PM).');
- const hour=Number(match[2])%12+(match[5].toUpperCase()==='PM'?12:0);
- const isoLocal=match[1]+'T'+String(hour).padStart(2,'0')+':'+match[3];
- const base=parseTimeTrackerAdminDateTime(isoLocal);
- const end=new Date(Date.parse(base)+Number(match[4]||0)*1000);
+ const match=/^(0?[1-9]|1[0-2]):([0-5]\d)(?::([0-5]\d))?\s*(AM|PM)$/i.exec(raw);
+ const machine=/^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/.exec(raw);
+ if(!match&&!machine)throw Error('Enter a valid Philippine clock-out time (hh:mm:ss AM/PM).');
+ const hour=match?Number(match[1])%12+(match[4].toUpperCase()==='PM'?12:0):Number(machine[1]);
+ const minutes=(match||machine)[2];
+ const seconds=Number((match||machine)[3]||0);
  const start=typeof record?.clockIn==='string'?record.clockIn:record?.clockIn?.timestamp;
- if(!Number.isFinite(Date.parse(start))||record?.clockOut||end.getTime()<Date.parse(start)||end.getTime()>new Date(now).getTime())
-  throw Error('Clock-out must be at or after clock-in, not in the future, and the session must still be active.');
- const reason=String(formData.get('reason')??'').trim();
- if(!reason||reason.length>500)throw Error('Enter a reason for the manual clock-out (up to 500 characters).');
- return Object.freeze({patch:Object.freeze({clockOutAt:end.toISOString()}),reason});
+ const startMs=Date.parse(start);
+ if(!Number.isFinite(startMs)||record?.clockOut)
+  throw Error('The session must still be active.');
+ const day=timeTrackerAdminDateTimeLocal(start).slice(0,10);
+ const isoLocal=day+'T'+String(hour).padStart(2,'0')+':'+minutes;
+ const base=parseTimeTrackerAdminDateTime(isoLocal);
+ let endMs=Date.parse(base)+seconds*1000;
+ // Compare whole seconds because the time input has second precision.
+ if(endMs<Math.floor(startMs/1000)*1000)endMs+=86400000;
+ if(endMs<startMs||endMs>new Date(now).getTime())
+  throw Error('Clock-out must be at or after clock-in and not in the future.');
+ return Object.freeze({patch:Object.freeze({clockOutAt:new Date(endMs).toISOString()}),reason:'Administrative manual clock-out'});
 }
 
 export function renderTimeTrackerManualClockOut({editor,busy=false,error=''}={}){
@@ -319,9 +329,9 @@ export function renderTimeTrackerManualClockOut({editor,busy=false,error=''}={})
   '<div class="tt-admin-record-context"><div><strong>'+esc(record.ownerName||record.name||'Selected employee')+'</strong><small>Clock in: '+esc(formatTimeTrackerDateTime(start,{seconds:true}))+'</small></div></div>'+
   (alreadyClosed?'<p role="status">This session is already completed. Refresh the Log.</p>':'')+
   '<section class="tt-admin-field-section"><h4>Verified clock-out · Philippine Time</h4>'+
-  inputField('Clock-out date and time','clockOutAt',editor.clockOutDraft||'',{placeholder:'YYYY-MM-DD hh:mm:ss AM/PM',required:true})+
-  '<p>Enter the verified actual clock-out time, or the policy cutoff if closing a missed automatic clock-out. Check approved overtime first. No GPS will be invented.</p>'+
-  '<label class="tt-admin-field"><span>Reason</span><textarea name="reason" required maxlength="500" rows="3" placeholder="Explain why this session requires manual clock-out">'+esc(editor.reasonDraft||'')+'</textarea></label></section>'+
+  inputField('Clock-out time','clockOutAt',editor.clockOutDraft||'',{placeholder:'06:48:32 PM',required:true})+
+  '<p>Attendance date: '+esc(timeTrackerAdminDateTimeLocal(start).slice(0,10))+'. A time earlier than clock-in is treated as the following day. Future times are not allowed.</p>'+
+  '</section>'+
   '</div></fieldset><footer class="tt-admin-editor-actions"><span class="tt-admin-editor-footnote">The original record and administrator identity remain in the audit history.</span><div>'+
   '<button type="button" class="secondary" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+'>Cancel</button>'+
   '<button type="submit" class="primary"'+(busy||alreadyClosed?' disabled':'')+'>'+(busy?'Saving…':'Confirm clock-out')+'</button></div></footer></form></div>';
