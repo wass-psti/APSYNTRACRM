@@ -2172,6 +2172,13 @@
       "sha256": "d11e986eeebe7e5b57bf8b6f889e8f1bf10bac97268ec3d5be9a6b5f96605f9d"
     },
     {
+      "version": "20261124115432",
+      "name": "cp_agt_18b_workforce_capture_v1",
+      "file": "20261124115432_cp_agt_18b_workforce_capture_v1.sql",
+      "bytes": 3986,
+      "sha256": "5b7819313f62efad2eb06a0e1fb0815b10e1909c3d9a28bbee67c037bd0b0635"
+    },
+    {
       "version": "20261124170000",
       "name": "cp_tt_ot_creator_withdrawal",
       "file": "20261124170000_cp_tt_ot_creator_withdrawal.sql",
