@@ -37,8 +37,18 @@ export function validateRecoverySnapshot(value){
  !validFields(value.fields,RECOVERY_FIELDS)||value.fields.documentType!==value.documentType||
  !Array.isArray(value.lines)||value.lines.length>100||
  !value.lines.every(line=>validFields(line,RECOVERY_LINE_FIELDS))||
- Object.keys(value).some(key=>!['schema','instanceId','userId','workspaceId','documentType','updatedAt','version','fields','lines','scope','key'].includes(key)))
+ Object.keys(value).some(key=>!['schema','instanceId','userId','workspaceId','documentType','updatedAt','version','fields','lines','scope','key','pendingSave'].includes(key)))
   throw new Error('Invalid recovery snapshot.');
+ if(value.pendingSave!==undefined&&value.pendingSave!==null){
+  const pending=value.pendingSave,command=pending.command;
+  if(!command||!uuid.test(command.documentId||'')||command.expectedRevision!==0||
+    command.draft?.documentType!==value.documentType||
+    !['draft','for-approval'].includes(command.initialState)||
+    command.reviseApproved!==false||
+    (pending.receipt&&(!uuid.test(pending.receipt.boardItemId||'')||
+      pending.receipt.revision!==1||typeof pending.receipt.documentNumber!=='string')))
+   throw new Error('Invalid pending creation transaction.');
+ }
  const scope=recoveryScope(value.userId,value.workspaceId,value.documentType);
  if(value.scope!==scope||value.key!==scope+':'+value.instanceId.toLowerCase())
   throw new Error('Invalid recovery identity.');
@@ -46,10 +56,10 @@ export function validateRecoverySnapshot(value){
   throw new Error('Recovery snapshot exceeds storage limit.');
  return value;
 }
-export function createRecoverySnapshot({userId,workspaceId,documentType,instanceId,fields,lines,version=1,updatedAt=Date.now()}){
+export function createRecoverySnapshot({userId,workspaceId,documentType,instanceId,fields,lines,pendingSave,version=1,updatedAt=Date.now()}){
  const scope=recoveryScope(userId,workspaceId,documentType);
  if(!uuid.test(instanceId||''))throw new Error('Invalid creation instance.');
  return validateRecoverySnapshot({schema:RECOVERY_SCHEMA,userId:userId.toLowerCase(),
   workspaceId:workspaceId.toLowerCase(),documentType,instanceId:instanceId.toLowerCase(),
-  scope,key:scope+':'+instanceId.toLowerCase(),fields:{...fields},lines:lines.map(line=>({...line})),version,updatedAt});
+  scope,key:scope+':'+instanceId.toLowerCase(),fields:{...fields},lines:lines.map(line=>({...line})),version,updatedAt,...(pendingSave?{pendingSave:JSON.parse(JSON.stringify(pendingSave))}:{})});
 }

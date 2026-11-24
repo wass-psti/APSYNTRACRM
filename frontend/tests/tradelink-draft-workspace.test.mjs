@@ -441,7 +441,7 @@ test('local validation feedback is specific, sanitized and reset after edited in
  assert.match(app,/form\.querySelector\(':invalid'\)/);
  assert.match(app,/resetTradeLinkDraftForm\(state\.tradeLinkDraft,event\.target\.value\)/);
  assert.match(app,/case 'tradelink-draft-clear'/);
- assert.match(app,/if\(!tradeLinkDraftRoute\(\)\|\|state\.tradeLinkDraft\.busy\)break;/);
+ assert.match(app,/if\(!tradeLinkDraftRoute\(\)\|\|state\.tradeLinkDraft\.busy\|\|state\.tradeLinkDraft\.pendingSave\)break;/);
 });
 
 
@@ -1091,13 +1091,13 @@ test('operational save and read handlers retain signed linkage, backend receipt 
  assert.match(app,/record\.board_item_id!==listed\.boardItemId/);
  assert.match(app,/state\.tradeLinkDraft\.documentPreview=\{/);
  assert.match(app,/revisions:bundle\.revisions/);
- assert.match(app,/const receipt=await tradeLinkDraftWorkspace\.save/);
+ assert.match(app,/const receipt=pending\.receipt\|\|await tradeLinkDraftWorkspace\.save/);
  assert.match(app,/committed=true/);
  assert.match(app,/tradeLinkDraftWorkspace\.revisionBundle\(documentId,revision\)/);
  assert.match(app,/tradeLinkDraftWorkspace\.list\(\)/);
  assert.match(app,/board\.items\?\.some\(item=>item\.id===receipt\.boardItemId/);
  assert.match(app,/location\.hash=tradeLinkApplicationHref\('documents'\)/);
- assert.match(app,/root\.querySelector\('\[data-tradelink-draft-form\]'\)\?\.requestSubmit\(\)/);
+ assert.match(app,/if\(form&&state\.tradeLinkDraft\.pendingSave\)await commitTradeLinkDraft\(form\);\s*else form\?\.requestSubmit\(\)/);
  assert.match(ui,/return renderTradeLinkDocumentRepository\(\{detail,workspaceId,view:draftView,canManage,canReview,actorEmail,canCreate,actorId\}\)/);
  assert.match(draft,/data-action="tradelink-document-open"/);
  assert.match(draft,/renderTradeLinkSavedDocumentPreview/);
