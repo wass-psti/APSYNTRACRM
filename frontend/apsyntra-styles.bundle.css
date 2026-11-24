@@ -28641,7 +28641,7 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell.aps-time-tracker-shell 
 #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-attendance-console .tt-start-button { min-height:48px;font-weight:600; }
 html[data-aps-monday-theme="dark"] #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact { --tt-session-data:#293d59;--tt-session-ink:#edf5ff;--tt-session-label:#b8d9ff; }
 html[data-aps-monday-theme="dark"] #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-work-plan-validation:not([hidden]) { color:#ffb4c0; }
-@keyframes tt-work-plan-reveal { from { opacity:0;transform:translateY(-4px); } to { opacity:1;transform:translateY(0); } }
+@keyframes tt-work-plan-reveal { from { transform:translateY(-4px); } to { transform:translateY(0); } }
 @keyframes tt-clock-ring-reveal { from { opacity:0;transform:scale(.96); } to { opacity:1;transform:scale(1); } }
 @media (prefers-reduced-motion: reduce) { #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-note-field:not([hidden]), #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact[data-session-state="active"] .tt-session-ring { animation:none; } #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-command-layout.tt-clock-compact .tt-session-ring-progress { transition:none; } }
 #app .tt-native .tt-ojt #tt-ojt-note-wrap[hidden], #app .tt-native .tt-ojt .tt-work-plan-validation[hidden] { display:none; }
