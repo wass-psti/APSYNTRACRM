@@ -102,6 +102,8 @@ export function syncTimeTrackerClock(root,at=new Date()){
   const node=root.querySelector('#'+id);
   if(node&&node.textContent!==value)node.textContent=value;
  }
+ const welcome=root.querySelector('[data-tt-welcome-greeting]');
+ if(welcome&&welcome.textContent!==parts.greeting)welcome.textContent=parts.greeting;
  const elapsed=root.querySelector('#tt-session-elapsed');
  if(elapsed?.dataset?.clockIn){
   const session=timeTrackerSessionElapsed(elapsed.dataset.clockIn,at);
@@ -152,6 +154,41 @@ function navigation(view,busy,bootstrapEligible=false,gpsEligible=false,employee
    '>'+esc(label)+'</button>'
   ).join('')+'</div></nav>';
 }
+/** Reparent the existing authorized tabs; never synthesize a second set of actions.
+ * Narrow screens and the collapsed icon rail retain the original in-content navigation.
+ */
+export function syncTimeTrackerSidebar(shell,{enabled=false,expanded=false,fresh=false}={}){
+ const sidebar=shell.querySelector('.aps-sidebar');
+ const application=shell.querySelector('.main-content .tt-application');
+ const parent=sidebar?.querySelector('a.nav-link[href="#/time-tracker"]');
+ const previous=sidebar?.querySelector('.tt-navigation');
+ if(fresh)previous?.remove();
+ const nav=application?.querySelector('.tt-navigation')||(!fresh?previous:null);
+ const mounted=Boolean(enabled&&expanded&&parent&&application&&nav);
+ if(mounted){
+  if(parent.nextElementSibling!==nav)parent.after(nav);
+  parent.setAttribute('aria-expanded','true');
+  nav.querySelector('[role="tablist"]')?.setAttribute('aria-orientation','vertical');
+ }else{
+  parent?.removeAttribute('aria-expanded');
+  if(nav&&application&&sidebar?.contains(nav)){
+   application.querySelector('.tt-app-header')?.after(nav);
+   nav.querySelector('[role="tablist"]')?.removeAttribute('aria-orientation');
+  }else if(!application)previous?.remove();
+ }
+ shell.classList.toggle('tt-sidebar-mounted',mounted);
+ const breadcrumb=shell.querySelector('.breadcrumb');
+ const old=breadcrumb?.querySelector('.tt-section-crumb');
+ const label=enabled?nav?.querySelector('[aria-selected="true"]')?.textContent:'';
+ if(label&&breadcrumb){
+  const item=old||breadcrumb.ownerDocument.createElement('span');
+  item.className='tt-section-crumb';
+  item.textContent='› '+label;
+  if(!old)breadcrumb.append(item);
+ }else old?.remove();
+ return mounted;
+}
+
 function head(access,busy=false,view='clock'){
  const role=access?.moduleRole||'';
  const roleLabel=role==='System Admin'?'System admin':role||(busy?'Checking signed access…':'Signed access required');
@@ -204,7 +241,7 @@ function heading(title,desc){
   esc(desc)+'</p></div></div>';
 }
 function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-out',locationPreference='',{
- success='',clockCorrectionNotice='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',workPlanDraft=''
+ success='',clockCorrectionNotice='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',workPlanDraft='',displayName=''
 }={}){
  const {access,records,active}=result;
  const writeReady=TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&access?.attendanceWritesAccepted===true;
@@ -254,6 +291,8 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
   autoClockout.status==='DUE'?'Automatic clock-out due · scheduled cutoff ':
   'Automatic clock-out monitoring unavailable';
  let html='<div class="tt-clock-stage tt-command-center">'+
+  '<h2 class="tt-reference-welcome"><span data-tt-welcome-greeting>'+t.greeting+'</span> '+
+   esc(displayName||(access?.moduleRole==='System Admin'?'System admin':access?.moduleRole)||'')+'</h2>'+
   '<div class="tt-command-layout tt-clock-compact" data-session-state="'+(active?'active':'idle')+'">'+
    '<section class="tt-time-dashboard" aria-label="Live time and attendance summary">'+
     '<div class="tt-time-scene" aria-hidden="true">'+
@@ -401,7 +440,7 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',workPlanDraft='',ojtWorkPlanDraft='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',clockCorrectionNotice='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',employeesTab='directory',employeesDepartment='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otManualVisibleCount=50,otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
+ result=null,displayName='',busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',workPlanDraft='',ojtWorkPlanDraft='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',clockCorrectionNotice='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',employeesTab='directory',employeesDepartment='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otManualVisibleCount=50,otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError='',
  adminEligible=false,adminFullAccess=adminEligible,adminDirectory=[],adminSelectedIds=[],adminEditor=null,adminDeleteConfirm=null,adminBusy=false,adminError='',adminSuccess='',
  ojtSelected=null,ojtAttendance=null,ojtBusy=false,ojtError='',ojtSuccess='',
@@ -444,7 +483,7 @@ export function renderTimeTrackerNative({
   overview:result.overview,access:result.access,now,filters:overviewFilters
  });
  if(selected==='clock')html+=clockPage(result,busy,new Date(now),clockPending,clockPendingAction,locationPreference,{
-  success,clockCorrectionNotice,geoPromptVisible,geoPermission,geoMessage,clockStage,workPlanDraft
+  success,clockCorrectionNotice,geoPromptVisible,geoPermission,geoMessage,clockStage,workPlanDraft,displayName
  });
  if(selected==='employees'){
   html+=renderTimeTrackerEmployees({
