@@ -831,9 +831,9 @@ try {
     await page.locator(".tt-log-row-status").textContent(),
     "Completed",
   );
-  assert.doesNotMatch(
+  assert.equal(
     await page.locator(".tt-log-row-out").textContent(),
-    /Completed|Active/,
+    "05:00:00 PM",
   );
   const logGeometry = await page.locator(".tt-log-table").evaluate((table) => {
     const headers = [...table.querySelectorAll("thead th")].slice(1);
