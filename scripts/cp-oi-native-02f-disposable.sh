@@ -42,7 +42,7 @@ SQL
   run <<'SQL'
 CREATE TABLE public.profiles(id uuid PRIMARY KEY,display_name text,email text,status text);
 SQL
-  run < supabase/migration-candidates/20261124110118_cp_oi_native_05a_operational_lifecycle.sql
+  run < supabase/migrations/20261124110118_cp_oi_native_05a_operational_lifecycle.sql
  fi
 fi
 
