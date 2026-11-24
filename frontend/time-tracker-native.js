@@ -263,11 +263,16 @@ export class TimeTrackerNativeClient{
     const session=response.session;
     const active=records.find(x=>x.status==='Active');
     if(!isRecord(session)||!active||session.recordId!==active.id||
-       !['MONITORING','GRACE','OVERTIME','ERROR'].includes(session.status)||
+       !['MONITORING','GRACE','OVERTIME','PENDING_GPS','ERROR'].includes(session.status)||
        !safeTime(session.thresholdAt)||
-       (session.graceDeadlineAt!==null&&!safeTime(session.graceDeadlineAt))||
-       (session.overtimeCutoffAt!==null&&!safeTime(session.overtimeCutoffAt))||
-       (session.nextAt!==null&&!safeTime(session.nextAt)))
+       (session.graceDeadlineAt!=null&&!safeTime(session.graceDeadlineAt))||
+       (session.overtimeCutoffAt!=null&&!safeTime(session.overtimeCutoffAt))||
+       (session.scheduledClockOutAt!=null&&!safeTime(session.scheduledClockOutAt))||
+       (session.pendingAt!=null&&!safeTime(session.pendingAt))||
+       (session.nextAt!=null&&!safeTime(session.nextAt))||
+       (session.status==='PENDING_GPS'&&
+        (!safeTime(session.scheduledClockOutAt)||!safeTime(session.pendingAt)||
+         !['nine_hour_threshold_grace_expired','approved_overtime_ended'].includes(session.clockOutReason))))
      autoClockoutUnavailable=true;
     else autoClockout=Object.freeze({
      recordId:session.recordId,status:session.status,
@@ -275,6 +280,8 @@ export class TimeTrackerNativeClient{
      graceStartedAt:safeTime(session.graceStartedAt)?session.graceStartedAt:null,
      graceDeadlineAt:safeTime(session.graceDeadlineAt)?session.graceDeadlineAt:null,
      overtimeCutoffAt:safeTime(session.overtimeCutoffAt)?session.overtimeCutoffAt:null,
+     scheduledClockOutAt:safeTime(session.scheduledClockOutAt)?session.scheduledClockOutAt:null,
+     pendingAt:safeTime(session.pendingAt)?session.pendingAt:null,
      nextAt:safeTime(session.nextAt)?session.nextAt:null,
      lastEvaluatedAt:safeTime(session.lastEvaluatedAt)?session.lastEvaluatedAt:null,
      clockOutReason:typeof session.clockOutReason==='string'?session.clockOutReason:null
@@ -638,6 +645,54 @@ export class TimeTrackerNativeClient{
   await checkIdentity(this.auth,this.api,before.access,boardId);
   return Object.freeze({id:requestId,status:decision});
  }
+ async completeAutomaticClockOut(boardId,{recordId,geo}={}){
+  if(!uuid.test(recordId||''))deny('A valid pending attendance record is required');
+  const before=await this.snapshot(boardId,{clockOnly:true});
+  if(before.access.attendanceWritesAccepted!==true)
+   deny('Server-verified TimeTracker Clock activation required');
+  const existing=before.records.find(row=>row.id===recordId);
+  if(existing?.status==='Completed')
+   return Object.freeze({mode:'ALREADY_CLOSED',recordId});
+  if(!before.active||before.active.id!==recordId)
+   deny('The pending attendance session is no longer active');
+  if(before.autoClockoutUnavailable||before.autoClockout?.recordId!==recordId||
+     before.autoClockout.status!=='PENDING_GPS'||
+     !safeTime(before.autoClockout.scheduledClockOutAt))
+   deny('The signed automatic clock-out is not pending foreground GPS');
+  if(!isRecord(geo)||geo.status!=='captured'||geo.source!=='browser-geolocation'||
+     !Number.isFinite(geo.latitude)||geo.latitude < -90||geo.latitude>90||
+     !Number.isFinite(geo.longitude)||geo.longitude < -180||geo.longitude>180||
+     !Number.isFinite(geo.accuracy)||geo.accuracy<0||geo.accuracy>100000||
+     !safeTime(geo.capturedAt)||Date.now()-Date.parse(geo.capturedAt)>60000||
+     Date.parse(geo.capturedAt)-Date.now()>120000)
+   deny('A fresh foreground browser GPS fix is required');
+  await checkIdentity(this.auth,this.api,before.access,boardId);
+  if(await this.attendanceCapability(boardId,before.access)!==true)
+   deny('Signed attendance write capability changed; no action performed');
+  const signal=globalThis.AbortSignal?.timeout?.(25000);
+  const result=await this.api.rpc('timetracker_auto_clockout_complete',{
+   p_board_id:boardId,p_record_id:recordId,p_geo:geo
+  },{retryUnauthorized:false,...(signal?{signal}:{})});
+  if(!isRecord(result)||result.contract!=='tt-auto-clockout-complete-1'||
+     result.actorId!==before.access.userId||result.workspaceId!==before.access.workspaceId||
+     result.boardId!==boardId||result.recordId!==recordId||
+     !['COMMITTED','ALREADY_COMMITTED','ALREADY_CLOSED'].includes(result.mode))
+   deny('Automatic clock-out completion receipt is unverified; refresh before retrying');
+  if(result.mode==='ALREADY_CLOSED')return Object.freeze({mode:result.mode,recordId});
+  if(!safeTime(result.scheduledClockOutAt)||
+     result.scheduledClockOutAt!==before.autoClockout.scheduledClockOutAt||
+     (result.mode==='COMMITTED'&&result.gpsCapturedAt!==geo.capturedAt)||
+     !safeTime(result.gpsCapturedAt)||!safeTime(result.committedAt)||
+     !Number.isSafeInteger(Number(result.revision))||
+     (result.mode==='COMMITTED'&&Number(result.revision)<=before.revision)||
+     (result.mode==='ALREADY_COMMITTED'&&Number(result.revision)<before.revision))
+   deny('Automatic clock-out receipt does not match the pending schedule');
+  await checkIdentity(this.auth,this.api,before.access,boardId);
+  return Object.freeze({mode:result.mode,recordId,
+   scheduledClockOutAt:result.scheduledClockOutAt,
+   gpsCapturedAt:result.gpsCapturedAt,revision:Number(result.revision),
+   committedAt:result.committedAt});
+ }
  async commit(boardId,{action,location,department,workNote='',geo}={}){
   if(!['clock-in','clock-out'].includes(action))deny('Unsupported attendance action');
   const before=await this.snapshot(boardId,{clockOnly:true});
@@ -692,7 +747,8 @@ export class TimeTrackerNativeClient{
  * Give the high-accuracy provider time to lock, then retry using network
  * positioning. Browser-managed cached fixes are accepted only if fresh;
  * never invent a coordinate or reuse application-stored locations.
- * Only called as part of an explicit Start/End Session action.
+ * Called for explicit manual attendance actions, or when TimeTracker opens
+ * with a durable automatic clock-out waiting for foreground GPS.
  */
 function geolocationRequest(geolocation,options){
  return new Promise((resolve,reject)=>{
@@ -721,7 +777,7 @@ function capturePosition(position){
  return {status:'captured',latitude,longitude,accuracy,
   capturedAt:new Date(capturedAt).toISOString(),source:'browser-geolocation'};
 }
-export async function captureAttendanceGeo(geolocation,{onProgress}={}){
+export async function captureAttendanceGeo(geolocation,{onProgress,freshOnly=false}={}){
  if(globalThis.isSecureContext===false){
   const error=new Error('Location requires a secure HTTPS connection');
   error.code='TT_GEO_INSECURE';
@@ -733,9 +789,9 @@ export async function captureAttendanceGeo(geolocation,{onProgress}={}){
   try{onProgress(message);}catch{/* A UI update must not interrupt GPS acquisition. */}
  }};
  const attempts=[
-  {options:{enableHighAccuracy:true,timeout:10000,maximumAge:25000},
+  {options:{enableHighAccuracy:true,timeout:10000,maximumAge:freshOnly===true?0:25000},
    message:'Finding your GPS location…'},
-  {options:{enableHighAccuracy:false,timeout:12000,maximumAge:45000},
+  {options:{enableHighAccuracy:false,timeout:12000,maximumAge:freshOnly===true?0:45000},
    message:'GPS is taking longer; trying network-assisted location…'}
  ];
  let lastError={code:2};

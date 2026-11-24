@@ -200,11 +200,15 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
  const status=active?'Active':'Idle';
  const locationEnabled=geoPermission==='granted';
  const geoWarning=geoPermission==='denied'||geoPermission==='unavailable';
- const geoTitle=clockStage==='location'?'Getting GPS for this attendance action…':
+ const automaticGps=clockStage==='auto-location'||clockStage==='auto-saving';
+ const geoTitle=clockStage==='auto-location'?'Getting GPS for automatic clock-out…':
+  clockStage==='auto-saving'?'Completing automatic clock-out…':
+  clockStage==='location'?'Getting GPS for this attendance action…':
   locationEnabled?'Location captured for this action':
   geoPermission==='denied'?'Location permission blocked':
   geoPermission==='unavailable'?'GPS unavailable':'Location could not be verified';
- const geoDescription=clockStage==='location'?
+ const geoDescription=automaticGps?geoMessage||'The scheduled clock-out is pending until a fresh foreground GPS fix is captured.':
+  clockStage==='location'?
   'Location is requested because you pressed Start Session or End Session.':
   geoMessage||(locationEnabled?
   'A fresh GPS fix was captured for this attendance attempt.':
@@ -222,13 +226,15 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
   isTimeTrackerHomeNoteRequired(active.location,access?.email,access?.userId);
  const session=active?timeTrackerSessionElapsed(active.clockIn,now):null;
  const autoClockout=active&&result.autoClockout?.recordId===active.id?result.autoClockout:null;
- const autoDeadline=autoClockout?.nextAt||autoClockout?.cutoffAt;
+ const autoDeadline=autoClockout?.status==='PENDING_GPS'?null:
+  autoClockout?.nextAt||autoClockout?.cutoffAt;
  const autoUnavailable=active&&result.autoClockoutUnavailable===true;
  const autoLabel=autoUnavailable?'Automatic clock-out status unavailable':
   !autoClockout?'':autoClockout.status==='MONITORING'?
   'Automatic clock-out monitoring · nine-hour threshold at ':
   autoClockout.status==='GRACE'?'Grace period active · automatic clock-out at ':
   autoClockout.status==='OVERTIME'?'Approved overtime active · automatic clock-out at ':
+  autoClockout.status==='PENDING_GPS'?'Automatic clock-out pending · fresh foreground GPS required':
   autoClockout.status==='DUE'?'Automatic clock-out due · scheduled cutoff ':
   'Automatic clock-out monitoring unavailable';
  let html='<div class="tt-clock-stage tt-command-center">'+
@@ -329,7 +335,9 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
       '<button class="tt-start-button" type="submit" name="tt-action" value="'+
        (active?'clock-out':'clock-in')+'"'+
        (busy||!writeReady||(!active&&!employeeDepartment)?' disabled':'')+'>'+
-       (busy&&clockStage==='location'?'Getting GPS…':
+       (busy&&clockStage==='auto-location'?'Getting GPS for automatic clock-out…':
+        busy&&clockStage==='auto-saving'?'Completing automatic clock-out…':
+        busy&&clockStage==='location'?'Getting GPS…':
         busy&&clockStage==='saving'?'Saving securely…':
         busy&&clockStage==='verifying'?'Verifying record…':
         active?'End session':'Start session')+'</button>')+
