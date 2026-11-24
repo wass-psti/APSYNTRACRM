@@ -2,37 +2,37 @@
 
 ## Scope
 
-The existing regular-employee TimeTracker scheduler already enforces nine **credited-work** hours with a 30-minute grace interval and approved-OT extension. Shared-login OJT attendance uses a distinct \`private.tt_ojt_attendance\` table; therefore it previously had no automatic clock-out. This migration adds an independent, server-side **nine elapsed-hour** cutoff for each intern identity. It does not change standard employee overtime rules or the pre-Arial TimeTracker UI.
+The existing regular-employee TimeTracker scheduler already enforces nine **credited-work** hours with a 30-minute grace interval and approved-OT extension. Shared-login OJT attendance uses a distinct `private.tt_ojt_attendance` table; therefore it previously had no automatic clock-out. This migration adds an independent, server-side **nine elapsed-hour** cutoff for each intern identity. It does not change standard employee overtime rules or the pre-Arial TimeTracker UI.
 
 ## Behavior
 
-- Every OJT record still active at \`clock_in_at + interval '9 hours'\` is automatically closed; the stored clock-out is **exactly** that cutoff even if the scheduler processes it slightly later.
+- Every OJT record still active at `clock_in_at + interval '9 hours'` is automatically closed; the stored clock-out is **exactly** that cutoff even if the scheduler processes it slightly later.
 - Existing active OJT records already older than nine hours will also be closed on the next scheduled sweep. Completed records are never altered.
-- The job runs every 30 seconds using \`pg_cron\`, independent of the logged-in device or the browser tab.
-- Each automatic closure creates an append-only audit entry with before/after rows and an explicit \`server-auto-clock-out\` action. Existing revision-trigger CAS rules remain in force.
-- The automated job does **not** attribute the clock-out to an intern or admin and records GPS as \`not_captured\`, not fabricated.
+- The job runs every 30 seconds using `pg_cron`, independent of the logged-in device or the browser tab.
+- Each automatic closure creates an append-only audit entry with before/after rows and an explicit `server-auto-clock-out` action. Existing revision-trigger CAS rules remain in force.
+- The automated job does **not** attribute the clock-out to an intern or admin and records GPS as `not_captured`, not fabricated.
 - Manual clock-out and administrator correction/delete remain serialized by the existing per-intern advisory lock. The worker rechecks the record after locking to prevent double clock-outs or overwriting a corrected start time.
 - There is no change to OJT dropdown identity, permission boundaries, location validation at manual clock-in, or UI.
 
 ## Production deployment
 
-Prerequisite: \`20261123150000_cp_tt_ojt_admin_record_management.sql\` successfully applied. Check \`supabase migration list --remote\` and do a dry run; deploy only when the pending migration list is expected.
+Prerequisite: `20261123150000_cp_tt_ojt_admin_record_management.sql` successfully applied. Check `supabase migration list --remote` and do a dry run; deploy only when the pending migration list is expected.
 
-\`\`\`powershell
+```powershell
 npx supabase db push --include-all --dry-run --remote
-\`\`\`
+```
 
-After review, deploy with \`npx supabase db push --include-all --remote\` using normal production backup procedure. Do not run SQL from the browser or grant authenticated users access to the private worker.
+After review, deploy with `npx supabase db push --include-all --remote` using normal production backup procedure. Do not run SQL from the browser or grant authenticated users access to the private worker.
 
 ## Read-only verification
 
-\`\`\`sql
+```sql
 SELECT to_regprocedure('private.tt_process_ojt_auto_clockouts()') IS NOT NULL AS worker_exists;
 SELECT jobname,schedule,active
 FROM cron.job WHERE jobname='tt-ojt-auto-clockout-9h';
 SELECT version FROM supabase_migrations.schema_migrations
 WHERE version='20261124100000';
-\`\`\`
+```
 
 ### QA acceptance cases
 1. New OJT session for one intern identity closes after nine hours even with browser closed.
