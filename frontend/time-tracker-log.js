@@ -356,7 +356,7 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
   '" aria-selected="'+selected+'" data-record-id="'+esc(r.id)+'" data-log-search="'+esc(searchText(r))+'"'+
   (hidden?' hidden':'')+'>'+
   '<td class="tt-log-check-cell">'+(gpsOptions.adminFullAccess?'<button type="button" class="tt-log-checkbox" role="checkbox" aria-checked="'+selected+'" aria-label="Select '+esc(r.name||'employee')+'" data-action="tt-log-row-select" data-record-id="'+esc(r.id)+'"'+(gpsOptions.adminBusy?' disabled':'')+'>'+(selected?'✓':'')+'</button>':'')+'</td>'+
-  '<td colspan="5"><details class="tt-log-detail" data-record-id="'+esc(r.id)+'">'+
+  '<td colspan="6"><details class="tt-log-detail" data-record-id="'+esc(r.id)+'">'+
    '<summary class="tt-log-row-summary" data-action="tt-log-open-detail" data-record-id="'+esc(r.id)+
     '" aria-haspopup="dialog" aria-label="Open attendance details for '+esc(r.name||'employee')+'">'+
    '<span class="tt-log-row-clock" title="'+esc(phtDate(r.clockIn))+'"><strong>'+esc(logRowTime(r.clockIn))+'</strong>'+
@@ -364,7 +364,7 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
    '<span class="tt-log-row-person"><span class="tt-log-avatar" aria-hidden="true">'+esc(logInitials(r.name))+'</span><strong title="'+esc(r.name||'Signed member')+'">'+esc(r.name||'Signed member')+'</strong><small class="tt-log-row-date">'+esc(logRowDate(r.clockIn))+'</small></span>'+
    '<span class="tt-log-row-location" title="'+esc(r.location||'Unspecified')+'">'+esc(locationLabel(r.location||'Unspecified'))+'</span>'+
    '<span class="tt-log-row-department" title="'+esc(r.isOjt?'OJT intern · Shared login':r.department||'Unassigned')+'">'+esc(r.department||'Unassigned')+'</span>'+
-   '<span class="tt-log-row-out" title="'+esc(validTime(r.clockOut)?phtDate(r.clockOut):'')+'">'+esc(logRowTime(r.clockOut))+' <span class="tt-log-badge '+(done?'tt-log-badge-done':
+   '<span class="tt-log-row-out" title="'+esc(validTime(r.clockOut)?phtDate(r.clockOut):'')+'">'+esc(logRowTime(r.clockOut))+'</span><span class="tt-log-row-status"><span class="tt-log-badge '+(done?'tt-log-badge-done':
     state==='Active'?'tt-log-badge-active':'tt-log-badge-unknown')+'">'+esc(state)+'</span></span>'+
   '</summary>'+(gpsOptions.expandedRecordIds?.includes(r.id)?'':safeSessionDetails(r,now,gpsOptions))+'</details></td></tr>';
 };
@@ -431,8 +431,8 @@ export function renderTimeTrackerLog({
    (adminError&&!adminEditor?'<p class="tt-log-admin-feedback is-error" role="alert">'+esc(adminError)+'</p>':'')+
    (adminSuccess?'<p class="tt-log-admin-feedback is-success" role="status">'+esc(adminSuccess)+'</p>':'')+
    (rows.length?'<div class="tt-log-day"><div class="tt-log-table-scroll">'+
-     '<table class="board-table tt-log-table"><thead><tr>'+
-     '<th class="tt-log-check-heading" aria-label="Selection"></th><th>Clock In</th><th>Employee</th><th>Working Location</th><th>Department</th><th>Clock Out</th></tr></thead>'+
+     '<table class="board-table tt-log-table"><colgroup><col class="tt-log-col-check"><col class="tt-log-col-in"><col class="tt-log-col-person"><col class="tt-log-col-location"><col class="tt-log-col-department"><col class="tt-log-col-out"><col class="tt-log-col-status"></colgroup><thead><tr>'+
+     '<th class="tt-log-check-heading" aria-label="Selection"></th><th>Clock In</th><th>Employee</th><th>Working Location</th><th>Department</th><th>Clock Out</th><th>Status</th></tr></thead>'+
      '<tbody>'+rows.map(r=>sessionRow(r,query,now,{
       gpsEligible:!r.isOjt&&gpsEligible,gpsData:r.isOjt?null:gpsData,gpsBusy,gpsError,gpsErrorRecordId,
       expandedRecordIds,mapEnabled:!r.isOjt&&mapEnabled,mapTheme,

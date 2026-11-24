@@ -74,7 +74,7 @@ test('Flat styling is scoped, adaptive and dark-mode aware',()=>{
 
 test('Record list has five mockup columns plus selection, initials and a single live results count',()=>{
  const html=render();
- assert.match(html,/<th>Clock In<\/th><th>Employee<\/th><th>Working Location<\/th><th>Department<\/th><th>Clock Out<\/th>/);
+ assert.match(html,/<th>Clock In<\/th><th>Employee<\/th><th>Working Location<\/th><th>Department<\/th><th>Clock Out<\/th><th>Status<\/th>/);
  assert.match(html,/class="tt-log-avatar" aria-hidden="true">SE<\/span>/);
  assert.equal((html.match(/id="tt-log-visible-count"/g)||[]).length,1);
  assert.ok(html.indexOf('tt-log-table')<html.indexOf('tt-log-secondary-analytics'));
@@ -135,4 +135,16 @@ test('Reference Log filters combine signed view, department, location, and inclu
  assert.match(html,/09:00:00/);
  assert.match(html,/Nov 4, 2026/);
  assert.doesNotMatch(render(),/data-action="tt-log-row-select"/);
+});
+
+
+test('Attendance Log keeps status separate from clock-out time and defines all seven columns',()=>{
+ const source=readFileSync('frontend/time-tracker-log.js','utf8');
+ const css=readFileSync('frontend/apps/TimeTracker/time-tracker-reference-shell.css','utf8');
+ assert.match(source,/<colgroup>(?:<col class="tt-log-col-[a-z]+">){7}<\/colgroup>/);
+ assert.match(source,/<td colspan="6"><details class="tt-log-detail"/);
+ assert.match(source,/<\/span><span class="tt-log-row-status"><span class="tt-log-badge /);
+ assert.match(css,/\.tt-log-search:has\(> \.aps-search-field\) > svg \{display:none\}/);
+ assert.match(css,/\.tt-log-row-clock strong \{font-size:inherit/);
+ assert.match(css,/grid-template-columns:14fr 29fr 17fr 17fr 9fr 11fr/);
 });

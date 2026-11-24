@@ -28722,9 +28722,13 @@ html[data-aps-monday-theme="dark"] #app#app .shell .main.aps-time-tracker-shell 
  position:relative;display:flex;align-items:center;flex:1 1 320px;min-width:0;max-width:760px;gap:8px;height:40px;padding:0 6px 0 14px;background:var(--tt-shell-hover,#f3f1fa);border:0;border-radius:12px;box-shadow:none;
 }
 #app#app .tt-log-reference-header .tt-log-search {position:relative;flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:10px;margin:0}
-#app#app .tt-log-reference-header .tt-log-search svg {position:static;transform:none;width:18px;height:18px;flex:none;color:var(--tt-shell-muted,#4a4860)}
+#app#app .tt-log-reference-header .tt-log-search > svg {position:static;transform:none;width:18px;height:18px;flex:none;color:var(--tt-shell-muted,#4a4860)}
 #app#app .tt-log-reference-header .tt-log-filter-label {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 #app#app .tt-log-reference-header .tt-log-search input {width:100%;min-width:0;min-height:0;padding:0;border:0;background:transparent;color:inherit;box-shadow:none;font:400 14px Inter,system-ui,sans-serif}
+/* The global search enhancer owns the icon and clear control after attachment. */
+#app#app .tt-log-reference-header .tt-log-search:has(> .aps-search-field) > svg {display:none}
+#app#app .tt-log-reference-header .tt-log-search .aps-search-mark {left:0;color:var(--tt-shell-muted,#4a4860)}
+#app#app .tt-log-reference-header .tt-log-search .aps-search-source {padding:0 34px 0 28px}
 #app#app .tt-log-reference-header .tt-log-filter-trigger {display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border:1px solid var(--tt-shell-line,#e3e0ee);border-radius:8px;background:var(--tt-shell-surface,#fff);color:inherit;font-size:13px;font-weight:500;cursor:pointer;list-style:none;white-space:nowrap}
 #app#app .tt-log-reference-header .tt-log-filter-trigger::-webkit-details-marker {display:none}
 #app#app .tt-log-reference-header .tt-log-filter-trigger svg {width:16px;height:16px}
@@ -28766,26 +28770,34 @@ html[data-aps-monday-theme="dark"] #app#app .shell .main.aps-time-tracker-shell 
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-checkbox:is([aria-checked="true"],[aria-checked="mixed"]) {background:#4f3fb8;border-color:#4f3fb8}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-admin-toolbar-copy > .tt-log-checkbox {margin:0 14px 0 8px}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table-scroll {max-width:100%;overflow-x:auto;border:0;border-radius:0}
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table {width:100%;min-width:1020px;table-layout:fixed;border-collapse:collapse}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table {width:100%;min-width:1120px;table-layout:fixed;border-collapse:collapse}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th {height:32px;padding:0 12px;text-align:left;background:var(--tt-log-bg);color:var(--tt-log-muted);font:600 12px Inter,system-ui,sans-serif;border-bottom:1px solid var(--tt-log-line)}
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th:nth-child(1) {width:40px}
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th:nth-child(2) {width:calc((100% - 40px)*.21)}
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th:nth-child(3) {width:calc((100% - 40px)*.29)}
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th:nth-child(4) {width:calc((100% - 40px)*.18)}
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th:nth-child(5) {width:calc((100% - 40px)*.19)}
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th:nth-child(6) {width:calc((100% - 40px)*.13)}
+/* Native table columns define the header widths; the spanning summary uses the same ratios. */
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table {--tt-log-in:14;--tt-log-person:29;--tt-log-location:17;--tt-log-department:17;--tt-log-out:9;--tt-log-status:11}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-table th:nth-child(n) {width:auto;box-sizing:border-box}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-col-check {width:3%}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-col-in {width:calc(var(--tt-log-in) * 1%)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-col-person {width:calc(var(--tt-log-person) * 1%)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-col-location {width:calc(var(--tt-log-location) * 1%)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-col-department {width:calc(var(--tt-log-department) * 1%)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-col-out {width:calc(var(--tt-log-out) * 1%)}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-col-status {width:calc(var(--tt-log-status) * 1%)}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-filterable > td {padding:0;border:0;border-bottom:1px solid var(--tt-log-line);background:var(--tt-log-bg)}
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-filterable > .tt-log-check-cell {padding-left:16px;vertical-align:middle}
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-summary {display:grid;grid-template-columns:21% 29% 18% 19% 13%;align-items:center;gap:0;min-height:44px;padding:0;border:0;background:transparent;color:var(--tt-log-ink);cursor:pointer}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-filterable > .tt-log-check-cell {padding:0;vertical-align:middle;text-align:center}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-check-cell > .tt-log-checkbox {margin-inline:auto}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-summary {display:grid;grid-template-columns:14fr 29fr 17fr 17fr 9fr 11fr;align-items:center;gap:0;min-height:44px;padding:0;border:0;background:transparent;color:var(--tt-log-ink);cursor:pointer}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-summary > span {min-width:0;padding:0 12px;font:400 13.5px Inter,system-ui,sans-serif;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-summary > .tt-log-row-clock {font-variant-numeric:tabular-nums}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-summary > :is(.tt-log-row-clock,.tt-log-row-out) {font-size:13.5px;font-variant-numeric:tabular-nums;line-height:1.35}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-clock strong {font-size:inherit;color:inherit;line-height:inherit}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-clock strong,#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-work-plan {font-weight:600}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-work-plan {color:var(--tt-log-accent)}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-person {display:flex;align-items:center;gap:10px}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-person strong {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:inherit;font:600 13.5px Inter,system-ui,sans-serif}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-date {flex:none;color:var(--tt-log-muted);font-size:12.5px}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-avatar {width:24px;height:24px;background:var(--tt-log-selected);color:var(--tt-log-accent);font:600 10px Inter,system-ui,sans-serif}
-#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-out {display:flex;align-items:center;gap:8px}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-out {display:block}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-status {display:flex;align-items:center;justify-content:flex-start}
+#app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-row-status .tt-log-badge {max-width:100%;white-space:normal;overflow-wrap:anywhere}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-badge {padding:2px 9px;border:0;border-radius:999px;font:600 11.5px Inter,system-ui,sans-serif;white-space:nowrap}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-badge-active {background:var(--tt-log-selected);color:var(--tt-log-accent)}
 #app#app .tt-native .tt-log[data-tt-log-reference] .tt-log-filterable:hover > td {background:var(--tt-log-hover)}
