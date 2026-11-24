@@ -124,7 +124,7 @@ test('All Documents no longer duplicates Board projection and stays signed',()=>
  assert.doesNotMatch(denied,/data-tradelink-domain-record|data-tradelink-document-edit/);
 });
 
-test('denied manager and foreign workspace cannot edit; Approved offers explicit revision',()=>{
+test('denied manager and foreign workspace cannot edit; Approved opens the existing revision editor',()=>{
  const denied=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view:authorizedView,canManage:false});
  assert.doesNotMatch(denied,/data-tradelink-document-edit|tradelink-draft-archive/);
@@ -136,7 +136,7 @@ test('denied manager and foreign workspace cannot edit; Approved offers explicit
  const final=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view:{...authorizedView,rows:[{...listed,workflowState:'approved'}]},canManage:true});
  assert.match(final,/data-tradelink-document-edit/);
- assert.match(final,/Revise Approved/);
+ assert.match(final,/Preview\/Edit/);
  assert.doesNotMatch(final,/data-action="tradelink-draft-archive"/);
 });
 

@@ -21,13 +21,13 @@ const record={id:doc,board_id:TRADELINK_BOARD_ID,workspace_id:workspace,
  board_item_id:item,document_type:'quotation',document_number:content.documentNumber,
  revision:2,workflow_state:'approved',content,archived_at:null,
  created_at:'2026-11-17T00:00:00.000Z',updated_at:'2026-11-17T00:00:00.000Z'};
-test('Approved documents explicitly offer Revise Approved while keeping Print PDF',()=>{
+test('Approved documents offer Preview/Edit while keeping Print PDF',()=>{
  const rows=[{documentId:doc,boardItemId:item,documentType:'quotation',
   documentNumber:content.documentNumber,revision:2,workflowState:'approved',
   archived:false,updatedAt:record.updated_at}];
  const markup=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view:{...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',rows},canManage:true});
- assert.match(markup,/Revise Approved/);
+ assert.match(markup,/Preview\/Edit/);
  assert.match(markup,/Print PDF/);
  assert.match(markup,/tradelink\/drafts\/edit\/99999999-9999-4999-8999-999999999992/);
 });

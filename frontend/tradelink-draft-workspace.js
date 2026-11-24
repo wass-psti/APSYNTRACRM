@@ -1713,14 +1713,14 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
        '<button type="button" class="tl-ref-row-action-trigger" popovertarget="tl-doc-menu-'+escape(row.documentId)+'" aria-label="Actions for '+escape(row.documentNumber)+'" title="Document actions">⋯</button>'+
        '<div popover="auto" data-tradelink-action-menu id="tl-doc-menu-'+escape(row.documentId)+'" class="tl-ref-actions-menu">'+
        (canEditRow&&tradeLinkDraftEditHref(row.documentId)?
-        '<button type="button" class="secondary" data-action="tradelink-document-open" '+
-         'data-id="'+escape(row.documentId)+'">Preview</button> '+
         '<a class="secondary" data-tradelink-document-edit href="'+
          escape(tradeLinkDraftEditHref(row.documentId))+'">'+
-         (canManage?(row.workflowState==='approved'?'Revise Approved':'Preview/Edit'):'Edit Draft')+'</a> ':
+         (canManage?'Preview/Edit':'Edit Draft')+'</a> '+
+        '<button type="button" class="secondary" data-action="tradelink-document-open" data-id="'+
+         escape(row.documentId)+'">Revision history &amp; details</button> ':
         '<button type="button" class="secondary" '+
          'data-action="tradelink-document-open" data-id="'+escape(row.documentId)+
-         '">Preview</button> ')+
+         '">View document</button> ')+
        '<button type="button" class="secondary" data-action="tradelink-document-print" '+
         'data-id="'+escape(row.documentId)+'"'+
         (view.busy||row.workflowState!=='approved'?' disabled title="PDF printing is available only after approval"':'')+
@@ -1948,10 +1948,9 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
    '</div></div>'+
   (view.error?'<p role="alert">'+escape(view.error)+'</p>':'')+
   (view.message?'<p role="status">'+escape(view.message)+'</p>':'')+
-  '<div class="tl-document-split-view" data-tradelink-document-split>'+
-   '<div class="tl-document-list-pane">'+renderTradeLinkDraftList(rows,view,canManage,{readOnly:true,canReview,canCreate,actorEmail})+'</div>'+
-   '<aside class="tl-document-preview-pane" aria-label="Selected document preview">'+
-    (selectedPreview?
+  '<div class="tl-document-list-pane">'+renderTradeLinkDraftList(rows,view,canManage,{readOnly:true,canReview,canCreate,actorEmail})+'</div>'+
+  (selectedPreview?
+   '<section class="tl-document-detail-view" aria-label="Selected document details">'+
      (linked&&(canManage||(creatorMode&&linked.createdByActor===true&&linked.workflowState==='draft'))&&
       selectedRecord.revision===linked.revision&&TL03_DOMAIN_WRITES_ENABLED&&
       ['draft','for-approval','revision-required','approved'].includes(linked.workflowState)&&!linked.archived&&
@@ -1971,14 +1970,8 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
        busy:view.busy
       }):'')+
      (linked&&canManage&&selectedRecord.revision===latestRecord.revision?
-      renderTradeLinkSavedWorkflowHistory(selection?.events):''):
-     '<div class="tl-document-preview-empty" role="status">'+
-      '<span class="tl-document-preview-empty-icon" aria-hidden="true">▤</span>'+
-      '<h3>'+(view.busy?'Loading document preview':'Select a document')+'</h3>'+
-      '<p>'+(view.busy?'Retrieving the selected signed document revision.':
-       'Choose Preview or View document from the list to inspect its verified contents here.')+'</p>'+
-     '</div>')+
-   '</aside></div></section>';
+      renderTradeLinkSavedWorkflowHistory(selection?.events):'')+
+   '</section>':'')+'</section>';
 }
 export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTradeLinkDraftView(),canManage=false,canCreate=canManage,actorId='',actorName='',actorEmail='',showModuleTabs=true}={}){
  if(!isTradeLinkBoard(detail?.board)||detail.board.id!==TRADELINK_BOARD_ID||
