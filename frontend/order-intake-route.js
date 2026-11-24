@@ -2,7 +2,7 @@ import { WORK_MANAGEMENT_BOARD_IDS } from './workspace-application-ownership.js'
 
 export const ORDER_INTAKE_ROUTE = '#/order-intake';
 export const ORDER_INTAKE_BOARD_ID = WORK_MANAGEMENT_BOARD_IDS.orders;
-export const ORDER_INTAKE_SECTIONS = Object.freeze(['dashboard', 'workflow', 'search', 'all-orders']);
+export const ORDER_INTAKE_SECTIONS = Object.freeze(['dashboard', 'workflow', 'search', 'all-orders', 'archived']);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function orderIntakeHref(section = 'dashboard', filters = {}, recordId = null) {

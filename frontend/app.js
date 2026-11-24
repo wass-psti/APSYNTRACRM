@@ -3,6 +3,9 @@ import {TradeLinkRecoveryController} from './tradelink/draft-recovery-controller
 import {captureRecoveryFields} from './tradelink/draft-recovery-state.js';
 import {syncFuelTrans} from './fueltrans-lazy.js';
 import {OrderIntakeRegistryClient} from './order-intake-registry-client.js';
+import {nativeEditable,orderEditorDraft,orderEditorMarkup,updateOrderEditorPreview,createOrderEditorSave} from './order-intake-editor.js';
+import {lifecycleActions,lifecycleFields,saveLifecycle,bindWorkflowDrag} from './order-intake-lifecycle.js';
+import {readOrderIntakePreference,saveOrderIntakePreference} from './order-intake-preference.js';
 import {parseOrderIntakeRoute,orderIntakeHref} from './order-intake-route.js';
 import {createOrderIntakeReadState} from './order-intake-read-state.js';
 import {renderOrderIntake} from './order-intake-ui.js';
@@ -610,6 +613,7 @@ function sharedApplicationLoading(){
    (Number.isFinite(navigator.deviceMemory)&&navigator.deviceMemory<=4)});
 }
 let orderIntakeRoute=null,orderIntakeRecord=null,orderIntakeRecordRun=0;
+let orderIntakeCreateSave=null,orderIntakeCreateScope=null,orderIntakeEditorGeneration=0;
 const orderIntakeScope=()=>[state.context?.user_id,state.context?.workspace_id].join('|');
 const orderIntakeCurrent=scope=>!state.workspaceTransitionPending&&auth.isSignedIn&&state.context?.user_id===auth.userId&&
  state.view==='order-intake'&&Boolean(parseOrderIntakeRoute(location.hash))&&scope===orderIntakeScope();
@@ -617,8 +621,18 @@ const orderIntakeRead=createOrderIntakeReadState({
  clientFor:scope=>new OrderIntakeRegistryClient({auth,api:db,workspaceId:scope.split('|')[1]}),
  isCurrent:orderIntakeCurrent,onChange:()=>render()
 });
+const orderIntakeArchived=createOrderIntakeReadState({
+ clientFor:scope=>({list:options=>new OrderIntakeRegistryClient({auth,api:db,workspaceId:scope.split('|')[1]}).list({...options,archived:true})}),
+ isCurrent:orderIntakeCurrent,onChange:()=>render()
+});
+const currentOrderIntakeRead=()=>orderIntakeRoute?.section==='archived'?orderIntakeArchived:orderIntakeRead;
+const completeOrderIntakeView=()=>['dashboard','workflow'].includes(orderIntakeRoute?.section);
+let orderIntakeLifecycleBusy=false;
+let resetOrderIntakeDrag=()=>{};
 function clearOrderIntake(){
- orderIntakeRead.clear();orderIntakeRecordRun++;orderIntakeRecord=null;orderIntakeRoute=null;
+ if(modal?.dataset.oiEditor)hideModal();
+ orderIntakeEditorGeneration++;orderIntakeCreateSave=null;orderIntakeCreateScope=null;
+ orderIntakeRead.clear();orderIntakeArchived.clear();orderIntakeLifecycleBusy=false;resetOrderIntakeDrag();orderIntakeRecordRun++;orderIntakeRecord=null;orderIntakeRoute=null;
 }
 async function loadOrderIntakeRecord(route,scope){
  const run=++orderIntakeRecordRun;
@@ -626,13 +640,88 @@ async function loadOrderIntakeRecord(route,scope){
  if(!route.recordId)return;
  orderIntakeRecord={busy:true};render();
  try{
-  const row=await new OrderIntakeRegistryClient({auth,api:db,workspaceId:scope.split('|')[1]}).detail(route.recordId);
+  const client=new OrderIntakeRegistryClient({auth,api:db,workspaceId:scope.split('|')[1]});
+  const row=await client.detail(route.recordId,{includeArchived:route.section==='archived'});
+  if(route.section==='archived'&&row.archived!==true)throw new Error('This order is no longer archived. Open All Orders.');
+  const activity=row.record_kind==='native'?await client.activity(row.id).catch(error=>({error:errorMessage(error)})):null;
   if(row.id!==route.recordId||row.workspace_id!==state.context?.workspace_id)throw new Error('Order record unavailable.');
-  if(run===orderIntakeRecordRun&&orderIntakeCurrent(scope))orderIntakeRecord={row};
+  if(run===orderIntakeRecordRun&&orderIntakeCurrent(scope))orderIntakeRecord={row,activity};
  }catch(error){
   if(run===orderIntakeRecordRun&&orderIntakeCurrent(scope))orderIntakeRecord={error:errorMessage(error)};
  }
  if(run===orderIntakeRecordRun&&orderIntakeCurrent(scope))render();
+}
+function openOrderIntakeEditor(edit=false){
+ const scope=orderIntakeScope();
+ if(!orderIntakeCurrent(scope))return;
+ const row=edit?orderIntakeRecord?.row:null;
+ if(edit&&!nativeEditable(row))return;
+ const client=new OrderIntakeRegistryClient({auth,api:db,workspaceId:scope.split('|')[1]});
+ const generation=orderIntakeEditorGeneration;
+ const current=()=>generation===orderIntakeEditorGeneration&&orderIntakeCurrent(scope);
+ if(!edit&&orderIntakeCreateScope!==scope){orderIntakeCreateScope=scope;orderIntakeCreateSave=null;}
+ const save=edit?createOrderEditorSave({client,row,isCurrent:current}):
+  (orderIntakeCreateSave??=createOrderEditorSave({client,isCurrent:current}));
+ let view;
+ openModal(edit?'Edit purchase order':'New purchase order',orderEditorMarkup(save.pendingDraft()||orderEditorDraft(row)),async fd=>{
+  const feedback=view.querySelector('[data-oi-editor-error]');
+  feedback.textContent='';
+  try{
+   const saved=await save(Object.fromEntries(fd));
+   if(!edit&&orderIntakeCreateSave===save){orderIntakeCreateSave=null;}
+   if(!current())return;
+   if(modal!==view){if(orderIntakeRoute?.section==='archived')orderIntakeRead.clear();else void orderIntakeRead.refresh(scope,completeOrderIntakeView());return;}
+   toast('Purchase order saved and verified.');
+   if(orderIntakeRoute?.recordId===saved.id){
+    await loadOrderIntakeRecord(orderIntakeRoute,scope);
+   }else location.hash=orderIntakeHref('all-orders',{},saved.id);
+   await orderIntakeRead.refresh(scope);
+  }catch(error){
+   const message=errorMessage(error);
+   feedback.textContent=message.includes('ORDER_INTAKE_REVISION_CONFLICT')?'This order changed elsewhere. Close, refresh and reopen it before editing again.':message;
+   throw error;
+  }
+ },{submitLabel:edit?'Save changes':'Create order',successMessage:''});
+ view=modal;view.dataset.oiEditor='true';
+ view.querySelector('.modal')?.classList.add('oi-editor-modal');
+ const form=view.querySelector('form');
+ form.addEventListener('input',()=>updateOrderEditorPreview(form));
+ updateOrderEditorPreview(form);
+}
+function openOrderIntakeLifecycle(action,id,target=null){
+ const scope=orderIntakeScope(),generation=orderIntakeEditorGeneration;
+ if(!orderIntakeCurrent(scope)||orderIntakeLifecycleBusy)return;
+ const row=orderIntakeRecord?.row?.id===id?orderIntakeRecord.row:currentOrderIntakeRead().read(scope)?.rows.find(item=>item.id===id);
+ if(!lifecycleActions(row)[action])return;
+ const client=new OrderIntakeRegistryClient({auth,api:db,workspaceId:scope.split('|')[1]});
+ const current=()=>generation===orderIntakeEditorGeneration&&orderIntakeCurrent(scope);
+ const title=action==='status'?'Change order status':action==='archive'?'Archive purchase order':'Restore purchase order';
+ let view;
+ openModal(title,lifecycleFields(row,action,target)+'<p role="alert" data-oi-lifecycle-error></p>',async fd=>{
+  if(orderIntakeLifecycleBusy)throw new Error('Another lifecycle update is in progress.');
+  orderIntakeLifecycleBusy=true;
+  try{
+   const saved=await saveLifecycle({client,row,action,target:fd.get('status'),isCurrent:current});
+   if(!current())return;
+   const active=orderIntakeRoute?.section!=='archived';
+   if(active){if(action!=='status')orderIntakeArchived.clear();}else orderIntakeRead.clear();
+   if(orderIntakeRoute?.recordId===saved.id){
+    if(action==='archive'||action==='restore'){
+     location.hash=orderIntakeHref(action==='archive'?'archived':'all-orders',{},saved.id);
+    }else await loadOrderIntakeRecord(orderIntakeRoute,scope);
+   }
+   await currentOrderIntakeRead().refresh(scope,completeOrderIntakeView());
+   if(current())toast('Order '+(action==='status'?'status updated':action==='archive'?'archived':'restored')+' and verified.');
+  }catch(error){
+   if(view?.isConnected)view.querySelector('[data-oi-lifecycle-error]').textContent=errorMessage(error)+' Refresh before retrying if the record changed.';
+   if(current()){
+    await currentOrderIntakeRead().refresh(scope,completeOrderIntakeView());
+    if(orderIntakeRoute?.recordId===row.id)await loadOrderIntakeRecord(orderIntakeRoute,scope);
+   }
+   throw error;
+  }finally{if(generation===orderIntakeEditorGeneration)orderIntakeLifecycleBusy=false;}
+ },{submitLabel:action==='status'?'Save status':action==='archive'?'Archive order':'Restore order',successMessage:''});
+ view=modal;view.dataset.oiEditor='true';
 }
 let avatarHydrationPromise=Promise.resolve({attempted:0,loaded:0,failed:0,stale:0});
 let ttClockTimer=null;
@@ -2164,7 +2253,7 @@ function render(){
  else if(state.view==='paseo')shell(renderPaseoNative());
  else if(state.view==='order-intake'&&orderIntakeRoute){
   const scope=orderIntakeScope();
-  const snapshot=orderIntakeCurrent(scope)?orderIntakeRead.read(scope):null;
+  const snapshot=orderIntakeCurrent(scope)?currentOrderIntakeRead().read(scope):null;
   shell(!snapshot||(snapshot.busy&&!snapshot.rows?.length)?sharedApplicationLoading():renderOrderIntake({route:orderIntakeRoute,snapshot,
    record:orderIntakeCurrent(scope)?orderIntakeRecord:null}));
  }
@@ -5687,15 +5776,23 @@ async function onRoute(){
    userId:auth.userId,workspaceId:state.context?.workspace_id};
  }else if(parts[0]==='fm1'&&pendingNativeSearchSelection?.applicationId==='fm1')pendingNativeSearchSelection=null;
  if(parts[0]==='order-intake'){
-  const nextRoute=parseOrderIntakeRoute(hash);
+  let nextRoute=parseOrderIntakeRoute(hash);
   if(!nextRoute)return;
+  const entering=state.view!=='order-intake';
+  if(entering&&hash==='#/order-intake'){
+   const saved=readOrderIntakePreference(orderIntakeScope());
+   if(saved)nextRoute=parseOrderIntakeRoute(saved)||nextRoute;
+  }
+  if(modal?.dataset.oiEditor&&orderIntakeRoute?.canonicalHash!==nextRoute.canonicalHash)hideModal();
   if(nextRoute.canonicalHash!==hash)history.replaceState(null,'',location.pathname+location.search+nextRoute.canonicalHash);
   if(state.view!=='order-intake'){clearOrderIntake();routeSerial++;stopTimeTrackerClock();}
   state.view='order-intake';state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
   state.boardManage=false;state.edit=false;state.error='';
   orderIntakeRoute=nextRoute;
   const scope=orderIntakeScope();
-  const read=orderIntakeRead.open(scope);
+  resetOrderIntakeDrag();
+  if(orderIntakeCurrent(scope))saveOrderIntakePreference(scope,nextRoute);
+  const read=currentOrderIntakeRead().open(scope,completeOrderIntakeView());
   const record=loadOrderIntakeRecord(nextRoute,scope);
   render();
   await Promise.all([read,record]);
@@ -13197,15 +13294,23 @@ root.addEventListener('keydown',event=>{
  }
 });
 root.addEventListener('submit',event=>{if(teamsController?.handleSubmit(event))return;},true);
+resetOrderIntakeDrag=bindWorkflowDrag(root,{
+ enabled:()=>state.view==='order-intake'&&orderIntakeRoute?.section==='workflow'&&!orderIntakeLifecycleBusy,
+ findRow:id=>orderIntakeRead.read(orderIntakeScope())?.rows.find(row=>row.id===id),
+ onDrop:(id,target)=>openOrderIntakeLifecycle('status',id,target)
+});
 root.addEventListener('click',event=>{
  const orderAction=event.target.closest('[data-oi-action]');
  if(orderAction&&state.view==='order-intake'&&orderIntakeRoute){
   event.preventDefault();
   const scope=orderIntakeScope();
-  if(orderAction.dataset.oiAction==='refresh'){
-   void orderIntakeRead.refresh(scope);
+  if(orderAction.dataset.oiAction==='create')openOrderIntakeEditor();
+  else if(orderAction.dataset.oiAction==='edit')openOrderIntakeEditor(true);
+  else if(['status','archive','restore'].includes(orderAction.dataset.oiAction))openOrderIntakeLifecycle(orderAction.dataset.oiAction,orderAction.dataset.oiId);
+  else if(orderAction.dataset.oiAction==='refresh'){
+   void currentOrderIntakeRead().refresh(scope,completeOrderIntakeView());
    void loadOrderIntakeRecord(orderIntakeRoute,scope);
-  }else if(orderAction.dataset.oiAction==='more')void orderIntakeRead.more(scope);
+  }else if(orderAction.dataset.oiAction==='more')void currentOrderIntakeRead().more(scope);
   return;
  }
  const activeRefueling=root.querySelector('.ft3-refuel-dialog');

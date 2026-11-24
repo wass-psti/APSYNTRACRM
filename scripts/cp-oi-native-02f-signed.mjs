@@ -2,8 +2,12 @@ import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
+import {verifyLifecycleSigned} from './cp-oi-native-05-signed.mjs';
+import {verifyOrderEditorBrowser} from './cp-oi-native-03-editor-browser.mjs';
+import {verifyOrderEditorSigned} from './cp-oi-native-03-signed.mjs';
 import {verifySignedRegistryBrowser} from './cp-oi-native-02f-signed-browser.mjs';
 import {OrderIntakeRegistryClient} from '../frontend/order-intake-registry-client.js';
+import {projectSalesIntelligence} from '../frontend/order-intake-analytics.js';
 import {projectUnifiedOrders} from '../frontend/order-intake-unified-read.js';
 import {renderOrderIntake} from '../frontend/order-intake-ui.js';
 import {parseOrderIntakeRoute} from '../frontend/order-intake-route.js';
@@ -18,7 +22,7 @@ const password=randomBytes(20).toString('hex')+'Aa!';
 async function call(base,path,{method='GET',body,token}={}){
  const response=await fetch(base+path,{method,headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(10000)});
  const data=await response.json().catch(()=>null);
- if(!response.ok)throw Object.assign(new Error('HTTP '+response.status),{status:response.status});
+ if(!response.ok)throw Object.assign(new Error('HTTP '+response.status+' '+(data?.code||'')+' '+(data?.message||'')),{status:response.status});
  return data;
 }
 async function ready(base,path){
@@ -34,10 +38,12 @@ async function signin(scope,allowed){
  assert.match(user.id,/^[0-9a-f-]{36}$/);
  sql("insert into fixture_access values ('"+user.id+"','"+scope+"',"+allowed+")");
  const auth={isSignedIn:true,userId:user.id,authorized:path=>call(restBase,path.replace('/rest/v1',''),{token:session.access_token})};
- return {auth,client:new OrderIntakeRegistryClient({auth,api:{},workspaceId:scope})};
+ const api={rpc:(name,body)=>call(restBase,'/rpc/'+name,{method:'POST',body,token:session.access_token})};
+ if(process.env.OI_VERIFY_MUTATIONS==='1')sql("insert into workspace_members values ('"+scope+"','"+user.id+"',true)");
+ return {auth,api,client:new OrderIntakeRegistryClient({auth,api,workspaceId:scope})};
 }
 await ready(authBase,'/health');await ready(restBase,'/');
-const {client,auth}=await signin(workspace,true);
+const {client,auth,api}=await signin(workspace,true);
 const rows=[];let more=true,pages=0;
 while(more){const page=await client.list({offset:rows.length,limit:100});rows.push(...page.items);more=page.hasMore;pages++;}
 assert.equal(rows.length,manifest.sourceCount+1);
@@ -56,6 +62,20 @@ assert.equal((await client.list({archived:true})).items.length,1);
 const p=projectUnifiedOrders(rows);assert.equal(p.totalOrders,rows.length);assert.equal(p.legacyCount,909);
 assert.equal(p.legacyUnknownCurrency,728);assert.equal(p.legacyTotals.find(r=>r.currency==='USD').amount,'185352.889');
 assert.equal(p.currencyTotals[0].grossProfit,'84.29');
+const analytics=projectSalesIntelligence(rows);
+assert.equal(analytics.total,910);
+assert.equal(analytics.unknownCurrency,728);
+for(const group of analytics.finance){
+ const where="archived is distinct from true and record_kind='"+(group.basis==='historical'?'legacy':'native')+"' and currency='"+group.currency+"'";
+ for(const [column,key] of [['po_amount','amount'],['procurement_expenses','expenses'],['gross_profit','profit']]){
+  const result=JSON.parse(sql("select json_build_object('count',count(*) filter(where "+column+" ~ '^-?[0-9]+([.][0-9]+)?$'),'sum',sum(case when "+column+" ~ '^-?[0-9]+([.][0-9]+)?$' then "+column+"::numeric end)::text) from order_intake_registry where "+where));
+  assert.equal(group[key+'Count'],result.count);
+  const normalize=value=>value==null?null:String(value).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'');
+  assert.equal(normalize(group[key]),normalize(result.sum));
+ }
+}
+console.log('PASS: sales intelligence exact financial sums and coverage reconciled against independent PostgreSQL aggregates');
+
 for(const section of ['dashboard','workflow','search','all-orders']){
  const html=renderOrderIntake({route:parseOrderIntakeRoute('#/order-intake/'+section),snapshot:{rows,hasMore:false}});
  assert.match(html,/910 matching of 910/);assert.doesNotMatch(html,/role="alert"/);
@@ -70,3 +90,9 @@ await assert.rejects(call(restBase,'/order_intake_registry'),e=>[401,403].includ
 console.log(JSON.stringify({signed:'disposable GoTrue logins + real PostgREST; fixture workspace helpers',legacy:legacy.length,native:1,pages,exactFinancialReadback:legacy.length,detailSamples:3,views:4,foreignAndDeniedReads:'PASS',anon:'PASS'}));
 
 await verifySignedRegistryBrowser({workspaceId:workspace,signedAuth:auth});
+
+if(process.env.OI_VERIFY_MUTATIONS==='1'){
+ await verifyOrderEditorSigned({client,auth,api,sql,workspace});
+ await verifyOrderEditorBrowser({auth,api,workspace});
+ await verifyLifecycleSigned({auth,api,workspace,sql});
+}

@@ -53,7 +53,7 @@ test('old workspace response cannot replace current state; clear invalidates pen
   const state = createOrderIntakeReadState({ isCurrent: scope => scope === active, onChange: () => {},
     clientFor: scope => ({list: () => scope === 'a' ? new Promise(resolve => {resolveOld=resolve;}) :
       Promise.resolve({items:[another],hasMore:false})}) });
-  const pending = state.open('a'); active='b'; await state.open('b');
+  const pending = state.open('a'); await Promise.resolve(); active='b'; await state.open('b');
   resolveOld({items:[row],hasMore:false}); await pending;
   assert.deepEqual(state.read('b').rows,[another]); assert.equal(state.read('a'),null);
   state.clear(); assert.equal(state.read('b'),null);
@@ -73,13 +73,13 @@ test('all views render actual records and honest partial scope; HTML is escaped'
     assert.match(html,/&lt;script&gt;bad/);
   }
   const html = renderOrderIntake({route:route('dashboard'),snapshot:{rows:[row,another],hasMore:false}});
-  assert.match(html,/PHP order value/); assert.match(html,/USD order value/);
+  assert.match(html,/PHP 100.00/); assert.match(html,/USD 100.00/);
   assert.match(html,/All available pages loaded/);
 });
 test('host wiring retains scope cleanup and uses native route without deleting board', () => {
   const src=readFileSync(new URL('../app.js',import.meta.url),'utf8');
   assert.match(src,/state.view='order-intake';state.boardId=null/);
-  assert.match(src,/orderIntakeRead.open\(scope\)/);
+  assert.match(src,/currentOrderIntakeRead\(\).open\(scope,completeOrderIntakeView\(\)\)/);
   assert.match(src,/clearOrderIntake\(\);\s*trashBoardSelection.clear/);
   assert.match(src,/data-oi-action/);
 });

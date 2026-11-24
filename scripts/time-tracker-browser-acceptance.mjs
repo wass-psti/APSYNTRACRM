@@ -852,9 +852,8 @@ try {
   assert.ok(logGeometry.deltas.every((delta) => delta <= 2));
   assert.equal(logGeometry.clockSize, logGeometry.bodySize);
   await page.evaluate(async () => {
-    const { startSearchExperience } = await import(
-      "/frontend/search-experience.js"
-    );
+    const { startSearchExperience } =
+      await import("/frontend/search-experience.js");
     window.__stopLogSearchTest = startSearchExperience(
       document.querySelector(".tt-log-reference-header"),
     );

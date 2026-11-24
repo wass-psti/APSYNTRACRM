@@ -23,6 +23,23 @@ run(){ docker exec -i "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgre
 run < sql/tests/cp-oi-native-02f-prerequisites.sql
 run < supabase/migrations/20261019112718_m195_order_intake_readonly_foundation.sql
 run < supabase/migrations/20261124075640_cp_oi_native_02f_legacy_read.sql
+# Optional CP03 mutation rehearsal: original deployed RPCs, fixture-only helpers.
+if [ "${OI_VERIFY_MUTATIONS:-0}" = 1 ]; then
+ run <<'SQL'
+CREATE TABLE public.workspace_members(workspace_id uuid,user_id uuid,active boolean);
+CREATE FUNCTION public.is_platform_admin(actor uuid) RETURNS boolean LANGUAGE sql STABLE AS $$
+ SELECT coalesce((SELECT allowed FROM public.fixture_access WHERE user_id=actor),false)
+$$;
+SQL
+ run < supabase/migrations/20261020022044_m19511_order_intake_create_rpc_permission_disabled.sql
+ run < supabase/migrations/20261022093930_order_intake_update_details_authorized_20261022.sql
+ run < supabase/migrations/20261023032352_order_intake_idempotent_create.sql
+ run < supabase/migrations/20261021064459_order_intake_status_and_archive_lifecycle_default_deny_20261021.sql
+ run < supabase/migrations/20261021064529_order_intake_lifecycle_audit_contract_correction_20261021.sql
+ run < supabase/migrations/20261021064556_order_intake_status_archive_authenticated_activation_20261021.sql
+ run < supabase/migrations/20261022093333_order_intake_restore_authorized_revision_20261022.sql
+fi
+
 run <<'SQL'
 INSERT INTO public.order_intake_orders(workspace_id,po_number,client_name,po_date,date_received,delivery_date,currency,po_amount,vat_rate,vat_exclusive_amount,vat_amount,procurement_expenses,gross_profit,status,company,industry,fiscal_year)
 VALUES ('00000000-0000-4000-8000-000000000001','CP02F-FIXTURE','Fixture','2026-01-01','2026-01-02','2026-01-03','PHP',100,12,89.29,10.71,5,84.29,'Processed','Fixture','Fixture',2026),
