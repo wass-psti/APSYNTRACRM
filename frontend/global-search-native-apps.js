@@ -264,6 +264,7 @@ export function createRemainingNativeSearchAdapters({auth,api,getBoards}={}){
 
 function nativeHref(boards,moduleKey,recordId,scopeValue=''){
  if(moduleKey==='fm1')return '#/fm1/ticket/'+encodeURIComponent(String(recordId));
+ if(moduleKey==='orders')return '#/order-intake/all-orders/record/'+encodeURIComponent(String(recordId));
  const name=MODULES[moduleKey],board=array(boards).find(item=>item?.name===name&&item?.status!=='trashed');
  return board?.id?'#/boards/'+board.id+'/native/'+moduleKey+'/'+encodeURIComponent(String(recordId))+
   (scopeValue?'/'+scopeValue:''):'#/boards';

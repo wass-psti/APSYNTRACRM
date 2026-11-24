@@ -110,7 +110,7 @@ export function workspaceApplicationsForNavigation(workspaceId, boards = []) {
 
   const visible = applicationsForWorkspace(workspaceId).filter(
     (application) => {
-      if (application.routeKind === "board")
+      if (application.routeKind === "board" || application.id === "orders")
         return boardIds.has(application.boardId);
       if (application.requiresBoardModuleKey) {
         const dependencyBoardId =

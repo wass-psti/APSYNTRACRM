@@ -69,6 +69,7 @@ test('all remaining native application adapters search existing records and emit
  for(const id of Object.values(ids))assert.ok(idsSeen.has(id),'missing '+id);
  for(const row of result.results){
   if(row.applicationId==='fm1')assert.match(row.href,/^#\/fm1\/ticket\//);
+  else if(row.applicationId==='orders')assert.match(row.href,/^#\/order-intake\/all-orders\/record\//);
   else assert.match(row.href,new RegExp('^#/boards/'+row.href.split('/')[2]+'/native/'));
   assert.ok(row.href.includes(encodeURIComponent(row.recordId)));
  }
