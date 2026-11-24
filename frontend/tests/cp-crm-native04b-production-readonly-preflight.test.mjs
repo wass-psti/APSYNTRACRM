@@ -2,10 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const file = new URL(
-  "../../scripts/cp-crm-native04b-production-readonly-preflight.mjs",
-  import.meta.url,
+const file = fileURLToPath(
+  new URL(
+    "../../scripts/cp-crm-native04b-production-readonly-preflight.mjs",
+    import.meta.url,
+  ),
 );
 const source = readFileSync(file, "utf8");
 
@@ -14,7 +17,7 @@ test("production preflight requires an explicitly supplied loopback Chromium end
   assert.match(source, /connectOverCDP\(cdp\)/);
   assert.doesNotMatch(source, /^import .*playwright/m);
   assert.match(source, /await import\("playwright"\)/);
-  const outcome = spawnSync(process.execPath, [file.pathname], {
+  const outcome = spawnSync(process.execPath, [file], {
     encoding: "utf8",
     timeout: 8000,
   });

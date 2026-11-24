@@ -105,11 +105,16 @@ const employeeIcons={
  attendance:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18m-9 3v4l3 1"/>'
 };
 const employeeIcon=name=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+employeeIcons[name]+'</svg>';
+/** Only signed TimeTracker administrators may view the employee roster. */
+export function canViewTimeTrackerEmployees(access){
+ return ['System Admin','IT Administrator'].includes(access?.moduleRole);
+}
 export function renderTimeTrackerEmployees({directory=null,access={},search='',department='',tab='directory',loading=false,ojtAdmin=null,ojtAttendance=null,ojtBusy=false}={}){
+ if(!canViewTimeTrackerEmployees(access))return '';
  const verified=directory?.scope==='SIGNED_TIMETRACKER_EMPLOYEES'&&
   directory.userId===access.userId&&directory.workspaceId===access.workspaceId&&
   directory.boardId===access.boardId&&Array.isArray(directory.members);
- const manager=['System Admin','IT Administrator'].includes(access.moduleRole);
+ const manager=canViewTimeTrackerEmployees(access);
  const catalog=access?.departmentCatalog;
  const catalogReady=manager&&catalog?.scope==='SIGNED_TIMETRACKER_DEPARTMENT_CATALOG'&&
   catalog.userId===access.userId&&catalog.workspaceId===access.workspaceId&&
