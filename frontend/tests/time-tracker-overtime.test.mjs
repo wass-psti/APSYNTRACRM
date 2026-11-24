@@ -57,15 +57,15 @@ test('metrics reflect actual authorized rows and not screenshot demo numbers',()
  assert.equal(m.approved,1);
  assert.equal(m.approvedMinutes,120);
  assert.equal(m.approvalRate,100);
- assert.equal(m.visible.length,1);
+ assert.equal(m.visible.length,2);
  assert.equal(timeTrackerOtMetrics(rows,{status:'Approved'},now).visible.length,1);
  assert.equal(timeTrackerOtMetrics(rows,{search:'not in OT'},now).visible.length,0);
 });
 test('staged modal is visible but submission and ordinary approvals fail closed',()=>{
  const employee=renderTimeTrackerOvertime({
   requests:rows,access:{bootstrapApprover:false},modalOpen:true,now});
- for(const text of ['Overtime','OT BY DAY','TOP REQUESTORS','Pending',
-  'Approved','Rejected','Submit overtime request','Estimated duration'])
+ for(const text of ['Overtime','Approved overtime this week','Awaiting approval','Pending',
+  'Approved','Rejected','File Overtime','Total overtime'])
   assert.ok(employee.includes(text),text);
  assert.match(employee,/type="submit" disabled/);
  assert.doesNotMatch(employee,/tt-ot-review-actions/);
@@ -152,18 +152,17 @@ test('System Admin sees manual OT controls and manual-only review actions',()=>{
   bootstrapApprover:false,otContractActive:true,overviewDirectory:[
    {id:admin,status:'active',display_name:'Administrator'},
    {id:worker,status:'active',display_name:'Worker One'}]};
- const html=renderTimeTrackerOvertime({requests:[manualRow,regularRow],access,now});
- assert.match(html,/Manual OT Submission/);
+ const html=renderTimeTrackerOvertime({requests:[manualRow,regularRow],access,now,modalOpen:'manual'});
+ assert.match(html,/File Overtime/);
  assert.match(html,/tt-ot-manual-employee/);
- assert.match(html,/Submit Manual OT/);
+ assert.match(html,/ADMINISTRATIVE ENTRY/);
  assert.match(html,/Manual Entry/);
  assert.match(html,/Entered by Administrator/);
  assert.equal((html.match(/data-action="tt-ot-approve"/g)||[]).length,1);
  const employee=renderTimeTrackerOvertime({requests:[manualRow],
   access:{userId:worker,moduleRole:'Employee',manualOtManager:false,otContractActive:true},now});
- assert.match(employee,/Manual OT Submission/);
- assert.match(employee,/READ-ONLY RECORDS/);
- assert.match(employee,/Read-only view/);
+ assert.match(employee,/File Overtime/);
+ assert.doesNotMatch(employee,/tt-ot-manual-open/);
  assert.match(employee,/Worker One/);
  assert.match(employee,/Emergency preparation/);
  assert.doesNotMatch(employee,/tt-ot-manual-form/);

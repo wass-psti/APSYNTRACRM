@@ -1,0 +1,60 @@
+/* Compact weekly OT reference design. Keep existing signed workflow and modal focus handling. */
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference{
+ --ot-bg:#fff;--ot-ink:#202431;--ot-muted:#667085;--ot-line:#e1e4eb;--ot-soft:#f4f5f8;--ot-primary:#583cca;
+ display:grid;gap:18px;padding:0;background:transparent;color:var(--ot-ink);
+}
+#app .aps-board-shell .tt-native .tt-ot-reference :is(.tt-ot-reference-header,.tt-ot-reference-header-actions,.tt-ot-reference-week,.tt-ot-reference-week-nav,.tt-ot-reference-filters,.tt-ot-reference-search,.tt-ot-reference-footer){display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#app .aps-board-shell .tt-native .tt-ot-reference :is(.tt-ot-reference-header,.tt-ot-reference-week,.tt-ot-reference-filters,.tt-ot-reference-footer){justify-content:space-between}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-header h3{margin:0;color:var(--ot-ink);font-size:25px;font-weight:750}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-header p{margin:4px 0;color:var(--ot-muted);font-size:13px}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-metrics{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:14px}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-metric{display:grid;gap:5px;min-width:0;border:1px solid var(--ot-line);border-radius:13px;background:var(--ot-bg);padding:16px 20px}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-metric strong{font-size:28px;line-height:1.15;color:var(--ot-ink)}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-metric :is(span,small){font-size:13px;color:var(--ot-muted)}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-pending{background:#fff8e8;border-color:#f1d398}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-pending>span{color:#815500;font-weight:650}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-table{min-width:0;background:var(--ot-bg);border:1px solid var(--ot-line);border-radius:14px}
+#app .aps-board-shell .tt-native .tt-ot-reference :is(.tt-ot-reference-week,.tt-ot-reference-filters,.tt-ot-reference-search,.tt-ot-reference-footer){padding:13px 18px;border-bottom:1px solid var(--ot-line)}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-week form{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#app .aps-board-shell .tt-native .tt-ot-reference :is(.tt-ot-reference-week,.tt-ot-reference-search) label{font-size:12px;color:var(--ot-muted)}
+#app .aps-board-shell .tt-native .tt-ot-reference :is(.tt-ot-reference-week,.tt-ot-reference-search) input{min-width:0;border:1px solid var(--ot-line);border-radius:9px;padding:9px 12px;background:var(--ot-bg);color:var(--ot-ink)}
+#app .aps-board-shell .tt-native .tt-ot-reference :is(.tt-ot-reference-secondary,.tt-ot-reference-week button,.tt-ot-reference-search button,.tt-ot-reference-details summary,.tt-ot-reason-chips button){border:1px solid var(--ot-line);border-radius:9px;padding:8px 12px;background:var(--ot-bg);color:var(--ot-ink);font-size:12px;font-weight:650;cursor:pointer;min-height:36px}
+#app .aps-board-shell .tt-native .tt-ot-reference :is(.tt-ot-reference-primary,.tt-ot-modal-footer button[type=submit]){border:1px solid var(--ot-primary);background:var(--ot-primary);color:#fff;border-radius:9px;padding:9px 14px;font-weight:650;min-height:36px}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-tabs{display:flex;gap:6px;padding:0;flex-wrap:wrap;background:transparent;border:0}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-tabs button{border:0;border-radius:999px;padding:9px 13px;color:var(--ot-ink);background:var(--ot-soft);font-weight:600}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-tabs button.is-active{background:var(--ot-ink);color:var(--ot-bg)}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-workflow{color:var(--ot-muted);font-size:12px}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-row{display:grid;grid-template-columns:minmax(130px,1.3fr) minmax(86px,.7fr) minmax(115px,1fr) minmax(52px,.45fr) minmax(120px,1.4fr) minmax(75px,.65fr) minmax(124px,1.1fr);align-items:center;gap:10px;padding:12px 18px;border:0;border-bottom:1px solid var(--ot-line);border-radius:0;background:var(--ot-bg);box-shadow:none;font-size:12px;overflow:visible}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-row[hidden]{display:none}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-labels{font-weight:650;color:var(--ot-muted);background:var(--ot-soft)}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-person{display:flex;gap:9px;align-items:center;min-width:0;overflow-wrap:anywhere}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-avatar{display:grid;place-items:center;flex:0 0 30px;height:30px;border-radius:50%;background:#ebe5fb;color:#4b33aa;font-size:11px;font-weight:750}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-reason{overflow-wrap:anywhere}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-actions{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-review-actions{display:flex;gap:5px;margin:0;flex-wrap:wrap}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-details{position:relative}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-details summary{list-style:none}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-details[open]{flex-basis:100%}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-detail{display:block;padding:8px 0;overflow-wrap:anywhere;color:var(--ot-muted)}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-detail>span{display:block}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-footer{border-bottom:0;color:var(--ot-muted);font-size:12px}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-modal{width:min(620px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;border-radius:18px}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-duration{display:flex;justify-content:space-between;padding:13px 15px;border-radius:10px;background:#eee9fc;color:#4b33aa;font-weight:650}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reason-chips{display:flex;gap:6px;flex-wrap:wrap}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-modal select{width:100%;border:1px solid var(--ot-line);padding:12px;border-radius:9px;background:var(--ot-bg);color:var(--ot-ink)}
+#app .aps-board-shell .tt-native .tt-ot-reference button:disabled{cursor:not-allowed;opacity:.55}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference{--ot-bg:#242632;--ot-ink:#eef0f5;--ot-muted:#aeb6c5;--ot-line:#424654;--ot-soft:#303340;--ot-primary:#6348d9}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-pending{background:#382f22;border-color:#826635}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-pending>span{color:#f1cf8c}
+@media(max-width:1050px){
+ #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-labels{display:none}
+ #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-row:not(.tt-ot-reference-labels){grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+ #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-actions{grid-column:1/-1}
+}
+@media(max-width:560px){
+ #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-metrics{grid-template-columns:1fr}
+ #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-row:not(.tt-ot-reference-labels){grid-template-columns:repeat(2,minmax(0,1fr));padding:12px}
+ #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-reason{grid-column:1/-1}
+ #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-week form{width:100%}
+ #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-search input{width:100%}
+}
