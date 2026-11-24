@@ -28073,6 +28073,78 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell.aps-time-tracker-shell 
  #app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app.tt-application .tt-header-identity { gap:6px;padding-left:6px; }
 }
 
+/* CP-TT-EMPLOYEES-UNIFIED: signed directory, departments and intern management. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified { --emp-bg:var(--tt-header-surface,#fff);--emp-ink:var(--tt-header-ink,#17171c);--emp-muted:var(--tt-header-muted,#59595d);--emp-line:var(--tt-header-line,#dedee2);--emp-accent:var(--tt-header-active,#42389e);--emp-lavender:var(--tt-header-shortcut,#eeebfc);--emp-neutral:#f1f1f2;--purple:#534AB7;box-sizing:border-box;width:min(100%,900px);max-width:900px;min-height:0;margin:20px auto;padding:24px;border:1px solid var(--emp-line);border-radius:18px;background:var(--emp-bg);color:var(--emp-ink);font-family:inherit;font-size:13px; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-heading { margin:0 0 20px;gap:12px;align-items:flex-start; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-heading h3 { font-family:inherit;font-size:22px;font-weight:500;line-height:1.25;letter-spacing:0;color:var(--emp-ink); }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-heading p:not(.tt-employees-eyebrow) { margin:5px 0 0;color:var(--emp-muted);font-size:13px;font-weight:400; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-heading p strong { font-weight:500; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-segments { display:inline-flex;align-items:stretch;flex-wrap:wrap;gap:3px;padding:4px;margin-bottom:20px;background:var(--emp-neutral);border-radius:12px; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-segments button { min-height:36px;padding:7px 14px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--emp-muted);font:inherit;font-weight:500;cursor:pointer; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-segments button[aria-pressed=true] { background:var(--emp-bg);border-color:var(--emp-line);color:var(--emp-accent); }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-toolbar { display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:0 0 16px; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-toolbar label { flex:1 1 145px;min-width:0;width:auto;max-width:300px; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified :is(#tt-employees-search,#tt-employees-department-filter) { box-sizing:border-box;min-height:40px;border:1px solid var(--emp-line);border-radius:10px;padding:8px 12px;color:var(--emp-ink);background:var(--emp-bg);font:inherit; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified #tt-employees-department-filter { flex:2 1 180px;min-width:0; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified [data-tt-employees-count] { color:var(--emp-muted);font-size:12px; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-panel[hidden],#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified [data-tt-employee-search-row][hidden],#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified [data-tt-employees-count][hidden] { display:none; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-visually-hidden { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-table-wrap { border:0;border-radius:0;overflow:auto;max-height:420px;background:var(--emp-bg); }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-table { min-width:350px;width:100%;table-layout:fixed; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-table :is(th,td) { padding:14px 8px;border-bottom:1px solid var(--emp-line);background:var(--emp-bg);color:var(--emp-ink);font-size:13px;font-weight:400;vertical-align:middle; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-table th { position:sticky;top:0;z-index:1;color:var(--emp-muted);font-size:12px; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-table th:first-child { width:44%; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-table th:last-child:not(:nth-child(2)) { width:92px;text-align:right; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-table td:first-child { display:table-cell; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-table td strong { font-weight:500;color:var(--emp-ink);overflow-wrap:anywhere; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employee-avatar { width:34px;height:34px;margin-right:9px;vertical-align:middle;background:var(--emp-neutral);color:var(--emp-muted);font-size:12px;font-weight:500; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employee-role { display:inline-block;padding:4px 9px;border-radius:999px;background:var(--emp-neutral);color:var(--emp-muted);font-size:12px;font-weight:500; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified :is(.tt-employee-avatar,.tt-employee-role).is-privileged { background:var(--emp-lavender);color:var(--emp-accent); }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employee-department-text { display:block;margin-top:4px;color:var(--emp-muted);overflow-wrap:anywhere; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employee-actions { display:table-cell;min-width:0;text-align:right;white-space:nowrap; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified :is(.tt-employee-actions,.tt-department-actions,.tt-employees-heading,.tt-ojt-admin) button.tt-employee-icon { display:inline-flex;align-items:center;justify-content:center;min-width:34px;width:34px;min-height:34px;height:34px;padding:0;margin:0 0 0 4px;border:1px solid var(--emp-line);border-radius:9px;background:var(--emp-bg);color:var(--emp-muted);box-shadow:none;cursor:pointer; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified button.tt-employee-icon svg { width:17px;height:17px; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified :is(.tt-employee-actions,.tt-department-actions,.tt-employees-heading,.tt-ojt-admin) button.tt-employee-icon:hover:not(:disabled) { background:var(--emp-lavender);color:var(--emp-accent);border-color:var(--emp-line); }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-departments-management { padding:0;margin:0;border:0;background:transparent; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-departments-head { align-items:center;padding-bottom:12px; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-departments-head h4 { font-family:inherit;font-size:16px;font-weight:500;color:var(--emp-ink); }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-departments-head button { background:#534AB7;color:#fff;border:0;border-radius:10px;font:inherit;font-weight:500;min-height:34px;padding:8px 14px; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-departments-list { border:1px solid var(--emp-line);border-radius:12px;max-height:300px;overflow:auto; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-department-item { padding:12px 16px;border:0;border-bottom:1px solid var(--emp-line);background:var(--emp-bg);color:var(--emp-ink); }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-department-item:last-child { border-bottom:0; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-department-item strong { color:var(--emp-ink);font-size:14px;font-weight:500; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-department-item span { color:var(--emp-muted);font-size:12px; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-admin { margin:0;max-width:none;padding:0;border:0;background:transparent;color:var(--emp-ink); }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-admin h4 { font-size:16px;font-weight:500;color:var(--emp-ink); }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-admin-head p { color:var(--emp-muted);font-size:13px; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-admin-group { margin:12px 0;padding:0;border:0; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-admin-group header { padding:0 0 12px; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-admin-group header small.tt-ojt-login-status { display:inline-block;margin-top:4px;padding:4px 9px;border-radius:999px;background:var(--emp-neutral);color:var(--emp-muted); }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-admin-group header small.tt-ojt-login-status.is-enabled { background:#e7f1df;color:#2d5719; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-admin-people { border:1px solid var(--emp-line);border-radius:12px;max-height:300px;overflow:auto; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-admin-people > div { padding:10px 14px;gap:10px;border-top:1px solid var(--emp-line);flex-wrap:nowrap; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-admin-people > div:first-child { border-top:0; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-admin-people strong { font-weight:500;overflow-wrap:anywhere; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-admin-people small { color:var(--emp-muted); }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-admin-people .tt-ojt-avatar { width:34px;height:34px;background:var(--emp-lavender);color:var(--emp-accent);font-weight:500; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-admin-people > div button.tt-employee-icon { margin-left:auto;flex:none; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-admin .tt-ojt-add { width:100%;min-height:40px;border:1px solid var(--emp-accent);background:var(--emp-bg);border-radius:10px;font:inherit;font-weight:500; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-attendance-list { max-height:300px;overflow:auto; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-attendance-row { display:flex;justify-content:space-between;align-items:center;gap:8px 20px;flex-wrap:wrap;padding:12px 0;border-top:1px solid var(--emp-line);color:var(--emp-muted); }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-attendance-row strong { font-weight:500;color:var(--emp-ink); }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-ojt-attendance-row .tt-ojt-in-progress { color:var(--emp-accent); }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-footnote { color:var(--emp-muted);text-align:center;font-size:12px;margin:12px 0 0; }
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified :is(button,input,select):focus-visible { outline:2px solid var(--emp-accent);outline-offset:2px; }
+html[data-aps-monday-theme="dark"] #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified { --emp-neutral:#303542;--purple:#d7d0ff; }
+@media (max-width: 620px) {
+ #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified { padding:14px;margin:12px auto; }
+ #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-segments { display:flex; }
+ #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-segments button { flex:1 1 auto;padding-inline:8px; }
+ #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-table :is(th,td) { padding:10px 5px; }
+ #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employee-avatar { width:28px;height:28px;margin-right:5px; }
+ #app .aps-board-shell.aps-time-tracker-shell .tt-native .tt-employees-board.tt-employees-unified .tt-employees-toolbar label { max-width:none; }
+}
+
 /* frontend/monday-inspired-ui.css */
 /* APSYNTRA CRM / Monday-inspired UI — isolated presentation pass.
  * Boards and the workspace chrome only. No domain, auth, or RPC overrides.
