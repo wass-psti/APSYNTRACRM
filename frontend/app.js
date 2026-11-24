@@ -5164,7 +5164,7 @@ async function submitTimeTrackerAction(form,actionName){
  const workNote=actionName==='clock-in'&&location==='Offsite (Home)'?
   String(form.querySelector('#tt-note')?.value||'').trim():'';
  if(actionName==='clock-in'&&isTimeTrackerHomeNoteRequired(location,state.ttAttendance.access?.email,state.ttAttendance.access?.userId)&&!workNote){
-  state.ttError='Offsite Work Note is mandatory for Home. Enter a reason before starting your session.';
+  state.ttError='Work Plan is required for Offsite (Home). Enter a reason before starting your session.';
   render();return;
  }
  const seq=routeSerial,run=++state.ttRunId,identity=state.context.user_id,
@@ -9767,12 +9767,12 @@ async function action(name,button){
    state.ttAttendance?.status!=='VERIFIED_READ')break;
   const active=state.ttOjtSnapshot?.active||null,action=active?'clock-out':'clock-in';
   const locationValue=active?.location||String(document.getElementById('tt-ojt-location')?.value||'');
-  const note=active?'':String(document.getElementById('tt-ojt-note')?.value||'').trim();
+  const note=active||locationValue!=='Offsite (Home)'?'':String(document.getElementById('tt-ojt-note')?.value||'').trim();
   if(!active)state.ttOjtLocationSelection=locationValue;
   if(action==='clock-in')ttWorkNoteDraft.write(timeTrackerWorkNoteScope(selected.id),
    document.getElementById('tt-ojt-note')?.value||'');
   if(action==='clock-in'&&locationValue==='Offsite (Home)'&&!note){
-   state.ttOjtError='A work note is required for Offsite (Home).';render();break;
+   state.ttOjtError='Work Plan is required for Offsite (Home).';render();break;
   }
   state.ttOjtBusy=true;state.ttOjtError='';state.ttOjtSuccess='';
   state.ttOjtGeoProgress='Finding your GPS location…';render();
@@ -13279,6 +13279,7 @@ root.addEventListener('change',event=>{
     isTimeTrackerHomeNoteRequired(event.target.value,state.ttAttendance?.access?.email,state.ttAttendance?.access?.userId);
    group.hidden=!showHomeNote;
    note.required=showHomeNote;
+   if(!showHomeNote){const message=root.querySelector('#tt-work-plan-validation');if(message)message.hidden=true;note.removeAttribute('aria-invalid');}
    const requirement=root.querySelector('#tt-note-requirement');
    if(requirement)requirement.textContent=note.required?' (required)':' (optional)';
   }
@@ -13628,8 +13629,15 @@ root.addEventListener('change',async event=>{
   return;
  }
  if(event.target?.id==='tt-ojt-location'){
-  if(timeTrackerOjtScope()&&state.ttOjtSelected&&!state.ttOjtBusy)
+  if(timeTrackerOjtScope()&&state.ttOjtSelected&&!state.ttOjtBusy){
    state.ttOjtLocationSelection=String(event.target.value||'Office-Base Duty');
+   const group=root.querySelector('#tt-ojt-note-wrap');
+   const note=root.querySelector('#tt-ojt-note');
+   const show=state.ttOjtLocationSelection==='Offsite (Home)';
+   if(group)group.hidden=!show;
+   if(note)note.required=show;
+   if(!show){const message=root.querySelector('#tt-ojt-work-plan-validation');if(message)message.hidden=true;}
+  }
   return;
  }
  if(event.target?.id!=='tt-ojt-intern-select')return;
@@ -13667,15 +13675,22 @@ function preserveManualAttendanceDraft(event){
  state.ttLogAdminEditor.draft=syncManualAttendanceForm(form);return true;
 }
 root.addEventListener('change',preserveManualAttendanceDraft);
+root.addEventListener('invalid',event=>{
+ if(event.target.id!=='tt-note'||!event.target.required)return;
+ const message=root.querySelector('#tt-work-plan-validation');
+ if(message){message.hidden=false;event.target.setAttribute('aria-invalid','true');}
+},true);
 root.addEventListener('input',event=>{
  if(syncTradeLinkFinanceInput(event))return;
  if(preserveManualAttendanceDraft(event))return;
  if(event.target.id==='tt-note'&&event.target.closest('#tt-clock-form')){
   ttWorkNoteDraft.write(timeTrackerWorkNoteScope(),event.target.value);
+  if(event.target.value.trim()){const message=root.querySelector('#tt-work-plan-validation');if(message)message.hidden=true;event.target.removeAttribute('aria-invalid');}
   return;
  }
  if(event.target.id==='tt-ojt-note'&&timeTrackerOjtScope()&&state.ttOjtSelected){
   ttWorkNoteDraft.write(timeTrackerWorkNoteScope(state.ttOjtSelected.id),event.target.value);
+  if(event.target.value.trim()){const message=root.querySelector('#tt-ojt-work-plan-validation');if(message)message.hidden=true;}
   return;
  }
  if(event.target.matches('[data-board-hide-search]')){

@@ -77,7 +77,7 @@ test('refined stylesheet remains scoped, responsive and uses native controls',()
  assert.match(css,/#app \.aps-board-shell\.aps-time-tracker-shell \.tt-native/);
  assert.match(css,/\.tt-session-ring-progress/);
  assert.match(css,/\.tt-clock-compact/);
- assert.match(css,/--tt-compact-panel:#e3effa/);
+ assert.match(css,/--tt-compact-panel:#E6F1FB/);
  assert.match(css,/--tt-compact-button:#4f43b1/);
  assert.match(css,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
  assert.match(css,/font-size:32px;font-weight:500/);

@@ -209,9 +209,9 @@ try {
   assert.equal(desktopLayout.headerBackground, "rgb(255, 255, 255)");
   assert.equal(desktopLayout.navOverflow, "auto");
   assert.equal(desktopLayout.clockLayout, "column");
-  assert.equal(desktopLayout.sessionCardBackground, "rgb(255, 255, 255)");
-  assert.equal(desktopLayout.clockSize, "32px");
-  assert.equal(desktopLayout.clockWeight, "500");
+  assert.equal(desktopLayout.sessionCardBackground, "rgb(230, 241, 251)");
+  assert.equal(desktopLayout.clockSize, "52px");
+  assert.equal(desktopLayout.clockWeight, "600");
   assert.equal(desktopLayout.statsCount, 2);
   assert.equal(desktopLayout.badges, 1);
   assert.equal(desktopLayout.compact, true);

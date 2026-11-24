@@ -185,7 +185,8 @@ export function renderTimeTrackerOjtClock({
  if(selected&&!attendance?.active)html+='<button type="button" class="secondary" data-action="tt-ojt-leave"'+disabled+
   '>Switch intern</button>';
  html+='</div>';
- if(error)html+='<p class="tt-ojt-error" role="alert">'+esc(error)+'</p>';
+ const planError=error==='Work Plan is required for Offsite (Home).';
+ if(error&&!planError)html+='<p class="tt-ojt-error" role="alert">'+esc(error)+'</p>';
  if(success)html+='<p class="tt-ojt-success" role="status">'+esc(success)+'</p>';
  if(roster?.mode==='SHARED_DISABLED')
   return html+'<p role="status">This shared OJT login is disabled or no longer eligible. Contact a TimeTracker administrator.</p></section>';
@@ -213,14 +214,15 @@ export function renderTimeTrackerOjtClock({
    '<div class="tt-ojt-session"><strong>'+ (active?'Active session':'Ready to start')+
    '</strong><p>'+(active?'Clocked in '+esc(stamp(active.clockIn))+
     ' · '+esc(active.location):'GPS is requested only when starting or ending a session.')+'</p>'+
-   '<label for="tt-ojt-location">Work location</label>'+
-   (active?'<p class="tt-ojt-current-location">'+esc(active.location)+'</p>':
+   (active?'':'<label for="tt-ojt-location">Work Location</label>')+
+   (active?'<p class="tt-ojt-current-location">Work Location: '+esc(active.location)+'</p>':
     '<select id="tt-ojt-location"'+disabled+'>'+
      locationOptions.map(v=>'<option value="'+esc(v)+'"'+
        (v===locationSelection?' selected':'')+'>'+esc(v)+'</option>').join('')+
      '</select>')+
-   (active?'':'<label for="tt-ojt-note">Work note (required when working from home)</label>'+
-    '<textarea id="tt-ojt-note" maxlength="500" rows="3" placeholder="Optional work details…">'+esc(workPlanDraft)+'</textarea>')+
+   (active?(active.location==='Offsite (Home)'?'<div class="tt-ojt-work-plan"><strong>Work Plan</strong><p>'+esc(active.workNote||'')+'</p></div>':''):
+    '<div id="tt-ojt-note-wrap"'+(locationSelection==='Offsite (Home)'?'':' hidden')+'><label for="tt-ojt-note">Work Plan (required)</label>'+
+    '<textarea id="tt-ojt-note"'+(locationSelection==='Offsite (Home)'?' required':'')+' maxlength="500" rows="3" aria-describedby="tt-ojt-work-plan-validation" placeholder="Describe your offsite work plan">'+esc(workPlanDraft)+'</textarea><p id="tt-ojt-work-plan-validation" class="tt-work-plan-validation" role="alert"'+(planError?'':' hidden')+'>Work Plan is required for Offsite (Home).</p></div>')+
    (busy&&geoProgress?'<p class="tt-ojt-geo-progress" role="status" aria-live="polite">'+
      esc(geoProgress)+'</p>':'')+
    '<button type="button" class="tt-ojt-clock-button" data-action="tt-ojt-clock"'+disabled+'>'+

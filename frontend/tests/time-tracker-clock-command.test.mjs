@@ -46,7 +46,7 @@ test('Clock uses a single compact widget with two summary cards and one status b
  assert.match(markup,/aria-label="Attendance clock form"/);
  assert.match(markup,/class="tt-compact-header"/);
  assert.match(markup,/<span>Sessions today<\/span><strong>/);
- assert.match(markup,/<span>Hours logged<\/span><strong>/);
+ assert.match(markup,/<span>Total logged<\/span><strong>/);
  assert.doesNotMatch(markup,/tt-summary-status|<span>Status<\/span>/);
  assert.equal((markup.match(/class="tt-idle-badge/g)||[]).length,1);
  assert.match(markup,/class="tt-clock-face" role="timer" aria-label="Current Philippine time"/);
@@ -69,9 +69,13 @@ test('Idle Clock preserves signed Clock In controls without requesting GPS',()=>
  assert.match(markup,/data-action="tt-location-shortcut" data-location="Office-Base Duty"/);
  assert.match(markup,/data-action="tt-location-shortcut" data-location="Offsite \(Home\)"/);
  assert.match(markup,/id="tt-note-wrap" hidden/);
+ assert.match(markup,/Not clocked in/);
+ assert.match(markup,/Work Location<select/);
+ assert.match(markup,/Work Plan/);
+ assert.doesNotMatch(markup,/id="tt-session-progress"/);
  assert.match(markup,/Session is secured with a fresh GPS fix on start and end/);
  assert.doesNotMatch(markup,/tt-location-readiness/);
- assert.match(markup,/Start your work session with a signed record/);
+ assert.match(markup,/GPS is requested only when you start or end a session/);
  assert.doesNotMatch(markup,/value="clock-out"/);
  assert.doesNotMatch(markup,/<canvas|<script|style=|onclick=/);
 });
@@ -87,7 +91,8 @@ test('Active Clock preserves authoritative session details and Clock Out',()=>{
  assert.match(markup,/Session is secured with a fresh GPS fix on start and end/);
  assert.match(markup,/tt-compact-active/);
  assert.match(markup,/Elapsed this session/);
- assert.match(markup,/tt-compact-clock-icon/);
+ assert.match(markup,/of 9h goal/);
+ assert.ok(markup.indexOf("tt-session-progress-wrap")<markup.indexOf("tt-session-summary"));
  assert.equal((markup.match(/class="tt-idle-badge/g)||[]).length,1);
  assert.doesNotMatch(markup,/Signed Clock writes active|Signed workspace verified/);
  assert.doesNotMatch(markup,/name="tt-action" value="clock-in"/);

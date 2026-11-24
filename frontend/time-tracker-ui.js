@@ -104,6 +104,17 @@ export function syncTimeTrackerClock(root,at=new Date()){
   const progress=root.querySelector('#tt-session-progress');
   progress?.setAttribute?.('stroke-dashoffset',String((339.292*(1-session.progress)).toFixed(3)));
  }
+ const total=root.querySelector('[data-tt-live-total]');
+ if(total?.dataset?.ttLiveTotal){
+  const value=total.querySelector('strong');
+  if(value)value.textContent=hrs(Number(total.dataset.creditedBase||0)+creditedAttendanceMs(total.dataset.ttLiveTotal,at));
+ }
+ const goal=root.querySelector('[data-tt-goal-remaining]');
+ if(goal?.dataset?.ttGoalRemaining){
+  const elapsedMs=Math.max(0,new Date(at).getTime()-Date.parse(goal.dataset.ttGoalRemaining));
+  const minutes=Math.ceil(Math.max(0,TT_POLICY.requiredWorkMs-elapsedMs)/60000);
+  goal.textContent=minutes?Math.floor(minutes/60)+'h '+minutes%60+'m to goal':'9h goal reached';
+ }
  const countdown=root?.querySelector?.('[data-tt-auto-clockout-countdown]');
  if(countdown?.dataset?.deadline){
   const remaining=Math.max(0,Date.parse(countdown.dataset.deadline)-new Date(at).getTime());
@@ -197,7 +208,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
  const todayRows=records.filter(r=>timeTrackerManilaDay(r.clockIn)===today);
  const credited=todayRows.reduce((sum,r)=>sum+(r.creditedMs===null?
   creditedAttendanceMs(r.clockIn,now):r.creditedMs||0),0);
- const status=active?'Active':'Idle';
+ const status=active?'Active':'Not clocked in';
  const locationEnabled=geoPermission==='granted';
  const geoWarning=geoPermission==='denied'||geoPermission==='unavailable';
  const automaticGps=clockStage==='auto-location'||clockStage==='auto-saving';
@@ -218,7 +229,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
   'Enable device Location Services and check connectivity, then press Start Session or End Session again.':
   'Please press Start Session or End Session to request a fresh location fix.');
  const employeeDepartment=access?.employeeDepartment||null;
- const location=TT_LOCATIONS.includes(locationPreference)?locationPreference:'';
+ const location=TT_LOCATIONS.includes(locationPreference)?locationPreference:'Office-Base Duty';
  const requireHomeNote=isTimeTrackerHomeNoteRequired(location,access?.email,access?.userId);
  // Exempt employees have no Home note field, whether starting or ending a session.
  const showHomeNote=location==='Offsite (Home)'&&requireHomeNote;
@@ -238,7 +249,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
   autoClockout.status==='DUE'?'Automatic clock-out due · scheduled cutoff ':
   'Automatic clock-out monitoring unavailable';
  let html='<div class="tt-clock-stage tt-command-center">'+
-  '<div class="tt-command-layout tt-clock-compact">'+
+  '<div class="tt-command-layout tt-clock-compact" data-session-state="'+(active?'active':'idle')+'">'+
    '<section class="tt-time-dashboard" aria-label="Live time and attendance summary">'+
     '<div class="tt-time-scene" aria-hidden="true">'+
      '<div class="tt-pixi-backdrop" data-pixi="fallback"></div>'+
@@ -253,7 +264,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
     '<div class="tt-clock-hero">'+
      '<span class="tt-clock-eyebrow">PHILIPPINE STANDARD TIME</span>'+
      '<h3 id="tt-clock-greeting" class="tt-compact-sr">'+t.greeting+'</h3>'+
-     '<div class="tt-compact-header"><p id="tt-clock-date">'+t.day+'</p><span class="tt-idle-badge '+(active?'tt-badge-active':'')+'">'+status+'</span></div>'+
+     '<div class="tt-compact-header"><p id="tt-clock-date">'+t.day+'</p></div>'+
      '<div class="tt-clock-face" role="timer" aria-label="Current Philippine time">'+
       '<span id="tt-clock-hours">'+t.hours+'</span>'+
       '<span class="tt-clock-colon" aria-hidden="true">:</span>'+
@@ -261,12 +272,33 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
       '<span class="tt-clock-suffix"><span id="tt-clock-seconds">'+t.seconds+
       '</span><span id="tt-clock-period">'+t.period+'</span></span>'+
      '</div>'+
+     '<span class="tt-idle-badge '+(active?'tt-badge-active':'')+'">'+status+'</span>'+
      '<p class="tt-clock-source">Live device time displayed in the organization’s timezone</p>'+
     '</div>'+
+    (active?'<div class="tt-session-progress-wrap">'+
+      '<div class="tt-session-ring">'+
+       '<svg viewBox="0 0 128 128" focusable="false" aria-hidden="true">'+
+        '<circle class="tt-session-ring-track" cx="64" cy="64" r="54"></circle>'+
+        '<circle id="tt-session-progress" class="tt-session-ring-progress" cx="64" cy="64" r="54"'+
+         ' stroke-dasharray="339.292" stroke-dashoffset="'+
+         (339.292*(1-session.progress)).toFixed(3)+'"></circle></svg>'+
+      '<div class="tt-compact-elapsed" role="timer" aria-label="Elapsed time for active attendance session">'+
+       '<span>Elapsed this session</span><strong id="tt-session-elapsed" data-clock-in="'+
+        esc(active.clockIn)+'">'+session.label+'</strong>'+
+       '<span class="tt-session-goal">of 9h goal</span></div></div>'+
+       '<p class="tt-active-copy">Started '+esc(formatTimeTrackerAutoClockoutTime(active.clockIn))+
+       (autoDeadline?' · auto clock-out '+esc(formatTimeTrackerAutoClockoutTime(autoDeadline)):'')+
+       ' · <span data-tt-goal-remaining="'+esc(active.clockIn)+'">'+(session.progress>=1?'9h goal reached':Math.floor(Math.ceil(TT_POLICY.requiredWorkMs*(1-session.progress)/60000)/60)+'h '+Math.ceil(TT_POLICY.requiredWorkMs*(1-session.progress)/60000)%60+'m to goal')+'</span></p>'+
+       '<span class="tt-compact-sr">Session duration · credited hours may differ</span>'+
+       ((autoClockout||autoUnavailable)?'<p class="tt-clock-hint tt-auto-clockout-state'+
+        (autoUnavailable||autoClockout?.status!=='MONITORING'?'':' tt-compact-sr')+'" role="status">'+esc(autoLabel)+
+        (autoDeadline?'<strong>'+esc(formatTimeTrackerAutoClockoutTime(autoDeadline))+'</strong> · '+
+         '<span data-tt-auto-clockout-countdown data-deadline="'+esc(autoDeadline)+'">—</span> remaining':'')+'</p>':'')+
+      '</div>':'')+
     '<div class="tt-dashboard-section-label">TODAY’S ATTENDANCE</div>'+
     '<div class="tt-session-summary" aria-label="My attendance today">'+
      '<div><span>Sessions today</span><strong>'+todayRows.length+'</strong></div>'+
-     '<div><span>Hours logged</span><strong>'+hrs(credited)+'</strong></div>'+
+     '<div'+(active&&todayRows.some(r=>r.id===active.id&&r.creditedMs===null)?' data-tt-live-total="'+esc(active.clockIn)+'" data-credited-base="'+todayRows.filter(r=>r.id!==active.id).reduce((sum,r)=>sum+(r.creditedMs||0),0)+'"':'')+'><span>Total logged</span><strong>'+hrs(credited)+'</strong></div>'+
     '</div>'+
     '<p class="tt-dashboard-source">Attendance totals use your authorized TimeTracker records.</p>'+
    '</section>'+
@@ -277,36 +309,17 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
      '</strong><p>'+esc(success)+'</p></div></div>':'')+
     (clockCorrectionNotice?'<p class="tt-clock-sync-status" role="status" aria-live="polite">'+esc(clockCorrectionNotice)+'</p>':'')+
     '<div class="tt-console-kicker"><span class="tt-console-kicker-mark" aria-hidden="true"></span> ATTENDANCE CONTROL</div>'+
-    (active?'':'<div class="tt-clock-card-head"><h4>Clock In</h4></div>')+
+    (active?'':'<div class="tt-clock-card-head"><h4>Ready to start</h4></div>')+
     '<p class="tt-console-description">'+(active?
      'End the current signed attendance session using a fresh GPS fix.':
-     'Start your work session with a signed record and a fresh GPS fix.')+'</p>'+
-    (active?'<div class="tt-session-progress-wrap">'+
-      '<div class="tt-session-ring" aria-hidden="true">'+
-       '<svg viewBox="0 0 128 128" focusable="false">'+
-        '<circle class="tt-session-ring-track" cx="64" cy="64" r="54"></circle>'+
-        '<circle id="tt-session-progress" class="tt-session-ring-progress" cx="64" cy="64" r="54"'+
-         ' stroke-dasharray="339.292" stroke-dashoffset="'+
-         (339.292*(1-session.progress)).toFixed(3)+'"></circle></svg>'+
-       '<span class="tt-compact-clock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span></div>'+
-      '<div class="tt-compact-elapsed" role="timer" aria-label="Elapsed time for active attendance session">'+
-       '<span>Elapsed this session</span><strong id="tt-session-elapsed" data-clock-in="'+
-        esc(active.clockIn)+'">'+session.label+'</strong>'+
-       '<p class="tt-active-copy">Started '+esc(formatTimeTrackerAutoClockoutTime(active.clockIn))+
-       (autoDeadline?' · auto clock-out '+esc(formatTimeTrackerAutoClockoutTime(autoDeadline)):'')+'</p>'+
-       '<span class="tt-compact-sr">Session duration · credited hours may differ</span>'+
-       ((autoClockout||autoUnavailable)?'<p class="tt-clock-hint tt-auto-clockout-state'+
-        (autoUnavailable||autoClockout?.status!=='MONITORING'?'':' tt-compact-sr')+'" role="status">'+esc(autoLabel)+
-        (autoDeadline?'<strong>'+esc(formatTimeTrackerAutoClockoutTime(autoDeadline))+'</strong> · '+
-         '<span data-tt-auto-clockout-countdown data-deadline="'+esc(autoDeadline)+'">—</span> remaining':'')+'</p>':'')+
-      '</div></div>':'')+
+     'GPS is requested only when you start or end a session.')+'</p>'+
     '<form id="tt-clock-form">'+
      (active?
       '<div class="tt-active-session-context" aria-label="Active attendance details">'+
        '<div><span><span aria-hidden="true">⌖</span> Location</span><strong>'+esc(active.location==='Offsite (Home)'?'Offsite · Home':active.location)+'</strong></div>'+
        '<div><span><span aria-hidden="true">▦</span> Department</span><strong>'+esc(active.department)+'</strong></div>'+
       '</div>':
-      '<label for="tt-location">Location'+select('tt-location',TT_LOCATIONS,'Select location…',location)+'</label>'+
+      '<label for="tt-location">Work Location'+select('tt-location',TT_LOCATIONS,'Select location…',location)+'</label>'+
       '<div class="tt-quick-location"><span>Quick select</span>'+
        '<button type="button" data-action="tt-location-shortcut" data-location="Office-Base Duty" aria-pressed="'+
         (location==='Office-Base Duty')+'" class="'+(location==='Office-Base Duty'?'is-selected':'')+'">◴ &nbsp; Office</button>'+
@@ -319,9 +332,9 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
       '</div>')+
      '<label for="tt-note" class="tt-note-field" id="tt-note-wrap"'+
       ((active?showActiveHomeNote:showHomeNote)?'':' hidden')+'>'+
-      'Offsite Work Note'+(!active?'<span id="tt-note-requirement">'+(requireHomeNote?' (required)':' (optional)')+'</span>':'')+'<textarea id="tt-note"'+((!active&&requireHomeNote)?' required':'')+
-      (active?' readonly':'')+' maxlength="500" rows="3" placeholder="Describe your offsite work">'+
-      (active?esc(active.workNote||''):esc(workPlanDraft))+'</textarea></label>'+
+      'Work Plan'+(!active?'<span id="tt-note-requirement">'+(requireHomeNote?' (required)':' (optional)')+'</span>':'')+'<textarea id="tt-note"'+((!active&&requireHomeNote)?' required':'')+
+      (active?' readonly':'')+' maxlength="500" rows="3" aria-describedby="tt-work-plan-validation" placeholder="Describe your offsite work plan">'+
+      (active?esc(active.workNote||''):esc(workPlanDraft))+'</textarea><span id="tt-work-plan-validation" class="tt-work-plan-validation" role="alert" hidden>Work Plan is required for Offsite (Home).</span></label>'+
      (geoPromptVisible?'<div class="tt-location-readiness '+(locationEnabled?'is-ready':geoWarning?'needs-action':'needs-permission')+
       '" role="status" aria-live="polite">'+
       '<span class="tt-location-indicator" aria-hidden="true">'+(locationEnabled?'✓':'⌖')+'</span>'+
