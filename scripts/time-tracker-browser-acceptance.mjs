@@ -795,26 +795,39 @@ try {
   await selectVisible.waitFor();
   assert.equal(await selectVisible.getAttribute("aria-checked"), "false");
   await page.locator(".tt-log-row-summary").waitFor();
-  const rowCheckbox = page.getByRole("checkbox", { name: "Select Test Employee" });
+  const rowCheckbox = page.getByRole("checkbox", {
+    name: "Select Test Employee",
+  });
   await rowCheckbox.waitFor();
   assert.equal(await rowCheckbox.getAttribute("aria-checked"), "false");
   await page.getByRole("button", { name: "Add Log", exact: true }).waitFor();
   await page.getByRole("button", { name: "Edit selected" }).waitFor();
   await page.getByRole("button", { name: "Delete selected" }).waitFor();
-  assert.equal(await page.getByRole("button", { name: "Edit selected" }).isDisabled(), true);
+  assert.equal(
+    await page.getByRole("button", { name: "Edit selected" }).isDisabled(),
+    true,
+  );
   assert.deepEqual(
     await page.locator(".tt-log-table thead th").allTextContents(),
     ["", "Clock In", "Employee", "Working Location", "Department", "Clock Out"],
   );
-  assert.match(await page.locator(".tt-log-row-clock").textContent(), /08:00:00/);
-  assert.match(await page.locator(".tt-log-row-department").textContent(), /Information Technology/);
+  assert.match(
+    await page.locator(".tt-log-row-clock").textContent(),
+    /08:00:00/,
+  );
+  assert.match(
+    await page.locator(".tt-log-row-department").textContent(),
+    /Information Technology/,
+  );
   await page.locator(".tt-log-filter-trigger").click();
   await page.locator(".tt-log-filter-panel").waitFor();
   for (const id of ["period", "status", "location", "department", "sort"]) {
     await page.locator("#tt-log-" + id).waitFor();
   }
   await page.getByRole("button", { name: "Reset", exact: true }).waitFor();
-  await page.getByRole("button", { name: "Apply filters", exact: true }).waitFor();
+  await page
+    .getByRole("button", { name: "Apply filters", exact: true })
+    .waitFor();
   await page.locator(".tt-log-filter-trigger").click();
   assert.equal(await page.locator(".tt-log-filter-panel").isVisible(), false);
   const managementSurface = await toolbar.evaluate((element) => {

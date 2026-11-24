@@ -166,7 +166,10 @@ test("TimeTracker uses the shared branded loader and retains application-specifi
   assert.equal(loading, renderBoardLoading({ application: "Board" }));
   assert.match(loading, /APSYNTRA <span>CRM<\/span>/);
   assert.match(loading, /Loading your workspace…/);
-  assert.doesNotMatch(loading, /TimeTracker|Preparing your board|aps-board-loading-preview/);
+  assert.doesNotMatch(
+    loading,
+    /TimeTracker|Preparing your board|aps-board-loading-preview/,
+  );
   const error = renderBoardLoadingError("Existing board is unavailable", {
     application: "TimeTracker",
   });
