@@ -1,3 +1,4 @@
+import {captureRecoveryFields} from './tradelink/draft-recovery-state.js';
 import {syncFuelTrans} from './fueltrans-lazy.js';
 import {applySearchVisibility} from './interaction-search.js';
 import {createFrameCoalescer} from './frame-coalescer.js';
@@ -12996,16 +12997,7 @@ function captureTradeLinkDraftListFilters(event){
 function captureTradeLinkDraftFields(event){
  const form=event.target?.closest?.('[data-tradelink-draft-form]');
  if(!form||!tradeLinkDraftRoute()||state.tradeLinkDraft.busy)return false;
- const fd=new FormData(form),values={};
- for(const key of ['documentType','documentNumber','customerName','referenceNumber',
-  'currency','vatType','lineDescription','lineQuantity','lineUnitPrice','lineUnit',
-  'lineSerialNumber','checkedBy','deliveredBy','receivedBy','verifiedBy',
-  'verifiedByEmail','approvedByEmail','paymentParticulars','cashAmount','chequeAmount',
-  'bankName','chequeNumber','customerTin','customerEmail','customerPhone','validity',
-  'deliveryCommitment','paymentTerms','targetDeliveryDate','poNumber','approvedBy',
-  'documentStatus','discountType','discountValue','exchangeRate','remarks']){
-  values[key]=String(fd.get(key)??'').slice(0,5000);
- }
+ const values=captureRecoveryFields(new FormData(form));
  state.tradeLinkDraft.formValues=values;
  state.tradeLinkDraft.lineDrafts=snapshotTradeLinkDraftLineItems(form);
  state.tradeLinkDraft.unsavedChanges=true;
