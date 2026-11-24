@@ -26,6 +26,8 @@ export function syncManualAttendanceForm(form,now=new Date()){
  date.setCustomValidity(policy.allowed?'':'Select today or a past date.');
  status.querySelector('option[value="active"]').disabled=!policy.activeAllowed;
  if(!policy.activeAllowed)status.value='completed';
+ else if(date.dataset.previousDate&&date.dataset.previousDate!==date.value)status.value='active';
+ date.dataset.previousDate=date.value;
  const completed=status.value==='completed';
  const outDate=form.elements.clockOutDate,outTime=form.elements.clockOutTime;
  outDate.disabled=outTime.disabled=!completed;
@@ -33,7 +35,8 @@ export function syncManualAttendanceForm(form,now=new Date()){
  outDate.min=date.value;outDate.max=date.max;
  if(completed&&(!outDate.value||outDate.value<date.value))outDate.value=date.value;
  if(!completed){outDate.value='';outTime.value='';}
- form.querySelector('[data-tt-manual-out]').hidden=!completed;
+ const outFields=form.querySelector('[data-tt-manual-out]');
+ outFields.hidden=!completed;outFields.style.display=completed?'':'none';
  form.elements.workNote.required=form.elements.location.value==='Offsite (Home)';
  form.querySelector('[data-tt-manual-policy]').textContent=policy.activeAllowed?
   'Today: active or completed.':'Past attendance must be completed; future dates are not permitted.';
@@ -56,12 +59,12 @@ export function renderManualAttendanceEditor({editor,busy=false,error='',now=new
  '<fieldset class="tt-admin-editor-fields"'+(busy?' disabled':'')+'><div class="tt-admin-editor-body">'+
  '<section class="tt-admin-field-section"><h4>Employee and attendance</h4><label class="tt-admin-field"><span>Employee or intern</span><select name="employee" required>'+
  opt('','Select employee…',employee)+(editor.roster||[]).map(m=>opt(m.type+':'+m.id,m.name+(m.type==='ojt'?' (OJT)':''),employee)).join('')+'</select></label>'+
- '<div class="tt-admin-grid tt-admin-grid-two">'+input('Attendance date','date','date',date,'required max="'+today+'"')+
+ '<div class="tt-admin-grid tt-admin-grid-two">'+input('Attendance date','date','date',date,'required max="'+today+'" data-previous-date="'+esc(date)+'"')+
  '<label class="tt-admin-field"><span>Session status</span><select name="status" required><option value="active"'+(status==='active'?' selected':'')+(policy.activeAllowed?'':' disabled')+'>Active / Ongoing</option>'+
  opt('completed','Completed',status)+'</select></label>'+
  input('Clock-in time','clockInTime','time',d.clockInTime||'','required')+'</div>'+
  '<p data-tt-manual-policy>'+(policy.activeAllowed?'Today: active or completed.':'Past attendance must be completed; future dates are not permitted.')+'</p>'+
- '<div class="tt-admin-grid tt-admin-grid-two" data-tt-manual-out'+(completed?'':' hidden')+'>'+
+ '<div class="tt-admin-grid tt-admin-grid-two" data-tt-manual-out'+(completed?'':' hidden style="display:none"')+'>'+
  input('Clock-out date','clockOutDate','date',completed?(d.clockOutDate||date):'','min="'+esc(date)+'" max="'+today+'" '+(completed?'required':'disabled'))+
  input('Clock-out time','clockOutTime','time',completed?(d.clockOutTime||''):'',completed?'required':'disabled')+'</div></section>'+
  '<section class="tt-admin-field-section"><h4>Manual entry details</h4><label class="tt-admin-field"><span>Work location</span><select name="location" required>'+
