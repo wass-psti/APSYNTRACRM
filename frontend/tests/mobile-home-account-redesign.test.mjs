@@ -28,3 +28,12 @@ test('mobile account switch explicitly requires a fresh login and stores no cred
  assert.match(app,/auth\.onExpired=\(\)=>\{boardCacheChannel\.stop\(\);db\.invalidateBoardCache\(\);boardPreferences\.clearMemory\(\);ttWorkNoteDraft\.clear\(\);mobileAccountChoices\.clear\(\)/);
  assert.match(app,/if\(isMobileSwitch\)await auth\.signOut\(\{scope:'local'\}\)/);
 });
+
+test('mobile settings actions preserve signed security revocation and login cleanup',()=>{
+ const settingsAction=app.slice(app.indexOf(" case 'mobile-account-security':{"),app.indexOf(" case 'ws01-open':{"));
+ assert.match(settingsAction,/case 'mobile-account-security':\{[\s\S]*?break;\n \}\n case 'mobile-account-profile':\{[\s\S]*?break;\n \}\n case 'mobile-account-switch':\n case 'security-tl03-revoke-run':\n case 'security-ws02d-b3-revoke-run':\n case 'security-ws02d-b3-rls-handoff':\s*case 'logout':\{/);
+ assert.match(settingsAction,/runTradeLinkLocalSessionRevocation\(\{auth,api:db\}\)/);
+ assert.match(settingsAction,/runWs02dB3LocalSessionRevocation\(\{auth\}\)/);
+ const login=app.slice(app.indexOf('function renderLogin('),app.indexOf('function renderLogin(')+800);
+ assert.match(login,/stopTimeTrackerPixi\(\);\n \/\/ Clear detached protected item values on every signed-out transition\.\n hideModal\(\);\n if\(mode==='login'&&!emailValue\)emailValue=mobileAccountEmail;/);
+});

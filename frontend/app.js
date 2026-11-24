@@ -671,9 +671,9 @@ function stopAuthVisuals(){
 function renderLogin(message='',{mode=authViewFromHash(),notice='',emailValue=''}={}){
  stopTimeTrackerClock();
  stopTimeTrackerPixi();
- if(mode==='login'&&!emailValue)emailValue=mobileAccountEmail;
  // Clear detached protected item values on every signed-out transition.
  hideModal();
+ if(mode==='login'&&!emailValue)emailValue=mobileAccountEmail;
  ttClockSyncScope='';ttClockLastCheckAt=0;
  state.ttClockCorrectionNotice='';
  stopAvatarPreview();
@@ -7767,8 +7767,6 @@ async function action(name,button){
   if(f){f.type=f.type==='password'?'text':'password';button.textContent=f.type==='password'?'Show':'Hide';button.setAttribute('aria-label',f.type==='password'?'Show password':'Hide password');button.setAttribute('aria-pressed',String(f.type==='text'));}
   break;
  }
- case 'security-tl03-revoke-run':
- case 'security-ws02d-b3-revoke-run':
  case 'mobile-account-security':{
   if(state.view!=='settings'||!auth.isSignedIn)break;
   const settings=root.querySelector('.aps-settings');
@@ -7786,6 +7784,8 @@ async function action(name,button){
   break;
  }
  case 'mobile-account-switch':
+ case 'security-tl03-revoke-run':
+ case 'security-ws02d-b3-revoke-run':
  case 'security-ws02d-b3-rls-handoff':
   case 'logout':{
   const isMobileSwitch=name==='mobile-account-switch';
