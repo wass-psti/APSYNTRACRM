@@ -169,15 +169,21 @@ try {
     const app = document.querySelector(".fm1-app");
     const header = document.querySelector(".tt-app-header");
     const navScroll = document.querySelector(".tt-navigation-scroll");
-    const clockLayout = document.querySelector(".tt-clock-stage.tt-clock-rework");
+    const clockLayout = document.querySelector(
+      ".tt-clock-stage.tt-clock-rework",
+    );
     const workspace = document.querySelector(".tt-clock-rework-workspace");
-    const clockFace = document.querySelector(".tt-clock-rework-time .tt-clock-face");
+    const clockFace = document.querySelector(
+      ".tt-clock-rework-time .tt-clock-face",
+    );
     const greeting = document.querySelector(".tt-clock-rework-greeting");
     const stats = document.querySelector(".tt-clock-rework-stats");
     const brandIcon = header.querySelector(".tt-brand-icon");
     const shortcut = header.querySelector(".tt-header-link");
     const activeTab = document.querySelector(".tt-nav-tab.is-current");
-    const parentWidth = document.querySelector(".tt-native").getBoundingClientRect().width;
+    const parentWidth = document
+      .querySelector(".tt-native")
+      .getBoundingClientRect().width;
     return {
       appDisplay: getComputedStyle(app).display,
       headerRadius: getComputedStyle(header).borderRadius,
@@ -199,7 +205,9 @@ try {
       greetingVisible: getComputedStyle(greeting).display !== "none",
       statsCount: stats.children.length,
       statusText: stats.querySelector(".tt-clock-rework-status").textContent,
-      actionCount: workspace.querySelectorAll('#tt-clock-form button[name="tt-action"]').length,
+      actionCount: workspace.querySelectorAll(
+        '#tt-clock-form button[name="tt-action"]',
+      ).length,
       root: document.querySelector(".tt-native")?.className,
     };
   });
@@ -216,8 +224,14 @@ try {
   assert.equal(desktopLayout.headerBackground, "rgb(255, 255, 255)");
   assert.equal(desktopLayout.navOverflow, "auto");
   assert.equal(desktopLayout.clockLayout, "grid");
-  assert.ok(desktopLayout.clockWidth > 800, "Clock must expand beyond the old 420px cap");
-  assert.ok(desktopLayout.workspaceRatio > 0.85, "Attendance workspace must use the available content width");
+  assert.ok(
+    desktopLayout.clockWidth > 800,
+    "Clock must expand beyond the old 420px cap",
+  );
+  assert.ok(
+    desktopLayout.workspaceRatio > 0.85,
+    "Attendance workspace must use the available content width",
+  );
   assert.equal(desktopLayout.clockSize, "62px");
   assert.equal(desktopLayout.clockWeight, "500");
   assert.equal(desktopLayout.greetingVisible, true);
@@ -282,10 +296,13 @@ try {
   );
   assert.equal(await page.locator("#tt-note").isVisible(), false);
   assert.equal(await page.locator("#tt-session-progress").count(), 0);
-  assert.equal(await page.locator(".tt-clock-rework-status").textContent(), "Not clocked in");
-  const idleClockSize = await page.locator(".tt-clock-face").evaluate(
-    (element) => parseFloat(getComputedStyle(element).fontSize),
+  assert.equal(
+    await page.locator(".tt-clock-rework-status").textContent(),
+    "Not clocked in",
   );
+  const idleClockSize = await page
+    .locator(".tt-clock-face")
+    .evaluate((element) => parseFloat(getComputedStyle(element).fontSize));
   await page.evaluate(() =>
     window.__timeTrackerRender({
       result: {
@@ -303,8 +320,16 @@ try {
     }),
   );
   assert.equal(await page.locator("#tt-note").isVisible(), true);
-  assert.equal(await page.locator("#tt-note").evaluate((element) => element.required), true);
-  assert.equal(await page.locator("#tt-note").evaluate((element) => element.validity.valueMissing), true);
+  assert.equal(
+    await page.locator("#tt-note").evaluate((element) => element.required),
+    true,
+  );
+  assert.equal(
+    await page
+      .locator("#tt-note")
+      .evaluate((element) => element.validity.valueMissing),
+    true,
+  );
   await page.evaluate(() => {
     const active = {
       id: "clock-state-fixture",
@@ -331,23 +356,49 @@ try {
       now: new Date("2026-11-24T06:07:00Z"),
     });
   });
-  assert.equal(await page.locator(".tt-clock-rework-status").textContent(), "Active");
-  assert.equal(await page.locator("#tt-session-elapsed").textContent(), "05:13:54");
-  assert.equal(await page.locator(".tt-session-ring > svg").isVisible(), true);
-  const activeClockSize = await page.locator(".tt-clock-face").evaluate(
-    (element) => parseFloat(getComputedStyle(element).fontSize),
+  assert.equal(
+    await page.locator(".tt-clock-rework-status").textContent(),
+    "Active",
   );
-  assert.equal(activeClockSize, idleClockSize, "Clock face remains stable across attendance states");
-  assert.equal(await page.locator("#tt-note").inputValue(), "Offsite development");
-  assert.equal(await page.locator("#tt-note").evaluate((element) => element.readOnly), true);
+  assert.equal(
+    await page.locator("#tt-session-elapsed").textContent(),
+    "05:13:54",
+  );
+  assert.equal(await page.locator(".tt-session-ring > svg").isVisible(), true);
+  const activeClockSize = await page
+    .locator(".tt-clock-face")
+    .evaluate((element) => parseFloat(getComputedStyle(element).fontSize));
+  assert.equal(
+    activeClockSize,
+    idleClockSize,
+    "Clock face remains stable across attendance states",
+  );
+  assert.equal(
+    await page.locator("#tt-note").inputValue(),
+    "Offsite development",
+  );
+  assert.equal(
+    await page.locator("#tt-note").evaluate((element) => element.readOnly),
+    true,
+  );
   const activeLayout = await page.evaluate(() => ({
-    ring: document.querySelector(".tt-session-ring").getBoundingClientRect().width,
-    ringTop: document.querySelector(".tt-session-ring").getBoundingClientRect().top,
-    summaryTop: document.querySelector(".tt-clock-rework-stats").getBoundingClientRect().top,
-    context: getComputedStyle(document.querySelector(".tt-active-session-context")).backgroundColor,
+    ring: document.querySelector(".tt-session-ring").getBoundingClientRect()
+      .width,
+    ringTop: document.querySelector(".tt-session-ring").getBoundingClientRect()
+      .top,
+    summaryTop: document
+      .querySelector(".tt-clock-rework-stats")
+      .getBoundingClientRect().top,
+    context: getComputedStyle(
+      document.querySelector(".tt-active-session-context"),
+    ).backgroundColor,
     note: getComputedStyle(document.querySelector("#tt-note")).backgroundColor,
-    workspaceWidth: document.querySelector(".tt-clock-rework-workspace").getBoundingClientRect().width,
-    stageWidth: document.querySelector(".tt-clock-stage").getBoundingClientRect().width,
+    workspaceWidth: document
+      .querySelector(".tt-clock-rework-workspace")
+      .getBoundingClientRect().width,
+    stageWidth: document
+      .querySelector(".tt-clock-stage")
+      .getBoundingClientRect().width,
     viewportWidth: innerWidth,
     overflow: document.documentElement.scrollWidth - innerWidth,
   }));
@@ -355,18 +406,26 @@ try {
   assert.ok(activeLayout.ringTop < activeLayout.summaryTop);
   assert.equal(activeLayout.context, "rgba(0, 0, 0, 0)");
   assert.equal(activeLayout.note, "rgb(255, 255, 255)");
-  assert.ok(activeLayout.workspaceWidth / activeLayout.stageWidth > 0.8,
-    "Clock workspace must fill the available mobile content area");
+  assert.ok(
+    activeLayout.workspaceWidth / activeLayout.stageWidth > 0.8,
+    "Clock workspace must fill the available mobile content area",
+  );
   assert.ok(activeLayout.overflow <= 0, "Clock workspace overflows at 360px");
   await checkAccessibility("TimeTracker active mobile Clock");
   await page.setViewportSize({ width: 1440, height: 1000 });
   const activeDesktopWidth = await page.evaluate(() => ({
     parent: document.querySelector(".tt-native").getBoundingClientRect().width,
-    stage: document.querySelector(".tt-clock-stage").getBoundingClientRect().width,
-    workspace: document.querySelector(".tt-clock-rework-workspace").getBoundingClientRect().width,
+    stage: document.querySelector(".tt-clock-stage").getBoundingClientRect()
+      .width,
+    workspace: document
+      .querySelector(".tt-clock-rework-workspace")
+      .getBoundingClientRect().width,
     overflow: document.documentElement.scrollWidth - innerWidth,
   }));
-  assert.ok(activeDesktopWidth.stage > 800, "Active Clock must use desktop content width");
+  assert.ok(
+    activeDesktopWidth.stage > 800,
+    "Active Clock must use desktop content width",
+  );
   assert.ok(activeDesktopWidth.workspace / activeDesktopWidth.parent > 0.85);
   assert.ok(activeDesktopWidth.overflow <= 0);
   await page.evaluate(() => window.__timeTrackerRender());
