@@ -54,12 +54,14 @@ test('nonessential signed TimeTracker reads are concurrent but access checks rem
  const native=readFileSync('frontend/time-tracker-native.js','utf8');
  const body=native.slice(native.indexOf('async snapshot(boardId,{clockOnly=false}={}){'),
   native.indexOf('async teamDirectory(boardId){'));
- assert.match(body,/const access=await this\.access\(boardId\)/);
+ assert.match(body,/const access=await this\.access\(boardId,\{includeDirectory:!clockOnly\}\)/);
  assert.match(body,/const otRead=clockOnly\?Promise\.resolve\(null\)/);
  assert.match(body,/const clockRead=this\.attendanceCapability\(boardId,access\)/);
- assert.match(body,/const raw=await this\.api\.rpc\('list_module_state'/);
+ assert.match(body,/raw=await this\.api\.rpc\('list_module_state'/);
+ assert.match(body,/if\(clockOnly\)/);
+ assert.match(body,/timetracker_attendance_clock_snapshot/);
  assert.ok(body.indexOf('const access=await')<body.indexOf('const otRead='));
- assert.ok(body.indexOf('const otRead=')<body.indexOf('const raw=await'));
+ assert.ok(body.indexOf('const otRead=')<body.indexOf('raw=await'));
  assert.match(body,/await checkIdentity\(this\.auth,this\.api,access,boardId\)/);
  const map=readFileSync('frontend/time-tracker-map.js','utf8');
  assert.match(map,/L\.circleMarker/);

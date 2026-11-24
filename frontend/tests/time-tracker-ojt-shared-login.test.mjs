@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {
  projectOjtRoster,projectOjtAdmin,projectOjtAttendance,projectOjtAdminAttendance,
+ projectOjtAdminAttendanceRecord,
  TimeTrackerOjtClient,TIMETRACKER_SHARED_OJT_USER_ID,
  isEligibleTimeTrackerSharedOjtAccount,renderTimeTrackerOjtAdmin,renderTimeTrackerOjtClock
 } from '../apps/TimeTracker/time-tracker-ojt.js';
@@ -44,6 +45,12 @@ const adminAttendance=()=>({contract:'tt-ojt-admin-attendance-1',
  actorId:scope.userId,workspaceId:scope.workspaceId,boardId:scope.boardId,
  records:[{id:record,internId:intern,name:'Intern Alpha',clockIn:stamp,
   clockOut:null,location:'Office-Base Duty'}]});
+const adminAttendanceRecord=()=>({
+ contract:'tt-ojt-admin-attendance-record-1',actorId:scope.userId,
+ workspaceId:scope.workspaceId,boardId:scope.boardId,
+ record:{id:record,internId:intern,name:'Intern Alpha',clockIn:stamp,
+  clockOut:null,location:'Office-Base Duty',workNote:'Field work',revision:3}
+});
 
 test('signed dropdown roster is scoped and exposes active names only',()=>{
  assert.deepEqual(projectOjtRoster(fresh(),scope).interns,[{id:intern,name:'Intern Alpha'}]);
@@ -64,6 +71,10 @@ test('admin projection retains inactive profiles for roster management only',()=
  assert.deepEqual(projectOjtAdminAttendance(adminAttendance(),scope).records[0],
   {id:record,internId:intern,name:'Intern Alpha',clockIn:stamp,
    clockOut:null,location:'Office-Base Duty',workNote:'',revision:null});
+ assert.deepEqual(projectOjtAdminAttendanceRecord(adminAttendanceRecord(),scope),
+  {id:record,internId:intern,name:'Intern Alpha',clockIn:stamp,
+   clockOut:null,location:'Office-Base Duty',workNote:'Field work',revision:3});
+ assert.throws(()=>projectOjtAdminAttendanceRecord({...adminAttendanceRecord(),boardId:intern},scope),/record unavailable/);
 });
 
 test('attendance projection is bound to the selected intern and rejects conflicting active rows',()=>{
@@ -85,6 +96,7 @@ test('client uses scoped intern-ID RPCs and does not issue identity tokens',asyn
    if(method==='timetracker_ojt_roster')return fresh();
    if(method==='timetracker_ojt_admin_snapshot')return adminRaw();
    if(method==='timetracker_ojt_admin_attendance')return adminAttendance();
+   if(method==='timetracker_ojt_admin_attendance_record')return adminAttendanceRecord();
    if(method==='timetracker_ojt_snapshot')return attendance();
    if(method==='timetracker_ojt_commit')return{
     contract:'tt-ojt-commit-1',mode:'COMMITTED',actorId:scope.userId,
@@ -106,21 +118,24 @@ test('client uses scoped intern-ID RPCs and does not issue identity tokens',asyn
  assert.equal((await client.roster(scope)).interns[0].id,intern);
  assert.equal((await client.admin(scope)).groups[0].interns[1].active,false);
  assert.equal((await client.adminAttendance(scope)).records[0].name,'Intern Alpha');
+ const single=await client.adminAttendanceRecord(scope,record);
+ assert.equal(single.revision,3);
+ assert.equal(calls[3].args.p_record_id,record);
  const snap=await client.snapshot(scope,intern);
  assert.equal(snap.internId,intern);
- assert.deepEqual(calls[3].args,{p_board_id:scope.boardId,p_intern_id:intern});
+ assert.deepEqual(calls[4].args,{p_board_id:scope.boardId,p_intern_id:intern});
  await client.commit(scope,intern,{action:'clock-in',location:'Office-Base Duty',
   geo:{status:'captured'},workNote:''});
- assert.equal(calls[4].method,'timetracker_ojt_commit');
- assert.equal(calls[4].args.p_intern_id,intern);
- assert.equal(calls[4].args.p_action,'clock-in');
+ assert.equal(calls[5].method,'timetracker_ojt_commit');
+ assert.equal(calls[5].args.p_intern_id,intern);
+ assert.equal(calls[5].args.p_action,'clock-in');
  await client.setIntern(scope,{userId:TIMETRACKER_SHARED_OJT_USER_ID,
   name:'Intern Alpha',active:true});
- assert.equal(calls[5].method,'timetracker_ojt_intern_set');
- assert.deepEqual(Object.keys(calls[5].args).sort(),
+ assert.equal(calls[6].method,'timetracker_ojt_intern_set');
+ assert.deepEqual(Object.keys(calls[6].args).sort(),
   ['p_active','p_board_id','p_intern_id','p_name','p_shared_user_id'].sort());
  await client.setGroup(scope,TIMETRACKER_SHARED_OJT_USER_ID,true);
- assert.equal(calls[6].method,'timetracker_ojt_group_set');
+ assert.equal(calls[7].method,'timetracker_ojt_group_set');
  assert.doesNotMatch(JSON.stringify(calls),/pin|token/i);
 });
 

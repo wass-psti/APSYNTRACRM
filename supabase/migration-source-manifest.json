@@ -2074,6 +2074,13 @@
       "sha256": "06ac4abddab7c9cadbdbb62bcf5854e2147debf436dfda75c769d5a485384e24"
     },
     {
+      "version": "20261123072051",
+      "name": "cp_tt_manual_ot_01_manual_submission_and_scoped_review",
+      "file": "20261123072051_cp_tt_manual_ot_01_manual_submission_and_scoped_review.sql",
+      "bytes": 12775,
+      "sha256": "edc0ff382fac12551ab5add4570477bf06103aae62babb31b035cb1a5765c251"
+    },
+    {
       "version": "20261123080322",
       "name": "cp_tl_document_identity_order_01",
       "file": "20261123080322_cp_tl_document_identity_order_01.sql",
@@ -2086,6 +2093,13 @@
       "file": "20261123081039_cp_fueltrans_m7_ticket_number_allocator.sql",
       "bytes": 6759,
       "sha256": "e5afa7ba82dd927ea71061b861c35c2595169afaf09c14d54a760238b5230db9"
+    },
+    {
+      "version": "20261123084003",
+      "name": "cp_tt_hr_ot_all_user_log_01",
+      "file": "20261123084003_cp_tt_hr_ot_all_user_log_01.sql",
+      "bytes": 4523,
+      "sha256": "786a67b307af56eaa40c12e38dcf5b6ea170d918aa63601e381a3d16ff0741ee"
     },
     {
       "version": "20261123100000",
@@ -2142,6 +2156,27 @@
       "file": "20261123180000_cp_tt_bootstrap_ot_self_review_01.sql",
       "bytes": 5439,
       "sha256": "4d8d0c8244d9b93f1c78bab486d1ca2e005712ec76689941601a0102411b1a6a"
+    },
+    {
+      "version": "20261124050317",
+      "name": "cp_tt_deferred_foreground_clockout_01",
+      "file": "20261124050317_cp_tt_deferred_foreground_clockout_01.sql",
+      "bytes": 17056,
+      "sha256": "e020f12107219bb76a1049e3419202c213f1f149b7c11d6b227f510bb9502008"
+    },
+    {
+      "version": "20261124100000",
+      "name": "cp_tt_ojt_auto_clockout_9h",
+      "file": "20261124100000_cp_tt_ojt_auto_clockout_9h.sql",
+      "bytes": 4708,
+      "sha256": "3e8e2ebf2f526a70dfe047a55dd3a5c0034c3d41c30856c8fcdd8ebcd4085a33"
+    },
+    {
+      "version": "20261124110000",
+      "name": "cp_tt_log_progressive_pagination_01",
+      "file": "20261124110000_cp_tt_log_progressive_pagination_01.sql",
+      "bytes": 40697,
+      "sha256": "0120994ebba11404e7543ddc9f38122d1eb1990c1419ab3bb609b5f66da0026e"
     }
   ]
 }

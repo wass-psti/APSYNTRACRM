@@ -176,7 +176,7 @@ import {renderFRTArchive} from './frt-archive-ui.js';
 import {renderFRTVoucherDocument} from './frt-voucher-document.js';
 import {renderFRTCompanyProfileEditor,hydrateFRTCompanyProfileForm} from './frt-company-profile.js';
 import {FRT_BOARD_ID,isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
-import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED,TT_DEPARTMENTS} from './time-tracker-native.js';
+import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED,TT_DEPARTMENTS,TT_LOCATIONS} from './time-tracker-native.js';
 import {FundTrackerNativeClient} from './fund-tracker-native.js';
 import {renderFundTrackerNative} from './fund-tracker-ui.js';
 import {findFundTrackerBoard,FUND_TRACKER_APPLICATION_ROUTE,parseFundTrackerRecordRoute,fundTrackerRecordHref} from './fund-tracker-application.js';
@@ -193,6 +193,7 @@ import {startInputExperience} from './input-experience.js';
 import {startMetricsExperience} from './metrics-experience.js';
 import {applyTimeTrackerOverviewFilters,filterTimeTrackerOverviewRows,syncTimeTrackerOverviewClock,timeTrackerOverviewCsv} from './time-tracker-overview.js';
 import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,timeTrackerLogRowsForSnapshot,retainTimeTrackerLogDetailIds,TT_LOG_DEFAULT_FILTERS} from './time-tracker-log.js';
+import {mergeTimeTrackerLogPages,TT_LOG_PAGE_SIZE} from './time-tracker-log-pagination.js';
 import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAULT_FILTERS} from './time-tracker-reports.js';
 import {timeTrackerCalendarMonth,shiftTimeTrackerCalendarMonth} from './time-tracker-calendar.js';
 import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED,TT_OT_MAX_WEEK_OFFSET,timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate} from './time-tracker-overtime.js';
@@ -419,7 +420,7 @@ async function getSystemAdminClient(){
 let performanceProfileAbort=null;
 const startupCriticalPath=createStartupCriticalPath();
 const state={workspaceTransitionPending:false,workspaceTransitionTargetId:null,workspaceTransitionTargetName:'',performanceBusy:false,performanceReport:null,context:null,boardCatalogError:'',crmRoleSnapshot:null,workspaceRelationSnapshot:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',boardItemSearch:'',mrhTrackerFilters:{...MATERIAL_TRACKER_DEFAULT_FILTERS},mrhTrackerScope:'',mrhAddView:false,mrhAddBusy:false,groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,boardPageBusy:false,boardPageError:'',issues:[],edit:false,boardManage:false,
-  view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceView:'tracker',frtStatusFilter:'all',ttStandalone:false,frtStandalone:false,tlStandalone:false,fuelTrackStandalone:false,fuelTransStandalone:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttOjtSelected:null,ttOjtSnapshot:null,ttOjtBusy:false,ttOjtError:'',ttOjtSuccess:'',ttOjtPending:false,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttClockCorrectionNotice:'',ttClockStage:'idle',ttGeoPromptVisible:false,ttGeoPermission:'unknown',ttGeoMessage:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtManualVisibleCount:50,ttOtExpandedRequestIds:[],ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttLogSelectedIds:[],ttLogAdminEditor:null,ttLogAdminDeleteConfirm:null,ttLogAdminBusy:false,ttLogAdminError:'',ttLogAdminSuccess:'',ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttEmployeesSearch:'',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkModuleRole:'',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkAnalytics:null,tradeLinkAnalyticsBusy:false,tradeLinkAnalyticsRunId:0,tradeLinkAnalyticsError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,adminVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleSection:'applications',userRoleBoardSearch:'',userRoleBatchMode:false,userRoleBatchSelected:[],userRoleBatchMemberSearch:'',userRoleBatchIdentity:'',userRoleBatchScope:'module',userRoleBatchResource:'',userRoleBatchRole:'',userRoleBatchAction:'assign',userRoleBatchModulesSelected:[],userRoleBatchModuleRoles:{},userRoleNativeBatchResults:[],userRoleBusy:false,userRoleError:'',systemAdminData:null,systemAdminBusy:false,systemAdminError:''};
+  view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceView:'tracker',frtStatusFilter:'all',ttStandalone:false,frtStandalone:false,tlStandalone:false,fuelTrackStandalone:false,fuelTransStandalone:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttOjtSelected:null,ttOjtSnapshot:null,ttOjtBusy:false,ttOjtError:'',ttOjtSuccess:'',ttOjtPending:false,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttClockCorrectionNotice:'',ttClockStage:'idle',ttGeoPromptVisible:false,ttGeoPermission:'unknown',ttGeoMessage:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtManualVisibleCount:50,ttOtExpandedRequestIds:[],ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogPageBusy:false,ttLogPageError:'',ttLogPageRetryReset:false,ttLogPageRunId:0,ttLogSearchTimer:null,ttLogExpandedIds:[],ttLogSelectedIds:[],ttLogAdminEditor:null,ttLogAdminDeleteConfirm:null,ttLogAdminBusy:false,ttLogAdminError:'',ttLogAdminSuccess:'',ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttEmployeesSearch:'',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkModuleRole:'',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkAnalytics:null,tradeLinkAnalyticsBusy:false,tradeLinkAnalyticsRunId:0,tradeLinkAnalyticsError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,adminVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleSection:'applications',userRoleBoardSearch:'',userRoleBatchMode:false,userRoleBatchSelected:[],userRoleBatchMemberSearch:'',userRoleBatchIdentity:'',userRoleBatchScope:'module',userRoleBatchResource:'',userRoleBatchRole:'',userRoleBatchAction:'assign',userRoleBatchModulesSelected:[],userRoleBatchModuleRoles:{},userRoleNativeBatchResults:[],userRoleBusy:false,userRoleError:'',systemAdminData:null,systemAdminBusy:false,systemAdminError:''};
 // A work plan is an unsaved, signed-scope draft until Clock In succeeds.
 const ttWorkNoteDraft=createTimeTrackerWorkNoteDraft();
 function timeTrackerWorkNoteScope(internId=''){
@@ -1617,6 +1618,8 @@ function renderTimeTrackerApplication(){
   clockCorrectionNotice:state.ttClockCorrectionNotice,
   error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,
   view:state.ttView,employeesSearch:state.ttEmployeesSearch,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,
+  logPageHasMore:state.ttAttendance?.log?.hasMore===true,logPageBusy:state.ttLogPageBusy,
+  logPageError:state.ttLogPageError,logSummary:state.ttAttendance?.log?.summary||null,
   reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,
   calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,
   otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,
@@ -1817,7 +1820,7 @@ function boardPage(){
   '>'+t.label+'</a></div>').join('')}</div>
 
 <div data-board-live-content>
-${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFundTrackerApplication():state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,otExpandedRequestIds:state.ttOtExpandedRequestIds,clockPendingAction:state.ttClockPending?.action||'clock-out',error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,employeesSearch:state.ttEmployeesSearch,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otManualVisibleCount:state.ttOtManualVisibleCount,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,adminEligible:state.ttAttendance?.access?.moduleRole==='System Admin',adminDirectory:state.ttLogAdminEditor?.directory||state.ttAttendance?.access?.overviewDirectory||[],adminSelectedIds:state.ttLogSelectedIds,adminEditor:state.ttLogAdminEditor,adminBusy:state.ttLogAdminBusy,adminError:state.ttLogAdminError,adminSuccess:state.ttLogAdminSuccess,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
+${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFundTrackerApplication():state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,otExpandedRequestIds:state.ttOtExpandedRequestIds,clockPendingAction:state.ttClockPending?.action||'clock-out',error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,employeesSearch:state.ttEmployeesSearch,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,logPageHasMore:state.ttAttendance?.log?.hasMore===true,logPageBusy:state.ttLogPageBusy,logPageError:state.ttLogPageError,logSummary:state.ttAttendance?.log?.summary||null,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otManualVisibleCount:state.ttOtManualVisibleCount,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,adminEligible:state.ttAttendance?.access?.moduleRole==='System Admin',adminDirectory:state.ttLogAdminEditor?.directory||state.ttAttendance?.access?.overviewDirectory||[],adminSelectedIds:state.ttLogSelectedIds,adminEditor:state.ttLogAdminEditor,adminBusy:state.ttLogAdminBusy,adminError:state.ttLogAdminError,adminSuccess:state.ttLogAdminSuccess,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,canCreate:state.boardManage||state.tradeLinkModuleRole==='User',actorId:state.context?.user_id||'',actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='talkbox'&&moduleKey==='toolbox'?renderTalkBoxApplication({page:talkBoxState.page,selected:talkBoxState.selected,busy:talkBoxState.busy,error:talkBoxState.error,canEdit:state.edit,filter:talkBoxState.filter,features:talkBoxState.features||{},meetingOpen:talkBoxState.meetingOpen===true,meetingDate:talkBoxState.meetingDate||'',meetingHistory:talkBoxState.meetingHistory||[],meetingRecord:talkBoxState.meetingRecord||null,meetingRows:talkBoxState.meetingRows||[],meetingError:talkBoxState.meetingError||'',reportUrl:talkBoxState.reportUrl||''}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar">
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ New item</button>':''}
@@ -2763,7 +2766,7 @@ async function refreshWorkspace(){
    state.boardTtSignedResult=null;state.boardTtSignedBusy=false;
    state.roleData=null;state.userRoleData=null;state.userRoleSelected=null;
    state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;
-   state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.ttRunId++;state.ttAttendance=null;clearTimeTrackerOjtSelection();state.ttClockPending=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtManualVisibleCount=50;state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
+   state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.ttRunId++;state.ttAttendance=null;clearTimeTrackerOjtSelection();state.ttClockPending=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtManualVisibleCount=50;state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogPageRunId++;state.ttLogPageBusy=false;state.ttLogPageError='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
  }
  // Both signed reads depend on the freshly validated access context, not
  // on each other. Parallelize only after context and recheck identity/scope
@@ -3173,7 +3176,7 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
  const seq=++routeSerial;
  state.groupEditId=null;state.groupEditBusy=false;state.inlineCell=null;state.inlineCellBusy=false;state.ttBoardGpsEligible=false;state.ttBoardAttendance=tab==='items'?{status:'LOADING'}:null;state.ttRunId++;state.ttAttendance=null;clearTimeTrackerOjtSelection();state.ttBusy=false;state.ttError='';state.ttSuccess='';
  if(state.boardId!==boardId||state.tab!=='attendance'){
-  state.ttView='clock';state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtManualVisibleCount=50;state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
+  state.ttView='clock';state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtManualVisibleCount=50;state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogPageRunId++;state.ttLogPageBusy=false;state.ttLogPageError='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
  }
  state.tradeLinkDraft=initialTradeLinkDraftView(tab==='tradelink'&&state.tradeLinkSection==='drafts'?draftType:null);
  // No saved content is trusted from the route. A deep-linked edit ID must
@@ -4482,10 +4485,106 @@ async function loadTradeLinkAnalytics(seq=routeSerial){
   }
  }
 }
+async function loadTimeTrackerLogPage(seq=routeSerial,{reset=false}={}){
+ if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='log'||
+    state.ttAttendance?.status!=='VERIFIED_READ'||!auth.isSignedIn)return;
+ const identity=state.context?.user_id,workspace=state.context?.workspace_id,
+  boardId=state.boardId,filters={...state.ttLogFilters};
+ const cursor=reset?null:state.ttAttendance.log?.nextCursor||null;
+ if(!reset&&(!state.ttAttendance.log?.hasMore||!cursor))return;
+ const run=++state.ttLogPageRunId;
+ const filterKey=JSON.stringify(filters);
+ state.ttLogPageBusy=true;state.ttLogPageError='';
+ if(reset)state.ttAttendance={...state.ttAttendance,log:{
+  scope:state.ttAttendance.log?.scope||'OWN_ATTENDANCE_ONLY',rows:[]
+ }};
+ render();
+ const isCurrent=()=>run===state.ttLogPageRunId&&seq===routeSerial&&
+  state.view==='board'&&state.tab==='attendance'&&state.ttView==='log'&&
+  state.boardId===boardId&&auth.isSignedIn&&auth.userId===identity&&
+  state.context?.user_id===identity&&state.context?.workspace_id===workspace&&
+  JSON.stringify(state.ttLogFilters)===filterKey&&
+  state.ttAttendance?.access?.userId===identity&&
+  state.ttAttendance?.access?.workspaceId===workspace;
+ try{
+  const page=await timeTracker.logPage(boardId,{
+   cursor,pageSize:TT_LOG_PAGE_SIZE,sort:filters.sort,filters,
+   verifiedAccess:state.ttAttendance.access,includeSummary:reset,
+   summaryFallback:reset?null:state.ttAttendance.log?.summary||null
+  });
+  if(!isCurrent())return;
+  const previous=reset?[]:state.ttAttendance.log?.rows||[];
+  const rows=mergeTimeTrackerLogPages(previous,page.records);
+  state.ttAttendance={...state.ttAttendance,log:{...page,rows}};
+  state.ttLogPageError='';
+ }catch(error){
+  if(isCurrent()){
+   if(error?.code==='TT_LOG_STALE_SNAPSHOT'){
+    state.ttLogPageRetryReset=true;
+    state.ttLogPageError='Attendance changed while you were browsing. Retry to reload the latest records.';
+   }else state.ttLogPageError=errorMessage(error)||'Unable to retrieve attendance records. Retry.';
+  }
+ }finally{
+  if(run===state.ttLogPageRunId){
+   state.ttLogPageBusy=false;
+   if(seq===routeSerial&&state.view==='board'&&state.tab==='attendance'&&state.ttView==='log')render();
+  }
+ }
+}
+async function exportTimeTrackerLog(){
+ const snapshot=state.ttAttendance;
+ const identity=state.context?.user_id,workspace=state.context?.workspace_id,
+  boardId=state.boardId,filters={...state.ttLogFilters};
+ if(!snapshot?.log||!Array.isArray(snapshot.log.rows)||!snapshot.access)return;
+ try{
+  let rows=[...snapshot.log.rows];
+  let cursor=snapshot.log.nextCursor||null;
+  let hasMore=snapshot.log.hasMore===true;
+  const seenCursors=new Set();
+  while(hasMore){
+   if(!auth.isSignedIn||auth.userId!==identity||state.context?.user_id!==identity||
+      state.context?.workspace_id!==workspace||state.boardId!==boardId||
+      state.ttView!=='log'||JSON.stringify(state.ttLogFilters)!==JSON.stringify(filters))
+    throw new Error('The Log view changed during export. Retry the export.');
+   const page=await timeTracker.logPage(boardId,{
+    cursor,pageSize:100,sort:filters.sort,filters,verifiedAccess:snapshot.access,
+    includeSummary:false,summaryFallback:snapshot.log.summary
+   });
+   rows=mergeTimeTrackerLogPages(rows,page.records);
+   hasMore=page.hasMore;cursor=page.nextCursor;
+   if(hasMore){
+    const key=JSON.stringify(cursor);
+    if(!key||seenCursors.has(key))throw new Error('Attendance export cursor did not advance.');
+    seenCursors.add(key);
+   }
+  }
+  if(!auth.isSignedIn||auth.userId!==identity||state.context?.workspace_id!==workspace||
+     state.boardId!==boardId||state.ttView!=='log')
+   throw new Error('The signed workspace changed during export. Retry the export.');
+  const filtered=filterTimeTrackerLogRows(rows,filters);
+  if(!filtered.length){toast('No attendance records match the current Log filters.',true);return;}
+  const blob=new Blob([timeTrackerLogCsv(filtered)],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  try{
+   const link=document.createElement('a');link.href=url;
+   link.download='timetracker-authorized-filtered-log.csv';link.click();
+  }finally{setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  toast('Attendance Log CSV exported.');
+ }catch(error){
+  toast(errorMessage(error)||'Unable to export the complete attendance Log.',true);
+ }
+}
 async function loadTimeTracker(seq=routeSerial){
  if(state.view!=='board'||state.tab!=='attendance'||
     moduleByBoardName(state.board?.board?.name)?.key!=='timetracker')return;
+ if(state.ttLogSearchTimer){clearTimeout(state.ttLogSearchTimer);state.ttLogSearchTimer=null;}
  const run=++state.ttRunId,identity=state.context?.user_id,ws=state.context?.workspace_id;
+ const pendingSearch=pendingNativeSearchSelection?.applicationId==='timetracker'&&
+  pendingNativeSearchSelection.userId===identity&&
+  pendingNativeSearchSelection.workspaceId===ws&&
+  pendingNativeSearchSelection.boardId===state.boardId?pendingNativeSearchSelection:null;
+ const clockOnly=(state.ttView==='clock'||state.ttView==='log')&&
+  pendingSearch?.recordType!=='Overtime request';
  restoreTimeTrackerClockPending();
  // Normal Clock loading never probes browser geolocation.
  state.ttGeoPromptVisible=false;state.ttGeoMessage='';state.ttGeoPermission='unknown';
@@ -4493,10 +4592,10 @@ async function loadTimeTracker(seq=routeSerial){
   state.ttClockPending.workspaceId!==ws||state.ttClockPending.boardId!==state.boardId))
   state.ttClockPending=null;
  state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';
- state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
+ state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogPageRunId++;state.ttLogPageBusy=false;state.ttLogPageError='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
  state.ttBusy=true;state.ttError='';render();
  try{
-  const snapshot=await timeTracker.snapshot(state.boardId,{clockOnly:state.ttView==='clock'});
+  const snapshot=await timeTracker.snapshot(state.boardId,{clockOnly});
   if(run===state.ttRunId&&seq===routeSerial&&auth.isSignedIn&&
     state.context?.user_id===identity&&state.context?.workspace_id===ws)
    {state.ttAttendance=snapshot;
@@ -4525,10 +4624,13 @@ async function loadTimeTracker(seq=routeSerial){
      pendingNativeSearchSelection.workspaceId===ws&&
      pendingNativeSearchSelection.boardId===state.boardId?pendingNativeSearchSelection:null;
     if(pending){
-     if(pending.recordType==='Attendance session'&&
-       (snapshot.log?.rows||snapshot.records||[]).some(row=>row.id===pending.recordId)){
-      state.ttView='log';state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS,search:'',period:'all'};
-      state.ttLogExpandedIds=[pending.recordId];
+     if(pending.recordType==='Attendance session'){
+      const recordId=String(pending.recordId||'').replace(/^ojt:/,'');
+      if(validUuid(recordId)){
+       state.ttView='log';state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS,
+        search:'',period:'all',recordId};
+       state.ttLogExpandedIds=[pending.recordId];
+      }
      }else if(pending.recordType==='Overtime request'){
       const request=(snapshot.otRequests||[]).find(row=>row.id===pending.recordId);
       if(request){
@@ -4558,6 +4660,10 @@ async function loadTimeTracker(seq=routeSerial){
    }))void platformSync.syncNow('manual',[]);
   }
  }
+ if(run===state.ttRunId&&seq===routeSerial&&state.ttView==='log'&&
+    state.ttAttendance?.status==='VERIFIED_READ'){
+  await loadTimeTrackerLogPage(seq,{reset:true});
+ }
 }
 /** The UI guard is presentation only; both RPCs independently enforce System Admin. */
 function timeTrackerAdminLogReady(){
@@ -4572,7 +4678,7 @@ function timeTrackerAdminLogReady(){
   moduleByBoardName(state.board?.board?.name)?.key==='timetracker';
 }
 function timeTrackerOjtLogAdminScope(){
- if(!timeTrackerAdminLogReady()||!state.ttAttendance?.ojtAdminAttendance)return null;
+ if(!timeTrackerAdminLogReady())return null;
  const a=state.ttAttendance.access;
  return {userId:a.userId,workspaceId:a.workspaceId,boardId:a.boardId};
 }
@@ -4583,26 +4689,27 @@ async function openTimeTrackerAdminEditor(recordIds,mode='single',{timeOnly=fals
  const ids=[...new Set(recordIds||[])];
  if(ids.some(id=>String(id).startsWith('ojt:'))){
   const scope=timeTrackerOjtLogAdminScope();
-  const preview=state.ttAttendance?.ojtAdminAttendance?.records?.find(row=>'ojt:'+row.id===ids[0]);
-  if(!scope||mode!=='single'||ids.length!==1||!preview||
-     !timeTrackerLogRowsForSnapshot(state.ttAttendance).some(row=>row.isOjt&&row.id===ids[0])){
+  const preview=timeTrackerLogRowsForSnapshot(state.ttAttendance).find(row=>row.isOjt&&row.id===ids[0]);
+  if(!scope||mode!=='single'||ids.length!==1||!preview||!uuid.test(preview.recordId||'')){
    state.ttLogAdminError='Select one authorized intern attendance record.';render();return;
   }
   const identity=scope.userId,boardId=scope.boardId,seq=routeSerial;
+  const previewRecord={id:preview.recordId,
+   internId:String(preview.ownerId||'').replace(/^ojt:/,''),name:preview.name,
+   clockIn:preview.clockIn,clockOut:preview.clockOut,location:preview.location,
+   workNote:preview.workNote||'',revision:preview.revision};
   const editor={ojt:true,mode:'single',
    timeOnly:timeOnly||state.ttAttendance.access.moduleRole==='IT Administrator',
-   record:preview,recordIds:ids,revision:null,verifying:true,
+   record:previewRecord,recordIds:ids,revision:null,verifying:true,
    actorId:identity,workspaceId:scope.workspaceId,boardId};
   // Present the editor immediately and wait for a fresh signed revision before writes.
   state.ttLogAdminEditor=editor;
   state.ttLogAdminBusy=true;state.ttLogAdminError='';state.ttLogAdminSuccess='';render();
   try{
-   const signed=await timeTrackerOjt.adminAttendance(scope);
+   const row=await timeTrackerOjt.adminAttendanceRecord(scope,previewRecord.id);
    if(seq!==routeSerial||!timeTrackerOjtLogAdminScope()||
       state.context?.user_id!==identity||state.boardId!==boardId||
       state.ttLogAdminEditor!==editor)return;
-   const row=signed.records.find(item=>'ojt:'+item.id===ids[0]);
-   if(!row)throw Error('Intern attendance was changed or removed. Refresh Logs.');
    const revision=Number.isSafeInteger(row.revision)&&row.revision>=1?row.revision:null;
    state.ttLogAdminEditor={...editor,record:row,revision,verifying:false};
    if(revision===null)
@@ -4775,9 +4882,9 @@ async function confirmTimeTrackerAdminDeletion(){
   const seq=routeSerial,boardId=scope.boardId;
   state.ttLogAdminBusy=true;state.ttLogAdminError='';render();
   try{
-   const fresh=await timeTrackerOjt.adminAttendance(scope);
+   const recordId=String(ids[0]).replace(/^ojt:/,'');
+   const row=await timeTrackerOjt.adminAttendanceRecord(scope,recordId);
    if(seq!==routeSerial||state.boardId!==boardId||!timeTrackerOjtLogAdminScope())return;
-   const row=fresh.records.find(r=>'ojt:'+r.id===ids[0]);
    if(!row||row.revision!==confirmation.revision)
     throw Error('OJT_REVISION_CONFLICT');
    await timeTrackerOjt.mutateAdminRecord(scope,{
@@ -7750,7 +7857,7 @@ async function action(name,button){
       state.ws02dB3HandoffPending=true;
       await auth.signOut({scope:'local'});
     }
-    paseoReadRunId++;state.paseoManagement=null;    state.row01Busy=false;state.row01Result=null;state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;if(!isB3LocalRevoke&&!isTl03LocalRevoke&&!isB3RlsHandoff)await auth.signOut();ttWorkNoteDraft.clear();timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;clearTimeTrackerOjtSelection();state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtManualVisibleCount=50;state.ttOtExpandedRequestIds=[];state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};boardCacheChannel.stop();db.invalidateBoardCache();state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;state.tl03ReadRunId++;state.tl03ReadBusy=false;state.tl03ReadResult=null;state.context=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.ws02dB3RevokeArmed=false;state.ws02dB3RevokedReport=revoked;state.b2QaRunId++;state.b2QaBusy=false;state.b2QaReport=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';state.tl03RevokeArmed=false;state.tl03RevokedReport=isTl03LocalRevoke?state.tl03RevokedReport:null;renderLogin();toast(isB3RlsHandoff?'Local sign-out complete. Sign in as another existing user in another workspace; then click B3 Step 2 without refreshing.':
+    paseoReadRunId++;state.paseoManagement=null;    state.row01Busy=false;state.row01Result=null;state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;if(!isB3LocalRevoke&&!isTl03LocalRevoke&&!isB3RlsHandoff)await auth.signOut();ttWorkNoteDraft.clear();timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;clearTimeTrackerOjtSelection();state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtManualVisibleCount=50;state.ttOtExpandedRequestIds=[];state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogPageRunId++;state.ttLogPageBusy=false;state.ttLogPageError='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};boardCacheChannel.stop();db.invalidateBoardCache();state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;state.tl03ReadRunId++;state.tl03ReadBusy=false;state.tl03ReadResult=null;state.context=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.ws02dB3RevokeArmed=false;state.ws02dB3RevokedReport=revoked;state.b2QaRunId++;state.b2QaBusy=false;state.b2QaReport=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';state.tl03RevokeArmed=false;state.tl03RevokedReport=isTl03LocalRevoke?state.tl03RevokedReport:null;renderLogin();toast(isB3RlsHandoff?'Local sign-out complete. Sign in as another existing user in another workspace; then click B3 Step 2 without refreshing.':
      isTl03LocalRevoke?'Signed out of this session only. TradeLink revocation: '+(state.tl03RevokedReport?.status||'BLOCKED')+'.':
      isB3LocalRevoke?'Signed out of this session only. B3 revocation: '+(revoked?.status||'BLOCKED')+'.':'Signed out successfully.');break;}
  case 'ws01-open':{
@@ -9891,14 +9998,24 @@ async function action(name,button){
    const member=state.ttAttendance.access.employees?.members.find(m=>m.id===button.dataset.userId);
    if(!member)return;
    state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS,employeeId:member.id};
-   state.ttView='log';render();
-   break;
+   state.ttView='log';state.ttLogSelectedIds=[];state.ttLogExpandedIds=[];
+   await loadTimeTracker();break;
   }
  case 'tt-log-employee-clear':{
    if(state.ttView!=='log'||state.ttAttendance?.status!=='VERIFIED_READ')return;
    state.ttLogFilters={...state.ttLogFilters,employeeId:null};
-   render();break;
+   state.ttLogSelectedIds=[];state.ttLogExpandedIds=[];
+   await loadTimeTrackerLogPage(routeSerial,{reset:true});break;
   }
+ case 'tt-log-load-more':{
+  if(state.ttBusy||state.ttLogPageBusy||state.ttView!=='log'||
+     state.ttAttendance?.status!=='VERIFIED_READ')return;
+  const pendingSearch=Boolean(state.ttLogSearchTimer);
+  if(pendingSearch){clearTimeout(state.ttLogSearchTimer);state.ttLogSearchTimer=null;}
+  const initial=pendingSearch||state.ttLogPageRetryReset||
+   !Number.isSafeInteger(state.ttAttendance.log?.pageSize);
+  await loadTimeTrackerLogPage(routeSerial,{reset:initial});break;
+ }
  case 'tt-employees-refresh':{
   if(state.ttBusy||state.ttView!=='employees'||state.ttAttendance?.status!=='VERIFIED_READ')return;
   await loadTimeTracker();break;
@@ -9913,12 +10030,12 @@ async function action(name,button){
   if(next!=='ot')state.ttOtModalOpen=false;
   if(next===state.ttView)return;
   state.ttGeoPromptVisible=false;state.ttGeoMessage='';
-  if(next!=='log'){state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogSelectedIds=[];state.ttLogAdminError='';state.ttLogAdminSuccess='';}
+  if(next!=='log'){if(state.ttLogSearchTimer){clearTimeout(state.ttLogSearchTimer);state.ttLogSearchTimer=null;}state.ttLogPageRunId++;state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogSelectedIds=[];state.ttLogAdminError='';state.ttLogAdminSuccess='';}
   state.ttView=next;render();
   animateTabContent('.tt-secondary-content, .tt-clock-stage');
   // Clock opens with only critical signed reads. Hydrate secondary views on demand.
   const requiresDetail=next!=='clock'&&state.ttAttendance?.clockOnly===true;
-  if(requiresDetail)await loadTimeTracker();
+  if(next==='log'||requiresDetail)await loadTimeTracker();
   if(next==='employees'&&!requiresDetail)await loadTimeTracker();
   if(next==='team')await loadTimeTrackerTeam();
   if(next==='monitor')await loadTimeTrackerMonitor();
@@ -10119,16 +10236,9 @@ async function action(name,button){
   break;
  }
  case 'tt-log-export':{
-  if(state.ttBusy||state.ttView!=='log'||state.view!=='board'||
+  if(state.ttBusy||state.ttLogPageBusy||state.ttView!=='log'||state.view!=='board'||
      state.tab!=='attendance'||state.ttAttendance?.status!=='VERIFIED_READ')return;
-  const rows=filterTimeTrackerLogRows(timeTrackerLogRowsForSnapshot(state.ttAttendance),state.ttLogFilters);
-  if(!rows.length)return;
-  const blob=new Blob([timeTrackerLogCsv(rows)],{type:'text/csv;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  try{const link=document.createElement('a');link.href=url;
-   link.download='timetracker-authorized-filtered-log.csv';link.click();}
-  finally{URL.revokeObjectURL(url);}
-  break;
+  await exportTimeTrackerLog();break;
  }
  case 'tt-export':{
   if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='reports'||
@@ -10237,7 +10347,7 @@ async function action(name,button){
  }
  case 'tt-monitor-clear':{
   if(state.ttView!=='monitor'||state.ttAttendance?.status!=='VERIFIED_READ')return;
-  state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
+  state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogPageRunId++;state.ttLogPageBusy=false;state.ttLogPageError='';state.ttLogExpandedIds=[];state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
   state.ttMonitorBusy=false;render();break;
  }
  case 'tt-team-department-edit':{
@@ -13135,9 +13245,11 @@ root.addEventListener('change',event=>{
   if(key==='period'&&['all','today','week','month'].includes(value)||
      key==='status'&&['all','Active','Completed','Late','Administrative closure'].includes(value)||
      key==='sort'&&['newest','oldest'].includes(value)||
-     key==='location'&&(value==='all'||timeTrackerLogRowsForSnapshot(state.ttAttendance).some(r=>r.location===value))){
-    state.ttLogFilters={...state.ttLogFilters,[key]:value};
-    render();
+     key==='location'&&(value==='all'||TT_LOCATIONS.includes(value))){
+   if(state.ttLogSearchTimer){clearTimeout(state.ttLogSearchTimer);state.ttLogSearchTimer=null;}
+   state.ttLogFilters={...state.ttLogFilters,[key]:value,recordId:null};
+   state.ttLogSelectedIds=[];state.ttLogExpandedIds=[];
+   void loadTimeTrackerLogPage(routeSerial,{reset:true});
   }
  }
  if(event.target.id==='tt-report-period'&&
@@ -13670,8 +13782,16 @@ root.addEventListener('input',event=>{
  }
  if(event.target.id==='tt-log-search'&&state.view==='board'&&state.ttView==='log'&&
     state.ttAttendance?.status==='VERIFIED_READ'){
-  state.ttLogFilters={...state.ttLogFilters,search:String(event.target.value).slice(0,120)};
+  state.ttLogFilters={...state.ttLogFilters,search:String(event.target.value).slice(0,120),recordId:null};
   applyTimeTrackerLogSearch(root,state.ttLogFilters.search);
+  if(state.ttLogSearchTimer)clearTimeout(state.ttLogSearchTimer);
+  state.ttLogSearchTimer=setTimeout(()=>{
+   state.ttLogSearchTimer=null;
+   if(state.view==='board'&&state.tab==='attendance'&&state.ttView==='log'){
+    state.ttLogSelectedIds=[];state.ttLogExpandedIds=[];
+    void loadTimeTrackerLogPage(routeSerial,{reset:true});
+   }
+  },300);
   return;
  }
  if(event.target.id==='tt-report-search'&&
@@ -13827,7 +13947,7 @@ window.addEventListener('keydown',event=>{
   if(state.ttOtModalOpen){state.ttOtModalOpen=false;render();}
 }});
 auth.onExpired=()=>{boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();ttWorkNoteDraft.clear();paseoReadRunId++;state.paseoManagement=null;timeTrackerPendingRecovery.clear(state.ttClockPending||timeTrackerClockScope());state.ttClockPending=null;globalSearchController?.close({restoreFocus:false});pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;invitationAcceptanceStatus='';// Keep an open invitation through session expiry so the user can sign in again.
- startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;clearTimeTrackerOjtSelection();state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtManualVisibleCount=50;state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
+ startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;clearTimeTrackerOjtSelection();state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtManualVisibleCount=50;state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogPageRunId++;state.ttLogPageBusy=false;state.ttLogPageError='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
 let workspacePreferenceSyncPending=false;
 let workspacePreferenceSyncQueued=null;
 let pendingExternalSignIn=false;

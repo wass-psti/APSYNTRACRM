@@ -19,6 +19,8 @@ const safeRows=rows=>Array.isArray(rows)?rows.filter(r=>r&&validTime(r.clockIn))
  */
 export function timeTrackerLogRowsForSnapshot(snapshot){
  if(snapshot?.status!=='VERIFIED_READ')return [];
+ if(Number.isSafeInteger(snapshot.log?.pageSize)&&Array.isArray(snapshot.log?.rows))
+  return snapshot.log.rows;
  const standard=snapshot.log?.rows||snapshot.records||[];
  if(!['System Admin','IT Administrator'].includes(snapshot.access?.moduleRole))
   return standard;
@@ -123,12 +125,16 @@ const locationsPalette=[
  ['Local Field Works','local'],['Out of Town Assignment','outtown'],
  ['International Field Assignments','international']
 ];
-function locationDistribution(rows){
- const total=rows.length;
+function locationDistribution(rows,summary=null){
+ const counts=Array.isArray(summary?.locationCounts)?
+  new Map(summary.locationCounts.map(item=>[item.location,Number(item.count)||0])):null;
+ const total=Number.isSafeInteger(summary?.sessions)?summary.sessions:rows.length;
  const buckets=locationsPalette.map(([location,color])=>({
-  location,color,count:rows.filter(r=>r.location===location).length
+  location,color,count:counts?counts.get(location)||0:
+   rows.filter(r=>r.location===location).length
  }));
- const unknown=rows.filter(r=>!TT_LOCATIONS.includes(r.location)).length;
+ const unknown=counts?counts.get('Unspecified')||0:
+  rows.filter(r=>!TT_LOCATIONS.includes(r.location)).length;
  if(unknown)buckets.push({location:'Unspecified',color:'other',count:unknown});
  return '<section class="tt-log-location-panel" aria-label="Location distribution">'+
   '<div class="tt-log-section-heading"><h4>⌖ &nbsp; LOCATION DISTRIBUTION</h4>'+
@@ -146,14 +152,14 @@ function locationDistribution(rows){
    '<span><i class="tt-log-dot tt-log-dot-'+x.color+'"></i>'+esc(x.location)+
    ' <strong>'+x.count+'</strong></span>').join('')+'</div></section>';
 }
-function dailyOperations(rows,now){
+function dailyOperations(rows,now,summary=null){
  const today=manilaDay(now);
- const todays=rows.filter(r=>manilaDay(r.clockIn)===today);
- const before=todays.filter(r=>r.classification==='On time').length;
- const late=todays.filter(r=>r.classification==='Late').length;
- const active=todays.filter(r=>r.status==='Active').length;
- const stagnant=todays.filter(r=>r.status==='Active'&&openDuration(r,now)>=14*3600000).length;
- const total=todays.length;
+ const todays=summary?null:rows.filter(r=>manilaDay(r.clockIn)===today);
+ const before=summary?summary.todayOnTime:todays.filter(r=>r.classification==='On time').length;
+ const late=summary?summary.todayLate:todays.filter(r=>r.classification==='Late').length;
+ const active=summary?summary.todayActive:todays.filter(r=>r.status==='Active').length;
+ const stagnant=summary?summary.todayStagnant:todays.filter(r=>r.status==='Active'&&openDuration(r,now)>=14*3600000).length;
+ const total=summary?summary.today:todays.length;
  const items=[
   ['✓','Before 8 AM',before,ratio(before,total),'green'],
   ['◷','Late Today',late,ratio(late,total),'orange'],
@@ -175,26 +181,26 @@ function dailyOperations(rows,now){
     widthBucket(rate===null?0:rate)+'"></i></div></article>').join('')+
   '</div></section>';
 }
-function shiftProgress(rows,now){
+function shiftProgress(rows,now,summary=null){
  const today=manilaDay(now);
- const todays=rows.filter(r=>manilaDay(r.clockIn)===today);
- const active=todays.filter(r=>r.status==='Active').length;
- const complete=todays.filter(r=>r.status==='Completed').length;
- const office=todays.filter(r=>r.location==='Office-Base Duty').length;
- const late=todays.filter(r=>r.classification==='Late').length;
- const credits=todays.reduce((sum,r)=>sum+(Number.isFinite(r.creditedMs)?
-  r.creditedMs:0),0);
+ const todays=summary?null:rows.filter(r=>manilaDay(r.clockIn)===today);
+ const active=summary?summary.todayActive:todays.filter(r=>r.status==='Active').length;
+ const complete=summary?summary.todayCompleted:todays.filter(r=>r.status==='Completed').length;
+ const office=summary?summary.todayOffice:todays.filter(r=>r.location==='Office-Base Duty').length;
+ const late=summary?summary.todayLate:todays.filter(r=>r.classification==='Late').length;
+ const credits=summary?summary.todayCreditedMs:todays.reduce((sum,r)=>sum+(Number.isFinite(r.creditedMs)?r.creditedMs:0),0);
+ const total=summary?summary.today:todays.length;
  const cards=[
-  ['TOTAL',todays.length],['ACTIVE',active],['ON-SITE',office],
+  ['TOTAL',total],['ACTIVE',active],['ON-SITE',office],
   ['LATE',late],['CREDITED HRS',durationLabel(credits)],['DONE',complete]
  ];
  return '<div class="tt-log-shift-strip" aria-label="Today shift progress">'+
   '<div class="tt-log-shift-cards">'+cards.map(([label,value])=>
    '<div><strong>'+esc(value)+'</strong><span>'+esc(label)+'</span></div>').join('')+'</div>'+
   '<div class="tt-log-progress"><span>SHIFT PROGRESS</span>'+
-   '<progress value="'+complete+'" max="'+Math.max(1,todays.length)+
+   '<progress value="'+complete+'" max="'+Math.max(1,total)+
    '" aria-label="Completed sessions among today clock-ins"></progress>'+
-   '<strong>'+complete+' / '+todays.length+'</strong></div></div>';
+   '<strong>'+complete+' / '+total+'</strong></div></div>';
 }
 function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=false,gpsError='',gpsErrorRecordId='',mapEnabled=false,mapTheme='map',adminEligible=false,adminFullAccess=false,adminBusy=false}={}){
  const start=Date.parse(row.clockIn),end=Date.parse(row.clockOut||now);
@@ -351,7 +357,7 @@ export function renderTimeTrackerLog({
  gpsEligible=false,gpsData=null,gpsBusy=false,gpsError='',gpsErrorRecordId='',
  expandedRecordIds=[],mapEnabled=false,mapTheme='map',
  adminEligible=false,adminFullAccess=adminEligible,adminDirectory=[],selectedIds=[],adminEditor=null,adminDeleteConfirm=null,
- adminBusy=false,adminError='',adminSuccess=''
+ adminBusy=false,adminError='',adminSuccess='',pageHasMore=false,pageBusy=false,pageError='',serverSummary=null
 }={}){
  const options={...TT_LOG_DEFAULT_FILTERS,...filters};
  const rows=filterTimeTrackerLogRows(records,{...options,search:''},now);
@@ -359,10 +365,9 @@ export function renderTimeTrackerLog({
  const editableVisible=visible.some(row=>!row.isOjt);
  const standardSelected=selectedIds.filter(id=>rows.some(row=>row.id===id&&!row.isOjt));
  const query=String(options.search??'').slice(0,120);
- const summary=timeTrackerLogSummary(rows,now);
+ const summary=serverSummary||timeTrackerLogSummary(rows,now);
  const team=scope==='AUTHORIZED_WORKSPACE_TEAM';
- const places=[...new Set(safeRows(records).map(r=>r.location).
-  filter(v=>TT_LOCATIONS.includes(v)))].sort();
+ const places=[...TT_LOCATIONS];
  return '<section class="tt-log tt-log-command" aria-label="Signed attendance Log">'+
   '<header class="tt-log-hero tt-log-command-hero" aria-label="Authorized attendance history">'+
    '<div class="tt-log-graphics" aria-hidden="true">'+
@@ -402,19 +407,19 @@ export function renderTimeTrackerLog({
     ['all','All locations'],...places.map(v=>[v,v])
    ],options.location)+'</label>'+
    '<label>Sort'+choices('tt-log-sort',sortModes,options.sort)+'</label>'+
-   '<span class="tt-log-results-count">'+visible.length+' of '+summary.sessions+
-   ' authorized sessions</span>'+
+   '<span class="tt-log-results-count">'+visible.length+' loaded · '+summary.sessions+
+   ' sessions in selected filters</span>'+
    '<button class="secondary" type="button" data-action="tt-log-export"'+
-    (busy||!visible.length?' disabled':'')+'>Export CSV</button></section>'+
-  locationDistribution(rows)+dailyOperations(rows,now)+shiftProgress(rows,now)+
+    (busy||pageBusy||!visible.length?' disabled':'')+'>Export CSV</button></section>'+
+  locationDistribution(rows,summary)+dailyOperations(rows,now,serverSummary)+shiftProgress(rows,now,serverSummary)+
   '<section class="tt-log-panel tt-log-records">'+
    '<div class="tt-log-panel-top"><div><h4>Attendance Records</h4>'+
     '<p>Attendance history · <span id="tt-log-visible-count">'+visible.length+'</span> of '+
-    summary.sessions+' sessions match filters · '+summary.people+
+    summary.sessions+' sessions in selected filters · '+summary.people+
     ' authorized employee'+(summary.people===1?'':'s')+'</p></div>'+
     '<span class="tt-log-readonly">'+summary.historical+
     ' earlier · '+summary.today+' today</span></div>'+
-   (adminEligible?'<p class="tt-log-footnote">Click any record to view its details in a popup. Standard employee records support authorized editing and multi-selection; OJT intern records can be corrected individually by authorized admins; bulk operations remain for standard employees. Intern attendance is drawn from the latest signed OJT snapshot (up to 100 entries).</p>':'')+
+   (adminEligible?'<p class="tt-log-footnote">Click any record to view its details in a popup. Standard employee records support authorized editing and multi-selection; OJT intern records can be corrected individually by authorized admins; bulk operations remain for standard employees. All eligible intern attendance is available through the same paginated history.</p>':'')+
    (adminFullAccess?'<div class="tt-log-admin-toolbar" role="region" aria-label="System Admin attendance record management">'+
     '<div class="tt-log-admin-toolbar-copy"><div class="tt-log-admin-toolbar-heading"><span class="tt-log-admin-toolbar-icon" aria-hidden="true">✦</span><div><strong>Manage attendance records</strong><span>Click a record to highlight it; no checkboxes required</span></div></div>'+
     '<div class="tt-log-admin-selection-status"><strong class="tt-log-admin-selected">'+selectedIds.length+'</strong><span>selected <i>·</i> up to '+TT_ADMIN_RECORD_LIMIT+'</span></div></div>'+
@@ -436,10 +441,16 @@ export function renderTimeTrackerLog({
       adminEligible,adminFullAccess,
       adminBusy,selectedIds})).join('')+
      '</tbody></table></div></div>':
+     pageBusy?'<p class="tt-log-empty" role="status">Loading attendance records…</p>':
+     pageError?'<p class="tt-log-empty" role="alert">'+esc(pageError)+'</p>':
      '<p class="tt-log-empty">No authorized attendance sessions match these filters.</p>')+
    (rows.length?'<p id="tt-log-empty-search" class="tt-log-empty"'+
     (visible.length?' hidden':'')+'>No sessions match the current search.</p>':'')+
-   '<p class="tt-log-footnote">Daily operations are based on the current Philippine date. Location and shift summaries reflect the selected date, status and location. Search narrows records and CSV only.</p>'+
+   (pageError?'<div class="tt-log-page-feedback" role="alert"><span>'+esc(pageError)+'</span><button type="button" data-action="tt-log-load-more">Retry</button></div>':
+    pageBusy?'<p class="tt-log-page-loading" role="status"><span class="tt-inline-spinner" aria-hidden="true"></span> Loading attendance records…</p>':
+    pageHasMore?'<div class="tt-log-pagination"><button type="button" class="secondary" data-action="tt-log-load-more">Load More</button></div>':
+    rows.length?'<p class="tt-log-end" role="status">'+(options.sort==='oldest'?"You’ve reached the newest available attendance record.":"You’ve reached the oldest available attendance record.")+'</p>':'')+
+   '<p class="tt-log-footnote">Search and filters are applied by the attendance service before each page is returned. Load More retrieves the next matching records without replacing those already displayed.</p>'+
    '<p class="tt-log-footnote">Exact GPS positions are shown only after a bootstrap administrator or assigned Supervisor receives a valid signed server GPS snapshot. Audit scores, satellite imagery, device fingerprints and manual-edit evidence are not inferred.</p>'+
   '</section>'+(adminEditor||adminDeleteConfirm?'':renderTimeTrackerLogDetailDialog({row:rows.find(r=>expandedRecordIds.includes(r.id))||null,now,
     gpsEligible,gpsData,gpsBusy,gpsError,gpsErrorRecordId,mapEnabled,mapTheme,

@@ -20,7 +20,7 @@ const example=(ownerId=user)=>({
 });
 function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=workspace,
  records=[],malformed=false,writeReady=false,foreignCapability=false,autoClockoutSnapshot=null,departmentValue='HR',email='employee@example.test'}={}){
- let commitCount=0, lastWrite=null;
+ let commitCount=0, lastWrite=null,rpcNames=[];
  const auth={userId:activeUser,getVerifiedUser:async()=>({id:activeUser,email})};
  let currentRecords=records;
  const api={
@@ -35,22 +35,30 @@ function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=works
   board:async()=>{throw Error('Generic board reads must not gate native TimeTracker access');},
   allowed:async()=>{throw Error('Generic board permissions must not gate native TimeTracker access');},
   rpc:async(name,args)=>{
+   rpcNames.push(name);
    switch(name){
     case 'has_module_access':return grant;
+    case 'timetracker_attendance_capabilities':return {
+     mode:'ACTIVE',contract:'tt-attendance-1',canClock:writeReady,
+     actorId:activeUser,workspaceId:foreignCapability?foreign:ctxWs,
+     boardId:board,moduleRole:role
+    };
     case 'list_module_directory':return [{id:activeUser,status:'active',module_role:role,
      display_name:'Test signed employee'}];
     case 'list_module_state':return [{state_key:'timetracker.attendance.v1',
      scope:'shared',revision:2,value:malformed?'not-json':JSON.stringify({version:1,records:currentRecords})}];
+    case 'timetracker_attendance_clock_snapshot':return {
+     mode:'ACTIVE',contract:'tt-attendance-clock-1',actorId:activeUser,
+     workspaceId:ctxWs,boardId:board,revision:2,
+     records:currentRecords.filter(row=>row?.ownerId==='cloud:'+activeUser&&
+      (row.clockOut==null||Date.parse(row.clockIn?.timestamp)>=Date.parse(stamp(0))))
+    };
     case 'timetracker_auto_clockout_snapshot':
      if(autoClockoutSnapshot===null)throw Error('PGRST202: function not deployed');
      return autoClockoutSnapshot;
     case 'timetracker_employee_department_for_clock':
      return {contract:'tt-department-1',actorId:activeUser,
       workspaceId:ctxWs,boardId:board,department:departmentValue};
-    case 'timetracker_attendance_capabilities':
-     if(!writeReady)throw Error('PGRST202: function not deployed');
-     return {mode:'ACTIVE',contract:'tt-attendance-1',canClock:true,
-      actorId:activeUser,workspaceId:foreignCapability?foreign:ctxWs,boardId:board};
     case 'timetracker_attendance_commit_v2':{
      commitCount++;
      lastWrite=args;
@@ -69,7 +77,7 @@ function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=works
   }
  };
  return {client:new TimeTrackerNativeClient({auth,api}),auth,api,commits:()=>commitCount,
-  lastWrite:()=>lastWrite};
+  lastWrite:()=>lastWrite,rpcNames:()=>rpcNames};
 }
 
 test('source 08:00 late threshold and unpaid 12:00–13:00 credit policy',()=>{
@@ -149,6 +157,87 @@ test('signed automatic clock-out snapshot is bound to the active session and PHT
   ...response,session:null
  }}).client.snapshot(board);
  assert.equal(legacy.autoClockout,null);
+});
+
+
+test('Clock-only snapshot reads current personal sessions without downloading shared history',async()=>{
+ const s=setup({records:[example()]});
+ const snapshot=await s.client.snapshot(board,{clockOnly:true});
+ assert.equal(snapshot.status,'VERIFIED_READ');
+ assert.equal(snapshot.clockOnly,true);
+ assert.equal(snapshot.records.length,1);
+ assert.equal(snapshot.active.id,'session-1');
+ assert.deepEqual(snapshot.log.rows,[]);
+ assert.equal(snapshot.overview,null);
+ assert.ok(s.rpcNames().includes('timetracker_attendance_clock_snapshot'));
+ assert.ok(!s.rpcNames().includes('list_module_state'));
+ assert.equal(snapshot.access.moduleRole,'Employee');
+ await assert.rejects(setup({role:'invalid'}).client.snapshot(board,{clockOnly:true}),/role assignment/);
+});
+
+test('Log page client sends stable server filters and validates the signed bounded response',async()=>{
+ const s=setup({role:'HR'});
+ const access=await s.client.access(board);
+ const recordId='00000000-0000-4000-8000-000000000010';
+ const response={
+  mode:'ACTIVE',contract:'tt-attendance-log-page-1',actorId:user,
+  workspaceId:workspace,boardId:board,scope:'AUTHORIZED_WORKSPACE_TEAM',
+  records:[{id:recordId,recordId,sourceRank:0,ownerId:'cloud:'+other,
+   name:'Coworker',clockIn:'2026-11-24T01:00:00.000Z',clockOut:null,
+   department:'Engineering',location:TT_LOCATIONS[0],status:'Active',
+   classification:'Late',workNote:null,creditedMs:null,isOjt:false,revision:2}],
+  hasMore:false,nextCursor:null,pageSize:1,
+  sourceRevision:2,ojtRevision:1,
+  summary:{sessions:1,people:1,today:1,historical:0,completed:0,active:1,late:1,
+   creditedMs:0,todayOnTime:0,todayLate:1,todayActive:1,todayStagnant:0,
+   todayOffice:1,todayCompleted:0,todayCreditedMs:0,
+   locationCounts:[{location:TT_LOCATIONS[0],count:1}]}
+ };
+ const original=s.api.rpc;
+ let request=null;
+ s.api.rpc=async(name,args)=>{
+  if(name==='timetracker_attendance_log_page'){request=args;return response;}
+  return original(name,args);
+ };
+ const page=await s.client.logPage(board,{
+  verifiedAccess:access,pageSize:1,sort:'oldest',
+  filters:{period:'today',status:'Late',location:TT_LOCATIONS[0],
+   employeeId:null,search:'Coworker'}
+ });
+ assert.equal(page.records[0].id,recordId);
+ assert.equal(page.hasMore,false);
+ assert.equal(request.p_page_size,1);
+ assert.equal(request.p_sort,'oldest');
+ assert.equal(request.p_period,'today');
+ assert.equal(request.p_status,'Late');
+ assert.equal(request.p_location,TT_LOCATIONS[0]);
+ assert.equal(request.p_search,'Coworker');
+ assert.equal(request.p_include_summary,true);
+ assert.equal(request.p_record_id,null);
+ const nextResponse={...response,summary:null};
+ s.api.rpc=async(name,args)=>{if(name==='timetracker_attendance_log_page'){request=args;return nextResponse;}return original(name,args);};
+ const next=await s.client.logPage(board,{verifiedAccess:access,pageSize:1,sort:'oldest',
+  filters:{period:'today',status:'Late',location:TT_LOCATIONS[0],search:'Coworker',recordId},
+  includeSummary:false,summaryFallback:response.summary});
+ assert.equal(next.summary.sessions,1);
+ assert.equal(request.p_record_id,recordId);
+});
+
+test('Log page stops and requests a first-page reset when its chronological snapshot changes',async()=>{
+ const s=setup({records:[example()]});
+ const original=s.api.rpc;
+ s.api.rpc=async(name,args)=>{
+  if(name==='timetracker_attendance_log_page')return {
+   mode:'STALE_SNAPSHOT',contract:'tt-attendance-log-page-1',
+   actorId:user,workspaceId:workspace,boardId:board,scope:'OWN_ATTENDANCE_ONLY'
+  };
+  return original(name,args);
+ };
+ await assert.rejects(s.client.logPage(board,{
+  verifiedAccess:{userId:user,workspaceId:workspace,boardId:board,moduleRole:'Employee'},
+  cursor:{clockIn:stamp(8),sourceRank:0,recordId:'00000000-0000-4000-8000-000000000010',
+   sourceRevision:2,ojtRevision:1}
+ }),error=>error.code==='TT_LOG_STALE_SNAPSHOT');
 });
 
 test('clock-in validates offsite note, GPS and duplicate sessions before RPC',async()=>{

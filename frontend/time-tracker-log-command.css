@@ -175,3 +175,27 @@
  #app .aps-board-shell .tt-native .tt-log-command .tt-log-hero h3{color:#fff}
  #app .aps-board-shell .tt-native .tt-log-command .tt-log-panel{border-color:#7f90b2}
 }
+
+/* Bounded historical Log pagination: compact, keyboard-accessible controls. */
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-pagination{
+ display:flex;justify-content:center;align-items:center;padding:18px 12px 8px;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-pagination button{
+ min-width:164px;min-height:42px;font-weight:650;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-page-feedback{
+ display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap;
+ padding:14px 12px;color:var(--text-secondary,#667085);font-size:13px;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-page-feedback button{
+ min-height:36px;padding:7px 14px;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-page-loading,
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-end{
+ display:flex;justify-content:center;align-items:center;gap:9px;
+ padding:14px 12px;color:var(--text-secondary,#667085);font-size:13px;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-page-loading .tt-inline-spinner{
+ width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;
+ border-radius:50%;display:inline-block;border-right-color:currentColor;
+}

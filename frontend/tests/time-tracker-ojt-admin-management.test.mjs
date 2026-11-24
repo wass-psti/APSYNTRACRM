@@ -192,7 +192,7 @@ test('OJT individual Remove selection never enables ordinary employee bulk edits
  assert.ok(app.includes('state.ttLogSelectedIds=[id]'));
  assert.ok(app.includes('if(record.isOjt)'));
  assert.ok(app.includes('state.ttLogExpandedIds=[]'));
- assert.ok(app.includes('timeTrackerOjt.adminAttendance(scope)'));
+ assert.ok(app.includes('timeTrackerOjt.adminAttendanceRecord(scope,previewRecord.id)'));
  assert.match(app,/Signed OJT editing requires database migration/);
 });
 
@@ -230,6 +230,6 @@ test('OJT signed mutator validates actor/board/revision and never uses ordinary 
   recordId,action:'edit',expectedRevision:null}),/current signed intern attendance record/);
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/timeTrackerOjt\.mutateAdminRecord\(scope,/);
- assert.match(app,/timeTrackerOjt\.adminAttendance\(scope\)/);
+ assert.match(app,/timeTrackerOjt\.adminAttendanceRecord\(scope,recordId\)/);
  assert.match(app,/timeTrackerOjtLogAdminScope/);
 });

@@ -3,6 +3,7 @@ import {TT_LOCATIONS,creditedAttendanceMs,creditedAttendanceRecordMs,manilaClock
 export {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
 import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-overview.js';
 import {projectTimeTrackerLog} from './time-tracker-history.js';
+import {validateTimeTrackerLogPage,TT_LOG_PAGE_SIZE} from './time-tracker-log-pagination.js';
 import {projectTimeTrackerOtRows,validateOvertimeDraft,validateManualOvertimeDraft,TT_OT_WRITES_ACCEPTED} from './time-tracker-overtime.js';
 import {projectTimeTrackerTeamDirectory,projectTimeTrackerTeamDepartments,TT_TEAM_DEPARTMENTS,validTimeTrackerDepartmentName} from './time-tracker-team.js';
 import {projectTimeTrackerEmployees,projectTimeTrackerEmployeeDepartments,projectTimeTrackerDepartmentCatalog} from './time-tracker-application.js';
@@ -120,36 +121,50 @@ async function checkIdentity(auth,api,expected,boardId){
 }
 export class TimeTrackerNativeClient{
  constructor({auth,api}){this.auth=auth;this.api=api;}
- async access(boardId){
+ async access(boardId,{includeDirectory=true}={}){
   const {auth,api}=this;
   const [who,ctx]=await Promise.all([auth.getVerifiedUser(),api.context()]);
   verifiedContext(auth,ctx,boardId);
   if(who?.id!==ctx.user_id)deny('Signed identity mismatch');
   const [native,granted]=await Promise.all([
    api.nativeApplicationBoardContext(moduleId),
-   api.rpc('has_module_access',{p_module_id:moduleId,p_user_id:who.id})
+   includeDirectory?
+    api.rpc('has_module_access',{p_module_id:moduleId,p_user_id:who.id}):
+    api.rpc('timetracker_attendance_capabilities',{p_board_id:boardId})
   ]);
   if(native?.userId!==who.id||native?.workspaceId!==ctx.workspace_id||
      native?.board?.id!==boardId||native.board.name!=='TimeTracker Attendance')
    deny('TimeTracker native application identity or workspace mismatch');
-  if(granted!==true)deny('TimeTracker application grant required');
-  const users=await api.rpc('list_module_directory',{p_module_id:moduleId});
-  if(!Array.isArray(users))deny('TimeTracker central directory unavailable');
-  const self=users.find(x=>x?.id===who.id&&x.status==='active');
+  let users=[],self,clockCapability=null;
+  if(includeDirectory){
+   if(granted!==true)deny('TimeTracker application grant required');
+   users=await api.rpc('list_module_directory',{p_module_id:moduleId});
+   if(!Array.isArray(users))deny('TimeTracker central directory unavailable');
+   self=users.find(x=>x?.id===who.id&&x.status==='active');
+  }else{
+   clockCapability=granted;
+   if(!isRecord(clockCapability)||clockCapability.mode!=='ACTIVE'||
+      clockCapability.contract!=='tt-attendance-1'||
+      clockCapability.actorId!==who.id||clockCapability.workspaceId!==ctx.workspace_id||
+      clockCapability.boardId!==boardId||typeof clockCapability.moduleRole!=='string')
+    deny('Signed TimeTracker role snapshot unavailable');
+   self={id:who.id,status:'active',module_role:clockCapability.moduleRole,
+    display_name:ctx.profile?.display_name||'Signed user'};
+  }
   if(!self||!TT_ROLES.includes(self.module_role))
    deny('Central TimeTracker role assignment unavailable');
   await checkIdentity(auth,api,{userId:who.id,workspaceId:ctx.workspace_id},boardId);
-  const overviewDirectory=users.filter(u=>u&&u.status==='active'&&
+  const overviewDirectory=includeDirectory?users.filter(u=>u&&u.status==='active'&&
     typeof u.id==='string'&&(u.id===who.id||TT_TEAM_OVERVIEW_ROLES.includes(self.module_role)))
     .map(u=>Object.freeze({id:u.id,status:'active',
-      display_name:String(u.display_name||'Workforce member').slice(0,100)}));
+      display_name:String(u.display_name||'Workforce member').slice(0,100)})):[];
   // Reuse this EXISTING authenticated Supabase module directory read.
   // Only name + TimeTracker role are carried into the read-only employee tab.
   // A corrupt optional roster must never interrupt Clock In/Out or My Hours.
   // Render Employees unavailable rather than exposing or guessing directory rows.
   let employees=null;
   try{
-   employees=projectTimeTrackerEmployees(users,{
+   if(includeDirectory)employees=projectTimeTrackerEmployees(users,{
     userId:who.id,workspaceId:ctx.workspace_id,boardId,validRoles:TT_ROLES
    });
   }catch{/* Fail closed for the optional read-only Employees view. */}
@@ -157,14 +172,14 @@ export class TimeTrackerNativeClient{
     platformRole:ctx.profile?.platform_role||'Unassigned',
     moduleRole:self.module_role,name:String(self.display_name||'Signed user').slice(0,100),
     email:typeof who.email==='string'?who.email.trim().toLowerCase():'',
-    overviewDirectory:Object.freeze(overviewDirectory),employees});
+    overviewDirectory:Object.freeze(overviewDirectory),employees,clockCapability});
 
  }
  /** Only a current signed, board-scoped server v2 capability can unlock Clock. */
  async attendanceCapability(boardId,access){
   if(!TT_LIVE_ATTENDANCE_WRITES_ACCEPTED)return false;
   try{
-   const cap=await this.api.rpc('timetracker_attendance_capabilities',{p_board_id:boardId});
+   const cap=access?.clockCapability||await this.api.rpc('timetracker_attendance_capabilities',{p_board_id:boardId});
    return isRecord(cap)&&cap.mode==='ACTIVE'&&cap.contract==='tt-attendance-1'&&
     cap.canClock===true&&cap.actorId===access.userId&&
     cap.workspaceId===access.workspaceId&&cap.boardId===boardId;
@@ -174,7 +189,7 @@ export class TimeTrackerNativeClient{
   }
  }
  async snapshot(boardId,{clockOnly=false}={}){
-  const access=await this.access(boardId);
+  const access=await this.access(boardId,{includeDirectory:!clockOnly});
   const canManageOjt=['System Admin','IT Administrator'].includes(access.moduleRole);
   // Issue independent, read-only RPCs together AFTER signed access verification.
   // Backend scope checks remain authoritative; identity is checked again below.
@@ -195,23 +210,45 @@ export class TimeTrackerNativeClient{
   const departmentRead=this.api.rpc('timetracker_employee_department_for_clock',{
    p_board_id:boardId
   }).then(response=>({response}),error=>({error}));
-  const raw=await this.api.rpc('list_module_state',{p_module_id:moduleId});
-  if(!Array.isArray(raw))deny('TimeTracker state API contract invalid');
-  const row=raw.find(x=>x?.state_key===stateKey&&x.scope==='shared');
-  if(row&&(!Number.isSafeInteger(Number(row.revision))||Number(row.revision)<1||
-    typeof row.value!=='string'))deny('Invalid authoritative attendance revision');
-  const records=projectOwnAttendance(row?row.value:{version:1,records:[]},access.userId);
-  const overview=projectTimeTrackerOverview({
-   value:row?row.value:{version:1,records:[]},
-   directory:access.overviewDirectory,userId:access.userId,
-   moduleRole:access.moduleRole
-  });
-  const log=projectTimeTrackerLog({
-   value:row?row.value:{version:1,records:[]},
-   directory:access.overviewDirectory,userId:access.userId,
-   moduleRole:access.moduleRole
-  });
-  const otRow=raw.find(x=>x?.state_key==='timetracker.ot.v1'&&x.scope==='shared');
+  let raw=null,row=null,revision=0,records,overview,log;
+  if(clockOnly){
+   const clockSnapshot=await this.api.rpc('timetracker_attendance_clock_snapshot',{
+    p_board_id:boardId
+   });
+   if(!isRecord(clockSnapshot)||clockSnapshot.mode!=='ACTIVE'||
+      clockSnapshot.contract!=='tt-attendance-clock-1'||
+      clockSnapshot.actorId!==access.userId||
+      clockSnapshot.workspaceId!==access.workspaceId||
+      clockSnapshot.boardId!==boardId||
+      !Number.isSafeInteger(Number(clockSnapshot.revision))||
+      Number(clockSnapshot.revision)<0||!Array.isArray(clockSnapshot.records))
+    deny('Signed lightweight Clock snapshot is invalid');
+   records=projectOwnAttendance({
+    version:1,records:clockSnapshot.records
+   },access.userId);
+   revision=Number(clockSnapshot.revision);
+   const team=TT_TEAM_OVERVIEW_ROLES.includes(access.moduleRole);
+   overview=null;
+   log={scope:team?'AUTHORIZED_WORKSPACE_TEAM':'OWN_ATTENDANCE_ONLY',rows:[]};
+  }else{
+   raw=await this.api.rpc('list_module_state',{p_module_id:moduleId});
+   if(!Array.isArray(raw))deny('TimeTracker state API contract invalid');
+   row=raw.find(x=>x?.state_key===stateKey&&x.scope==='shared');
+   if(row&&(!Number.isSafeInteger(Number(row.revision))||Number(row.revision)<1||
+     typeof row.value!=='string'))deny('Invalid authoritative attendance revision');
+   const value=row?row.value:{version:1,records:[]};
+   records=projectOwnAttendance(value,access.userId);
+   overview=projectTimeTrackerOverview({
+    value,directory:access.overviewDirectory,userId:access.userId,
+    moduleRole:access.moduleRole
+   });
+   log=projectTimeTrackerLog({
+    value,directory:access.overviewDirectory,userId:access.userId,
+    moduleRole:access.moduleRole
+   });
+   revision=row?Number(row.revision):0;
+  }
+  const otRow=raw?.find(x=>x?.state_key==='timetracker.ot.v1'&&x.scope==='shared');
   let otRequests=projectOwnOvertime(otRow?.value||{version:1,requests:[]},access.userId)
    .map(row=>Object.freeze({...row,ownerId:'cloud:'+access.userId,name:access.name}));
   let otAccess=Object.freeze({scope:'OWN_OT_ONLY',
@@ -345,7 +382,40 @@ export class TimeTrackerNativeClient{
     employeeDepartment,employees,departmentCatalog},
    ojtRoster,ojtAdmin,ojtAdminAttendance,
    records,otRequests,autoClockout,autoClockoutUnavailable,overview,log,
-   revision:row?Number(row.revision):0,active:records.find(x=>x.status==='Active')||null};
+   revision,active:records.find(x=>x.status==='Active')||null};
+ }
+ /** Read one bounded, server-filtered historical Log page. */
+ async logPage(boardId,{
+  cursor=null,pageSize=TT_LOG_PAGE_SIZE,sort='newest',filters={},verifiedAccess=null,
+  includeSummary=true,summaryFallback=null
+ }={}){
+  const access=verifiedAccess||await this.access(boardId);
+  if(access?.boardId!==boardId||access?.userId!==this.auth.userId||
+     !uuid.test(access?.workspaceId||''))deny('Signed TimeTracker Log context is unavailable');
+  const period=['all','today','week','month'].includes(filters.period)?filters.period:'all';
+  const status=['all','Active','Completed','Late','Administrative closure'].includes(filters.status)?
+   filters.status:'all';
+  const location=typeof filters.location==='string'?filters.location:'all';
+  const employeeId=filters.employeeId||null;
+  const recordId=filters.recordId||null;
+  if(employeeId!==null&&!uuid.test(employeeId))deny('TimeTracker employee filter is invalid');
+  if(recordId!==null&&!uuid.test(recordId))deny('TimeTracker record filter is invalid');
+  const response=await this.api.rpc('timetracker_attendance_log_page',{
+   p_board_id:boardId,p_page_size:pageSize,p_cursor:cursor,
+   p_sort:sort==='oldest'?'oldest':'newest',p_period:period,
+   p_status:status,p_location:location,p_employee_id:employeeId,
+   p_search:String(filters.search||'').slice(0,120),
+   p_include_summary:includeSummary===true,p_record_id:recordId
+  });
+  if(response?.mode==='STALE_SNAPSHOT'){
+   const error=new Error('Attendance changed while you were browsing. Reload the Log to continue.');
+   error.code='TT_LOG_STALE_SNAPSHOT';
+   throw error;
+  }
+  const page=validateTimeTrackerLogPage(response,{
+   access,boardId,pageSize,sort:sort==='oldest'?'oldest':'newest',summaryFallback
+  });
+  return page;
  }
  /** A fresh independently guarded bootstrap read; no Team information for normal users. */
  async teamDirectory(boardId){

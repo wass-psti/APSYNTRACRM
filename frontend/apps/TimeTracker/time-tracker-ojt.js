@@ -92,6 +92,14 @@ export function projectOjtAdminAttendance(raw,scope){
     revision:Number.isSafeInteger(x.revision)&&x.revision>=1?x.revision:null});
  }))});
 }
+
+export function projectOjtAdminAttendanceRecord(raw,scope){
+ if(!scoped(scope)||raw?.contract!=='tt-ojt-admin-attendance-record-1'||
+   !same(raw,scope)||!raw.record)fail('Signed intern attendance record unavailable');
+ return projectOjtAdminAttendance({
+  ...raw,contract:'tt-ojt-admin-attendance-1',records:[raw.record]
+ },scope).records[0];
+}
 export class TimeTrackerOjtClient{
  constructor({auth,api}){this.auth=auth;this.api=api;}
  async identity(scope){
@@ -113,6 +121,12 @@ export class TimeTrackerOjtClient{
  adminAttendance(s){
   return this.perform(s,'timetracker_ojt_admin_attendance',{},
    v=>projectOjtAdminAttendance(v,s));
+ }
+ adminAttendanceRecord(s,recordId){
+  if(!uuid.test(recordId||''))fail('Select one signed intern attendance record');
+  return this.perform(s,'timetracker_ojt_admin_attendance_record',{
+   p_record_id:recordId
+  },v=>projectOjtAdminAttendanceRecord(v,s));
  }
  async mutateAdminRecord(s,{recordId,action,patch={},reason='',expectedRevision}={}){
   if(!uuid.test(recordId||'')||

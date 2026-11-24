@@ -125,3 +125,29 @@ test('Pages includes new style after Overview without requiring a new build tool
  assert.match(smoke,/'frontend\/time-tracker-log-command\.css'/);
  assert.match(index,/script type="module" src="\.\/frontend\/app\.js"/);
 });
+
+test('server aggregates remain complete while the Log table shows only loaded pages',()=>{
+ const serverSummary={
+  sessions:67,people:12,today:4,historical:63,completed:62,active:5,late:8,
+  creditedMs:90000000,todayOnTime:2,todayLate:1,todayActive:1,todayStagnant:0,
+  todayOffice:3,todayCompleted:3,todayCreditedMs:12000000,
+  locationCounts:[{location:'Office-Base Duty',count:50},{location:'Offsite (Home)',count:17}]
+ };
+ const html=renderTimeTrackerLog({records,now,serverSummary,pageHasMore:true});
+ assert.match(html,/>67<\/strong><span>Sessions in selected period<\/span>/);
+ assert.match(html,/12 authorized employees/);
+ assert.match(html,/50 \(75%\)/);
+ assert.match(html,/data-action="tt-log-load-more">Load More/);
+ assert.match(html,/Search and filters are applied by the attendance service/);
+});
+
+test('Load More loading, retry and end-of-records feedback are explicit',()=>{
+ const loading=renderTimeTrackerLog({records,now,pageBusy:true,pageHasMore:true});
+ assert.match(loading,/Loading attendance records/);
+ assert.doesNotMatch(loading,/data-action="tt-log-load-more">Load More/);
+ const failed=renderTimeTrackerLog({records,now,pageError:'Temporary read failure'});
+ assert.match(failed,/Temporary read failure/);
+ assert.match(failed,/data-action="tt-log-load-more">Retry/);
+ const end=renderTimeTrackerLog({records,now,pageHasMore:false});
+ assert.match(end,/You’ve reached the oldest available attendance record/);
+});
