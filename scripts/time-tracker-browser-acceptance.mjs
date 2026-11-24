@@ -107,10 +107,8 @@ try {
   const twelveHour = await page.evaluate(async () => {
     const { formatTimeTrackerClock, formatTimeTrackerDateTime } =
       await import("/frontend/time-tracker-time-format.js");
-    const {
-      renderTimeTrackerOvertime,
-      updateTimeTrackerOvertimePreview,
-    } = await import("/frontend/time-tracker-overtime.js");
+    const { renderTimeTrackerOvertime, updateTimeTrackerOvertimePreview } =
+      await import("/frontend/time-tracker-overtime.js");
     const { renderTimeTrackerAdminEditor } =
       await import("/frontend/time-tracker-record-management.js");
     const host = document.createElement("div");
