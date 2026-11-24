@@ -281,7 +281,7 @@ function heading(title,desc){
   esc(desc)+'</p></div></div>';
 }
 function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-out',locationPreference='',{
- success='',clockCorrectionNotice='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',workPlanDraft='',displayName='',referenceShell=false
+ success='',clockCorrectionNotice='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',workPlanDraft='',displayName='',referenceShell=false,gpsDiagnosticsAvailable=false
 }={}){
  const {access,records,active}=result;
  const writeReady=TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&access?.attendanceWritesAccepted===true;
@@ -452,6 +452,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
     '</form>'+
    '</section>'+
    '<p class="tt-clock-footnote">'+(writeReady?'Session is secured with a fresh GPS fix on start and end.':'Clock actions require signed workspace and backend verification.')+'</p>'+
+   (gpsDiagnosticsAvailable?'<div class="tt-gps-diagnostics-tools"><button type="button" class="tt-secondary-button" data-action="tt-gps-diagnostics-copy">Copy GPS diagnostics</button><small>Local browser diagnostics only. Precise coordinates are excluded.</small></div>':'')+
   '</div>'+
  '</div>';
  return html;
@@ -683,7 +684,7 @@ export function renderTimeTrackerNative({
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError='',
  adminEligible=false,adminFullAccess=adminEligible,adminDirectory=[],adminSelectedIds=[],adminEditor=null,adminDeleteConfirm=null,adminBusy=false,adminError='',adminSuccess='',
  ojtSelected=null,ojtAttendance=null,ojtBusy=false,ojtError='',ojtSuccess='',
- ojtLocationSelection='Office-Base Duty',ojtGeoProgress=''
+ ojtLocationSelection='Office-Base Duty',ojtGeoProgress='',gpsDiagnosticsAvailable=false
 }={}){
  const verified=result?.status==='VERIFIED_READ';
  const employeesEligible=verified&&canViewTimeTrackerEmployees(result.access);
@@ -723,7 +724,7 @@ export function renderTimeTrackerNative({
   overview:result.overview,access:result.access,now,filters:overviewFilters
  });
  if(selected==='clock')html+=clockPage(result,busy,new Date(now),clockPending,clockPendingAction,locationPreference,{
-  success,clockCorrectionNotice,geoPromptVisible,geoPermission,geoMessage,clockStage,workPlanDraft,displayName,referenceShell:reference
+  success,clockCorrectionNotice,geoPromptVisible,geoPermission,geoMessage,clockStage,workPlanDraft,displayName,referenceShell:reference,gpsDiagnosticsAvailable
  });
  if(selected==='employees'){
   html+=renderTimeTrackerEmployees({

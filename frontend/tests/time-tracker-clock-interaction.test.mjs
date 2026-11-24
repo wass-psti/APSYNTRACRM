@@ -4,6 +4,8 @@ import {readFileSync} from 'node:fs';
 import {isTimeTrackerHomeNoteRequired,createTimeTrackerWorkNoteDraft} from '../time-tracker-offsite-note.js';
 import {attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError}
  from '../time-tracker-clock-recovery.js';
+import {recordTimeTrackerGpsDiagnostic,clearTimeTrackerGpsDiagnostics}
+ from '../time-tracker-gps-diagnostics.js';
 
 const source=readFileSync('frontend/app.js','utf8');
 const start=source.indexOf('function reconcileTimeTrackerClock(');
@@ -32,6 +34,7 @@ function harness({commit=async()=>({action:'clock-out',revision:2,recordId}),
  capture=async()=>({status:'captured',latitude:10.3,longitude:123.9,
   accuracy:20,capturedAt:new Date().toISOString(),source:'browser-geolocation'}),
  location='Office-Base Duty',noteValue=''}={}){
+ clearTimeTrackerGpsDiagnostics();
  const state={view:'board',tab:'attendance',ttBusy:false,ttClockPending:null,
   ttRunId:0,ttError:'',ttSuccess:'',boardId,
   board:{board:{name:'TimeTracker Attendance'}},
@@ -46,14 +49,14 @@ function harness({commit=async()=>({action:'clock-out',revision:2,recordId}),
  };
  const functions=new Function('state','render','auth','moduleByBoardName',
   'TT_LIVE_ATTENDANCE_WRITES_ACCEPTED','FormData','captureAttendanceGeo',
-  'timeTracker','routeSerial','navigator','attendanceSnapshotOutcome',
+  'recordTimeTrackerGpsDiagnostic','timeTracker','routeSerial','navigator','attendanceSnapshotOutcome',
   'attendanceAuthFailure','attendanceClockError','isTimeTrackerHomeNoteRequired',
   'rememberTimeTrackerClockPending','clearTimeTrackerClockPending',
   'restoreTimeTrackerClockPending','ttWorkNoteDraft','timeTrackerWorkNoteScope',clockSource+
   ';return {submitTimeTrackerAction,verifyTimeTrackerAttendance};')(
   state,()=>{updates++;},{isSignedIn:true},
   ()=>({key:'timetracker'}),true,
-  class{get(key){return key==='tt-location'?location:key==='tt-department'?'HR':null;}},capture,timeTracker,1,{geolocation:{}},
+  class{get(key){return key==='tt-location'?location:key==='tt-department'?'HR':null;}},capture,recordTimeTrackerGpsDiagnostic,timeTracker,1,{geolocation:{}},
   attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError,isTimeTrackerHomeNoteRequired,
   context=>{state.ttClockPending=context;},
   ()=>{state.ttClockPending=null;},

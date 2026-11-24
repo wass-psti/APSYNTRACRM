@@ -1,3 +1,4 @@
+import {recordTimeTrackerGpsDiagnostic} from '../../time-tracker-gps-diagnostics.js';
 /**
  * Complete one persisted automatic clock-out when the TimeTracker module is
  * foregrounded. All state and services are injected to keep this workflow testable.
@@ -21,26 +22,46 @@ export async function runPendingTimeTrackerAutoClockout({
  state.ttGeoPromptVisible=true;state.ttGeoPermission='unknown';
  state.ttGeoMessage='Automatic clock-out is pending. Acquiring a fresh device GPS fix…';
  state.ttClockStage='auto-location';state.ttError='';state.ttSuccess='';render();
- let commitAttempted=false;
+ let commitAttempted=false,commitSucceeded=false;
  try{
   const geo=await captureAttendanceGeo(navigator.geolocation,{
-   freshOnly:true,
+   freshOnly:true,diagnosticContext:{action:'automatic-clock-out'},
    onProgress:message=>{
     if(!sameSession())return;
     state.ttGeoMessage=message;render();
    }
   });
-  if(!sameSession())return;
+  if(!sameSession()){
+   recordTimeTrackerGpsDiagnostic({phase:'session-context-changed-after-gps',
+    action:'automatic-clock-out'});
+   return;
+  }
+  recordTimeTrackerGpsDiagnostic({phase:'gps-fix-ready',action:'automatic-clock-out',
+   accuracyMeters:geo.accuracy,positionAgeMs:Math.max(0,Date.now()-Date.parse(geo.capturedAt))});
   state.ttGeoPermission='granted';
   state.ttGeoMessage='Fresh GPS captured. Completing the scheduled clock-out…';
   state.ttClockStage='auto-saving';render();
+  recordTimeTrackerGpsDiagnostic({phase:'attendance-commit-start',action:'automatic-clock-out'});
   commitAttempted=true;
   const receipt=await timeTracker.completeAutomaticClockOut(boardId,{
    recordId:pending.recordId,geo
   });
-  if(!sameSession())return;
+  commitSucceeded=true;
+  recordTimeTrackerGpsDiagnostic({phase:'attendance-commit-success',action:'automatic-clock-out',
+   result:receipt.mode||'committed'});
+  if(!sameSession()){
+   recordTimeTrackerGpsDiagnostic({phase:'session-context-changed-after-commit',
+    action:'automatic-clock-out'});
+   return;
+  }
   const snapshot=await timeTracker.snapshot(boardId,{clockOnly:true});
-  if(!sameSession())return;
+  recordTimeTrackerGpsDiagnostic({phase:'attendance-readback-success',
+   action:'automatic-clock-out',result:snapshot?.status==='VERIFIED_READ'?'verified':'unverified'});
+  if(!sameSession()){
+   recordTimeTrackerGpsDiagnostic({phase:'session-context-changed-after-readback',
+    action:'automatic-clock-out'});
+   return;
+  }
   state.ttAttendance=snapshot;
   const completed=snapshot.records.find(row=>row.id===pending.recordId);
   if(receipt.mode==='ALREADY_CLOSED'){
@@ -58,6 +79,10 @@ export async function runPendingTimeTrackerAutoClockout({
   state.ttGeoPromptVisible=false;state.ttGeoMessage='';
   state.ttError='';
  }catch(error){
+  recordTimeTrackerGpsDiagnostic({phase:commitSucceeded?'attendance-readback-failed':
+   commitAttempted?'attendance-commit-failed':'attendance-action-failed',
+   action:'automatic-clock-out',errorCode:typeof error?.code==='string'?error.code:undefined,
+   httpStatus:error?.status});
   if(!sameSession())return;
   if(commitAttempted){
    try{

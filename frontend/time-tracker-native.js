@@ -7,6 +7,9 @@ import {projectTimeTrackerOtRows,validateOvertimeDraft,validateManualOvertimeDra
 import {projectTimeTrackerTeamDirectory,projectTimeTrackerTeamDepartments,TT_TEAM_DEPARTMENTS,validTimeTrackerDepartmentName} from './time-tracker-team.js';
 import {projectTimeTrackerEmployees,projectTimeTrackerEmployeeDepartments,projectTimeTrackerDepartmentCatalog,canViewTimeTrackerEmployees} from './time-tracker-application.js';
 import {validateTimeTrackerGps} from './time-tracker-gps.js';
+import {beginTimeTrackerGpsCapture,observeTimeTrackerGpsPermission,
+ observeTimeTrackerGpsLifecycle,gpsPositionFailureReason,recordTimeTrackerGpsDiagnostic}
+ from './time-tracker-gps-diagnostics.js';
 import {projectOjtRoster,projectOjtAdmin,projectOjtAdminAttendance,TIMETRACKER_SHARED_OJT_USER_ID} from './apps/TimeTracker/time-tracker-ojt.js';
 /**
  * TimeTracker native APSYNTRA adapter. Source reference: TimeTracker v2.0.14.
@@ -774,53 +777,102 @@ function geolocationRequest(geolocation,options){
 }
 function locationError(reason){
  const code=Number(reason?.code);
- const kind=code===1?'TT_GEO_DENIED':code===3?'TT_GEO_TIMEOUT':'TT_GEO_UNAVAILABLE';
- const message=code===1?'Browser location permission denied':
-  code===3?'Browser GPS acquisition timed out':'Current browser GPS fix unavailable';
+ const denied=code===1||reason?.code==='TT_GEO_DENIED'||reason?.name==='NotAllowedError';
+ const timedOut=code===3||reason?.code==='TT_GEO_TIMEOUT'||reason?.name==='TimeoutError';
+ const kind=denied?'TT_GEO_DENIED':timedOut?'TT_GEO_TIMEOUT':'TT_GEO_UNAVAILABLE';
+ const message=denied?'Browser location permission denied':
+  timedOut?'Browser GPS acquisition timed out':'Current browser GPS fix unavailable';
  const error=new Error(message);
  error.code=kind;
  return error;
 }
 function capturePosition(position){
- const {latitude,longitude,accuracy}=position?.coords||{};
- const capturedAt=Number(position?.timestamp);
- const now=Date.now();
- if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||!Number.isFinite(accuracy)||
-   latitude < -90||latitude>90||longitude < -180||longitude>180||
-   accuracy<0||accuracy>100000||!Number.isFinite(capturedAt)||
-   now-capturedAt>60000||capturedAt-now>120000)
-  return null;
+ if(gpsPositionFailureReason(position))return null;
+ const {latitude,longitude,accuracy}=position.coords;
+ const capturedAt=Number(position.timestamp);
  return {status:'captured',latitude,longitude,accuracy,
   capturedAt:new Date(capturedAt).toISOString(),source:'browser-geolocation'};
 }
-export async function captureAttendanceGeo(geolocation,{onProgress,freshOnly=false}={}){
- if(globalThis.isSecureContext===false){
-  const error=new Error('Location requires a secure HTTPS connection');
-  error.code='TT_GEO_INSECURE';
-  throw error;
- }
- if(!geolocation||typeof geolocation.getCurrentPosition!=='function')
-  throw locationError({code:2});
+export async function captureAttendanceGeo(geolocation,{onProgress,freshOnly=false,diagnosticContext={}}={}){
+ const action=diagnosticContext?.action||'unknown';
+ const captureId=beginTimeTrackerGpsCapture(action);
+ const startedAt=Date.now();
+ const stopLifecycle=observeTimeTrackerGpsLifecycle(action,captureId);
+ const stopPermission=observeTimeTrackerGpsPermission(action,captureId);
  const progress=message=>{if(typeof onProgress==='function'){
   try{onProgress(message);}catch{/* A UI update must not interrupt GPS acquisition. */}
  }};
- const attempts=[
-  {options:{enableHighAccuracy:true,timeout:10000,maximumAge:freshOnly===true?0:25000},
-   message:'Finding your GPS location…'},
-  {options:{enableHighAccuracy:false,timeout:12000,maximumAge:freshOnly===true?0:45000},
-   message:'GPS is taking longer; trying network-assisted location…'}
- ];
- let lastError={code:2};
- for(const attempt of attempts){
-  progress(attempt.message);
-  try{
-   const fix=capturePosition(await geolocationRequest(geolocation,attempt.options));
-   if(fix)return fix;
-   lastError={code:2};
-  }catch(error){
-   if(Number(error?.code)===1)throw locationError(error);
-   lastError=error;
+ try{
+  if(globalThis.isSecureContext===false){
+   const error=new Error('Location requires a secure HTTPS connection');
+   error.code='TT_GEO_INSECURE';
+   recordTimeTrackerGpsDiagnostic({phase:'capture-precondition-failed',action,captureId,
+    elapsedMs:Date.now()-startedAt,errorCode:error.code,reason:'insecure-context'});
+   throw error;
   }
+  if(!geolocation||typeof geolocation.getCurrentPosition!=='function'){
+   const error=locationError({code:2});
+   recordTimeTrackerGpsDiagnostic({phase:'capture-precondition-failed',action,captureId,
+    elapsedMs:Date.now()-startedAt,errorCode:error.code,reason:'geolocation-api-missing'});
+   throw error;
+  }
+  const attempts=[
+   {options:{enableHighAccuracy:true,timeout:10000,maximumAge:freshOnly===true?0:25000},
+    message:'Finding your GPS location…'},
+   {options:{enableHighAccuracy:false,timeout:12000,maximumAge:freshOnly===true?0:45000},
+    message:'GPS is taking longer; trying network-assisted location…'}
+  ];
+  let lastError={code:2};
+  for(const [index,attempt] of attempts.entries()){
+   const attemptNumber=index+1,attemptStartedAt=Date.now();
+   progress(attempt.message);
+   recordTimeTrackerGpsDiagnostic({phase:'attempt-start',action,captureId,
+    attempt:attemptNumber,enableHighAccuracy:attempt.options.enableHighAccuracy,
+    timeoutMs:attempt.options.timeout,maximumAgeMs:attempt.options.maximumAge});
+   try{
+    const position=await geolocationRequest(geolocation,attempt.options);
+    const elapsedMs=Date.now()-attemptStartedAt;
+    const reason=gpsPositionFailureReason(position);
+    if(reason){
+     recordTimeTrackerGpsDiagnostic({phase:'attempt-invalid-position',action,captureId,
+      attempt:attemptNumber,elapsedMs,reason});
+     lastError={code:2};
+     continue;
+    }
+    const fix=capturePosition(position);
+    if(fix){
+     const positionAgeMs=Math.max(0,Date.now()-Number(position.timestamp));
+     recordTimeTrackerGpsDiagnostic({phase:'attempt-success',action,captureId,
+      attempt:attemptNumber,elapsedMs,accuracyMeters:fix.accuracy,positionAgeMs});
+     recordTimeTrackerGpsDiagnostic({phase:'capture-success',action,captureId,
+      elapsedMs:Date.now()-startedAt,accuracyMeters:fix.accuracy,positionAgeMs});
+     return fix;
+    }
+    lastError={code:2};
+   }catch(error){
+    const code=Number(error?.code);
+    const errorCode=error?.code==='TT_GEO_DENIED'?'TT_GEO_DENIED':
+     error?.code==='TT_GEO_TIMEOUT'?'TT_GEO_TIMEOUT':
+     error?.code==='TT_GEO_UNAVAILABLE'?'TT_GEO_UNAVAILABLE':
+     code===1||error?.name==='NotAllowedError'?'TT_GEO_DENIED':
+     code===3||error?.name==='TimeoutError'?'TT_GEO_TIMEOUT':'TT_GEO_UNAVAILABLE';
+    recordTimeTrackerGpsDiagnostic({phase:'attempt-error',action,captureId,
+     attempt:attemptNumber,elapsedMs:Date.now()-attemptStartedAt,errorCode});
+    if(code===1||errorCode==='TT_GEO_DENIED'||error?.name==='NotAllowedError')
+     throw locationError(error);
+    lastError=error;
+   }
+  }
+  throw locationError(lastError);
+ }catch(error){
+  const code=error?.code==='TT_GEO_INSECURE'?'TT_GEO_INSECURE':
+   error?.code==='TT_GEO_DENIED'?'TT_GEO_DENIED':
+   error?.code==='TT_GEO_TIMEOUT'?'TT_GEO_TIMEOUT':'TT_GEO_UNAVAILABLE';
+  recordTimeTrackerGpsDiagnostic({phase:'capture-failed',action,captureId,
+   elapsedMs:Date.now()-startedAt,errorCode:code});
+  throw error;
+ }finally{
+  stopLifecycle();
+  stopPermission();
  }
- throw locationError(lastError);
 }

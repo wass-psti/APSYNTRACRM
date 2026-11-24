@@ -25,7 +25,7 @@ test('mobile account switch explicitly requires a fresh login and stores no cred
  assert.doesNotMatch(markup,/access_token|refresh_token|localStorage|sessionStorage|password/);
  assert.match(app,/target&&!mobileAccountChoices\.has\(target\)/);
  assert.match(app,/insertAdjacentHTML\('afterbegin',mobileAccountMarkup\(\)\)/);
- assert.match(app,/auth\.onExpired=\(\)=>\{boardCacheChannel\.stop\(\);db\.invalidateBoardCache\(\);boardPreferences\.clearMemory\(\);ttWorkNoteDraft\.clear\(\);mobileAccountChoices\.clear\(\)/);
+ assert.match(app,/auth\.onExpired=\(\)=>\{boardCacheChannel\.stop\(\);db\.invalidateBoardCache\(\);boardPreferences\.clearMemory\(\);ttWorkNoteDraft\.clear\(\);clearTimeTrackerGpsDiagnostics\(\);mobileAccountChoices\.clear\(\)/);
  assert.match(app,/if\(isMobileSwitch\)await auth\.signOut\(\{scope:'local'\}\)/);
 });
 
