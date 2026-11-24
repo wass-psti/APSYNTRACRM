@@ -201,6 +201,8 @@ import {timeTrackerMyHoursWeek} from './time-tracker-my-hours.js';
 import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
 import {probeTimeTrackerMonitor} from './time-tracker-monitor.js';
 import {buildTimeTrackerAdminPatch,TT_ADMIN_RECORD_LIMIT} from './time-tracker-record-management.js';
+import {manualAttendancePreviewRoster,syncManualAttendanceForm} from './apps/TimeTracker/time-tracker-manual-attendance-ui.js';
+import {manualAttendanceToday} from './apps/TimeTracker/time-tracker-manual-attendance.js';
 import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
 import {TT_BOARD_GPS_PROJECTION_ENABLED,loadTimeTrackerBoardGps,renderTimeTrackerBoardGps} from './time-tracker-board-projection.js';
 import {renderTimeTrackerMainGroup} from './time-tracker-main-group.js';
@@ -4646,6 +4648,10 @@ async function saveTimeTrackerAdminEditor(form){
     state.ttLogAdminBusy||!state.ttLogAdminEditor)return;
  if(!form.reportValidity())return;
  const editor=state.ttLogAdminEditor;
+ if(editor.mode==='manual'){
+  // Manual create remains fail-closed until the signed creation RPC and projection are deployed.
+  state.ttLogAdminError='Signed manual attendance creation is unavailable. No record was saved.';render();return;
+ }
  if(editor.actorId!==auth.userId||editor.workspaceId!==state.context?.workspace_id||
     editor.boardId!==state.boardId){
   state.ttLogAdminError='Signed workspace changed. Reopen the attendance editor.';render();return;
@@ -10050,6 +10056,16 @@ async function action(name,button){
   if(!record||typeof record.ownerId!=='string'||!record.ownerId.startsWith('cloud:'))return;
   await loadTimeTrackerLogGps(routeSerial,record,{force:button.textContent?.includes('Refresh')===true});break;
  }
+ case 'tt-log-admin-add':{
+  if(!timeTrackerAdminLogReady()||state.ttAttendance.access.moduleRole!=='System Admin'||
+     state.ttLogAdminBusy||state.ttLogAdminEditor||state.ttLogAdminDeleteConfirm)return;
+  const access=state.ttAttendance.access;
+  state.ttLogAdminError='';state.ttLogAdminSuccess='';
+  state.ttLogAdminEditor={mode:'manual',actorId:access.userId,workspaceId:access.workspaceId,
+   boardId:access.boardId,roster:manualAttendancePreviewRoster(state.ttAttendance),
+   signedCreateReady:false,draft:{date:manualAttendanceToday(),status:'active'}};
+  render();root.querySelector('#tt-attendance-admin-form select[name="employee"]')?.focus();break;
+ }
  case 'tt-log-admin-correct-time':{
   if(!timeTrackerAdminLogReady())return;
   await openTimeTrackerAdminEditor([button.dataset.recordId],'single',{timeOnly:true});break;
@@ -10084,7 +10100,7 @@ async function action(name,button){
  case 'tt-log-admin-cancel':{
   if(!timeTrackerAdminLogReady()||state.ttLogAdminBusy)return;
   {const editor=state.ttLogAdminEditor;state.ttLogAdminEditor=null;state.ttLogAdminError='';render();
-   const target=editor?.mode==='bulk'?root.querySelector('[data-action=\"tt-log-admin-bulk-edit\"]'):
+   const target=editor?.mode==='manual'?root.querySelector('[data-action="tt-log-admin-add"]'):editor?.mode==='bulk'?root.querySelector('[data-action=\"tt-log-admin-bulk-edit\"]'):
     root.querySelector('[data-tt-log-detail-dialog] [data-action=\"tt-log-detail-close\"]')||
     root.querySelector('[data-action=\"tt-log-open-detail\"][data-record-id=\"'+editor?.recordIds?.[0]+'\"]');
    target?.focus();}
@@ -13543,8 +13559,16 @@ root.addEventListener('change',async event=>{
   state.ttOjtBusy=false;render();
  }
 });
+function preserveManualAttendanceDraft(event){
+ const form=event.target.closest?.('#tt-attendance-admin-form[data-mode="manual"]');
+ if(!form||state.ttLogAdminEditor?.mode!=='manual'||!timeTrackerAdminLogReady()||
+    state.ttAttendance.access.moduleRole!=='System Admin')return false;
+ state.ttLogAdminEditor.draft=syncManualAttendanceForm(form);return true;
+}
+root.addEventListener('change',preserveManualAttendanceDraft);
 root.addEventListener('input',event=>{
  if(syncTradeLinkFinanceInput(event))return;
+ if(preserveManualAttendanceDraft(event))return;
  if(event.target.id==='tt-note'&&event.target.closest('#tt-clock-form')){
   ttWorkNoteDraft.write(timeTrackerWorkNoteScope(),event.target.value);
   return;
