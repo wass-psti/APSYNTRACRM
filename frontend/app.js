@@ -209,6 +209,7 @@ import {FUELTRANS_APPLICATION_ROUTE,FUELTRANS_BOARD_ID,fuelTransApplicationHref,
 import {openTimeTrackerAddDepartmentModal} from './apps/TimeTracker/time-tracker-add-department-modal.js';
 import {TimeTrackerOjtClient,isEligibleTimeTrackerSharedOjtAccount,TIMETRACKER_SHARED_OJT_USER_ID} from './apps/TimeTracker/time-tracker-ojt.js';
 import {buildTimeTrackerOjtAdminPatch} from './apps/TimeTracker/time-tracker-ojt-admin-editor.js';
+import {buildTimeTrackerManualOjtEntry} from './apps/TimeTracker/time-tracker-ojt-manual-entry.js';
 import {attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError} from './time-tracker-clock-recovery.js';
 import {signedMapPoints,mountTimeTrackerMaps,disposeTimeTrackerMaps,setTimeTrackerMapTheme,retryTimeTrackerMaps,toggleTimeTrackerMapFullscreen} from './time-tracker-map.js';
 import {inspectMySignedEffectiveAccess,sanitizeEffectiveAccessReport} from './signed-effective-access.js';
@@ -4574,6 +4575,63 @@ function timeTrackerOjtLogAdminScope(){
  if(!timeTrackerAdminLogReady()||!state.ttAttendance?.ojtAdminAttendance)return null;
  const a=state.ttAttendance.access;
  return {userId:a.userId,workspaceId:a.workspaceId,boardId:a.boardId};
+}
+function openTimeTrackerManualOjtEntry(){
+ if(!timeTrackerAdminLogReady()||state.ttLogAdminBusy||
+    state.ttAttendance.access.moduleRole!=='System Admin')return;
+ const scope=timeTrackerOjtLogAdminScope();
+ if(!scope||!state.ttAttendance.ojtAdmin){
+  state.ttLogAdminError='Signed OJT roster is unavailable. Refresh Logs and try again.';render();return;
+ }
+ const interns=state.ttAttendance.ojtAdmin.groups.filter(g=>g.enabled)
+  .flatMap(g=>g.interns.filter(i=>i.active)).map(i=>({id:i.id,name:i.name}));
+ if(!globalThis.crypto?.randomUUID){
+  state.ttLogAdminError='Secure request identifier unavailable. Reload the application.';render();return;
+ }
+ state.ttLogAdminEditor={manualCreate:true,actorId:scope.userId,
+  workspaceId:scope.workspaceId,boardId:scope.boardId,
+  requestId:globalThis.crypto.randomUUID(),interns,draft:{}};
+ state.ttLogAdminError='';state.ttLogAdminSuccess='';render();
+ root.querySelector('#tt-ojt-manual-entry-form select[name="internId"]')?.focus();
+}
+async function saveTimeTrackerManualOjtEntry(form){
+ if(!form||form.id!=='tt-ojt-manual-entry-form'||!timeTrackerAdminLogReady()||
+    state.ttAttendance?.access?.moduleRole!=='System Admin'||state.ttLogAdminBusy||
+    !state.ttLogAdminEditor?.manualCreate)return;
+ if(!form.reportValidity())return;
+ const editor=state.ttLogAdminEditor,scope=timeTrackerOjtLogAdminScope();
+ if(!scope||editor.actorId!==scope.userId||editor.workspaceId!==scope.workspaceId||
+    editor.boardId!==scope.boardId){
+  state.ttLogAdminError='The signed workspace changed. Reopen the entry form.';render();return;
+ }
+ const data=new FormData(form);
+ let plan;
+ try{plan=buildTimeTrackerManualOjtEntry(data,{interns:editor.interns});}
+ catch(err){editor.draft=Object.fromEntries(data);state.ttLogAdminError=errorMessage(err);render();return;}
+ editor.draft=Object.fromEntries(data);
+ const seq=routeSerial,boardId=scope.boardId;
+ state.ttLogAdminBusy=true;state.ttLogAdminError='';
+ form.querySelector('button[type="submit"]')?.setAttribute('disabled','');
+ try{
+  const receipt=await timeTrackerOjt.createAdminAttendance(scope,{...plan,requestId:editor.requestId});
+  if(seq!==routeSerial||state.boardId!==boardId||!timeTrackerOjtLogAdminScope()||
+     state.ttLogAdminEditor!==editor)return;
+  state.ttLogAdminEditor=null;state.ttLogSelectedIds=[];state.ttLogAdminBusy=false;
+  await loadTimeTracker(seq);
+  if(seq===routeSerial&&state.boardId===boardId&&state.ttAttendance?.status==='VERIFIED_READ')
+   state.ttLogAdminSuccess=receipt.replayed?'Previously saved manual OJT entry verified.':
+    'Manual OJT attendance saved with signed audit evidence.';
+  else state.ttLogAdminError='Entry was committed but Logs could not be verified. Refresh before retrying.';
+ }catch(err){
+  if(seq===routeSerial&&state.boardId===boardId&&state.ttLogAdminEditor===editor){
+   const message=errorMessage(err);
+   state.ttLogAdminError=/timeout|network|fetch|connection/i.test(message)?
+    'Save status uncertain. Refresh Logs before retrying; this request ID prevents duplicate entries.':
+    message;
+  }
+ }finally{
+  if(seq===routeSerial&&state.boardId===boardId){state.ttLogAdminBusy=false;render();}
+ }
 }
 async function openTimeTrackerAdminEditor(recordIds,mode='single',{timeOnly=false}={}){
  if(!timeTrackerAdminLogReady()||state.ttLogAdminBusy)return;
@@ -10049,6 +10107,9 @@ async function action(name,button){
   if(!record||typeof record.ownerId!=='string'||!record.ownerId.startsWith('cloud:'))return;
   await loadTimeTrackerLogGps(routeSerial,record,{force:button.textContent?.includes('Refresh')===true});break;
  }
+ case 'tt-log-admin-manual-create':{
+  openTimeTrackerManualOjtEntry();break;
+ }
  case 'tt-log-admin-correct-time':{
   if(!timeTrackerAdminLogReady())return;
   await openTimeTrackerAdminEditor([button.dataset.recordId],'single',{timeOnly:true});break;
@@ -10083,7 +10144,8 @@ async function action(name,button){
  case 'tt-log-admin-cancel':{
   if(!timeTrackerAdminLogReady()||state.ttLogAdminBusy)return;
   {const editor=state.ttLogAdminEditor;state.ttLogAdminEditor=null;state.ttLogAdminError='';render();
-   const target=editor?.mode==='bulk'?root.querySelector('[data-action=\"tt-log-admin-bulk-edit\"]'):
+   const target=editor?.manualCreate?root.querySelector('[data-action=\"tt-log-admin-manual-create\"]'):
+    editor?.mode==='bulk'?root.querySelector('[data-action=\"tt-log-admin-bulk-edit\"]'):
     root.querySelector('[data-tt-log-detail-dialog] [data-action=\"tt-log-detail-close\"]')||
     root.querySelector('[data-action=\"tt-log-open-detail\"][data-record-id=\"'+editor?.recordIds?.[0]+'\"]');
    target?.focus();}
@@ -13185,6 +13247,9 @@ root.addEventListener('change',event=>{
 root.addEventListener('submit',event=>{
  if(event.target.id==='tt-attendance-admin-form'){
   event.preventDefault();void saveTimeTrackerAdminEditor(event.target);return;
+ }
+ if(event.target.id==='tt-ojt-manual-entry-form'){
+  event.preventDefault();void saveTimeTrackerManualOjtEntry(event.target);return;
  }
  if(event.target.id==='mrh-add-material-form'){
   event.preventDefault();

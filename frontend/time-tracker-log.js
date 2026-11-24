@@ -7,6 +7,7 @@ import {manilaDay} from './time-tracker-overview.js';
 import {mapFrame} from './time-tracker-map.js';
 import {renderTimeTrackerAdminEditor,renderTimeTrackerAdminDeleteDialog,TT_ADMIN_RECORD_LIMIT} from './time-tracker-record-management.js';
 import {renderTimeTrackerOjtAdminEditor} from './apps/TimeTracker/time-tracker-ojt-admin-editor.js';
+import {renderTimeTrackerManualOjtEntry} from './apps/TimeTracker/time-tracker-ojt-manual-entry.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -35,7 +36,7 @@ export function timeTrackerLogRowsForSnapshot(snapshot){
    workNote:typeof r.workNote==='string'?r.workNote.slice(0,500):'',
    creditedMs:r.clockOut?creditedAttendanceMs(r.clockIn,r.clockOut):null,
    revision:Number.isSafeInteger(Number(r.revision))?Number(r.revision):null,
-   isOjt:true
+   manualEntry:r.manualEntry===true,isOjt:true
   }));
  return [...standard,...ojtRows];
 }
@@ -334,7 +335,7 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
    '<summary class="tt-log-row-summary" data-action="tt-log-open-detail" data-record-id="'+esc(r.id)+
     '" aria-haspopup="dialog" aria-label="Open attendance details for '+esc(r.name||'employee')+'">'+
    '<span class="tt-log-row-person"><strong>'+esc(r.name||'Signed member')+
-    '</strong><small>'+esc(r.isOjt?'OJT intern · Shared login':r.department||'Unassigned')+'</small></span>'+
+    '</strong><small>'+esc(r.isOjt?(r.manualEntry?'OJT intern · Manual entry':'OJT intern · Shared login'):r.department||'Unassigned')+'</small></span>'+
    '<span title="'+esc(phtDate(r.clockIn))+'">'+esc(dateTime(r.clockIn))+'</span>'+
    '<span>'+esc(dateTime(r.clockOut))+'</span>'+
    '<span class="tt-log-row-location">'+esc(r.location||'Unspecified')+'</span>'+
@@ -419,6 +420,7 @@ export function renderTimeTrackerLog({
     '<div class="tt-log-admin-toolbar-copy"><div class="tt-log-admin-toolbar-heading"><span class="tt-log-admin-toolbar-icon" aria-hidden="true">✦</span><div><strong>Manage attendance records</strong><span>Click a record to highlight it; no checkboxes required</span></div></div>'+
     '<div class="tt-log-admin-selection-status"><strong class="tt-log-admin-selected">'+selectedIds.length+'</strong><span>selected <i>·</i> up to '+TT_ADMIN_RECORD_LIMIT+'</span></div></div>'+
     '<div class="tt-log-admin-toolbar-actions">'+
+    '<button type="button" data-action="tt-log-admin-manual-create"'+(adminBusy?' disabled':'')+'>+ Add missed OJT entry</button>'+
     '<button type="button" data-action="tt-log-admin-select-visible"'+(!editableVisible||adminBusy?' disabled':'')+'>Select visible</button>'+
     '<button type="button" data-action="tt-log-admin-bulk-edit"'+(standardSelected.length&&!adminBusy?'':' disabled')+'><span aria-hidden="true">✎</span> Edit selected</button>'+
     '<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-bulk-delete"'+(standardSelected.length&&!adminBusy?'':' disabled')+'><span aria-hidden="true">⌫</span> Delete selected</button>'+
@@ -444,7 +446,8 @@ export function renderTimeTrackerLog({
   '</section>'+(adminEditor||adminDeleteConfirm?'':renderTimeTrackerLogDetailDialog({row:rows.find(r=>expandedRecordIds.includes(r.id))||null,now,
     gpsEligible,gpsData,gpsBusy,gpsError,gpsErrorRecordId,mapEnabled,mapTheme,
     adminEligible,adminFullAccess,adminBusy,selectedIds}))+
-   (adminEditor?.ojt?renderTimeTrackerOjtAdminEditor({editor:adminEditor,busy:adminBusy,error:adminError}):
+   (adminEditor?.manualCreate?renderTimeTrackerManualOjtEntry({editor:adminEditor,busy:adminBusy,error:adminError}):
+    adminEditor?.ojt?renderTimeTrackerOjtAdminEditor({editor:adminEditor,busy:adminBusy,error:adminError}):
     renderTimeTrackerAdminEditor({editor:adminEditor,directory:adminDirectory,busy:adminBusy,error:adminEditor?adminError:'',timeOnly:adminEditor?.timeOnly===true}))+
    renderTimeTrackerAdminDeleteDialog({confirmation:adminDeleteConfirm,busy:adminBusy})+'</section>';
 }
