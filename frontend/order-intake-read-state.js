@@ -1,3 +1,4 @@
+import {matchesAmount,sortOrderRows} from './order-intake-search.js';
 /** Shared read state; bounded pages and stale-response protection. */
 export function createOrderIntakeReadState({ clientFor, isCurrent, onChange }) {
   let generation = 0;
@@ -55,10 +56,11 @@ export function createOrderIntakeReadState({ clientFor, isCurrent, onChange }) {
 
 export function filterOrderIntakeRows(rows, filters = {}) {
   const words = String(filters.q || '').toLowerCase().split(/\s+/).filter(Boolean);
-  return rows.filter(row => {
-    const haystack = [row.po_number, row.client_name, row.account_manager, row.company, row.industry]
+  return sortOrderRows(rows.filter(row => {
+    const haystack = [row.po_number, row.client_name, row.account_manager, row.company, row.industry, row.historical_client_name, row.source_key, row.confirmation_reference, row.po_file_reference, row.notes]
       .map(value => String(value ?? '').toLowerCase());
     return words.every(word => haystack.some(value => value.includes(word))) &&
+      matchesAmount(row,filters) && (!filters.kind || row.record_kind===filters.kind) && (!filters.manager || row.account_manager===filters.manager) &&
       (!filters.year || String(row.fiscal_year) === filters.year) &&
       (!filters.status || row.status === filters.status) &&
       (!filters.company || row.company === filters.company) &&
@@ -66,5 +68,5 @@ export function filterOrderIntakeRows(rows, filters = {}) {
       (!filters.currency || (filters.currency==='Unknown currency' ? row.record_kind==='legacy'&&!row.currency : row.currency === filters.currency)) &&
       (!filters.from || (row.date_received && row.date_received >= filters.from)) &&
       (!filters.to || (row.date_received && row.date_received <= filters.to));
-  });
+  }),filters.sort);
 }

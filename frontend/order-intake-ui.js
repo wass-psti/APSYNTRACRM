@@ -1,3 +1,5 @@
+import {orderTablePage} from './order-intake-search.js';
+import {bulkToolbar,bulkResults} from './order-intake-bulk-ui.js';
 import { ORDER_INTAKE_SECTIONS, orderIntakeHref } from './order-intake-route.js';
 import { ORDER_INTAKE_STATUSES } from './order-intake-native.js';
 import { filterOrderIntakeRows } from './order-intake-read-state.js';
@@ -23,19 +25,24 @@ function filterForm(rows, route) {
   return '<form id="oi-filter-form" class="oi-filters">' +
     input('PO number, client or account manager', 'q') +
     select('Fiscal year', 'year', values('fiscal_year').filter(v=>v!=null).map(String).concat(f.year).sort().reverse()) +
-    (['search','dashboard'].includes(route.section) ? select('Status', 'status', [...ORDER_INTAKE_STATUSES, ...values('status'), f.status]) +
+    (['search','dashboard','all-orders','archived'].includes(route.section) ? select('Status', 'status', [...ORDER_INTAKE_STATUSES, ...values('status'), f.status]) +
       input('Received from', 'from', 'date') + input('Received to', 'to', 'date') +
       select('Company', 'company', [...values('company'), f.company]) +
       select('Industry', 'industry', [...values('industry'), f.industry]) +
-      select('Currency', 'currency', [...values('currency'), ...(rows.some(row=>history(row)&&!row.currency)?['Unknown currency']:[]), f.currency]) :
-      ['status','from','to','company','industry','currency'].map(key => '<input type="hidden" name="'+key+'" value="'+esc(f[key])+'">').join('')) +
+      select('Currency', 'currency', [...values('currency'), ...(rows.some(row=>history(row)&&!row.currency)?['Unknown currency']:[]), f.currency])+
+      select('Account manager','manager',[...values('account_manager'),f.manager])+
+      select('Record type','kind',['native','legacy'])+
+      input('Minimum PO amount','minAmount','text')+input('Maximum PO amount','maxAmount','text')+
+      select('Sort','sort',['received-desc','received-asc','po-asc','amount-desc'])+
+      '<small>Amount range uses reported numeric values in each record currency; no currency conversion. Amount sorting groups by currency.</small>' :
+      ['status','from','to','company','industry','currency','manager','kind','minAmount','maxAmount','sort'].map(key => '<input type="hidden" name="'+key+'" value="'+esc(f[key])+'">').join('')) +
     '<button type="submit" class="secondary">Apply filters</button><a href="' + orderIntakeHref(route.section) + '">Clear</a></form>';
 }
-function orderTable(rows, route) {
+function orderTable(rows, route, selection=null, disabled=false) {
   if (!rows.length) return '<p class="oi-empty">No matching orders in the loaded records.</p>';
   return '<div class="oi-table-scroll" tabindex="0" aria-label="Purchase orders"><table><thead><tr>' +
-    ['PO Number','Client','Currency','Status','PO Amount','Gross Profit','Industry','Company','Account Manager','Date Received','Delivery Date'].map(v => '<th scope="col">'+v+'</th>').join('') +
-    '</tr></thead><tbody>' + rows.map(row => '<tr><td><a href="' + esc(orderIntakeHref(route.section==='archived'?'archived':'all-orders',route.filters,row.id)) + '">' + show(row.po_number) + '</a>'+origin(row)+'</td>' +
+    (selection?'<th scope="col">Select</th>':'')+['PO Number','Client','Currency','Status','PO Amount','Gross Profit','Industry','Company','Account Manager','Date Received','Delivery Date'].map(v => '<th scope="col">'+v+'</th>').join('') +
+    '</tr></thead><tbody>' + rows.map(row => '<tr>'+(selection?'<td><input type="checkbox" name="order-selection" data-oi-select="'+esc(row.id)+'" aria-label="Select '+esc(row.po_number)+'"'+(selection.has(row.id)?' checked':'')+(disabled?' disabled':'')+'></td>':'')+'<td><a href="' + esc(orderIntakeHref(route.section==='archived'?'archived':'all-orders',route.filters,row.id)) + '">' + show(row.po_number) + '</a>'+origin(row)+'</td>' +
       [row.client_name,row.currency,row.status,row.po_amount,row.gross_profit,row.industry,row.company,row.account_manager,row.date_received,row.delivery_date].map((v,i) => '<td>'+show(v)+(history(row)&&i===4?' <small>Source</small>':history(row)&&i===5?' <small>Reported</small>':'')+'</td>').join('') + '</tr>').join('') + '</tbody></table></div>';
 }
 function workflow(rows, route) {
@@ -49,18 +56,20 @@ function detail(record, route) {
     (record?.busy ? '<p role="status">Loading order…</p>' : record?.error ? '<p role="alert">'+esc(record.error)+'</p>' :
       record?.row ? (nativeEditable(record.row)?'<button type="button" class="secondary" data-oi-action="edit">Edit purchase order</button>':'')+(history(record.row)?'<p>Historical record — original reported financial values; original source status and archive state are retained separately; VAT and archive state may be unknown. Historical client evidence is not a verified current client.</p>':'')+'<dl class="oi-detail">'+Object.entries(record.row).filter(([key])=>!['id','workspace_id'].includes(key)&&(key!=='archived'||history(record.row))).map(([key,value])=>'<div><dt>'+esc(key.replaceAll('_',' '))+'</dt><dd>'+show(value)+'</dd></div>').join('')+'</dl>'+lifecycleControls(record.row)+(Number.isSafeInteger(record.row.revision)?'<button type="button" class="secondary" data-oi-action="recipient" data-oi-id="'+esc(record.row.id)+'">Notification recipient</button>':'')+renderOrderActivity(record.activity) : '<p>Order unavailable.</p>') + '</section>';
 }
-export function renderOrderIntake({ route, snapshot, record = null }) {
+export function renderOrderIntake({ route, snapshot, record = null, tableState = null }) {
   const rows = snapshot?.rows || [];
   const filtered = filterOrderIntakeRows(rows, route.filters);
   const partial = !snapshot || snapshot.hasMore || snapshot.busy || Boolean(snapshot.error);
   let content = '';
+  const table=tableState&&['search','all-orders','archived'].includes(route.section)?orderTablePage(filtered,tableState.page):null;
+  const ready=!partial&&!tableState?.busy;
   try {
     if (snapshot && !snapshot.busy || rows.length) content = route.section === 'dashboard' ? renderSalesDashboard(filtered,{recentOrders:orderTable(filtered.slice(0,10),route),complete:!partial}) :
-      route.section === 'workflow' ? workflow(filtered,route) : orderTable(filtered,route);
+      route.section === 'workflow' ? workflow(filtered,route) : table?bulkToolbar({selected:tableState.selected.size,total:filtered.length,page:table.page,pages:table.pages,ready,busy:tableState.busy,archived:route.section==='archived'})+orderTable(table.rows,route,tableState.selected,!ready):orderTable(filtered,route);
   } catch (error) { content = '<p role="alert">'+esc(error.message)+'</p>'; }
   return '<section class="oi-app" aria-label="Order Intake"><header class="oi-header"><div><h1>Order Intake</h1><p>Sales Operations Intelligence</p></div><div class="oi-header-actions"><button class="secondary" type="button" data-oi-action="inbox">Notifications</button><button class="primary" type="button" data-oi-action="create">New purchase order</button><button class="secondary" type="button" data-oi-action="refresh"'+(snapshot?.busy?' disabled':'')+'>Refresh</button></div></header>' +
     '<nav class="oi-tabs" aria-label="Order Intake views">'+ORDER_INTAKE_SECTIONS.map((section,i)=>'<a href="'+esc(orderIntakeHref(section,route.filters))+'"'+(section===route.section?' aria-current="page"':'')+'>'+labels[i]+'</a>').join('')+'</nav>' +
-    filterForm(rows,route) + detail(record,route) +
+    filterForm(rows,route) + detail(record,route) + (tableState?bulkResults(tableState.results):'') +
     '<p class="oi-count" role="status">'+(snapshot?.busy?'Loading orders… ': '')+filtered.length+' matching of '+rows.length+' loaded orders. '+(partial?'Partial or unconfirmed results; counts and totals cover loaded records only.':'All available pages loaded; refresh for current records.')+'</p>' +
     (snapshot?.error?'<p role="alert">'+esc(snapshot.error)+'</p>':'') + content +
     (snapshot?.hasMore && !snapshot.busy && !snapshot.error?'<button type="button" class="secondary" data-oi-action="more">Load more orders</button>':'')+'</section>';

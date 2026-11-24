@@ -1,3 +1,4 @@
+import {decimalParts} from './order-intake-search.js';
 import { WORK_MANAGEMENT_BOARD_IDS } from './workspace-application-ownership.js';
 
 export const ORDER_INTAKE_ROUTE = '#/order-intake';
@@ -7,7 +8,7 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 
 export function orderIntakeHref(section = 'dashboard', filters = {}, recordId = null) {
   const params = new URLSearchParams();
-  for (const key of ['year', 'q', 'status', 'from', 'to', 'company', 'industry', 'currency']) {
+  for (const key of ['year', 'q', 'status', 'from', 'to', 'company', 'industry', 'currency', 'manager', 'kind', 'minAmount', 'maxAmount', 'sort']) {
     if (filters[key]) params.set(key, filters[key]);
   }
   const path = section === 'dashboard' ? ORDER_INTAKE_ROUTE : ORDER_INTAKE_ROUTE + '/' + section;
@@ -23,12 +24,15 @@ export function parseOrderIntakeRoute(hash) {
   const recordId = parts[2] === 'record' && uuid.test(parts[3] || '') ? parts[3] : null;
   const params = new URLSearchParams(query);
   const filters = {};
-  for (const key of ['year', 'q', 'status', 'from', 'to', 'company', 'industry', 'currency']) {
+  for (const key of ['year', 'q', 'status', 'from', 'to', 'company', 'industry', 'currency', 'manager', 'kind', 'minAmount', 'maxAmount', 'sort']) {
     filters[key] = (params.get(key) || '').trim().slice(0, 240);
   }
   if (!/^\d{4}$/.test(filters.year)) filters.year = '';
   for (const key of ['from', 'to']) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(filters[key])) filters[key] = '';
   }
+  for(const key of ['minAmount','maxAmount'])if(filters[key]&&!decimalParts(filters[key]))filters[key]='';
+  if(!['native','legacy'].includes(filters.kind))filters.kind='';
+  if(!['received-desc','received-asc','po-asc','amount-desc'].includes(filters.sort))filters.sort='';
   return { section, filters, recordId, canonicalHash: orderIntakeHref(section, filters, recordId) };
 }

@@ -6,6 +6,7 @@ import {notificationInbox,recipientFields} from '../frontend/order-intake-notifi
 import {renderOrderIntake} from '../frontend/order-intake-ui.js';
 import {parseOrderIntakeRoute} from '../frontend/order-intake-route.js';
 import {verifyOperationalBrowser} from './cp-oi-native-05a-browser.mjs';
+import {verifyBulkSigned} from './cp-oi-native-06-signed.mjs';
 import {randomUUID} from 'node:crypto';
 
 export async function verifyOperationalLifecycle({auth,api,workspace,foreign,signin,sql,manifest}){
@@ -75,6 +76,8 @@ export async function verifyOperationalLifecycle({auth,api,workspace,foreign,sig
  assert.equal(sql('select count(*) from order_intake_legacy_lifecycle'),'1');
  assert.equal(sql("select md5(string_agg(id::text||':'||md5(payload::text),',' order by id)) from order_intake_legacy_orders"),snapshotHash);
  await verifyOperationalBrowser({actor:{auth,api},recipient:{auth:other.auth,api:other.api},row});
+ assert.equal(sql("select md5(string_agg(id::text||':'||md5(payload::text),',' order by id)) from order_intake_legacy_orders"),snapshotHash);
+ await verifyBulkSigned({client:actor,sql,legacy:await actor.detail(row.id),native});
  assert.equal(sql("select md5(string_agg(id::text||':'||md5(payload::text),',' order by id)) from order_intake_legacy_orders"),snapshotHash);
  console.log('PASS: 909 operational identities; source payload unchanged; unknown archive preserved; legacy status/archive/restore; stale and foreign denial; explicit recipient binding; two-account inbox, read acknowledgement; native workflow and editor notifications; changed manager unresolved');
 }

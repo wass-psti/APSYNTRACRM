@@ -1343,9 +1343,7 @@ try {
         globalHeader.querySelector(".tt-log-reference-header"),
       ),
       searchInside: Boolean(logHeader?.querySelector("#tt-log-search")),
-      filterInside: Boolean(
-        logHeader?.querySelector(".tt-log-filter-trigger"),
-      ),
+      filterInside: Boolean(logHeader?.querySelector(".tt-log-filter-trigger")),
       belowTopbar:
         logHeader?.getBoundingClientRect().top >=
         globalHeader.getBoundingClientRect().bottom - 1,
