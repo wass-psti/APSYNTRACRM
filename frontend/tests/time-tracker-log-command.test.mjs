@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {renderTimeTrackerLog,timeTrackerLogSummary,filterTimeTrackerLogRows} from '../time-tracker-log.js';
+import {renderTimeTrackerLog,timeTrackerLogSummary,filterTimeTrackerLogRows,boundTimeTrackerLogWidth} from '../time-tracker-log.js';
 
 const now=new Date('2026-11-04T05:48:59Z');
 const records=[
@@ -74,7 +74,7 @@ test('Flat styling is scoped, adaptive and dark-mode aware',()=>{
 
 test('Record list has five mockup columns plus selection, initials and a single live results count',()=>{
  const html=render();
- assert.match(html,/<th>Clock In<\/th><th>Employee<\/th><th>Working Location<\/th><th>Department<\/th><th>Clock Out<\/th><th>Status<\/th>/);
+ assert.deepEqual([...html.matchAll(/<th>([^<]+)<span class="tt-log-resize"/g)].map(m=>m[1]),['Clock In','Employee','Working Location','Department','Clock Out','Status']);
  assert.match(html,/class="tt-log-avatar" aria-hidden="true">SE<\/span>/);
  assert.equal((html.match(/id="tt-log-visible-count"/g)||[]).length,1);
  assert.ok(html.indexOf('tt-log-table')<html.indexOf('tt-log-secondary-analytics'));
@@ -148,3 +148,23 @@ test('Attendance Log keeps status separate from clock-out time and defines all s
  assert.match(css,/\.tt-log-row-clock strong \{font-size:inherit/);
  assert.match(css,/grid-template-columns:14fr 29fr 17fr 17fr 9fr 11fr/);
 });
+
+ test('Exact Manila date intersects signed status and filters, including midnight boundary',()=>{
+ const extra=[...records,{...records[0],id:'midnight',clockIn:'2026-11-03T16:00:00Z'}];
+ assert.deepEqual(filterTimeTrackerLogRows(extra,{date:'2026-11-04',view:'Active'},now).map(r=>r.id),['a','midnight']);
+ assert.deepEqual(filterTimeTrackerLogRows(extra,{date:'2026-11-03'},now).map(r=>r.id),['b']);
+ assert.match(render({filters:{date:'2026-11-04'}}),/id="tt-log-date"[^>]*value="2026-11-04"/);
+ });
+ test('Work plan uses escaped signed text and only appears on offsite rows',()=>{
+ const note='<script>plan & review</script>';
+ const html=render({records:[{...records[0],location:'Offsite (Home)',workNote:note}]});
+ assert.match(html,/class="tt-log-work-plan" title="&lt;script&gt;plan &amp; review&lt;\/script&gt;">&lt;script&gt;/);
+ assert.doesNotMatch(html,/<script>|\[Work Plan\]/);
+ assert.doesNotMatch(render({records:[{...records[0],workNote:note}]}),/class="tt-log-work-plan"/);
+ });
+ test('Six independent width-only handles use bounded static tokens',()=>{
+ assert.equal((render().match(/data-tt-log-resize="/g)||[]).length,6);
+ assert.equal(boundTimeTrackerLogWidth(1),96);
+ assert.equal(boundTimeTrackerLogWidth(99999),960);
+ assert.equal(boundTimeTrackerLogWidth(207),208);
+ });

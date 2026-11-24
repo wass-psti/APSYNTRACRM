@@ -61,7 +61,7 @@ const choices=(id,values,selected)=>'<select id="'+id+'">'+
  '</select>';
 
 export const TT_LOG_DEFAULT_FILTERS=Object.freeze({
- search:'',period:'all',status:'all',location:'all',department:'all',sort:'newest',employeeId:null,view:'all',start:'',end:''
+ search:'',period:'all',status:'all',location:'all',department:'all',sort:'newest',employeeId:null,view:'all',start:'',end:'',date:''
 });
 const periods=[['all','All dates'],['today','Today'],
  ['last7','Last 7 days'],['week','This week'],['month','This month'],['custom','Custom range']];
@@ -82,6 +82,7 @@ export function filterTimeTrackerLogRows(records=[],filters={},now=new Date()){
  if(period==='custom')result=result.filter(r=>options.start&&options.end&&manilaDay(r.clockIn)>=options.start&&manilaDay(r.clockIn)<=options.end);
  const search=String(options.search??'').toLocaleLowerCase().trim().slice(0,120);
  result=result.filter(r=>
+  (!options.date||manilaDay(r.clockIn)===options.date)&&
   (!options.employeeId||r.ownerId==='cloud:'+options.employeeId)&&
   (options.department==='all'||(r.department||'Unassigned')===options.department)&&
   (options.view==='all'||(options.view==='today'?manilaDay(r.clockIn)===today:r.status===options.view))&&
@@ -345,6 +346,86 @@ const icons={
 };
 const iconButton=(action,label,icon,disabled=false,cls='')=>'<button type="button" class="tt-log-icon '+cls+'" aria-label="'+esc(label)+'" title="'+esc(label)+'" data-action="'+action+'"'+(disabled?' disabled':'')+'>'+icons[icon]+'</button>';
 const field=(label,id,values,selected)=>'<label class="tt-log-filter-field"><span>'+label+'</span>'+choices(id,values,selected)+'</label>';
+
+const TT_LOG_COLUMNS=Object.freeze([["in","Clock In"],["person","Employee"],["location","Working Location"],["department","Department"],["out","Clock Out"],["status","Status"]]);
+const LOG_WIDTH_MIN=96,LOG_WIDTH_MAX=960,LOG_WIDTH_STEP=16;
+export function boundTimeTrackerLogWidth(value){
+ return Math.max(LOG_WIDTH_MIN,Math.min(LOG_WIDTH_MAX,Math.round((Number(value)||LOG_WIDTH_MIN)/LOG_WIDTH_STEP)*LOG_WIDTH_STEP));
+}
+/** Width-only presentation state. Numeric, bounded data attributes select static CSP-safe CSS. */
+export function startTimeTrackerLogColumnResize(root){
+ const doc=root?.ownerDocument;
+ const win=doc?.defaultView;
+ if(!win||!root.querySelector)return ()=>{};
+ let widths=null,drag=null;
+ const tableFor=handle=>handle?.closest('.tt-log-table');
+ const readWidths=table=>Object.fromEntries(TT_LOG_COLUMNS.map(([key],i)=>[
+  key,boundTimeTrackerLogWidth(table.tHead.rows[0].cells[i+1].getBoundingClientRect().width)
+ ]));
+ const apply=(table,values)=>{
+  if(!table||!values)return;
+  table.classList.add('tt-log-width-adjusted');
+  for(const [key] of TT_LOG_COLUMNS){
+   table.setAttribute('data-tt-log-width-'+key,String(values[key]));
+   table.querySelector('[data-tt-log-resize="'+key+'"]')?.setAttribute('aria-valuenow',String(values[key]));
+  }
+ };
+ const hydrate=()=>{
+  const table=root.querySelector('.tt-log-table');
+  if(!table)return;
+  if(widths)apply(table,widths);
+  else for(const [key] of TT_LOG_COLUMNS){
+   const handle=table.querySelector('[data-tt-log-resize="'+key+'"]');
+   if(handle)handle.setAttribute('aria-valuenow',String(boundTimeTrackerLogWidth(handle.parentElement.getBoundingClientRect().width)));
+  }
+ };
+ const observer=new win.MutationObserver(hydrate);
+ observer.observe(root,{childList:true,subtree:true});
+ const handleFor=event=>event.target?.closest?.('[data-tt-log-resize]');
+ const down=event=>{
+  const handle=handleFor(event),table=tableFor(handle);
+  if(!table||event.button!==0||drag)return;
+  const key=handle.dataset.ttLogResize;
+  if(!TT_LOG_COLUMNS.some(([k])=>k===key))return;
+  widths=widths||readWidths(table);
+  drag={table,key,x:event.clientX,start:widths[key],pointerId:event.pointerId};
+  apply(table,widths);
+  handle.setPointerCapture?.(event.pointerId);
+  event.preventDefault();
+ };
+ const move=event=>{
+  if(!drag||event.pointerId!==drag.pointerId)return;
+  widths={...widths,[drag.key]:boundTimeTrackerLogWidth(drag.start+event.clientX-drag.x)};
+  apply(drag.table,widths);
+ };
+ const end=event=>{if(drag&&event.pointerId===drag.pointerId)drag=null;};
+ const keyboard=event=>{
+  const handle=handleFor(event),table=tableFor(handle);
+  if(!table||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+  const key=handle.dataset.ttLogResize;
+  widths=widths||readWidths(table);
+  const next=event.key==='Home'?LOG_WIDTH_MIN:event.key==='End'?LOG_WIDTH_MAX:
+   widths[key]+(event.key==='ArrowRight'?LOG_WIDTH_STEP:-LOG_WIDTH_STEP);
+  widths={...widths,[key]:boundTimeTrackerLogWidth(next)};
+  apply(table,widths);
+  event.preventDefault();
+ };
+ root.addEventListener('pointerdown',down);
+ root.addEventListener('keydown',keyboard);
+ win.addEventListener('pointermove',move);
+ win.addEventListener('pointerup',end);
+ win.addEventListener('pointercancel',end);
+ hydrate();
+ return ()=>{
+  observer.disconnect();
+  root.removeEventListener('pointerdown',down);
+  root.removeEventListener('keydown',keyboard);
+  win.removeEventListener('pointermove',move);
+  win.removeEventListener('pointerup',end);
+  win.removeEventListener('pointercancel',end);
+ };
+}
+
 const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
  const hidden=query&&!searchText(r).includes(query.toLocaleLowerCase().trim());
  const selected=gpsOptions.selectedIds?.includes(r.id)===true||
@@ -360,7 +441,7 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
    '<summary class="tt-log-row-summary" data-action="tt-log-open-detail" data-record-id="'+esc(r.id)+
     '" aria-haspopup="dialog" aria-label="Open attendance details for '+esc(r.name||'employee')+'">'+
    '<span class="tt-log-row-clock" title="'+esc(phtDate(r.clockIn))+'"><strong>'+esc(logRowTime(r.clockIn))+'</strong>'+
-    (r.location==='Offsite (Home)'&&r.workNote?' <span class="tt-log-work-plan">- [Work Plan]</span>':'')+'</span>'+
+    (r.location==='Offsite (Home)'&&r.workNote?' <span class="tt-log-work-plan" title="'+esc(r.workNote)+'">'+esc(r.workNote)+'</span>':'')+'</span>'+
    '<span class="tt-log-row-person"><span class="tt-log-avatar" aria-hidden="true">'+esc(logInitials(r.name))+'</span><strong title="'+esc(r.name||'Signed member')+'">'+esc(r.name||'Signed member')+'</strong><small class="tt-log-row-date">'+esc(logRowDate(r.clockIn))+'</small></span>'+
    '<span class="tt-log-row-location" title="'+esc(r.location||'Unspecified')+'">'+esc(locationLabel(r.location||'Unspecified'))+'</span>'+
    '<span class="tt-log-row-department" title="'+esc(r.isOjt?'OJT intern · Shared login':r.department||'Unassigned')+'">'+esc(r.department||'Unassigned')+'</span>'+
@@ -385,7 +466,7 @@ export function renderTimeTrackerLog({
  const places=[...new Set(safeRows(records).map(r=>r.location).
   filter(v=>TT_LOCATIONS.includes(v)))].sort();
  const scopeLabel=scope==='AUTHORIZED_WORKSPACE_TEAM'?'Authorized team history':'Your attendance history';
- const totals=timeTrackerLogSummary(safeRows(records),now);
+ const totals=timeTrackerLogSummary(safeRows(records).filter(r=>!options.date||manilaDay(r.clockIn)===options.date),now);
  const departments=[...new Set(safeRows(records).map(r=>r.department||'Unassigned'))].sort();
  const visibleStandard=visible.filter(r=>!r.isOjt);
  const allSelected=visibleStandard.length>0&&visibleStandard.every(r=>standardSelected.includes(r.id));
@@ -412,6 +493,8 @@ export function renderTimeTrackerLog({
   '<nav class="tt-log-flat-stats" aria-label="Signed attendance history snapshot">'+
    [['all','All sessions',totals.sessions],['today','Today',totals.today],['Completed','Completed',totals.completed],['Active','Active',totals.active]].map(([key,label,count])=>
     '<button type="button" class="tt-log-view-tab'+(options.view===key?' is-current':'')+'" aria-pressed="'+(options.view===key)+'" data-action="tt-log-view" data-target="'+key+'">'+label+'<span>'+count+'</span></button>').join('')+
+   '<label class="tt-log-date-picker"><span>Date</span><input type="date" id="tt-log-date" aria-label="Attendance date (Philippine time)" value="'+esc(options.date)+'"></label>'+
+   (options.date?'<button type="button" class="tt-log-date-clear" data-action="tt-log-date-clear">Clear date</button>':'')+
   '</nav>'+
   '<section class="tt-log-panel tt-log-records" aria-label="Attendance Records">'+
    '<div class="tt-log-reference-toolbar">'+
@@ -432,7 +515,8 @@ export function renderTimeTrackerLog({
    (adminSuccess?'<p class="tt-log-admin-feedback is-success" role="status">'+esc(adminSuccess)+'</p>':'')+
    (rows.length?'<div class="tt-log-day"><div class="tt-log-table-scroll">'+
      '<table class="board-table tt-log-table"><colgroup><col class="tt-log-col-check"><col class="tt-log-col-in"><col class="tt-log-col-person"><col class="tt-log-col-location"><col class="tt-log-col-department"><col class="tt-log-col-out"><col class="tt-log-col-status"></colgroup><thead><tr>'+
-     '<th class="tt-log-check-heading" aria-label="Selection"></th><th>Clock In</th><th>Employee</th><th>Working Location</th><th>Department</th><th>Clock Out</th><th>Status</th></tr></thead>'+
+     '<th class="tt-log-check-heading" aria-label="Selection"></th>'+TT_LOG_COLUMNS.map(([key,label])=>
+      '<th>'+label+'<span class="tt-log-resize" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize '+label+' column" aria-valuemin="96" aria-valuemax="960" aria-valuenow="160" data-tt-log-resize="'+key+'"></span></th>').join('')+'</tr></thead>'+
      '<tbody>'+rows.map(r=>sessionRow(r,query,now,{
       gpsEligible:!r.isOjt&&gpsEligible,gpsData:r.isOjt?null:gpsData,gpsBusy,gpsError,gpsErrorRecordId,
       expandedRecordIds,mapEnabled:!r.isOjt&&mapEnabled,mapTheme,
