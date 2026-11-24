@@ -816,6 +816,7 @@ try {
       "Working Location",
       "Department",
       "Clock Out",
+      "Work Duration",
       "Status",
     ],
   );
@@ -834,6 +835,10 @@ try {
   assert.equal(
     await page.locator(".tt-log-row-out").textContent(),
     "05:00:00 PM",
+  );
+  assert.equal(
+    await page.locator(".tt-log-row-duration").textContent(),
+    "09:00:00",
   );
   const logGeometry = await page.locator(".tt-log-table").evaluate((table) => {
     const headers = [...table.querySelectorAll("thead th")].slice(1);
