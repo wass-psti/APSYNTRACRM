@@ -174,13 +174,14 @@ function head(access,busy=false,view='clock'){
     '<span class="tt-header-role">'+esc(roleLabel)+'</span></span>'+
   '</div></header>';
 }
-function applicationHeading(view,busy){
- const [title,description]=sectionMeta[view]||sectionMeta.clock;
+function applicationHeading(view,busy,adminEligible=false,adminFullAccess=false){
+ const [title,defaultDescription]=sectionMeta[view]||sectionMeta.clock;
+ const description=view==='log'?(adminEligible?(adminFullAccess?'Authorized attendance history and record management.':'Authorized attendance history and time corrections.'):'Read-only history of authorized sessions, today and earlier.'):defaultDescription;
  return '<div class="fm1-page-heading tt-application-heading"><div>'+
   '<span class="fm1-eyebrow">TIMEKEEPING WORKSPACE</span><h2>'+esc(title)+'</h2>'+
   '<p>'+esc(description)+'</p></div>'+
   '<button type="button" class="fm1-quiet-button tt-refresh-button" data-action="tt-refresh"'+
-  (busy?' disabled':'')+'>↻ Refresh</button></div>';
+  (busy?' disabled':'')+(view==='log'?' aria-label="Refresh attendance" title="Refresh attendance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 8a7 7 0 0 1 11.6-2L20 12M4 12l2.3 6A7 7 0 0 0 18 16"/></svg>':'>↻ Refresh')+'</button></div>';
 }
 function applicationFooter(){
  return '<footer class="fm1-app-footer tt-application-footer"><span>APSYNTRA CRM · TimeTracker Attendance</span>'+
@@ -418,7 +419,7 @@ export function renderTimeTrackerNative({
   head(verified?result.access:null,busy,selected)+
   (sharedOjt?'<nav class="tt-ojt-navigation" aria-label="Intern attendance"><strong>OJT attendance</strong></nav>':
    navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true))+
-  (sharedOjt||selected==='employees'?'':applicationHeading(selected,busy)+((selected==='clock'&&verified&&TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&result.access?.attendanceWritesAccepted===true)?'':notifications(verified,verified&&result.access?.attendanceWritesAccepted===true,busy)));
+  (sharedOjt||selected==='employees'?'':applicationHeading(selected,busy,verified&&adminEligible,verified&&adminFullAccess)+((verified&&(selected==='log'||(selected==='clock'&&TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&result.access?.attendanceWritesAccepted===true)))?'':notifications(verified,verified&&result.access?.attendanceWritesAccepted===true,busy)));
  if(busy&&verified&&selected==='clock')html+='<div class="tt-clock-sync-status" role="status" aria-live="polite">'+
   '<span class="tt-inline-spinner" aria-hidden="true"></span>Synchronizing signed attendance…</div>';
  if(error)html+='<div class="tt-feedback tt-feedback-error" role="alert">'+esc(error)+'</div>';

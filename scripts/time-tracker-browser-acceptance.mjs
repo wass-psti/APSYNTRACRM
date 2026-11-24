@@ -294,15 +294,14 @@ try {
       locationPreference: "Office-Base Duty",
     }),
   );
-  assert.equal(await page.locator("#tt-note").isVisible(), false);
+  const noteField = page.locator("#tt-note");
+  const status = page.locator(".tt-clock-rework-status");
+  const clockFace = page.locator(".tt-clock-face");
+  const readClockSize = (el) => parseFloat(getComputedStyle(el).fontSize);
+  assert.equal(await noteField.isVisible(), false);
   assert.equal(await page.locator("#tt-session-progress").count(), 0);
-  assert.equal(
-    await page.locator(".tt-clock-rework-status").textContent(),
-    "Not clocked in",
-  );
-  const idleClockSize = await page
-    .locator(".tt-clock-face")
-    .evaluate((element) => parseFloat(getComputedStyle(element).fontSize));
+  assert.equal(await status.textContent(), "Not clocked in");
+  const idleClockSize = await clockFace.evaluate(readClockSize);
   await page.evaluate(() =>
     window.__timeTrackerRender({
       result: {
@@ -319,15 +318,10 @@ try {
       locationPreference: "Offsite (Home)",
     }),
   );
-  assert.equal(await page.locator("#tt-note").isVisible(), true);
+  assert.equal(await noteField.isVisible(), true);
+  assert.equal(await noteField.evaluate((el) => el.required), true);
   assert.equal(
-    await page.locator("#tt-note").evaluate((element) => element.required),
-    true,
-  );
-  assert.equal(
-    await page
-      .locator("#tt-note")
-      .evaluate((element) => element.validity.valueMissing),
+    await noteField.evaluate((el) => el.validity.valueMissing),
     true,
   );
   await page.evaluate(() => {
@@ -356,52 +350,38 @@ try {
       now: new Date("2026-11-24T06:07:00Z"),
     });
   });
-  assert.equal(
-    await page.locator(".tt-clock-rework-status").textContent(),
-    "Active",
-  );
+  assert.equal(await status.textContent(), "Active");
   assert.equal(
     await page.locator("#tt-session-elapsed").textContent(),
     "05:13:54",
   );
   assert.equal(await page.locator(".tt-session-ring > svg").isVisible(), true);
-  const activeClockSize = await page
-    .locator(".tt-clock-face")
-    .evaluate((element) => parseFloat(getComputedStyle(element).fontSize));
+  const activeClockSize = await clockFace.evaluate(readClockSize);
   assert.equal(
     activeClockSize,
     idleClockSize,
     "Clock face remains stable across attendance states",
   );
-  assert.equal(
-    await page.locator("#tt-note").inputValue(),
-    "Offsite development",
-  );
-  assert.equal(
-    await page.locator("#tt-note").evaluate((element) => element.readOnly),
-    true,
-  );
-  const activeLayout = await page.evaluate(() => ({
-    ring: document.querySelector(".tt-session-ring").getBoundingClientRect()
-      .width,
-    ringTop: document.querySelector(".tt-session-ring").getBoundingClientRect()
-      .top,
-    summaryTop: document
-      .querySelector(".tt-clock-rework-stats")
-      .getBoundingClientRect().top,
-    context: getComputedStyle(
-      document.querySelector(".tt-active-session-context"),
-    ).backgroundColor,
-    note: getComputedStyle(document.querySelector("#tt-note")).backgroundColor,
-    workspaceWidth: document
-      .querySelector(".tt-clock-rework-workspace")
-      .getBoundingClientRect().width,
-    stageWidth: document
-      .querySelector(".tt-clock-stage")
-      .getBoundingClientRect().width,
-    viewportWidth: innerWidth,
-    overflow: document.documentElement.scrollWidth - innerWidth,
-  }));
+  assert.equal(await noteField.inputValue(), "Offsite development");
+  assert.equal(await noteField.evaluate((el) => el.readOnly), true);
+  const activeLayout = await page.evaluate(() => {
+    const ring = document.querySelector(".tt-session-ring");
+    const summary = document.querySelector(".tt-clock-rework-stats");
+    const context = document.querySelector(".tt-active-session-context");
+    const note = document.querySelector("#tt-note");
+    const stage = document.querySelector(".tt-clock-stage");
+    const workspace = document.querySelector(".tt-clock-rework-workspace");
+    return {
+      ring: ring.getBoundingClientRect().width,
+      ringTop: ring.getBoundingClientRect().top,
+      summaryTop: summary.getBoundingClientRect().top,
+      context: getComputedStyle(context).backgroundColor,
+      note: getComputedStyle(note).backgroundColor,
+      workspaceWidth: workspace.getBoundingClientRect().width,
+      stageWidth: stage.getBoundingClientRect().width,
+      overflow: document.documentElement.scrollWidth - innerWidth,
+    };
+  });
   assert.ok(activeLayout.ring >= 50 && activeLayout.ring <= 64);
   assert.ok(activeLayout.ringTop < activeLayout.summaryTop);
   assert.equal(activeLayout.context, "rgba(0, 0, 0, 0)");
