@@ -44,11 +44,11 @@ No backend, database, attendance business-rule, role, permission, or authorizati
 ## Verification record
 
 - Red/green source test: frontend/tests/time-tracker-refined-ui.test.mjs failed before the CSS change because the Clock animation declarations remained, then passed after removal.
-- Chromium browser acceptance: npm run test:tt-clock-a11y-02 passed with the CP_TT_CLOCK_A11Y_03_BROWSER_PASS result. It checks computed animation/transform/transition properties, zero active animations, and identical Work Plan/ring bounding rectangles across 400ms.
+- Chromium browser acceptance: both node scripts/cp-tt-clock-a11y-01-browser.mjs and npm run test:tt-clock-a11y-02 passed. CP01's inherited assertion was updated because it still required the now-removed Work Plan animation. CP03 checks computed animation/transform/transition properties, zero active animations, and identical Work Plan/ring bounding rectangles across 400ms.
 - Full frontend regression: 3,669 passed, zero failed.
 - Focused TimeTracker clock regression: 44 passed, zero failed.
 - Production Vite build: passed. Existing build warnings remain for the startup-guard script tag, host-context pseudo-class, and large generated chunks; no build failure.
 - Repository lint and syntax checks: passed. Direct ESLint on the changed browser acceptance and TimeTracker unit test: passed.
 - Deterministic CSS bundle: 81 source files verified current; 1,688,004 bytes.
 - Git diff whitespace check: passed.
-- GitHub CI and deployment are pending the pull request.
+- Initial GitHub CI correctly exposed the stale CP01 animation expectation; the inherited browser acceptance was updated to the new no-motion contract and both CP01/CP03 Chromium scripts passed locally. GitHub CI is rerunning on the updated pull request.

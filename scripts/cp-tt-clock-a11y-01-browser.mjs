@@ -85,33 +85,27 @@ try {
 
   await page.addScriptTag({ content: axeSource });
   const activeAccessibility = await page.evaluate(async () => {
-    const element = document.querySelector("#tt-note-wrap");
-    const rules = [...document.styleSheets].flatMap((sheet) => {
-      try {
-        return [...sheet.cssRules];
-      } catch {
-        return [];
-      }
-    });
-    const keyframes = rules.find(
-      (rule) =>
-        rule.type === CSSRule.KEYFRAMES_RULE &&
-        rule.name === "tt-work-plan-reveal",
-    );
+    const workPlan = document.querySelector("#tt-note-wrap");
+    const ring = document.querySelector(".tt-session-ring");
+    const progress = document.querySelector("#tt-session-progress");
     const result = await window.axe.run(document, {
       runOnly: {
         type: "tag",
         values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"],
       },
     });
+    const workPlanStyle = getComputedStyle(workPlan);
+    const ringStyle = getComputedStyle(ring);
+    const progressStyle = getComputedStyle(progress);
     return {
-      animationName: getComputedStyle(element).animationName,
-      frames: keyframes
-        ? [...keyframes.cssRules].map((frame) => ({
-            opacity: frame.style.opacity,
-            transform: frame.style.transform,
-          }))
-        : [],
+      workPlanAnimation: workPlanStyle.animationName,
+      workPlanTransform: workPlanStyle.transform,
+      ringAnimation: ringStyle.animationName,
+      ringTransform: ringStyle.transform,
+      ringProgressTransition: progressStyle.transitionProperty,
+      ringProgressTransitionDuration: progressStyle.transitionDuration,
+      activeAnimations:
+        workPlan.getAnimations().length + ring.getAnimations().length,
       violations: result.violations.map((item) => ({
         id: item.id,
         nodes: item.nodes.map((node) => ({
@@ -121,13 +115,13 @@ try {
       })),
     };
   });
-  assert.equal(activeAccessibility.animationName, "tt-work-plan-reveal");
-  assert.deepEqual(
-    activeAccessibility.frames.map((frame) => frame.opacity),
-    ["", ""],
-    "Work Plan reveal must not animate text opacity",
-  );
-  assert.ok(activeAccessibility.frames.every((frame) => frame.transform));
+  assert.equal(activeAccessibility.workPlanAnimation, "none");
+  assert.equal(activeAccessibility.workPlanTransform, "none");
+  assert.equal(activeAccessibility.ringAnimation, "none");
+  assert.equal(activeAccessibility.ringTransform, "none");
+  assert.equal(activeAccessibility.ringProgressTransition, "none");
+  assert.equal(activeAccessibility.ringProgressTransitionDuration, "0s");
+  assert.equal(activeAccessibility.activeAnimations, 0);
   assert.deepEqual(activeAccessibility.violations, []);
 
   const update = await page.evaluate(async () => {
