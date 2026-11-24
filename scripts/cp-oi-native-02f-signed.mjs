@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
+import {verifyOperationalLifecycle} from './cp-oi-native-05a-signed.mjs';
 import {verifyLifecycleSigned} from './cp-oi-native-05-signed.mjs';
 import {verifyOrderEditorBrowser} from './cp-oi-native-03-editor-browser.mjs';
 import {verifyOrderEditorSigned} from './cp-oi-native-03-signed.mjs';
@@ -40,6 +41,7 @@ async function signin(scope,allowed){
  const auth={isSignedIn:true,userId:user.id,authorized:path=>call(restBase,path.replace('/rest/v1',''),{token:session.access_token})};
  const api={rpc:(name,body)=>call(restBase,'/rpc/'+name,{method:'POST',body,token:session.access_token})};
  if(process.env.OI_VERIFY_MUTATIONS==='1')sql("insert into workspace_members values ('"+scope+"','"+user.id+"',true)");
+ if(process.env.OI_VERIFY_OPERATIONAL==='1')sql("insert into profiles values ('"+user.id+"','Fixture member','"+email+"','active')");
  return {auth,api,client:new OrderIntakeRegistryClient({auth,api,workspaceId:scope})};
 }
 await ready(authBase,'/health');await ready(restBase,'/');
@@ -96,3 +98,5 @@ if(process.env.OI_VERIFY_MUTATIONS==='1'){
  await verifyOrderEditorBrowser({auth,api,workspace});
  await verifyLifecycleSigned({auth,api,workspace,sql});
 }
+
+if(process.env.OI_VERIFY_OPERATIONAL==='1')await verifyOperationalLifecycle({auth,api,workspace,foreign,signin,sql,manifest});

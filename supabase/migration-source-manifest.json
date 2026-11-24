@@ -2165,6 +2165,13 @@
       "sha256": "3e8e2ebf2f526a70dfe047a55dd3a5c0034c3d41c30856c8fcdd8ebcd4085a33"
     },
     {
+      "version": "20261124110118",
+      "name": "cp_oi_native_05a_operational_lifecycle",
+      "file": "20261124110118_cp_oi_native_05a_operational_lifecycle.sql",
+      "bytes": 15391,
+      "sha256": "d11e986eeebe7e5b57bf8b6f889e8f1bf10bac97268ec3d5be9a6b5f96605f9d"
+    },
+    {
       "version": "20261124170000",
       "name": "cp_tt_ot_creator_withdrawal",
       "file": "20261124170000_cp_tt_ot_creator_withdrawal.sql",

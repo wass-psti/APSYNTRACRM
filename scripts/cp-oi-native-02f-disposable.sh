@@ -38,6 +38,12 @@ SQL
  run < supabase/migrations/20261021064529_order_intake_lifecycle_audit_contract_correction_20261021.sql
  run < supabase/migrations/20261021064556_order_intake_status_archive_authenticated_activation_20261021.sql
  run < supabase/migrations/20261022093333_order_intake_restore_authorized_revision_20261022.sql
+ if [ "${OI_VERIFY_OPERATIONAL:-0}" = 1 ]; then
+  run <<'SQL'
+CREATE TABLE public.profiles(id uuid PRIMARY KEY,display_name text,email text,status text);
+SQL
+  run < supabase/migrations/20261124110118_cp_oi_native_05a_operational_lifecycle.sql
+ fi
 fi
 
 run <<'SQL'
