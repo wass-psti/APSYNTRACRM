@@ -17,7 +17,7 @@ import {renderTimeTrackerCalendar} from './time-tracker-calendar.js';
 import {renderTimeTrackerOvertime} from './time-tracker-overtime.js';
 import {renderTimeTrackerMyHours} from './time-tracker-my-hours.js';
 import {renderTimeTrackerTeam} from './time-tracker-team.js';
-import {renderTimeTrackerEmployees} from './time-tracker-application.js';
+import {renderTimeTrackerEmployees,canViewTimeTrackerEmployees} from './time-tracker-application.js';
 import {renderTimeTrackerOjtClock} from './apps/TimeTracker/time-tracker-ojt.js';
 import {renderTimeTrackerMonitor} from './time-tracker-monitor.js';
 import {renderTimeTrackerGps} from './time-tracker-gps.js';
@@ -136,11 +136,12 @@ export function ownAttendanceCsv(records){
  return '\uFEFF'+rows.map(row=>row.map(safe).join(',')) .join('\r\n')+'\r\n';
 }
 
-function navigation(view,busy,bootstrapEligible=false,gpsEligible=false){
+function navigation(view,busy,bootstrapEligible=false,gpsEligible=false,employeesEligible=false){
  return '<nav class="tt-navigation fm1-tabs" aria-label="TimeTracker sections">'+
   '<div class="tt-navigation-scroll" role="tablist" aria-label="TimeTracker views">'+
   sections.filter(([key])=>(key!=='team'||bootstrapEligible===true)&&
-   (key!=='gps'||gpsEligible===true)).map(([key,label,enabled])=>
+   (key!=='gps'||gpsEligible===true)&&
+   (key!=='employees'||employeesEligible===true)).map(([key,label,enabled])=>
    '<button type="button" role="tab" class="tt-nav-tab fm1-tab'+(view===key?' is-current is-active':'')+
    '" aria-selected="'+(view===key)+'" data-action="tt-tab" data-target="'+key+'"'+
    (!enabled||busy?' disabled aria-disabled="true"':'')+
@@ -404,14 +405,15 @@ export function renderTimeTrackerNative({
  ojtLocationSelection='Office-Base Duty',ojtGeoProgress=''
 }={}){
  const verified=result?.status==='VERIFIED_READ';
- const selected=((view==='team'&&teamEligible!==true)||
+ const employeesEligible=verified&&canViewTimeTrackerEmployees(result.access);
+ const selected=((view==='employees'&&!employeesEligible)||(view==='team'&&teamEligible!==true)||
   (view==='gps'&&gpsEligible!==true))?'clock':
  ['overview','clock','employees','log','reports','calendar','ot','hours','team','monitor','gps'].includes(view)?view:'clock';
  const sharedOjt=verified&&['SHARED_LOGIN','SHARED_DISABLED','SERVICE_UNAVAILABLE','SETUP_REQUIRED'].includes(result.ojtRoster?.mode);
  let html='<section class="tt-native" aria-label="TimeTracker attendance application"><div class="fm1-app tt-application" data-tt-view="'+selected+'" data-tt-application-root>'+
   head(verified?result.access:null,busy,selected)+
   (sharedOjt?'<nav class="tt-ojt-navigation" aria-label="Intern attendance"><strong>OJT attendance</strong></nav>':
-   navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true))+
+   navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true,employeesEligible))+
   (sharedOjt||selected==='employees'?'':applicationHeading(selected,busy,verified&&adminEligible,verified&&adminFullAccess)+((verified&&(selected==='log'||(selected==='clock'&&TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&result.access?.attendanceWritesAccepted===true)))?'':notifications(verified,verified&&result.access?.attendanceWritesAccepted===true,busy)));
  if(busy&&verified&&selected==='clock')html+='<div class="tt-clock-sync-status" role="status" aria-live="polite">'+
   '<span class="tt-inline-spinner" aria-hidden="true"></span>Synchronizing signed attendance…</div>';

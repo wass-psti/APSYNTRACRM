@@ -21,7 +21,7 @@ const rows=[
  {id:'60000000-0000-4000-8000-000000000001',
   status:'active',module_role:null,display_name:'No TimeTracker access'}
 ];
-const scope={userId:actor,workspaceId:workspace,boardId:board,validRoles:TT_ROLES};
+const scope={userId:actor,workspaceId:workspace,boardId:board,validRoles:TT_ROLES,moduleRole:'IT Administrator'};
 
 test('existing signed module directory projects only registered active TimeTracker members',()=>{
  const projected=projectTimeTrackerEmployees(rows,scope);
@@ -246,6 +246,43 @@ test('unified Employees shell retains authorized actions, exposes selected secti
  assert.doesNotMatch(html,/tt-employee-active|<th scope="col">Access/);
  assert.match(html,/id="tt-employees-department-filter"/);
  const plain=renderTimeTrackerEmployees({directory,access:{...scope,moduleRole:'Employee'},tab:'ojt'});
- assert.doesNotMatch(plain,/data-target="ojt"|tt-departments-add/);
- assert.match(plain,/data-target="directory" aria-pressed="true"/);
+ assert.equal(plain,'');
+});
+
+
+test('Employees is admin-only in navigation, direct rendering, and unverified state',()=>{
+ const directory=projectTimeTrackerEmployees(rows,scope);
+ for(const moduleRole of TT_ROLES){
+  const access={...scope,moduleRole,employees:directory};
+  const result={status:'VERIFIED_READ',access,records:[],active:null};
+  const eligible=['System Admin','IT Administrator'].includes(moduleRole);
+  for(const view of ['clock','employees']){
+   const html=renderTimeTrackerNative({result,view});
+   assert.equal(html.includes('data-target="employees"'),eligible,moduleRole);
+   assert.equal(html.includes('data-tt-view="employees"'),eligible&&view==='employees',moduleRole);
+   if(!eligible)assert.doesNotMatch(html,/tt-employees-board|Jamie &amp; Taylor/);
+  }
+  assert.equal(Boolean(renderTimeTrackerEmployees({directory,access})),eligible,moduleRole);
+ }
+ const unverified=renderTimeTrackerNative({view:'employees',result:{status:'DENIED',access:scope}});
+ assert.doesNotMatch(unverified,/data-target="employees"|data-tt-view="employees"|tt-employees-board/);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/if\(next==='employees'&&!canViewTimeTrackerEmployees\(state\.ttAttendance\.access\)\)return/);
+ assert.match(app,/state\.ttView==='employees'&&\(snapshot\?\.status!=='VERIFIED_READ'\|\|!canViewTimeTrackerEmployees\(snapshot\.access\)\)/);
+});
+
+test('signed access omits the optional employee roster for non-admin roles',async()=>{
+ for(const moduleRole of TT_ROLES){
+  const api={
+   context:async()=>({user_id:actor,workspace_id:workspace,profile:{status:'active'}}),
+   nativeApplicationBoardContext:async()=>({userId:actor,workspaceId:workspace,board:{id:board,name:'TimeTracker Attendance'}}),
+   rpc:async name=>{
+    if(name==='has_module_access')return true;
+    if(name==='list_module_directory')return [{...rows[0],module_role:moduleRole},rows[1]];
+    throw Error('Unexpected RPC '+name);
+   }
+  };
+  const access=await new TimeTrackerNativeClient({auth:{userId:actor,getVerifiedUser:async()=>({id:actor})},api}).access(board);
+  assert.equal(Boolean(access.employees),['System Admin','IT Administrator'].includes(moduleRole),moduleRole);
+ }
 });
