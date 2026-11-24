@@ -1,5 +1,5 @@
 import {syncFuelTrans} from './fueltrans-lazy.js';
-import {OrderIntakeClient} from './order-intake-native.js';
+import {OrderIntakeRegistryClient} from './order-intake-registry-client.js';
 import {parseOrderIntakeRoute,orderIntakeHref} from './order-intake-route.js';
 import {createOrderIntakeReadState} from './order-intake-read-state.js';
 import {renderOrderIntake} from './order-intake-ui.js';
@@ -590,7 +590,7 @@ const orderIntakeScope=()=>[state.context?.user_id,state.context?.workspace_id].
 const orderIntakeCurrent=scope=>!state.workspaceTransitionPending&&auth.isSignedIn&&state.context?.user_id===auth.userId&&
  state.view==='order-intake'&&Boolean(parseOrderIntakeRoute(location.hash))&&scope===orderIntakeScope();
 const orderIntakeRead=createOrderIntakeReadState({
- clientFor:scope=>new OrderIntakeClient({auth,api:db,workspaceId:scope.split('|')[1]}),
+ clientFor:scope=>new OrderIntakeRegistryClient({auth,api:db,workspaceId:scope.split('|')[1]}),
  isCurrent:orderIntakeCurrent,onChange:()=>render()
 });
 function clearOrderIntake(){
@@ -602,8 +602,7 @@ async function loadOrderIntakeRecord(route,scope){
  if(!route.recordId)return;
  orderIntakeRecord={busy:true};render();
  try{
-  const row=await readNativeSearchRecordDetail({applicationId:'orders',recordId:route.recordId,
-   auth,api:db,workspaceId:state.context.workspace_id});
+  const row=await new OrderIntakeRegistryClient({auth,api:db,workspaceId:scope.split('|')[1]}).detail(route.recordId);
   if(row.id!==route.recordId||row.workspace_id!==state.context?.workspace_id)throw new Error('Order record unavailable.');
   if(run===orderIntakeRecordRun&&orderIntakeCurrent(scope))orderIntakeRecord={row};
  }catch(error){
