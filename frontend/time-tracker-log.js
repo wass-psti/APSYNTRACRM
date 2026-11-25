@@ -366,7 +366,7 @@ function renderTimeTrackerLogDetailDialog({row,now,gpsEligible=false,gpsData=nul
   '</section></div>';
 }
 const logInitials=name=>String(name||'Signed member').trim().split(/\s+/).filter(Boolean).slice(0,2).map(word=>Array.from(word)[0].toUpperCase()).join('');
-const logRowTime=value=>validTime(value)?new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Manila',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date(value)):'—';
+const logRowTime=value=>validTime(value)?formatTimeTrackerClock(value,{seconds:true}):'—';
 const logRowDate=value=>new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',month:'short',day:'numeric',year:'numeric'}).format(new Date(value));
 const locationLabel=value=>value==='Office-Base Duty'?'Office':value==='Offsite (Home)'?'Offsite · Home':value;
 const logIcon=body=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+body+'</svg>';
