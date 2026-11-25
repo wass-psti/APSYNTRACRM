@@ -75,3 +75,14 @@ test('existing signed server RPC and session-bound route checks are required bef
  assert.match(app,/case 'tradelink-activity-refresh'/);
  assert.match(app,/state\.tradeLinkActivity=null;state\.tradeLinkActivityError='';state\.tradeLinkActivityBusy=false;state\.tradeLinkAnalytics=null;state\.tradeLinkAnalyticsError='';state\.tradeLinkAnalyticsRunId\+\+;state\.tradeLinkAnalyticsBusy=false;state\.tl03ReadRunId\+\+;state\.tl03ReadBusy=false;state\.tl03ReadResult=null;state\.context=null;/);
 });
+
+test('Activity presentation uses scoped responsive light-mode styles and the delivered CSS bundle',()=>{
+ const css=readFileSync('frontend/tradelink-ui-refresh.css','utf8');
+ const bundle=readFileSync('frontend/apsyntra-styles.bundle.css','utf8');
+ assert.match(css,/container-name:tradelink-activity/);
+ assert.match(css,/@container tradelink-activity \\(max-width:680px\\)/);
+ assert.match(css,/@container tradelink-activity \\(max-width:440px\\)/);
+ assert.match(css,/prefers-reduced-motion:reduce/);
+ assert.match(css,/tl-activity-source-badge/);
+ assert.ok(bundle.includes('CP-TL-ACTIVITY-UI-01'));
+});
