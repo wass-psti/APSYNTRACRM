@@ -132,6 +132,12 @@ export function tradeLinkDraftSaveFailureMessage(error,{committed=false}={}){
   return 'Save confirmation was interrupted. Retry unchanged inputs to reuse the same document ID, or refresh All Documents before changing the Draft.';
  return 'Save could not be confirmed. Retry unchanged inputs to reuse the same document ID, or refresh All Documents before changing the Draft.';
 }
+// Contact values are text, not numbers: preserve leading zeroes and formatting.
+const QUOTATION_EMAIL_PATTERN=String.raw`[^\s@]+@[^\s@]+\.[^\s@]+`;
+const QUOTATION_PHONE_PATTERN=String.raw`\+?[0-9\s\(\).\-\/]*[0-9][0-9\s\(\).\-\/]*(?:\s*(?:[Ee][Xx][Tt]\.?|[Xx])\s*[0-9]+)?`;
+const quotationEmailValid=value=>/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+$/.test(value);
+const quotationPhoneValid=value=>new RegExp('^(?:'+QUOTATION_PHONE_PATTERN+')$').test(value);
+
 export function parseTradeLinkDraftForm(fields,{
  lineId=()=>globalThis.crypto?.randomUUID?.(),purpose='readiness'
 }={}){
@@ -310,8 +316,10 @@ export function parseTradeLinkDraftForm(fields,{
      !draft.validity||!draft.deliveryCommitment||
      !draft.paymentTerms||!draft.approvedBy))
     throw new ApiError('Quotation readiness needs client contact, validity, delivery, payment terms and an intended approver.',400);
-   if(draft.customerEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.customerEmail))
-    throw new ApiError('Invalid Quotation contact email.',400);
+   if(draft.customerEmail&&!quotationEmailValid(draft.customerEmail))
+    throw new ApiError('Invalid Quotation contact email. Enter an email address in Client email.',400);
+   if(draft.customerPhone&&!quotationPhoneValid(draft.customerPhone))
+    throw new ApiError('Invalid Quotation contact phone. Enter a phone number in Client phone.',400);
   }else if(type==='po'){
    for(const key of ['poNumber','targetDeliveryDate','paymentTerms',
     'verifiedBy','approvedBy'])addText(key);
@@ -1330,10 +1338,10 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
        options([['','Not recorded'],['Working on it','Working on it'],['Sent','Sent'],['Client Review','Client Review'],
         ['Accepted','Accepted'],['Declined','Declined'],['On Hold','On Hold'],['Closed','Closed']],
         fieldValue('quoteStatus',data.quoteStatus||(editing?'':'Working on it')))+'</select><small>Commercial status is separate from the signed approval and document workflow state. Older records without a value remain Not recorded until selected.</small></label>'+
-      field('Client email (or phone)','customerEmail',fieldValue('customerEmail',data.customerEmail||''),
-       'type="email" maxlength="5000"')+
-      field('Client phone (or email)','customerPhone',fieldValue('customerPhone',data.customerPhone||''),
-       'maxlength="5000"')+
+      field('Client email','customerEmail',fieldValue('customerEmail',data.customerEmail||''),
+       'type="email" autocomplete="email" maxlength="5000" pattern="'+escape(QUOTATION_EMAIL_PATTERN)+'" title="Enter an email address"')+
+      field('Client phone','customerPhone',fieldValue('customerPhone',data.customerPhone||''),
+       'type="tel" inputmode="tel" autocomplete="tel" maxlength="5000" pattern="'+escape(QUOTATION_PHONE_PATTERN)+'" title="Enter a phone number, including country code or extension if applicable"')+
       quotationCommercialField('paymentTerms',fieldValue('paymentTerms',data.paymentTerms||''),fieldValue('paymentTermsCustom',''))+
       quotationCommercialField('validity',fieldValue('validity',data.validity||''),fieldValue('validityCustom',''))+
       quotationCommercialField('deliveryCommitment',fieldValue('deliveryCommitment',data.deliveryCommitment||''),fieldValue('deliveryCommitmentCustom','')):'')+

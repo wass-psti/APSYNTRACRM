@@ -52,6 +52,8 @@ try{
   await page.locator('[name=remarks]').fill('Preserve '+type);
   if(type==='quotation'){
    await page.locator('[name=customerAddress]').fill('  12 QA Street\nCebu City  ');
+   await page.locator('[name=customerEmail]').fill('buyer@example.test');
+   await page.locator('[name=customerPhone]').fill('+63 (32) 123-4567 ext. 12');
    for(const [key,standard,custom] of [['paymentTerms','30 Days Net','  40% deposit  '],['validity','30 Days','2027-01-15'],['deliveryCommitment','4 Weeks','Within 10 working days']]){
     const select=page.locator('select[name='+key+']'),input=page.locator('input[name='+key+'Custom]');
     assert.equal(await input.isVisible(),false);
@@ -84,6 +86,8 @@ try{
   assert.equal(state.formValues.remarks,'Preserve '+type);
   if(type==='quotation'){
    assert.equal(state.formValues.customerAddress,'  12 QA Street\nCebu City  ');
+   assert.equal(state.formValues.customerEmail,'buyer@example.test');
+   assert.equal(state.formValues.customerPhone,'+63 (32) 123-4567 ext. 12');
    await show(page,type,state.formValues);
    for(const [key,custom] of [['paymentTerms','  40% deposit  '],['validity','2027-01-15'],['deliveryCommitment','Within 10 working days']]){
     assert.equal(await page.locator('select[name='+key+']').inputValue(),'__custom__');
