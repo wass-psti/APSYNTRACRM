@@ -1,3 +1,4 @@
+import {renderTradeLinkQuotationPrint} from './tradelink/quotation-print.js';
 import {GM_SALES_EXEMPT_POLICY} from './tradelink/approval-policy.js';
 /**
  * CP-TL-09B — Official TradeLink output from an authenticated, revision-matched
@@ -158,7 +159,7 @@ function renderApproval(data,row){
 }
 
 /** Pure official printable markup, from an already authenticated and matched record. */
-export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId){
+export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId,{creatorName}={}){
  const row=normalizeTradeLinkDomainRow(record,workspaceId,documentId);
  const data=row.content;
  if(!Object.hasOwn(TYPE_LABELS,row.document_type)||!STATES.has(row.workflow_state)||
@@ -173,6 +174,7 @@ export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId
   throw new ApiError('Saved TradeLink company/template snapshot does not match an official profile.',409);
  const logo=logoUrl(company.logoAsset);
  const currency=TRADELINK_CURRENCIES.includes(data.currency)?data.currency:'—';
+ if(row.document_type==='quotation')return renderTradeLinkQuotationPrint({row,company,template,currency,legacyDefaulted,creatorName,terms:typeof data.terms==='string'?data.terms:TRADELINK_DEFAULT_TERMS.quotation});
  const address=String(company.address||'').split(/\r?\n/).filter(Boolean)
   .map(line=>'<p>'+safe(line)+'</p>').join('');
  const companyHeader='<header class="tl-official-header"><div class="tl-official-brand">'+
@@ -271,10 +273,12 @@ export function mountTradeLinkSavedDocumentOutput(markup,{doc=document}={}){
  };
  node.addEventListener('keydown',onKey);
  node.querySelector('[data-tradelink-print-action="close"]').addEventListener('click',closeTradeLinkSavedDocumentOutput);
- node.querySelector('[data-tradelink-print-action="print"]').addEventListener('click',()=>{
+ node.querySelector('[data-tradelink-print-action="print"]').addEventListener('click',async()=>{
   const windowRef=doc.defaultView;
   if(!active||active.node!==node||typeof windowRef?.print!=='function')return;
-  windowRef.print();
+  await Promise.allSettled([...node.querySelectorAll('img')].map(img=>img.decode?.()));
+  await doc.fonts?.ready;
+  if(active?.node===node)windowRef.print();
  });
  doc.body.append(node);active={node,previous,onKey};
  node.querySelector('[data-tradelink-print-action="print"]').focus();return node;

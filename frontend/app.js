@@ -4130,7 +4130,9 @@ async function printTradeLinkDocument(documentId,revision=null){
    board?.board?.id!==TRADELINK_BOARD_ID||board.board.workspace_id!==ws||
    !board.items?.some(item=>item.id===listed.boardItemId&&item.title===listed.documentNumber))
    throw new ApiError('The requested revision is not a verified Approved TradeLink revision.',409);
-  const markup=renderTradeLinkSavedDocumentOutput(record,ws,documentId);
+  const creator=(state.board?.members||[]).find(m=>String(m.user_id||m.id||'')===String(record.created_by||''));
+  const creatorName=record.created_by===actor?name():(creator?.display_name||creator?.name||creator?.email||'');
+  const markup=renderTradeLinkSavedDocumentOutput(record,ws,documentId,{creatorName});
   if(!same())return;
   mountTradeLinkSavedDocumentOutput(markup);
  }catch{

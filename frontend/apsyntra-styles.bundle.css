@@ -17801,6 +17801,75 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-ot-refer
 .tl-revision-history-warning{grid-column:1/-1;margin:0;color:var(--muted,#667085);font-size:.76rem}
 @media(max-width:560px){.tl-revision-history-item{grid-template-columns:1fr}.tl-revision-history-actions{justify-content:flex-start}}
 
+/* CP-TL-PDF-TEMPLATE-01: quotation reference dimensions in points, US Letter.
+   Other module layouts keep their existing A4 contract. */
+.tl-official-paper.tl-quote-paper{
+ --tl-official-accent:#ff3d57;--tl-official-table-bg:#ffe5e9;
+ --tl-official-table-text:#1e40af;--tl-official-rule:#1e40af;
+ color:#111;font-family:Roboto,Arial,Helvetica,sans-serif;font-size:9pt;line-height:1.18;
+ max-width:612pt;margin:0 auto;padding:40pt 20pt 20pt!important;box-sizing:border-box;
+}
+.tl-official-paper.tl-quote-paper.tl-official-profile-watchdog-opc{--tl-official-accent:#00d748;--tl-official-table-bg:#e0f7e9}
+.tl-official-paper.tl-quote-paper.tl-official-profile-plc-systems{--tl-official-accent:#009999;--tl-official-table-bg:#e0f7f7}
+.tl-quote-paper p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.tl-quote-paper h3{margin:0 0 4pt;font-size:9pt;letter-spacing:normal;color:#1e3a5f}
+.tl-quote-letterhead{display:grid;grid-template-columns:80pt minmax(0,1fr) 138pt;gap:10pt;align-items:start;margin-bottom:20pt}
+.tl-quote-logo{width:60pt;height:60pt;object-fit:contain;object-position:top;justify-self:center}
+.tl-official-profile-watchdog-opc .tl-quote-logo{height:56.982pt}
+.tl-official-profile-plc-systems .tl-quote-logo{width:84.689pt;height:47.09pt;justify-self:start;margin:2.144pt 0 0 1.522pt}
+.tl-quote-company h1{font-size:13pt;line-height:1.16;font-weight:600;color:var(--tl-official-accent);margin:0 0 5pt}
+.tl-quote-company p{font-size:8.5pt;color:#374151}
+.tl-quote-meta h2{font-size:18pt;font-weight:600;color:var(--tl-official-accent);margin:0 0 7pt}
+.tl-quote-meta p{display:grid;grid-template-columns:33pt minmax(0,1fr);gap:5pt;margin-bottom:5pt}
+.tl-quote-parties{display:grid;grid-template-columns:47% minmax(0,1fr);gap:8pt;margin:0 0 18pt;align-items:start}
+.tl-quote-parties p{margin:3pt 0}
+.tl-quote-parties strong{font-size:10pt}
+.tl-quote-paper .tl-official-items{margin:0}
+.tl-quote-paper .tl-official-items table{table-layout:fixed;font-size:8pt;line-height:1.15;width:100%}
+.tl-quote-paper .tl-official-items th,.tl-quote-paper .tl-official-items td{padding:3pt 3pt;border:0.5pt solid #dce1e7;white-space:pre-wrap;overflow-wrap:anywhere}
+.tl-quote-paper .tl-official-items th{border-top:1pt solid var(--tl-official-rule);border-bottom:1pt solid var(--tl-official-rule);font-size:8.5pt;font-weight:600}
+.tl-quote-paper .tl-official-items th:first-child,.tl-quote-paper .tl-official-items td:first-child{width:auto;color:#1e40af}
+.tl-quote-paper .tl-official-items th:nth-child(3){text-align:center}
+.tl-quote-paper .tl-official-items th:nth-child(n+4){text-align:right}
+.tl-quote-paper .tl-official-items td.tl-official-money{white-space:normal;font-weight:600}
+.tl-quote-paper .tl-official-note-row td{background:#fff;font-style:italic;color:#475467}
+.tl-quote-paper .tl-official-totals{width:45%;margin:12pt 0 0 auto;break-inside:avoid}
+.tl-quote-paper .tl-official-totals dl{display:block}
+.tl-quote-paper .tl-official-totals dl>div{padding:3pt 0;border:0;gap:4pt}
+.tl-quote-paper .tl-official-totals dt,.tl-quote-paper .tl-official-totals dd{font-size:10pt;color:#111;margin:0;font-weight:400}
+.tl-quote-paper .tl-official-totals dd{font-weight:600}
+.tl-quote-paper .tl-official-totals .tl-official-grand{border-top:1pt solid #111;margin-top:1pt}
+.tl-quote-paper .tl-official-grand dt,.tl-quote-paper .tl-official-grand dd{font-size:11pt;font-weight:700}
+.tl-quote-remarks{margin:12pt 0}
+.tl-quote-approval{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8pt;border-top:1pt solid #cbd5e1;margin-top:22pt;padding-top:8pt;break-inside:avoid;font-size:8.5pt}
+.tl-quote-approval h3{font-size:8.5pt;color:#475467;margin:0 0 3pt}
+.tl-quote-approval p{font-size:8pt;color:#475467}
+.tl-quote-approval p.tl-quote-reviewed{color:#146b38}
+.tl-quote-approval .tl-quote-print-proof{grid-column:1/-1;font-size:7pt;margin-top:3pt}
+.tl-quote-print-proof .tl-official-approval-stamp{display:inline;padding:0;border:0;background:transparent;color:inherit;font-size:inherit;letter-spacing:normal}
+.tl-quote-terms{border-top:1pt solid #cbd5e1;margin-top:24pt;padding-top:12pt;font-size:8pt;line-height:1.35}
+.tl-quote-terms h2{font-size:10pt;margin:0 0 6pt;break-after:avoid}
+.tl-quote-terms h3{font-size:8.5pt;color:#111;margin:8pt 0 2pt;break-after:avoid}
+.tl-quote-terms p{margin:2pt 0;orphans:2;widows:2}
+.tl-quote-acceptance{display:grid;grid-template-columns:1fr 1fr;gap:24pt;margin:25pt 0 0;break-inside:avoid;font-size:9pt}
+.tl-quote-sign-line{height:24pt;border-bottom:1pt solid #111}
+.tl-quote-paper .tl-official-footer{display:block;text-align:center;margin-top:25pt;color:#475467;font-size:8pt}
+@media screen and (max-width:620px){
+ .tl-print-shell:has(.tl-quote-paper){overflow-x:auto}
+ .tl-quote-paper{min-width:572pt}
+}
+@media print{
+ @page tl-quotation{size:letter;margin:20pt 20pt 20pt}
+ #tradelink-saved-print .tl-quote-paper{page:tl-quotation;max-width:none;width:auto;margin:0!important;padding:0!important;font-size:9pt;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+ #tradelink-saved-print .tl-quote-letterhead{margin-top:20pt;break-inside:avoid}
+ #tradelink-saved-print .tl-quote-parties{break-inside:auto}
+ #tradelink-saved-print .tl-quote-paper .tl-official-items thead{display:table-header-group}
+ /* Allow a very tall description to continue instead of clipping or dropping it. */
+ #tradelink-saved-print .tl-quote-paper .tl-official-items tr{break-inside:auto;page-break-inside:auto}
+}
+
+.tl-quote-col-number{width:5%}.tl-quote-col-description{width:60.5%}.tl-quote-col-quantity{width:6.5%}.tl-quote-col-price{width:14%}
+
 /* frontend/order-intake-application.css */
 .aps-order-intake-shell > .main-content { max-width: none !important; width: 100%; min-width: 0; }
 .oi-app { width: 100%; min-width: 0; display: grid; gap: 16px; color: inherit; }
