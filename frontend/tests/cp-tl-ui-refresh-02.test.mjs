@@ -87,7 +87,7 @@ test('Activity timeline preserves event order, timestamps, actors, escaping and 
  assert.match(html,/document\.approved/);
  assert.ok(html.indexOf('document.saved')<html.indexOf('document.approved'));
  assert.match(html,/datetime="2026-11-25T03:00:00Z"/);
- assert.match(html,/Recorded by Operations User/);
+ assert.match(html,/class="tl-activity-actor-prefix">Recorded by<\/span><strong class="tl-activity-actor-name">Operations User<\/strong>/);
  assert.match(html,/&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
  assert.doesNotMatch(html,/<script>/);
  assert.match(html,/data-action="tradelink-activity-refresh"/);
@@ -190,6 +190,8 @@ test('Activity and Analytics remain in their existing TradeLink routes and signe
  assert.match(reports,/data-tl-section="analytics"/);
  assert.match(activity,/data-tl-tab="activity"[^>]*aria-current="page"/);
  assert.match(reports,/data-tl-tab="analytics"[^>]*aria-current="page"/);
- assert.match(activity,/tl-activity-timeline/);
+ assert.match(activity,/tl-activity-empty[^>]*role="status"/);
+ assert.match(activity,/No authorized application events were returned/);
+ assert.doesNotMatch(activity,/tl-activity-timeline/);
  assert.match(reports,/tl-analytics-kpis/);
 });
