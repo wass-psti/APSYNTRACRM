@@ -22,6 +22,12 @@ BEGIN
  FROM pg_catalog.pg_constraint
  WHERE conrelid='private.tradelink_document_revision_snapshots'::regclass
   AND conname='tradelink_document_revision_snapshots_content_check' AND convalidated;
+ -- Exact post-CP02 function fingerprint prevents overwriting any later
+ -- validator change while retaining the approved capacity contract.
+ IF pg_catalog.md5(validator) IS DISTINCT FROM '84ba479daa8a792279f142c8d50ce49e' THEN
+  RAISE EXCEPTION 'CP-TL-QUOTATION-EMAIL-VALIDATION-01 requires the exact CP-TL-LARGE-SAVE-02 shared validator.'
+   USING ERRCODE='55000';
+ END IF;
  IF pg_catalog.strpos(validator,'octet_length(p_data::text)>2097152')=0
   OR pg_catalog.strpos(validator,'jsonb_array_length(p_data->''items'')>250')=0
   OR pg_catalog.strpos(validator,'Duplicate TradeLink line item identifier')=0
@@ -173,6 +179,10 @@ DECLARE
  validator text;
 BEGIN
  validator:=pg_catalog.pg_get_functiondef('private.tl03_validate_draft(jsonb)'::regprocedure);
+ IF pg_catalog.md5(validator) IS DISTINCT FROM '8840f7176a5f187a7a9ef77773fa0626' THEN
+  RAISE EXCEPTION 'Quotation email validator postflight fingerprint mismatch.'
+   USING ERRCODE='55000';
+ END IF;
  IF pg_catalog.strpos(validator,'Invalid Quotation contact email.')=0
   OR pg_catalog.strpos(validator,'octet_length(p_data::text)>2097152')=0
   OR pg_catalog.strpos(validator,'jsonb_array_length(p_data->''items'')>250')=0

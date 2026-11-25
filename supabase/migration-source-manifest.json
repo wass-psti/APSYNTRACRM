@@ -2294,8 +2294,8 @@
       "version": "20261125020000",
       "name": "cp_tl_quotation_email_validation_01",
       "file": "20261125020000_cp_tl_quotation_email_validation_01.sql",
-      "bytes": 13564,
-      "sha256": "7b9391d1874e9f2f59a64303246b8d1e2a793ffb9b31aa6b3a574dda3a45d718"
+      "bytes": 14141,
+      "sha256": "799f8bd2e3542d861b892db4420b89adeddda2283efd24ed21f98336bc643c70"
     },
     {
       "version": "20261125090000",
