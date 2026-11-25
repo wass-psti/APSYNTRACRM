@@ -2331,6 +2331,13 @@
       "file": "20261125130000_cp_tt_auto_clockout_reactivation.sql",
       "bytes": 12504,
       "sha256": "ab6cec8983b5dd92ebae2c4850e431f818e615be1be972b588eaee3c8f7bc0ea"
+    },
+    {
+      "version": "20261125151922",
+      "name": "cp_tt_manual_ot_workspace_resolution_03a",
+      "file": "20261125151922_cp_tt_manual_ot_workspace_resolution_03a.sql",
+      "bytes": 3651,
+      "sha256": "de2bfd4a8b8c5ea533a22781670609f3cb1199a930c31116828aa9ade367825e"
     }
   ]
 }
