@@ -112,7 +112,10 @@ export function normalizeTradeLinkDomainRow(row,workspaceId,documentId){
   !validUuid(row.board_item_id)||!TYPES.has(row.document_type)||
   !STATES.has(row.workflow_state)||!Number.isSafeInteger(row.revision)||
   row.revision<1||!row.content||typeof row.content!=='object'||
-  Array.isArray(row.content))
+  Array.isArray(row.content)||
+  (row.created_by!==undefined&&!validUuid(row.created_by))||
+  (row.created_by_name!==undefined&&row.created_by_name!==null&&
+   typeof row.created_by_name!=='string'))
   deny('Invalid authorized TradeLink document response.',409);
  return row;
 }
@@ -474,6 +477,8 @@ export class TradeLinkDomainClient{
       typeof r?.documentNumber!=='string'||typeof r?.archived!=='boolean'||
       (r?.hidden!==undefined&&typeof r.hidden!=='boolean')||
       typeof r?.createdByActor!=='boolean'||
+      (r?.createdBy!==undefined&&!validUuid(r.createdBy))||
+      (r?.createdByName!==undefined&&r.createdByName!==null&&typeof r.createdByName!=='string')||
       (r?.clientName!==null&&r?.clientName!==undefined&&typeof r.clientName!=='string')||
       !['primary','secondary',null,undefined].includes(r?.assignedStage)||
       !knownApprovalPolicy(r?.approvalPolicy)||

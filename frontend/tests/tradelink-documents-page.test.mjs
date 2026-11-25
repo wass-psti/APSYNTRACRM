@@ -13,7 +13,8 @@ const timestamp='2026-11-08T06:23:14.478231+00:00';
 const row={documentId,boardItemId,documentType:'quotation',
  documentNumber:'Q-0001',revision:5,workflowState:'draft',
  archived:false,hidden:false,clientName:'Example Client',createdAt:timestamp,
- updatedAt:timestamp,createdByActor:false,assignedStage:'primary',
+ updatedAt:timestamp,createdByActor:false,createdBy:actor,
+ createdByName:'Original Document Creator',assignedStage:'primary',
  primaryAt:null,secondaryAt:null};
 const page={rows:[row],hasMore:true,nextCursor:{documentId,createdAt:timestamp}};
 const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
@@ -123,6 +124,16 @@ test('assigned reviewers use the paged RPC through their existing reviewer sessi
  assert.equal(calls[0][0],'tl03_documents_page');
 });
 
+test('All Documents displays the original creator name from the signed page response',()=>{
+ const view={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',rows:[{
+  ...row,createdByName:'Original Document Creator'
+ }],listFilters:{query:'',documentType:'all',workflowState:'all',archiveMode:'active',
+  visibilityMode:'visible',sortBy:'createdAt',sortDirection:'desc'}};
+ const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:true});
+ assert.match(html,/<th scope="col">Created By<\/th>/);
+ assert.match(html,/Original Document Creator/);
+ assert.match(html,/class="tl-ref-created-by"/);
+});
 test('untrusted page envelopes, revisions, times, and cursors fail closed',async()=>{
  const invalid=[
   {...page,rows:[{...row,documentId:'bad'}]},
