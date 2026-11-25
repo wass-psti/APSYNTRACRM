@@ -25,10 +25,25 @@ export function manualAttendanceDatePolicy(day,now=new Date()){
  if(day>today)return {allowed:false,activeAllowed:false,defaultStatus:null};
  return {allowed:true,activeAllowed:day===today,defaultStatus:day===today?'active':'completed'};
 }
+export function normalizeManualAttendanceTime(value){
+ const time=String(value??'').trim();
+ if(timePattern.test(time))return time;
+ const match=/^(0?[1-9]|1[0-2]):([0-5]\d)\s*(AM|PM)$/i.exec(time);
+ if(!match)return null;
+ const hour=Number(match[1])%12+(match[3].toUpperCase()==='PM'?12:0);
+ return String(hour).padStart(2,'0')+':'+match[2];
+}
+export function formatManualAttendanceTime(value){
+ const time=normalizeManualAttendanceTime(value);
+ if(!time)return String(value??'');
+ const hour=Number(time.slice(0,2));
+ return (hour%12||12)+':'+time.slice(3)+(hour<12?' AM':' PM');
+}
 function wallTime(day,time){
- if(!validDay(day)||typeof time!=='string'||!timePattern.test(time))
-  throw Error('Select a valid Philippine date and time.');
- return new Date(day+'T'+time+':00+08:00');
+ const normalized=normalizeManualAttendanceTime(time);
+ if(!validDay(day)||!normalized)
+  throw Error('Select a valid Philippine date and time (e.g. 8:45 AM).');
+ return new Date(day+'T'+normalized+':00+08:00');
 }
 export function buildManualAttendanceEntry(input,{now=new Date(),roster=[]}={}){
  const {employeeId,employeeType,date,clockInTime,status,clockOutDate,clockOutTime,location}=input||{};
@@ -46,12 +61,13 @@ export function buildManualAttendanceEntry(input,{now=new Date(),roster=[]}={}){
   end=wallTime(clockOutDate||date,clockOutTime);
   if(end<=start)throw Error('Clock-out must be later than clock-in.');
   if(end>now)throw Error('Clock-out cannot be in the future.');
+  if(end-start>370*86400000)throw Error('Attendance duration exceeds 370 days.');
  }else if(clockOutDate||clockOutTime){
   throw Error('Active attendance cannot have a clock-out timestamp.');
  }
  if(!TT_MANUAL_LOCATIONS.includes(location))throw Error('Select a valid work location.');
  const reason=String(input.reason||'').trim();
- const workNote=String(input.workNote||'').trim();
+ const workNote=location==='Offsite (Home)'?String(input.workNote||'').trim():'';
  if(!reason||reason.length>500)throw Error('Provide a manual entry reason of 1–500 characters.');
  if(workNote.length>500||(location==='Offsite (Home)'&&!workNote))
   throw Error('Offsite work requires a work note (maximum 500 characters).');
