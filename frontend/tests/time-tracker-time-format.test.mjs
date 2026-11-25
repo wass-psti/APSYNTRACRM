@@ -6,7 +6,7 @@ import {
   formatTimeTrackerAdminWallDateTime,parseTimeTrackerAdminWallDateTime
 } from '../time-tracker-time-format.js';
 import {renderTimeTrackerOvertime} from '../time-tracker-overtime.js';
-import {renderTimeTrackerAdminEditor,parseTimeTrackerAdminDateTime} from '../time-tracker-record-management.js';
+import {renderTimeTrackerAdminEditor,parseTimeTrackerAdminDateTime,buildTimeTrackerAdminPatch} from '../time-tracker-record-management.js';
 import {ownAttendanceCsv} from '../time-tracker-ui.js';
 import {timeTrackerOverviewCsv} from '../time-tracker-overview.js';
 import {timeTrackerLogCsv} from '../time-tracker-log.js';
@@ -45,7 +45,14 @@ test('admin date-time display is 12-hour and converts to same server instant',()
   id:'id',ownerId:'cloud:user',ownerName:'Employee',
   clockIn:{timestamp:'2026-11-20T10:05:00.000Z'},clockOut:null
  }]},timeOnly:true});
- assert.match(html,/value="2026-11-20 06:05 PM"/);
+ assert.match(html,/name="clockInDate" type="date" value="2026-11-20"/);
+ assert.match(html,/name="clockInAt" type="text" value="06:05 PM"/);
+ const form=new FormData();
+ form.set('clockInDate','2026-11-20');
+ form.set('clockInAt','06:06 PM');
+ assert.deepEqual(buildTimeTrackerAdminPatch(form,{mode:'single',record:{
+  clockIn:{timestamp:'2026-11-20T10:05:00.000Z'},clockOut:null
+ }}).patch,{clockInAt:'2026-11-20T10:06:00.000Z'});
  assert.doesNotMatch(html,/datetime-local/);
 });
 test('all attendance CSV exports present AM/PM rather than raw ISO clock stamps',()=>{

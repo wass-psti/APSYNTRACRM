@@ -93,7 +93,7 @@ export function buildTimeTrackerAdminPatch(formData,{mode='single',record=null,r
   );
   const needsClockOut=bulk?records.some(item=>!hasClockOut(item)):!hasClockOut(record);
 
-  const clockInAt=read('clockInAt');
+  const clockInAt=read('clockInDate')?read('clockInDate')+' '+read('clockInAt'):read('clockInAt');
   if(clockInAt){
     const iso=parseTimeTrackerAdminDateTime(clockInAt);
     if(bulk||timeTrackerAdminDateTimeLocal(iso)!==timeTrackerAdminDateTimeLocal(timeValue(record,'in')))assign('clockInAt',iso);
@@ -102,7 +102,7 @@ export function buildTimeTrackerAdminPatch(formData,{mode='single',record=null,r
   if(clockInGeo)assign('clockInGeo',clockInGeo);
 
   if(effectiveStatus!=='Active'){
-    const clockOutAt=read('clockOutAt');
+    const clockOutAt=read('clockOutDate')?read('clockOutDate')+' '+read('clockOutAt'):read('clockOutAt');
     if(clockOutAt){
       const iso=parseTimeTrackerAdminDateTime(clockOutAt);
       if(bulk||timeTrackerAdminDateTimeLocal(iso)!==timeTrackerAdminDateTimeLocal(timeValue(record,'out')))assign('clockOutAt',iso);
@@ -160,6 +160,15 @@ const inputField=(label,name,value,{type='text',step=null,min=null,max=null,plac
   (max!==null?` max="${max}"`:'')+(placeholder?` placeholder="${esc(placeholder)}"`:'')+
   (required?' required':'')+'></label>';
 
+// Presentation fields for time-only corrections; legacy combined input remains supported.
+const referenceAvatar=name=>'<span class="tt-admin-record-avatar" aria-hidden="true">'+esc(String(name||'Employee').trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase())+'</span>';
+function referenceDateFields(label,prefix,timestamp){
+ const local=timeTrackerAdminDateTimeLocal(timestamp);
+ const formatted=formatTimeTrackerAdminWallDateTime(local);
+ return inputField(label+' date',prefix+'Date',local.slice(0,10),{type:'date',required:true})+
+ inputField(label+' time',prefix+'At',formatted.slice(11),{placeholder:'08:19 AM',required:true});
+}
+
 function gpsFields(record,kind,{bulk=false}={}){
   const geo=geoValue(record,kind)||{};
   const prefix=kind==='in'?'clockInGeo':'clockOutGeo';
@@ -179,19 +188,19 @@ export function renderTimeTrackerAdminEditor({editor,directory=[],busy=false,err
     if(bulk||!record)return '';
     const active=!hasClockOut(record);
     return '<div class="tt-admin-editor-backdrop" data-tt-admin-backdrop>'+
-     '<form id="tt-attendance-admin-form" class="tt-admin-editor" role="dialog" aria-modal="true" aria-labelledby="tt-admin-editor-title" data-mode="single" data-tt-admin-dialog>'+
+     '<form id="tt-attendance-admin-form" class="tt-admin-editor" role="dialog" aria-modal="true" aria-labelledby="tt-admin-editor-title" data-mode="single" data-tt-admin-dialog data-tt-reference-correction>'+
      '<header class="tt-admin-editor-head"><div class="tt-admin-editor-title-group">'+
       '<span class="tt-admin-eyebrow">AUTHORIZED ADMIN · TIME CORRECTION ONLY</span>'+
-      '<h3 id="tt-admin-editor-title">Correct attendance times</h3>'+
+      '<h3 id="tt-admin-editor-title">'+(active?'Correct clock-in time':'Correct attendance times')+'</h3>'+
       '<p>Changes are recorded in the private append-only audit history.</p></div>'+
       '<button type="button" class="tt-admin-close" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+' aria-label="Close editor">×</button></header>'+
      (error?'<p class="tt-admin-error" role="alert">'+esc(error)+'</p>':'')+
      '<fieldset class="tt-admin-editor-fields"'+(busy?' disabled':'')+'><div class="tt-admin-editor-body">'+
-      '<div class="tt-admin-record-context"><div><strong>'+esc(record.ownerName||'Employee')+'</strong>'+
-       '<small>'+esc(active?'Active clock-in session':'Completed attendance session')+'</small></div></div>'+
+      '<div class="tt-admin-record-context">'+referenceAvatar(record.ownerName||record.name)+'<div><strong>'+esc(record.ownerName||record.name||'Employee')+'</strong>'+
+       '<small>'+esc((active?'Active clock-in session':'Completed attendance session')+' · '+timeTrackerAdminDateTimeLocal(record.clockIn?.timestamp).slice(0,10))+'</small></div><span class="tt-admin-record-status" data-completed="'+(!active)+'">'+(active?'Active':'Completed')+'</span></div>'+
       '<section class="tt-admin-field-section"><h4>Philippine Time (UTC+08:00)</h4><div class="tt-admin-grid tt-admin-grid-two">'+
-       inputField('Clock-In date and time','clockInAt',formatTimeTrackerAdminWallDateTime(timeTrackerAdminDateTimeLocal(record.clockIn?.timestamp)),{type:'text',placeholder:'YYYY-MM-DD hh:mm AM/PM'})+
-       (active?'':inputField('Clock-Out date and time','clockOutAt',formatTimeTrackerAdminWallDateTime(timeTrackerAdminDateTimeLocal(record.clockOut?.timestamp)),{type:'text',placeholder:'YYYY-MM-DD hh:mm AM/PM'}))+
+       referenceDateFields('Clock-in','clockIn',record.clockIn?.timestamp)+
+       (active?'':referenceDateFields('Clock-out','clockOut',record.clockOut?.timestamp))+
       '</div><p>Active sessions remain active, and their Clock timer updates from the corrected start time after signed synchronization. Completed sessions recalculate credited hours. GPS and employee ownership remain unchanged.</p></section>'+
       '<section class="tt-admin-field-section"><h4>Correction note (optional)</h4>'+
        '<label class="tt-admin-field"><span>Additional context, if needed</span>'+
@@ -274,11 +283,12 @@ export function renderTimeTrackerAdminDeleteDialog({confirmation=null,busy=false
   const extra=Math.max(0,ids.length-names.length);
   return '<div class="tt-admin-delete-backdrop" data-tt-admin-delete-backdrop>'+
     '<section class="tt-admin-delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="tt-admin-delete-title" aria-describedby="tt-admin-delete-description" tabindex="-1" data-tt-admin-dialog>'+
+    '<button type="button" class="tt-admin-close tt-admin-reference-delete-close" data-action="tt-log-admin-delete-cancel" aria-label="Close confirmation"'+(busy?' disabled':'')+'>×</button>'+
     '<div class="tt-admin-delete-icon" aria-hidden="true">!</div>'+
     '<span class="tt-admin-eyebrow">SYSTEM ADMIN · RECORD REMOVAL</span>'+
     '<h3 id="tt-admin-delete-title">'+title+'</h3>'+
     '<p id="tt-admin-delete-description">'+(bulk?'You are about to remove '+ids.length+' attendance records.':'You are about to remove this attendance record.')+(confirmation.ojt?' The OJT attendance record will be removed, but its before/after evidence is retained in the private audit history.':' The records will disappear from the TimeTracker Log and their linked attendance-board projection. This action cannot be undone from the Log.')+'</p>'+
-    (names.length?'<div class="tt-admin-delete-records"><span>Selected records</span><ul>'+names.map(name=>'<li>'+esc(name)+'</li>').join('')+
+    (names.length&&!bulk?'<div class="tt-admin-delete-records tt-admin-reference-delete-person">'+referenceAvatar(names[0])+'<div><strong>'+esc(names[0])+'</strong><small>'+esc(formatTimeTrackerDateTime(typeof records[0]?.clockIn==='string'?records[0].clockIn:records[0]?.clockIn?.timestamp))+'</small></div></div>':names.length?'<div class="tt-admin-delete-records"><span>Selected records</span><ul>'+names.map(name=>'<li>'+esc(name)+'</li>').join('')+
       (extra?'<li>and '+extra+' more</li>':'')+'</ul></div>':'')+
     '<div class="tt-admin-delete-audit-note"><strong>Audit evidence is retained</strong><span>The private administrative before/after audit history is not deleted.</span></div>'+
     (error||confirmation.error?'<p class="tt-admin-error" role="alert">'+esc(error||confirmation.error)+'</p>':'')+
@@ -372,11 +382,11 @@ export function renderTimeTrackerManualClockOut({editor,busy=false,error='',now=
  return '<div class="tt-admin-editor-backdrop" data-tt-admin-backdrop>'+
   '<form id="tt-attendance-admin-form" class="tt-admin-editor" role="dialog" aria-modal="true" aria-labelledby="tt-admin-editor-title" data-mode="single" data-tt-admin-dialog data-tt-manual-clockout>'+
   '<header class="tt-admin-editor-head"><div class="tt-admin-editor-title-group"><span class="tt-admin-eyebrow">SYSTEM ADMIN · MANUAL CLOCK-OUT</span>'+
-  '<h3 id="tt-admin-editor-title">Manual clock-out</h3><p>Close the selected active attendance session. This is an administrative action, not employee GPS evidence.</p></div>'+
+  '<h3 id="tt-admin-editor-title">Clock out employee</h3><p>Close the selected active attendance session. This is an administrative action, not employee GPS evidence.</p></div>'+
   '<button type="button" class="tt-admin-close" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+' aria-label="Close editor">×</button></header>'+
   (error?'<p class="tt-admin-error" role="alert">'+esc(error)+'</p>':'')+
   '<fieldset class="tt-admin-editor-fields"'+(busy||alreadyClosed?' disabled':'')+'><div class="tt-admin-editor-body">'+
-  '<div class="tt-admin-record-context"><div><strong>'+esc(record.ownerName||record.name||'Selected employee')+'</strong><small>Active attendance · Philippine Time (UTC+08:00)</small></div><span class="tt-admin-record-status">'+(alreadyClosed?'Completed':'Active')+'</span></div>'+
+  '<div class="tt-admin-record-context">'+referenceAvatar(record.ownerName||record.name)+'<div><strong>'+esc(record.ownerName||record.name||'Selected employee')+'</strong><small>Active attendance · Philippine Time (UTC+08:00)</small></div><span class="tt-admin-record-status" data-completed="'+alreadyClosed+'">'+(alreadyClosed?'Completed':'Active')+'</span></div>'+
   (alreadyClosed?'<p role="status">This session is already completed. Refresh the Log.</p>':'')+
   '<section class="tt-admin-field-section"><h4>Shift reference</h4><div class="tt-admin-grid tt-admin-grid-two">'+
   '<div><small>Clock-in (recorded)</small><br><strong>'+esc(formatTimeTrackerDateTime(start,{seconds:true}))+'</strong></div>'+
