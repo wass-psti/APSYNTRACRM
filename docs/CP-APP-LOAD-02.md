@@ -107,6 +107,13 @@ The clock-in/out write RPCs, fresh foreground GPS acquisition, automatic clock-o
 - Production Vite build: PASS (existing large-chunk warning remains).
 - Migration source manifest: 222 recovered baseline and 98 forward migration files verified by SHA-256.
 
+### GitHub and live deployment
+
+- PR #878: merged.
+- All listed PR checks: passed; the optional Supabase Preview check was skipped.
+- Current-main GitHub Pages deployment run 45519185728: build and deploy passed.
+- Current-main validation run 45519187272: frontend checks and live-pages asset verification passed.
+
 ### Disposable PostgreSQL 17 acceptance
 
 Applied the fixture and candidate migration to an isolated, temporary PostgreSQL 17 container.
@@ -154,9 +161,23 @@ Production post-deployment verification confirmed:
 
 The eight previously applied remote migration sources missing from the local repository were fetched from the production migration history and restored to the forward migration manifest. All 319 applied remote versions now have matching local source files. The only remaining local pending migration is the separate 20261124193000_cp_tt_default_server_auto_clockout_9h.sql; it was not deployed as part of CP-APP-LOAD-02.
 
-The new database RPC is live. The GitHub Pages frontend has not yet been updated with the client retrieval changes. Until that frontend release is deployed, users continue to use the existing retrieval path. The new Clock projection becomes active when the frontend release is published.
+The new database RPC and frontend client are live. PR #878 was merged, and the current main branch (d78b94b81beb1b26e52f4de91fb4c44e43a53e36) includes the change. GitHub Pages deployment run 45519185728 completed successfully. Main validation run 45519187272 also passed its live-pages job, which verified that the published assets match the main commit.
 
-Production signed-browser acceptance, P50/P95 retrieval timing, request-count comparison and Supabase CPU comparison remain pending the frontend deployment. The 98.83% payload reduction is a deterministic disposable-fixture result, not a production payload or latency measurement.
+### Production signed-browser acceptance
+
+A signed-in Chromium session was used against the published GitHub Pages application:
+
+- Clock opened with the current active attendance session and displayed its elapsed time.
+- A Clock refresh invoked public.timetracker_clock_snapshot.
+- The Clock refresh trace did not invoke list_module_state or timetracker_ot_snapshot.
+- The same Clock refresh retained the signed attendance capabilities, employee department and automatic clock-out reads needed by the existing Clock workflow.
+- The Log view still loaded its full attendance projection and overtime snapshot. It displayed 79 of 79 authorized sessions.
+- Returning to Clock and refreshing again used timetracker_clock_snapshot and did not issue list_module_state.
+- Three observed browser RPC samples for timetracker_clock_snapshot were approximately 214–239 ms end-to-end. These are individual request timings, not a statistically valid P50/P95 measurement.
+
+Production pg_stat_statements reported 495 calls to public.timetracker_clock_snapshot, with 6,418.02 ms cumulative execution time and 12.97 ms mean database execution time. Statistics were reset on 2026-10-20; this function was introduced on 2026-11-24, so these calls are from after deployment. This is SQL execution time, not a direct CPU measurement.
+
+The 98.83% payload reduction remains a deterministic disposable-fixture result, not a measured production response-size reduction. Formal P50/P95 comparison against a pre-change baseline and a direct Supabase CPU comparison were not captured; no claim of measured CPU reduction is made.
 
 ## Scope preservation
 
