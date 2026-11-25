@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {TRADELINK_ACTIVITY_LIMIT,renderTradeLinkActivity} from '../tradelink-activity.js';
 import {
- normalizeTradeLinkSection,renderTradeLinkApplication,TRADELINK_SOURCE_MODULES,
+ normalizeTradeLinkSection,renderTradeLinkApplication,renderTradeLinkUserManual,TRADELINK_SOURCE_MODULES,
  TRADELINK_SOURCE_WORKFLOW_STATES,TRADELINK_SOURCE_QUOTE_STATUSES
 } from '../tradelink-application.js';
 import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
+import {parseTradeLinkApplicationRoute} from '../apps/TradeLink/tradelink-application-route.js';
 const ws='11111111-1111-4111-8111-111111111111';
 const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:ws,
  name:'TradeLink',status:'active',
@@ -85,4 +86,29 @@ test('Activity presentation uses scoped responsive light-mode styles and the del
  assert.match(css,/prefers-reduced-motion:reduce/);
  assert.match(css,/tl-activity-source-badge/);
  assert.ok(bundle.includes('CP-TL-ACTIVITY-UI-01'));
+});
+
+test('TradeLink User Manual has a dedicated canonical route and structured guide',()=>{
+ const route=parseTradeLinkApplicationRoute(['tradelink','manual']);
+ assert.equal(route.section,'manual');
+ assert.equal(route.canonicalHash,'#/tradelink/manual');
+ assert.equal(normalizeTradeLinkSection('manual'),'manual');
+ const html=renderTradeLinkUserManual();
+ assert.match(html,/data-tl-screen="manual"/);
+ assert.match(html,/TRADELINK · HELP CENTER/);
+ assert.match(html,/Document lifecycle/);
+ assert.match(html,/Review and approval/);
+ assert.match(html,/Create documents and numbering/);
+ assert.match(html,/Quotation status/);
+ assert.match(html,/Print and PDF/);
+ assert.match(html,/Analytics and receivables/);
+ assert.match(html,/tl-manual-index/);
+ assert.equal((html.match(/class="tl-manual-section"/g)||[]).length,7);
+});
+test('TradeLink navigation opens User Manual as a page instead of a popover',()=>{
+ const html=renderTradeLinkApplication({detail,workspaceId:ws,section:'manual'});
+ assert.match(html,/href="#\\/tradelink\\/manual"/);
+ assert.match(html,/data-tl-tab="manual" aria-current="page"/);
+ assert.match(html,/data-tl-screen="manual"/);
+ assert.doesNotMatch(html,/<details class="tl-reference-manual">/);
 });
