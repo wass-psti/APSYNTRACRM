@@ -4,6 +4,8 @@ import {captureRecoveryFields} from './tradelink/draft-recovery-state.js';
 import {syncFuelTrans} from './fueltrans-lazy.js';
 import {OrderIntakeOperationalClient as OrderIntakeRegistryClient} from './order-intake-operational-client.js';
 import {buildConfirmation} from './order-intake-confirmation.js';
+import {OrderIntakeDocuments,prepareOrderDocument,confirmationMetadata} from './order-intake-documents.js';
+import {documentUploadFields,documentRegistryMarkup,downloadDocument} from './order-intake-documents-ui.js';
 import {confirmationFields,bindConfirmationForm,readConfirmationForm} from './order-intake-confirmation-ui.js';
 import {recipientFields,notificationInbox} from './order-intake-notifications.js';
 import {nativeEditable,orderEditorDraft,orderEditorMarkup,updateOrderEditorPreview,createOrderEditorSave} from './order-intake-editor.js';
@@ -846,18 +848,82 @@ function openOrderIntakeConfirmation(){
   if(!prepared||prepared.serialized!==serialized){
    const logo=await engine.loadConfirmationLogo(doc.entity);
    const blob=await engine.createConfirmationPdf(doc,logo);
-   prepared={serialized,blob,sha256:await engine.confirmationDigest(blob),id:crypto.randomUUID(),auditAttempted:false};
+   prepared={serialized,blob,file:await prepareOrderDocument(blob,engine.confirmationFilename(doc)),id:crypto.randomUUID(),auditAttempted:false};
   }
   if(!current())throw Error('Order context changed.');
   prepared.auditAttempted=true;
-  await client.recordConfirmation(doc,prepared.id,prepared.sha256);
+  await new OrderIntakeDocuments(client).save(row,'generated_confirmation',prepared.file,prepared.id,confirmationMetadata(doc));
   if(!current())return;
   const url=URL.createObjectURL(prepared.blob);
   const link=document.createElement('a');link.href=url;link.download=engine.confirmationFilename(doc);document.body.append(link);link.click();link.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
- },{submitLabel:'Generate and download PDF',successMessage:'Confirmation PDF generated; audit receipt verified.'});
+ },{submitLabel:'Generate and download PDF',successMessage:'Confirmation PDF stored; audit receipt verified.'});
  view=modal;view.dataset.oiEditor='true';view.querySelector('.modal')?.classList.add('oi-editor-modal');
  bindConfirmationForm(view.querySelector('form'),row);
+}
+function openOrderIntakeUpload(){
+ const scope=orderIntakeScope(),row=orderIntakeRecord?.row,generation=orderIntakeEditorGeneration;
+ if(!row||!orderIntakeCurrent(scope)||orderIntakeTable.busy)return;
+ const documents=new OrderIntakeDocuments(new OrderIntakeRegistryClient({auth,api:db,workspaceId:scope.split('|')[1]}));
+ let view,pending;
+ const current=()=>modal===view&&generation===orderIntakeEditorGeneration&&orderIntakeCurrent(scope)&&orderIntakeRoute?.recordId===row.id;
+ openModal('Upload order document',documentUploadFields(row),async fd=>{
+  if(!current())throw Error('Order context changed.');
+  const file=fd.get('document'),category=fd.get('category');
+  if(!['client_po','uploaded_confirmation','supporting'].includes(category))throw Error('Select a document type.');
+  const prepared=await prepareOrderDocument(file,file.name);
+  const key=JSON.stringify([category,prepared.filename,prepared.sha256]);
+  if(pending&&pending.key!==key)throw Error('Previous upload outcome may be uncertain. Retry the same file or reopen and inspect history.');
+  if(!current())throw Error('Order context changed.');
+  pending??={key,id:crypto.randomUUID()};
+  await documents.save(row,category,prepared,pending.id);
+ },{submitLabel:'Upload document',successMessage:'Document stored and integrity receipt verified.'});
+ view=modal;view.dataset.oiEditor='true';
+}
+async function openOrderIntakeDocuments(forOrder=false){
+ const scope=orderIntakeScope(),generation=orderIntakeEditorGeneration,row=forOrder?orderIntakeRecord?.row:null;
+ if(!orderIntakeCurrent(scope)||forOrder&&!row)return;
+ const documents=new OrderIntakeDocuments(new OrderIntakeRegistryClient({auth,api:db,workspaceId:scope.split('|')[1]}));
+ openModal(forOrder?'Order documents':'Document registry','<div data-oi-documents-host>Loading documents…</div>',async()=>{}, {submitDisabled:true,submitLabel:'Close',successMessage:''});
+ const view=modal;view.dataset.oiEditor='true';view.querySelector('[type=submit]').hidden=true;
+ const host=view.querySelector('[data-oi-documents-host]');
+ const active=()=>modal===view&&generation===orderIntakeEditorGeneration&&orderIntakeCurrent(scope)&&(!row||orderIntakeRoute?.recordId===row.id);
+ let rows=[],busy=false,hasMore=false,coverage=null,offset=0;
+ async function load(more=false){
+  if(!active()||busy)return;busy=true;
+  try{
+   if(!more){offset=0;coverage=await documents.coverage();}
+   const page=await documents.list({row,offset});
+   if(!active())return;
+   offset+=page.rows.length;
+   rows=more?[...rows,...page.rows.filter(d=>!rows.some(old=>old.id===d.id))]:page.rows;
+   hasMore=page.hasMore;host.innerHTML=documentRegistryMarkup({row,rows,coverage,hasMore});
+  }catch(error){if(active()){host.textContent=errorMessage(error);}}
+  finally{busy=false;}
+ }
+ host.addEventListener('click',async event=>{
+  if(!active()||busy)return;
+  if(event.target.closest('[data-oi-document-more]')){void load(true);return;}
+  const button=event.target.closest('[data-oi-document-download],[data-oi-document-preview]');
+  if(!button)return;
+  const entry=rows.find(d=>d.id===(button.dataset.oiDocumentDownload||button.dataset.oiDocumentPreview));
+  if(!entry)return;
+  busy=true;button.disabled=true;
+  try{
+   const blob=await documents.read(entry);
+   if(!active())return;
+   if(button.dataset.oiDocumentDownload)downloadDocument(blob,entry.filename);
+   else{
+    const target=[...host.querySelectorAll('[data-oi-document-thumbnail]')].find(el=>el.dataset.oiDocumentThumbnail===entry.id);
+    const url=URL.createObjectURL(blob),img=document.createElement('img');
+    img.alt='Thumbnail of '+entry.filename;img.className='oi-document-thumbnail';
+    img.onload=()=>URL.revokeObjectURL(url);img.onerror=()=>{URL.revokeObjectURL(url);if(active())target.textContent='Image preview unavailable.';};
+    target.replaceChildren(img);img.src=url;setTimeout(()=>URL.revokeObjectURL(url),30000);
+   }
+  }catch(error){if(active())notice(error);}
+  finally{busy=false;if(active())button.disabled=false;}
+ });
+ await load();
 }
 let avatarHydrationPromise=Promise.resolve({attempted:0,loaded:0,failed:0,stale:0});
 let ttClockTimer=null;
@@ -13533,6 +13599,9 @@ root.addEventListener('click',event=>{
   if(orderIntakeTable.busy)return;
   if(orderAction.dataset.oiAction==='create')openOrderIntakeEditor();
   else if(orderAction.dataset.oiAction==='edit')openOrderIntakeEditor(true);
+  else if(orderAction.dataset.oiAction==='documents')void openOrderIntakeDocuments();
+  else if(orderAction.dataset.oiAction==='order-documents')void openOrderIntakeDocuments(true);
+  else if(orderAction.dataset.oiAction==='upload-document')openOrderIntakeUpload();
   else if(orderAction.dataset.oiAction==='confirmation')openOrderIntakeConfirmation();
   else if(orderAction.dataset.oiAction==='recipient')void openOrderIntakeRecipient(orderAction.dataset.oiId);
   else if(orderAction.dataset.oiAction==='inbox')void openOrderIntakeInbox();
