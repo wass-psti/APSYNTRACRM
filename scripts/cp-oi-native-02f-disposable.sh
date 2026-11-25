@@ -46,7 +46,7 @@ SQL
   if [ "${OI_VERIFY_CONFIRMATION:-0}" = 1 ]; then
    run < supabase/migrations/20261124121228_cp_oi_native_07_confirmation_audit.sql
    if [ "${OI_VERIFY_DOCUMENTS:-0}" = 1 ]; then
-    run < supabase/migration-candidates/20261125004655_cp_oi_native_08_documents.sql
+    run < supabase/migrations/20261125004655_cp_oi_native_08_documents.sql
    fi
   fi
  fi

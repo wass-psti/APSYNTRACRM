@@ -2261,6 +2261,13 @@
       "file": "20261124203000_cp_tt_admin_manual_clockout.sql",
       "bytes": 7703,
       "sha256": "0a341757b8f1ddb345b712a5a9f00c4bc0f07365aa270bb2dfd404ab47746c51"
+    },
+    {
+      "version": "20261125004655",
+      "name": "cp_oi_native_08_documents",
+      "file": "20261125004655_cp_oi_native_08_documents.sql",
+      "bytes": 9268,
+      "sha256": "1ab72204b4bfdefd779a83acc7aea9ce92f7bdcca231e57de35f6d66850c544c"
     }
   ]
 }
