@@ -12,6 +12,7 @@ const source=readFileSync('frontend/global-search.js','utf8');
 const app=readFileSync('frontend/app.js','utf8');
 const data=readFileSync('frontend/data.js','utf8');
 const css=readFileSync('frontend/global-search.css','utf8');
+const presentation=readFileSync('frontend/monday-inspired-ui.js','utf8');
 const sql=readFileSync('supabase/migrations/20261116055059_cp_crm_global_search_02_indexed_workspace_search.sql','utf8');
 const prefixSql=readFileSync('supabase/migrations/20261116062331_cp_crm_global_search_02b_prefix_index_lookup.sql','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
@@ -343,4 +344,12 @@ test('application identification is presentation-only and distinguishes same-nam
  const quick=buildGlobalSearchResults('',options);
  assert.equal(globalSearchResultKind(quick.find(row=>row.href==='#/time-tracker')),'Application');
  assert.equal(globalSearchResultKind(quick.find(row=>row.type==='module')),'Application');
+});
+
+test('global search owns the platform shortcut and refocuses an already open palette',()=>{
+ assert.doesNotMatch(presentation,/event\.key\.toLowerCase\(\) === 'k'/);
+ assert.match(source,/if\(isGlobalSearchShortcut\(event,platformName\(win\)\)\)\{/);
+ assert.match(source,/if\(opened\)\{input\.focus\(\{preventScroll:true\}\);return true;\}/);
+ assert.match(source,/!event\.target\?\.matches\?\.\('\[data-aps-search-native\]'\)/);
+ assert.match(source,/input\.focus\(\{preventScroll:true\}\);\n  const scopeAtStart/);
 });

@@ -275,18 +275,7 @@ if (app) {
     filterBoards(sidebar);
   }
 
-  // Preserve standard sidebar filtering and Ctrl+K focus
-  document.addEventListener('keydown', event => {
-    if ((event.ctrlKey || event.metaKey) &&
-        !event.altKey && event.key.toLowerCase() === 'k') {
-      const input = host?.querySelector('.aps-board-search-v3 input');
-      if (!input) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      input.focus();
-    }
-  }, true);
-
+  // Global search owns Cmd/Ctrl+K. Sidebar filtering remains available by click.
   if (!host) return;
 
   const observer = new MutationObserver(() => {
