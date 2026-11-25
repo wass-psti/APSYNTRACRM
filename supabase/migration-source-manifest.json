@@ -2322,8 +2322,8 @@
       "version": "20261125130000",
       "name": "cp_tt_auto_clockout_reactivation",
       "file": "20261125130000_cp_tt_auto_clockout_reactivation.sql",
-      "bytes": 11797,
-      "sha256": "479e5b86b00e6ce2635224dced229bbbdb9f0363401d7f2c6739cd432a79cc53"
+      "bytes": 12504,
+      "sha256": "ab6cec8983b5dd92ebae2c4850e431f818e615be1be972b588eaee3c8f7bc0ea"
     }
   ]
 }
