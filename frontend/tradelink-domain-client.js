@@ -6,6 +6,7 @@ import {ApiError,} from './session.js';
 import {validUuid} from './data.js';
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
 import {normalizeTradeLinkAnalyticsSummary} from './tradelink-analytics.js';
+import {STANDARD_APPROVAL_POLICY,GM_SALES_EXEMPT_POLICY,tradeLinkReviewEvidenceComplete} from './tradelink/approval-policy.js';
 // Stage A read RPCs enforce signed-session, board and General Manager checks.
 export const TL03_DOMAIN_READS_ENABLED=true;
 // Stage B authenticated EXECUTE grants are live; server enforces session and workspace permissions.
@@ -40,6 +41,11 @@ const STATES=new Set(['draft','for-approval','submitted','under-review','revisio
  'on-hold','won','lost','delivered','closed']);
 const OPS=new Set(['create','update','revise-approved','archive','restore']);
 const deny=(message,status=403)=>{throw new ApiError(message,status);};
+const knownApprovalPolicy=policy=>policy===undefined||
+ policy===STANDARD_APPROVAL_POLICY||policy===GM_SALES_EXEMPT_POLICY;
+const approvalEvidenceComplete=(policy,primaryAt,secondaryAt)=>
+ knownApprovalPolicy(policy)&&tradeLinkReviewEvidenceComplete(policy,primaryAt,secondaryAt);
+
 export function validateTradeLinkDraftEnvelope(value,{allowUnassignedNumber=false}={}){
  const unassigned=allowUnassignedNumber===true&&value?.documentNumber==='';
  if(!value||typeof value!=='object'||Array.isArray(value)||
@@ -108,7 +114,8 @@ export function normalizeTradeLinkRevisionBundle(value,workspaceId,documentId,re
    typeof row.capturedAt!=='string'||!Number.isFinite(Date.parse(row.capturedAt))||
    (row.primaryAt!=null&&(typeof row.primaryAt!=='string'||!Number.isFinite(Date.parse(row.primaryAt))))||
    (row.secondaryAt!=null&&(typeof row.secondaryAt!=='string'||!Number.isFinite(Date.parse(row.secondaryAt))))||
-   (row.approved&&(!row.primaryAt||!row.secondaryAt)))
+   !knownApprovalPolicy(row.approvalPolicy)||
+   (row.approved&&!approvalEvidenceComplete(row.approvalPolicy,row.primaryAt,row.secondaryAt)))
    deny('Invalid TradeLink revision metadata.',409);
   return Object.freeze({...row});
  });
@@ -128,9 +135,12 @@ export function normalizeTradeLinkRevisionBundle(value,workspaceId,documentId,re
     (typeof selected.primary_reviewed_at!=='string'||!Number.isFinite(Date.parse(selected.primary_reviewed_at))))||
    (selected.secondary_reviewed_at!=null&&
     (typeof selected.secondary_reviewed_at!=='string'||!Number.isFinite(Date.parse(selected.secondary_reviewed_at))))||
-   (selected.approved&&(!selected.primary_reviewed_at||!selected.secondary_reviewed_at))||
+   !knownApprovalPolicy(selected.approval_policy)||
+   (selected.approval_policy===GM_SALES_EXEMPT_POLICY&&!['quotation','po'].includes(selected.document_type))||
+   (selected.approved&&!approvalEvidenceComplete(selected.approval_policy,selected.primary_reviewed_at,selected.secondary_reviewed_at))||
    !revisions.some(row=>row.revision===selected.revision&&
-    row.approved===selected.approved&&row.snapshotSource===selected.snapshot_source))
+    row.approved===selected.approved&&row.snapshotSource===selected.snapshot_source&&
+    (row.approvalPolicy??STANDARD_APPROVAL_POLICY)===(selected.approval_policy??STANDARD_APPROVAL_POLICY)))
    deny('Selected TradeLink revision does not match its immutable history.',409);
  }
  return Object.freeze({documentId,boardItemId:value.boardItemId,
@@ -447,6 +457,7 @@ export class TradeLinkDomainClient{
       typeof r?.createdByActor!=='boolean'||
       (r?.clientName!==null&&r?.clientName!==undefined&&typeof r.clientName!=='string')||
       !['primary','secondary',null,undefined].includes(r?.assignedStage)||
+      !knownApprovalPolicy(r?.approvalPolicy)||
       (r?.primaryAt!=null&&(typeof r.primaryAt!=='string'||!Number.isFinite(Date.parse(r.primaryAt))))||
       (r?.secondaryAt!=null&&(typeof r.secondaryAt!=='string'||!Number.isFinite(Date.parse(r.secondaryAt))))||
       !Number.isSafeInteger(r?.revision)||r.revision<1||
@@ -507,6 +518,7 @@ export class TradeLinkDomainClient{
     row.revision<1||typeof row?.primaryEmail!=='string'||
     typeof row?.secondaryEmail!=='string'||
     !['primary','secondary'].includes(row?.assignedStage)||
+    !knownApprovalPolicy(row?.approvalPolicy)||
     (row.clientName!==null&&row.clientName!==undefined&&typeof row.clientName!=='string')||
     typeof row?.createdAt!=='string'||!Number.isFinite(Date.parse(row.createdAt))||
     typeof row?.updatedAt!=='string'||!Number.isFinite(Date.parse(row.updatedAt))||
@@ -538,7 +550,8 @@ export class TradeLinkDomainClient{
   if(!result||result.documentId!==documentId||
    !Number.isSafeInteger(result.revision)||result.revision<1||
    !STATES.has(result.state)||!validStage(result.primary)||
-   !validStage(result.secondary))
+   !validStage(result.secondary)||!knownApprovalPolicy(result.approvalPolicy)||
+   (result.approvalPolicy===GM_SALES_EXEMPT_POLICY&&result.primary!==null))
    deny('Invalid signed TradeLink review-stage response.',409);
   return result;
  }
@@ -579,7 +592,9 @@ export class TradeLinkDomainClient{
     (typeof result.secondaryAt!=='string'||!Number.isFinite(Date.parse(result.secondaryAt))))||
    (stage==='primary'&&result.primaryAt!==result.recordedAt)||
    (stage==='secondary'&&result.secondaryAt!==result.recordedAt)||
-   (result.state==='approved'&&(!result.primaryAt||!result.secondaryAt))||
+   !knownApprovalPolicy(result.approvalPolicy)||
+   (result.approvalPolicy===GM_SALES_EXEMPT_POLICY&&(stage!=='secondary'||result.primaryAt!=null))||
+   (result.state==='approved'&&!approvalEvidenceComplete(result.approvalPolicy,result.primaryAt,result.secondaryAt))||
    typeof result.idempotent!=='boolean')
    deny('Signed TradeLink review receipt mismatch.',409);
   return {...result,actorId:session.actorId,workspaceId:session.workspaceId};

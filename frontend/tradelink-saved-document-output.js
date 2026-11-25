@@ -1,3 +1,4 @@
+import {GM_SALES_EXEMPT_POLICY} from './tradelink/approval-policy.js';
 /**
  * CP-TL-09B — Official TradeLink output from an authenticated, revision-matched
  * saved document. Uses recovered v1.42 company profiles and six module layouts.
@@ -151,7 +152,7 @@ function renderApproval(data,row){
     'NOT APPROVED · PDF NOT ISSUED')+'</span><span>'+(state?'Approved revision '+safe(row.revision):
     'This print view does not approve the document')+'</span></div>'+
   (assignments.length?'<div class="tl-official-assignees"><h3>Workflow assignments / recorded responsibility</h3><dl>'+
-   assignments.map(([key,label])=>pair(label,data[key]||data[key+'Email'])).join('')+'</dl></div>':'')+
+   assignments.map(([key,label])=>pair(label,key==='verifiedBy'&&row.approval_policy===GM_SALES_EXEMPT_POLICY?'Sales Supervisor approval — Exempted':data[key]||data[key+'Email'])).join('')+'</dl></div>':'')+
   '<p class="tl-official-approval-note">The APPROVED mark is shown only when the signed TradeLink workflow state is Approved. Assigned reviewers are identified separately from recorded approval actions. Electronic PDF approval and issuance have NOT been verified; this is a browser print copy, not an electronically issued PDF.</p>'+
   '</section>';
 }

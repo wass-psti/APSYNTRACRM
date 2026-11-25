@@ -2,6 +2,7 @@
  * No local persistence, fabricated records, second login, or write bypass.
  */
 import {ApiError} from './session.js';
+import {GM_SALES_EXEMPT_POLICY,tradeLinkGmApprovalPreview} from './tradelink/approval-policy.js';
 import {validUuid} from './data.js';
 import {calculateTradeLinkAmounts,formatTradeLinkAmount,TRADELINK_CURRENCIES,TRADELINK_VAT_CODES} from './tradelink-finance.js';
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
@@ -580,8 +581,9 @@ function referencePersonField(label,name,value,people,placeholder,{required=fals
 /** Review controls are enabled only for the saved document's assigned account.
  * The timestamp itself is always returned by the signed server operation. */
 function referenceAssignedPdfStage(field,value,label,stage,{
- actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewedAt=null
+ actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewedAt=null,exempt=false
 }={}){
+ if(exempt)return '<p class="tl-reference-assigned-account" role="status">Sales Supervisor approval exempt for this revision.</p>';
  const account=String(value??'').trim().toLowerCase();
  const actor=String(actorEmail||'').trim().toLowerCase();
  const canRecord=TL03_DUAL_REVIEW_ENABLED&&documentSaved&&
@@ -617,11 +619,12 @@ function referenceCreator(actorName){
   '</div></div>';
 }
 function renderReferenceModuleWorkflow(type,fieldValue,data,actorName,reviewContext={}){
- const {actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewStages=null}=reviewContext;
+ const {actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewStages=null,gmPreview=false}=reviewContext;
  const value=name=>fieldValue(name,data[name]||'');
  const stage=(field,stageName,label)=>referenceAssignedPdfStage(field,value(field),label,stageName,{
   actorEmail,documentSaved,documentId,workflowState,
-  reviewedAt:reviewStages?.[stageName]?.recordedAt||null
+  reviewedAt:reviewStages?.[stageName]?.recordedAt||null,
+  exempt:stageName==='primary'&&reviewStages?.approvalPolicy===GM_SALES_EXEMPT_POLICY
  });
  const person=(label,name,placeholder,required=false,stageName='primary')=>
   referencePersonField(label,name,value(name),TRADELINK_MODULE_ACCOUNT_OPTIONS[type][name],placeholder,{required})+
@@ -666,6 +669,7 @@ function renderReferenceModuleWorkflow(type,fieldValue,data,actorName,reviewCont
     value('verifiedBy')||'aacsenagan@watchdogautomation.com.ph',
     TRADELINK_MODULE_ACCOUNT_OPTIONS.po.verifiedBy,'Select account manager...',{required:true})+
    '<small>Suggested default reviewer: aacsenagan@watchdogautomation.com.ph. This selection is editable.</small>'+
+   (!documentSaved&&gmPreview?'<p>Sales Supervisor approval will be exempt if that reviewer is selected. Other Account Manager reviews remain applicable.</p>':'')+
    stage('verifiedBy','primary','Account Manager review'))+
   group('Approved By (Management)',
    person('Management approver','approvedBy','Select management member...',true,'secondary'))+
@@ -736,8 +740,10 @@ export function quotationReviewControlEligibility({
 /** Quotation has a fixed primary Sales Supervisor and an editable existing
  * management reviewer assignment. Each reviewer records an independent server event. */
 function renderQuotationVerification(fieldValue,data,actorName='',reviewContext={}){
- const {actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewStages=null}=reviewContext;
+ const {actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewStages=null,gmPreview=false}=reviewContext;
  const {primary}=QUOTATION_APPROVAL_HIERARCHY;
+ const exempt=reviewStages?.approvalPolicy===GM_SALES_EXEMPT_POLICY;
+ const preview=!documentSaved&&gmPreview;
  const secondaryOptionsForDocument=quotationSecondaryOptionsForDocument(data.documentNumber);
  const selected=fieldValue('approvedByEmail',data.approvedByEmail||secondaryOptionsForDocument[0]);
  const safeSelected=secondaryOptionsForDocument.includes(selected)?selected:secondaryOptionsForDocument[0];
@@ -752,14 +758,15 @@ function renderQuotationVerification(fieldValue,data,actorName='',reviewContext=
    (actorName?escape(actorName):'Current authenticated user')+
    '</p><small>Identity and time are recorded by the signed server on successful save.</small></div></div>'+
   '<div class="tl-reference-approval-stage">'+
+   (exempt||preview?'<strong>Sales Supervisor approval — '+(exempt?'Exempted':'Exemption on save')+'</strong><input type="hidden" name="verifiedByEmail" value="'+escape(primary.email)+'"><input type="hidden" name="verifiedBy" value="'+escape(primary.label)+'"><p>'+(exempt?'Not required for this General Manager revision.':'Management validation remains. Exemption is confirmed by the signed server on save.')+'</p>':
    '<label for="tl-quote-reviewer-email">Primary approver — Sales Supervisor</label>'+
    '<input id="tl-quote-reviewer-email" name="verifiedByEmail" value="'+escape(primary.email)+'" '+
     'type="email" maxlength="254" readonly required aria-describedby="tl-quote-primary-note">'+
    '<input type="hidden" name="verifiedBy" value="'+escape(primary.label)+'">'+
-   '<small id="tl-quote-primary-note">Permanent first-stage reviewer. Only this assigned signed account can validate.</small>'+
+   '<small id="tl-quote-primary-note">Permanent first-stage reviewer for standard policy. Only this assigned signed account can validate. Eligible General Manager submissions do not require this review.</small>'+
    referenceAssignedPdfStage('verifiedByEmail',primary.email,'Sales Supervisor review','primary',{
     actorEmail,documentSaved,documentId,workflowState,
-    reviewedAt:reviewStages?.primary?.recordedAt||null})+
+    reviewedAt:reviewStages?.primary?.recordedAt||null}))+
   '</div>'+
   '<div class="tl-reference-approval-stage">'+
    '<label for="tl-quote-approver-email">Secondary approver — Management</label>'+
@@ -1175,7 +1182,7 @@ export function snapshotTradeLinkDraftLineItems(form){
    unit:get('lineUnit'),serialNumber:get('lineSerialNumber')};
  });
 }
-function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error='',message='',lineDrafts=null,actorName='',actorEmail='',reviewStages=null,showModuleTabs=true,canCreate=false,canEditOwnDraft=false){
+function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error='',message='',lineDrafts=null,actorName='',actorEmail='',reviewStages=null,showModuleTabs=true,canCreate=false,canEditOwnDraft=false,actorModuleRole=''){
  const editing=mode==='edit'&&
   ['draft','for-approval','revision-required','approved'].includes(row?.workflow_state)&&
   row.content&&typeof row.content==='object'&&
@@ -1349,9 +1356,9 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
      '<small>Recovered from the original TradeLink v1.42.0 template. Changes are saved with this document revision. No PDF, approval or document is generated by changing terms locally; eligible saved records remain printable through the existing workflow.</small>'+
     '</label></details>'+
    (type==='quotation'?renderQuotationVerification(fieldValue,data,actorName,{
-    actorEmail,documentSaved:editing,documentId,workflowState,reviewStages}):
+    actorEmail,documentSaved:editing,documentId,workflowState,reviewStages,gmPreview:tradeLinkGmApprovalPreview(actorEmail,actorModuleRole)}):
     renderReferenceModuleWorkflow(type,fieldValue,data,actorName,{
-     actorEmail,documentSaved:editing,documentId,workflowState,reviewStages}))+
+     actorEmail,documentSaved:editing,documentId,workflowState,reviewStages,gmPreview:tradeLinkGmApprovalPreview(actorEmail,actorModuleRole)}))+
    '<div class="tl-draft-actions">'+
     '<button type="button" class="secondary" data-action="tradelink-draft-clear">Clear form</button>'+
    '</div><p data-tradelink-draft-preview-status data-validation="pending" role="status" aria-live="polite" aria-atomic="true">'+
@@ -1709,13 +1716,14 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
         const formatTime=value=>value&&Number.isFinite(Date.parse(value))?
          new Date(value).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'}):'Pending';
         const assignedLabel=stage==='primary'?'Primary reviewer':'Secondary reviewer';
+        const exempt=row.approvalPolicy===GM_SALES_EXEMPT_POLICY;
         return '<div class="tl-reviewer-row-actions" data-tl-reviewer-stage="'+escape(stage)+'">'+
          '<button type="button" class="secondary" data-action="tradelink-review-document-open" '+
           'data-id="'+escape(row.documentId)+'"'+(view.busy?' disabled':'')+
           '>View document</button> '+
-         '<p class="tl-reviewer-stage-summary">Primary: '+escape(formatTime(row.primaryAt))+
+         '<p class="tl-reviewer-stage-summary">Primary: '+escape(exempt?'Exempted':formatTime(row.primaryAt))+
          '<br>Secondary: '+escape(formatTime(row.secondaryAt))+'</p>'+
-         (recordedAt?'<span class="tl-reviewer-recorded" role="status">'+escape(assignedLabel)+
+         (exempt&&stage==='primary'?'<span class="muted">Sales Supervisor approval exempted.</span>':recordedAt?'<span class="tl-reviewer-recorded" role="status">'+escape(assignedLabel)+
           ' validated · '+escape(formatTime(recordedAt))+'</span>':
           row.workflowState==='for-approval'?'<button type="button" class="primary" '+
            'data-action="tradelink-document-review-stage" data-id="'+escape(row.documentId)+'" '+
@@ -1986,7 +1994,7 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
       renderTradeLinkSavedWorkflowHistory(selection?.events):'')+
    '</section>':'')+'</section>';
 }
-export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTradeLinkDraftView(),canManage=false,canCreate=canManage,actorId='',actorName='',actorEmail='',showModuleTabs=true}={}){
+export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTradeLinkDraftView(),canManage=false,canCreate=canManage,actorId='',actorName='',actorEmail='',showModuleTabs=true,actorModuleRole=''}={}){
  if(!isTradeLinkBoard(detail?.board)||detail.board.id!==TRADELINK_BOARD_ID||
    detail.board.workspace_id!==workspaceId)
   return '<section role="alert" class="tl-draft-panel">Signed TradeLink workspace unavailable.</section>';
@@ -2004,6 +2012,6 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
    renderEditor(selected?.record,view.mode,canManage,
    view.mode==='edit'&&!selected?null:view.formValues,view.draftNotice||'',
    view.error||'',view.message||'',view.lineDrafts,actorName,actorEmail,view.reviewStages||null,showModuleTabs,
-   canCreate,view.canEditOwnDraft===true))+
+   canCreate,view.canEditOwnDraft===true,actorModuleRole))+
   '</div>';
 }
