@@ -50,9 +50,9 @@ test('signed board activity is deduped, HTML escaped and does not pretend to be 
  assert.match(html,/tl-activity-heading-tools/);
  assert.match(html,/Signed audit feed/);
  assert.match(html,/tl-activity-avatar/);
- assert.match(html,/&lt;script&gt;alert\\(1\\)&lt;\\/script&gt;/);
+ assert.ok(html.includes('&lt;script&gt;alert(1)&lt;/script&gt;'));
  assert.match(html,/document · ESI-001/);
- assert.match(html,/Showing <strong>2<\\/strong> events shown/);
+ assert.ok(html.includes('Showing <strong>2</strong> events shown'));
  assert.match(html,/not the source application/);
 });
 test('activity error and loading states neither invent rows nor leak prior data',()=>{
