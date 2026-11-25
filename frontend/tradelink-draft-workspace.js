@@ -1809,16 +1809,18 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
    '<div class="tl-records-scroll"><table class="tl-records-table">'+
     '<caption>'+(canReview&&!creatorMode?'Documents assigned to the signed account':readOnly?'Authorized TradeLink documents':'Authorized TradeLink Draft records')+
      ' in current response</caption>'+
-    '<thead><tr>'+(readOnly&&!canReview?'<th scope="col"><input id="tl-select-visible-documents" type="checkbox" data-tl-select-all aria-label="Select all visible documents" /></th>':'')+
-    '<th scope="col">No.</th><th scope="col">Document Number</th><th scope="col">Client Name</th>'+
-    '<th scope="col">Created By</th><th scope="col">Module</th><th scope="col">Created</th>'+
-    '<th scope="col">Last updated</th><th scope="col">Workflow Status</th>'+
-    '<th scope="col">Rev. No.</th><th scope="col">Actions</th>'+
+    '<thead><tr>'+(readOnly&&!canReview?'<th class="tl-ref-select-column" scope="col"><input id="tl-select-visible-documents" type="checkbox" data-tl-select-all aria-label="Select all visible documents" /></th>':'')+
+    '<th class="tl-ref-row-number" scope="col">No.</th><th class="tl-ref-doc-number" scope="col">Document Number</th><th class="tl-ref-client-name" scope="col">Client Name</th>'+
+    '<th class="tl-ref-created-by" scope="col">Created By</th><th class="tl-ref-module" scope="col">Module</th><th class="tl-ref-created-at" scope="col">Created</th>'+
+    '<th class="tl-ref-updated-at" scope="col">Last updated</th><th class="tl-ref-workflow-status" scope="col">Workflow Status</th>'+
+    '<th class="tl-ref-revision-column" scope="col">Rev. No.</th><th scope="col">Actions</th>'+
     '</tr></thead><tbody data-tradelink-domain-list-body>'+
     ordered.map((row,index)=>{
      const match=tradeLinkDraftRowMatches(row,applied);
      const ownerDraft=creatorMode&&row.createdByActor===true&&
       row.workflowState==='draft'&&!row.archived;
+     const clientName=typeof row.clientName==='string'&&row.clientName.trim()?row.clientName:'—';
+     const createdByName=typeof row.createdByName==='string'&&row.createdByName.trim()?row.createdByName:'—';
      const canEditRow=ownerDraft||(canManage&&TL03_DOMAIN_WRITES_ENABLED&&
       !row.archived&&['draft','for-approval','revision-required','approved'].includes(row.workflowState));
      return '<tr data-tradelink-domain-record data-document-id="'+escape(row.documentId)+'" data-document-number="'+
@@ -1828,16 +1830,16 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
       escape(row.revision)+'" data-created-at="'+escape(tradeLinkTimestamp(row.createdAt)===null?'':row.createdAt)+
       '" data-updated-at="'+escape(tradeLinkTimestamp(row.updatedAt)===null?'':row.updatedAt)+'" data-archived="'+
       (row.archived===true?'true':'false')+'" data-hidden="'+(row.hidden===true?'true':'false')+'"'+(match?'':' hidden')+'>'+
-      (readOnly&&!canReview?'<td><input id="tl-select-'+escape(row.documentId)+'" type="checkbox" data-tl-select-document data-document-id="'+escape(row.documentId)+'"'+(match&&selectedIds.has(row.documentId)?' checked':'')+' aria-label="Select document '+escape(row.documentNumber)+'" /></td>':'')+
+      (readOnly&&!canReview?'<td class="tl-ref-select-column"><input id="tl-select-'+escape(row.documentId)+'" type="checkbox" data-tl-select-document data-document-id="'+escape(row.documentId)+'"'+(match&&selectedIds.has(row.documentId)?' checked':'')+' aria-label="Select document '+escape(row.documentNumber)+'" /></td>':'')+
       '<td class="tl-ref-row-number">'+escape(index+1)+'</td>'+
       '<td class="tl-ref-doc-number">'+escape(row.documentNumber)+'</td>'+
-      '<td>'+escape(typeof row.clientName==='string'&&row.clientName.trim()?row.clientName:'—')+'</td>'+
-      '<td class="tl-ref-created-by">'+escape(typeof row.createdByName==='string'&&row.createdByName.trim()?row.createdByName:'—')+'</td>'+
-      '<td>'+escape(tradeLinkDocumentLabel(row.documentType))+'</td>'+
-      '<td>'+renderTradeLinkTimestamp(row.createdAt)+'</td>'+
-      '<td>'+renderTradeLinkTimestamp(row.updatedAt)+'</td>'+
-      '<td>'+renderTradeLinkWorkflowBadge(row.workflowState,row.archived)+'</td>'+
-      '<td><span class="tl-ref-revision">'+escape(row.revision)+'</span></td>'+
+      '<td class="tl-ref-client-name" title="'+escape(clientName)+'"><span class="tl-ref-cell-truncate">'+escape(clientName)+'</span></td>'+
+      '<td class="tl-ref-created-by" title="'+escape(createdByName)+'"><span class="tl-ref-cell-truncate">'+escape(createdByName)+'</span></td>'+
+      '<td class="tl-ref-module">'+escape(tradeLinkDocumentLabel(row.documentType))+'</td>'+
+      '<td class="tl-ref-created-at">'+renderTradeLinkTimestamp(row.createdAt)+'</td>'+
+      '<td class="tl-ref-updated-at">'+renderTradeLinkTimestamp(row.updatedAt)+'</td>'+
+      '<td class="tl-ref-workflow-status">'+renderTradeLinkWorkflowBadge(row.workflowState,row.archived)+'</td>'+
+      '<td class="tl-ref-revision-column"><span class="tl-ref-revision">'+escape(row.revision)+'</span></td>'+
       (readOnly?'<td class="tl-ref-actions-cell">'+(
        canReview&&['primary','secondary'].includes(row.assignedStage)?(()=>{
         const stage=row.assignedStage;

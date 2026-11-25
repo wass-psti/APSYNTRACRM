@@ -69,6 +69,8 @@ test('All Documents receives the light-mode screen identity and retains existing
  assert.match(html,/More filters and sorting/);
  assert.match(html,/Q-2026-001/);
  assert.match(html,/Example Industrial Supply/);
+ assert.match(html,/class="tl-ref-client-name" title="Example Industrial Supply"/);
+ assert.match(html,/class="tl-ref-cell-truncate"/);
 });
 
 test('Activity timeline preserves event order, timestamps, actors, escaping and the existing refresh action',()=>{
@@ -150,6 +152,8 @@ test('All three screens use the same scoped light-mode refresh stylesheet and re
  );
  for(const selector of [
   '.tl-document-repository','.tl-reference-document-filter-tabs',
+  '.tl-ref-cell-truncate','.tl-ref-client-name','.tl-ref-workflow-status',
+  '.tl-reference-document-datebar','.tl-ref-selection-controls',
   '.tl-activity-timeline','.tl-activity-card','.tl-analytics-kpis',
   '.tl-analytics-card','.tl-analytics-table'
  ])assert.ok(css.includes(selector),selector);
@@ -159,6 +163,9 @@ test('All three screens use the same scoped light-mode refresh stylesheet and re
  assert.ok(css.includes('@media(max-width:620px)'));
  assert.ok(css.includes('color-scheme:light'));
  assert.ok(css.includes('prefers-reduced-motion:reduce'));
+ assert.ok(css.includes('min-width:1328px'));
+ assert.ok(css.includes('table-layout:fixed'));
+ assert.ok(css.includes('position:sticky'));
  assert.doesNotMatch(css,/data-aps-monday-theme|crm-native-|dark-mode/i);
  assert.match(manifest,/frontend\/tradelink-ui-refresh\.css/);
 });

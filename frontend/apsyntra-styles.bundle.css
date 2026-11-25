@@ -20318,6 +20318,708 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-ot-refer
  }
 }
 
+
+/* CP-TL-ALL-DOCUMENTS-UI-03 — clearer repository hierarchy and a compact,
+   readable document table. Presentation only; all signed actions stay intact. */
+.tl-reference-portal .tl-document-repository{
+ box-sizing:border-box;
+ padding:0;
+ border:1px solid #e3e9f2;
+ border-radius:16px;
+ background:#fff;
+ box-shadow:0 8px 26px rgba(15,23,42,.045);
+}
+.tl-reference-portal .tl-document-repository>.tl-reference-repository-actions{
+ padding:20px 24px;
+ border:0;
+ border-bottom:1px solid #e9eef5;
+ border-radius:15px 15px 0 0;
+ background:#fff;
+}
+.tl-reference-portal .tl-document-repository>.tl-reference-repository-actions h2{
+ color:#17243a;
+ font-size:18px;
+ font-weight:760;
+ letter-spacing:-.025em;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-count-badge{
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ min-width:26px;
+ min-height:24px;
+ padding:2px 8px;
+ border:1px solid #d8e5ff;
+ border-radius:999px;
+ background:#eff5ff;
+ color:#2455bd;
+ font-size:11px;
+ font-weight:750;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-repository-buttons{
+ gap:9px;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-repository-buttons :is(a,button){
+ min-height:40px;
+ padding:8px 14px;
+ border-radius:9px;
+ font-size:12px;
+ font-weight:700;
+ transition:background .14s ease,border-color .14s ease,box-shadow .14s ease;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-repository-buttons a.primary{
+ border:1px solid #2458d3;
+ background:#2458d3;
+ box-shadow:0 2px 5px rgba(36,88,211,.16);
+}
+.tl-reference-portal .tl-document-repository .tl-reference-repository-buttons a.primary:hover{
+ border-color:#1e49b4;
+ background:#1e49b4;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-repository-buttons button.secondary{
+ border:1px solid #dce4ee;
+ background:#fff;
+ color:#46556c;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-repository-buttons button.secondary:hover{
+ border-color:#c5d3e5;
+ background:#f8faff;
+ color:#244db3;
+}
+.tl-reference-portal .tl-document-repository [data-tradelink-domain-list]{
+ padding:0 24px 24px;
+ border:0;
+ border-radius:0 0 15px 15px;
+ background:#fff;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-document-filter-tabs{
+ display:flex;
+ align-items:center;
+ gap:7px;
+ margin:0 0 16px;
+ padding:14px 0 13px;
+ border-bottom:1px solid #e9eef5;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-document-filter-tabs>button{
+ min-height:36px;
+ padding:7px 12px;
+ border:1px solid #e7ecf3;
+ border-radius:9px;
+ background:#f8fafc!important;
+ color:#59677c;
+ font-size:11px;
+ font-weight:650;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-document-filter-tabs>button:hover{
+ border-color:#d6e2f4;
+ background:#f2f6fc!important;
+ color:#244db3;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-document-filter-tabs>button[aria-current="true"]{
+ border-color:#cbdcff;
+ background:#edf4ff!important;
+ color:#214fb5;
+ font-weight:750;
+ box-shadow:inset 0 0 0 1px rgba(49,93,230,.035);
+}
+.tl-reference-portal .tl-document-repository .tl-draft-list-filters{
+ grid-template-columns:minmax(0,1fr) minmax(180px,230px);
+ gap:14px;
+ margin:0 0 12px;
+ padding:14px;
+ border:1px solid #e7edf5;
+ border-radius:12px;
+ background:#f8fafc;
+}
+.tl-reference-portal .tl-document-repository .tl-draft-list-filters .tl-draft-field>span{
+ margin-bottom:6px;
+ color:#475569;
+ font-size:11px;
+ font-weight:700;
+}
+.tl-reference-portal .tl-document-repository .tl-draft-list-filters :is(input,select){
+ box-sizing:border-box;
+ width:100%;
+ min-width:0;
+ min-height:40px;
+ padding:8px 11px;
+ border:1px solid #d9e2ed;
+ border-radius:9px;
+ background:#fff;
+ color:#25344b;
+ font-size:12px;
+ box-shadow:0 1px 2px rgba(15,23,42,.025);
+}
+.tl-reference-portal .tl-document-repository .tl-draft-list-filters :is(input,select):focus-visible,
+.tl-reference-portal .tl-document-repository .tl-reference-document-datebar input:focus-visible,
+.tl-reference-portal .tl-document-repository .tl-ref-advanced-filter-grid select:focus-visible{
+ outline:2px solid #7ca4f5;
+ outline-offset:2px;
+ border-color:#7ca4f5;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-document-datebar{
+ display:grid;
+ grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;
+ grid-template-rows:auto auto auto;
+ align-items:end;
+ gap:10px 12px;
+ margin:0 0 12px;
+ padding:13px 14px;
+ border:1px solid #e7edf5;
+ border-radius:12px;
+ background:#fbfcfe;
+ color:#5b687d;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-document-datebar>.tl-date-label{
+ grid-column:1/-1;
+ grid-row:1;
+ margin:0;
+ color:#3e4d63;
+ font-size:11px;
+ font-weight:750;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-document-datebar>label[for="tl-doc-updated-start"]{
+ grid-column:1;
+ grid-row:2;
+ min-width:0;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-document-datebar>label[for="tl-doc-updated-end"]{
+ grid-column:2;
+ grid-row:2;
+ min-width:0;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-document-datebar>span:not(.tl-date-label){
+ display:none;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-document-datebar label{
+ min-width:0;
+ color:#64748b;
+ font-size:10px;
+ font-weight:650;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-document-datebar input{
+ box-sizing:border-box;
+ width:100%;
+ min-height:38px;
+ margin-top:5px;
+ padding:7px 9px;
+ border-color:#d9e2ed;
+ border-radius:9px;
+ background:#fff;
+ color:#26364c;
+ font-size:12px;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-date-presets{
+ grid-column:1/3;
+ grid-row:3;
+ display:flex;
+ align-items:center;
+ flex-wrap:wrap;
+ gap:5px;
+ margin:0;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-date-presets>button{
+ min-height:31px;
+ padding:6px 9px;
+ border:1px solid #e2e8f0;
+ border-radius:8px;
+ background:#fff;
+ color:#53627a;
+ font-size:10px;
+ font-weight:650;
+}
+.tl-reference-portal .tl-document-repository .tl-reference-date-presets>button:hover{
+ border-color:#cbdcff;
+ background:#f1f6ff;
+ color:#2454bd;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-apply-filter{
+ grid-column:3;
+ grid-row:3;
+ min-height:36px;
+ padding:8px 13px;
+ border:1px solid #2458d3;
+ border-radius:9px;
+ background:#2458d3;
+ color:#fff;
+ font-size:11px;
+ font-weight:750;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-apply-filter:hover{
+ border-color:#1e49b4;
+ background:#1e49b4;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-advanced-filters{
+ margin:0 0 12px;
+ padding:0;
+ border:0;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-advanced-filters>summary{
+ display:inline-flex;
+ align-items:center;
+ gap:9px;
+ min-height:36px;
+ padding:7px 11px;
+ border:1px solid #e3e9f1;
+ border-radius:9px;
+ background:#fff;
+ color:#4b5a70;
+ font-size:11px;
+ font-weight:700;
+ list-style:none;
+ cursor:pointer;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-advanced-filters>summary::-webkit-details-marker{
+ display:none;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-advanced-filters>summary::after{
+ content:"⌄";
+ color:#77869c;
+ font-size:14px;
+ line-height:1;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-advanced-filters[open]>summary{
+ border-color:#cbdcff;
+ background:#f5f8ff;
+ color:#214fb5;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-advanced-filters[open]>summary::after{
+ content:"⌃";
+}
+.tl-reference-portal .tl-document-repository .tl-ref-advanced-filter-grid{
+ grid-template-columns:repeat(4,minmax(0,1fr));
+ gap:12px;
+ margin:9px 0 0;
+ padding:14px;
+ border:1px solid #e7edf5;
+ border-radius:11px;
+ background:#fbfcfe;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-advanced-filter-grid .tl-draft-field>span{
+ display:block;
+ margin-bottom:6px;
+ color:#526176;
+ font-size:10px;
+ font-weight:700;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-advanced-filter-grid select{
+ box-sizing:border-box;
+ width:100%;
+ min-height:38px;
+ padding:7px 9px;
+ border:1px solid #d9e2ed;
+ border-radius:9px;
+ background:#fff;
+ color:#26364c;
+ font-size:11px;
+}
+.tl-reference-portal .tl-document-repository .tl-draft-pagination-controls{
+ display:flex;
+ align-items:center;
+ flex-wrap:wrap;
+ gap:8px;
+ margin:12px 0 0;
+ padding:10px 12px;
+ border:1px solid #e7edf5;
+ border-radius:10px;
+ background:#fbfcfe;
+}
+.tl-reference-portal .tl-document-repository .tl-draft-pagination-controls button{
+ min-height:34px;
+ padding:7px 11px;
+ border:1px solid #dce4ee;
+ border-radius:8px;
+ background:#fff;
+ color:#46556c;
+ font-size:11px;
+ font-weight:650;
+}
+.tl-reference-portal .tl-document-repository .tl-draft-pagination-controls button:not(:disabled):hover{
+ border-color:#cbdcff;
+ background:#f3f7ff;
+ color:#2454bd;
+}
+.tl-reference-portal .tl-document-repository .tl-draft-pagination-controls span[role="status"]{
+ margin-inline:auto;
+ padding:5px 9px;
+ border-radius:7px;
+ background:#edf2f8;
+ color:#46556c;
+ font-size:10px;
+ font-weight:700;
+}
+.tl-reference-portal .tl-document-repository .tl-draft-pagination-controls button:disabled,
+.tl-reference-portal .tl-document-repository .tl-ref-selection-controls button:disabled{
+ opacity:.48;
+ cursor:not-allowed;
+}
+.tl-reference-portal .tl-document-repository #tl-draft-search-scope{
+ margin:10px 0 0;
+ padding:9px 12px;
+ border-left:3px solid #c9d9f4;
+ border-radius:0 8px 8px 0;
+ background:#f7faff;
+ color:#68778d;
+ font-size:10px;
+ line-height:1.55;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-selection-row{
+ align-items:center;
+ gap:10px 14px;
+ margin-top:13px;
+ padding:12px 0;
+ border-top:1px solid #edf1f6;
+ border-bottom:1px solid #edf1f6;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-selection-row>p{
+ color:#334155;
+ font-size:11px;
+ font-weight:750;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-selection-controls{
+ gap:7px;
+ color:#64748b;
+ font-size:10px;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-selection-controls [data-tl-selected-count]{
+ padding:5px 8px;
+ border:1px solid #e2e8f0;
+ border-radius:7px;
+ background:#f8fafc;
+ color:#475569;
+ font-size:10px;
+ font-weight:750;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-selection-controls button{
+ min-height:31px;
+ padding:6px 9px;
+ border:1px solid #dfe6ef;
+ border-radius:8px;
+ background:#fff;
+ color:#4b5a70;
+ font-size:10px;
+ font-weight:650;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-selection-controls button:not(:disabled):hover{
+ border-color:#cbdcff;
+ background:#f4f7ff;
+ color:#214fb5;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-selection-controls [data-action="tradelink-documents-export-selection"]{
+ border-color:#d5e2fb;
+ background:#f4f8ff;
+ color:#2453b8;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-selection-controls [data-action="tradelink-documents-delete-selection"]{
+ border-color:#f0d5d7;
+ color:#a33a42;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-selection-controls [data-action="tradelink-documents-delete-selection"]:not(:disabled):hover{
+ border-color:#e6bfc2;
+ background:#fff6f6;
+ color:#922d35;
+}
+.tl-reference-portal .tl-document-repository .tl-records-scroll{
+ margin-top:12px;
+ border:1px solid #e2e8f0;
+ border-radius:12px;
+ background:#fff;
+ box-shadow:0 1px 2px rgba(15,23,42,.025);
+}
+.tl-reference-portal .tl-document-repository .tl-records-table{
+ width:100%;
+ min-width:1328px;
+ table-layout:fixed;
+ border-collapse:separate;
+ border-spacing:0;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table thead th{
+ position:sticky;
+ top:0;
+ z-index:2;
+ padding:13px 11px;
+ border-bottom:1px solid #dfe7f1;
+ background:#f5f8fc;
+ color:#56657a;
+ font-size:10px;
+ font-weight:750;
+ letter-spacing:.045em;
+ text-transform:uppercase;
+ white-space:nowrap;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table tbody td{
+ padding:13px 11px;
+ border-bottom:1px solid #edf1f6;
+ color:#46556b;
+ font-size:11px;
+ line-height:1.45;
+ vertical-align:middle;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table tbody tr:nth-child(even){
+ background:#fcfdff;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table tbody tr:hover{
+ background:#f4f8ff;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table tbody tr:last-child td{
+ border-bottom:0;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table .tl-ref-select-column{
+ width:44px;
+ min-width:44px;
+ text-align:center;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table .tl-ref-row-number{
+ width:52px;
+ min-width:52px;
+ text-align:center;
+ color:#8390a2;
+ font-size:10px;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table .tl-ref-doc-number{
+ width:145px;
+ min-width:145px;
+ color:#214b9e;
+ font-size:11px;
+ font-weight:750;
+ white-space:nowrap;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table .tl-ref-client-name{
+ width:245px;
+ min-width:245px;
+ max-width:245px;
+ color:#26364d;
+ white-space:normal;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table .tl-ref-created-by{
+ width:175px;
+ min-width:175px;
+ max-width:175px;
+ color:#526176;
+ white-space:normal;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table .tl-ref-module{
+ width:128px;
+ min-width:128px;
+ white-space:nowrap;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table .tl-ref-created-at,
+.tl-reference-portal .tl-document-repository .tl-records-table .tl-ref-updated-at{
+ width:118px;
+ min-width:118px;
+ white-space:nowrap;
+ color:#64748b;
+ font-size:10px;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table .tl-ref-workflow-status{
+ width:145px;
+ min-width:145px;
+ white-space:nowrap;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table .tl-ref-revision-column{
+ width:76px;
+ min-width:76px;
+ text-align:center;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table .tl-ref-actions-column,
+.tl-reference-portal .tl-document-repository .tl-records-table .tl-ref-actions-cell{
+ width:82px;
+ min-width:82px;
+ text-align:center;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-cell-truncate{
+ display:-webkit-box;
+ -webkit-box-orient:vertical;
+ -webkit-line-clamp:2;
+ overflow:hidden;
+ overflow-wrap:anywhere;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-created-by .tl-ref-cell-truncate{
+ -webkit-line-clamp:1;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table .tl-ref-revision{
+ min-width:26px;
+ padding:4px 8px;
+ border:1px solid #e1d8f6;
+ background:#f6f1ff;
+ color:#7136b7;
+ font-size:10px;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table .tl-ref-actions-cell{
+ padding-inline:8px;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-row-action-trigger{
+ display:inline-grid;
+ place-items:center;
+ width:34px;
+ height:34px;
+ border:1px solid #e1e7ef;
+ border-radius:9px;
+ background:#fff;
+ color:#526176;
+ font-size:19px;
+ transition:background .14s ease,border-color .14s ease,color .14s ease;
+}
+.tl-reference-portal .tl-document-repository .tl-ref-row-action-trigger:hover{
+ border-color:#cbdcff;
+ background:#f1f6ff;
+ color:#2454bd;
+}
+.tl-reference-portal .tl-document-repository .tl-doc-status{
+ min-height:24px;
+ padding:4px 9px;
+ border:1px solid #e2e8f0;
+ border-radius:999px;
+ background:#f8fafc;
+ color:#53627a;
+ font-size:10px;
+ font-weight:700;
+ line-height:1.2;
+}
+.tl-reference-portal .tl-document-repository .tl-doc-status--draft,
+.tl-reference-portal .tl-document-repository .tl-doc-status--expired,
+.tl-reference-portal .tl-document-repository .tl-doc-status--closed{
+ border-color:#e2e8f0;
+ background:#f5f7fa;
+ color:#53627a;
+}
+.tl-reference-portal .tl-document-repository .tl-doc-status--for-approval,
+.tl-reference-portal .tl-document-repository .tl-doc-status--submitted,
+.tl-reference-portal .tl-document-repository .tl-doc-status--under-review,
+.tl-reference-portal .tl-document-repository .tl-doc-status--revision-required,
+.tl-reference-portal .tl-document-repository .tl-doc-status--on-hold{
+ border-color:#f3dfb8;
+ background:#fff8e9;
+ color:#96600d;
+}
+.tl-reference-portal .tl-document-repository .tl-doc-status--approved,
+.tl-reference-portal .tl-document-repository .tl-doc-status--completed,
+.tl-reference-portal .tl-document-repository .tl-doc-status--delivered,
+.tl-reference-portal .tl-document-repository .tl-doc-status--won{
+ border-color:#ccebd9;
+ background:#effaf3;
+ color:#1c7042;
+}
+.tl-reference-portal .tl-document-repository .tl-doc-status--rejected,
+.tl-reference-portal .tl-document-repository .tl-doc-status--cancelled,
+.tl-reference-portal .tl-document-repository .tl-doc-status--lost{
+ border-color:#f1d0d2;
+ background:#fff3f3;
+ color:#a5363d;
+}
+.tl-reference-portal .tl-document-repository .tl-doc-status--under-negotiation{
+ border-color:#d5e3fb;
+ background:#f0f6ff;
+ color:#315aa5;
+}
+.tl-reference-portal .tl-document-repository :is(button,a,summary):focus-visible{
+ outline:2px solid #7ca4f5;
+ outline-offset:2px;
+}
+@media(min-width:1450px){
+ .tl-reference-portal .tl-document-repository .tl-reference-document-datebar{
+  grid-template-columns:max-content minmax(130px,160px) max-content minmax(130px,160px) minmax(0,1fr) auto;
+  grid-template-rows:auto;
+  align-items:end;
+  gap:9px;
+ }
+ .tl-reference-portal .tl-document-repository .tl-reference-document-datebar>.tl-date-label{
+  grid-column:auto;
+  grid-row:auto;
+  align-self:center;
+ }
+ .tl-reference-portal .tl-document-repository .tl-reference-document-datebar>label[for="tl-doc-updated-start"],
+ .tl-reference-portal .tl-document-repository .tl-reference-document-datebar>label[for="tl-doc-updated-end"]{
+  grid-row:auto;
+ }
+ .tl-reference-portal .tl-document-repository .tl-reference-document-datebar>span:not(.tl-date-label){
+  display:inline-flex;
+  align-self:center;
+ }
+ .tl-reference-portal .tl-document-repository .tl-reference-date-presets{
+  grid-column:auto;
+  grid-row:auto;
+  justify-content:flex-end;
+ }
+ .tl-reference-portal .tl-document-repository .tl-ref-apply-filter{
+  grid-column:auto;
+  grid-row:auto;
+ }
+}
+@media(max-width:850px){
+ .tl-reference-portal .tl-document-repository>.tl-reference-repository-actions{
+  align-items:flex-start;
+ }
+ .tl-reference-portal .tl-document-repository .tl-ref-advanced-filter-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+ }
+ .tl-reference-portal .tl-document-repository .tl-draft-pagination-controls{
+  gap:7px;
+ }
+}
+@media(max-width:620px){
+ .tl-reference-portal .tl-document-repository{
+  border-radius:12px;
+ }
+ .tl-reference-portal .tl-document-repository>.tl-reference-repository-actions{
+  padding:16px;
+ }
+ .tl-reference-portal .tl-document-repository .tl-reference-repository-buttons{
+  width:100%;
+ }
+ .tl-reference-portal .tl-document-repository .tl-reference-repository-buttons>*{
+  flex:1 1 auto;
+ }
+ .tl-reference-portal .tl-document-repository [data-tradelink-domain-list]{
+  padding:0 14px 16px;
+ }
+ .tl-reference-portal .tl-document-repository .tl-draft-list-filters{
+  grid-template-columns:minmax(0,1fr);
+  padding:12px;
+ }
+ .tl-reference-portal .tl-document-repository .tl-reference-document-datebar{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+  padding:11px;
+ }
+ .tl-reference-portal .tl-document-repository .tl-reference-document-datebar>.tl-date-label,
+ .tl-reference-portal .tl-document-repository .tl-reference-date-presets,
+ .tl-reference-portal .tl-document-repository .tl-ref-apply-filter{
+  grid-column:1/-1;
+ }
+ .tl-reference-portal .tl-document-repository .tl-reference-document-datebar>label[for="tl-doc-updated-start"],
+ .tl-reference-portal .tl-document-repository .tl-reference-document-datebar>label[for="tl-doc-updated-end"]{
+  grid-row:auto;
+ }
+ .tl-reference-portal .tl-document-repository .tl-reference-date-presets{
+  grid-row:auto;
+  justify-content:flex-start;
+ }
+ .tl-reference-portal .tl-document-repository .tl-ref-apply-filter{
+  grid-row:auto;
+  width:100%;
+ }
+ .tl-reference-portal .tl-document-repository .tl-ref-advanced-filter-grid{
+  grid-template-columns:minmax(0,1fr);
+  padding:11px;
+ }
+ .tl-reference-portal .tl-document-repository .tl-ref-selection-row{
+  align-items:flex-start;
+ }
+ .tl-reference-portal .tl-document-repository .tl-ref-selection-controls{
+  width:100%;
+ }
+ .tl-reference-portal .tl-document-repository .tl-records-scroll{
+  border-radius:10px;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ .tl-reference-portal .tl-document-repository .tl-reference-repository-buttons :is(a,button),
+ .tl-reference-portal .tl-document-repository .tl-ref-row-action-trigger{
+  transition:none!important;
+ }
+}
+
 /* frontend/select-experience.css */
 /* APSYNTRA CRM GLOBAL SELECT EXPERIENCE — Vanilla ESM, CSS3, CSS custom properties.
  * Progressive, select-only WAI-ARIA combobox; the original select stays in forms.
