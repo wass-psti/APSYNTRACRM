@@ -409,6 +409,21 @@ export class TimeTrackerNativeClient{
    records,otRequests,autoClockout,autoClockoutUnavailable,overview,log,
    revision:row?Number(row.revision):0,active:records.find(x=>x.status==='Active')||null};
  }
+ /** Signed directory-only refresh; never reads or writes attendance state. */
+ async employeeDirectory(boardId){
+  const access=await this.access(boardId);
+  if(!canViewTimeTrackerEmployees(access)||!access.employees)
+   deny('TimeTracker administrator directory required');
+  const [department,catalog]=await Promise.all([
+   this.api.rpc('timetracker_employee_department_directory_snapshot',{p_board_id:boardId}),
+   this.api.rpc('timetracker_department_catalog_snapshot',{p_board_id:boardId})
+  ]);
+  const employees=projectTimeTrackerEmployeeDepartments(access.employees,department);
+  const departmentCatalog=projectTimeTrackerDepartmentCatalog(catalog,access);
+  await checkIdentity(this.auth,this.api,access,boardId);
+  return Object.freeze({userId:access.userId,workspaceId:access.workspaceId,boardId,
+   moduleRole:access.moduleRole,employees,departmentCatalog,overviewDirectory:access.overviewDirectory});
+ }
  /** A fresh independently guarded bootstrap read; no Team information for normal users. */
  async teamDirectory(boardId){
   const access=await this.access(boardId);

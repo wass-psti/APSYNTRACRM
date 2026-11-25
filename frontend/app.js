@@ -869,6 +869,39 @@ const TT_CLOCK_FOCUS_MIN_MS=10000;
 function stopTimeTrackerClock(){
  if(ttClockTimer!==null){clearInterval(ttClockTimer);ttClockTimer=null;}
 }
+let ttEmployeeDirectoryInFlight=false;
+let ttEmployeeDirectoryLastCheck=0;
+const TT_EMPLOYEE_DIRECTORY_POLL_MS=30000;
+function timeTrackerEmployeeDirectoryRefreshReady(){
+ return !document.hidden&&auth.isSignedIn&&navigator.onLine!==false&&
+  state.view==='board'&&state.tab==='attendance'&&state.ttView==='employees'&&
+  state.ttEmployeesTab==='directory'&&state.ttAttendance?.status==='VERIFIED_READ'&&
+  canViewTimeTrackerEmployees(state.ttAttendance.access)&&!state.ttLogAdminBusy&&
+  !state.ttLogAdminEditor&&!state.ttOjtBusy&&!platformSyncEditInProgress();
+}
+async function refreshTimeTrackerEmployeeDirectory({onFocus=false}={}){
+ if(ttEmployeeDirectoryInFlight||!timeTrackerEmployeeDirectoryRefreshReady()||
+    Date.now()-ttEmployeeDirectoryLastCheck<(onFocus?5000:TT_EMPLOYEE_DIRECTORY_POLL_MS))return;
+ const before=state.ttAttendance,route=routeSerial,run=state.ttRunId,boardId=state.boardId,
+  actor=state.context?.user_id,workspace=state.context?.workspace_id;
+ ttEmployeeDirectoryInFlight=true;ttEmployeeDirectoryLastCheck=Date.now();
+ try{
+  const fresh=await timeTracker.employeeDirectory(boardId);
+  if(!timeTrackerEmployeeDirectoryRefreshReady()||state.ttAttendance!==before||
+     route!==routeSerial||run!==state.ttRunId||state.boardId!==boardId||
+     actor!==state.context?.user_id||workspace!==state.context?.workspace_id||
+     fresh.userId!==actor||fresh.workspaceId!==workspace||fresh.boardId!==boardId||
+     fresh.moduleRole!==before.access.moduleRole)return;
+  if(JSON.stringify(fresh.employees)===JSON.stringify(before.access.employees)&&
+     JSON.stringify(fresh.departmentCatalog)===JSON.stringify(before.access.departmentCatalog)&&
+     JSON.stringify(fresh.overviewDirectory)===JSON.stringify(before.access.overviewDirectory))return;
+  state.ttAttendance={...before,access:{...before.access,employees:fresh.employees,
+   departmentCatalog:fresh.departmentCatalog,overviewDirectory:fresh.overviewDirectory}};
+  render();
+ }catch{/* Retain the last verified view on transient failure; writes reauthorize independently. */}
+ finally{ttEmployeeDirectoryInFlight=false;}
+}
+setInterval(()=>{void refreshTimeTrackerEmployeeDirectory();},TT_EMPLOYEE_DIRECTORY_POLL_MS);
 function maintainTimeTrackerClock(){
  const mounted=state.view==='board'&&state.tab==='attendance'&&
   state.ttAttendance?.status==='VERIFIED_READ'&&
@@ -14822,6 +14855,7 @@ document.addEventListener('visibilitychange',()=>{
  platformSync.visibilityChanged();
  setBoardLoadingVisibility(root,document.hidden);
  if(!document.hidden)void refreshCorrectedTimeTrackerClock({onFocus:true});
+ if(!document.hidden)void refreshTimeTrackerEmployeeDirectory({onFocus:true});
 });
 // Window focus is distinct from document visibility: switching between two
 // visible application windows may not emit visibilitychange in either one.
@@ -14832,7 +14866,7 @@ window.addEventListener('focus',()=>{
   void readBoardGroupPreferences({userId:state.context.user_id,
    workspaceId:state.context.workspace_id,boardId:state.boardId});
 });
-window.addEventListener('focus',()=>{void refreshCorrectedTimeTrackerClock({onFocus:true});mobileClockRead=null;void readMobileHomeClock();});
+window.addEventListener('focus',()=>{void refreshCorrectedTimeTrackerClock({onFocus:true});void refreshTimeTrackerEmployeeDirectory({onFocus:true});mobileClockRead=null;void readMobileHomeClock();});
 // An additional tab may begin a Clock action; surface its pending marker
 // immediately, without replaying writes or trusting browser data as attendance.
 window.addEventListener('storage',event=>{
