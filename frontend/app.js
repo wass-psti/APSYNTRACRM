@@ -220,7 +220,7 @@ import {parseTimeTrackerClockInput} from './time-tracker-time-format.js';
 import {timeTrackerMyHoursWeek} from './time-tracker-my-hours.js';
 import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
 import {probeTimeTrackerMonitor} from './time-tracker-monitor.js';
-import {buildTimeTrackerAdminPatch,buildTimeTrackerManualClockOut,TT_ADMIN_RECORD_LIMIT} from './time-tracker-record-management.js';
+import {buildTimeTrackerAdminPatch,buildTimeTrackerManualClockOut,syncManualClockOutPreview,TT_ADMIN_RECORD_LIMIT} from './time-tracker-record-management.js';
 import {manualAttendancePreviewRoster,syncManualAttendanceForm,validateManualAttendanceForm} from './apps/TimeTracker/time-tracker-manual-attendance-ui.js';
 import {manualAttendanceToday} from './apps/TimeTracker/time-tracker-manual-attendance.js';
 import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
@@ -5170,7 +5170,9 @@ async function saveTimeTrackerAdminEditor(form){
  }
  if(editor.manualClockout){
   if(state.ttAttendance.access.moduleRole!=='System Admin')return;
-  editor.clockOutDraft=String(new FormData(form).get('clockOutAt')||'');
+  const draft=new FormData(form);
+  editor.clockOutDraft=String(draft.get('clockOutAt')||'');
+  editor.clockOutDateDraft=String(draft.get('clockOutDate')||'');
  }
  if(editor.ojt){
   const scope=timeTrackerOjtLogAdminScope();
@@ -14557,7 +14559,20 @@ function preserveManualAttendanceDraft(event){
     state.ttAttendance.access.moduleRole!=='System Admin')return false;
  state.ttLogAdminEditor.draft=syncManualAttendanceForm(form);return true;
 }
-root.addEventListener('change',preserveManualAttendanceDraft);
+function preserveManualClockOutDraft(event){
+ const form=event.target.closest?.('#tt-attendance-admin-form[data-tt-manual-clockout]');
+ const editor=state.ttLogAdminEditor;
+ if(!form||!editor?.manualClockout||state.ttLogAdminBusy||!timeTrackerAdminLogReady()||
+    state.ttAttendance.access.moduleRole!=='System Admin')return false;
+ const draft=new FormData(form);
+ editor.clockOutDateDraft=String(draft.get('clockOutDate')||'');
+ editor.clockOutDraft=String(draft.get('clockOutAt')||'');
+ syncManualClockOutPreview(form,editor.ojt?editor.record:editor.records?.[0]);
+ return true;
+}
+root.addEventListener('change',event=>{
+ if(!preserveManualClockOutDraft(event))preserveManualAttendanceDraft(event);
+});
 root.addEventListener('invalid',event=>{
  if(event.target.id!=='tt-note'||!event.target.required)return;
  const message=root.querySelector('#tt-work-plan-validation');
@@ -14588,7 +14603,7 @@ root.addEventListener('input',event=>{
   updateTimeTrackerOvertimePreview(overtimeForm);
   return;
  }
- if(preserveManualAttendanceDraft(event))return;
+ if(preserveManualClockOutDraft(event)||preserveManualAttendanceDraft(event))return;
  if(event.target.id==='tt-note'&&event.target.closest('#tt-clock-form')){
   ttWorkNoteDraft.write(timeTrackerWorkNoteScope(),event.target.value);
   event.target.setCustomValidity(event.target.required&&event.target.value&&!event.target.value.trim()?'Work Plan is required for Offsite (Home).':'');
