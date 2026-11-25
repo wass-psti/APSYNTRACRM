@@ -803,3 +803,11 @@ test('manual clock-in accepts only signed System Admin capability and receipt',a
  await assert.rejects(setup({role:'Employee'}).client.createManualClockIn(board,entry,2),/Invalid/);
  assert.equal(writes,1);
 });
+
+test('a stale End Session action never closes an admin-created replacement session',async()=>{
+ const record={...example(),id:autoRecordId};
+ const f=setup({records:[record],writeReady:true});
+ await assert.rejects(f.client.commit(board,{action:'clock-out',expectedRecordId:'old-session',
+  geo:{status:'captured',latitude:12.3,longitude:123.4,accuracy:10}}),/Active attendance changed/);
+ assert.equal(f.commits(),0);
+});
