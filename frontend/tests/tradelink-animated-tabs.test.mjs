@@ -35,17 +35,14 @@ function fixture(initial='create'){
   getBoundingClientRect:()=>({left:20+i*110,top:20,width:95,height:36}),
   classList:{toggle(name,on){this.last=[name,on];}}
  }));
- const manual={open:false,listeners:{},addEventListener(name,fn){this.listeners[name]=fn;}};
  nav.querySelector=selector=>{
   if(selector==='.tl-reference-active-indicator')return indicator;
-  if(selector==='.tl-reference-manual')return manual;
-  if(selector==='.tl-reference-manual[open] > summary')return manual.open?tabs[2]:null;
   if(selector.includes('aria-current'))return tabs.find(t=>t.active)||null;
   return null;
  };
  nav.querySelectorAll=()=>tabs;
- const container={querySelector:()=>nav};
- return {nav,tabs,manual,indicator,animations,container};
+ const container={querySelector:selector=>selector==='.tl-reference-portal-links'?nav:null};
+ return {nav,tabs,indicator,animations,container};
 }
 
 test('indicator interpolates from old active tab to new tab across replaced navigation DOM',()=>{
@@ -60,14 +57,19 @@ test('indicator interpolates from old active tab to new tab across replaced navi
  assert.deepEqual(next.animations[0].frames.map(frame=>frame.left),['10px','120px']);
  assert.equal(next.animations[0].options.duration,280);
  assert.deepEqual(next.tabs.map(tab=>tab.classList.last[1]),[false,true,false]);
- next.manual.open=true;
- next.manual.listeners.toggle();
- assert.equal(next.animations.length,2);
- assert.deepEqual(next.animations[1].frames.map(frame=>frame.left),['120px','230px']);
- next.manual.open=false;
- next.manual.listeners.toggle();
- assert.equal(next.animations.length,3);
- assert.deepEqual(next.animations[2].frames.map(frame=>frame.left),['230px','120px']);
+ // User Manual is a dedicated route, not a details/summary popover.
+ captureTradeLinkTabMotion(next.container);
+ const manual=fixture('manual');
+ mountTradeLinkTabMotion(manual.container);
+ assert.equal(manual.animations.length,1);
+ assert.deepEqual(manual.animations[0].frames.map(frame=>frame.left),['120px','230px']);
+ assert.deepEqual(manual.tabs.map(tab=>tab.classList.last[1]),[false,false,true]);
+ captureTradeLinkTabMotion(manual.container);
+ const back=fixture('documents');
+ mountTradeLinkTabMotion(back.container);
+ assert.equal(back.animations.length,1);
+ assert.deepEqual(back.animations[0].frames.map(frame=>frame.left),['230px','120px']);
+ assert.deepEqual(back.tabs.map(tab=>tab.classList.last[1]),[false,true,false]);
 });
 
 test('reduced motion disables animation without removing active-tab indication',()=>{

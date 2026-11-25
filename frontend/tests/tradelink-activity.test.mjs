@@ -53,7 +53,7 @@ test('signed board activity is deduped, HTML escaped and does not pretend to be 
  assert.match(html,/tl-activity-avatar/);
  assert.ok(html.includes('&lt;script&gt;alert(1)&lt;/script&gt;'));
  assert.match(html,/document · ESI-001/);
- assert.ok(html.includes('Showing <strong>2</strong> events shown'));
+ assert.match(html,/class="tl-activity-total"><strong>2<\/strong> events shown<\/span>/);
  assert.match(html,/not the source application/);
 });
 test('activity error and loading states neither invent rows nor leak prior data',()=>{
@@ -113,7 +113,7 @@ test('TradeLink User Manual has a dedicated canonical route and structured guide
 test('TradeLink navigation opens User Manual as a page instead of a popover',()=>{
  const html=renderTradeLinkApplication({detail,workspaceId:ws,section:'manual'});
  assert.ok(html.includes('href="#/tradelink/manual"'));
- assert.match(html,/data-tl-tab="manual" aria-current="page"/);
+ assert.match(html,/<a data-tl-tab="manual" href="#\/tradelink\/manual"[^>]*aria-current="page"/);
  assert.match(html,/data-tl-screen="manual"/);
  assert.doesNotMatch(html,/Quotation drafting guide/);
  assert.doesNotMatch(html,/<details class="tl-reference-manual">/);

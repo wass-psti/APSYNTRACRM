@@ -319,6 +319,8 @@ export class TimeTrackerNativeClient{
     const active=records.find(x=>x.status==='Active');
     if(!isRecord(session)||!active||session.recordId!==active.id||
        !['MONITORING','GRACE','OVERTIME','PENDING_GPS','ERROR'].includes(session.status)||
+       (session.clockInAt!=null&&
+        (!safeTime(session.clockInAt)||Date.parse(session.clockInAt)!==Date.parse(active.clockIn)))||
        !safeTime(session.thresholdAt)||
        (session.graceDeadlineAt!=null&&!safeTime(session.graceDeadlineAt))||
        (session.overtimeCutoffAt!=null&&!safeTime(session.overtimeCutoffAt))||
