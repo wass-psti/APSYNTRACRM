@@ -94,6 +94,7 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-overtime
 #app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-schedule-heading>span{background:var(--ot-soft);border-color:var(--ot-line);color:var(--ot-muted)}
 #app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-duration,#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-reference-duration{background:var(--ot-tint);border:0;color:var(--ot-accent-ink);padding:12px 14px}
 #app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-duration-top :is(span,strong),#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-reference-duration strong{color:var(--ot-accent-ink);font-family:Inter,system-ui,sans-serif}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal .tt-ot-duration-foot small{color:var(--ot-accent-ink)}
 #app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-reason-chips button{min-height:28px;padding:4px 10px;border-radius:999px}
 #app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-gate{padding:0;border:0;background:transparent;color:var(--ot-muted);font-size:12px;margin:12px 0}
 #app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal-footer{margin:18px -24px 0;padding:15px 24px;background:var(--ot-soft);border-top:1px solid var(--ot-line)}
