@@ -713,21 +713,21 @@ function renderReferenceModuleWorkflow(type,fieldValue,data,actorName,reviewCont
  const help='<p class="tl-reference-workflow-disclaimer">Assigned reviewers are validated against their existing signed TradeLink accounts. Assignments do not grant roles or board permissions.</p>';
  const group=(title,content)=>'<div class="tl-reference-approval-stage">'+
   '<h5>'+title+'</h5>'+content+'</div>';
- if(type==='packing')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Packing List verification and approval">'+
+ if(type==='packing')return '<section id="tl-section-approval" class="tl-reference-approval tl-reference-module-approval" aria-label="Packing List verification and approval">'+
   '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
   group('Primary Reviewer',field('Primary reviewer email','verifiedBy',value('verifiedBy'),
    'type="email" maxlength="254" required')+stage('verifiedBy','primary','Primary reviewer'))+
   group('Secondary Reviewer',field('Secondary reviewer email','approvedBy',value('approvedBy'),
    'type="email" maxlength="254" required')+stage('approvedBy','secondary','Secondary reviewer'))+
   help+'</section>';
- if(type==='esi')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Electronic SI verification and approval">'+
+ if(type==='esi')return '<section id="tl-section-approval" class="tl-reference-approval tl-reference-module-approval" aria-label="Electronic SI verification and approval">'+
   '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
   group('Verified By (Finance Team)',
    person('Finance team member','verifiedBy','Select finance team member...',true,'primary'))+
   group('Approved By (Management)',
    person('Management approver','approvedBy','Select management member...',true,'secondary'))+
   help+'</section>';
- if(type==='delivery')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Delivery tracking">'+
+ if(type==='delivery')return '<section id="tl-section-approval" class="tl-reference-approval tl-reference-module-approval" aria-label="Delivery tracking">'+
   '<h4>Delivery Tracking</h4>'+referenceCreator(actorName)+
   group('Checked By (Quality Control)',
    person('QC personnel','checkedBy','Select QC personnel...',true,'primary'))+
@@ -736,14 +736,14 @@ function renderReferenceModuleWorkflow(type,fieldValue,data,actorName,reviewCont
   '<div class="tl-reference-assignment-field"><label for="tl-ref-delivery-received">Received By (optional)</label>'+
   '<input id="tl-ref-delivery-received" name="receivedBy" maxlength="5000" value="'+escape(value('receivedBy'))+'" placeholder="Enter recipient name"></div>'+
   help+'</section>';
- if(type==='payment')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Payment acknowledgement">'+
+ if(type==='payment')return '<section id="tl-section-approval" class="tl-reference-approval tl-reference-module-approval" aria-label="Payment acknowledgement">'+
   '<h4>Payment Acknowledgement</h4>'+referenceCreator(actorName)+
   group('Payment Received By (Finance)',
    person('Finance team member','receivedBy','Select finance team member...',true,'primary'))+
   group('Verified By (Administration)',
    person('Administrator','verifiedBy','Select admin...',true,'secondary'))+
   help+'</section>';
- if(type==='po')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Supplier purchase order verification and approval">'+
+ if(type==='po')return '<section id="tl-section-approval" class="tl-reference-approval tl-reference-module-approval" aria-label="Supplier purchase order verification and approval">'+
   '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
   group('Reviewed By (Account Manager)',
    referencePersonField('Account Manager','verifiedBy',
@@ -832,7 +832,7 @@ function renderQuotationVerification(fieldValue,data,actorName='',reviewContext=
   secondaryOptions:secondaryOptionsForDocument,
   documentSaved,workflowState,primaryRecordedAt:reviewStages?.primary?.recordedAt,
   secondaryRecordedAt:reviewStages?.secondary?.recordedAt});
- return '<section class="tl-reference-approval" aria-labelledby="tl-quotation-approval-heading">'+
+ return '<section id="tl-section-approval" class="tl-reference-approval" aria-labelledby="tl-quotation-approval-heading">'+
   '<h4 id="tl-quotation-approval-heading">Verification &amp; Approval Workflow</h4>'+
   '<div class="tl-reference-approval-creator"><span aria-hidden="true">♙</span><div><strong>Created By</strong> '+
    '<span class="tl-reference-approval-chip">Auto-captured on save</span><p>'+
@@ -974,7 +974,7 @@ function renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line,lines=[line]
    name==='lineKind'?lines.map(x=>x.kind||'item'):[]});
  const unit=currencyUnit(value('currency'));
  const display=key=>initial&&initial[key]!==null?formatTradeLinkAmount(initial[key]):'—';
- return '<section class="tl-draft-finance tl-reference-totals" data-tradelink-draft-finance '+
+ return '<section id="tl-section-totals" class="tl-draft-finance tl-reference-totals" data-tradelink-draft-finance '+
   'aria-label="Document totals · unsaved preview">'+
   '<div class="tl-reference-totals-right">'+
    '<dl class="tl-draft-finance-results">'+
@@ -1198,6 +1198,17 @@ function referenceDraftTabs(type){
   '<a href="'+base+escape(key)+'"'+(key===type?' class="active" aria-current="page"':'')+
   '>'+escape(key==='quotation'?'Quotations':label)+'</a>').join('')+'</nav>';
 }
+function referenceDraftSectionNavigation(type){
+ const links=[['document','Document'],['client','Client'],
+  ['items',type==='payment'?'Payment':'Items']];
+ if(['esi','quotation','po'].includes(type))links.push(['totals','Totals']);
+ links.push(['notes','Notes'],['terms','Terms'],['approval','Workflow']);
+ return '<nav class="tl-reference-section-nav" aria-label="Document section navigation">'+
+  '<span class="tl-reference-section-nav-label">Jump to</span>'+
+  links.map(([key,label])=>'<button type="button" data-action="tradelink-draft-section" '+
+   'data-target="tl-section-'+key+'" aria-label="Jump to '+escape(label)+
+   ' section">'+escape(label)+'</button>').join('')+'</nav>';
+}
 function referenceDocumentHeader(type,editing,canSave=false,status='for-approval',documentId='',revisingApproved=false){
  const title=referenceTitles[type]||'TradeLink Document';
  const approved=status==='approved'&&validUuid(documentId);
@@ -1254,18 +1265,22 @@ export function renderTradeLinkDraftLineItem(item={},type='quotation',currency='
   '<div class="tl-ref-item-handle" draggable="true" title="Drag to reorder" aria-hidden="true">⠿</div>'+
   '<span class="tl-ref-item-index" aria-label="'+escape(label)+'">'+escape(index+1)+'</span>'+
   '<label class="tl-draft-field tl-ref-item-description"><span class="sr-only">'+escape(label)+' description</span>'+
+   '<span class="tl-ref-item-label" aria-hidden="true">'+escape(label)+' description</span>'+
    '<textarea name="lineDescription" maxlength="2000" rows="2" placeholder="'+(note?'Enter item note':'Enter item description')+'" required>'+desc+'</textarea></label>'+
   (note?
    '<input type="hidden" name="lineQuantity" value="">'+
    (physical?'':'<input type="hidden" name="lineUnitPrice" value="">')+
    '<input type="hidden" name="lineUnit" value="">':
    '<label class="tl-draft-field tl-ref-item-quantity"><span class="sr-only">'+escape(label)+' quantity</span>'+
+    '<span class="tl-ref-item-label" aria-hidden="true">Quantity</span>'+
     '<input name="lineQuantity" type="number" min="0" max="1000000000" step="any" value="'+escape(quantity)+'" placeholder="Enter quantity"'+req+'></label>'+
    (physical?'':
     '<label class="tl-draft-field tl-ref-item-price"><span class="sr-only">'+escape(label)+' unit price ('+escape(currency)+')</span>'+
+    '<span class="tl-ref-item-label" aria-hidden="true">Unit price ('+escape(currency)+')</span>'+
     '<input name="lineUnitPrice" type="number" min="0" max="1000000000" step="any" value="'+escape(unitPrice)+'" placeholder="Enter unit price"'+(priced?' required':'')+'></label>')+
    (physical?
     '<label class="tl-draft-field tl-ref-item-unit"><span class="sr-only">'+escape(label)+' unit</span>'+
+     '<span class="tl-ref-item-label" aria-hidden="true">Unit</span>'+
      '<input name="lineUnit" value="'+escape(item.unit??'')+'" maxlength="120" placeholder="Enter unit"></label>':
     '<input type="hidden" name="lineUnit" value="'+escape(item.unit??'')+'">'))+
   (type==='delivery'&&note?'<input type="hidden" name="lineSerialNumber" value="">':'')+
@@ -1347,7 +1362,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
   '<div class="tl-reference-editor-content">'+
    (editing&&row.workflow_state==='approved'?'<p role="status" class="tl-draft-feedback">Revise Approved: the existing approved revision remains printable. Saving creates a new For Approval revision requiring both assigned reviewers again.</p>':'')+
    (showModuleTabs?referenceDraftTabs(type):'')+
-  renderModuleGuidance(type)+
+  renderModuleGuidance(type)+referenceDraftSectionNavigation(type)+
   '<form data-tradelink-draft-form'+(type==='quotation'?' novalidate':'')+'>'+
    // Retain the source documentType control for existing form contracts.
    // The embedded split workspace uses its sidebar as the visible module switcher.
@@ -1355,7 +1370,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
     '<select name="documentType" tabindex="-1" aria-hidden="true" '+(editing?'disabled':'')+'>'+
      options(typeLabels,type)+'</select></label></div>'+
    (editing?'<input type="hidden" name="documentType" value="'+escape(type)+'">':'')+
-   '<section class="tl-reference-form-section tl-reference-document-info">'+
+   '<section id="tl-section-document" class="tl-reference-form-section tl-reference-document-info">'+
     '<h4>Document Information</h4>'+
     '<div class="tl-reference-document-grid">'+
      '<label class="tl-draft-field"><span>Status</span><select name="documentStatus"'+
@@ -1388,12 +1403,12 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
       '<small>Saved with this document revision. Existing company assignments remain unchanged.</small></label>'+
     '</div>'+
    '</section>'+
-   '<section class="tl-reference-form-section tl-reference-client">'+
+   '<section id="tl-section-client" class="tl-reference-form-section tl-reference-client">'+
     '<h4>Client Information</h4>'+
     '<div class="tl-draft-form-grid">'+
      field(commonPartyLabel,'customerName',fieldValue('customerName',data.customerName||''),
       'maxlength="5000"'+(physical||payment||priced?' required':''),partyPlaceholders[type])+
-     (type==='quotation'?'<label class="tl-draft-field"><span>Client Address</span>'+
+     (type==='quotation'?'<label class="tl-draft-field tl-reference-address-field"><span>Client Address</span>'+
       '<textarea name="customerAddress" rows="2" maxlength="5000" placeholder="Enter client address">\n'+
       escape(fieldValue('customerAddress',data.customerAddress||''))+'</textarea></label>':'')+
      field(physical?'Source reference':'Reference information','referenceNumber',
@@ -1430,7 +1445,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
     '</div>'+
    '</section>'+commercialSuggestionLists(type)+
    (payment?
-    '<fieldset class="tl-draft-lines tl-reference-payment"><legend>Form of Payment</legend>'+
+    '<fieldset id="tl-section-items" class="tl-draft-lines tl-reference-payment"><legend>Form of Payment</legend>'+
      field('Payment particulars','paymentParticulars',fieldValue('paymentParticulars',data.paymentParticulars||''),
       'maxlength="5000" required')+
      moneyField('Cash amount','cashAmount',fieldValue('cashAmount',data.cashAmount??''),
@@ -1441,7 +1456,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
      field('Cheque number (for cheque)','chequeNumber',fieldValue('chequeNumber',data.chequeNumber||''),'maxlength="5000"')+
     '</fieldset>'+
     '<p class="muted">Payment amounts are unsaved estimates. This form does not receive or verify funds.</p>':
-    '<fieldset class="tl-draft-lines tl-reference-items"><legend>Items</legend>'+
+    '<fieldset id="tl-section-items" class="tl-draft-lines tl-reference-items"><legend>Items</legend>'+
      '<div class="tl-ref-items-toolbar">'+
 
       '<button type="button" class="tl-ref-add-blank" data-action="tradelink-draft-add-line"'+
@@ -1456,14 +1471,14 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
     '</fieldset>'+
     (physical?'<p class="muted">Shipment items are not priced here. This preview records no delivery or inventory movement.</p>':''))+
    (priced?renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line,lines):'')+
-   '<section class="tl-reference-form-section tl-reference-terms"><h4>Additional Notes</h4>'+
+   '<section id="tl-section-notes" class="tl-reference-form-section tl-reference-terms"><h4>Additional Notes</h4>'+
     '<label class="tl-draft-field"><span>Document notes</span>'+
      '<textarea name="remarks" maxlength="5000" rows="4" '+
       'placeholder="Enter additional remarks">'+
        escape(fieldValue('remarks',data.remarks||''))+'</textarea>'+
      '<small>Additional notes are saved with this document revision.</small>'+
     '</label></section>'+
-   '<details class="tl-reference-official-terms"><summary>Terms &amp; Conditions · Official TradeLink template</summary>'+
+   '<details id="tl-section-terms" class="tl-reference-official-terms"><summary>Terms &amp; Conditions · Official TradeLink template</summary>'+
     '<label class="tl-draft-field"><span>Document terms</span>'+
      '<textarea name="terms" maxlength="5000" rows="12" placeholder="Enter terms and conditions">'+escape(selectedTerms)+'</textarea>'+
      '<small>Recovered from the original TradeLink v1.42.0 template. Changes are saved with this document revision. No PDF, approval or document is generated by changing terms locally; eligible saved records remain printable through the existing workflow.</small>'+

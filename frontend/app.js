@@ -8920,6 +8920,20 @@ async function action(name,button){
   }catch{toast('Clipboard is unavailable; no report was exported.',true);}
   break;
  }
+ case 'tradelink-draft-section':{
+  if(!tradeLinkDraftRoute())break;
+  const sectionId=button?.dataset?.target||'';
+  const allowedSections=['tl-section-document','tl-section-client',
+   'tl-section-items','tl-section-totals','tl-section-notes',
+   'tl-section-terms','tl-section-approval'];
+  if(!allowedSections.includes(sectionId))break;
+  const section=root.querySelector('[id="'+sectionId+'"]');
+  if(!section||typeof section.scrollIntoView!=='function')break;
+  const reduceMotion=typeof window.matchMedia==='function'&&
+   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  section.scrollIntoView({behavior:reduceMotion?'auto':'smooth',block:'start'});
+  break;
+ }
  case 'tradelink-draft-preview':{
   if(!tradeLinkDraftRoute())break;
   const form=root.querySelector('[data-tradelink-draft-form]');

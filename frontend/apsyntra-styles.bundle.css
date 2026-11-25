@@ -37783,3 +37783,632 @@ html[data-aps-monday-theme="dark"]
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+
+/* frontend/tradelink-ui-refresh.css */
+/* CP-TL-UI-REFRESH-01 — clearer document drafting, responsive line items,
+   section navigation and persistent save access. Presentation only. */
+.tl-reference-portal{
+ --tl-editor-surface:#fff;
+ --tl-editor-soft:#f8fafc;
+ --tl-editor-border:#e2e8f0;
+ --tl-editor-ink:#1f2937;
+ --tl-editor-muted:#64748b;
+ --tl-editor-accent:#2563eb;
+ --tl-editor-accent-soft:#eff6ff;
+ color-scheme:light;
+}
+.tl-reference-portal .tl-reference-document-topcard{
+ position:sticky;
+ top:68px;
+ z-index:70;
+ background:var(--tl-editor-surface);
+ box-shadow:0 6px 20px #0f172a12;
+}
+.tl-reference-portal .tl-reference-document-toolbar .tl-reference-save:not(:disabled){
+ background:var(--tl-editor-accent);
+ border-color:var(--tl-editor-accent);
+ color:#fff;
+ font-weight:750;
+}
+.tl-reference-portal .tl-reference-document-toolbar .tl-reference-save:not(:disabled):hover{
+ background:#1d4ed8;
+ border-color:#1d4ed8;
+}
+.tl-reference-portal .tl-reference-section-nav{
+ display:flex;
+ align-items:center;
+ flex-wrap:wrap;
+ gap:7px;
+ margin:0 0 20px;
+ padding:10px 12px;
+ border:1px solid var(--tl-editor-border);
+ border-radius:12px;
+ background:var(--tl-editor-soft);
+}
+.tl-reference-portal .tl-reference-section-nav-label{
+ flex:none;
+ margin-right:3px;
+ color:var(--tl-editor-muted);
+ font-size:10px;
+ font-weight:800;
+ letter-spacing:.08em;
+ text-transform:uppercase;
+}
+.tl-reference-portal .tl-reference-section-nav button{
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ min-height:35px;
+ padding:7px 11px;
+ border:1px solid var(--tl-editor-border);
+ border-radius:9px;
+ background:var(--tl-editor-surface);
+ color:var(--tl-editor-muted);
+ font-size:11px;
+ font-weight:650;
+ line-height:1.25;
+ text-decoration:none;
+ white-space:nowrap;
+ transition:background .14s ease,border-color .14s ease,color .14s ease;
+}
+.tl-reference-portal .tl-reference-section-nav button:hover{
+ background:var(--tl-editor-accent-soft);
+ border-color:#bfd2fb;
+ color:var(--tl-editor-accent);
+}
+.tl-reference-portal .tl-reference-section-nav button:focus-visible{
+ outline:2px solid var(--tl-editor-accent);
+ outline-offset:2px;
+}
+.tl-reference-portal #tl-section-document,
+.tl-reference-portal #tl-section-client,
+.tl-reference-portal #tl-section-items,
+.tl-reference-portal #tl-section-totals,
+.tl-reference-portal #tl-section-notes,
+.tl-reference-portal #tl-section-terms,
+.tl-reference-portal #tl-section-approval{
+ scroll-margin-top:218px;
+}
+.tl-reference-portal form[data-tradelink-draft-form]{
+ display:grid;
+ gap:14px;
+ min-width:0;
+}
+.tl-reference-portal .tl-reference-form-section{
+ margin:0;
+ padding:21px;
+ border:1px solid var(--tl-editor-border);
+ border-radius:14px;
+ background:var(--tl-editor-surface);
+ box-shadow:0 1px 2px #0f172a06;
+}
+.tl-reference-portal .tl-reference-form-section h4{
+ display:flex;
+ align-items:center;
+ gap:10px;
+ margin:0 0 18px;
+ color:var(--tl-editor-ink);
+ font-size:14px;
+ font-weight:760;
+ letter-spacing:-.01em;
+}
+.tl-reference-portal .tl-reference-form-section h4::before{
+ content:"";
+ flex:none;
+ width:4px;
+ height:18px;
+ border-radius:4px;
+ background:var(--tl-editor-accent);
+}
+.tl-reference-portal .tl-reference-document-grid{
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:16px;
+}
+.tl-reference-portal .tl-reference-revision{
+ grid-column:auto;
+}
+.tl-reference-portal .tl-reference-company-profile,
+.tl-reference-portal .tl-reference-client .tl-reference-address-field,
+.tl-reference-portal .tl-reference-client .tl-reference-currency-field{
+ grid-column:1/-1;
+}
+.tl-reference-portal .tl-reference-client .tl-draft-form-grid{
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:16px;
+}
+.tl-reference-portal .tl-reference-form-section .tl-draft-field>span:not(.sr-only){
+ color:var(--tl-editor-muted);
+ font-size:11px;
+ font-weight:700;
+}
+.tl-reference-portal .tl-reference-form-section .tl-draft-field :is(input,select,textarea){
+ min-height:43px;
+ padding:10px 12px;
+ border:1px solid var(--tl-editor-border);
+ border-radius:10px;
+ background:var(--tl-editor-surface);
+ color:var(--tl-editor-ink);
+ font-size:13px;
+}
+.tl-reference-portal .tl-reference-form-section .tl-draft-field textarea{
+ min-height:82px;
+ line-height:1.55;
+}
+.tl-reference-portal .tl-reference-form-section .tl-draft-field small{
+ color:var(--tl-editor-muted);
+ font-size:10.5px;
+ line-height:1.5;
+}
+.tl-reference-portal .tl-draft-lines.tl-reference-items,
+.tl-reference-portal .tl-draft-lines.tl-reference-payment{
+ display:grid;
+ grid-template-columns:minmax(0,1fr);
+ gap:13px;
+ margin:0;
+ padding:18px;
+ border:1px solid var(--tl-editor-border);
+ border-radius:14px;
+ background:var(--tl-editor-surface);
+}
+.tl-reference-portal .tl-reference-items legend,
+.tl-reference-portal .tl-reference-payment legend{
+ float:none;
+ width:100%;
+ margin:0;
+ padding:0;
+ color:var(--tl-editor-ink);
+ font-size:14px;
+ font-weight:760;
+}
+.tl-reference-portal .tl-ref-items-toolbar{
+ justify-content:flex-start;
+ gap:8px;
+ margin:0;
+}
+.tl-reference-portal .tl-ref-items-toolbar button{
+ min-height:38px;
+ padding:8px 13px;
+ border-radius:9px;
+}
+.tl-reference-portal .tl-ref-items-toolbar .tl-ref-add-blank{
+ background:#1f2937;
+ border-color:#1f2937;
+ color:#fff;
+}
+.tl-reference-portal .tl-reference-items-note{
+ margin:0!important;
+ color:var(--tl-editor-muted)!important;
+ font-size:11px!important;
+ line-height:1.5;
+}
+.tl-reference-portal [data-tradelink-draft-line-items]{
+ display:grid;
+ gap:10px;
+ min-width:0;
+}
+.tl-reference-portal .tl-reference-line-item{
+ display:grid;
+ grid-template-columns:20px 24px minmax(180px,1.55fr) minmax(100px,.62fr) minmax(115px,.7fr) minmax(90px,.55fr) auto;
+ align-items:end;
+ gap:10px;
+ min-width:0;
+ margin:0;
+ padding:14px;
+ border:1px solid var(--tl-editor-border);
+ border-radius:12px;
+ background:var(--tl-editor-soft);
+ box-shadow:none;
+}
+.tl-reference-portal .tl-reference-line-item>.tl-ref-item-handle,
+.tl-reference-portal .tl-reference-line-item>.tl-ref-item-index{
+ align-self:start;
+ margin-top:8px;
+}
+.tl-reference-portal .tl-reference-line-item>.tl-draft-field{
+ display:flex;
+ flex-direction:column;
+ gap:6px;
+ min-width:0;
+ margin:0;
+}
+.tl-reference-portal .tl-reference-line-item>.tl-ref-item-description{
+ grid-column:3;
+ max-width:none;
+}
+.tl-reference-portal .tl-reference-line-item>.tl-ref-item-quantity{
+ grid-column:4;
+ flex:none;
+}
+.tl-reference-portal .tl-reference-line-item>.tl-ref-item-price,
+.tl-reference-portal .tl-reference-line-item>.tl-ref-item-unit{
+ grid-column:5;
+ flex:none;
+}
+.tl-reference-portal .tl-reference-line-item>.tl-draft-field:not(
+ .tl-ref-item-description,.tl-ref-item-quantity,.tl-ref-item-price,.tl-ref-item-unit
+){
+ grid-column:6;
+}
+.tl-reference-portal .tl-reference-line-item>.tl-draft-field :is(input,textarea){
+ box-sizing:border-box;
+ width:100%;
+ min-width:0;
+ min-height:41px;
+ padding:9px 10px;
+ border:1px solid var(--tl-editor-border);
+ border-radius:9px;
+ background:var(--tl-editor-surface);
+ color:var(--tl-editor-ink);
+ font-size:12px;
+}
+.tl-reference-portal .tl-reference-line-item>.tl-draft-field textarea{
+ min-height:58px;
+}
+/* Keep line-item and nested commercial labels neutral; the older reference
+   stylesheet uses amber for every draft-field label. */
+.tl-reference-portal .tl-reference-items .tl-reference-line-item .tl-draft-field>.tl-ref-item-label{
+ display:block;
+ margin:0 0 1px;
+ color:var(--tl-editor-muted);
+ font-size:10px;
+ font-weight:750;
+ line-height:1.35;
+}
+.tl-reference-portal .tl-reference-client [data-tl-commercial-choice]>label>span{
+ color:var(--tl-editor-muted);
+ font-size:11px;
+ font-weight:700;
+}
+.tl-reference-portal .tl-reference-line-item>.tl-ref-item-total{
+ grid-column:6;
+ align-self:end;
+ min-width:0;
+ margin:0;
+ padding:10px 0;
+ color:var(--tl-editor-ink);
+ font-size:12px;
+ font-weight:800;
+ text-align:right;
+ white-space:nowrap;
+}
+.tl-reference-portal .tl-reference-line-item>.tl-ref-item-actions{
+ grid-column:7;
+ align-self:end;
+ justify-self:end;
+ gap:3px;
+ margin:0;
+}
+.tl-reference-portal .tl-ref-item-actions button{
+ display:grid;
+ place-items:center;
+ min-width:32px;
+ min-height:32px;
+ border:1px solid transparent;
+ border-radius:8px;
+ color:var(--tl-editor-accent);
+ font-size:14px;
+}
+.tl-reference-portal .tl-ref-item-actions button:hover{
+ background:var(--tl-editor-accent-soft);
+ border-color:#d5e3ff;
+}
+.tl-reference-portal .tl-ref-item-actions .tl-ref-item-delete{
+ color:#b42332;
+}
+.tl-reference-portal .tl-reference-note-row>.tl-ref-item-description{
+ grid-column:3/7;
+}
+.tl-reference-portal .tl-draft-finance.tl-reference-totals{
+ width:100%;
+ max-width:620px;
+ margin:0 0 0 auto;
+ padding:18px;
+ border:1px solid var(--tl-editor-border);
+ border-radius:14px;
+ background:var(--tl-editor-soft);
+ box-shadow:none;
+}
+.tl-reference-portal .tl-reference-totals-right{
+ width:100%;
+ min-width:0;
+}
+.tl-reference-portal .tl-reference-totals .tl-ref-total-grand,
+.tl-reference-portal .tl-reference-totals .tl-ref-total-grand:nth-last-child(2){
+ border-color:#bfd2fb;
+ background:var(--tl-editor-accent-soft);
+}
+.tl-reference-portal .tl-reference-totals .tl-ref-total-grand dt,
+.tl-reference-portal .tl-reference-totals .tl-ref-total-grand dd{
+ color:var(--tl-editor-accent);
+ font-weight:800;
+}
+.tl-reference-portal .tl-reference-totals .tl-ref-total-grand dd{
+ font-size:22px;
+}
+.tl-reference-portal .tl-reference-form-section.tl-reference-terms{
+ margin:0;
+}
+.tl-reference-portal .tl-reference-official-terms{
+ margin:0;
+ padding:16px 18px;
+ border:1px solid var(--tl-editor-border);
+ border-radius:14px;
+ background:var(--tl-editor-surface);
+}
+.tl-reference-portal .tl-reference-official-terms summary{
+ min-height:40px;
+ display:flex;
+ align-items:center;
+ color:var(--tl-editor-ink);
+ font-size:12px;
+ font-weight:750;
+}
+.tl-reference-portal .tl-reference-approval{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:13px;
+ margin:0;
+ padding:21px;
+ border:1px solid var(--tl-editor-border);
+ border-radius:14px;
+ background:var(--tl-editor-surface);
+}
+.tl-reference-portal .tl-reference-approval>h4{
+ grid-column:1/-1;
+ margin:0 0 2px;
+ color:var(--tl-editor-ink);
+ font-size:14px;
+}
+.tl-reference-portal .tl-reference-approval-creator{
+ grid-column:1/-1;
+ margin:0;
+ border:1px solid var(--tl-editor-border);
+ border-radius:11px;
+ background:var(--tl-editor-soft);
+}
+.tl-reference-portal .tl-reference-approval-stage{
+ display:grid;
+ align-content:start;
+ gap:10px;
+ min-width:0;
+ margin:0;
+ padding:15px;
+ border:1px solid var(--tl-editor-border);
+ border-radius:11px;
+ background:var(--tl-editor-soft);
+}
+.tl-reference-portal .tl-reference-approval-stage h5{
+ margin:0;
+ color:var(--tl-editor-ink);
+ font-size:12px;
+ font-weight:750;
+}
+.tl-reference-portal .tl-reference-approval-stage label,
+.tl-reference-portal .tl-reference-assignment-field label{
+ color:var(--tl-editor-muted);
+ font-size:11px;
+ font-weight:700;
+}
+.tl-reference-portal .tl-reference-approval-stage :is(input,select),
+.tl-reference-portal .tl-reference-assignment-field :is(input,select){
+ min-height:42px;
+ border-color:var(--tl-editor-border);
+ border-radius:9px;
+ background:var(--tl-editor-surface);
+ color:var(--tl-editor-ink);
+ font-size:12px;
+}
+.tl-reference-portal .tl-reference-workflow-disclaimer{
+ grid-column:1/-1;
+ margin:0;
+ color:var(--tl-editor-muted);
+}
+.tl-reference-portal .tl-reference-form-section:target,
+.tl-reference-portal .tl-draft-lines:target,
+.tl-reference-portal .tl-draft-finance:target,
+.tl-reference-portal .tl-reference-approval:target,
+.tl-reference-portal .tl-reference-official-terms:target{
+ border-color:#9bbaf4;
+ box-shadow:0 0 0 3px #dbeafe88;
+}
+.tl-reference-portal [data-tradelink-draft-preview-status]{
+ margin:0;
+ padding:12px 14px;
+ border:1px solid var(--tl-editor-border);
+ border-radius:10px;
+ background:var(--tl-editor-soft);
+ color:var(--tl-editor-muted);
+ font-size:11px;
+ line-height:1.5;
+}
+@media(min-width:1100px){
+ .tl-reference-portal .tl-reference-document-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+ }
+}
+@media(max-width:980px){
+ .tl-reference-portal .tl-reference-line-item{
+  grid-template-columns:20px 24px minmax(150px,1.4fr) minmax(90px,.62fr) minmax(105px,.7fr) minmax(80px,.55fr) auto;
+  gap:8px;
+ }
+ .tl-reference-portal .tl-reference-approval{
+  gap:10px;
+  padding:17px;
+ }
+}
+@media(max-width:760px){
+ .tl-reference-portal .tl-reference-line-item{
+  grid-template-columns:20px 24px minmax(0,1fr) minmax(0,1fr);
+  gap:10px;
+ }
+ .tl-reference-portal .tl-reference-line-item>.tl-ref-item-handle{grid-column:1;grid-row:1}
+ .tl-reference-portal .tl-reference-line-item>.tl-ref-item-index{grid-column:2;grid-row:1}
+ .tl-reference-portal .tl-reference-line-item>.tl-ref-item-description{grid-column:3/5;grid-row:1}
+ .tl-reference-portal .tl-reference-line-item>.tl-ref-item-quantity{grid-column:1/3;grid-row:2}
+ .tl-reference-portal .tl-reference-line-item>.tl-ref-item-price,
+ .tl-reference-portal .tl-reference-line-item>.tl-ref-item-unit{grid-column:3/5;grid-row:2}
+ .tl-reference-portal .tl-reference-line-item>.tl-ref-item-total{grid-column:1/3;grid-row:3;text-align:left}
+ .tl-reference-portal .tl-reference-line-item>.tl-ref-item-actions{grid-column:3/5;grid-row:3}
+ .tl-reference-portal .tl-reference-line-item>.tl-draft-field:not(
+  .tl-ref-item-description,.tl-ref-item-quantity,.tl-ref-item-price,.tl-ref-item-unit
+ ){grid-column:1/-1;grid-row:3}
+ .tl-reference-portal .tl-reference-line-item:has(.tl-ref-item-unit)>.tl-draft-field:not(
+  .tl-ref-item-description,.tl-ref-item-quantity,.tl-ref-item-price,.tl-ref-item-unit
+ ){grid-row:3}
+ .tl-reference-portal .tl-reference-line-item:has(.tl-ref-item-unit)>.tl-ref-item-actions{grid-row:4}
+ .tl-reference-portal .tl-reference-note-row>.tl-ref-item-description{grid-column:3/5;grid-row:1}
+ .tl-reference-portal .tl-reference-note-row>.tl-ref-item-actions{grid-column:3/5;grid-row:2}
+ .tl-reference-portal .tl-reference-approval{
+  grid-template-columns:minmax(0,1fr);
+ }
+ .tl-reference-portal .tl-reference-approval>h4,
+ .tl-reference-portal .tl-reference-approval-creator,
+ .tl-reference-portal .tl-reference-workflow-disclaimer{
+  grid-column:1;
+ }
+}
+@media(max-width:620px){
+ .tl-reference-portal .tl-reference-document-topcard{
+  top:64px;
+  padding:12px;
+ }
+ .tl-reference-portal .tl-reference-document-heading{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:10px;
+ }
+ .tl-reference-portal .tl-reference-document-toolbar{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  width:100%;
+  gap:6px;
+ }
+ .tl-reference-portal .tl-reference-document-toolbar button{
+  min-width:0;
+  min-height:38px;
+  padding:7px 5px;
+  font-size:10px;
+ }
+ .tl-reference-portal .tl-reference-section-nav{
+  flex-wrap:nowrap;
+  overflow-x:auto;
+  overscroll-behavior-inline:contain;
+  scrollbar-width:thin;
+  margin-bottom:14px;
+  padding:8px;
+ }
+ .tl-reference-portal .tl-reference-section-nav-label{display:none}
+ .tl-reference-portal .tl-reference-section-nav button{flex:none}
+ .tl-reference-portal .tl-reference-form-section{padding:16px}
+ .tl-reference-portal .tl-reference-document-grid,
+ .tl-reference-portal .tl-reference-client .tl-draft-form-grid{
+  grid-template-columns:minmax(0,1fr);
+  gap:14px;
+ }
+ .tl-reference-portal .tl-reference-company-profile,
+ .tl-reference-portal .tl-reference-client .tl-reference-address-field,
+ .tl-reference-portal .tl-reference-client .tl-reference-currency-field{
+  grid-column:1;
+ }
+ .tl-reference-portal .tl-draft-lines.tl-reference-items,
+ .tl-reference-portal .tl-draft-lines.tl-reference-payment{
+  padding:14px;
+ }
+ .tl-reference-portal .tl-draft-finance.tl-reference-totals{padding:14px}
+ .tl-reference-portal .tl-reference-approval{padding:15px}
+ .tl-reference-portal #tl-section-document,
+ .tl-reference-portal #tl-section-client,
+ .tl-reference-portal #tl-section-items,
+ .tl-reference-portal #tl-section-totals,
+ .tl-reference-portal #tl-section-notes,
+ .tl-reference-portal #tl-section-terms,
+ .tl-reference-portal #tl-section-approval{
+  scroll-margin-top:196px;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ .tl-reference-portal .tl-reference-section-nav button{transition:none}
+}
+
+/* Explicit line-item placement overrides legacy flex-row defaults. */
+.tl-reference-portal .tl-reference-items .tl-reference-line-item{
+ position:relative;
+ grid-template-columns:20px 24px minmax(160px,1.55fr) minmax(88px,.62fr) minmax(100px,.7fr) minmax(80px,.55fr) auto;
+}
+.tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-handle{
+ grid-column:1;grid-row:1;
+}
+.tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-index{
+ grid-column:2;grid-row:1;
+}
+.tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-description{
+ grid-area:1 / 3 / auto / 4;width:100%;min-width:0;
+}
+.tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-quantity{
+ grid-area:1 / 4 / auto / 5;width:100%;min-width:0;
+}
+.tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-price,
+.tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-unit{
+ grid-area:1 / 5 / auto / 6;width:100%;min-width:0;
+}
+.tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-draft-field:not(
+ .tl-ref-item-description,.tl-ref-item-quantity,.tl-ref-item-price,.tl-ref-item-unit
+){
+ grid-area:1 / 6 / auto / 7;width:100%;min-width:0;
+}
+.tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-total{
+ grid-area:1 / 6 / auto / 7;
+}
+.tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-actions{
+ grid-area:1 / 7 / auto / 8;
+}
+.tl-reference-portal .tl-reference-items .tl-reference-note-row>.tl-ref-item-description{
+ grid-area:1 / 3 / auto / 7;
+}
+@media(max-width:760px){
+ .tl-reference-portal .tl-reference-items .tl-reference-line-item{
+  grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:14px;
+ }
+ .tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-handle{
+  position:absolute;top:18px;left:14px;grid-area:auto;
+ }
+ .tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-index{
+  position:absolute;top:18px;left:42px;grid-area:auto;
+ }
+ .tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-description{
+  grid-area:1 / 1 / auto / -1;padding-left:58px;
+ }
+ .tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-quantity{
+  grid-area:2 / 1 / auto / 2;
+ }
+ .tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-price,
+ .tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-unit{
+  grid-area:2 / 2 / auto / 3;
+ }
+ .tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-total{
+  grid-area:3 / 1 / auto / 2;text-align:left;
+ }
+ .tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-actions{
+  grid-area:3 / 2 / auto / 3;max-width:100%;flex-wrap:wrap;justify-content:flex-end;
+ }
+ .tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-draft-field:not(
+  .tl-ref-item-description,.tl-ref-item-quantity,.tl-ref-item-price,.tl-ref-item-unit
+ ){
+  grid-area:3 / 1 / auto / -1;
+ }
+ .tl-reference-portal .tl-reference-items .tl-reference-line-item:has(.tl-ref-item-unit)>.tl-ref-item-actions{
+  grid-area:4 / 1 / auto / -1;
+ }
+ .tl-reference-portal .tl-reference-items .tl-reference-note-row>.tl-ref-item-description{
+  grid-area:1 / 1 / auto / -1;padding-left:58px;
+ }
+ .tl-reference-portal .tl-reference-items .tl-reference-note-row>.tl-ref-item-actions{
+  grid-area:2 / 2 / auto / 3;
+ }
+}
+@media(max-width:550px){
+ .tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-handle{display:none}
+ .tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-index{left:14px}
+ .tl-reference-portal .tl-reference-items .tl-reference-line-item>.tl-ref-item-description,
+ .tl-reference-portal .tl-reference-items .tl-reference-note-row>.tl-ref-item-description{padding-left:42px}
+}
