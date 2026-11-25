@@ -129,3 +129,12 @@ test('visible Clock polling uses signed reads, revision guard and no automatic w
  assert.match(app,/case 'tt-log-admin-correct-time'/);
  assert.match(app,/\{timeOnly:true\}/);
 });
+
+// Reference redesign keeps date and wall-clock controls separate without changing the signed patch shape.
+test('split Philippine date/time controls produce the same sparse correction patch',()=>{
+ const html=renderTimeTrackerAdminEditor({editor:{mode:'single',records:[active()]},timeOnly:true});
+ assert.match(html,/name="clockInDate" type="date"/);
+ assert.match(html,/name="clockInAt" type="text"/);
+ const form=new FormData();form.set('clockInDate','2026-11-20');form.set('clockInAt','08:00 AM');
+ assert.deepEqual(buildTimeTrackerAdminPatch(form,{mode:'single',record:active()}).patch,{clockInAt:'2026-11-20T00:00:00.000Z'});
+});
