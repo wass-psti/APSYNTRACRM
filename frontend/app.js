@@ -4219,7 +4219,7 @@ async function commitTradeLinkDraft(form){
      error:err?.message||'Invalid Draft input. Nothing saved.',message:''};
     render();
     if(err?.message?.startsWith('Invalid Quotation contact email.'))
-     root.querySelector('[data-tradelink-draft-form] [name="customerEmail"]')?.focus({preventScroll:true});
+     root.querySelector('[data-tradelink-draft-form] [name="customerEmail"]')?.focus();
    }
    return;
   }
@@ -4310,7 +4310,7 @@ async function commitTradeLinkDraft(form){
    state.tradeLinkDraft.busy=false;
    render();
    if(state.tradeLinkDraft.error?.startsWith('Invalid Quotation contact email.'))
-    root.querySelector('[data-tradelink-draft-form] [name="customerEmail"]')?.focus({preventScroll:true});
+    root.querySelector('[data-tradelink-draft-form] [name="customerEmail"]')?.focus();
   }
  }
 }
