@@ -804,13 +804,15 @@ export class TimeTrackerNativeClient{
    gpsCapturedAt:result.gpsCapturedAt,revision:Number(result.revision),
    committedAt:result.committedAt});
  }
- async commit(boardId,{action,location,department,workNote='',geo}={}){
+ async commit(boardId,{action,location,department,workNote='',geo,expectedRecordId=null}={}){
   if(!['clock-in','clock-out'].includes(action))deny('Unsupported attendance action');
   const before=await this.snapshot(boardId,{clockOnly:true});
   if(before.access.attendanceWritesAccepted!==true)
    deny('Server-verified TimeTracker Clock activation required');
   if(action==='clock-in'&&before.active)deny('Already clocked in');
   if(action==='clock-out'&&!before.active)deny('No active clock-in session');
+  if(action==='clock-out'&&expectedRecordId!==null&&before.active.id!==expectedRecordId)
+   deny('Active attendance changed; refresh before ending the new session');
   // Clock Out inherits the signed server-recorded context, never mutable form fields.
   const committedLocation=action==='clock-out'?before.active.location:location;
   const committedDepartment=action==='clock-out'?before.active.department:
