@@ -16,6 +16,7 @@ const line={id:'line-1',kind:'item',description:'Filter assembly',quantity:2,
 const base={
  id,workspace_id:workspace,board_id:TRADELINK_BOARD_ID,board_item_id:item,
  revision:5,workflow_state:'draft',updated_at:stamp,created_at:stamp,
+ created_by:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',created_by_name:'Original TradeLink Creator',
  archived_at:null,document_type:'quotation',document_number:'Q-QA-20261108-01',
  content:{documentType:'quotation',documentNumber:'Q-QA-20261108-01',
   customerName:'Synthetic buyer',customerAddress:'Cebu City',
@@ -50,6 +51,8 @@ test('all six saved TradeLink modules use the recovered official company templat
  for(const [type,content] of Object.entries(docs)){
   const html=renderTradeLinkSavedDocumentOutput(record(type,content),workspace,id);
   assert.match(html,/data-tradelink-signed-output/);
+  assert.match(html,/CREATED BY:/,type+' original creator field');
+  assert.match(html,/Original TradeLink Creator/,type+' original creator name');
   assert.match(html,/data-tradelink-template-version="v1\.42\.0"/);
   assert.equal((html.match(/class="tl-official-footer"/g)||[]).length,1,type+' footer count');
   if(type==='quotation'){
@@ -69,6 +72,13 @@ test('all six saved TradeLink modules use the recovered official company templat
   assert.doesNotMatch(html,/workspace_id|board_item_id|Authoritative document ID|Linked Board item ID/);
   assert.doesNotMatch(html,/onclick=|<script|<iframe|src="https?:\/\//i);
  }
+});
+test('creator identity is escaped and never inferred from the latest editor',()=>{
+ const creator='<Original Creator> & Team';
+ const row=record('delivery',{...docs.delivery});
+ const html=renderTradeLinkSavedDocumentOutput({...row,created_by_name:creator},workspace,id);
+ assert.match(html,/&lt;Original Creator&gt; &amp; Team/);
+ assert.doesNotMatch(html,/<Original Creator>/);
 });
 test('commercial print totals use all saved lines, source VAT, discount and currency',()=>{
  const multi={...docs.quotation,items:[
@@ -231,6 +241,9 @@ test('print action reloads signed record and matching Board before mounting the 
   /record\.revision!==targetRevision/,
   /record\.workflow_state!=='approved'/,
   /record\.board_item_id!==listed\.boardItemId/,
+  /record\.created_by!==listed\.createdBy/,
+  /record\.created_by_name!==listed\.createdByName/,
+  /creatorName=record\.created_by_name/,
   /board\.board\.workspace_id!==ws/,
   /item\.title===listed\.documentNumber/,
   /renderTradeLinkSavedDocumentOutput\(record,ws,documentId,\{creatorName\}\)/,
@@ -241,6 +254,8 @@ test('print action reloads signed record and matching Board before mounting the 
  assert.match(source,/window\.addEventListener\('pagehide',closeTradeLinkSavedDocumentOutput\)/);
  const markup=readFileSync('frontend/tradelink-saved-document-output.js','utf8');
  assert.match(markup,/data-tradelink-print-action="print"/);
+ assert.match(markup,/CREATED BY:/);
+ assert.match(markup,/created_by_name/);
  assert.match(markup,/data-tradelink-legacy-company-default/);
  assert.match(markup,/Print \/ Save as PDF/);
  assert.match(markup,/disable browser Headers and footers/);

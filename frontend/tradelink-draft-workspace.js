@@ -1811,7 +1811,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
      ' in current response</caption>'+
     '<thead><tr>'+(readOnly&&!canReview?'<th scope="col"><input id="tl-select-visible-documents" type="checkbox" data-tl-select-all aria-label="Select all visible documents" /></th>':'')+
     '<th scope="col">No.</th><th scope="col">Document Number</th><th scope="col">Client Name</th>'+
-    '<th scope="col">Module</th><th scope="col">Created</th>'+
+    '<th scope="col">Created By</th><th scope="col">Module</th><th scope="col">Created</th>'+
     '<th scope="col">Last updated</th><th scope="col">Workflow Status</th>'+
     '<th scope="col">Rev. No.</th><th scope="col">Actions</th>'+
     '</tr></thead><tbody data-tradelink-domain-list-body>'+
@@ -1832,6 +1832,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
       '<td class="tl-ref-row-number">'+escape(index+1)+'</td>'+
       '<td class="tl-ref-doc-number">'+escape(row.documentNumber)+'</td>'+
       '<td>'+escape(typeof row.clientName==='string'&&row.clientName.trim()?row.clientName:'—')+'</td>'+
+      '<td class="tl-ref-created-by">'+escape(typeof row.createdByName==='string'&&row.createdByName.trim()?row.createdByName:'—')+'</td>'+
       '<td>'+escape(tradeLinkDocumentLabel(row.documentType))+'</td>'+
       '<td>'+renderTradeLinkTimestamp(row.createdAt)+'</td>'+
       '<td>'+renderTradeLinkTimestamp(row.updatedAt)+'</td>'+

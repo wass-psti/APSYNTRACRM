@@ -4182,8 +4182,10 @@ async function printTradeLinkDocument(documentId,revision=null){
    board?.board?.id!==TRADELINK_BOARD_ID||board.board.workspace_id!==ws||
    !board.items?.some(item=>item.id===listed.boardItemId&&item.title===listed.documentNumber))
    throw new ApiError('The requested revision is not a verified Approved TradeLink revision.',409);
-  const creator=(state.board?.members||[]).find(m=>String(m.user_id||m.id||'')===String(record.created_by||''));
-  const creatorName=record.created_by===actor?name():(creator?.display_name||creator?.name||creator?.email||'');
+  if(!validUuid(record.created_by)||record.created_by!==listed.createdBy||
+   record.created_by_name!==listed.createdByName)
+   throw new ApiError('The original creator identity does not match the signed document listing.',409);
+  const creatorName=record.created_by_name||'';
   const markup=renderTradeLinkSavedDocumentOutput(record,ws,documentId,{creatorName});
   if(!same())return;
   mountTradeLinkSavedDocumentOutput(markup);

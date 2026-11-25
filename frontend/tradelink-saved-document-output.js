@@ -143,12 +143,15 @@ function renderFinancial(data,type,currency){
  }
  return '';
 }
-function renderApproval(data,row){
+function renderApproval(data,row,creatorName){
  const assignments=(moduleFields[row.document_type]||[]).filter(([key])=>
   ['verifiedBy','approvedBy','checkedBy','deliveredBy','receivedBy'].includes(key));
  const state=row.workflow_state==='approved';
  const label=state?'APPROVED':'NOT APPROVED';
+ const creator=typeof creatorName==='string'&&creatorName.trim()?creatorName.trim():'Recorded creator (name unavailable)';
  return '<section class="tl-official-approval" aria-label="Document workflow status">'+
+  '<div class="tl-official-created-by"><h3>CREATED BY:</h3><strong>'+safe(creator)+'</strong>'+
+   '<p>'+safe(dateLabel(row.created_at))+'</p></div>'+
   '<div class="tl-official-approval-stamp '+(state?'is-approved':'is-not-approved')+'">'+
    '<strong>'+label+'</strong><span>'+(state?'WORKFLOW APPROVED · PDF NOT ISSUED':
     'NOT APPROVED · PDF NOT ISSUED')+'</span><span>'+(state?'Approved revision '+safe(row.revision):
@@ -163,6 +166,8 @@ function renderApproval(data,row){
 export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId,{creatorName}={}){
  const row=normalizeTradeLinkDomainRow(record,workspaceId,documentId);
  const data=row.content;
+ const resolvedCreatorName=typeof creatorName==='string'&&creatorName.trim()?creatorName.trim():
+  (typeof row.created_by_name==='string'&&row.created_by_name.trim()?row.created_by_name.trim():'');
  if(!Object.hasOwn(TYPE_LABELS,row.document_type)||!STATES.has(row.workflow_state)||
   data.documentType!==row.document_type||data.documentNumber!==row.document_number||
   typeof row.document_number!=='string'||row.document_number.length>120||
@@ -175,7 +180,7 @@ export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId
   throw new ApiError('Saved TradeLink company/template snapshot does not match an official profile.',409);
  const logo=logoUrl(company.logoAsset);
  const currency=TRADELINK_CURRENCIES.includes(data.currency)?data.currency:'—';
- if(row.document_type==='quotation')return renderTradeLinkQuotationPrint({row,company,template,currency,legacyDefaulted,creatorName,terms:typeof data.terms==='string'?data.terms:TRADELINK_DEFAULT_TERMS.quotation});
+ if(row.document_type==='quotation')return renderTradeLinkQuotationPrint({row,company,template,currency,legacyDefaulted,creatorName:resolvedCreatorName,terms:typeof data.terms==='string'?data.terms:TRADELINK_DEFAULT_TERMS.quotation});
  const address=String(company.address||'').split(/\r?\n/).filter(Boolean)
   .map(line=>'<p>'+safe(line)+'</p>').join('');
  const companyHeader='<header class="tl-official-header"><div class="tl-official-brand">'+
@@ -210,7 +215,7 @@ export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId
   '<span>Revision '+safe(row.revision)+'</span></div>';
  const mainHeaderContent=companyHeader+workflowLine+party;
  const mainBodyContent=commercial+payment+renderItems(data,row.document_type,currency)+
-  renderFinancial(data,row.document_type,currency)+remarks+renderApproval(data,row);
+  renderFinancial(data,row.document_type,currency)+remarks+renderApproval(data,row,resolvedCreatorName);
  const continuationHeader='<header class="tl-official-continuation"><span>'+safe(company.name)+
   '</span><span>'+safe(row.document_number)+'</span></header>';
  const flowingTerms=termsHtml&&template.termsMode!=='new-page'?
