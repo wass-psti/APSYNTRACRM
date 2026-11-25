@@ -45,6 +45,7 @@ html[data-aps-monday-theme="dark"] :is(
 html[data-aps-monday-theme="dark"] .aps-global-search-option-kind {
  background:#3b3b3b;color:#dedede;
 }
+html[data-aps-monday-theme="dark"] .aps-global-search-option-kind.is-application {color:#d6e5ff}
 html[data-aps-monday-theme="dark"] .aps-global-search-footer {
  background:#252525;color:#ccc;border-color:#545454;
 }

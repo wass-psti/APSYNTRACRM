@@ -68,6 +68,7 @@ body.aps-global-search-open{overflow:hidden}
 .aps-global-search-option-title{overflow:hidden;color:#34425c;font-size:13px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
 .aps-global-search-option-subtitle{overflow:hidden;color:#8490a4;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
 .aps-global-search-option-kind{justify-self:end;padding:4px 7px;border-radius:6px;background:#f1f4f9;color:#73819a;font-size:10px;font-weight:650;white-space:nowrap}
+.aps-global-search-option-kind.is-application{color:#344b70;font-weight:700}
 .aps-global-search-option-excerpt{grid-column:2/4;overflow:hidden;color:#748198;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
 .aps-global-search-empty{display:grid;place-items:center;min-height:112px;padding:20px;color:#8b96a9;font-size:12px;text-align:center}
 .aps-global-search-footer{
