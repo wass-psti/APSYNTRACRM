@@ -166,6 +166,7 @@ test('All three screens use the same scoped light-mode refresh stylesheet and re
  assert.ok(css.includes('min-width:1328px'));
  assert.ok(css.includes('table-layout:fixed'));
  assert.ok(css.includes('position:sticky'));
+ assert.ok(css.includes('grid-template-columns:max-content minmax(0,1fr) max-content minmax(0,1fr)'));
  assert.doesNotMatch(css,/data-aps-monday-theme|crm-native-|dark-mode/i);
  assert.match(manifest,/frontend\/tradelink-ui-refresh\.css/);
 });

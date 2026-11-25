@@ -58,8 +58,8 @@ test('All Documents displays Document Number and persisted Client Name columns',
   detail,workspaceId:workspace,canManage:true,
   view:{...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',rows:[listed]}
  });
- assert.match(html,/<th scope="col">Document Number<\/th>/);
- assert.match(html,/<th scope="col">Client Name<\/th>/);
+ assert.match(html,/<th(?: class="[^"]+")? scope="col">Document Number<\/th>/);
+ assert.match(html,/<th(?: class="[^"]+")? scope="col">Client Name<\/th>/);
  assert.match(html,/Q-202611220001/);
  assert.match(html,/Example Client &amp; Partners/);
  assert.match(html,/data-client-name="Example Client &amp; Partners"/);

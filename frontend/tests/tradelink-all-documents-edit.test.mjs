@@ -68,8 +68,8 @@ test('authorized listing shows server update time and preview shows creation tim
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:true});
  assert.ok(html.includes('<time datetime="'+updatedAt+'">Nov 08, 2026</time>'));
  assert.match(html,/<option value="createdAt"[^>]*>Date created<\/option>/);
- assert.match(html,/<th scope="col">Document Number<\/th>/);
- assert.match(html,/<th scope="col">Client Name<\/th>/);
+ assert.match(html,/<th(?: class="[^"]+")? scope="col">Document Number<\/th>/);
+ assert.match(html,/<th(?: class="[^"]+")? scope="col">Client Name<\/th>/);
  assert.match(html,/Example client/);
  assert.match(html,/<dt>Created<\/dt><dd>2026-11-07T01:00:00Z<\/dd>/);
  const denied=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:false});

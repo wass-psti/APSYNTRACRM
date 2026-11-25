@@ -130,7 +130,7 @@ test('All Documents displays the original creator name from the signed page resp
  }],listFilters:{query:'',documentType:'all',workflowState:'all',archiveMode:'active',
   visibilityMode:'visible',sortBy:'createdAt',sortDirection:'desc'}};
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:true});
- assert.match(html,/<th scope="col">Created By<\/th>/);
+ assert.match(html,/<th(?: class="[^"]+")? scope="col">Created By<\/th>/);
  assert.match(html,/Original Document Creator/);
  assert.match(html,/class="tl-ref-created-by"/);
 });
