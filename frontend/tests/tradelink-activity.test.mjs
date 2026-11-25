@@ -80,7 +80,8 @@ test('Activity presentation uses scoped responsive light-mode styles and the del
  const css=readFileSync('frontend/tradelink-ui-refresh.css','utf8');
  const bundle=readFileSync('frontend/apsyntra-styles.bundle.css','utf8');
  assert.match(css,/container-name:tradelink-activity/);
- assert.ok(css.includes('@container tradelink-activity (max-width:680px)'));\n assert.ok(css.includes('@container tradelink-activity (max-width:440px)'));
+ assert.ok(css.includes('@container tradelink-activity (max-width:680px)'));
+ assert.ok(css.includes('@container tradelink-activity (max-width:440px)'));
  assert.match(css,/prefers-reduced-motion:reduce/);
  assert.match(css,/tl-activity-source-badge/);
  assert.ok(bundle.includes('CP-TL-ACTIVITY-UI-01'));
