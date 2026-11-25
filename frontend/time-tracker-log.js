@@ -583,7 +583,7 @@ export function renderTimeTrackerLog({
   '</details>'+(adminEditor||adminDeleteConfirm?'':renderTimeTrackerLogDetailDialog({row:rows.find(r=>expandedRecordIds.includes(r.id))||null,now,
     gpsEligible,gpsData,gpsBusy,gpsError,gpsErrorRecordId,mapEnabled,mapTheme,
     adminEligible,adminFullAccess,adminBusy,selectedIds}))+
-   (adminFullAccess&&adminEditor?.manualClockout?renderTimeTrackerManualClockOut({editor:adminEditor,busy:adminBusy,error:adminError}):adminFullAccess&&adminEditor?.mode==='manual'?renderManualAttendanceEditor({editor:adminEditor,busy:adminBusy,error:adminError,now}):adminEditor?.ojt?renderTimeTrackerOjtAdminEditor({editor:adminEditor,busy:adminBusy,error:adminError}):
+   (adminFullAccess&&adminEditor?.manualClockout?renderTimeTrackerManualClockOut({editor:adminEditor,busy:adminBusy,error:adminError,now}):adminFullAccess&&adminEditor?.mode==='manual'?renderManualAttendanceEditor({editor:adminEditor,busy:adminBusy,error:adminError,now}):adminEditor?.ojt?renderTimeTrackerOjtAdminEditor({editor:adminEditor,busy:adminBusy,error:adminError}):
     renderTimeTrackerAdminEditor({editor:adminEditor,directory:adminDirectory,busy:adminBusy,error:adminEditor?adminError:'',timeOnly:adminEditor?.timeOnly===true}))+
    renderTimeTrackerAdminDeleteDialog({confirmation:adminDeleteConfirm,busy:adminBusy})+'</section>';
 }
