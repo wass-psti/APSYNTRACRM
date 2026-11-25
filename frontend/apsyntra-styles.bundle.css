@@ -19313,6 +19313,42 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-ot-refer
  margin:0;color:#b42318;font-size:11px;font-weight:650;line-height:1.45;
 }
 
+
+/* CP-TL-USER-MANUAL-UI-01 — dedicated TradeLink help-center screen. */
+.tl-reference-portal .tl-reference-portal-links>a[data-tl-tab="manual"][aria-current="page"]{background:#eaf1ff;color:#2456a6;font-weight:760}
+.tl-reference-portal .tl-user-manual{display:grid;gap:22px;padding:clamp(16px,2.5vw,28px);border:1px solid #e4eaf2;border-radius:16px;background:#fff;box-shadow:0 4px 18px rgba(15,23,42,.035)}
+.tl-reference-portal .tl-manual-hero{position:relative;display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:190px;padding:clamp(20px,3vw,34px);overflow:hidden;border:1px solid #dfe8f6;border-radius:14px;background:linear-gradient(112deg,#f5f8ff 0%,#edf3ff 58%,#f8faff 100%)}
+.tl-reference-portal .tl-manual-hero-copy{position:relative;z-index:1;max-width:720px}
+.tl-reference-portal .tl-manual-hero .tl-eyebrow{margin:0 0 9px;color:#4770b2;font-size:10px;font-weight:850;letter-spacing:.1em}
+.tl-reference-portal .tl-manual-hero h2{margin:0;color:#1c3558;font-size:clamp(25px,3vw,34px);font-weight:800;letter-spacing:-.045em}
+.tl-reference-portal .tl-manual-hero-copy>p:not(.tl-eyebrow){max-width:600px;margin:10px 0 0;color:#60718a;font-size:12px;line-height:1.7}
+.tl-reference-portal .tl-manual-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:17px}
+.tl-reference-portal .tl-manual-meta span{padding:6px 10px;border:1px solid #dbe5f4;border-radius:999px;background:#fff;color:#536b8e;font-size:10px;font-weight:720}
+.tl-reference-portal .tl-manual-hero-art{position:relative;display:grid;place-items:center;flex:none;width:116px;height:116px;margin-right:clamp(0px,3vw,30px);border:1px solid #d7e3f5;border-radius:28px;background:rgba(255,255,255,.75);box-shadow:0 12px 28px rgba(48,79,128,.08);transform:rotate(3deg)}
+.tl-reference-portal .tl-manual-art-sheet{color:#5c7fb8;font-size:58px;line-height:1}
+.tl-reference-portal .tl-manual-art-check{position:absolute;right:5px;bottom:8px;display:grid;place-items:center;width:31px;height:31px;border:3px solid #fff;border-radius:50%;background:#2f966c;color:#fff;font-size:16px;font-weight:850}
+.tl-reference-portal .tl-manual-layout{display:grid;grid-template-columns:minmax(180px,220px) minmax(0,1fr);align-items:start;gap:22px}
+.tl-reference-portal .tl-manual-index{position:sticky;top:16px;display:grid;gap:4px;padding:15px;border:1px solid #e6ebf2;border-radius:12px;background:#fbfcfe}
+.tl-reference-portal .tl-manual-index>strong{margin:0 0 6px;padding:0 7px;color:#8793a5;font-size:9px;font-weight:850;letter-spacing:.09em}
+.tl-reference-portal .tl-manual-index>a{display:flex;align-items:center;gap:9px;min-height:35px;padding:7px;border-radius:8px;color:#53647c;font-size:11px;font-weight:650;text-decoration:none;transition:background .14s ease,color .14s ease}
+.tl-reference-portal .tl-manual-index>a:hover{background:#edf3ff;color:#2857a0}
+.tl-reference-portal .tl-manual-index>a span{display:grid;place-items:center;flex:none;width:23px;height:23px;border:1px solid #e2e9f3;border-radius:7px;background:#fff;color:#6680a8;font-size:9px;font-weight:800}
+.tl-reference-portal .tl-manual-content{display:grid;gap:12px;min-width:0}
+.tl-reference-portal .tl-manual-section{display:grid;grid-template-columns:36px minmax(0,1fr);gap:13px;padding:19px;border:1px solid #e5eaf1;border-radius:12px;background:#fff;scroll-margin-top:20px}
+.tl-reference-portal .tl-manual-section-number{display:grid;place-items:center;width:34px;height:34px;border:1px solid #dce7f7;border-radius:10px;background:#f0f5ff;color:#3f68a7;font-size:10px;font-weight:850;font-variant-numeric:tabular-nums}
+.tl-reference-portal .tl-manual-section-content{min-width:0}
+.tl-reference-portal .tl-manual-section h3{margin:1px 0 0;color:#263d5d;font-size:15px;font-weight:790;letter-spacing:-.02em}
+.tl-reference-portal .tl-manual-section-summary{margin:5px 0 14px;color:#78869a;font-size:11px;line-height:1.55}
+.tl-reference-portal .tl-manual-points{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.tl-reference-portal .tl-manual-point{min-width:0;padding:12px;border:1px solid #edf0f5;border-radius:9px;background:#fafbfd}
+.tl-reference-portal .tl-manual-point strong{display:block;color:#405875;font-size:10px;font-weight:780}
+.tl-reference-portal .tl-manual-point p{margin:6px 0 0;color:#627187;font-size:11px;line-height:1.65;overflow-wrap:anywhere}
+.tl-reference-portal .tl-manual-footnote{margin:3px 0 0;padding:13px 15px;border-left:3px solid #9bb8e8;border-radius:8px;background:#f6f9ff;color:#6b7c94;font-size:10px;line-height:1.65}
+.tl-reference-portal .tl-user-manual :is(a,button):focus-visible{outline:2px solid #7ca4e8;outline-offset:3px}
+@media(max-width:760px){.tl-reference-portal .tl-manual-layout{grid-template-columns:minmax(0,1fr);gap:13px}.tl-reference-portal .tl-manual-index{position:static;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.tl-reference-portal .tl-manual-index>strong{grid-column:1/-1}.tl-reference-portal .tl-manual-index>a{font-size:10px}.tl-reference-portal .tl-manual-hero-art{width:82px;height:82px;margin:0}.tl-reference-portal .tl-manual-art-sheet{font-size:43px}}
+@media(max-width:520px){.tl-reference-portal .tl-user-manual{padding:13px}.tl-reference-portal .tl-manual-hero{min-height:0;padding:19px}.tl-reference-portal .tl-manual-hero-art{display:none}.tl-reference-portal .tl-manual-index{grid-template-columns:minmax(0,1fr)}.tl-reference-portal .tl-manual-section{grid-template-columns:30px minmax(0,1fr);gap:9px;padding:13px}.tl-reference-portal .tl-manual-section-number{width:29px;height:29px}.tl-reference-portal .tl-manual-points{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:reduce){.tl-reference-portal .tl-manual-index>a{transition:none}}
+
 /* frontend/tradelink-ui-refresh.css */
 /* CP-TL-UI-REFRESH-01 — clearer document drafting, responsive line items,
    section navigation and persistent save access. Presentation only. */
