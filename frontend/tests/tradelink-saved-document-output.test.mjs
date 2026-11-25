@@ -68,8 +68,12 @@ test('all six saved TradeLink modules use the recovered official company templat
   assert.match(html,new RegExp(content.documentNumber));
   assert.match(html,type==='quotation'?/Rev:<\/b> 5/:/>Rev\.<\/dt><dd>5<\/dd>/);
   assert.match(html,/NOT APPROVED/);
-  assert.match(html,/Contact Person/);
-  assert.match(html,/Jordan Reyes/);
+  if(content.customerContact){
+   assert.match(html,/Contact Person/,type+' saved contact label');
+   assert.ok(html.includes(content.customerContact),type+' saved contact');
+  }else{
+   assert.doesNotMatch(html,/Contact Person|Jordan Reyes/,type+' absent contact must not be invented');
+  }
   assert.match(html,/Workflow assignments \/ recorded responsibility/);
   assert.doesNotMatch(html,/workspace_id|board_item_id|Authoritative document ID|Linked Board item ID/);
   assert.doesNotMatch(html,/onclick=|<script|<iframe|src="https?:\/\//i);
