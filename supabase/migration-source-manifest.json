@@ -1566,6 +1566,13 @@
       "file": "20261115132051_cp_board_import_sync_01_authoritative_counts.sql",
       "bytes": 4568,
       "sha256": "4ac73bd08175d7075132f8fe0ca3bdf9990d1329b825a0453f6f8ade9c6aaf5d"
+    },
+    {
+      "version": "20261125090000",
+      "name": "cp_tt_admin_manual_clockin",
+      "file": "20261125090000_cp_tt_admin_manual_clockin.sql",
+      "bytes": 12060,
+      "sha256": "a3a43c054d6d2e07385c1db9c3ae5a2996ddacde4207bbf848b4c2dbf93a706d"
     }
   ],
   "forward_migrations": [
