@@ -38,7 +38,12 @@ test('GPS capture records attempt timing, requested options and accuracy without
  assert.equal(success.accuracyMeters,18);
  assert.ok(success.positionAgeMs>=0);
  const serialized=exportTimeTrackerGpsDiagnostics();
- assert.doesNotMatch(serialized,/"latitude"|"longitude"|10\.2|123\.9/);
+ // Match exact coordinate values, not prefixes of ISO timestamp milliseconds.
+ const coordinateLeak=/"latitude"|"longitude"|(?<![\d.])(?:10\.2|123\.9)(?![\d.])/;
+ assert.doesNotMatch(serialized,coordinateLeak);
+ assert.doesNotMatch('{"generatedAt":"2026-11-25T00:56:10.243Z"}',coordinateLeak);
+ for(const sample of ['{"latitude":0}','{"longitude":0}','{"value":10.2}','{"value":"123.9"}'])
+  assert.match(sample,coordinateLeak);
  assert.match(serialized,/"coordinatesIncluded": false/);
  assert.match(serialized,/"persistentStorage": false/);
  assert.match(serialized,/"remoteTransmission": false/);
