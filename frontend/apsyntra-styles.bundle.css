@@ -19298,6 +19298,16 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-ot-refer
  .tl-reference-portal .tl-app-nav .tl-module-link{transition:none}
 }
 
+.tl-reference-portal .tl-draft-field input[aria-invalid="true"]{
+ border-color:#c65b65;background:#fffafb;
+}
+.tl-reference-portal .tl-draft-field input[aria-invalid="true"]:focus-visible{
+ outline-color:#c65b65;
+}
+.tl-reference-portal .tl-draft-field .tl-draft-field-error{
+ margin:0;color:#b42318;font-size:11px;font-weight:650;line-height:1.45;
+}
+
 /* frontend/select-experience.css */
 /* APSYNTRA CRM GLOBAL SELECT EXPERIENCE — Vanilla ESM, CSS3, CSS custom properties.
  * Progressive, select-only WAI-ARIA combobox; the original select stays in forms.

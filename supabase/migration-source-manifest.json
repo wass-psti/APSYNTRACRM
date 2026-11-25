@@ -2291,6 +2291,13 @@
       "sha256": "c1f66056a5c6770ebb4d977f37a677baf6eca1f3647853e3d4a2d11889d3d5ed"
     },
     {
+      "version": "20261125020000",
+      "name": "cp_tl_quotation_email_validation_01",
+      "file": "20261125020000_cp_tl_quotation_email_validation_01.sql",
+      "bytes": 14141,
+      "sha256": "799f8bd2e3542d861b892db4420b89adeddda2283efd24ed21f98336bc643c70"
+    },
+    {
       "version": "20261125090000",
       "name": "cp_tt_admin_manual_clockin",
       "file": "20261125090000_cp_tt_admin_manual_clockin.sql",
