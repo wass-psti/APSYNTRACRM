@@ -82,3 +82,35 @@ test('client rejects a signed snapshot for the same record with a different star
   const native = readFileSync(new URL('frontend/time-tracker-native.js', root), 'utf8');
   assert.match(native, /session\.clockInAt!=null&&\s*\(!safeTime\(session\.clockInAt\)\|\|Date\.parse\(session\.clockInAt\)!==Date\.parse\(active\.clockIn\)\)/);
 });
+
+test('admin-only automatic no-GPS evidence is audited and unchanged by time edits', () => {
+  const baseline = migration('20261116084228_cp_tt_attendance_admin_record_management_01.sql');
+  const manual = migration('20261124203000_cp_tt_admin_manual_clockout.sql');
+  const applyName = 'private.tt_attendance_admin_apply_patch';
+  const projectName = 'private.tt_attendance_admin_sync_projection';
+  const defs = new Map([
+    [applyName + '(jsonb,jsonb,uuid,uuid)', definition(baseline, applyName, '$function$')],
+    [projectName + '(uuid,uuid,uuid,jsonb,bigint)', definition(baseline, projectName, '$function$')],
+  ]);
+  const manualPatches = [...manual.matchAll(/\$old\$([\s\S]*?)\$old\$,\s*\$new\$([\s\S]*?)\$new\$/g)];
+  assert.equal(manualPatches.length, 2);
+  for (const [index, key] of [projectName + '(uuid,uuid,uuid,jsonb,bigint)', applyName + '(jsonb,jsonb,uuid,uuid)'].entries()) {
+    const [, old, replacement] = manualPatches[index];
+    assert.equal(defs.get(key).split(old).length, 2);
+    defs.set(key, defs.get(key).replace(old, () => replacement));
+  }
+  applyPatches(sql.split('DO $gps_patch$')[1], defs);
+  const patch = defs.get(applyName + '(jsonb,jsonb,uuid,uuid)');
+  const projection = defs.get(projectName + '(uuid,uuid,uuid,jsonb,bigint)');
+  assert.match(patch, /private\.tt_is_server_clockout_evidence\(p_workspace,p_record\)/);
+  assert.match(patch, /v_clock_out->'geo'=p_record#>'\{clockOut,geo\}'/);
+  assert.match(patch, /v_record->>'ownerId'=p_record->>'ownerId'/);
+  assert.match(patch, /IS DISTINCT FROM 'captured'/);
+  assert.match(patch, /WHERE k NOT IN \('clockInAt','clockOutAt','creditedMsOverride'\)/);
+  assert.match(projection, /private\.tt_is_server_clockout_evidence\(p_workspace_id,p_record\)/);
+  assert.match(sql, /a\.action='clock-out' AND a\.source='automatic'/);
+  assert.match(sql, /pg_catalog\.date_trunc\('milliseconds',a\.committed_at\)/);
+  assert.match(sql, /NOT \(p_record#>'\{clockOut,geo\}' \?\| ARRAY\['latitude','longitude','accuracy'\]\)/);
+  assert.match(sql, /REVOKE ALL ON FUNCTION private\.tt_is_server_clockout_evidence\(uuid,jsonb\)/);
+  assert.doesNotMatch(sql, /CREATE OR REPLACE FUNCTION public\.timetracker_attendance_commit_v2/);
+});
