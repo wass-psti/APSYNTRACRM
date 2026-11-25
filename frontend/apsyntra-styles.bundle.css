@@ -12957,6 +12957,21 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log-deta
  #app .aps-board-shell .tt-native .tt-log-details-dialog .tt-record-timeline strong{font-size:15px}
 }
 
+/* Manual attendance: a freely editable 12-hour time and an hourly preset. */
+#app .aps-board-shell .tt-native .tt-admin-editor[data-mode="manual"] .tt-manual-time-controls{
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px;align-items:center;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-mode="manual"] .tt-manual-time-controls :is(input,select){
+ width:100%;min-width:0;box-sizing:border-box;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-mode="manual"] [data-tt-manual-note][hidden],
+#app .aps-board-shell .tt-native .tt-admin-editor[data-mode="manual"] [data-tt-manual-out][hidden]{display:none!important;}
+@media(max-width:380px){
+ #app .aps-board-shell .tt-native .tt-admin-editor[data-mode="manual"] .tt-manual-time-controls{
+  grid-template-columns:minmax(0,1fr);
+ }
+}
+
 /* frontend/time-tracker-reports-command.css */
 /* TimeTracker Reports command view. Decoration only; all report records, SVG
  * charts, filtering and export remain existing signed native DOM operations.
