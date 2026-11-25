@@ -2282,6 +2282,13 @@
       "file": "20261125100000_cp_tt_auto_clockout_isolation.sql",
       "bytes": 19694,
       "sha256": "3340ba61dc49c1b8e342357b97d6b9e41ef5971703c620869d2982d59f7f6075"
+    },
+    {
+      "version": "20261125120000",
+      "name": "cp_tt_company_provisioning_workspace_scope",
+      "file": "20261125120000_cp_tt_company_provisioning_workspace_scope.sql",
+      "bytes": 10194,
+      "sha256": "55e2f246c0e0c27485dc992ba23f91abf5c04f1dd73ae8838458ffde5755316e"
     }
   ]
 }
