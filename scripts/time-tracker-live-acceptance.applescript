@@ -18,7 +18,7 @@ on run
     tell activeTab
       set readyState to "WAITING"
       repeat with attempt from 1 to 20
-        set readyState to execute javascript "(()=>{if(location.hash!=='#/time-tracker')return 'WAIT_ROUTE';if(!document.querySelector('.tt-native'))return 'WAIT_RENDER';if(!document.querySelector('.fm1-app.tt-application'))return 'WAIT_SHELL';if(!(document.querySelector('.tt-notices')?.innerText||'').includes('Signed workspace verified'))return 'WAIT_SIGNED_READ';return 'READY'})()"
+        set readyState to execute javascript "(()=>{if(location.hash!=='#/time-tracker')return 'WAIT_ROUTE';if(!document.querySelector('.tt-native'))return 'WAIT_RENDER';if(!document.querySelector('.fm1-app.tt-application'))return 'WAIT_SHELL';if(![...document.querySelectorAll('button[aria-label]')].some(button=>(button.getAttribute('aria-label')||'').startsWith('Live synced · Authorized Realtime connected')))return 'WAIT_SIGNED_READ';return 'READY'})()"
         if readyState is "READY" then exit repeat
         delay 1
       end repeat
