@@ -157,6 +157,14 @@ test('All three screens use the same scoped light-mode refresh stylesheet and re
   '.tl-activity-timeline','.tl-activity-card','.tl-analytics-kpis',
   '.tl-analytics-card','.tl-analytics-table'
  ])assert.ok(css.includes(selector),selector);
+ assert.ok(css.includes('container-type:inline-size'));
+ assert.ok(css.includes('container-name:tradelink-analytics'));
+ assert.ok(css.includes('@container tradelink-analytics (max-width:900px)'));
+ assert.ok(css.includes('@container tradelink-analytics (max-width:560px)'));
+ for(const key of ['documents','quotations','won','lost','win-rate','tax-invoices'])
+  assert.ok(css.includes('data-tl-kpi="'+key+'"'),key);
+ assert.ok(css.includes('min-width:620px'));
+ assert.ok(css.includes('tl-analytics-aging>p:last-child'));
  assert.ok(css.includes('data-tl-section="documents"'));
  assert.ok(css.includes('@media(max-width:1000px)'));
  assert.ok(css.includes('@media(max-width:850px)'));
