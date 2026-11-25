@@ -228,4 +228,66 @@ $patch$;
 
 REVOKE ALL ON FUNCTION private.tt_reconcile_auto_clockout_sessions() FROM PUBLIC,anon,authenticated,service_role;
 REVOKE ALL ON FUNCTION private.tt_process_auto_clockouts() FROM PUBLIC,anon,authenticated,service_role;
+-- Administrative time corrections preserve authentic server no-GPS evidence.
+-- The exception is confined to an already completed session with the original
+-- automatic closure evidence and matching immutable audit in this workspace.
+-- Do not relax employee GPS requirements or create a no-GPS closure via edit.
+CREATE FUNCTION private.tt_is_server_clockout_evidence(p_workspace uuid,p_record jsonb)
+RETURNS boolean LANGUAGE sql STABLE SECURITY INVOKER SET search_path=''
+AS $evidence$
+ SELECT COALESCE(
+  pg_catalog.jsonb_typeof(p_record->'clockOut')='object'
+  AND p_record#>'{clockOut,automatic}'='true'::jsonb
+  AND p_record#>>'{clockOut,reason}' IN (
+    'nine_hour_threshold_grace_expired','approved_overtime_ended')
+  AND p_record#>>'{clockOut,geo,status}'='not_captured'
+  AND p_record#>>'{clockOut,geo,source}'='server-auto-clockout'
+  AND NOT (p_record#>'{clockOut,geo}' ?| ARRAY['latitude','longitude','accuracy'])
+  AND EXISTS (
+   SELECT 1 FROM public.timetracker_attendance_mutation_audit a
+   WHERE a.workspace_id=p_workspace
+    AND a.board_id='46bf4ee7-368a-4c35-842c-8593ea1f6ac3'::uuid
+    AND a.record_id=p_record->>'id'
+    AND 'cloud:'||a.actor_id::text=p_record->>'ownerId'
+    AND a.action='clock-out' AND a.source='automatic'
+    AND CASE WHEN pg_catalog.pg_input_is_valid(
+      p_record#>>'{clockOut,geo,generatedAt}','timestamp with time zone')
+      THEN pg_catalog.date_trunc('milliseconds',a.committed_at)=
+       (p_record#>>'{clockOut,geo,generatedAt}')::timestamptz
+      ELSE false END
+  ),false);
+$evidence$;
+REVOKE ALL ON FUNCTION private.tt_is_server_clockout_evidence(uuid,jsonb)
+ FROM PUBLIC,anon,authenticated,service_role;
+
+DO $gps_patch$
+DECLARE d text; old text; replacement text; target text;
+BEGIN
+ FOR target,old,replacement IN VALUES
+ ('private.tt_attendance_admin_apply_patch(jsonb,jsonb,uuid,uuid)',
+  $old$AND COALESCE(v_clock_out#>>'{geo,source}','')='admin-manual-clockout'))) THEN$old$,
+  $new$AND COALESCE(v_clock_out#>>'{geo,source}','')='admin-manual-clockout')))
+     AND NOT (
+       private.tt_is_server_clockout_evidence(p_workspace,p_record)
+       AND v_record->>'ownerId'=p_record->>'ownerId'
+       AND v_clock_out->'geo'=p_record#>'{clockOut,geo}'
+       AND NOT EXISTS (
+        SELECT 1 FROM pg_catalog.jsonb_object_keys(p_patch) k
+        WHERE k NOT IN ('clockInAt','clockOutAt','creditedMsOverride')
+       )
+     ) THEN$new$),
+ ('private.tt_attendance_admin_sync_projection(uuid,uuid,uuid,jsonb,bigint)',
+  $old$AND COALESCE(v_out_geo->>'source','')='admin-manual-clockout')) THEN$old$,
+  $new$AND COALESCE(v_out_geo->>'source','')='admin-manual-clockout')
+       AND NOT private.tt_is_server_clockout_evidence(p_workspace_id,p_record)) THEN$new$)
+ LOOP
+  d:=pg_catalog.pg_get_functiondef(target::regprocedure);
+  IF pg_catalog.cardinality(pg_catalog.string_to_array(d,old))<>2 THEN
+   RAISE EXCEPTION 'Admin GPS correction baseline differs: %',target USING ERRCODE='55000';
+  END IF;
+  EXECUTE pg_catalog.replace(d,old,replacement);
+ END LOOP;
+END;
+$gps_patch$;
+
 COMMIT;
