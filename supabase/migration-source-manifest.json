@@ -2263,6 +2263,13 @@
       "sha256": "0a341757b8f1ddb345b712a5a9f00c4bc0f07365aa270bb2dfd404ab47746c51"
     },
     {
+      "version": "20261125012603",
+      "name": "cp_tl_gm_approval_exemption",
+      "file": "20261125012603_cp_tl_gm_approval_exemption.sql",
+      "bytes": 53289,
+      "sha256": "d2417020aae9aa021386daba47966e94f923bfa57203cd7aba35f9476bfb93c7"
+    },
+    {
       "version": "20261125100000",
       "name": "cp_tt_auto_clockout_isolation",
       "file": "20261125100000_cp_tt_auto_clockout_isolation.sql",
