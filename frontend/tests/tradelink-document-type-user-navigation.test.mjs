@@ -8,7 +8,7 @@ import {
 import { TRADELINK_BOARD_ID } from "../tradelink-board-items.js";
 import { initialTradeLinkDraftView } from "../tradelink-draft-workspace.js";
 
-const css = readFileSync("frontend/tradelink-reference-ui.css", "utf8");
+const css = readFileSync("frontend/tradelink-document-type-ui.css", "utf8");
 const bundle = readFileSync("frontend/apsyntra-styles.bundle.css", "utf8");
 const workspaceId = "00000000-0000-4000-8000-000000000001";
 const detail = {
@@ -74,19 +74,27 @@ test("review-only accounts are not given a create selector by styling", () => {
   assert.doesNotMatch(html, /data-tl-module-nav|class="tl-app-nav"/);
   assert.match(html, /Create New is unavailable for this signed account/);
 });
-test("both source and generated CSS restore links and split layout for can-create Users", () => {
+test("selector is placed directly below the document header and before the editor content", () => {
+  const html = render(true, false);
+  const header = html.indexOf('class="tl-reference-document-topcard"');
+  const selector = html.indexOf('class="tl-app-nav"');
+  const editorContent = html.indexOf('class="tl-reference-editor-content"');
+  assert.ok(header >= 0 && selector > header && editorContent > selector);
+  assert.ok(html.indexOf('<main class="tl-app-main">') < header);
+  assert.match(html, /TRADELINK WORKSPACE/);
+  assert.match(html, /Document Types/);
+  assert.match(html, /Choose a document to prepare/);
+  assert.equal((html.match(/class="tl-app-nav"/g) || []).length, 1);
+});
+
+test("source and generated CSS provide six desktop columns and responsive three/two-column layouts", () => {
+  const manifest = readFileSync("scripts/priority5-style-manifest.mjs", "utf8");
+  assert.ok(manifest.indexOf("frontend/tradelink-document-type-ui.css") > manifest.indexOf("frontend/board-overhaul-experience.css"));
   for (const text of [css, bundle]) {
-    assert.match(
-      text,
-      /\.tl-reference-portal\[data-tl-section="drafts"\]\[data-tl-can-create="true"\] \.tl-app-layout\{/,
-    );
-    assert.match(
-      text,
-      /\.tl-reference-portal\[data-tl-section="drafts"\]\[data-tl-can-create="true"\] \.tl-app-nav \.tl-module-link\{\s*display:flex/,
-    );
-    assert.doesNotMatch(
-      text,
-      /\[data-tl-can-manage="true"\] \.tl-app-nav \.tl-module-link/,
-    );
+    assert.match(text, /grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
+    assert.match(text, /@media\(max-width:1050px\)[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+    assert.match(text, /@media\(max-width:620px\)[\s\S]*?grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+    assert.match(text, /@media\(max-width:360px\)[\s\S]*?grid-template-columns:minmax\(0,1fr\)/);
+    assert.doesNotMatch(text, /\[data-tl-can-manage="true"\] \.tl-app-nav \.tl-module-link/);
   }
 });

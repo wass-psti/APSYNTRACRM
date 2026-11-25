@@ -115,7 +115,7 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
  const selectedType=modules.has(requestedType)?requestedType:'quotation';
  const workspaceNavigation=current==='drafts'&&canCreate?
   '<nav class="tl-app-nav" aria-label="TradeLink document modules">'+
-   '<div class="tl-app-nav-heading"><span>TRADELINK WORKSPACE</span><strong>Document types</strong><small>Choose a document to prepare</small></div>'+
+   '<div class="tl-app-nav-heading"><span>TRADELINK WORKSPACE</span><strong>Document Types</strong><small>Choose a document to prepare</small></div>'+
    '<div class="tl-app-nav-links">'+
     TRADELINK_SOURCE_MODULES.map(module=>moduleLink(module,selectedType)).join('')+
    '</div></nav>':'';
@@ -146,9 +146,9 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
      '</div></details>'+
    '</nav>'+
   '</header>'+
-  '<div class="tl-app-layout">'+workspaceNavigation+
+  '<div class="tl-app-layout">'+
    '<main class="tl-app-main">'+
-    (m?renderModule(m,canCreate):current==='drafts'&&!canCreate?'<section class="tl-content-panel" aria-labelledby="tl-reviewer-access-title"><h2 id="tl-reviewer-access-title">Create New is unavailable for this signed account</h2><p>This signed TradeLink account does not have the existing document-creation capability. Open All Documents to inspect documents assigned to your account and use the available reviewer actions.</p><p><a class="secondary" href="'+tradeLinkApplicationHref('documents')+'">Open All Documents</a></p></section>':current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,canCreate,actorId,actorName,actorEmail,actorModuleRole,showModuleTabs:false}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage,canReview,actorEmail,canCreate,actorId):current==='activity'?renderTradeLinkActivity(activity||{}):current==='analytics'?renderTradeLinkAnalytics({summary:analytics,busy:analyticsBusy,error:analyticsError,enabled:analyticsEnabled}):renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail,actorModuleRole,showModuleTabs:false}))+
+    (m?renderModule(m,canCreate):current==='drafts'&&!canCreate?'<section class="tl-content-panel" aria-labelledby="tl-reviewer-access-title"><h2 id="tl-reviewer-access-title">Create New is unavailable for this signed account</h2><p>This signed TradeLink account does not have the existing document-creation capability. Open All Documents to inspect documents assigned to your account and use the available reviewer actions.</p><p><a class="secondary" href="'+tradeLinkApplicationHref('documents')+'">Open All Documents</a></p></section>':current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,canCreate,actorId,actorName,actorEmail,actorModuleRole,showModuleTabs:false,moduleNavigation:workspaceNavigation}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage,canReview,actorEmail,canCreate,actorId):current==='activity'?renderTradeLinkActivity(activity||{}):current==='analytics'?renderTradeLinkAnalytics({summary:analytics,busy:analyticsBusy,error:analyticsError,enabled:analyticsEnabled}):renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail,actorModuleRole,showModuleTabs:false}))+
    '</main></div></div>';
 }
 /** Pure DOM filtering of already-authorized board rows; no additional network

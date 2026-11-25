@@ -1308,7 +1308,7 @@ export function snapshotTradeLinkDraftLineItems(form){
    unit:get('lineUnit'),serialNumber:get('lineSerialNumber')};
  });
 }
-function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error='',message='',lineDrafts=null,actorName='',actorEmail='',reviewStages=null,showModuleTabs=true,canCreate=false,canEditOwnDraft=false,actorModuleRole=''){
+function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error='',message='',lineDrafts=null,actorName='',actorEmail='',reviewStages=null,showModuleTabs=true,canCreate=false,canEditOwnDraft=false,actorModuleRole='',moduleNavigation=''){
  const editing=mode==='edit'&&
   ['draft','for-approval','revision-required','approved'].includes(row?.workflow_state)&&
   row.content&&typeof row.content==='object'&&
@@ -1349,6 +1349,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
   String(now.getDate()).padStart(2,'0')].join('-');
  return '<section class="tl-draft-panel tl-reference-editor" aria-labelledby="tl-draft-editor-title">'+
   referenceDocumentHeader(type,editing,live,workflowState,documentId,editing&&row.workflow_state==='approved')+
+  moduleNavigation+
   (error&&!contactEmailError?'<p class="tl-draft-feedback" role="alert">'+escape(error)+'</p>':'')+
   (message?'<p class="tl-draft-feedback" role="status">'+escape(message)+'</p>':'')+
   (editing?'<div class="tl-draft-editor-navigation">'+
@@ -2125,7 +2126,7 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
       renderTradeLinkSavedWorkflowHistory(selection?.events):'')+
    '</section>':'')+'</section>';
 }
-export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTradeLinkDraftView(),canManage=false,canCreate=canManage,actorId='',actorName='',actorEmail='',showModuleTabs=true,actorModuleRole=''}={}){
+export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTradeLinkDraftView(),canManage=false,canCreate=canManage,actorId='',actorName='',actorEmail='',showModuleTabs=true,actorModuleRole='',moduleNavigation=''}={}){
  if(!isTradeLinkBoard(detail?.board)||detail.board.id!==TRADELINK_BOARD_ID||
    detail.board.workspace_id!==workspaceId)
   return '<section role="alert" class="tl-draft-panel">Signed TradeLink workspace unavailable.</section>';
@@ -2143,6 +2144,6 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
    renderEditor(selected?.record,view.mode,canManage,
    view.mode==='edit'&&!selected?null:view.formValues,view.draftNotice||'',
    view.error||'',view.message||'',view.lineDrafts,actorName,actorEmail,view.reviewStages||null,showModuleTabs,
-   canCreate,view.canEditOwnDraft===true,actorModuleRole))+
+   canCreate,view.canEditOwnDraft===true,actorModuleRole,moduleNavigation))+
   '</div>';
 }
