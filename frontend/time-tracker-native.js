@@ -616,7 +616,7 @@ export class TimeTrackerNativeClient{
    directory:Object.freeze(directory),actorId:access.userId,workspaceId:access.workspaceId,boardId});
  }
  /** Atomic compare-and-swap edit/delete. A lost response must be reconciled by a fresh read. */
- async manualClockInCapability(boardId){
+ async manualClockInCapability(boardId,includeCompleted=false){
   const access=await this.access(boardId);
   if(access.moduleRole!=='System Admin')deny('System Admin attendance management required');
   const response=await this.api.rpc('timetracker_attendance_admin_create_capability',{p_board_id:boardId});
@@ -625,23 +625,30 @@ export class TimeTrackerNativeClient{
      response.boardId!==boardId||typeof response.ready!=='boolean')
    deny('Manual clock-in capability is unverified');
   await checkIdentity(this.auth,this.api,access,boardId);
-  return response.ready;
+  if(Object.hasOwn(response,'completedReady')&&typeof response.completedReady!=='boolean')
+   deny('Manual completed attendance capability is unverified');
+  return includeCompleted?Object.freeze({ready:response.ready,completedReady:response.ready&&response.completedReady===true}):response.ready;
  }
  async createManualClockIn(boardId,entry,expectedRevision){
   const access=await this.access(boardId);
   if(access.moduleRole!=='System Admin'||entry?.employeeType!=='regular'||
-     entry.status!=='active'||entry.clockOutAt!==null||!uuid.test(entry.employeeId||'')||
+     !['active','completed'].includes(entry.status)||
+     (entry.status==='active'&&entry.clockOutAt!==null)||
+     (entry.status==='completed'&&(!safeTime(entry.clockOutAt)||Date.parse(entry.clockOutAt)<=Date.parse(entry.clockInAt)))||
+     !uuid.test(entry.employeeId||'')||
      !safeTime(entry.clockInAt)||!TT_LOCATIONS.includes(entry.location)||
      typeof entry.reason!=='string'||!entry.reason.trim()||entry.reason.length>500||
      !Number.isSafeInteger(expectedRevision)||expectedRevision<1)
    deny('Invalid System Admin manual clock-in request');
   await checkIdentity(this.auth,this.api,access,boardId);
-  const result=await this.api.rpc('timetracker_attendance_admin_create',{
+  const completed=entry.status==='completed';
+  const result=await this.api.rpc(completed?'timetracker_attendance_admin_create_completed':'timetracker_attendance_admin_create',{
    p_board_id:boardId,p_employee_id:entry.employeeId,p_clock_in_at:entry.clockInAt,
+   ...(completed?{p_clock_out_at:entry.clockOutAt}:{}),
    p_location:entry.location,p_work_note:entry.workNote,p_reason:entry.reason,
    p_expected_revision:expectedRevision
   },{retryUnauthorized:false});
-  if(!isRecord(result)||result.mode!=='COMMITTED'||result.contract!=='tt-admin-clockin-1'||
+  if(!isRecord(result)||result.mode!=='COMMITTED'||result.contract!==(completed?'tt-admin-completed-1':'tt-admin-clockin-1')||
      result.actorId!==access.userId||result.workspaceId!==access.workspaceId||
      result.boardId!==boardId||result.employeeId!==entry.employeeId||
      !uuid.test(result.recordId||'')||!Number.isSafeInteger(Number(result.revision))||
