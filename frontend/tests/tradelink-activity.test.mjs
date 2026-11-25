@@ -102,7 +102,7 @@ test('TradeLink User Manual has a dedicated canonical route and structured guide
  assert.match(html,/Quotation status/);
  assert.match(html,/Print and PDF/);
  assert.match(html,/Analytics and receivables/);
- assert.match(html,/tl-manual-index/);\n assert.match(html,/data-tl-manual-search/);\n assert.match(html,/QUICK START/);\n assert.match(html,/From document to approval/);
+ assert.match(html,/tl-manual-index/);\n assert.match(html,/data-tl-manual-search/);\n assert.match(html,/data-tl-manual-target="lifecycle"/);\n assert.match(html,/href="#\\/tradelink\\/manual"/);\n assert.match(html,/QUICK START/);\n assert.match(html,/From document to approval/);
  assert.equal((html.match(/class="tl-manual-section"/g)||[]).length,7);
 });
 test('TradeLink navigation opens User Manual as a page instead of a popover',()=>{
@@ -121,13 +121,13 @@ test('TradeLink manual search filters topics and updates the accessible result s
  ];
  const links=sections.map(section=>({
   hash:'#'+section.id,hidden:false,
-  getAttribute(name){return name==='href'?this.hash:null;}
+  getAttribute(name){return name==='data-tl-manual-target'?this.hash.slice(1).replace('tl-manual-',''):null;}
  }));
  const result={textContent:''},empty={hidden:true};
  const manual={
   querySelectorAll(selector){
    if(selector==='.tl-manual-section')return sections;
-   if(selector==='.tl-manual-index a[href^="#tl-manual-"]')return links;
+   if(selector==='[data-tl-manual-target]')return links;
    return [];
   },
   querySelector(selector){
