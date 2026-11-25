@@ -8,6 +8,7 @@ export const RECOVERY_FIELDS=Object.freeze([
  'vatType','discountType','discountValue','exchangeRate','checkedBy','deliveredBy','receivedBy',
  'verifiedBy','approvedBy','verifiedByEmail','approvedByEmail','paymentParticulars','cashAmount',
  'chequeAmount','bankName','chequeNumber','validity','deliveryCommitment','paymentTerms',
+ 'validityCustom','deliveryCommitmentCustom','paymentTermsCustom',
  'targetDeliveryDate','poNumber','remarks','terms',
  'lineDescription','lineQuantity','lineUnitPrice','lineUnit','lineSerialNumber'
 ]);
