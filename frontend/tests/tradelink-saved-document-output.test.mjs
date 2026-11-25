@@ -19,7 +19,7 @@ const base={
  created_by:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',created_by_name:'Original TradeLink Creator',
  archived_at:null,document_type:'quotation',document_number:'Q-QA-20261108-01',
  content:{documentType:'quotation',documentNumber:'Q-QA-20261108-01',
-  customerName:'Synthetic buyer',customerAddress:'Cebu City',
+  customerName:'Synthetic buyer',customerContact:'Jordan Reyes',customerAddress:'Cebu City',
   currency:'PHP',vatType:'12',discountType:'fixed',discountValue:10,
   validity:'30 days',deliveryCommitment:'14 days',paymentTerms:'Net 30',
   items:[line],remarks:'Signed record print snapshot',terms:TRADELINK_DEFAULT_TERMS.quotation}
@@ -68,6 +68,8 @@ test('all six saved TradeLink modules use the recovered official company templat
   assert.match(html,new RegExp(content.documentNumber));
   assert.match(html,type==='quotation'?/Rev:<\/b> 5/:/>Rev\.<\/dt><dd>5<\/dd>/);
   assert.match(html,/NOT APPROVED/);
+  assert.match(html,/Contact Person/);
+  assert.match(html,/Jordan Reyes/);
   assert.match(html,/Workflow assignments \/ recorded responsibility/);
   assert.doesNotMatch(html,/workspace_id|board_item_id|Authoritative document ID|Linked Board item ID/);
   assert.doesNotMatch(html,/onclick=|<script|<iframe|src="https?:\/\//i);
