@@ -115,7 +115,9 @@ test('TradeLink navigation opens User Manual as a page instead of a popover',()=
  assert.ok(html.includes('href="#/tradelink/manual"'));
  assert.match(html,/data-tl-tab="manual" aria-current="page"/);
  assert.match(html,/data-tl-screen="manual"/);
+ assert.doesNotMatch(html,/Quotation drafting guide/);
  assert.doesNotMatch(html,/<details class="tl-reference-manual">/);
+ assert.doesNotMatch(html,/href="#tl-manual-/);
 });
 
 test('TradeLink manual search filters topics and updates the accessible result state',()=>{
