@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {TRADELINK_ACTIVITY_LIMIT,renderTradeLinkActivity} from '../tradelink-activity.js';
 import {
- normalizeTradeLinkSection,renderTradeLinkApplication,renderTradeLinkUserManual,TRADELINK_SOURCE_MODULES,
+ normalizeTradeLinkSection,renderTradeLinkApplication,renderTradeLinkUserManual,filterTradeLinkManualSections,TRADELINK_SOURCE_MODULES,
  TRADELINK_SOURCE_WORKFLOW_STATES,TRADELINK_SOURCE_QUOTE_STATUSES
 } from '../tradelink-application.js';
 import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
@@ -102,7 +102,7 @@ test('TradeLink User Manual has a dedicated canonical route and structured guide
  assert.match(html,/Quotation status/);
  assert.match(html,/Print and PDF/);
  assert.match(html,/Analytics and receivables/);
- assert.match(html,/tl-manual-index/);
+ assert.match(html,/tl-manual-index/);\n assert.match(html,/data-tl-manual-search/);\n assert.match(html,/QUICK START/);\n assert.match(html,/From document to approval/);
  assert.equal((html.match(/class="tl-manual-section"/g)||[]).length,7);
 });
 test('TradeLink navigation opens User Manual as a page instead of a popover',()=>{
@@ -111,4 +111,40 @@ test('TradeLink navigation opens User Manual as a page instead of a popover',()=
  assert.match(html,/data-tl-tab="manual" aria-current="page"/);
  assert.match(html,/data-tl-screen="manual"/);
  assert.doesNotMatch(html,/<details class="tl-reference-manual">/);
+});
+
+test('TradeLink manual search filters topics and updates the accessible result state',()=>{
+ const sections=[
+  {id:'tl-manual-lifecycle',textContent:'Document lifecycle save status approval',hidden:false},
+  {id:'tl-manual-pdf',textContent:'Print and PDF saved revision',hidden:false},
+  {id:'tl-manual-analytics',textContent:'Analytics receivables currency',hidden:false}
+ ];
+ const links=sections.map(section=>({
+  hash:'#'+section.id,hidden:false,
+  getAttribute(name){return name==='href'?this.hash:null;}
+ }));
+ const result={textContent:''},empty={hidden:true};
+ const manual={
+  querySelectorAll(selector){
+   if(selector==='.tl-manual-section')return sections;
+   if(selector==='.tl-manual-index a[href^="#tl-manual-"]')return links;
+   return [];
+  },
+  querySelector(selector){
+   if(selector==='[data-tl-manual-results]')return result;
+   if(selector==='[data-tl-manual-empty]')return empty;
+   return null;
+  }
+ };
+ const container={querySelector(selector){return selector==='.tl-user-manual'?manual:null;}};
+ assert.equal(filterTradeLinkManualSections(container,'pdf'),1);
+ assert.deepEqual(sections.map(section=>section.hidden),[true,false,true]);
+ assert.deepEqual(links.map(link=>link.hidden),[true,false,true]);
+ assert.equal(result.textContent,'1 of 3 topics match');
+ assert.equal(empty.hidden,true);
+ assert.equal(filterTradeLinkManualSections(container,''),3);
+ assert.equal(result.textContent,'3 topics');
+ assert.equal(empty.hidden,true);
+ assert.equal(filterTradeLinkManualSections(container,'no match'),0);
+ assert.equal(empty.hidden,false);
 });
