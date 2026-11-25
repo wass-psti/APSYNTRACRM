@@ -28,7 +28,7 @@ $f$;
 REVOKE ALL ON FUNCTION private.tt_is_admin_clockin_evidence(jsonb)
  FROM PUBLIC,anon,authenticated;
 
--- Require the exact existing projection baseline. A mismatch aborts the
+-- Require the existing projection semantics, tolerating coordinate whitespace only. A mismatch aborts the
 -- migration rather than replacing a newer employee attendance implementation.
 DO $patch$
 DECLARE d text; n text;
@@ -41,9 +41,12 @@ BEGIN
    AND NOT private.tt_is_admin_clockin_evidence(p_record)) THEN$new$);
  IF n=d THEN RAISE EXCEPTION 'Employee projection GPS baseline differs'; END IF;
  d:=n;
- n:=pg_catalog.replace(d,
-  $old$IF v_clock_in IS NULL OR v_in_geo->>'latitude' IS NULL OR
-    v_in_geo->>'longitude' IS NULL OR v_in_geo->>'accuracy' IS NULL THEN$old$,
+ -- Match exactly one coordinate guard, tolerating formatting only.
+ IF pg_catalog.regexp_count(d,
+  $old$IF[[:space:]]+v_clock_in[[:space:]]+IS[[:space:]]+NULL[[:space:]]+OR[[:space:]]+v_in_geo->>'latitude'[[:space:]]+IS[[:space:]]+NULL[[:space:]]+OR[[:space:]]+v_in_geo->>'longitude'[[:space:]]+IS[[:space:]]+NULL[[:space:]]+OR[[:space:]]+v_in_geo->>'accuracy'[[:space:]]+IS[[:space:]]+NULL[[:space:]]+THEN$old$)<>1
+ THEN RAISE EXCEPTION 'Employee projection coordinate baseline differs'; END IF;
+ n:=pg_catalog.regexp_replace(d,
+  $old$IF[[:space:]]+v_clock_in[[:space:]]+IS[[:space:]]+NULL[[:space:]]+OR[[:space:]]+v_in_geo->>'latitude'[[:space:]]+IS[[:space:]]+NULL[[:space:]]+OR[[:space:]]+v_in_geo->>'longitude'[[:space:]]+IS[[:space:]]+NULL[[:space:]]+OR[[:space:]]+v_in_geo->>'accuracy'[[:space:]]+IS[[:space:]]+NULL[[:space:]]+THEN$old$,
   $new$IF v_clock_in IS NULL OR (
     (v_in_geo->>'latitude' IS NULL OR v_in_geo->>'longitude' IS NULL
       OR v_in_geo->>'accuracy' IS NULL)
