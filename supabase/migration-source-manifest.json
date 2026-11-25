@@ -2273,8 +2273,8 @@
       "version": "20261125090000",
       "name": "cp_tt_admin_manual_clockin",
       "file": "20261125090000_cp_tt_admin_manual_clockin.sql",
-      "bytes": 12060,
-      "sha256": "a3a43c054d6d2e07385c1db9c3ae5a2996ddacde4207bbf848b4c2dbf93a706d"
+      "bytes": 12772,
+      "sha256": "023ab99c826f18bc1f66861a924ff04975f16388f1df3069c1a58dd3c39988ec"
     },
     {
       "version": "20261125100000",
