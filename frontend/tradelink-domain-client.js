@@ -3,6 +3,7 @@
  * local draft fallback, unsanctioned domain writes or implicit activation.
  */
 import {ApiError,} from './session.js';
+import {TRADELINK_MAX_ITEMS,TRADELINK_MAX_PAYLOAD_BYTES,tradeLinkJsonbTextByteLength} from './tradelink/limits.js';
 import {validUuid} from './data.js';
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
 import {normalizeTradeLinkAnalyticsSummary} from './tradelink-analytics.js';
@@ -58,11 +59,29 @@ export function validateTradeLinkDraftEnvelope(value,{allowUnassignedNumber=fals
   'updatedById','board_id','workspace_id','role','accessControl']){
   if(Object.hasOwn(value,blocked))deny('Server-controlled TradeLink draft property.',400);
  }
- if(value.items!=null&&(!Array.isArray(value.items)||value.items.length>100))
-  deny('Invalid TradeLink line items.',400);
- const serialized=JSON.stringify(value);
- if(!serialized||serialized.length>131072)
-  deny('TradeLink draft is too large.',400);
+ if(value.items!=null&&(!Array.isArray(value.items)||value.items.length>TRADELINK_MAX_ITEMS))
+  deny('TradeLink draft exceeds the 250-item capacity.',400);
+ if(Array.isArray(value.items)){
+  const lineIds=new Set();
+  for(const item of value.items){
+   const id=item?.id;
+   if(typeof id==='string'&&id){
+    if(lineIds.has(id))deny('Duplicate TradeLink line-item identifier.',400);
+    lineIds.add(id);
+   }
+  }
+ }
+ let normalized;
+ try{
+  const serialized=JSON.stringify(value);
+  if(!serialized)deny('Invalid TradeLink draft payload.',400);
+  normalized=JSON.parse(serialized);
+ }catch(error){
+  if(error instanceof ApiError)throw error;
+  deny('Invalid TradeLink draft payload.',400);
+ }
+ if(tradeLinkJsonbTextByteLength(normalized)>TRADELINK_MAX_PAYLOAD_BYTES)
+  deny('TradeLink draft exceeds the 2 MiB capacity.',400);
  return value;
 }
 export function normalizeTradeLinkDomainReceipt(
