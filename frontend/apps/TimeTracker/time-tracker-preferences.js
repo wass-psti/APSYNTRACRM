@@ -22,3 +22,29 @@ export function saveTimeTrackerLocationPreference(storage,scope,location){
  try{storage?.setItem?.(key,location);return true;}
  catch{return false;}
 }
+
+const VIEW_PREFIX='apsyntra.tt.view-pref.v1:';
+// Restore only ordinary navigation. Privileged and special-purpose views
+// keep their existing explicit navigation and authorization flow.
+const RESTORABLE_VIEWS=['clock','overview','log','ot','reports','calendar','hours'];
+function timeTrackerViewKey({userId,workspaceId,boardId}={}){
+ return [userId,workspaceId,boardId].every(id=>UUID.test(id||''))?
+  VIEW_PREFIX+workspaceId+':'+boardId+':'+userId:null;
+}
+export function readTimeTrackerViewPreference(storage,scope){
+ const key=timeTrackerViewKey(scope);
+ if(!key)return 'clock';
+ try{
+  const value=storage?.getItem?.(key);
+  return RESTORABLE_VIEWS.includes(value)?value:'clock';
+ }catch{return 'clock';}
+}
+export function saveTimeTrackerViewPreference(storage,scope,view){
+ const key=timeTrackerViewKey(scope);
+ if(!key)return false;
+ try{
+  if(!storage)return false;
+  storage.setItem(key,RESTORABLE_VIEWS.includes(view)?view:'clock');
+  return true;
+ }catch{return false;}
+}
