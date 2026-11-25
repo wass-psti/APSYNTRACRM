@@ -506,7 +506,8 @@ function morphClockNode(current,next){
 export function syncTimeTrackerClockView(root,{
  result,now=new Date(),clockPending=false,clockPendingAction='clock-out',
  locationPreference='',workPlanDraft='',success='',clockCorrectionNotice='',
- geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle'
+ geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',
+ forceReconcile=false,displayName='',referenceShell=false,gpsDiagnosticsAvailable=false,clearError=false
 }={}){
  const current=root?.querySelector?.('.tt-clock-stage');
  if(!current||result?.status!=='VERIFIED_READ')return false;
@@ -516,15 +517,17 @@ export function syncTimeTrackerClockView(root,{
  const currentIsActive=currentLayout?.dataset.sessionState==='active';
  const nextIsActive=Boolean(active);
 
- // The only structural reconciliation is a genuine session start/end.
- if(currentIsActive!==nextIsActive){
+ // A signed session identity or pending-action change can also require
+ // reconciling the action controls, without replacing the application shell.
+ if(currentIsActive!==nextIsActive||forceReconcile){
   const template=document.createElement('template');
   template.innerHTML=clockPage(result,false,now,clockPending,clockPendingAction,
    locationPreference,{success,clockCorrectionNotice,geoPromptVisible,geoPermission,
-    geoMessage,clockStage,workPlanDraft});
+    geoMessage,clockStage,workPlanDraft,displayName,referenceShell,gpsDiagnosticsAvailable});
   const next=template.content.firstElementChild;
   if(!next||!next.classList.contains('tt-clock-stage'))return false;
   morphClockNode(current,next);
+  if(clearError)current.closest('.tt-application')?.querySelector('.tt-feedback-error')?.remove();
   return true;
  }
 
