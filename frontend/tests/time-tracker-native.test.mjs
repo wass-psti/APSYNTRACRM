@@ -811,3 +811,45 @@ test('a stale End Session action never closes an admin-created replacement sessi
   geo:{status:'captured',latitude:12.3,longitude:123.4,accuracy:10}}),/Active attendance changed/);
  assert.equal(f.commits(),0);
 });
+
+test('completed manual attendance uses the additive RPC and verified capability without changing the active path',async()=>{
+ const entry={employeeId:other,employeeType:'regular',status:'completed',clockOutAt:stamp(17),
+  clockInAt:stamp(8),location:'Offsite (Home)',workNote:'Project work',reason:'Missed attendance'};
+ const f=setup({role:'System Admin'});
+ const original=f.api.rpc;
+ let writes=0,completedReady=false;
+ f.api.rpc=async(name,args,options)=>{
+  if(name==='timetracker_attendance_admin_create_capability')
+   return {contract:'tt-admin-clockin-capability-1',actorId:user,workspaceId:workspace,boardId:board,ready:true,
+    ...(completedReady?{completedReady:true}:{})};
+  if(name==='timetracker_attendance_admin_create_completed'){
+   writes++;
+   assert.equal(options.retryUnauthorized,false);
+   assert.equal(args.p_clock_in_at,entry.clockInAt);
+   assert.equal(args.p_clock_out_at,entry.clockOutAt);
+   assert.equal(args.p_work_note,'Project work');
+   assert.equal(args.p_expected_revision,2);
+   assert.equal(Object.hasOwn(args,'p_geo'),false);
+   return {mode:'COMMITTED',contract:'tt-admin-completed-1',actorId:user,workspaceId:workspace,
+    boardId:board,employeeId:other,recordId:autoRecordId,revision:3,committedAt:stamp(17)};
+  }
+  return original(name,args,options);
+ };
+ assert.deepEqual(await f.client.manualClockInCapability(board,true),{ready:true,completedReady:false});
+ completedReady=true;
+ assert.deepEqual(await f.client.manualClockInCapability(board,true),{ready:true,completedReady:true});
+ assert.deepEqual(await f.client.createManualClockIn(board,entry,2),{recordId:autoRecordId,revision:3});
+ await assert.rejects(f.client.createManualClockIn(board,{...entry,clockOutAt:stamp(7)},2),/Invalid/);
+ await assert.rejects(setup({role:'Employee'}).client.createManualClockIn(board,entry,2),/Invalid/);
+ assert.equal(writes,1);
+});
+test('admin-created active Offsite Work Plan is visible to its employee in the signed Clock snapshot',async()=>{
+ const record={...example(),id:autoRecordId,clockIn:{...example().clockIn,
+  location:'Offsite (Home)',workNote:'Prepare project drawings',
+  geo:{status:'not_captured',source:'admin-manual-clockin',recordedBy:other}}};
+ const f=setup({records:[record],writeReady:true});
+ const snapshot=await f.client.snapshot(board,{clockOnly:true});
+ assert.equal(snapshot.active.id,autoRecordId);
+ assert.equal(snapshot.active.location,'Offsite (Home)');
+ assert.equal(snapshot.active.workNote,'Prepare project drawings');
+});
