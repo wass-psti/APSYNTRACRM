@@ -760,3 +760,46 @@ test('Home reason readback is scoped to the signed attendance owner',()=>{
  assert.equal(rows[0].workNote,'  Approved home schedule  ');
  assert.equal(JSON.stringify(rows).includes('Sensitive note'),false);
 });
+
+test('administrative clock-in becomes the employee active Clock session without fake GPS',async()=>{
+ const record={...example(),id:autoRecordId,clockIn:{...example().clockIn,
+  geo:{status:'not_captured',source:'admin-manual-clockin',recordedBy:other}}};
+ const f=setup({records:[record],writeReady:true});
+ const snapshot=await f.client.snapshot(board,{clockOnly:true});
+ assert.equal(snapshot.active.id,autoRecordId);
+ assert.equal(snapshot.active.clockIn,record.clockIn.timestamp);
+ assert.equal(snapshot.active.status,'Active');
+ assert.equal(snapshot.active.creditedMs,null);
+ assert.equal(JSON.stringify(snapshot.active).includes('admin-manual-clockin'),false);
+ const geo={status:'captured',latitude:12.3,longitude:123.4,accuracy:10};
+ await assert.rejects(f.client.commit(board,{action:'clock-in',location:TT_LOCATIONS[0],geo}),/Already clocked in/);
+ await f.client.commit(board,{action:'clock-out',geo});
+ assert.equal(f.lastWrite().p_record_id,autoRecordId);
+ assert.equal(f.lastWrite().p_action,'clock-out');
+});
+test('manual clock-in accepts only signed System Admin capability and receipt',async()=>{
+ const entry={employeeId:other,employeeType:'regular',status:'active',clockOutAt:null,
+  clockInAt:stamp(8),location:TT_LOCATIONS[0],workNote:null,reason:'Missed clock-in'};
+ const f=setup({role:'System Admin'});
+ const original=f.api.rpc;
+ let writes=0;
+ f.api.rpc=async(name,args,options)=>{
+  if(name==='timetracker_attendance_admin_create_capability')
+   return {contract:'tt-admin-clockin-capability-1',actorId:user,workspaceId:workspace,boardId:board,ready:true};
+  if(name==='timetracker_attendance_admin_create'){
+   writes++;
+   assert.equal(options.retryUnauthorized,false);
+   assert.equal(args.p_employee_id,other);
+   assert.equal(args.p_expected_revision,2);
+   assert.equal(Object.hasOwn(args,'p_geo'),false);
+   return {mode:'COMMITTED',contract:'tt-admin-clockin-1',actorId:user,workspaceId:workspace,
+    boardId:board,employeeId:other,recordId:autoRecordId,revision:3,committedAt:stamp(8)};
+  }
+  return original(name,args,options);
+ };
+ assert.equal(await f.client.manualClockInCapability(board),true);
+ assert.deepEqual(await f.client.createManualClockIn(board,entry,2),{recordId:autoRecordId,revision:3});
+ await assert.rejects(f.client.createManualClockIn(board,{...entry,employeeType:'ojt'},2),/Invalid/);
+ await assert.rejects(setup({role:'Employee'}).client.createManualClockIn(board,entry,2),/Invalid/);
+ assert.equal(writes,1);
+});
