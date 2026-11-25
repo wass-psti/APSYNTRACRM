@@ -105,6 +105,11 @@ export function tradeLinkDraftHasUnsavedChanges(view){
  return view?.unsavedChanges===true&&
   (view.mode==='create'||(view.mode==='edit'&&validUuid(view.selected?.documentId)));
 }
+export function tradeLinkDraftFieldForError(error){
+ const message=typeof error==='string'?error:error?.message;
+ return typeof message==='string'&&message.startsWith('Invalid Quotation contact email.')?
+  'customerEmail':null;
+}
 /** Expose only program-defined local validation messages, not field values. */
 export function tradeLinkDraftValidationMessage(error){
  return error instanceof ApiError&&error.status===400?
@@ -119,6 +124,8 @@ export function tradeLinkDraftSaveFailureMessage(error,{committed=false}={}){
  if(committed)return 'Document saved, but Board and All Documents could not be verified. Select Save again to retry verification only.';
  const code=String(error?.code||''),status=Number(error?.status);
  if(tradeLinkSaveDefinitelyRejected(error)){
+  if(error.message==='Invalid Quotation contact email.')
+   return 'Invalid Quotation contact email. Enter an email address in Client email.';
   if(error.message==='Two different assigned TradeLink reviewers are required')
    return 'Document rejected: select two different assigned TradeLink reviewers, then save again.';
   if(error.message==='Both assigned reviewers must be active confirmed TradeLink accounts in this workspace')
@@ -598,9 +605,13 @@ const partyPlaceholders={
 function placeholderAttribute(text){
  return text?' placeholder="'+escape(text)+'"':'';
 }
-function field(label,name,val='',attrs='',hint=contactPlaceholders[name]){
+function field(label,name,val='',attrs='',hint=contactPlaceholders[name],error=''){
+ const invalid=error?
+  ' aria-invalid="true" aria-describedby="tl-quotation-contact-email-error"':'';
  return '<label class="tl-draft-field"><span>'+escape(label)+'</span>'+
-  '<input name="'+escape(name)+'" value="'+escape(val)+'" '+attrs+placeholderAttribute(hint)+'></label>';
+  '<input name="'+escape(name)+'" value="'+escape(val)+'" '+attrs+invalid+placeholderAttribute(hint)+'>'+
+  (error?'<small id="tl-quotation-contact-email-error" class="tl-draft-field-error" role="alert">'+
+   'Enter a valid email address in Client email.</small>':'')+'</label>';
 }
 function moneyField(label,name,val,currency,attrs){
  return '<label class="tl-draft-field"><span>'+escape(label)+
@@ -1297,6 +1308,8 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
  const selectedStatus=fieldValue('documentStatus',workflowState);
 
  const type=editing?data.documentType:fieldValue('documentType','quotation');
+ const contactEmailError=type==='quotation'&&
+  tradeLinkDraftFieldForError(error)==='customerEmail'?error:'';
  const selectedCompanyProfileId=fieldValue('vendorId',
   data.vendorId||tradeLinkCompanyProfileIdFromTemplateId(data.templateId)||TRADELINK_DEFAULT_COMPANY_PROFILE_ID);
  const companyProfileLocked=editing&&Boolean(data.vendorId||data.templateId);
@@ -1321,7 +1334,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
   String(now.getDate()).padStart(2,'0')].join('-');
  return '<section class="tl-draft-panel tl-reference-editor" aria-labelledby="tl-draft-editor-title">'+
   referenceDocumentHeader(type,editing,live,workflowState,documentId,editing&&row.workflow_state==='approved')+
-  (error?'<p class="tl-draft-feedback" role="alert">'+escape(error)+'</p>':'')+
+  (error&&!contactEmailError?'<p class="tl-draft-feedback" role="alert">'+escape(error)+'</p>':'')+
   (message?'<p class="tl-draft-feedback" role="status">'+escape(message)+'</p>':'')+
   (editing?'<div class="tl-draft-editor-navigation">'+
    '<a class="secondary" href="'+tradeLinkApplicationHref('documents')+'">Back to All Documents</a> '+
@@ -1395,7 +1408,8 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
         ['Accepted','Accepted'],['Declined','Declined'],['On Hold','On Hold'],['Closed','Closed']],
         fieldValue('quoteStatus',data.quoteStatus||(editing?'':'Working on it')))+'</select><small>Commercial status is separate from the signed approval and document workflow state. Older records without a value remain Not recorded until selected.</small></label>'+
       field('Client email','customerEmail',fieldValue('customerEmail',data.customerEmail||''),
-       'type="email" autocomplete="email" maxlength="5000" pattern="'+escape(QUOTATION_EMAIL_PATTERN)+'" title="Enter an email address"')+
+       'type="email" autocomplete="email" maxlength="5000" pattern="'+escape(QUOTATION_EMAIL_PATTERN)+'" title="Enter an email address"',
+       undefined,contactEmailError)+
       field('Client phone','customerPhone',fieldValue('customerPhone',data.customerPhone||''),
        'type="tel" inputmode="tel" autocomplete="tel" maxlength="5000" pattern="'+escape(QUOTATION_PHONE_PATTERN)+'" title="Enter a phone number, including country code or extension if applicable"')+
       quotationCommercialField('paymentTerms',fieldValue('paymentTerms',data.paymentTerms||''),fieldValue('paymentTermsCustom',''))+

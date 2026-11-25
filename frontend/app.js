@@ -97,7 +97,8 @@ import {TradeLinkAttachmentClient,TL03_ATTACHMENTS_ENABLED}
  from './tradelink-attachments.js';
 import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftForm,parseTradeLinkDraftForm,
  tradeLinkDraftValidationMessage,tradeLinkDraftReady,tradeLinkDraftSaveFailureMessage,
- tradeLinkDraftHasUnsavedChanges,reconcileTradeLinkSavedListing,tradeLinkSaveDefinitelyRejected,
+ tradeLinkDraftHasUnsavedChanges,reconcileTradeLinkSavedListing,
+ tradeLinkSaveDefinitelyRejected,
  serializeTradeLinkDocumentCsv,
  prepareTradeLinkDraftCommand,
  renderTradeLinkDraftLineItem,snapshotTradeLinkDraftLineItems,restoreTradeLinkPendingSave,updateTradeLinkDraftLocalAmounts,
@@ -4217,6 +4218,8 @@ async function commitTradeLinkDraft(form){
      lineDrafts:snapshotTradeLinkDraftLineItems(form),
      error:err?.message||'Invalid Draft input. Nothing saved.',message:''};
     render();
+    if(err?.message?.startsWith('Invalid Quotation contact email.'))
+     root.querySelector('[data-tradelink-draft-form] [name="customerEmail"]')?.focus({preventScroll:true});
    }
    return;
   }
@@ -4303,7 +4306,12 @@ async function commitTradeLinkDraft(form){
    state.tradeLinkDraft.message='';
   }
  }finally{
-  if(same()){state.tradeLinkDraft.busy=false;render();}
+  if(same()){
+   state.tradeLinkDraft.busy=false;
+   render();
+   if(state.tradeLinkDraft.error?.startsWith('Invalid Quotation contact email.'))
+    root.querySelector('[data-tradelink-draft-form] [name="customerEmail"]')?.focus({preventScroll:true});
+  }
  }
 }
 /** Advisory readiness preview; existing signed read, no mutation or new gate. */
@@ -13888,6 +13896,13 @@ async function discardTradeLinkRecovery(){
 function captureTradeLinkDraftFields(event){
  const form=event.target?.closest?.('[data-tradelink-draft-form]');
  if(!form||!tradeLinkDraftRoute()||state.tradeLinkDraft.busy||state.tradeLinkDraft.pendingSave)return false;
+ if(event.target?.name==='customerEmail'&&
+    state.tradeLinkDraft.error?.startsWith('Invalid Quotation contact email.')){
+  state.tradeLinkDraft.error='';
+  event.target.removeAttribute('aria-invalid');
+  event.target.removeAttribute('aria-describedby');
+  root.querySelector('#tl-quotation-contact-email-error')?.remove();
+ }
  // Switch only the associated custom input; never re-render the editor.
  const choice=event.target?.closest?.('[data-tl-commercial-choice]');
  if(choice&&event.target.matches('select')){
