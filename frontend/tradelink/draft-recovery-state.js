@@ -5,7 +5,7 @@ export const RECOVERY_MAX_BYTES=4*1024*1024;
 export const RECOVERY_TYPES=Object.freeze(['esi','quotation','packing','delivery','payment','po']);
 export const RECOVERY_FIELDS=Object.freeze([
  'documentType','documentNumber','documentStatus','date','dueDate','vendorId','quoteStatus',
- 'customerName','customerAddress','referenceNumber','customerTin','customerEmail','customerPhone','currency',
+ 'customerName','customerContact','customerAddress','referenceNumber','customerTin','customerEmail','customerPhone','currency',
  'vatType','discountType','discountValue','exchangeRate','checkedBy','deliveredBy','receivedBy',
  'verifiedBy','approvedBy','verifiedByEmail','approvedByEmail','paymentParticulars','cashAmount',
  'chequeAmount','bankName','chequeNumber','validity','deliveryCommitment','paymentTerms',
