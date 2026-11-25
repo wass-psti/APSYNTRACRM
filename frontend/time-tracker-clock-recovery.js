@@ -31,19 +31,27 @@ export function clockInSnapshotOutcome(snapshot,{
  const baseline=Number(baselineRevision),revision=Number(snapshot.revision);
  if(!Number.isSafeInteger(revision)||revision<baseline)return 'UNVERIFIED';
  const previous=new Set(Array.isArray(previousRecordIds)?previousRecordIds:[]);
- const matches=snapshot.records.filter(row=>row&&typeof row.id==='string'&&
-  !previous.has(row.id)&&(!recordId||row.id===recordId)&&
-  row.location===location&&row.department===department&&safeTime(row.clockIn));
- if(matches.length===1){
-  const row=matches[0];
-  if(revision<=baseline)return 'UNVERIFIED';
-  if(row.status==='Active'&&row.clockOut===null&&snapshot.active?.id===row.id)
-   return 'CONFIRMED';
-  if(row.status==='Completed'&&safeTime(row.clockOut)&&snapshot.active?.id!==row.id)
-   return 'CONFIRMED';
-  return 'UNVERIFIED';
+ // Compare record identity first. A new record with unexpected details is
+ // ambiguous; it must not be mistaken for a Clock-In that never committed.
+ const newRecords=snapshot.records.filter(row=>row&&typeof row.id==='string'&&
+  !previous.has(row.id)&&(!recordId||row.id===recordId));
+ if(newRecords.length===0){
+  // A receipt already supplies the committed record identity. Missing that
+  // exact record is a readback conflict, not proof that the write never ran.
+  if(recordId!==null)return 'UNVERIFIED';
+  // The revision belongs to the shared workspace document and may advance
+  // because another employee changed attendance. No new actor record plus an
+  // explicit null active session is sufficient to resolve this Clock-In.
+  return snapshot.active===null?'NOT_COMMITTED':'UNVERIFIED';
  }
- if(revision===baseline&&!snapshot.active)return 'NOT_COMMITTED';
+ if(newRecords.length!==1||revision<=baseline)return 'UNVERIFIED';
+ const row=newRecords[0];
+ if(row.location!==location||row.department!==department||!safeTime(row.clockIn))
+  return 'UNVERIFIED';
+ if(row.status==='Active'&&row.clockOut===null&&snapshot.active?.id===row.id)
+  return 'CONFIRMED';
+ if(row.status==='Completed'&&safeTime(row.clockOut)&&snapshot.active?.id!==row.id)
+  return 'CONFIRMED';
  return 'UNVERIFIED';
 }
 
