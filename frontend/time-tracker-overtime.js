@@ -286,7 +286,7 @@ export function renderTimeTrackerOvertime({
  '<button type="button" class="'+(canManage?'tt-ot-reference-secondary':'tt-ot-reference-primary')+'" data-action="tt-ot-open">'+(canManage?'File my overtime':'+ File Overtime')+'</button>'+
  (canManage?'<button type="button" class="tt-ot-reference-primary" data-action="tt-ot-manual-open">+ File Overtime</button>':'')+'</div></header>'+
  '<div class="tt-ot-reference-metrics">'+metric('Approved overtime this week',minutesLabel(m.approvedMinutes).trim(),m.approved+' requests approved')+
- metric('Awaiting approval',m.submitted,minutesLabel(m.pendingMinutes).trim()+' total · Review below','tt-ot-reference-pending')+
+ metric('Awaiting approval',m.submitted,minutesLabel(m.pendingMinutes).trim()+' total · Review below',m.submitted?'tt-ot-reference-pending':'')+
  metric('Rejected',m.rejected,minutesLabel(m.rejectedMinutes).trim())+'</div>'+
  '<section class="tt-ot-reference-table" aria-label="Weekly overtime records"><div class="tt-ot-reference-week">'+
  '<div class="tt-ot-reference-week-nav"><button type="button" data-action="tt-ot-prev" aria-label="Previous week"'+(opts.weekOffset<=-TT_OT_MAX_WEEK_OFFSET?' disabled':'')+'>‹</button>'+
@@ -299,7 +299,8 @@ export function renderTimeTrackerOvertime({
  '<div class="tt-ot-reference-search"><label for="tt-ot-search">Search requests</label><input id="tt-ot-search" type="search" maxlength="120" placeholder="Search employee or reason…" value="'+esc(opts.search)+'"><button type="button" data-action="tt-ot-sort">Date '+(opts.sort==='oldest'?'↑':'↓')+'</button></div>'+
  '<div class="tt-ot-reference-row tt-ot-reference-labels" aria-hidden="true"><span>Employee</span><span>Date</span><span>Time</span><span>Hours</span><span>Reason</span><span>Status</span><span>Actions</span></div>'+
  m.statusRows.map(r=>row(r,access,m.search,expandedRequestIds,access.otContractActive===true)).join('')+
- '<div class="tt-ot-empty" data-tt-ot-empty'+(m.visible.length?' hidden':'')+'><strong>No matching requests</strong><p>Try a different week, search or status.</p></div>'+
+ '<div class="tt-ot-empty" data-tt-ot-empty'+(m.visible.length?' hidden':'')+'><span class="tt-ot-reference-empty-icon" aria-hidden="true">◷</span>'+
+ (m.submitted+m.approved+m.rejected===0?'<strong>No overtime this week</strong><p>Overtime requests for this week will appear here.</p><button type="button" class="tt-ot-reference-primary" data-action="'+(canManage?'tt-ot-manual-open':'tt-ot-open')+'">+ File Overtime</button>':'<strong>No matching requests</strong><p>Try a different week, search or status.</p>')+'</div>'+
  '<footer class="tt-ot-reference-footer"><span>Manual entries are tagged</span><strong>'+m.visible.length+' of '+m.statusRows.length+' total</strong></footer></section>'+
  (modalOpen==='manual'?manualRequestForm(form,access,now,busy):modalOpen?requestForm(form,now,access.otContractActive===true,busy):'')+'</section>';
 }
