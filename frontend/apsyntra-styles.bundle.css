@@ -39932,7 +39932,6 @@ html[data-aps-monday-theme="dark"]
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-
 /* frontend/tradelink-document-type-ui.css */
 /* CP-TL-DOCUMENT-TYPE-UI-01 — Full-width document selector below the editor header. */
 .tl-reference-portal[data-tl-section="drafts"][data-tl-can-create="true"] .tl-app-layout{
