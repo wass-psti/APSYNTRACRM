@@ -132,7 +132,7 @@ test('Reference Log filters combine signed view, department, location, and inclu
  assert.equal(filterTimeTrackerLogRows(records,{department:'Finance'},now).length,0);
  const html=render({adminFullAccess:true,selectedIds:['a']});
  for(const token of ['tt-log-filter-popover','tt-log-department','tt-log-filter-apply','tt-log-filter-reset','tt-log-row-select','aria-checked="mixed"','tt-log-reference-header','tt-log-row-date'])assert.ok(html.includes(token),token);
- assert.match(html,/09:00:00/);
+ assert.match(html,/09:00:00 AM/);
  assert.match(html,/Nov 4, 2026/);
  assert.doesNotMatch(render(),/data-action="tt-log-row-select"/);
 });
@@ -169,13 +169,19 @@ test('Attendance Log keeps status separate from clock-out time and defines all e
  assert.equal(boundTimeTrackerLogWidth(207),208);
  });
 
-test('Log clock-out uses Philippine 12-hour time with seconds while clock-in and active placeholder stay unchanged',()=>{
+test('Log clock-in and clock-out use Philippine 12-hour time with seconds and preserve the active clock-out placeholder',()=>{
  const rows=[...records,{...records[1],id:'noon',clockOut:'2026-11-03T04:00:00Z'},
   {...records[1],id:'midnight',clockOut:'2026-11-03T16:00:00Z'}];
  const html=render({records:rows});
  const times=[...html.matchAll(/class="tt-log-row-out"[^>]*>([^<]+)<\/span>/g)].map(match=>match[1]);
  assert.deepEqual(times.sort(),['—','05:00:00 PM','12:00:00 AM','12:00:00 PM'].sort());
- assert.match(html,/class="tt-log-row-clock"[^>]*><strong>09:00:00<\/strong>/);
+ assert.match(html,/class="tt-log-row-clock"[^>]*><strong>09:00:00 AM<\/strong>/);
+ const clockInRows=[records[0],{...records[0],id:'in-pm',clockIn:'2026-11-04T05:30:00Z'},
+  {...records[0],id:'in-noon',clockIn:'2026-11-04T04:00:00Z'},
+  {...records[0],id:'in-midnight',clockIn:'2026-11-03T16:00:00Z'}];
+ const clockInHtml=render({records:clockInRows});
+ const clockInTimes=[...clockInHtml.matchAll(/class="tt-log-row-clock"[^>]*><strong>([^<]+)<\/strong>/g)].map(match=>match[1]);
+ assert.deepEqual(clockInTimes.sort(),['09:00:00 AM','01:30:00 PM','12:00:00 PM','12:00:00 AM'].sort());
 });
 
 test('Work Duration is blank until completion and short shifts have no lunch deduction',()=>{
