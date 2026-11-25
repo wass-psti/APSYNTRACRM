@@ -62,7 +62,7 @@ export function renderTradeLinkUserManual(){
    '<p class="tl-eyebrow">TRADELINK · HELP CENTER</p><h2 id="tl-manual-title">User Manual</h2>'+
    '<p>A practical guide to preparing documents, completing reviews, printing approved revisions and reading analytics.</p>'+
    '<div class="tl-manual-meta"><span>7 topics</span><span>Document workflow reference</span></div>'+
-   '<div class="tl-manual-hero-actions"><a class="tl-manual-primary-link" href="#tl-manual-lifecycle">Start with the basics <span aria-hidden="true">→</span></a>'+
+   '<div class="tl-manual-hero-actions"><a class="tl-manual-primary-link" href="#/tradelink/manual" data-tl-manual-target="lifecycle">Start with the basics <span aria-hidden="true">→</span></a>'+
     '<a class="tl-manual-secondary-link" href="#/tradelink/documents">Open All Documents</a></div></div>'+
    '<div class="tl-manual-hero-art" aria-hidden="true"><span class="tl-manual-art-sheet">▤</span><span class="tl-manual-art-check">✓</span></div></header>'+
   '<section class="tl-manual-quickstart" aria-labelledby="tl-manual-quickstart-title">'+
@@ -76,7 +76,7 @@ export function renderTradeLinkUserManual(){
    '<div class="tl-manual-search"><label for="tl-manual-search-input">Search topics</label><div class="tl-manual-search-control"><span aria-hidden="true">⌕</span><input id="tl-manual-search-input" data-tl-manual-search type="search" placeholder="Search approvals, numbering, PDF..." autocomplete="off"/><button type="button" data-tl-manual-clear aria-label="Clear manual search">Clear</button></div>'+
     '<p data-tl-manual-results aria-live="polite">7 topics</p></div></div>'+
   '<div class="tl-manual-layout"><nav class="tl-manual-index" aria-label="Manual topics"><strong>IN THIS GUIDE</strong>'+
-   TRADELINK_MANUAL_SECTIONS.map(section=>'<a href="#tl-manual-'+section.id+'"><span>'+section.number+'</span>'+section.title+'</a>').join('')+
+   TRADELINK_MANUAL_SECTIONS.map(section=>'<a href="#/tradelink/manual" data-tl-manual-target="'+section.id+'"><span>'+section.number+'</span>'+section.title+'</a>').join('')+
   '</nav><div class="tl-manual-content">'+cards+
    '<p class="tl-manual-empty" data-tl-manual-empty hidden>No topics match that search. Try another keyword or clear the search.</p>'+
    '<p class="tl-manual-footnote">This guide describes the current TradeLink workflow and reporting behavior. Use the document’s saved revision and signed application data as the authoritative record.</p>'+
@@ -95,9 +95,9 @@ export function filterTradeLinkManualSections(container,query=''){
   section.hidden=!matches;
   if(matches)visible++;
  }
- for(const link of manual.querySelectorAll('.tl-manual-index a[href^="#tl-manual-"]')){
-  const sectionId=String(link.getAttribute('href')||'').slice(1);
-  const section=sections.find(item=>item.id===sectionId);
+ for(const link of manual.querySelectorAll('[data-tl-manual-target]')){
+  const targetId='tl-manual-'+String(link.getAttribute('data-tl-manual-target')||'');
+  const section=sections.find(item=>item.id===targetId);
   link.hidden=Boolean(section?.hidden);
  }
  const count=manual.querySelector('[data-tl-manual-results]');
@@ -249,6 +249,20 @@ export function mountTradeLinkTabMotion(container){
  if(!nav)return;
  const manualScreen=container.querySelector('.tl-user-manual');
  const manualSearch=manualScreen?.querySelector('[data-tl-manual-search]');
+ if(manualScreen&&!manualScreen.dataset.navigationMounted){
+  for(const link of manualScreen.querySelectorAll('[data-tl-manual-target]')){
+   link.addEventListener('click',event=>{
+    event.preventDefault();
+    const targetId='tl-manual-'+String(link.getAttribute('data-tl-manual-target')||'');
+    const target=manualScreen.querySelector('#'+targetId);
+    if(!target||target.hidden)return;
+    for(const section of manualScreen.querySelectorAll('.tl-manual-section'))
+     section.classList.toggle('is-targeted',section===target);
+    target.scrollIntoView({behavior:reduced()?'auto':'smooth',block:'start'});
+   });
+  }
+  manualScreen.dataset.navigationMounted='true';
+ }
  if(manualSearch&&!manualSearch.dataset.mounted){
   const updateManualResults=()=>filterTradeLinkManualSections(manualScreen,manualSearch.value);
   manualSearch.addEventListener('input',updateManualResults);
