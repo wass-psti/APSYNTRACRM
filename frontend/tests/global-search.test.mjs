@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
  normalizeGlobalSearchQuery,isGlobalSearchShortcut,isGlobalSearchEditableTarget,
- buildGlobalSearchResults,GLOBAL_SEARCH_MIN_QUERY,GLOBAL_SEARCH_MAX_RESULTS
+ buildGlobalSearchResults,globalSearchResultKind,GLOBAL_SEARCH_MIN_QUERY,GLOBAL_SEARCH_MAX_RESULTS
 } from '../global-search.js';
 import {createNativeSearchAdapter,createNativeSearchRegistry,
  normalizeNativeSearchResult,scoreNativeSearchResult} from '../global-search-adapters.js';
@@ -100,7 +100,7 @@ test('uses textContent, bounded live queries, stale-response suppression and acc
  assert.match(source,/meta\.textContent=item\.subtitle/);
  assert.match(source,/option\.setAttribute\('role','option'\)/);
  assert.match(source,/input\.setAttribute\('role','combobox'\)/);
- assert.match(source,/input\.setAttribute\('aria-label','Search modules, boards and records'\)/);
+ assert.match(source,/input\.setAttribute\('aria-label','Search applications, boards and records'\)/);
  assert.match(source,/event\.key==='ArrowDown'\|\|event\.key==='ArrowUp'/);
  assert.match(source,/event\.key==='Enter'/);
  assert.match(source,/event\.key==='Escape'/);
@@ -320,4 +320,27 @@ test('specialized native search results retain exact record identity in refresha
  assert.ok(app.includes("query:routeQuery"));
  assert.ok(app.includes("parts[1]==='attendance'&&validUuid(parts[2])"));
  assert.ok(app.includes("parts[3]==='record'&&parts[4]&&validUuid(parts[5])"));
+});
+
+test('application identification is presentation-only and distinguishes same-name records and boards',()=>{
+ const navigation=[{title:'TimeTracker',subtitle:'Navigation',href:'#/time-tracker',isApplication:true},
+  {title:'TimeTracker help',subtitle:'Navigation',href:'#/help'}];
+ const modules=[{key:'timetracker',name:'TimeTracker',description:'Attendance',recordType:'Attendance session'}];
+ const boards=[{id:activeBoard.id,name:'TimeTracker',status:'active'}];
+ const records=[{...record,item_title:'TimeTracker',board_name:'TimeTracker'},
+  {native:true,id:'qa-session',title:'TimeTracker',subtitle:'Attendance',href:'#/time-tracker/attendance/qa',recordType:'Attendance session',score:0}];
+ const options={navigation,modules,boards,records};
+ const results=buildGlobalSearchResults('TimeTracker',options);
+ assert.equal(results.length,6);
+ for(const row of results){
+  const expected={module:'Application',page:row.href==='#/time-tracker'?'Application':'Page',board:'Board',record:'Record','native-record':'Attendance session'};
+  assert.equal(globalSearchResultKind(row),expected[row.type]);
+ }
+ const plain=buildGlobalSearchResults('TimeTracker',{...options,navigation:navigation.map(({isApplication,...row})=>row)});
+ assert.deepEqual(results.map(({isApplication,...row})=>row),plain);
+ assert.equal(globalSearchResultKind({type:'native-record',application:'TimeTracker'}),'Application record');
+ assert.equal(globalSearchResultKind({type:'board',isApplication:true}),'Board');
+ const quick=buildGlobalSearchResults('',options);
+ assert.equal(globalSearchResultKind(quick.find(row=>row.href==='#/time-tracker')),'Application');
+ assert.equal(globalSearchResultKind(quick.find(row=>row.type==='module')),'Application');
 });

@@ -61,7 +61,7 @@ export function buildGlobalSearchResults(query,{boards=[],modules=BOARD_MODULES,
 
  if(!q){
   for(const item of nav.slice(0,6))add(result('page',item.title,item.subtitle||'Go to page',
-   item.href,0,{id:item.href}));
+   item.href,0,{id:item.href,...(item.isApplication===true?{isApplication:true}:{})}));
   for(const module of moduleList.slice(0,6)){
    const board=visibleBoards.find(entry=>String(entry.name||'').toLocaleLowerCase()===
     String(module.name||'').toLocaleLowerCase());
@@ -83,7 +83,7 @@ export function buildGlobalSearchResults(query,{boards=[],modules=BOARD_MODULES,
  for(const item of nav){
   const score=matchScore([item.title,item.subtitle].join(' '),q);
   if(score!==null)add(result('page',item.title,item.subtitle||'Navigation',item.href,
-   score,{id:item.href}));
+   score,{id:item.href,...(item.isApplication===true?{isApplication:true}:{})}));
  }
 
  for(const board of visibleBoards){
@@ -125,12 +125,25 @@ export function buildGlobalSearchResults(query,{boards=[],modules=BOARD_MODULES,
  return out.slice(0,Math.max(1,Math.min(GLOBAL_SEARCH_MAX_RESULTS,limit)));
 }
 
+/** Presentation only: native application launch links retain their page type,
+ * score and href; module results and application shortcuts share one label. */
+export function globalSearchResultKind(item){
+ if(item.type==='module'||(item.type==='page'&&item.isApplication===true))return 'Application';
+ if(item.type==='native-record')return item.recordType||'Application record';
+ if(item.type==='record')return 'Record';
+ if(item.type==='board')return 'Board';
+ return 'Page';
+}
+
 function collectNavigation(doc){
+ const applicationHrefs=new Set([...doc.querySelectorAll('#app .aps-sidebar a[data-global-search-application="true"]')]
+  .map(anchor=>anchor.getAttribute('href')));
  return [...doc.querySelectorAll('#app .aps-sidebar nav a[href^="#/"],#app .main-content a[href^="#/"]')]
   .filter(anchor=>!anchor.closest('[hidden],[aria-hidden="true"]'))
   .map(anchor=>({title:String(anchor.getAttribute('aria-label')||anchor.textContent||'')
    .replace(/\s+/g,' ').trim().slice(0,100),
-   subtitle:'Navigation',href:anchor.getAttribute('href')}))
+   subtitle:'Navigation',href:anchor.getAttribute('href'),
+   isApplication:applicationHrefs.has(anchor.getAttribute('href'))}))
   .filter(item=>item.title&&item.href&&item.href.startsWith('#/'));
 }
 
@@ -158,7 +171,7 @@ export function startGlobalSearch({root=globalThis.document?.body,
  const headingCopy=doc.createElement('div');
  const title=doc.createElement('h2');title.id=id+'-title';title.textContent='Search APSYNTRA CRM';
  const description=doc.createElement('p');description.id=id+'-description';
- description.textContent='Find modules, boards, records and workspace content.';
+ description.textContent='Find applications, boards, records and workspace content.';
  headingCopy.append(title,description);
  const closeButton=doc.createElement('button');closeButton.type='button';
  closeButton.className='aps-global-search-close';closeButton.textContent='×';
@@ -168,9 +181,9 @@ export function startGlobalSearch({root=globalThis.document?.body,
  const searchGlyph=doc.createElement('span');searchGlyph.className='aps-global-search-glyph';
  searchGlyph.setAttribute('aria-hidden','true');searchGlyph.textContent='⌕';
  const input=doc.createElement('input');input.type='text';input.className='aps-global-search-input';
- input.placeholder='Search modules, boards and records…';input.autocomplete='off';
+ input.placeholder='Search applications, boards and records…';input.autocomplete='off';
  input.spellcheck=false;input.maxLength=GLOBAL_SEARCH_MAX_QUERY;
- input.setAttribute('role','combobox');input.setAttribute('aria-label','Search modules, boards and records');
+ input.setAttribute('role','combobox');input.setAttribute('aria-label','Search applications, boards and records');
  input.setAttribute('aria-autocomplete','list');
  input.setAttribute('aria-haspopup','listbox');input.setAttribute('aria-expanded','false');
  input.setAttribute('aria-controls',id+'-results');input.setAttribute('aria-activedescendant','');
@@ -222,7 +235,8 @@ export function startGlobalSearch({root=globalThis.document?.body,
    const meta=doc.createElement('span');meta.className='aps-global-search-option-subtitle';meta.textContent=item.subtitle;
    copy.append(label,meta);
    const kind=doc.createElement('span');kind.className='aps-global-search-option-kind';
-   kind.textContent=item.type==='native-record'?(item.recordType||'Application record'):item.type==='record'?'Record':item.type==='board'?'Board':item.type==='module'?'Module':'Page';
+   kind.textContent=globalSearchResultKind(item);
+   if(kind.textContent==='Application')kind.classList.add('is-application');
    option.append(icon,copy,kind);
    if(item.excerpt){
     const excerpt=doc.createElement('span');excerpt.className='aps-global-search-option-excerpt';
@@ -233,7 +247,7 @@ export function startGlobalSearch({root=globalThis.document?.body,
   if(!results.length){
    const empty=doc.createElement('div');empty.className='aps-global-search-empty';
    empty.textContent=normalizeGlobalSearchQuery(input.value).length>=GLOBAL_SEARCH_MIN_QUERY?
-    'No matching modules, boards or records.':'Type at least 2 characters to search.';
+    'No matching applications, boards or records.':'Type at least 2 characters to search.';
    list.append(empty);
   }
   input.setAttribute('aria-expanded',String(results.length>0));
@@ -266,7 +280,7 @@ export function startGlobalSearch({root=globalThis.document?.body,
    if(serial!==requestSerial||!scopeStillCurrent()||scopeAtStart!==currentScopeKey)return;
    records=Array.isArray(found)?found:[];
    render();
-   setStatus(results.length?results.length+' results':'No matching modules, boards or records.');
+   setStatus(results.length?results.length+' results':'No matching applications, boards or records.');
   }catch(error){
    if(serial!==requestSerial||!scopeStillCurrent())return;
    records=[];render();
@@ -282,7 +296,7 @@ export function startGlobalSearch({root=globalThis.document?.body,
    setStatus(query?'Enter one more character to search records.':'Search across the current workspace.');
    return;
   }
-  setStatus('Filtering modules and boards…');
+  setStatus('Filtering applications and boards…');
   debounceHandle=win.setTimeout(()=>{debounceHandle=null;void runSearch();},180);
  }
  function close({restoreFocus=true}={}){
@@ -308,7 +322,7 @@ export function startGlobalSearch({root=globalThis.document?.body,
    const found=await getBoards();
    if(!scopeStillCurrent()||scopeAtStart!==currentScopeKey)return true;
    boards=Array.isArray(found)?found:[];navigation=collectNavigation(doc);render();
-   setStatus('Search modules, boards and records.');
+   setStatus('Search applications, boards and records.');
   }catch(error){
    if(scopeStillCurrent()){
     boards=[];render();setStatus('Workspace board search is temporarily unavailable.');onError(error);

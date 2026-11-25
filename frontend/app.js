@@ -1019,11 +1019,12 @@ function renderLogin(message='',{mode=authViewFromHash(),notice='',emailValue=''
 }
 
 /** Visual-only route links. Permission-aware inclusion stays server-derived. */
-function sidebarNav(href,label,icon,active,{count=null}={}){
+function sidebarNav(href,label,icon,active,{count=null,application=false}={}){
  const selected=active?' aria-current="page"':'';
  const badge=count!==null?'<span class="nav-count">'+e(count)+'</span>':'';
  return '<a class="nav-link '+(active?'active':'')+'" href="'+e(href)+'" '+
-  'title="'+e(label)+'" aria-label="'+e(label)+'"'+selected+'>'+
+  'title="'+e(label)+'" aria-label="'+e(label)+'"'+selected+
+  (application?' data-global-search-application="true"':'')+'>'+
   '<span class="nav-ico">'+sidebarIcon(icon)+'</span>'+
   '<span class="nav-label">'+e(label)+'</span>'+badge+'</a>';
 }
@@ -1163,7 +1164,7 @@ function sidebar(){
   workspaceApplicationsForNavigation(state.context?.workspace_id,state.boards);
  const applicationNav=applications.map(application=>sidebarNav(
   application.href,application.label,application.icon,
-  active(application.navigationKey)
+  active(application.navigationKey),{application:true}
  )).join('');
  const applicationSection=applications.length?
   '<div class="side-section sidebar-nav-section">Applications</div>'+applicationNav:'';
