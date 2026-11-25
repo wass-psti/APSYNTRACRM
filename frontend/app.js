@@ -221,7 +221,7 @@ import {timeTrackerMyHoursWeek} from './time-tracker-my-hours.js';
 import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
 import {probeTimeTrackerMonitor} from './time-tracker-monitor.js';
 import {buildTimeTrackerAdminPatch,buildTimeTrackerManualClockOut,TT_ADMIN_RECORD_LIMIT} from './time-tracker-record-management.js';
-import {manualAttendancePreviewRoster,syncManualAttendanceForm} from './apps/TimeTracker/time-tracker-manual-attendance-ui.js';
+import {manualAttendancePreviewRoster,syncManualAttendanceForm,validateManualAttendanceForm} from './apps/TimeTracker/time-tracker-manual-attendance-ui.js';
 import {manualAttendanceToday} from './apps/TimeTracker/time-tracker-manual-attendance.js';
 import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
 import {TT_BOARD_GPS_PROJECTION_ENABLED,loadTimeTrackerBoardGps,renderTimeTrackerBoardGps} from './time-tracker-board-projection.js';
@@ -891,14 +891,14 @@ function maintainTimeTrackerClock(){
 }
 /** A periodic signed read reconciles administrator corrections made in another browser.
  * No local attendance mutation, automatic write, or trust in other tabs.
- * Active Clock is the only polled screen; background/hidden views are not polled.
+ * Poll both idle and active regular Clock screens; never poll hidden views.
  */
 async function refreshCorrectedTimeTrackerClock({onFocus=false}={}){
  const before=state.ttAttendance;
  if(ttClockSyncInFlight||document.hidden||!auth.isSignedIn||
    state.view!=='board'||state.tab!=='attendance'||state.ttView!=='clock'||
-   before?.status!=='VERIFIED_READ'||!before.active||state.ttBusy||
-   state.ttClockPending||state.ttLogAdminBusy||navigator.onLine===false)return;
+   before?.status!=='VERIFIED_READ'||state.ttBusy||state.ttLogAdminBusy||navigator.onLine===false||
+   ['SHARED_LOGIN','SHARED_DISABLED','SERVICE_UNAVAILABLE','SETUP_REQUIRED'].includes(before.ojtRoster?.mode))return;
  const now=Date.now();
  if(now-ttClockLastCheckAt<(onFocus?TT_CLOCK_FOCUS_MIN_MS:TT_CLOCK_CORRECTION_POLL_MS))return;
  ttClockLastCheckAt=now;
@@ -909,13 +909,14 @@ async function refreshCorrectedTimeTrackerClock({onFocus=false}={}){
   const fresh=await timeTracker.snapshot(boardId,{clockOnly:true});
   if(route!==routeSerial||run!==state.ttRunId||document.hidden||!auth.isSignedIn||
      state.view!=='board'||state.tab!=='attendance'||state.ttView!=='clock'||
-     state.ttBusy||state.ttClockPending||state.boardId!==boardId||
+     state.ttBusy||state.boardId!==boardId||
      state.context?.user_id!==actor||state.context?.workspace_id!==workspace||
      fresh?.status!=='VERIFIED_READ'||fresh.access?.userId!==actor||
      fresh.access?.workspaceId!==workspace||fresh.access?.boardId!==boardId||
      Number(fresh.revision)<=Number(state.ttAttendance?.revision))return;
   const previous=state.ttAttendance;
-  const changed=previous.active?.id!==fresh.active?.id||
+  const sessionChanged=previous.active?.id!==fresh.active?.id;
+  const changed=sessionChanged||
    previous.active?.clockIn!==fresh.active?.clockIn||
    previous.active?.location!==fresh.active?.location||
    previous.active?.department!==fresh.active?.department||
@@ -932,9 +933,25 @@ async function refreshCorrectedTimeTrackerClock({onFocus=false}={}){
    previous.autoClockout?.cutoffAt!==fresh.autoClockout?.cutoffAt||
    previous.autoClockoutUnavailable!==fresh.autoClockoutUnavailable;
   state.ttAttendance=fresh;
-  if(changed){
+  const reconciled=state.ttClockPending&&reconcileTimeTrackerClock(fresh)==='CONFIRMED';
+  if(sessionChanged||reconciled){
+   // A signed session start/end changes the action form itself. Reconcile
+   // locally with current signed capabilities and retained work-plan draft.
+   state.ttClockStage='idle';state.ttGeoPromptVisible=false;
+   state.ttGeoMessage='';state.ttGeoPermission='unknown';
+   if(!state.ttClockPending){
+    state.ttError='';
+    if(!reconciled)state.ttSuccess=fresh.active?
+     'Active attendance synchronized from the server.':
+     'Attendance closed on the server. You can start a new session.';
+   }
+  }
+  if(sessionChanged||reconciled||(changed&&!state.ttClockPending)){
    syncTimeTrackerClockView(root,{
     result:fresh,now:new Date(),clockPending:!!state.ttClockPending,
+    forceReconcile:sessionChanged||!!reconciled,clearError:!state.ttError,
+    displayName:name(),referenceShell:state.ttStandalone===true,
+    gpsDiagnosticsAvailable:getTimeTrackerGpsDiagnostics().events.length>0,
     clockPendingAction:state.ttClockPending?.action||'clock-out',
     locationPreference:readTimeTrackerLocationPreference(
      typeof localStorage==='undefined'?null:localStorage,
@@ -5117,8 +5134,35 @@ async function saveTimeTrackerAdminEditor(form){
  if(!form.reportValidity())return;
  const editor=state.ttLogAdminEditor;
  if(editor.mode==='manual'){
-  // Manual create remains fail-closed until the signed creation RPC and projection are deployed.
-  state.ttLogAdminError='Signed manual attendance creation is unavailable. No record was saved.';render();return;
+  if(!editor.signedCreateReady||editor.uncertain||state.ttAttendance.access.moduleRole!=='System Admin'||
+     editor.actorId!==auth.userId||editor.workspaceId!==state.context?.workspace_id||
+     editor.boardId!==state.boardId){
+   state.ttLogAdminError='Signed manual attendance creation is unavailable. No record was saved.';render();return;
+  }
+  let entry;
+  try{entry=validateManualAttendanceForm(form,editor);}
+  catch(err){state.ttLogAdminError=errorMessage(err);render();return;}
+  const seq=routeSerial,boardId=state.boardId;
+  state.ttLogAdminBusy=true;state.ttLogAdminError='';render();
+  try{
+   const receipt=await timeTracker.createManualClockIn(boardId,entry,editor.revision);
+   if(seq!==routeSerial||state.boardId!==boardId||!timeTrackerAdminLogReady())return;
+   state.ttLogAdminEditor=null;state.ttLogAdminBusy=false;
+   await loadTimeTracker(seq);
+   if(seq!==routeSerial||state.boardId!==boardId)return;
+   if(state.ttAttendance?.status==='VERIFIED_READ'&&
+      (state.ttAttendance.log?.rows||[]).some(row=>row.id===receipt.recordId))
+    state.ttLogAdminSuccess='Manual clock-in recorded. The employee can refresh their Clock.';
+   else state.ttLogAdminError='Clock-in committed. Refresh the signed Log before another change.';
+  }catch(err){
+   if(seq===routeSerial&&state.boardId===boardId&&state.ttLogAdminEditor===editor){
+    editor.uncertain=true;
+    state.ttLogAdminError=errorMessage(err)+' Refresh the signed Log before retrying.';
+   }
+  }finally{
+   if(seq===routeSerial&&state.boardId===boardId){state.ttLogAdminBusy=false;render();}
+  }
+  return;
  }
  if(editor.actorId!==auth.userId||editor.workspaceId!==state.context?.workspace_id||
     editor.boardId!==state.boardId){
@@ -5615,7 +5659,8 @@ async function submitTimeTrackerAction(form,actionName){
   commitAttempted=true;
   rememberTimeTrackerClockPending({...context,receiptVerified:false});
   const receipt=await timeTracker.commit(boardId,{
-   action:actionName,location,department,workNote,geo
+   action:actionName,location,department,workNote,geo,
+   expectedRecordId:actionName==='clock-out'?context.recordId:null
   });
   recordTimeTrackerGpsDiagnostic({phase:'attendance-commit-success',action:actionName,
    result:'committed'});
@@ -10745,7 +10790,25 @@ async function action(name,button){
   state.ttLogAdminEditor={mode:'manual',actorId:access.userId,workspaceId:access.workspaceId,
    boardId:access.boardId,roster:manualAttendancePreviewRoster(state.ttAttendance),
    signedCreateReady:false,draft:{date:manualAttendanceToday(),status:'active'}};
-  render();root.querySelector('#tt-attendance-admin-form select[name="employee"]')?.focus();break;
+  const editor=state.ttLogAdminEditor;
+  const seq=routeSerial,boardId=state.boardId;
+  state.ttLogAdminBusy=true;render();
+  try{
+   const ready=await timeTracker.manualClockInCapability(boardId);
+   if(seq===routeSerial&&state.ttLogAdminEditor===editor&&timeTrackerAdminLogReady()&&ready){
+    editor.signedCreateReady=true;editor.activeOnly=true;
+    editor.revision=state.ttAttendance.revision;
+   }
+  }catch(err){
+   if(seq===routeSerial&&state.ttLogAdminEditor===editor)
+    state.ttLogAdminError=errorMessage(err);
+  }finally{
+   if(seq===routeSerial&&state.ttLogAdminEditor===editor){
+    state.ttLogAdminBusy=false;render();
+    root.querySelector('#tt-attendance-admin-form select[name="employee"]')?.focus();
+   }
+  }
+  break;
  }
  case 'tt-log-admin-manual-clock-out':{
   if(!timeTrackerAdminLogReady()||state.ttAttendance.access.moduleRole!=='System Admin'||

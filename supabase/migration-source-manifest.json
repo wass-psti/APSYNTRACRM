@@ -2270,6 +2270,13 @@
       "sha256": "d2417020aae9aa021386daba47966e94f923bfa57203cd7aba35f9476bfb93c7"
     },
     {
+      "version": "20261125090000",
+      "name": "cp_tt_admin_manual_clockin",
+      "file": "20261125090000_cp_tt_admin_manual_clockin.sql",
+      "bytes": 12060,
+      "sha256": "a3a43c054d6d2e07385c1db9c3ae5a2996ddacde4207bbf848b4c2dbf93a706d"
+    },
+    {
       "version": "20261125100000",
       "name": "cp_tt_auto_clockout_isolation",
       "file": "20261125100000_cp_tt_auto_clockout_isolation.sql",
