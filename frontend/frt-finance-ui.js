@@ -383,12 +383,9 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
  if(selectedView==='executive')return html+renderFRTExecutiveDashboard(result)+'</section>';
  if(selectedView==='opex')return html+renderFRTOpexAnalytics(result)+'</section>';
  if(selectedView==='manual')return html+renderFRTManual(result)+'</section>';
- html+='<div class="frt-ref-deadlines" role="status"><span class="frt-ref-warning" aria-hidden="true">△</span>'+
-  '<div><strong>Pending Liquidation</strong><small>Bank-linked aging is shown only when signed company aggregates are available</small></div>'+
-  '<b>'+count(summary.pending_liquidation_count)+' pending</b></div>'+renderFRTLiquidationAging(result);
  html+='<div class="frt-ref-hero"><div class="frt-ref-hero-title"><span class="frt-ref-icon" aria-hidden="true">▣</span>'+
   '<div><h2>Fund Release Tracker</h2><p>Complete workflow from request to liquidation</p></div></div>'+
-  '<div class="frt-ref-toolbar"><span class="frt-ref-pill" title="Signed FRT company">▣ '+
+  '<div class="frt-ref-toolbar" role="group" aria-label="Fund Tracker actions"><span class="frt-ref-pill" title="Signed FRT company">▣ '+
   escape(result.companyCode)+'</span><span class="frt-ref-company-name">'+escape(selectedCompany?.name||'')+'</span>'+
   '<button class="frt-ref-action is-primary" type="button" data-action="frt-ui-dialog" data-frt-section="new" title="Create an authorized fund request">＋ New Fund Request</button>'+
   '<button class="frt-ref-action" type="button" disabled title="Bulk fund-request import is not connected">⇧ Bulk Import</button>'+
@@ -398,7 +395,10 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
   '<button class="frt-ref-action" type="button" disabled title="Domain export is not connected in this phase">⇩ Export</button>'+
   '<button class="frt-ref-action frt-ref-refresh" type="button" data-action="frt-finance-refresh" '+
    (busy?'disabled':'')+' aria-label="Refresh Fund Released Tracker">↻ Refresh</button></div></div>';
- const metrics=[['Total Requests','total_requests','violet','▥'],['Completed','completed','teal','✓'],
+html+='<div class="frt-ref-deadlines" role="status"><span class="frt-ref-warning" aria-hidden="true">△</span>'+
+  '<div><strong>Pending Liquidation</strong><small>Bank-linked aging is shown only when signed company aggregates are available</small></div>'+
+  '<b>'+count(summary.pending_liquidation_count)+' pending</b></div>'+renderFRTLiquidationAging(result);
+  const metrics=[['Total Requests','total_requests','violet','▥'],['Completed','completed','teal','✓'],
   ['In Progress','in_progress','orange','◷'],['Pending Approval','pending','rose','!']];
  html+='<div class="frt-ref-metrics">'+metrics.map(([label,key,tone,icon])=>
   '<article class="frt-ref-metric frt-ref-'+tone+'"><div><span>'+label+'</span><strong>'+count(summary[key])+ '</strong></div>'+
