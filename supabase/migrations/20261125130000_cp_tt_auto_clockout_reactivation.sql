@@ -66,20 +66,31 @@ REVOKE ALL ON FUNCTION private.tt_admin_manual_clockin_ready() FROM PUBLIC,anon,
 
 -- Guarded source patches retain existing attendance, OT, GPS, audit,
 -- projection, worker lock order and scoped employee eligibility contracts.
+-- Worker and reconciler use independent locks plus a shared control lock;
+-- activation/suspension take the exclusive control lock without blocking attendance.
 DO $patch$
 DECLARE d text; old text; replacement text; target text;
 BEGIN
  FOR target,old,replacement IN VALUES
   ('private.tt_reconcile_auto_clockout_sessions()',
    ' SELECT activated_at INTO v_activated_at FROM private.tt_auto_clockout_config WHERE config_key=''default'';',
-   $new$ IF NOT pg_catalog.pg_try_advisory_xact_lock(
-    pg_catalog.hashtextextended('tt-auto-clockout-worker',0)) THEN
+   $new$ IF NOT pg_catalog.pg_try_advisory_xact_lock_shared(
+    pg_catalog.hashtextextended('tt-auto-clockout-control',0))
+    OR NOT pg_catalog.pg_try_advisory_xact_lock(
+    pg_catalog.hashtextextended('tt-auto-clockout-reconciler',0)) THEN
     RETURN pg_catalog.jsonb_build_object('added',0,'skipped',0,'busy',true);
    END IF;
    SELECT activated_at INTO v_activated_at FROM private.tt_auto_clockout_config WHERE config_key='default';$new$),
   ('private.tt_reconcile_auto_clockout_sessions()',
    'IF v_activated_at IS NULL OR v_activated_at=''infinity''::timestamptz THEN',
    'IF private.tt_auto_clockout_mode() IS DISTINCT FROM ''active'' OR v_activated_at IS NULL OR v_activated_at=''infinity''::timestamptz THEN'),
+  ('private.tt_process_auto_clockouts()',
+   $old$IF NOT pg_catalog.pg_try_advisory_xact_lock(
+    pg_catalog.hashtextextended('tt-auto-clockout-worker',0)) THEN$old$,
+   $new$IF NOT pg_catalog.pg_try_advisory_xact_lock_shared(
+    pg_catalog.hashtextextended('tt-auto-clockout-control',0))
+    OR NOT pg_catalog.pg_try_advisory_xact_lock(
+    pg_catalog.hashtextextended('tt-auto-clockout-worker',0)) THEN$new$),
   ('private.tt_process_auto_clockouts()',
    'IF v_activated_at IS NULL OR v_activated_at=''infinity''::timestamptz THEN',
    'IF private.tt_auto_clockout_mode() IS DISTINCT FROM ''active'' OR v_activated_at IS NULL OR v_activated_at=''infinity''::timestamptz THEN'),
@@ -126,7 +137,7 @@ BEGIN
   OR p_expected_open IS NULL OR p_expected_open<0 THEN
   RAISE EXCEPTION 'Review current Philippine date and eligible open session count before activation' USING ERRCODE='22023';
  END IF;
- IF NOT pg_catalog.pg_try_advisory_xact_lock(pg_catalog.hashtextextended('tt-auto-clockout-worker',0)) THEN
+ IF NOT pg_catalog.pg_try_advisory_xact_lock(pg_catalog.hashtextextended('tt-auto-clockout-control',0)) THEN
   RAISE EXCEPTION 'Scheduler busy; retry after worker exits' USING ERRCODE='55P03';
  END IF;
  IF private.tt_auto_clockout_mode() IS DISTINCT FROM 'suspended' THEN
@@ -197,14 +208,14 @@ END;
 $activate$;
 REVOKE ALL ON FUNCTION private.tt_activate_isolated_auto_clockout(date,integer) FROM PUBLIC,anon,authenticated,service_role;
 
--- Operator suspension shares the scheduler lock. Never revive old enrollment,
+-- Operator suspension takes the exclusive control lock. Never revive old enrollment,
 -- alter OJT jobs, or modify canonical attendance.
 CREATE FUNCTION private.tt_suspend_isolated_auto_clockout()
 RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path='' SET lock_timeout='2s'
 AS $suspend$
 DECLARE v_job record;
 BEGIN
- IF NOT pg_catalog.pg_try_advisory_xact_lock(pg_catalog.hashtextextended('tt-auto-clockout-worker',0)) THEN
+ IF NOT pg_catalog.pg_try_advisory_xact_lock(pg_catalog.hashtextextended('tt-auto-clockout-control',0)) THEN
   RAISE EXCEPTION 'Scheduler busy; retry after worker exits' USING ERRCODE='55P03';
  END IF;
  UPDATE private.tt_auto_clockout_config SET activated_at='infinity'::timestamptz WHERE config_key='default';
