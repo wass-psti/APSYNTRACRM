@@ -25,6 +25,8 @@ test('reference sections render actual verified signed KPIs, chart labels, title
  assert.match(html,/data-action="frt-finance-refresh"/);
  assert.match(html,/role="img" aria-label="Request distribution: 13 completed, 18 in progress, 9 pending approval"/);
  assert.match(html,/data-action="frt-finance-detail"/);
+ assert.ok(html.indexOf('class="frt-ref-hero"')<html.indexOf('class="frt-ref-deadlines"'));
+ assert.match(html,/aria-label="Fund Tracker actions"/);
  assert.match(html,/data-action="frt-ui-dialog"/);
  assert.match(html,/data-action="frt-date-edit"/);
  assert.match(html,/data-action="frt-person-edit"/);
@@ -76,6 +78,9 @@ test('new scoped CSS participates in generated ordered stylesheet without extra 
  assert.match(bundle,/frt-exec-category-list/);
  assert.match(bundle,/frt-exec-trend/);
  assert.match(css,/#app \.frt-ref/);
+ assert.match(css,/CP-FRT-UI-01/);
+ assert.match(css,/frt-ref-company-workspace/);
+
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  assert.doesNotMatch(css,/!important\s*;\s*\}/);
 });
