@@ -195,3 +195,33 @@ test('verified signed TimeTracker reload clears stale bootstrap errors without u
  assert.match(load,/state\.ttAttendance=snapshot;[\s\S]*if\(snapshot\?\.status==='VERIFIED_READ'&&!state\.ttClockPending\)\s*state\.ttError='';/);
  assert.match(load,/if\(state\.ttClockPending\)reconcileTimeTrackerClock\(snapshot\)/);
 });
+
+test('signed administrative closure reconciles a pending employee clock-out and restores Start session',()=>{
+ const access={...snapshot().access,employeeDepartment:'HR'};
+ const completed={...row,status:'Completed',clockOut:ended,creditedMs:32400000};
+ const closed=snapshot({access,records:[completed],active:null,revision:6});
+ assert.equal(attendanceSnapshotOutcome(closed,{...base,action:'clock-out',baselineRevision:5}),'CONFIRMED');
+ const html=renderTimeTrackerNative({result:closed,view:'clock',clockPending:false});
+ assert.match(html,/Not clocked in/);
+ assert.match(html,/name="tt-action" value="clock-in"/);
+ assert.match(html,/Start session/);
+ assert.doesNotMatch(html,/Verify session status/);
+ const newRecord={...row,id:'admin-created',clockIn:'2026-11-04T05:00:00.000Z'};
+ const started=snapshot({access,records:[newRecord,completed],active:newRecord,revision:7});
+ const activeHtml=renderTimeTrackerNative({result:started,view:'clock',clockPending:false});
+ assert.match(activeHtml,/name="tt-action" value="clock-out"/);
+ assert.match(activeHtml,/End session/);
+ assert.match(activeHtml,/data-clock-in="2026-11-04T05:00:00.000Z"/);
+ assert.doesNotMatch(activeHtml,/name="tt-action" value="clock-in"/);
+});
+test('visible regular Clock polls signed idle and active states and reconciles pending writes',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const sync=app.slice(app.indexOf('async function refreshCorrectedTimeTrackerClock'),app.indexOf('function toast('));
+ assert.doesNotMatch(sync,/\|\|!before\.active/);
+ assert.match(sync,/timeTracker\.snapshot\(boardId,\{clockOnly:true\}\)/);
+ assert.match(sync,/state\.ttAttendance=fresh/);
+ assert.match(sync,/reconcileTimeTrackerClock\(fresh\)==='CONFIRMED'/);
+ assert.match(sync,/if\(sessionChanged\|\|reconciled\)/);
+ assert.match(sync,/Attendance closed on the server\. You can start a new session\./);
+ assert.doesNotMatch(sync,/timeTracker\.commit\(/);
+});

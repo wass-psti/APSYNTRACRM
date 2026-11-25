@@ -21,6 +21,8 @@ export function readManualAttendanceDraft(form){
 }
 export function syncManualAttendanceForm(form,now=new Date()){
  const date=form.elements.date,status=form.elements.status;
+ const activeOnly=form.dataset.activeOnly==='true';
+ if(activeOnly){date.value=manualAttendanceToday(now);status.value='active';}
  const policy=manualAttendanceDatePolicy(date.value,now);
  date.max=manualAttendanceToday(now);
  date.setCustomValidity(policy.allowed?'':'Select today or a past date.');
@@ -38,32 +40,33 @@ export function syncManualAttendanceForm(form,now=new Date()){
  const outFields=form.querySelector('[data-tt-manual-out]');
  outFields.hidden=!completed;outFields.style.display=completed?'':'none';
  form.elements.workNote.required=form.elements.location.value==='Offsite (Home)';
- form.querySelector('[data-tt-manual-policy]').textContent=policy.activeAllowed?
+ form.querySelector('[data-tt-manual-policy]').textContent=activeOnly?'Active same-day regular employee sessions only.':policy.activeAllowed?
   'Today: active or completed.':'Past attendance must be completed; future dates are not permitted.';
  return readManualAttendanceDraft(form);
 }
 export function renderManualAttendanceEditor({editor,busy=false,error='',now=new Date()}={}){
  if(editor?.mode!=='manual')return '';
  const today=manualAttendanceToday(now),d=editor.draft||{};
- const date=d.date||today,policy=manualAttendanceDatePolicy(date,now);
- const status=policy.activeAllowed?(d.status||'active'):'completed',completed=status==='completed';
+ const activeOnly=editor.activeOnly===true;
+ const date=activeOnly?today:d.date||today,policy=manualAttendanceDatePolicy(date,now);
+ const status=activeOnly?'active':policy.activeAllowed?(d.status||'active'):'completed',completed=status==='completed';
  const ready=editor.signedCreateReady===true&&!editor.uncertain;
  const input=(label,name,type,value,attrs='')=>'<label class="tt-admin-field"><span>'+esc(label)+'</span><input name="'+name+'" type="'+type+'" value="'+esc(value)+'" '+attrs+'></label>';
  const employee=d.employeeType&&d.employeeId?d.employeeType+':'+d.employeeId:'';
  return '<div class="tt-admin-editor-backdrop" data-tt-admin-backdrop>'+
- '<form id="tt-attendance-admin-form" class="tt-admin-editor" role="dialog" aria-modal="true" aria-labelledby="tt-admin-editor-title" data-tt-admin-dialog data-mode="manual">'+
- '<header class="tt-admin-editor-head"><div class="tt-admin-editor-title-group"><span class="tt-admin-eyebrow">SYSTEM ADMIN · MANUAL ATTENDANCE</span><h3 id="tt-admin-editor-title">Add Attendance Log</h3><p>Register a missed clock-in or clock-out in Philippine time.</p></div>'+
+ '<form id="tt-attendance-admin-form" class="tt-admin-editor" role="dialog" aria-modal="true" aria-labelledby="tt-admin-editor-title" data-tt-admin-dialog data-mode="manual"'+(activeOnly?' data-active-only="true"':'')+'>'+ 
+ '<header class="tt-admin-editor-head"><div class="tt-admin-editor-title-group"><span class="tt-admin-eyebrow">SYSTEM ADMIN · MANUAL ATTENDANCE</span><h3 id="tt-admin-editor-title">Add Attendance Log</h3><p>'+ (activeOnly?'Start a missed employee clock-in in Philippine time.':'Register a missed clock-in or clock-out in Philippine time.')+'</p></div>'+
  '<button type="button" class="tt-admin-close" data-action="tt-log-admin-cancel" aria-label="Close editor"'+(busy?' disabled':'')+'>×</button></header>'+
  (error?'<p class="tt-admin-error" role="alert">'+esc(error)+'</p>':'')+
  (!ready?'<p class="tt-admin-error" role="status">'+(editor.uncertain?'Save confirmation uncertain. Refresh the Log before retrying.':'Manual entry service is not verified. Preview only; saving is disabled.')+'</p>':'')+
  '<fieldset class="tt-admin-editor-fields"'+(busy?' disabled':'')+'><div class="tt-admin-editor-body">'+
  '<section class="tt-admin-field-section"><h4>Employee and attendance</h4><label class="tt-admin-field"><span>Employee or intern</span><select name="employee" required>'+
- opt('','Select employee…',employee)+(editor.roster||[]).map(m=>opt(m.type+':'+m.id,m.name+(m.type==='ojt'?' (OJT)':''),employee)).join('')+'</select></label>'+
- '<div class="tt-admin-grid tt-admin-grid-two">'+input('Attendance date','date','date',date,'required max="'+today+'" data-previous-date="'+esc(date)+'"')+
+ opt('','Select employee…',employee)+(editor.roster||[]).filter(m=>!activeOnly||m.type==='regular').map(m=>opt(m.type+':'+m.id,m.name+(m.type==='ojt'?' (OJT)':''),employee)).join('')+'</select></label>'+
+ '<div class="tt-admin-grid tt-admin-grid-two">'+input('Attendance date','date','date',date,'required max="'+today+'" data-previous-date="'+esc(date)+'"'+(activeOnly?' readonly':''))+
  '<label class="tt-admin-field"><span>Session status</span><select name="status" required><option value="active"'+(status==='active'?' selected':'')+(policy.activeAllowed?'':' disabled')+'>Active / Ongoing</option>'+
- opt('completed','Completed',status)+'</select></label>'+
+ (activeOnly?'':opt('completed','Completed',status))+'</select></label>'+
  input('Clock-in time','clockInTime','time',d.clockInTime||'','required')+'</div>'+
- '<p data-tt-manual-policy>'+(policy.activeAllowed?'Today: active or completed.':'Past attendance must be completed; future dates are not permitted.')+'</p>'+
+ '<p data-tt-manual-policy>'+(activeOnly?'Active same-day regular employee sessions only.':policy.activeAllowed?'Today: active or completed.':'Past attendance must be completed; future dates are not permitted.')+'</p>'+
  '<div class="tt-admin-grid tt-admin-grid-two" data-tt-manual-out'+(completed?'':' hidden style="display:none"')+'>'+
  input('Clock-out date','clockOutDate','date',completed?(d.clockOutDate||date):'','min="'+esc(date)+'" max="'+today+'" '+(completed?'required':'disabled'))+
  input('Clock-out time','clockOutTime','time',completed?(d.clockOutTime||''):'',completed?'required':'disabled')+'</div></section>'+
@@ -71,10 +74,13 @@ export function renderManualAttendanceEditor({editor,busy=false,error='',now=new
  TT_MANUAL_LOCATIONS.map(v=>opt(v,v,d.location||TT_MANUAL_LOCATIONS[0])).join('')+'</select></label>'+
  '<label class="tt-admin-field"><span>Work note (required for offsite home)</span><textarea name="workNote" maxlength="500"'+(d.location==='Offsite (Home)'?' required':'')+'>'+esc(d.workNote)+'</textarea></label>'+
  '<label class="tt-admin-field"><span>Reason for manual entry</span><textarea name="reason" maxlength="500" required>'+esc(d.reason)+'</textarea></label><p>No GPS coordinates will be fabricated. Manual attendance is audited by the signed service.</p></section>'+
- '</div></fieldset><footer class="tt-admin-editor-actions"><span class="tt-admin-editor-footnote">Past logs must be completed. Active logs can only start today.</span><div>'+
+ '</div></fieldset><footer class="tt-admin-editor-actions"><span class="tt-admin-editor-footnote">'+(activeOnly?'The employee can end this session from their own Clock screen.':'Past logs must be completed. Active logs can only start today.')+'</span><div>'+
  '<button type="button" class="secondary" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+'>Cancel</button><button type="submit"'+(!ready||busy?' disabled':'')+'>Save Attendance Log</button></div></footer></form></div>';
 }
 export function validateManualAttendanceForm(form,editor,now=new Date()){
  if(editor?.signedCreateReady!==true||editor.uncertain)throw Error('Signed manual attendance creation is unavailable.');
- return buildManualAttendanceEntry(syncManualAttendanceForm(form,now),{now,roster:editor.roster});
+ const entry=buildManualAttendanceEntry(syncManualAttendanceForm(form,now),{now,roster:editor.roster});
+ if(editor.activeOnly&&(entry.employeeType!=='regular'||entry.status!=='active'))
+  throw Error('Only regular employee active clock-ins are supported.');
+ return entry;
 }

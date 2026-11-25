@@ -46,3 +46,13 @@ test('application routes the admin Add Log action through the existing signed gu
  assert.match(log,/data-action="tt-log-admin-add"/);
  assert.match(log,/adminFullAccess&&adminEditor\?\.mode==='manual'\?renderManualAttendanceEditor/);
 });
+
+test('verified active-only service excludes OJT and completed creation',()=>{
+ const html=render({date:'2026-11-23',status:'completed'},{signedCreateReady:true,activeOnly:true});
+ assert.match(html,/data-active-only="true"/);
+ assert.match(html,/name="date" type="date" value="2026-11-24"/);
+ assert.match(html,/value="active" selected/);
+ assert.doesNotMatch(html,/value="completed"/);
+ assert.doesNotMatch(html,/Intern B/);
+ assert.match(html,/type="submit">Save Attendance Log/);
+});
