@@ -55,6 +55,8 @@ test('dark-launch UI is routed inside the existing signed TradeLink app',()=>{
  assert.match(html,/href="#\/tradelink\/drafts\/quotation"/);
  assert.match(html,/data-action="tradelink-draft-submit"/);
  assert.match(html,/data-tradelink-draft-form/);
+ assert.match(html,/name="customerContact"/);
+ assert.match(html,/Contact Person/);
  assert.match(html,/data-action="tradelink-draft-submit"/);
  assert.doesNotMatch(html,/data-action="tradelink-draft-refresh"/);
  assert.match(html,/data-action="tradelink-draft-submit"/);
@@ -135,7 +137,7 @@ test('client denies all operations when signed auth and board APIs are unavailab
 
 test('form parser accepts only bounded source Draft fields and never asserts persistence',()=>{
  const draft=parseTradeLinkDraftForm(fields({documentType:'quotation',documentNumber:'Q-100',
-  currency:'PHP',vatType:'12',customerName:'Sample customer',referenceNumber:'REF-7',
+  currency:'PHP',vatType:'12',customerName:'Sample customer',customerContact:'Contact Person QA',referenceNumber:'REF-7',
   customerEmail:'customer@example.com',validity:'30 days',deliveryCommitment:'Within 14 days',
   paymentTerms:'Net 30',approvedBy:'asenagan@watchdogautomation.com.ph',
   lineDescription:'Sample item',lineQuantity:'2',lineUnitPrice:'150.25',lineUnit:'pc',
@@ -144,6 +146,7 @@ test('form parser accepts only bounded source Draft fields and never asserts per
   quantity:2,unitPrice:150.25,unit:'pc'}]);
  assert.equal(draft.documentType,'quotation');
  assert.equal(draft.documentNumber,'Q-100');
+ assert.equal(draft.customerContact,'Contact Person QA');
  assert.equal(draft.remarks,'Local only');
  assert.equal('status' in draft,false);
  for(const row of [
@@ -363,7 +366,7 @@ test('commercial UI redraw and signed client boundaries do not persist or leak d
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/captureRecoveryFields\(new FormData\(form\)\)/);
- for(const key of ['customerTin','customerEmail','customerPhone','validity',
+ for(const key of ['customerTin','customerContact','customerEmail','customerPhone','validity',
   'verifiedByEmail','approvedByEmail','deliveryCommitment','paymentTerms','targetDeliveryDate','poNumber','approvedBy'])
   assert.ok(RECOVERY_FIELDS.includes(key),key);
  assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
