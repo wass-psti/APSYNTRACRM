@@ -336,6 +336,13 @@ export function startGlobalSearch({root=globalThis.document?.body,
   try{await navigate(item);}catch(error){onError(error);}
  }
  function onDocumentKeydown(event){
+  // One shortcut owner, including when focus is on the palette's close button.
+  if(isGlobalSearchShortcut(event,platformName(win))){
+   if(!opened&&(!currentScope()||
+    (isGlobalSearchEditableTarget(event.target)&&!event.target?.matches?.('[data-aps-search-native]'))||
+    event.target?.closest?.('[role="dialog"][aria-modal="true"]:not([data-global-search-layer])')))return;
+   event.preventDefault();event.stopPropagation();void open();return;
+  }
   if(opened){
    if(event.key==='Escape'){
     event.preventDefault();event.stopPropagation();close();return;
@@ -357,9 +364,6 @@ export function startGlobalSearch({root=globalThis.document?.body,
    }
    return;
   }
-  if(!isGlobalSearchShortcut(event,platformName(win))||isGlobalSearchEditableTarget(event.target)||
-     event.target?.closest?.('[role="dialog"][aria-modal="true"]:not([data-global-search-layer])'))return;
-  event.preventDefault();event.stopPropagation();void open();
  }
  function onDocumentClick(event){
   const trigger=event.target?.closest?.('[data-global-search-open]');
