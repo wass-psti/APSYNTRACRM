@@ -6,7 +6,7 @@ Replace the compact User Manual popover with a dedicated, readable, responsive h
 ## Scope
 - Add canonical `#/tradelink/manual` navigation and active state.
 - Organize current guidance into seven topics: lifecycle, reviews, creation and numbering, dates, quotation status, print/PDF, and analytics/receivables.
-- Add a topic index, concise summaries and responsive guidance cards.
+- Add a topic index, concise summaries, searchable topics, a three-step quick start and responsive guidance cards.\n- Keep in-page topic jumps inside the canonical manual route; topic links do not alter the application hash route.
 - Preserve workflow and reporting statements without changing document behavior or data sources.
 
 ## Non-goals
