@@ -173,7 +173,8 @@ export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId
   typeof row.document_number!=='string'||row.document_number.length>120||
   typeof row.updated_at!=='string'||!Number.isFinite(Date.parse(row.updated_at))||
   !validLines(data.items??[])||
-  (data.customerName!==undefined&&(typeof data.customerName!=='string'||data.customerName.length>5000)))
+  (data.customerName!==undefined&&(typeof data.customerName!=='string'||data.customerName.length>5000))||
+  (data.customerContact!==undefined&&(typeof data.customerContact!=='string'||data.customerContact.length>5000)))
   throw new ApiError('Saved document output cannot be verified.',409);
  const {company,template,legacyDefaulted,profileValid,templateIdValid}=resolveTradeLinkOfficialTemplate(data);
  if(!profileValid||!templateIdValid)
@@ -192,7 +193,7 @@ export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId
    pair('No.',row.document_number)+pair('Rev.',row.revision)+
    pair('Date',dateLabel(data.date||row.created_at))+
   '</dl></div></header>';
- const partyFields=[['Address',data.customerAddress],['Contact',data.customerContact],
+ const partyFields=[['Address',data.customerAddress],['Contact Person',data.customerContact],
   ['Email',data.customerEmail],['Phone',data.customerPhone],['TIN',data.customerTin]]
   .filter(([,value])=>value!==undefined&&value!==null&&value!=='');
  const party='<section class="tl-official-party-grid"><div class="tl-official-party"><h3>'+
