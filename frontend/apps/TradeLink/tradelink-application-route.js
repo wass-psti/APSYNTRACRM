@@ -5,7 +5,7 @@ export const TRADELINK_APPLICATION_ROUTE = '#/tradelink';
 export const TRADELINK_MODULE_ID = 'tradelink';
 
 const documentTypes = new Set(['esi','packing','delivery','payment','quotation','po']);
-const sections = new Set(['drafts','documents','activity','analytics']);
+const sections = new Set(['drafts','documents','activity','analytics','manual']);
 
 export function tradeLinkApplicationHref(path = '') {
  const suffix = String(path ?? '').replace(/^\/+|\/+$/g, '');
