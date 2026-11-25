@@ -239,8 +239,9 @@
  box-shadow:0 1px 1px #151b2505;background:#fff;
  color:#272c35;font:inherit;font-size:12.5px;font-weight:430;line-height:1.4
 }
-.tl-reference-portal .tl-draft-field :is(input,select,textarea)::placeholder{
- color:#9aa0a9;opacity:1
+.aps-tradelink-app :is(input,textarea)::placeholder,
+.tl-reference-portal .tl-draft-field :is(input,textarea)::placeholder{
+ color:#616b7a;opacity:1
 }
 .tl-reference-portal .tl-draft-field textarea{
  line-height:1.6;resize:vertical;min-height:75px
@@ -977,9 +978,9 @@
 .tl-reference-portal .tl-reference-line-item>.tl-ref-item-description textarea{
  resize:vertical;min-height:55px;width:100%;display:block;
 }
-.tl-reference-portal .tl-reference-line-item>.tl-ref-item-quantity{flex:0 1 90px}
-.tl-reference-portal .tl-reference-line-item>.tl-ref-item-price{flex:0 1 108px}
-.tl-reference-portal .tl-reference-line-item>.tl-ref-item-unit{flex:0 1 90px}
+.tl-reference-portal .tl-reference-line-item>.tl-ref-item-quantity{flex:0 1 124px}
+.tl-reference-portal .tl-reference-line-item>.tl-ref-item-price{flex:0 1 132px}
+.tl-reference-portal .tl-reference-line-item>.tl-ref-item-unit{flex:0 1 104px}
 .tl-reference-portal .tl-ref-item-total{
  margin:auto 0 0;min-width:75px;text-align:right;padding:9px 0;
  color:#17191e;font-weight:750;font-size:12px;white-space:nowrap;
@@ -1025,9 +1026,9 @@
  .tl-reference-portal .tl-ref-items-toolbar button{font-size:11px}
  .tl-reference-portal .tl-ref-item-handle{display:none}
  .tl-reference-portal .tl-ref-item-actions{width:100%;justify-content:flex-end;margin:0}
- .tl-reference-portal .tl-reference-line-item>.tl-ref-item-quantity{flex:1 1 75px}
- .tl-reference-portal .tl-reference-line-item>.tl-ref-item-price{flex:1 1 96px}
- .tl-reference-portal .tl-reference-line-item>.tl-ref-item-unit{flex:1 1 75px}
+ .tl-reference-portal .tl-reference-line-item>.tl-ref-item-quantity{flex:1 1 124px}
+ .tl-reference-portal .tl-reference-line-item>.tl-ref-item-price{flex:1 1 132px}
+ .tl-reference-portal .tl-reference-line-item>.tl-ref-item-unit{flex:1 1 104px}
  .tl-reference-portal .tl-ref-item-total{margin-left:auto}
  .tl-reference-portal .tl-draft-finance{max-width:none}
 }

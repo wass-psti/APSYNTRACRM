@@ -542,14 +542,29 @@ export class TradeLinkDraftWorkspace{
 const options=(arr,current)=>arr.map(([id,label])=>
  '<option value="'+escape(id)+'"'+(id===current?' selected':'')+'>'+
  escape(label)+'</option>').join('');
-function field(label,name,val='',attrs=''){
+const contactPlaceholders={
+ customerEmail:'Enter contact email address',customerPhone:'Enter contact number',
+ customerTin:'Enter client TIN',verifiedBy:'Enter reviewer email address',
+ approvedBy:'Enter approver email address',lineSerialNumber:'Enter serial / asset number',
+ poNumber:'Enter supplier PO number',paymentTerms:'Enter payment terms',
+ paymentParticulars:'Enter payment particulars',bankName:'Enter bank name',
+ chequeNumber:'Enter cheque number',cashAmount:'Enter cash amount',chequeAmount:'Enter cheque amount'
+};
+const partyPlaceholders={
+ esi:'Enter client name',quotation:'Enter client name',packing:'Enter consignee name',
+ delivery:'Enter recipient / consignee name',payment:'Enter payor name',po:'Enter supplier name'
+};
+function placeholderAttribute(text){
+ return text?' placeholder="'+escape(text)+'"':'';
+}
+function field(label,name,val='',attrs='',hint=contactPlaceholders[name]){
  return '<label class="tl-draft-field"><span>'+escape(label)+'</span>'+
-  '<input name="'+escape(name)+'" value="'+escape(val)+'" '+attrs+'></label>';
+  '<input name="'+escape(name)+'" value="'+escape(val)+'" '+attrs+placeholderAttribute(hint)+'></label>';
 }
 function moneyField(label,name,val,currency,attrs){
  return '<label class="tl-draft-field"><span>'+escape(label)+
   ' (<span data-tradelink-draft-money-currency>'+escape(currency)+'</span>)</span>'+
-  '<input name="'+escape(name)+'" value="'+escape(val)+'" '+attrs+'></label>';
+  '<input name="'+escape(name)+'" value="'+escape(val)+'" '+attrs+placeholderAttribute(contactPlaceholders[name])+'></label>';
 }
 /** Explicit UI nomination lists. These emails are account identifiers,
  * not signed authorization or verified directory/role membership. */
@@ -667,7 +682,7 @@ function renderReferenceModuleWorkflow(type,fieldValue,data,actorName,reviewCont
   group('Delivered By (Logistics)',
    person('Logistics personnel','deliveredBy','Select logistics personnel...',true,'secondary'))+
   '<div class="tl-reference-assignment-field"><label for="tl-ref-delivery-received">Received By (optional)</label>'+
-  '<input id="tl-ref-delivery-received" name="receivedBy" maxlength="5000" value="'+escape(value('receivedBy'))+'" placeholder="Recipient acknowledgement"></div>'+
+  '<input id="tl-ref-delivery-received" name="receivedBy" maxlength="5000" value="'+escape(value('receivedBy'))+'" placeholder="Enter recipient name"></div>'+
   help+'</section>';
  if(type==='payment')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Payment acknowledgement">'+
   '<h4>Payment Acknowledgement</h4>'+referenceCreator(actorName)+
@@ -916,7 +931,7 @@ function renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line,lines=[line]
      '<select name="discountType" aria-label="Discount method" aria-describedby="tl-draft-discount-help">'+
       options([['percentage','Percentage (%)'],['fixed','Fixed amount']],value('discountType'))+'</select>'+
      '<input id="tl-reference-discount-input" name="discountValue" value="'+escape(value('discountValue'))+'" '+
-      'type="number" min="0" max="1000000000000" step="any" aria-describedby="tl-draft-discount-help">'+
+      'type="number" min="0" max="1000000000000" step="any" placeholder="Enter discount" aria-describedby="tl-draft-discount-help">'+
      '<output data-tradelink-draft-amount="discount">'+display('discount')+'</output></dd></div>'+
     '<div class="tl-ref-total-taxable"><dt>Subtotal After Discount:</dt><dd data-tradelink-draft-amount="taxable">'+display('taxable')+'</dd></div>'+
     '<div class="tl-ref-total-vat"><dt><label for="tl-reference-vat">VAT (<span data-tradelink-draft-vat-rate>'+escape(value('vatType'))+'</span>):</label></dt><dd>'+
@@ -930,7 +945,7 @@ function renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line,lines=[line]
     '<label for="tl-reference-fx">PHP conversion rate (PHP per 1 '+
      '<span data-tradelink-draft-fx-base>'+escape(unit)+'</span>)</label>'+
     '<input id="tl-reference-fx" name="exchangeRate" value="'+escape(value('exchangeRate'))+'" '+
-     'type="number" min="0" max="1000000000000" step="any" aria-describedby="tl-draft-fx-help">'+
+     'type="number" min="0" max="1000000000000" step="any" placeholder="Enter exchange rate" aria-describedby="tl-draft-fx-help">'+
     '<small id="tl-draft-fx-help">Enter a rate manually; no exchange-rate lookup occurs.</small>'+
     '<div class="tl-ref-total-php"><span>PHP equivalent (PHP)</span>'+
      '<output data-tradelink-draft-amount="phpEquivalent">'+display('phpEquivalent')+'</output></div>'+
@@ -1098,7 +1113,7 @@ function quotationCommercialField(name,savedValue,customValue=''){
   '<div id="'+id+'-custom" data-tl-commercial-custom'+(custom?'':' hidden')+'>'+
    '<label class="tl-draft-field"><span>'+escape(config.customInput)+'</span>'+
    '<input name="'+name+'Custom" value="'+escape(customText)+'" maxlength="5000"'+
-   (name==='validity'?' placeholder="Enter date or custom validity"':'')+(custom?' required':'')+'></label></div></div>';
+   placeholderAttribute(name==='validity'?'Enter date or custom validity':name==='paymentTerms'?'Enter custom payment terms':'Enter custom delivery time')+(custom?' required':'')+'></label></div></div>';
 }
 function commercialSuggestionLists(type){
  if(type!=='po')return '';
@@ -1187,19 +1202,19 @@ export function renderTradeLinkDraftLineItem(item={},type='quotation',currency='
   '<div class="tl-ref-item-handle" draggable="true" title="Drag to reorder" aria-hidden="true">⠿</div>'+
   '<span class="tl-ref-item-index" aria-label="'+escape(label)+'">'+escape(index+1)+'</span>'+
   '<label class="tl-draft-field tl-ref-item-description"><span class="sr-only">'+escape(label)+' description</span>'+
-   '<textarea name="lineDescription" maxlength="2000" rows="2" placeholder="'+(note?'Enter item note…':'Enter material description…')+'" required>'+desc+'</textarea></label>'+
+   '<textarea name="lineDescription" maxlength="2000" rows="2" placeholder="'+(note?'Enter item note':'Enter item description')+'" required>'+desc+'</textarea></label>'+
   (note?
    '<input type="hidden" name="lineQuantity" value="">'+
    (physical?'':'<input type="hidden" name="lineUnitPrice" value="">')+
    '<input type="hidden" name="lineUnit" value="">':
    '<label class="tl-draft-field tl-ref-item-quantity"><span class="sr-only">'+escape(label)+' quantity</span>'+
-    '<input name="lineQuantity" type="number" min="0" max="1000000000" step="any" value="'+escape(quantity)+'" placeholder="Qty"'+req+'></label>'+
+    '<input name="lineQuantity" type="number" min="0" max="1000000000" step="any" value="'+escape(quantity)+'" placeholder="Enter quantity"'+req+'></label>'+
    (physical?'':
     '<label class="tl-draft-field tl-ref-item-price"><span class="sr-only">'+escape(label)+' unit price ('+escape(currency)+')</span>'+
-    '<input name="lineUnitPrice" type="number" min="0" max="1000000000" step="any" value="'+escape(unitPrice)+'" placeholder="Unit price"'+(priced?' required':'')+'></label>')+
+    '<input name="lineUnitPrice" type="number" min="0" max="1000000000" step="any" value="'+escape(unitPrice)+'" placeholder="Enter unit price"'+(priced?' required':'')+'></label>')+
    (physical?
     '<label class="tl-draft-field tl-ref-item-unit"><span class="sr-only">'+escape(label)+' unit</span>'+
-     '<input name="lineUnit" value="'+escape(item.unit??'')+'" maxlength="120" placeholder="Unit"></label>':
+     '<input name="lineUnit" value="'+escape(item.unit??'')+'" maxlength="120" placeholder="Enter unit"></label>':
     '<input type="hidden" name="lineUnit" value="'+escape(item.unit??'')+'">'))+
   (type==='delivery'&&note?'<input type="hidden" name="lineSerialNumber" value="">':'')+
   (type==='delivery'&&!note?field('Serial / asset no.','lineSerialNumber',
@@ -1304,7 +1319,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
      '<label class="tl-draft-field"><span>Document number</span>'+
       '<input name="documentNumber" value="'+escape(fieldValue('documentNumber',data.documentNumber||''))+'" '+
        (editing||TL03_AUTOMATIC_NUMBERING_ENABLED?'readonly ':'required maxlength="120" pattern="[A-Za-z0-9][A-Za-z0-9._ /-]*" ')+
-       'aria-describedby="tl-reference-number-help">'+
+       'placeholder="'+(editing||TL03_AUTOMATIC_NUMBERING_ENABLED?'Assigned on save':'Enter document number')+'" aria-describedby="tl-reference-number-help">'+
       '<small id="tl-reference-number-help">'+(editing?'Assigned number is permanent and remains unchanged across revisions.':
        TL03_AUTOMATIC_NUMBERING_ENABLED?'Automatically assigned by the database when this document is first saved.':
        'Enter the document number manually. The automatic-numbering database capability is installed but is not enabled for production document creation.')+'</small></label>'+
@@ -1323,13 +1338,13 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
     '<h4>Client Information</h4>'+
     '<div class="tl-draft-form-grid">'+
      field(commonPartyLabel,'customerName',fieldValue('customerName',data.customerName||''),
-      'maxlength="5000"'+(physical||payment||priced?' required':''))+
+      'maxlength="5000"'+(physical||payment||priced?' required':''),partyPlaceholders[type])+
      (type==='quotation'?'<label class="tl-draft-field"><span>Client Address</span>'+
-      '<textarea name="customerAddress" rows="2" maxlength="5000">\n'+
+      '<textarea name="customerAddress" rows="2" maxlength="5000" placeholder="Enter client address">\n'+
       escape(fieldValue('customerAddress',data.customerAddress||''))+'</textarea></label>':'')+
      field(physical?'Source reference':'Reference information','referenceNumber',
       fieldValue('referenceNumber',data.referenceNumber||''),
-      'maxlength="5000"'+(physical?' required':''))+
+      'maxlength="5000"'+(physical?' required':''),physical?'Enter shipment reference':'PO Number / Reference #')+
      field('Due date (optional)','dueDate',fieldValue('dueDate',data.dueDate||''),'type="date"')+
      (type==='esi'?field('Client tax identity / TIN','customerTin',
       fieldValue('customerTin',data.customerTin||''),'maxlength="5000" required'):'')+
@@ -1389,13 +1404,13 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
    '<section class="tl-reference-form-section tl-reference-terms"><h4>Additional Notes</h4>'+
     '<label class="tl-draft-field"><span>Document notes</span>'+
      '<textarea name="remarks" maxlength="5000" rows="4" '+
-      'placeholder="Enter additional document notes">'+
+      'placeholder="Enter additional remarks">'+
        escape(fieldValue('remarks',data.remarks||''))+'</textarea>'+
      '<small>Additional notes are saved with this document revision.</small>'+
     '</label></section>'+
    '<details class="tl-reference-official-terms"><summary>Terms &amp; Conditions · Official TradeLink template</summary>'+
     '<label class="tl-draft-field"><span>Document terms</span>'+
-     '<textarea name="terms" maxlength="5000" rows="12">'+escape(selectedTerms)+'</textarea>'+
+     '<textarea name="terms" maxlength="5000" rows="12" placeholder="Enter terms and conditions">'+escape(selectedTerms)+'</textarea>'+
      '<small>Recovered from the original TradeLink v1.42.0 template. Changes are saved with this document revision. No PDF, approval or document is generated by changing terms locally; eligible saved records remain printable through the existing workflow.</small>'+
     '</label></details>'+
    (type==='quotation'?renderQuotationVerification(fieldValue,data,actorName,{
