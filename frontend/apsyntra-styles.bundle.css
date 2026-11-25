@@ -21230,6 +21230,197 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-ot-refer
  }
 }
 
+
+/* CP-TL-ACTIVITY-UI-01 — refined TradeLink signed activity feed. */
+.tl-reference-portal .tl-activity{
+ container-name:tradelink-activity;container-type:inline-size;
+ gap:18px;padding:clamp(18px,2.2vw,28px);
+ border:1px solid #e3e9f2;border-radius:16px;background:#fff;
+ box-shadow:0 4px 18px rgba(15,23,42,.035);
+}
+.tl-reference-portal .tl-activity .tl-activity-heading{
+ align-items:flex-start;justify-content:space-between;gap:18px;
+ padding:0 0 18px;border-bottom:1px solid #e8edf4;
+}
+.tl-reference-portal .tl-activity-heading-copy{min-width:0}
+.tl-reference-portal .tl-activity-heading .tl-eyebrow{
+ margin:0 0 6px;color:#4568a7;font-size:10px;font-weight:800;
+ letter-spacing:.095em;text-transform:uppercase;
+}
+.tl-reference-portal .tl-activity-heading h2{
+ margin:0;color:#172b49;font-size:clamp(23px,2.3vw,28px);
+ font-weight:790;letter-spacing:-.04em;line-height:1.15;
+}
+.tl-reference-portal .tl-activity-subtitle{
+ margin:8px 0 0;color:#718096;font-size:12px;line-height:1.55;
+}
+.tl-reference-portal .tl-activity-heading-tools{
+ display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:9px;
+}
+.tl-reference-portal .tl-activity-source-badge{
+ display:inline-flex;align-items:center;gap:7px;min-height:32px;padding:6px 10px;
+ border:1px solid #dcefe5;border-radius:999px;background:#f2faf5;
+ color:#28734c;font-size:10px;font-weight:750;white-space:nowrap;
+}
+.tl-reference-portal .tl-activity-source-badge>span{
+ width:7px;height:7px;border-radius:50%;background:#299b68;
+ box-shadow:0 0 0 3px #e2f4e9;
+}
+.tl-reference-portal .tl-activity-heading-tools button[data-action="tradelink-activity-refresh"]{
+ display:inline-flex;align-items:center;justify-content:center;gap:8px;
+ min-height:38px;padding:8px 13px;border:1px solid #d7e1ef;border-radius:9px;
+ background:#fff;color:#344c70;font-size:11px;font-weight:750;
+ box-shadow:0 1px 2px rgba(15,23,42,.035);
+ transition:background .14s ease,border-color .14s ease,color .14s ease;
+}
+.tl-reference-portal .tl-activity-heading-tools button[data-action="tradelink-activity-refresh"]:hover:not(:disabled){
+ border-color:#b9cbed;background:#f4f8ff;color:#214fb5;
+}
+.tl-reference-portal .tl-activity-heading-tools button:disabled{cursor:wait;opacity:.65}
+.tl-reference-portal .tl-activity-heading-tools button>span{
+ color:#456fc0;font-size:16px;line-height:1;
+}
+.tl-reference-portal .tl-activity-intro{
+ max-width:none;margin:0;padding:12px 14px;
+ border:1px solid #e1eaf7;border-left:3px solid #8aafe8;border-radius:9px;
+ background:#f7faff;color:#60718b;font-size:11px;line-height:1.6;
+}
+.tl-reference-portal .tl-activity-feed-heading{
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+ margin-top:2px;
+}
+.tl-reference-portal .tl-activity-feed-heading h3{
+ margin:0;color:#263e5e;font-size:14px;font-weight:780;letter-spacing:-.015em;
+}
+.tl-reference-portal .tl-activity-feed-heading p{
+ margin:4px 0 0;color:#8390a3;font-size:10px;line-height:1.45;
+}
+.tl-reference-portal .tl-activity-total{
+ display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:5px 10px;
+ border:1px solid #e2e9f2;border-radius:999px;background:#f8fafc;
+ color:#65748b;font-size:10px;font-weight:700;white-space:nowrap;
+}
+.tl-reference-portal .tl-activity-total strong{
+ color:#294b7d;font-size:12px;font-variant-numeric:tabular-nums;
+}
+.tl-reference-portal .tl-activity-list,
+.tl-reference-portal .tl-activity-timeline{
+ gap:13px;margin:0;padding:2px 0 2px 1px;
+}
+.tl-reference-portal .tl-activity-entry{
+ grid-template-columns:18px minmax(0,1fr);gap:12px;
+}
+.tl-reference-portal .tl-activity-marker{
+ z-index:1;width:12px;height:12px;margin:17px 0 0 2px;
+ border:2px solid #82a8e5;background:#fff;
+ box-shadow:0 0 0 4px #eff5ff;
+}
+.tl-reference-portal .tl-activity-entry:not(:last-child)::after{
+ top:24px;bottom:-37px;left:7px;width:2px;background:#e4ebf5;
+}
+.tl-reference-portal .tl-activity-card{
+ padding:16px 18px;border:1px solid #e3eaf3;border-radius:13px;
+ background:#fff;box-shadow:0 2px 8px rgba(15,23,42,.025);
+ transition:border-color .14s ease,box-shadow .14s ease,transform .14s ease;
+}
+.tl-reference-portal .tl-activity-card:hover{
+ border-color:#cbd9ed;box-shadow:0 5px 15px rgba(31,61,105,.06);
+ transform:translateY(-1px);
+}
+.tl-reference-portal .tl-activity-card-header{
+ display:flex;align-items:flex-start;justify-content:space-between;gap:12px;min-width:0;
+}
+.tl-reference-portal .tl-activity-type{
+ max-width:100%;min-height:27px;padding:5px 10px;
+ border:1px solid #dce7f8;border-radius:8px;background:#f1f6ff;color:#2857a0;
+ font-size:11px;font-weight:780;line-height:1.35;overflow-wrap:anywhere;
+}
+.tl-reference-portal .tl-activity-time{
+ flex:none;padding-top:5px;color:#7a879a;font-size:10px;
+ font-variant-numeric:tabular-nums;line-height:1.4;text-align:right;
+}
+.tl-reference-portal .tl-activity-message{
+ margin:12px 0 0;color:#43536c;font-size:12px;line-height:1.7;
+ white-space:pre-wrap;overflow-wrap:anywhere;
+}
+.tl-reference-portal .tl-activity-meta{
+ display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+ margin-top:14px;padding-top:12px;border-top:1px solid #edf1f6;
+}
+.tl-reference-portal .tl-activity-avatar{
+ display:grid;place-items:center;flex:none;width:29px;height:29px;
+ border:1px solid #d9e5f7;border-radius:50%;background:#edf4ff;
+ color:#315b9b;font-size:9px;font-weight:850;letter-spacing:.025em;
+}
+.tl-reference-portal .tl-activity-actor{
+ display:flex;align-items:baseline;flex-wrap:wrap;gap:5px;
+ margin:0;color:#7a8799;font-size:10px;font-weight:550;
+}
+.tl-reference-portal .tl-activity-actor-name{
+ color:#354963;font-size:11px;font-weight:750;
+}
+.tl-reference-portal .tl-activity-entity{
+ max-width:100%;margin-left:auto;padding:5px 9px;
+ border:1px solid #e7ebf2;border-radius:7px;background:#fafbfd;
+ color:#66758c;font-size:9px;font-weight:700;line-height:1.35;
+ overflow-wrap:anywhere;
+}
+.tl-reference-portal .tl-activity-state{
+ display:flex;align-items:center;gap:12px;margin:0;padding:18px;
+ border:1px solid #e3eaf3;border-radius:12px;background:#f8fafd;
+ color:#4c5e78;font-size:12px;line-height:1.6;
+}
+.tl-reference-portal .tl-activity-loading{border-color:#e1eaf7;background:#f7faff}
+.tl-reference-portal .tl-activity-error{
+ border-color:#f1d2d4;background:#fff7f7;color:#a33a42;
+}
+.tl-reference-portal .tl-activity-empty-icon{
+ display:grid;place-items:center;flex:none;width:38px;height:38px;
+ border:1px solid #dce7f8;border-radius:11px;background:#edf4ff;
+ color:#3d68a9;font-size:20px;
+}
+.tl-reference-portal .tl-activity-empty strong{
+ display:block;color:#314761;font-size:12px;font-weight:780;
+}
+.tl-reference-portal .tl-activity-empty p{
+ margin:4px 0 0;color:#718096;font-size:11px;
+}
+.tl-reference-portal .tl-activity-count{
+ margin:0;padding-top:12px;border-top:1px solid #edf1f6;
+ color:#7b8798;font-size:10px;font-weight:600;line-height:1.5;
+}
+.tl-reference-portal .tl-activity :is(button,a):focus-visible{
+ outline:2px solid #7ca4e8;outline-offset:3px;
+}
+@container tradelink-activity (max-width:680px){
+ .tl-reference-portal .tl-activity .tl-activity-heading{
+  align-items:flex-start;flex-direction:column;
+ }
+ .tl-reference-portal .tl-activity-heading-tools{
+  width:100%;justify-content:space-between;
+ }
+ .tl-reference-portal .tl-activity-card{padding:14px}
+}
+@container tradelink-activity (max-width:440px){
+ .tl-reference-portal .tl-activity{padding:15px}
+ .tl-reference-portal .tl-activity-heading-tools{align-items:stretch;flex-direction:column}
+ .tl-reference-portal .tl-activity-heading-tools button{width:100%}
+ .tl-reference-portal .tl-activity-feed-heading{align-items:flex-start}
+ .tl-reference-portal .tl-activity-card-header{flex-direction:column;gap:7px}
+ .tl-reference-portal .tl-activity-time{padding-top:0;text-align:left}
+ .tl-reference-portal .tl-activity-entry{grid-template-columns:13px minmax(0,1fr);gap:9px}
+ .tl-reference-portal .tl-activity-marker{margin-left:1px}
+ .tl-reference-portal .tl-activity-entry:not(:last-child)::after{left:5px}
+ .tl-reference-portal .tl-activity-entity{margin-left:0}
+}
+@media(prefers-reduced-motion:reduce){
+ .tl-reference-portal .tl-activity-card,
+ .tl-reference-portal .tl-activity-heading-tools button{
+  transition:none!important;
+ }
+ .tl-reference-portal .tl-activity-card:hover{transform:none}
+}
+
 /* frontend/select-experience.css */
 /* APSYNTRA CRM GLOBAL SELECT EXPERIENCE — Vanilla ESM, CSS3, CSS custom properties.
  * Progressive, select-only WAI-ARIA combobox; the original select stays in forms.
