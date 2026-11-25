@@ -42,7 +42,7 @@ test('new migration source hash and exact guarded patch anchors match recovered 
   assert.equal(entry.sha256, createHash('sha256').update(sql).digest('hex'));
   const defs = new Map([
     ['private.tt_reconcile_auto_clockout_sessions()', definition(isolated, 'private.tt_reconcile_auto_clockout_sessions', '$f$')],
-    ['private.tt_process_auto_clockouts()', definition(isolated, 'private.tt_process_auto_clockouts', '$f$')],
+    ['private.tt_process_auto_clockouts()', definition(isolated, 'private.tt_process_auto_clockouts', '$function$')],
     ['private.tt_activate_isolated_auto_clockout(date,integer)', definition(reactivated, 'private.tt_activate_isolated_auto_clockout', '$activate$')],
     ['public.timetracker_attendance_admin_mutate(uuid,text,text[],jsonb,text,bigint)', definition(admin, 'public.timetracker_attendance_admin_mutate', '$function$')],
     ['public.timetracker_auto_clockout_snapshot(uuid)', definition(snapshot, 'public.timetracker_auto_clockout_snapshot', '$function$')],
