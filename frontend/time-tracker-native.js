@@ -599,6 +599,40 @@ export class TimeTrackerNativeClient{
    directory:Object.freeze(directory),actorId:access.userId,workspaceId:access.workspaceId,boardId});
  }
  /** Atomic compare-and-swap edit/delete. A lost response must be reconciled by a fresh read. */
+ async manualClockInCapability(boardId){
+  const access=await this.access(boardId);
+  if(access.moduleRole!=='System Admin')deny('System Admin attendance management required');
+  const response=await this.api.rpc('timetracker_attendance_admin_create_capability',{p_board_id:boardId});
+  if(!isRecord(response)||response.contract!=='tt-admin-clockin-capability-1'||
+     response.actorId!==access.userId||response.workspaceId!==access.workspaceId||
+     response.boardId!==boardId||typeof response.ready!=='boolean')
+   deny('Manual clock-in capability is unverified');
+  await checkIdentity(this.auth,this.api,access,boardId);
+  return response.ready;
+ }
+ async createManualClockIn(boardId,entry,expectedRevision){
+  const access=await this.access(boardId);
+  if(access.moduleRole!=='System Admin'||entry?.employeeType!=='regular'||
+     entry.status!=='active'||entry.clockOutAt!==null||!uuid.test(entry.employeeId||'')||
+     !safeTime(entry.clockInAt)||!TT_LOCATIONS.includes(entry.location)||
+     typeof entry.reason!=='string'||!entry.reason.trim()||entry.reason.length>500||
+     !Number.isSafeInteger(expectedRevision)||expectedRevision<1)
+   deny('Invalid System Admin manual clock-in request');
+  await checkIdentity(this.auth,this.api,access,boardId);
+  const result=await this.api.rpc('timetracker_attendance_admin_create',{
+   p_board_id:boardId,p_employee_id:entry.employeeId,p_clock_in_at:entry.clockInAt,
+   p_location:entry.location,p_work_note:entry.workNote,p_reason:entry.reason,
+   p_expected_revision:expectedRevision
+  },{retryUnauthorized:false});
+  if(!isRecord(result)||result.mode!=='COMMITTED'||result.contract!=='tt-admin-clockin-1'||
+     result.actorId!==access.userId||result.workspaceId!==access.workspaceId||
+     result.boardId!==boardId||result.employeeId!==entry.employeeId||
+     !uuid.test(result.recordId||'')||!Number.isSafeInteger(Number(result.revision))||
+     Number(result.revision)<=expectedRevision||!safeTime(result.committedAt))
+   deny('Manual clock-in receipt is unverified; refresh before retrying');
+  await checkIdentity(this.auth,this.api,access,boardId);
+  return Object.freeze({recordId:result.recordId,revision:Number(result.revision)});
+ }
  async mutateAttendanceRecords(boardId,{action,recordIds,patch={},reason='',expectedRevision,manualClockout=false}={}){
   const access=await this.access(boardId);
   if(!['System Admin','IT Administrator'].includes(access.moduleRole))
