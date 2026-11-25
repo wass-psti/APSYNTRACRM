@@ -1,0 +1,50 @@
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {readFileSync} from 'node:fs';
+import {OrderIntakeOperationalClient} from '../frontend/order-intake-operational-client.js';
+import {OrderIntakeDocuments,prepareOrderDocument,confirmationMetadata} from '../frontend/order-intake-documents.js';
+import {buildConfirmation} from '../frontend/order-intake-confirmation.js';
+import {createConfirmationPdf} from '../frontend/order-intake-confirmation-pdf.js';
+import {createOrderEditorSave,orderEditorDraft} from '../frontend/order-intake-editor.js';
+import {verifyDocumentsBrowser} from './cp-oi-native-08-browser.mjs';
+
+export async function verifyDocumentsSigned({auth,api,workspace,foreign,signin,sql}){
+ const actor=new OrderIntakeOperationalClient({auth,api,workspaceId:workspace}),docs=new OrderIntakeDocuments(actor);
+ const initial=await docs.coverage();assert.equal(initial.storedFiles,0);assert.equal(initial.auditOnly,2);
+ const sourceHash=sql("select md5(string_agg(id::text||':'||md5(payload::text),',' order by id)) from order_intake_legacy_orders");
+ const row=await createOrderEditorSave({client:actor})({...orderEditorDraft(),poNumber:'CP08-'+randomUUID(),clientName:'Fixture client',company:'WASS',industry:'Water',poDate:'2026-11-24',dateReceived:'2026-11-24',deliveryDate:'2026-12-01',poAmount:'112.00'});
+ const input={entity:'watchdog-sales',currency:'PHP',quotation:'Q-001',payment:'30 days',warranty:'12 months',signatory:'Alex P. Señagan',items:[{description:'Fixture equipment',quantity:'2',unit:'pc',unitPrice:'56.00'}]};
+ const doc=buildConfirmation(row,input),metadata=confirmationMetadata(doc);
+ const imageBytes=readFileSync(new URL('../frontend/assets/tradelink/'+doc.entity.logoAsset,import.meta.url));
+ const pdf=await createConfirmationPdf(doc,'data:image/png;base64,'+imageBytes.toString('base64'));
+ const prepared=await prepareOrderDocument(pdf,'confirmation.pdf'),id=randomUUID();
+ // Invalid filename must roll back both document and its newly inserted CP07 receipt.
+ await assert.rejects(docs.save(row,'generated_confirmation',{...prepared,filename:'../bad.pdf'},randomUUID(),metadata),/check constraint|23514/);
+ assert.equal(sql('select count(*) from order_intake_confirmation_audit'),'2');
+ await assert.rejects(docs.save(row,'generated_confirmation',{...prepared,sha256:'a'.repeat(64)},randomUUID(),metadata),/DIGEST_OR_SIZE/);
+ const receipt=await docs.save(row,'generated_confirmation',prepared,id,metadata);
+ assert.deepEqual(await docs.save(row,'generated_confirmation',prepared,id,metadata),receipt);
+ await assert.rejects(docs.save(row,'generated_confirmation',{...prepared,filename:'other.pdf'},id,metadata),/RECEIPT_CONFLICT/);
+ const entry=(await docs.list({row})).rows[0];assert.equal(entry.id,id);assert.equal(entry.audit_id,id);assert.ok(entry.stored);
+ assert.deepEqual(Buffer.from(await (await docs.read(entry)).arrayBuffer()),Buffer.from(await pdf.arrayBuffer()));
+ const legacy=(await actor.list({limit:100})).items.find(r=>r.record_kind==='legacy')||await actor.detail(sql('select id from order_intake_legacy_orders limit 1'));
+ const picture=await prepareOrderDocument(new Blob([imageBytes],{type:'image/png'}),'fixture.png');
+ await docs.save(legacy,'client_po',picture,randomUUID());
+ await assert.rejects(docs.save({...row,revision:row.revision+1},'supporting',prepared,randomUUID()),/row-level security|42501/);
+ const reader=await signin(workspace,true),other=new OrderIntakeDocuments(new OrderIntakeOperationalClient({auth:reader.auth,api:reader.api,workspaceId:workspace}));
+ assert.equal((await other.list({row})).rows[0].sha256,prepared.sha256);
+ assert.deepEqual(Buffer.from(await (await other.read(entry)).arrayBuffer()),Buffer.from(await pdf.arrayBuffer()));
+ const outsider=await signin(foreign,true),cross=new OrderIntakeDocuments(new OrderIntakeOperationalClient({auth:outsider.auth,api:outsider.api,workspaceId:foreign}));
+ assert.equal((await cross.list()).rows.length,0);
+ assert.equal(await outsider.api.rpc('order_intake_read_document',{p_id:id}),null);
+ await assert.rejects(outsider.api.rpc('order_intake_save_document',{p_id:randomUUID(),p_order_id:row.id,p_kind:row.record_kind,p_revision:row.revision,p_category:'supporting',p_filename:prepared.filename,p_mime:prepared.mime,p_base64:prepared.base64,p_sha256:prepared.sha256}),/row-level security|42501/);
+ assert.deepEqual(await actor.detail(row.id),row);
+ await verifyDocumentsBrowser({actor:{auth,api},reader,row,entry,imageBytes});
+ const coverage=await docs.coverage();
+ assert.equal(coverage.storedFiles,3);assert.equal(coverage.withFiles,2);assert.equal(coverage.withClientPO,1);assert.equal(coverage.withConfirmation,1);assert.equal(coverage.auditOnly,2);
+ assert.equal(coverage.storedBytes,Number(sql('select sum(byte_count) from order_intake_documents')));
+ assert.equal(coverage.historicalPOReferences,Number(sql("select count(*) from order_intake_operational_registry where record_kind='legacy' and nullif(btrim(po_file_reference),'') is not null")));
+ assert.equal(sql("select md5(string_agg(id::text||':'||md5(payload::text),',' order by id)) from order_intake_legacy_orders"),sourceHash);
+ assert.equal(sql('select count(*) from order_intake_confirmation_audit'),'3');
+ console.log('PASS: atomic generated PDF+audit, rollback, exact bytes, stable replay, stale/foreign denial, two signed sessions, coverage and 909 source payloads unchanged');
+}

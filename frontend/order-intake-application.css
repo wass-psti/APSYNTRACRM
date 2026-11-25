@@ -76,3 +76,9 @@
 .oi-confirmation-item { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; border:1px solid var(--border,#ccd5df); padding:10px; min-width:0; margin:0 0 8px; }
 .oi-confirmation-item label:first-of-type { grid-column:1/-1; }
 @media(max-width:600px){.oi-confirmation-item{grid-template-columns:minmax(0,1fr);}}
+
+.oi-document-list { display:grid; gap:12px; list-style:none; padding:0; }
+.oi-document-list li { border:1px solid var(--border,#ccd5df); border-radius:8px; padding:12px; overflow-wrap:anywhere; min-width:0; }
+.oi-document-list code { font-size:11px; overflow-wrap:anywhere; }
+.oi-document-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.oi-document-thumbnail { max-width:100%; max-height:200px; object-fit:contain; margin-top:8px; }
