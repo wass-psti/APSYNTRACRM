@@ -5200,8 +5200,8 @@ async function saveTimeTrackerAdminEditor(form){
    if(seq!==routeSerial||state.boardId!==boardId)return;
    if(state.ttAttendance?.status==='VERIFIED_READ'&&
       (state.ttAttendance.log?.rows||[]).some(row=>row.id===receipt.recordId))
-    state.ttLogAdminSuccess='Manual clock-in recorded. The employee can refresh their Clock.';
-   else state.ttLogAdminError='Clock-in committed. Refresh the signed Log before another change.';
+    state.ttLogAdminSuccess=entry.status==='completed'?'Completed attendance recorded.':'Manual clock-in recorded. The employee can refresh their Clock.';
+   else state.ttLogAdminError='Attendance committed. Refresh the signed Log before another change.';
   }catch(err){
    if(seq===routeSerial&&state.boardId===boardId&&state.ttLogAdminEditor===editor){
     editor.uncertain=true;
@@ -10867,9 +10867,9 @@ async function action(name,button){
   const seq=routeSerial,boardId=state.boardId;
   state.ttLogAdminBusy=true;render();
   try{
-   const ready=await timeTracker.manualClockInCapability(boardId);
-   if(seq===routeSerial&&state.ttLogAdminEditor===editor&&timeTrackerAdminLogReady()&&ready){
-    editor.signedCreateReady=true;editor.activeOnly=true;
+   const capability=await timeTracker.manualClockInCapability(boardId,true);
+   if(seq===routeSerial&&state.ttLogAdminEditor===editor&&timeTrackerAdminLogReady()&&capability.ready){
+    editor.signedCreateReady=true;editor.regularOnly=true;editor.activeOnly=!capability.completedReady;
     editor.revision=state.ttAttendance.revision;
    }
   }catch(err){
@@ -14647,7 +14647,7 @@ function preserveManualAttendanceDraft(event){
  const form=event.target.closest?.('#tt-attendance-admin-form[data-mode="manual"]');
  if(!form||state.ttLogAdminEditor?.mode!=='manual'||!timeTrackerAdminLogReady()||
     state.ttAttendance.access.moduleRole!=='System Admin')return false;
- state.ttLogAdminEditor.draft=syncManualAttendanceForm(form);return true;
+ state.ttLogAdminEditor.draft=syncManualAttendanceForm(form,new Date(),event.target);return true;
 }
 function preserveManualClockOutDraft(event){
  const form=event.target.closest?.('#tt-attendance-admin-form[data-tt-manual-clockout]');
