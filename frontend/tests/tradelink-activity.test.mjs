@@ -38,7 +38,7 @@ test('TradeLink activity route and navigation are scoped to the existing managed
 test('signed board activity is deduped, HTML escaped and does not pretend to be TradeLink collaboration history',()=>{
  const html=renderTradeLinkActivity({events:[
   {id:7,event_type:'column.created',message:'<img src=x onerror=alert(1)>',
-    actor_name:'<script>alert(1)</script>',created_at:'2026-11-04T01:00:00Z'},
+    actor_name:'<script>alert(1)</script>',entity_type:'document',entity_id:'ESI-001',created_at:'2026-11-04T01:00:00Z'},
   {id:7,event_type:'duplicate',message:'should disappear'},
   {id:4,event_type:'board.view',message:'Visible board event',actor_name:'Operator'}
  ]});
@@ -46,7 +46,7 @@ test('signed board activity is deduped, HTML escaped and does not pretend to be 
  assert.match(html,/&lt;img src=x onerror=alert\(1\)&gt;/);
  assert.match(html,/&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
  assert.doesNotMatch(html,/<img\s|<script>|should disappear/);
- assert.match(html,/Latest 2 authorized application events/);
+ assert.match(html,/Latest 2 authorized application events/);\n assert.match(html,/tl-activity-heading-tools/);\n assert.match(html,/Signed audit feed/);\n assert.match(html,/tl-activity-avatar/);\n assert.match(html,/&lt;script&gt;alert\(1\)&lt;\\/script&gt;/);\n assert.match(html,/document · ESI-001/);\n assert.match(html,/Showing <strong>2<\\/strong> events shown/);
  assert.match(html,/not the source application/);
 });
 test('activity error and loading states neither invent rows nor leak prior data',()=>{
