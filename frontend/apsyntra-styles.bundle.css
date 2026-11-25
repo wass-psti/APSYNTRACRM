@@ -12957,6 +12957,62 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-log-deta
  #app .aps-board-shell .tt-native .tt-log-details-dialog .tt-record-timeline strong{font-size:15px}
 }
 
+/* Compact reference dialogs — scope to time-only and manual clock-out, not the full admin editor. */
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]),#app .aps-board-shell .tt-native .tt-admin-delete-dialog{--tt-dialog-bg:#fff;--tt-dialog-footer:#f7f7fa;--tt-dialog-ink:#1c2035;--tt-dialog-muted:#626878;--tt-dialog-line:#dfe0e7;--tt-dialog-accent:#5036c8;--tt-dialog-tint:#eee9fb;--tt-dialog-accent-ink:#5036c8;background:var(--tt-dialog-bg);color:var(--tt-dialog-ink);border:1px solid var(--tt-dialog-line);border-radius:18px;box-shadow:0 24px 64px #19152b38;font:400 14px/1.45 Inter,system-ui,sans-serif}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]),html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-delete-dialog{--tt-dialog-bg:#252631;--tt-dialog-footer:#1d1e28;--tt-dialog-ink:#f2f2f7;--tt-dialog-muted:#b9bdca;--tt-dialog-line:#454754;--tt-dialog-tint:#393052;--tt-dialog-accent-ink:#c6baff}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]){width:min(560px,100%);max-height:calc(100dvh - 32px);overflow:auto;gap:0}
+#app .aps-board-shell .tt-native .tt-admin-editor-backdrop:has(> :is([data-tt-reference-correction],[data-tt-manual-clockout])),#app .aps-board-shell .tt-native .tt-admin-delete-backdrop{background:#302a4b88;backdrop-filter:blur(4px)}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-editor-head{padding:22px 24px 12px;border:0;background:var(--tt-dialog-bg);box-shadow:none;gap:12px}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-editor-title-group{position:relative;padding-left:56px;min-width:0}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-editor-title-group::before{content:"✎";position:absolute;left:0;top:0;display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:var(--tt-dialog-tint);color:var(--tt-dialog-accent-ink);font-size:20px}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout])[data-tt-manual-clockout] .tt-admin-editor-title-group::before{content:"◷"}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-eyebrow{color:var(--tt-dialog-muted);font-size:9px;letter-spacing:.07em}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-editor-head h3,#app .aps-board-shell .tt-native .tt-admin-delete-dialog h3{color:var(--tt-dialog-ink);font:700 21px/1.2 Inter,system-ui,sans-serif;letter-spacing:-.025em;margin:3px 0}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-editor-head p,#app .aps-board-shell .tt-native .tt-admin-delete-dialog>p{color:var(--tt-dialog-muted);font-size:13px;line-height:1.45}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-close,#app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-close{background:var(--tt-dialog-bg);border:1px solid var(--tt-dialog-line);color:var(--tt-dialog-muted);box-shadow:none}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-editor-body{padding:12px 24px 20px;gap:14px;background:var(--tt-dialog-bg);overflow:visible}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-record-context,#app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-reference-delete-person{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px;border:1px solid var(--tt-dialog-line);border-radius:12px;background:var(--tt-dialog-bg);box-shadow:none}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-record-avatar,#app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-record-avatar{display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:50%;background:var(--tt-dialog-tint);color:var(--tt-dialog-accent-ink);font-weight:700}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-record-context>div strong,#app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-reference-delete-person strong{display:block;color:var(--tt-dialog-ink);font-size:14px;font-weight:700}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-record-context>div small,#app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-reference-delete-person small{display:block;color:var(--tt-dialog-muted);font-size:12px;white-space:normal;overflow-wrap:anywhere}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-record-status{font-size:11px;padding:4px 9px;border:0;background:#dbf1e8;color:#16654d}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-record-status[data-completed="true"]{background:var(--tt-dialog-tint);color:var(--tt-dialog-accent-ink)}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-field-section{padding:0;gap:9px;border:0;border-radius:0;background:var(--tt-dialog-bg);box-shadow:none}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-field-section h4,#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-field{color:var(--tt-dialog-ink);font-size:13px;font-weight:600}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-field-section h4::before{display:none}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-field-section>p,#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-field-section small,#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-editor-footnote{color:var(--tt-dialog-muted);font-size:12px;font-weight:400}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-field :is(input,textarea){min-height:44px;border:1px solid var(--tt-dialog-line);border-radius:9px;background:var(--tt-dialog-bg);color:var(--tt-dialog-ink);font:400 14px Inter,system-ui,sans-serif;box-shadow:none}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-field textarea{min-height:82px}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-grid-three{padding:12px 14px;background:var(--tt-dialog-footer);border-radius:11px;gap:10px}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-grid-three strong{font-size:18px;color:var(--tt-dialog-ink);font-variant-numeric:tabular-nums}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) [data-tt-clockout-preview="credited"]{color:var(--tt-dialog-accent-ink)}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-editor-actions,#app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-delete-actions{padding:15px 24px;border-top:1px solid var(--tt-dialog-line);background:var(--tt-dialog-footer);gap:10px;box-shadow:none}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-editor-actions button,#app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-delete-actions button{min-height:44px;padding:10px 18px;border:1px solid var(--tt-dialog-line);border-radius:10px;background:var(--tt-dialog-bg);color:var(--tt-dialog-ink);font-size:13px;font-weight:600;box-shadow:none}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-editor-actions button.primary,#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-editor-actions button.primary:hover:not(:disabled){background:#5036c8;border-color:#5036c8;color:#fff;box-shadow:none}
+#app .aps-board-shell .tt-native .tt-admin-delete-dialog{position:relative;gap:12px;width:min(460px,100%);padding:24px 24px 0;max-height:calc(100dvh - 32px);overflow:auto}
+#app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-reference-delete-close{position:absolute;right:24px;top:24px}
+#app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-delete-icon{position:absolute;top:24px;left:24px;width:42px;height:42px;background:#fae2e3;border:0;border-radius:12px;color:#b83236;box-shadow:none}
+#app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-eyebrow,#app .aps-board-shell .tt-native .tt-admin-delete-dialog h3,#app .aps-board-shell .tt-native .tt-admin-delete-dialog>p{margin-left:56px;margin-right:38px}
+#app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-eyebrow{color:var(--tt-dialog-muted);letter-spacing:.05em;font-size:9px}
+#app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-reference-delete-person{grid-template-columns:40px minmax(0,1fr)}
+#app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-delete-audit-note{background:var(--tt-dialog-footer);border-color:var(--tt-dialog-line);box-shadow:none}
+#app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-delete-audit-note :is(strong,span){color:var(--tt-dialog-muted)}
+#app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-delete-actions{margin:4px -24px 0}
+#app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-delete-actions .tt-admin-delete-confirm,#app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-delete-actions .tt-admin-delete-confirm:hover:not(:disabled){background:#b83236;border-color:#b83236;color:#fff;box-shadow:none}
+#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) :is(button,input,textarea):focus-visible,#app .aps-board-shell .tt-native .tt-admin-delete-dialog button:focus-visible{outline:2px solid var(--tt-dialog-accent-ink);outline-offset:2px}
+@media(max-width:650px){
+ #app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-editor-head,#app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-editor-body{padding-left:16px;padding-right:16px}
+ #app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-editor-actions{padding:12px 16px}
+ #app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-record-context{grid-template-columns:40px minmax(0,1fr) auto}
+ #app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-record-status{grid-column:auto;justify-self:end}
+ #app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-grid-three{grid-template-columns:repeat(3,minmax(0,1fr));padding:10px}
+ #app .aps-board-shell .tt-native .tt-admin-editor:is([data-tt-reference-correction],[data-tt-manual-clockout]) .tt-admin-grid-three strong{font-size:15px}
+ #app .aps-board-shell .tt-native .tt-admin-delete-dialog{width:100%;padding:20px 16px 0}
+ #app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-delete-icon{left:16px;top:20px}
+ #app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-reference-delete-close{right:16px;top:20px}
+ #app .aps-board-shell .tt-native .tt-admin-delete-dialog .tt-admin-delete-actions{margin-left:-16px;margin-right:-16px;padding:12px 16px}
+}
+
 /* frontend/time-tracker-reports-command.css */
 /* TimeTracker Reports command view. Decoration only; all report records, SVG
  * charts, filtering and export remain existing signed native DOM operations.
@@ -14622,6 +14678,53 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-ot-refer
  #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-reason{grid-column:1/-1}
  #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-week form{width:100%}
  #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-search input{width:100%}
+}
+
+/* Reference polish: one quiet surface, purple selection, compact accessible filing dialogs. */
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference{--ot-primary:#5036c8;--ot-tint:#eee9fb;--ot-accent-ink:#5036c8;gap:16px}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference{--ot-primary:#6249da;--ot-tint:#393052;--ot-accent-ink:#c6baff}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-reference-header h3{font-size:25px;font-weight:700}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-reference-metric{box-shadow:none;min-height:100px;align-content:center}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-tabs button.is-active{background:var(--ot-primary);color:#fff}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-tabs button.is-active span{color:#fff}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-reference-filters{border-bottom:0;padding-bottom:4px}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-reference-search{justify-content:flex-end;padding-top:4px}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-reference-row{font-size:13px;min-height:54px;box-shadow:none}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-reference-labels{min-height:40px;font-size:12px}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-reference-avatar{background:var(--ot-tint);color:var(--ot-accent-ink)}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-empty:not([hidden]){display:grid;justify-items:center;align-content:center;gap:10px;min-height:300px;padding:24px;text-align:center;color:var(--ot-muted)}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-empty[hidden]{display:none}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-empty strong{color:var(--ot-ink);font-size:16px}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-empty p{margin:0;font-size:13px}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-reference-empty-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:var(--ot-tint);color:var(--ot-accent-ink);font-size:23px}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-empty button.tt-ot-reference-primary{background:var(--ot-primary);border:1px solid var(--ot-primary);color:#fff;padding:10px 16px}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-backdrop{background:#302a4b88;backdrop-filter:blur(4px)}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal{width:min(580px,calc(100vw - 32px));max-width:580px;max-height:calc(100dvh - 32px);padding:22px 24px 0;border:1px solid var(--ot-line);border-radius:18px;background:var(--ot-bg);color:var(--ot-ink);box-shadow:0 24px 64px #19152b38}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal-header{border:0;margin:0 0 18px;padding:0;background:transparent;gap:12px}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal-header>div{position:relative;padding-left:56px}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal-header>div::before{content:"+";display:grid;place-items:center;position:absolute;left:0;top:0;width:42px;height:42px;border-radius:12px;background:var(--ot-tint);color:var(--ot-accent-ink);font-size:23px;font-weight:700}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal-header h3{color:var(--ot-ink);font:700 21px/1.2 Inter,system-ui,sans-serif;letter-spacing:-.025em;margin:3px 0}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal :is(p,small,.tt-ot-modal-eyebrow){color:var(--ot-muted)}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal-header button{width:36px;height:36px;background:var(--ot-bg);border:1px solid var(--ot-line);color:var(--ot-muted)}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-form-grid{grid-template-columns:minmax(0,1fr);gap:13px}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-form-grid label{color:var(--ot-ink);font-size:13px;font-weight:600}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal :is(input,select,textarea){min-height:44px;padding:10px 12px;background:var(--ot-bg);color:var(--ot-ink);border:1px solid var(--ot-line);border-radius:9px;font:400 14px/1.4 Inter,system-ui,sans-serif;box-shadow:none}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal textarea{min-height:82px;resize:vertical}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-schedule{padding:0;border:0;background:transparent;gap:10px}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-schedule-heading :is(h4,p){color:var(--ot-ink)}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-schedule-heading>span{background:var(--ot-soft);border-color:var(--ot-line);color:var(--ot-muted)}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-duration,#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-reference-duration{background:var(--ot-tint);border:0;color:var(--ot-accent-ink);padding:12px 14px}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-duration-top :is(span,strong),#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-reference-duration strong{color:var(--ot-accent-ink);font-family:Inter,system-ui,sans-serif}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-reason-chips button{min-height:28px;padding:4px 10px;border-radius:999px}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-gate{padding:0;border:0;background:transparent;color:var(--ot-muted);font-size:12px;margin:12px 0}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal-footer{margin:18px -24px 0;padding:15px 24px;background:var(--ot-soft);border-top:1px solid var(--ot-line)}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal-footer button{min-height:44px;border:1px solid var(--ot-line);border-radius:10px;background:var(--ot-bg);color:var(--ot-ink);box-shadow:none;font-size:13px}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal-footer button[type=submit],#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal-footer button[type=submit]:hover:not(:disabled){background:var(--ot-primary);border-color:var(--ot-primary);color:#fff;box-shadow:none}
+#app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal :is(button,input,select,textarea):focus-visible{outline:2px solid var(--ot-accent-ink);outline-offset:2px}
+@media(max-width:560px){
+ #app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal{padding:18px 16px 0}
+ #app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal-footer{margin-left:-16px;margin-right:-16px;padding:12px 16px}
+ #app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-empty:not([hidden]){min-height:220px}
 }
 
 /* frontend/time-tracker-my-hours-command.css */
