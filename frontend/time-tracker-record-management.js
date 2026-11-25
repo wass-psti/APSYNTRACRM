@@ -287,9 +287,8 @@ export function renderTimeTrackerAdminDeleteDialog({confirmation=null,busy=false
     '</section></div>';
 }
 
-/** Time-only administrative closure, anchored to the signed attendance date.
- * For an earlier wall-clock time, use the following day (overnight session).
- * The operator never supplies a date or audit reason.
+/** Administrative closure uses an explicit Philippine calendar date.
+ * Never infer an overnight date or supply unverified GPS.
  */
 export function buildTimeTrackerManualClockOut(formData,record,now=new Date()){
  const raw=String(formData.get('clockOutAt')??'').trim();
@@ -303,36 +302,94 @@ export function buildTimeTrackerManualClockOut(formData,record,now=new Date()){
  const startMs=Date.parse(start);
  if(!Number.isFinite(startMs)||record?.clockOut)
   throw Error('The session must still be active.');
- const day=timeTrackerAdminDateTimeLocal(start).slice(0,10);
+ const day=String(formData.get('clockOutDate')??'').trim();
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(day))throw Error('Choose a valid Philippine clock-out date.');
  const isoLocal=day+'T'+String(hour).padStart(2,'0')+':'+minutes;
  const base=parseTimeTrackerAdminDateTime(isoLocal);
- let endMs=Date.parse(base)+seconds*1000;
- // Compare whole seconds because the time input has second precision.
- if(endMs<Math.floor(startMs/1000)*1000)endMs+=86400000;
- if(endMs<startMs||endMs>new Date(now).getTime())
+ const endMs=Date.parse(base)+seconds*1000;
+ const nowMs=new Date(now).getTime();
+ if(!Number.isFinite(nowMs)||endMs<startMs||endMs>nowMs)
   throw Error('Clock-out must be at or after clock-in and not in the future.');
+ if(endMs>startMs+370*86400000)throw Error('Clock-out exceeds the supported attendance window.');
  return Object.freeze({patch:Object.freeze({clockOutAt:new Date(endMs).toISOString()}),reason:'Administrative manual clock-out'});
 }
 
-export function renderTimeTrackerManualClockOut({editor,busy=false,error=''}={}){
+/** Match the existing nine credited hour policy, including PHT lunch overlap.
+ * Round the reference UP to whole seconds so it never falls below nine hours.
+ * This is guidance, not an automatic attendance mutation or OT decision.
+ */
+export function manualClockOutNineHourReference(start){
+ const ms=Date.parse(start);
+ if(!Number.isFinite(ms))return null;
+ let low=Math.ceil(ms/1000),high=low+48*3600;
+ while(low<high){
+  const mid=Math.floor((low+high)/2);
+  if(creditedAttendanceMs(ms,mid*1000)>=9*3600000)high=mid;
+  else low=mid+1;
+ }
+ return new Date(low*1000).toISOString();
+}
+
+export function manualClockOutPreview(formData,record,now=new Date()){
+ const start=typeof record?.clockIn==='string'?record.clockIn:record?.clockIn?.timestamp;
+ try{
+  const end=buildTimeTrackerManualClockOut(formData,record,now).patch.clockOutAt;
+  const elapsed=Date.parse(end)-Date.parse(start);
+  const credited=creditedAttendanceMs(start,end);
+  return {valid:true,elapsed:formatTimeTrackerDurationMs(elapsed),
+   unpaid:formatTimeTrackerDurationMs(elapsed-credited),
+   credited:formatTimeTrackerDurationMs(credited),message:credited<9*3600000?
+   'Below nine credited hours. Confirm the actual end of work.':credited>=9*3600000+1000?
+   'Above nine credited hours. Verify any overtime before saving.':'Nine-hour shift reached.'};
+ }catch(error){
+  return {valid:false,elapsed:'—',unpaid:'—',credited:'—',message:error.message};
+ }
+}
+
+export function syncManualClockOutPreview(form,record,now=new Date()){
+ const preview=manualClockOutPreview(new FormData(form),record,now);
+ for(const key of ['elapsed','unpaid','credited','message']){
+  const node=form.querySelector('[data-tt-clockout-preview="'+key+'"]');
+  if(node)node.textContent=preview[key];
+ }
+ const submit=form.querySelector('button[type="submit"]');
+ if(submit)submit.disabled=!preview.valid||form.querySelector('fieldset')?.disabled===true;
+ return preview;
+}
+
+export function renderTimeTrackerManualClockOut({editor,busy=false,error='',now=new Date()}={}){
  const record=editor?.ojt?editor.record:editor?.records?.[0];
  if(!record)return '';
  const start=typeof record.clockIn==='string'?record.clockIn:record.clockIn?.timestamp;
  const alreadyClosed=Boolean(record.clockOut);
+ const day=timeTrackerAdminDateTimeLocal(start).slice(0,10);
+ const today=timeTrackerAdminDateTimeLocal(new Date(now).toISOString()).slice(0,10);
+ const date=editor.clockOutDateDraft??day,time=editor.clockOutDraft??'';
+ const reference=manualClockOutNineHourReference(start);
+ const draft=new FormData();draft.set('clockOutDate',date);draft.set('clockOutAt',time);
+ const preview=manualClockOutPreview(draft,record,now);
+ const metric=(label,key)=>'<div><small>'+esc(label)+'</small><br><strong data-tt-clockout-preview="'+key+'">'+esc(preview[key])+'</strong></div>';
  return '<div class="tt-admin-editor-backdrop" data-tt-admin-backdrop>'+
-  '<form id="tt-attendance-admin-form" class="tt-admin-editor" role="dialog" aria-modal="true" aria-labelledby="tt-admin-editor-title" data-mode="single" data-tt-admin-dialog>'+
+  '<form id="tt-attendance-admin-form" class="tt-admin-editor" role="dialog" aria-modal="true" aria-labelledby="tt-admin-editor-title" data-mode="single" data-tt-admin-dialog data-tt-manual-clockout>'+
   '<header class="tt-admin-editor-head"><div class="tt-admin-editor-title-group"><span class="tt-admin-eyebrow">SYSTEM ADMIN · MANUAL CLOCK-OUT</span>'+
   '<h3 id="tt-admin-editor-title">Manual clock-out</h3><p>Close the selected active attendance session. This is an administrative action, not employee GPS evidence.</p></div>'+
   '<button type="button" class="tt-admin-close" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+' aria-label="Close editor">×</button></header>'+
   (error?'<p class="tt-admin-error" role="alert">'+esc(error)+'</p>':'')+
   '<fieldset class="tt-admin-editor-fields"'+(busy||alreadyClosed?' disabled':'')+'><div class="tt-admin-editor-body">'+
-  '<div class="tt-admin-record-context"><div><strong>'+esc(record.ownerName||record.name||'Selected employee')+'</strong><small>Clock in: '+esc(formatTimeTrackerDateTime(start,{seconds:true}))+'</small></div></div>'+
+  '<div class="tt-admin-record-context"><div><strong>'+esc(record.ownerName||record.name||'Selected employee')+'</strong><small>Active attendance · Philippine Time (UTC+08:00)</small></div><span class="tt-admin-record-status">'+(alreadyClosed?'Completed':'Active')+'</span></div>'+
   (alreadyClosed?'<p role="status">This session is already completed. Refresh the Log.</p>':'')+
-  '<section class="tt-admin-field-section"><h4>Verified clock-out · Philippine Time</h4>'+
-  inputField('Clock-out time','clockOutAt',editor.clockOutDraft||'',{placeholder:'06:48:32 PM',required:true})+
-  '<p>Attendance date: '+esc(timeTrackerAdminDateTimeLocal(start).slice(0,10))+'. A time earlier than clock-in is treated as the following day. Future times are not allowed.</p>'+
-  '</section>'+
+  '<section class="tt-admin-field-section"><h4>Shift reference</h4><div class="tt-admin-grid tt-admin-grid-two">'+
+  '<div><small>Clock-in (recorded)</small><br><strong>'+esc(formatTimeTrackerDateTime(start,{seconds:true}))+'</strong></div>'+
+  '<div><small>9-hour shift reference</small><br><strong>'+esc(formatTimeTrackerDateTime(reference,{seconds:true}))+'</strong></div></div>'+
+  '<p>Excludes unpaid lunch from 12:00 PM to 1:00 PM when the session overlaps it. Reference only; use the actual verified end time, including overtime if applicable.</p></section>'+
+  '<section class="tt-admin-field-section"><h4>Verified clock-out · Philippine Time</h4><div class="tt-admin-grid tt-admin-grid-two">'+
+  inputField('Clock-out date','clockOutDate',date,{type:'date',min:day,max:today,required:true})+
+  inputField('Clock-out time (AM/PM)','clockOutAt',time,{placeholder:'06:48:32 PM',required:true})+
+  '</div><p>Attendance date: '+esc(day)+'. Select a later date for overnight work. Future times are not allowed.</p></section>'+
+  '<section class="tt-admin-field-section"><h4>Working-hours preview</h4><div class="tt-admin-grid tt-admin-grid-three">'+
+  metric('Elapsed','elapsed')+metric('Unpaid break','unpaid')+metric('Credited hours','credited')+'</div>'+
+  '<p data-tt-clockout-preview="message" role="status" aria-live="polite">'+esc(time?preview.message:'Enter a clock-out time to calculate working hours.')+'</p></section>'+
   '</div></fieldset><footer class="tt-admin-editor-actions"><span class="tt-admin-editor-footnote">The original record and administrator identity remain in the audit history.</span><div>'+
   '<button type="button" class="secondary" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+'>Cancel</button>'+
-  '<button type="submit" class="primary"'+(busy||alreadyClosed?' disabled':'')+'>'+(busy?'Saving…':'Confirm clock-out')+'</button></div></footer></form></div>';
+  '<button type="submit" class="primary"'+(busy||alreadyClosed||!preview.valid?' disabled':'')+'>'+(busy?'Saving…':'Confirm clock-out')+'</button></div></footer></form></div>';
 }
