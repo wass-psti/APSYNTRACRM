@@ -97,7 +97,7 @@ CREATE TABLE private.ws02_company_provisioning_config(
 INSERT INTO private.ws02_company_provisioning_config(id,workspace_id)
  VALUES(true,'00000000-0000-4000-8000-000000000001');
 CREATE TABLE private.ws02_company_provision_events(
- user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE RESTRICT,
+ user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
  workspace_id uuid NOT NULL REFERENCES public.workspaces(id),
  assigned_by uuid NOT NULL REFERENCES public.profiles(id),
  provisioned_at timestamptz NOT NULL DEFAULT clock_timestamp()
