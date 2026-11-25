@@ -64,7 +64,7 @@ html[data-aps-monday-theme="dark"] #app .tl-reference-portal :is(
  input,textarea,select,.tl-reference-input,.tl-reference-select,
  .tl-reference-document-toolbar button
 ) {background:var(--crm-native-input);color:var(--crm-native-ink);border-color:var(--crm-native-border)}
-html[data-aps-monday-theme="dark"] #app .tl-reference-portal :is(input,textarea)::placeholder {color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .aps-tradelink-app :is(input,textarea)::placeholder {color:var(--crm-native-muted);opacity:1}
 /* Fund Tracker reporting surfaces retain dark headers and financial status accents. */
 html[data-aps-monday-theme="dark"] #app .frt-ref {
  --frt-ink:var(--crm-native-ink);

@@ -33,16 +33,16 @@ export function renderTradeLinkFinancePreview(){
    '<span class="tl-finance-local">Unsaved estimate</span></div>'+
   '<p class="muted">This uses the source discount, VAT and currency rules on one sample line item. It is not a saved invoice, quotation or purchase order.</p>'+
   '<div class="tl-finance-fields" data-tradelink-finance-preview>'+
-   '<label>Quantity<input name="quantity" type="number" min="0" step="any" value="1" inputmode="decimal"></label>'+
-   '<label>Unit price<input name="unitPrice" type="number" min="0" step="any" value="0" inputmode="decimal"></label>'+
+   '<label>Quantity<input name="quantity" type="number" placeholder="Enter quantity" min="0" step="any" value="1" inputmode="decimal"></label>'+
+   '<label>Unit price<input name="unitPrice" type="number" placeholder="Enter unit price" min="0" step="any" value="0" inputmode="decimal"></label>'+
    '<label>Discount<select name="discountType"><option value="percentage">Percentage</option><option value="fixed">Fixed amount</option></select></label>'+
-   '<label>Discount value<input name="discountValue" type="number" min="0" step="any" value="0" inputmode="decimal"></label>'+
+   '<label>Discount value<input name="discountValue" type="number" placeholder="Enter discount" min="0" step="any" value="0" inputmode="decimal"></label>'+
    '<label>VAT<select name="vatType"><option value="zero">0% Zero Rated</option>'+
     '<option value="exempt">0% Tax Exempt</option><option value="12">12% VAT</option>'+
     '<option value="15_tkm">15% TKM VAT</option><option value="15_ksa">15% KSA VAT</option></select></label>'+
    '<label>Currency<select name="currency">'+TRADELINK_CURRENCIES.map(c=>
     '<option value="'+c+'">'+c+'</option>').join('')+'</select></label>'+
-   '<label>PHP exchange rate<input name="exchangeRate" type="number" min="0" step="any" value="1" inputmode="decimal"></label>'+
+   '<label>PHP exchange rate<input name="exchangeRate" type="number" placeholder="Enter exchange rate" min="0" step="any" value="1" inputmode="decimal"></label>'+
    '</div>'+
   '<dl class="tl-finance-results" aria-live="polite" aria-atomic="true">'+
    [['subtotal','Subtotal'],['discount','Discount'],['taxable','Taxable'],['vat','VAT'],

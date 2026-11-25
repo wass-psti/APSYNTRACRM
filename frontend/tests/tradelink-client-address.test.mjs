@@ -15,7 +15,7 @@ const render=view=>renderTradeLinkDraftWorkspace({detail,workspaceId:ws,view,can
 const parse=value=>parseTradeLinkDraftForm(form(value),{purpose:'save'});
 test('optional multiline Client Address appears immediately after Client Name only in Quotation',()=>{
  const html=render(initialTradeLinkDraftView('quotation'));
- assert.match(html,/Client Information[\s\S]*name="customerName"[\s\S]*Client Address<\/span><textarea name="customerAddress" rows="2" maxlength="5000">/);
+ assert.match(html,/Client Information[\s\S]*name="customerName"[\s\S]*Client Address<\/span><textarea name="customerAddress" rows="2" maxlength="5000" placeholder="Enter client address">/);
  assert.doesNotMatch(render(initialTradeLinkDraftView('po')),/<textarea name="customerAddress"/);
 });
 test('address is optional, validated and included in exact Save command',()=>{
