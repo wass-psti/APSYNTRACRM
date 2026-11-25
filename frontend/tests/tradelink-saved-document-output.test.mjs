@@ -53,17 +53,17 @@ test('all six saved TradeLink modules use the recovered official company templat
   assert.match(html,/data-tradelink-template-version="v1\.42\.0"/);
   assert.equal((html.match(/class="tl-official-footer"/g)||[]).length,1,type+' footer count');
   if(type==='quotation'){
-   assert.match(html,/CLIENT NAME:/);
+   assert.match(html,/CLIENT:/);
    assert.doesNotMatch(html,/PROSPECTIVE CLIENT/);
-   assert.match(html,/tl-official-quotation-page-1/);
-   assert.match(html,/tl-official-quotation-page-2/);
-   assert.match(html,/tl-official-terms-page/);
+   assert.match(html,/tl-quote-letterhead/);
+   assert.match(html,/tl-quote-parties/);
+   assert.match(html,/tl-quote-terms/);
   }
   assert.match(html,/Watchdog Automation Sales &amp; Services/);
-  assert.match(html,/watchdog-logo\.png/);
+  assert.match(html,type==='quotation'?/watchdog-sales-quotation\.png/:/watchdog-logo\.png/);
   assert.match(html,new RegExp(labels[type]));
   assert.match(html,new RegExp(content.documentNumber));
-  assert.match(html,/>Rev\.<\/dt><dd>5<\/dd>/);
+  assert.match(html,type==='quotation'?/Rev:<\/b> 5/:/>Rev\.<\/dt><dd>5<\/dd>/);
   assert.match(html,/NOT APPROVED/);
   assert.match(html,/Workflow assignments \/ recorded responsibility/);
   assert.doesNotMatch(html,/workspace_id|board_item_id|Authoritative document ID|Linked Board item ID/);
@@ -77,16 +77,16 @@ test('commercial print totals use all saved lines, source VAT, discount and curr
  ]};
  const html=renderTradeLinkSavedDocumentOutput(record('quotation',multi),workspace,id);
  // 601+300=901 subtotal, 10 discount, 12% VAT of 891 = 106.92, total 997.92.
- assert.match(html,/901\.00 PHP/);
- assert.match(html,/10\.00 PHP/);
- assert.match(html,/106\.92 PHP/);
- assert.match(html,/997\.92 PHP/);
+ assert.match(html,/₱901\.00/);
+ assert.match(html,/₱-10\.00/);
+ assert.match(html,/₱106\.92/);
+ assert.match(html,/₱997\.92/);
  assert.match(html,/Second service/);
  assert.equal((html.match(/class="tl-official-items"/g)||[]).length,1);
  const foreign={...multi,currency:'USD',exchangeRate:58};
  const fx=renderTradeLinkSavedDocumentOutput(record('quotation',foreign),workspace,id);
  assert.match(fx,/997\.92 USD/);
- assert.match(fx,/57,879\.36 PHP/);
+ assert.match(fx,/₱57,879\.36/);
 });
 test('incomplete Drafts and note-only rows remain truthful and render terms without fabricated values',()=>{
  const content={documentType:'packing',documentNumber:'PK-INCOMPLETE',
@@ -112,9 +112,9 @@ test('Payment AR shows cash and cheque acknowledgement without tax invoice claim
 });
 test('all three historical company profiles resolve to their own legal identity, logo and template',()=>{
  const cases=[
-  ['watchdog-sales','Watchdog Automation Sales &amp; Services','watchdog-logo.png','#ef4155'],
-  ['watchdog-opc','Watchdog Automation OPC','watchdog-opc-logo.png','#14b866'],
-  ['plc-systems','PLC Systems Technik, Inc.','plc-systems-logo.png','#0b9a9d']
+  ['watchdog-sales','Watchdog Automation Sales &amp; Services','watchdog-sales-quotation.png','#ff3d57'],
+  ['watchdog-opc','Watchdog Automation OPC','watchdog-opc-quotation.png','#00d748'],
+  ['plc-systems','PLC Systems Technik, Inc.','plc-systems-quotation.png','#009999']
  ];
  for(const [profile,name,logo,color] of cases){
   const content={...docs.quotation,vendorId:profile,
@@ -220,7 +220,7 @@ test('print action reloads signed record and matching Board before mounting the 
   /record\.board_item_id!==listed\.boardItemId/,
   /board\.board\.workspace_id!==ws/,
   /item\.title===listed\.documentNumber/,
-  /renderTradeLinkSavedDocumentOutput\(record,ws,documentId\)/,
+  /renderTradeLinkSavedDocumentOutput\(record,ws,documentId,\{creatorName\}\)/,
   /mountTradeLinkSavedDocumentOutput\(markup\)/,
   /if\(!same\(\)\)return/
  ])assert.match(flow,pattern);

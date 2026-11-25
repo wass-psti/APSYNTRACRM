@@ -71,8 +71,8 @@ assert.match(repository,/data-action="tradelink-document-revision-print"[^>]*dat
 assert.doesNotMatch(repository,/data-action="tradelink-document-revision-print"[^>]*data-revision="2"/);
 
 const html=renderTradeLinkSavedDocumentOutput(history.selected,workspace,documentId);
-for(const expected of ['Immutable first revision only','APPROVED','250.50 PHP',
- '30.06 PHP','280.56 PHP']){
+for(const expected of ['Immutable first revision only','APPROVED','₱250.50',
+ '₱30.06','₱280.56']){
  assert.ok(html.includes(expected),'Missing historical field '+expected);
 }
 assert.doesNotMatch(html,/New pending revision only/);
@@ -84,18 +84,18 @@ try{
  await page.setContent('<!doctype html><html><head><meta charset="utf-8"><style>'+
   css+'</style></head><body><section id="tradelink-saved-print">'+html+
   '</section></body></html>');
- assert.equal(await page.locator('.tl-official-quotation-page-1').count(),1);
- assert.equal(await page.locator('.tl-official-quotation-page-2').count(),1);
- assert.equal(await page.locator('.tl-official-terms-page').count(),1);
+ assert.equal(await page.locator('.tl-quote-letterhead').count(),1);
+ assert.equal(await page.locator('.tl-quote-parties').count(),1);
+ assert.equal(await page.locator('.tl-quote-terms').count(),1);
  assert.equal(await page.locator('.tl-official-approval-stamp.is-approved').count(),1);
  await page.emulateMedia({media:'print'});
- const pdf=await page.pdf({format:'A4',printBackground:true,displayHeaderFooter:false});
+ const pdf=await page.pdf({preferCSSPageSize:true,printBackground:true,displayHeaderFooter:false});
  assert.ok(pdf.length>10000,'Chromium must generate a nonempty PDF');
  assert.match(pdf.subarray(0,12).toString(),/^%PDF-/);
- assert.match(pdf.toString('latin1'),/\/MediaBox\s*\[\s*0\s+0\s+59[45](?:\.\d+)?\s+84[12](?:\.\d+)?\s*\]/);
+ assert.match(pdf.toString('latin1'),/\/MediaBox\s*\[\s*0\s+0\s+612(?:\.\d+)?\s+792(?:\.\d+)?\s*\]/);
  console.log('PASS: Chromium PDF of synthetic prior Approved revision');
  console.log('PASS: pending new revision is not printable, old amounts and wording preserved');
- console.log('PASS: saved A4 template and all three Quotation sections');
+ console.log('PASS: saved Letter template and flowing Quotation sections');
  console.log('DISPOSABLE TEST ONLY — not signed production historical acceptance');
 }finally{
  await browser?.close();
