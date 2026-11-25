@@ -43,7 +43,7 @@ test('split navigation follows the active module, All Documents, and Activity ro
 test('split navigation preserves existing signed routes and refuses a foreign workspace',()=>{
  const source=readFileSync('frontend/tradelink-application.js','utf8');
  assert.match(source,/renderTradeLinkDocumentRepository\(\{detail,workspaceId,view:draftView,canManage,canReview,actorEmail,canCreate,actorId\}\)/);
- assert.match(source,/renderTradeLinkDraftWorkspace\(\{detail,workspaceId,view:draftView,canManage,canCreate,actorId,actorName,actorEmail,showModuleTabs:false\}\)/);
+ assert.match(source,/renderTradeLinkDraftWorkspace\(\{detail,workspaceId,view:draftView,canManage,canCreate,actorId,actorName,actorEmail,actorModuleRole,showModuleTabs:false\}\)/);
  const denied=renderTradeLinkApplication({...base,workspaceId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'});
  assert.match(denied,/signed workspace access is unavailable/);
  assert.doesNotMatch(denied,/class="tl-app-nav"|data-tradelink-draft-form/);
