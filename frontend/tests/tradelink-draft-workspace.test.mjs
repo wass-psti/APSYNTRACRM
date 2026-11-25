@@ -1153,9 +1153,42 @@ test('app integration is session-cleared and route-scoped, with no new credentia
  assert.doesNotMatch(source,/\b(?:indexedDB|setItem|document\.cookie)\b/);
 });
 
+
+test('TradeLink draft parsing and editor rendering support 250 unique items and reject 251',()=>{
+ const makeFields=count=>{
+  const data={documentType:'quotation',documentNumber:'Q-250',customerName:'Example Customer',
+   customerEmail:'customer@example.test',validity:'30 days',deliveryCommitment:'2 weeks',
+   paymentTerms:'Net 30',approvedBy:'Manager',currency:'PHP',vatType:'12',
+   lineDescription:Array.from({length:count},(_,i)=>'Item '+(i+1)),
+   lineQuantity:Array(count).fill('1'),lineUnitPrice:Array(count).fill('10'),
+   lineUnit:Array(count).fill('pc')};
+  return {get:key=>Array.isArray(data[key])?data[key][0]??null:data[key]??null,
+   getAll:key=>Array.isArray(data[key])?data[key]:data[key]===undefined?[]:[data[key]]};
+ };
+ const parsed=parseTradeLinkDraftForm(makeFields(250),{lineId:index=>'line-'+(index+1)});
+ assert.equal(parsed.items.length,250);
+ assert.equal(new Set(parsed.items.map(item=>item.id)).size,250);
+ assert.throws(()=>parseTradeLinkDraftForm(makeFields(251),{lineId:index=>'line-'+(index+1)}),/line-item count/);
+ assert.throws(()=>parseTradeLinkDraftForm(makeFields(2),{lineId:()=> 'duplicate-id'}),/Duplicate/);
+ const row={id:'11111111-1111-4111-8111-111111111111',document_number:'Q-250',
+  document_type:'quotation',revision:1,workflow_state:'draft',archived_at:null,
+  created_by:'22222222-2222-4222-8222-222222222222',
+  content:{documentType:'quotation',documentNumber:'Q-250',items:parsed.items}};
+ const view={...initialTradeLinkDraftView('quotation'),status:'AUTHORIZED_READ',mode:'edit',
+  selected:{documentId:row.id,record:row}};
+ const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view,canManage:true});
+ assert.equal((html.match(/data-tradelink-line-item/g)||[]).length,250);
+ const oversizedRow={...row,content:{...row.content,items:[...parsed.items,{...parsed.items[0],id:'line-251'}]}};
+ const oversizedHtml=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
+  view:{...view,selected:{documentId:row.id,record:oversizedRow}},canManage:true});
+ assert.match(oversizedHtml,/cannot be edited with the bounded Phase 1 editor/i);
+});
+
 test('shared recovery field capture preserves raw values and excludes unknown inputs',()=>{
  const input=new Map(RECOVERY_FIELDS.map(key=>[key,'  '+key+' Ω  ']));
  input.set('unexpected','not captured');
- assert.deepEqual(captureRecoveryFields(input),Object.fromEntries(RECOVERY_FIELDS.map(key=>[key,input.get(key)])));
+ const lineFields=new Set(['lineDescription','lineQuantity','lineUnitPrice','lineUnit','lineSerialNumber']);
+ const captured=RECOVERY_FIELDS.filter(key=>!lineFields.has(key));
+ assert.deepEqual(captureRecoveryFields(input),Object.fromEntries(captured.map(key=>[key,input.get(key)])));
  assert.deepEqual(captureRecoveryFields(new Map([['remarks','']])),{remarks:''});
 });

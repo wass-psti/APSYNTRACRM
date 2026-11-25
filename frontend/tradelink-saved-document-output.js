@@ -7,6 +7,7 @@ import {GM_SALES_EXEMPT_POLICY} from './tradelink/approval-policy.js';
  * approval, payment, shipment, or persistence action is performed here.
  */
 import {ApiError} from './session.js';
+import {TRADELINK_MAX_ITEMS} from './tradelink/limits.js';
 import {normalizeTradeLinkDomainRow} from './tradelink-domain-client.js';
 import {calculateTradeLinkAmounts,formatTradeLinkAmount,TRADELINK_CURRENCIES} from './tradelink-finance.js';
 import {resolveTradeLinkOfficialTemplate,TRADELINK_DEFAULT_TERMS,
@@ -29,7 +30,7 @@ const validStamp=value=>typeof value==='string'&&Number.isFinite(Date.parse(valu
 const amount=value=>typeof value==='number'&&Number.isFinite(value)?formatTradeLinkAmount(value):'—';
 const money=(value,currency)=>amount(value)+(Number.isFinite(value)?' '+safe(currency):'');
 const pair=(label,value)=>'<div><dt>'+safe(label)+'</dt><dd>'+display(value)+'</dd></div>';
-const validLines=items=>Array.isArray(items)&&items.length<=100&&
+const validLines=items=>Array.isArray(items)&&items.length<=TRADELINK_MAX_ITEMS&&
  items.every(row=>row&&typeof row==='object'&&!Array.isArray(row)&&
   ['item','note'].includes(row.kind)&&
   (row.description===undefined||typeof row.description==='string'&&row.description.length<=2000)&&

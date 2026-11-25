@@ -2263,11 +2263,32 @@
       "sha256": "0a341757b8f1ddb345b712a5a9f00c4bc0f07365aa270bb2dfd404ab47746c51"
     },
     {
+      "version": "20261125004655",
+      "name": "cp_oi_native_08_documents",
+      "file": "20261125004655_cp_oi_native_08_documents.sql",
+      "bytes": 9340,
+      "sha256": "b3a002cef11928bf14f7d484e03c3fd897176b298ef71bcb838b07a286d3a2c5"
+    },
+    {
+      "version": "20261125005115",
+      "name": "cp_agt_19b5_authoritative_sources",
+      "file": "20261125005115_cp_agt_19b5_authoritative_sources.sql",
+      "bytes": 24511,
+      "sha256": "d6d5fc7c5a9cab8b5db0e2de30c43ccf2652a564ac2b5dd163d3aadd5a757e61"
+    },
+    {
       "version": "20261125012603",
       "name": "cp_tl_gm_approval_exemption",
       "file": "20261125012603_cp_tl_gm_approval_exemption.sql",
       "bytes": 53289,
       "sha256": "d2417020aae9aa021386daba47966e94f923bfa57203cd7aba35f9476bfb93c7"
+    },
+    {
+      "version": "20261125014338",
+      "name": "cp_tl_large_save_02_capacity",
+      "file": "20261125014338_cp_tl_large_save_02_capacity.sql",
+      "bytes": 23963,
+      "sha256": "c1f66056a5c6770ebb4d977f37a677baf6eca1f3647853e3d4a2d11889d3d5ed"
     },
     {
       "version": "20261125090000",
