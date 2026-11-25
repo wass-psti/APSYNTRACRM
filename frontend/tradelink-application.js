@@ -57,7 +57,54 @@ const TRADELINK_MANUAL_SECTIONS=Object.freeze([
 ]);
 export function renderTradeLinkUserManual(){
  const cards=TRADELINK_MANUAL_SECTIONS.map(section=>'<article class="tl-manual-section" id="tl-manual-'+section.id+'"><div class="tl-manual-section-number">'+section.number+'</div><div class="tl-manual-section-content"><h3>'+section.title+'</h3><p class="tl-manual-section-summary">'+section.summary+'</p><div class="tl-manual-points">'+section.points.map(point=>'<div class="tl-manual-point"><strong>'+point[0]+'</strong><p>'+point[1]+'</p></div>').join('')+'</div></div></article>').join('');
- return '<section class="tl-content-panel tl-user-manual" data-tl-screen="manual" aria-labelledby="tl-manual-title"><header class="tl-manual-hero"><div class="tl-manual-hero-copy"><p class="tl-eyebrow">TRADELINK · HELP CENTER</p><h2 id="tl-manual-title">User Manual</h2><p>A practical guide to preparing documents, completing reviews, printing approved revisions and reading analytics.</p><div class="tl-manual-meta"><span>7 topics</span><span>Document workflow reference</span></div></div><div class="tl-manual-hero-art" aria-hidden="true"><span class="tl-manual-art-sheet">▤</span><span class="tl-manual-art-check">✓</span></div></header><div class="tl-manual-layout"><nav class="tl-manual-index" aria-label="Manual topics"><strong>IN THIS GUIDE</strong>'+TRADELINK_MANUAL_SECTIONS.map(section=>'<a href="#tl-manual-'+section.id+'"><span>'+section.number+'</span>'+section.title+'</a>').join('')+'</nav><div class="tl-manual-content">'+cards+'<p class="tl-manual-footnote">This guide describes the current TradeLink workflow and reporting behavior. Use the document’s saved revision and signed application data as the authoritative record.</p></div></div></section>';
+ return '<section class="tl-content-panel tl-user-manual" data-tl-screen="manual" aria-labelledby="tl-manual-title">'+
+  '<header class="tl-manual-hero"><div class="tl-manual-hero-copy">'+
+   '<p class="tl-eyebrow">TRADELINK · HELP CENTER</p><h2 id="tl-manual-title">User Manual</h2>'+
+   '<p>A practical guide to preparing documents, completing reviews, printing approved revisions and reading analytics.</p>'+
+   '<div class="tl-manual-meta"><span>7 topics</span><span>Document workflow reference</span></div>'+
+   '<div class="tl-manual-hero-actions"><a class="tl-manual-primary-link" href="#tl-manual-lifecycle">Start with the basics <span aria-hidden="true">→</span></a>'+
+    '<a class="tl-manual-secondary-link" href="#/tradelink/documents">Open All Documents</a></div></div>'+
+   '<div class="tl-manual-hero-art" aria-hidden="true"><span class="tl-manual-art-sheet">▤</span><span class="tl-manual-art-check">✓</span></div></header>'+
+  '<section class="tl-manual-quickstart" aria-labelledby="tl-manual-quickstart-title">'+
+   '<div class="tl-manual-quickstart-heading"><p class="tl-eyebrow">QUICK START</p><h3 id="tl-manual-quickstart-title">From document to approval</h3><p>Three steps to begin a TradeLink document workflow.</p></div>'+
+   '<ol class="tl-manual-steps">'+
+    '<li><span>01</span><div><strong>Choose a document</strong><p>Select one of the six available document types.</p></div></li>'+
+    '<li><span>02</span><div><strong>Complete the details</strong><p>Enter client information, items, dates and applicable terms.</p></div></li>'+
+    '<li><span>03</span><div><strong>Save and review</strong><p>Save as Draft or For Approval, then follow the applicable review route.</p></div></li>'+
+   '</ol></section>'+
+  '<div class="tl-manual-browse-heading"><div><p class="tl-eyebrow">REFERENCE LIBRARY</p><h3>Browse the guide</h3><p>Jump to a topic or search the guidance by keyword.</p></div>'+
+   '<div class="tl-manual-search"><label for="tl-manual-search-input">Search topics</label><div class="tl-manual-search-control"><span aria-hidden="true">⌕</span><input id="tl-manual-search-input" data-tl-manual-search type="search" placeholder="Search approvals, numbering, PDF..." autocomplete="off"/><button type="button" data-tl-manual-clear aria-label="Clear manual search">Clear</button></div>'+
+    '<p data-tl-manual-results aria-live="polite">7 topics</p></div></div>'+
+  '<div class="tl-manual-layout"><nav class="tl-manual-index" aria-label="Manual topics"><strong>IN THIS GUIDE</strong>'+
+   TRADELINK_MANUAL_SECTIONS.map(section=>'<a href="#tl-manual-'+section.id+'"><span>'+section.number+'</span>'+section.title+'</a>').join('')+
+  '</nav><div class="tl-manual-content">'+cards+
+   '<p class="tl-manual-empty" data-tl-manual-empty hidden>No topics match that search. Try another keyword or clear the search.</p>'+
+   '<p class="tl-manual-footnote">This guide describes the current TradeLink workflow and reporting behavior. Use the document’s saved revision and signed application data as the authoritative record.</p>'+
+  '</div></div></section>';
+}
+
+export function filterTradeLinkManualSections(container,query=''){
+ const manual=container?.matches?.('.tl-user-manual')?container:
+  container?.querySelector?.('.tl-user-manual');
+ if(!manual)return 0;
+ const search=String(query||'').toLocaleLowerCase().trim().slice(0,120);
+ const sections=[...manual.querySelectorAll('.tl-manual-section')];
+ let visible=0;
+ for(const section of sections){
+  const matches=!search||String(section.textContent||'').toLocaleLowerCase().includes(search);
+  section.hidden=!matches;
+  if(matches)visible++;
+ }
+ for(const link of manual.querySelectorAll('.tl-manual-index a[href^="#tl-manual-"]')){
+  const sectionId=String(link.getAttribute('href')||'').slice(1);
+  const section=sections.find(item=>item.id===sectionId);
+  link.hidden=Boolean(section?.hidden);
+ }
+ const count=manual.querySelector('[data-tl-manual-results]');
+ if(count)count.textContent=search?visible+' of '+sections.length+' topics match':sections.length+' topics';
+ const empty=manual.querySelector('[data-tl-manual-empty]');
+ if(empty)empty.hidden=visible!==0;
+ return visible;
 }
 
 export function normalizeTradeLinkSection(value){
@@ -200,6 +247,18 @@ export function captureTradeLinkTabMotion(container){
 export function mountTradeLinkTabMotion(container){
  const nav=container?.querySelector('.tl-reference-portal-links');
  if(!nav)return;
+ const manualScreen=container.querySelector('.tl-user-manual');
+ const manualSearch=manualScreen?.querySelector('[data-tl-manual-search]');
+ if(manualSearch&&!manualSearch.dataset.mounted){
+  const updateManualResults=()=>filterTradeLinkManualSections(manualScreen,manualSearch.value);
+  manualSearch.addEventListener('input',updateManualResults);
+  manualScreen.querySelector('[data-tl-manual-clear]')?.addEventListener('click',()=>{
+   manualSearch.value='';
+   updateManualResults();
+   manualSearch.focus();
+  });
+  manualSearch.dataset.mounted='true';
+ }
  const indicator=nav.querySelector('.tl-reference-active-indicator');
  const reduced=()=>typeof matchMedia==='function'&&
   matchMedia('(prefers-reduced-motion: reduce)').matches;
