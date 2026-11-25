@@ -2086,7 +2086,7 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
   try{selectedPreview=renderTradeLinkSavedDocumentPreview(selectedRecord,workspaceId,selection.documentId);}
   catch{selectedPreview='';}
  }
- return '<section class="tl-content-panel tl-document-repository" aria-labelledby="tl-domain-repository-title">'+
+ return '<section class="tl-content-panel tl-document-repository" data-tl-screen="documents" aria-labelledby="tl-domain-repository-title">'+
   '<div class="tl-panel-heading tl-reference-repository-actions">'+
    '<h2 id="tl-domain-repository-title">'+(canReview&&!creatorMode?'My Assigned Documents':'All Documents')+' <span class="tl-ref-count-badge">'+
     escape(rows.length)+'</span></h2>'+

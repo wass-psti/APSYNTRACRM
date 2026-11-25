@@ -106,27 +106,27 @@ export function summarizeTradeLinkAnalytics(summary){
 function chartRows(rows,{label,value}={}){
  if(!rows.length)return '<p class="muted">No matching records in this reporting period.</p>';
  const max=Math.max(1,...rows.map(value));
- return '<div class="tl-analytics-bars">'+rows.map(row=>{
+ return '<div class="tl-analytics-bars" role="list">'+rows.map(row=>{
   const amount=value(row),width=Math.max(amount>0?2:0,amount/max*100);
-  return '<div class="tl-analytics-bar-row"><span>'+esc(label(row))+'</span>'+
+  return '<div class="tl-analytics-bar-row" role="listitem"><span class="tl-analytics-bar-label">'+esc(label(row))+'</span>'+
    '<progress class="tl-analytics-bar-track" max="100" value="'+width.toFixed(2)+'" aria-label="'+esc(label(row))+'"></progress>'+
    '<strong>'+amount+'</strong></div>';
  }).join('')+'</div>';
 }
 function table(rows,headers,empty){
- return rows.length?'<div class="tl-records-scroll"><table class="tl-records-table"><thead><tr>'+headers.map(h=>
+ return rows.length?'<div class="tl-records-scroll"><table class="tl-records-table tl-analytics-table"><thead><tr>'+headers.map(h=>
   '<th'+(h.numeric?' class="numeric"':'')+'>'+esc(h.label)+'</th>').join('')+
   '</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>':
   '<p class="muted">'+esc(empty)+'</p>';
 }
 export function renderTradeLinkAnalytics({summary=null,busy=false,error='',enabled=false}={}){
- const shell='<section class="tl-content-panel tl-analytics" aria-labelledby="tl-analytics-title">'+
+ const shell='<section class="tl-content-panel tl-analytics" data-tl-screen="analytics" aria-labelledby="tl-analytics-title">'+
   '<div class="tl-panel-heading"><div><p class="tl-eyebrow">TradeLink reporting</p><h2 id="tl-analytics-title">Analytics &amp; Dashboards</h2></div></div>';
  if(!enabled&&!summary)return shell+
   '<div class="tl-analytics-empty" role="status"><strong>Analytics service is prepared but not activated.</strong>'+
   '<p>The signed aggregate-read database function and matching report schema must be activated before production figures can be displayed. No partial-page figures or fabricated metrics are shown.</p></div></section>';
- if(busy)return shell+'<p role="status">Loading signed TradeLink analytics…</p></section>';
- if(error)return shell+'<div class="tl-analytics-empty" role="alert"><strong>Analytics could not be loaded.</strong>'+
+ if(busy)return shell+'<p class="tl-analytics-loading" role="status" aria-live="polite">Loading signed TradeLink analytics…</p></section>';
+ if(error)return shell+'<div class="tl-analytics-empty tl-analytics-error" role="alert"><strong>Analytics could not be loaded.</strong>'+
   '<p>'+esc(error)+'</p><button type="button" class="secondary" data-action="tradelink-analytics-refresh">Retry analytics</button></div></section>';
  if(!summary)return shell+'<div class="tl-analytics-empty" role="status"><p>No analytics response is currently loaded.</p>'+
   '<button type="button" class="secondary" data-action="tradelink-analytics-refresh">Load analytics</button></div></section>';
@@ -136,25 +136,25 @@ export function renderTradeLinkAnalytics({summary=null,busy=false,error='',enabl
  const quoteWorkflow=[...new Set(data.quotationPerformance.map(row=>row.workflowState))].map(workflowState=>({
   workflowState,count:data.quotationPerformance.filter(row=>row.workflowState===workflowState).reduce((sum,row)=>sum+row.count,0)}));
  const workflowRows=data.quotationPerformance.map(row=>'<tr><td>'+esc(stateLabels[row.workflowState]||row.workflowState)+
-  '</td><td>'+esc(row.currency)+'</td><td>'+row.count+'</td><td>'+esc(money(row.total,row.currency))+'</td></tr>');
+  '</td><td>'+esc(row.currency)+'</td><td class="numeric">'+row.count+'</td><td class="numeric">'+esc(money(row.total,row.currency))+'</td></tr>');
  const commercialRows=data.quotationCommercialStatus.map(row=>'<tr><td>'+esc(row.quoteStatus==='unspecified'?'Not recorded':row.quoteStatus)+
-  '</td><td>'+esc(row.currency)+'</td><td>'+row.count+'</td><td>'+esc(money(row.total,row.currency))+'</td></tr>');
+  '</td><td>'+esc(row.currency)+'</td><td class="numeric">'+row.count+'</td><td class="numeric">'+esc(money(row.total,row.currency))+'</td></tr>');
  const taxRows=data.taxSummary.map(row=>'<tr><td>'+esc(row.currency)+'</td><td>'+esc(row.vatType)+
-  '</td><td>'+row.invoiceCount+'</td><td>'+esc(money(row.taxable,row.currency))+'</td><td>'+esc(money(row.vat,row.currency))+
-  '</td><td>'+esc(money(row.total,row.currency))+'</td></tr>');
+  '</td><td class="numeric">'+row.invoiceCount+'</td><td class="numeric">'+esc(money(row.taxable,row.currency))+'</td><td class="numeric">'+esc(money(row.vat,row.currency))+
+  '</td><td class="numeric">'+esc(money(row.total,row.currency))+'</td></tr>');
  let agingHtml='';
  if(!data.aging.available){
-  agingHtml='<section class="tl-analytics-aging"><h3>Accounts Receivable Aging</h3><p>'+esc(data.aging.reason)+'</p></section>';
+  agingHtml='<section class="tl-analytics-aging tl-analytics-card"><h3>Accounts Receivable Aging</h3><p>'+esc(data.aging.reason)+'</p></section>';
  }else{
   const buckets=data.aging.buckets.map(row=>'<tr><td>'+esc(row.currency)+'</td><td>'+esc(row.bucket)+
-   '</td><td>'+row.invoiceCount+'</td><td>'+esc(money(row.outstanding,row.currency))+'</td></tr>');
-  const unallocated=data.aging.unallocatedReceipts.map(row=>'<tr><td>'+esc(row.currency)+'</td><td>'+row.count+
-   '</td><td>'+esc(money(row.amount,row.currency))+'</td></tr>');
-  const excess=data.aging.excessPayments.map(row=>'<tr><td>'+esc(row.currency)+'</td><td>'+row.count+
-   '</td><td>'+esc(money(row.amount,row.currency))+'</td></tr>');
-  const cheques=data.aging.pendingChequeReceipts.map(row=>'<tr><td>'+esc(row.currency)+'</td><td>'+row.count+
-   '</td><td>'+esc(money(row.amount,row.currency))+'</td></tr>');
-  agingHtml='<section class="tl-analytics-aging"><h3>Accounts Receivable Aging</h3>'+table(buckets,
+   '</td><td class="numeric">'+row.invoiceCount+'</td><td class="numeric">'+esc(money(row.outstanding,row.currency))+'</td></tr>');
+  const unallocated=data.aging.unallocatedReceipts.map(row=>'<tr><td>'+esc(row.currency)+'</td><td class="numeric">'+row.count+
+   '</td><td class="numeric">'+esc(money(row.amount,row.currency))+'</td></tr>');
+  const excess=data.aging.excessPayments.map(row=>'<tr><td>'+esc(row.currency)+'</td><td class="numeric">'+row.count+
+   '</td><td class="numeric">'+esc(money(row.amount,row.currency))+'</td></tr>');
+  const cheques=data.aging.pendingChequeReceipts.map(row=>'<tr><td>'+esc(row.currency)+'</td><td class="numeric">'+row.count+
+   '</td><td class="numeric">'+esc(money(row.amount,row.currency))+'</td></tr>');
+  agingHtml='<section class="tl-analytics-aging tl-analytics-card"><h3>Accounts Receivable Aging</h3>'+table(buckets,
    [{label:'Currency'},{label:'Aging bucket'},{label:'Open invoices',numeric:true},{label:'Outstanding',numeric:true}],
    'No approved ESI invoices with a due date and an outstanding balance were found.')+
    '<h4>Unmatched cash receipts</h4>'+table(unallocated,
@@ -168,27 +168,27 @@ export function renderTradeLinkAnalytics({summary=null,busy=false,error='',enabl
    'No completed cheque receipts are pending bank clearance.')+
    '<p class="muted">'+esc(data.aging.reason)+' Invoices without a due date are excluded from aging: '+data.aging.excludedWithoutDueDate+'. Partial cash receipts are applied only to an exact ESI document-number reference in the same currency. Cheques are not deducted until bank clearance is recorded. No currency conversion is inferred.</p></section>';
  }
- return '<section class="tl-content-panel tl-analytics" aria-labelledby="tl-analytics-title">'+
+ return '<section class="tl-content-panel tl-analytics" data-tl-screen="analytics" aria-labelledby="tl-analytics-title">'+
   '<div class="tl-panel-heading"><div><p class="tl-eyebrow">Signed document aggregates</p><h2 id="tl-analytics-title">Analytics &amp; Dashboards</h2>'+
-   '<p class="muted">Generated '+esc(new Date(data.generatedAt).toLocaleString('en-PH'))+' · Active documents only</p></div>'+
+   '<p class="tl-analytics-generated muted">Generated <time datetime="'+esc(data.generatedAt)+'">'+esc(new Date(data.generatedAt).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'}))+'</time> · Active documents only</p></div>'+
    '<button type="button" class="secondary" data-action="tradelink-analytics-refresh"'+(busy?' disabled':'')+'>Refresh analytics</button></div>'+
-  '<div class="tl-analytics-kpis">'+
-   [['Documents',metrics.documents],['Quotations',metrics.quoteCount],['Won',metrics.won],['Lost',metrics.lost],
-    ['Win rate',metrics.winRate===null?'—':(metrics.winRate*100).toFixed(1)+'%'],['Tax invoices',metrics.taxInvoices]]
-    .map(([label,value])=>'<article><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></article>').join('')+
+  '<div class="tl-analytics-kpis" role="group" aria-label="Key performance indicators">'+
+   [['documents','Documents',metrics.documents],['quotations','Quotations',metrics.quoteCount],['won','Won',metrics.won],['lost','Lost',metrics.lost],
+    ['win-rate','Win rate',metrics.winRate===null?'—':(metrics.winRate*100).toFixed(1)+'%'],['tax-invoices','Tax invoices',metrics.taxInvoices]]
+    .map(([key,label,value])=>'<article data-tl-kpi="'+key+'" aria-label="'+esc(label+': '+value)+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></article>').join('')+
   '</div>'+
-  '<div class="tl-analytics-grid"><section><h3>Document volume by module</h3>'+chartRows(documentRows,{
+  '<div class="tl-analytics-grid"><section class="tl-analytics-card tl-analytics-chart"><h3>Document volume by module</h3>'+chartRows(documentRows,{
    label:row=>typeLabels[row.documentType]||row.documentType,value:row=>row.count})+'</section>'+
-   '<section><h3>Quotation workflow outcomes</h3>'+chartRows(quoteWorkflow,{
+   '<section class="tl-analytics-card tl-analytics-chart"><h3>Quotation workflow outcomes</h3>'+chartRows(quoteWorkflow,{
     label:row=>stateLabels[row.workflowState]||row.workflowState,value:row=>row.count})+
     '<p class="muted">Win rate = Won ÷ (Won + Lost). Commercial quotation statuses are reported separately.</p></section></div>'+
-  '<section class="tl-analytics-table-section"><h3>Quotation commercial status</h3>'+table(commercialRows,
+  '<section class="tl-analytics-table-section tl-analytics-card"><h3>Quotation commercial status</h3>'+table(commercialRows,
    [{label:'Commercial status'},{label:'Currency'},{label:'Documents',numeric:true},{label:'Quoted value',numeric:true}],
    'No quotation commercial statuses have been recorded.')+'</section>'+
-  '<section class="tl-analytics-table-section"><h3>Quotation workflow by currency</h3>'+table(workflowRows,
+  '<section class="tl-analytics-table-section tl-analytics-card"><h3>Quotation workflow by currency</h3>'+table(workflowRows,
    [{label:'Workflow state'},{label:'Currency'},{label:'Documents',numeric:true},{label:'Document value',numeric:true}],
    'No quotation records in this reporting period.')+'</section>'+
-  '<section class="tl-analytics-table-section"><h3>Tax summary · Approved Electronic Sales Invoices</h3>'+table(taxRows,
+  '<section class="tl-analytics-table-section tl-analytics-card"><h3>Tax summary · Approved Electronic Sales Invoices</h3>'+table(taxRows,
    [{label:'Currency'},{label:'VAT treatment'},{label:'Invoices',numeric:true},{label:'Taxable amount',numeric:true},{label:'VAT',numeric:true},{label:'Total',numeric:true}],
    'No approved ESI tax records in this reporting period.')+'</section>'+agingHtml+
   '</section>';
