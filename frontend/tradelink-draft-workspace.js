@@ -164,6 +164,7 @@ export function parseTradeLinkDraftForm(fields,{
  };
  for(const key of ['date','dueDate','customerName','referenceNumber','remarks',
   'verifiedBy','verifiedByEmail','approvedBy','approvedByEmail'])addText(key);
+ if(type==='quotation')addText('customerAddress');
  const validDocumentDate=value=>!value||/^\d{4}-\d{2}-\d{2}$/.test(value)&&
   Number.isFinite(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;
  if(!validDocumentDate(draft.date)||!validDocumentDate(draft.dueDate))
@@ -957,7 +958,7 @@ const localSummaryRows=Object.freeze({
   ['chequeAmount','Cheque amount'],['bankName','Cheque bank'],
   ['chequeNumber','Cheque number'],['receivedBy','Received by'],
   ['verifiedBy','Verified by']],
- quotation:[['customerEmail','Client email'],['customerPhone','Client phone'],
+ quotation:[['customerAddress','Client Address'],['customerEmail','Client email'],['customerPhone','Client phone'],
   ['lineDescription','Priced item'],['lineQuantity','Quantity'],
   ['lineUnitPrice','Unit price'],['validity','Offer validity'],
   ['deliveryCommitment','Delivery commitment'],['paymentTerms','Payment terms'],
@@ -1280,6 +1281,9 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
     '<div class="tl-draft-form-grid">'+
      field(commonPartyLabel,'customerName',fieldValue('customerName',data.customerName||''),
       'maxlength="5000"'+(physical||payment||priced?' required':''))+
+     (type==='quotation'?'<label class="tl-draft-field"><span>Client Address</span>'+
+      '<textarea name="customerAddress" rows="2" maxlength="5000">\n'+
+      escape(fieldValue('customerAddress',data.customerAddress||''))+'</textarea></label>':'')+
      field(physical?'Source reference':'Reference information','referenceNumber',
       fieldValue('referenceNumber',data.referenceNumber||''),
       'maxlength="5000"'+(physical?' required':''))+

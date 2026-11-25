@@ -50,6 +50,7 @@ try{
  for(const type of types){
   await show(page,type);await page.locator('[name=customerName]').fill('Disposable '+type);
   await page.locator('[name=remarks]').fill('Preserve '+type);
+  if(type==='quotation')await page.locator('[name=customerAddress]').fill('  12 QA Street\nCebu City  ');
   await page.waitForFunction(()=>document.querySelector('[data-tradelink-recovery-status]').textContent==='Inputs preserved on this device.',null,{timeout:4000}).catch(async e=>{console.log(await page.evaluate(()=>({secure:isSecureContext,uuid:typeof crypto.randomUUID,id:window.qa.id(),status:document.querySelector('[data-tradelink-recovery-status]')?.textContent,fields:window.qa.state.tradeLinkDraft.formValues,entries:[...window.qa.controller.entries.values()].map(e=>({status:e.status,version:e.version}))})));throw e;});
   const rows=await page.evaluate(async ({userId,workspaceId,type})=>window.qa.store.list(userId,workspaceId,type),{userId,workspaceId,type});
   assert.equal(rows.length,1);assert.equal(rows[0].fields.remarks,'Preserve '+type);ids[type]=rows[0].instanceId;
@@ -71,6 +72,7 @@ try{
   await page.evaluate(id=>window.qa.resume(id),ids[type]);
   const state=await page.evaluate(()=>window.qa.state.tradeLinkDraft);
   assert.equal(state.formValues.remarks,'Preserve '+type);
+  if(type==='quotation')assert.equal(state.formValues.customerAddress,'  12 QA Street\nCebu City  ');
   assert.equal(await page.evaluate(()=>window.qa.id()),ids[type]);
   await page.evaluate(()=>window.qa.next());
  }
