@@ -19,7 +19,7 @@ test('past dates force Completed and require clock-out; today may be completed e
  const past=render({date:'2026-11-23',status:'active'});
  assert.match(past,/value="active" disabled/);
  assert.match(past,/value="completed" selected/);
- assert.match(past,/name="clockOutTime" type="time" value="" required/);
+ assert.match(past,/name="clockOutTime" type="text" value=""[^>]*required/);
  assert.doesNotMatch(past,/data-tt-manual-out hidden/);
  assert.match(render({status:'completed'}),/value="completed" selected/);
 });
@@ -55,4 +55,27 @@ test('verified active-only service excludes OJT and completed creation',()=>{
  assert.doesNotMatch(html,/value="completed"/);
  assert.doesNotMatch(html,/Intern B/);
  assert.match(html,/type="submit">Save Attendance Log/);
+});
+
+test('verified completed service exposes an editable calendar and both status options for regular employees',()=>{
+ const html=render({clockInTime:'08:45'},{signedCreateReady:true,regularOnly:true,activeOnly:false});
+ assert.match(html,/name="date" type="date"[^>]*max="2026-11-24"/);
+ assert.doesNotMatch(html,/name="date"[^>]*readonly/);
+ assert.match(html,/value="active" selected/);
+ assert.match(html,/value="completed">Completed/);
+ assert.match(html,/name="clockInTime" type="text" value="8:45 AM"/);
+ assert.match(html,/name="clockInPreset" aria-label="Clock-in time hourly presets"/);
+ assert.match(html,/<option value="08:00">8:00 AM<\/option>/);
+ assert.match(html,/<option value="18:00">6:00 PM<\/option>/);
+ assert.doesNotMatch(html,/Intern B/);
+ assert.match(html,/type="submit">Save Attendance Log/);
+});
+test('offsite Work Plan alone exposes and requires the work note; other locations hide and omit it',()=>{
+ const html=render({location:'Office-Base Duty',workNote:'Do not carry this note'});
+ assert.match(html,/data-tt-manual-note hidden/);
+ assert.match(html,/name="workNote" maxlength="500" disabled/);
+ assert.doesNotMatch(html,/Do not carry this note/);
+ const home=render({location:'Offsite (Home)',workNote:'Project testing'});
+ assert.doesNotMatch(home,/data-tt-manual-note hidden/);
+ assert.match(home,/name="workNote" maxlength="500" required>Project testing/);
 });
