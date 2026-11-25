@@ -48,3 +48,26 @@ for file in \
  apply "$file"
 done
 echo CP_TL_LARGE_SAVE_02_DISPOSABLE_PASS
+
+# Optional sequential integration with the dependent quotation email migration.
+# Supply both host paths to exercise the exact production migration order.
+if [[ -n "${CP_TL_EMAIL_MIGRATION_PATH:-}" ]]; then
+ [[ -f "$CP_TL_EMAIL_MIGRATION_PATH" ]] || {
+  echo "CP_TL_EMAIL_MIGRATION_PATH does not exist" >&2; exit 1;
+ }
+ docker cp "$CP_TL_EMAIL_MIGRATION_PATH" "$NAME:/tmp/cp-tl-email-migration.sql"
+ echo "== dependent quotation email migration =="
+ docker exec "$NAME" psql -h 127.0.0.1 -X -v ON_ERROR_STOP=1 -U postgres -d postgres -q -f /tmp/cp-tl-email-migration.sql
+fi
+if [[ -n "${CP_TL_EMAIL_TEST_PATH:-}" ]]; then
+ [[ -f "$CP_TL_EMAIL_TEST_PATH" ]] || {
+  echo "CP_TL_EMAIL_TEST_PATH does not exist" >&2; exit 1;
+ }
+ [[ -n "${CP_TL_EMAIL_MIGRATION_PATH:-}" ]] || {
+  echo "Email validation tests require CP_TL_EMAIL_MIGRATION_PATH" >&2; exit 1;
+ }
+ docker cp "$CP_TL_EMAIL_TEST_PATH" "$NAME:/tmp/cp-tl-email-test.sql"
+ echo "== signed quotation email RPC acceptance =="
+ docker exec "$NAME" psql -h 127.0.0.1 -X -v ON_ERROR_STOP=1 -U postgres -d postgres -q -f /tmp/cp-tl-email-test.sql
+ echo CP_TL_QUOTATION_EMAIL_VALIDATION_01_DISPOSABLE_PASS
+fi
