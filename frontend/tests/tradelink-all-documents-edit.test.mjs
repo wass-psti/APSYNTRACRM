@@ -295,7 +295,7 @@ test('all six saved document types hydrate the shared Create New form with their
   payment:{documentNumber:'AR-HYDRATE-01',customerName:'Payor',paymentParticulars:'Bank transfer',
    cashAmount:100,chequeAmount:50,bankName:'QA Bank',chequeNumber:'CHK-01',
    receivedBy:'msenagan@watchdogautomation.com.ph',verifiedBy:'asenagan@watchdogautomation.com.ph',remarks:'Payment terms'},
-  quotation:{...saved.content,documentNumber:'Q-HYDRATE-01',customerName:'Quote Client',
+  quotation:{...saved.content,documentNumber:'Q-HYDRATE-01',customerName:'Quote Client',customerAddress:'12 Example Street, Cebu City',
    customerEmail:'quote@example.invalid',customerPhone:'09170000001',validity:'45 days',
    deliveryCommitment:'6 weeks',paymentTerms:'Net 45',
    verifiedByEmail:'aacsenagan@watchdogautomation.com.ph',
@@ -327,7 +327,7 @@ test('all six saved document types hydrate the shared Create New form with their
    assert.match(html,new RegExp('value="'+content.items[0].id+'"'),type);
    assert.ok(html.includes(content.items[0].description),type);
   }
-  for(const key of ['customerName','referenceNumber','customerTin','customerEmail',
+  for(const key of ['customerName','customerAddress','referenceNumber','customerTin','customerEmail',
    'customerPhone','validity','deliveryCommitment','paymentTerms','poNumber',
    'targetDeliveryDate','paymentParticulars','cashAmount','chequeAmount','bankName',
    'chequeNumber','receivedBy','checkedBy','deliveredBy','verifiedBy','approvedBy',

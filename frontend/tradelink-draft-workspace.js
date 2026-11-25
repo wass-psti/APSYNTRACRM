@@ -164,6 +164,7 @@ export function parseTradeLinkDraftForm(fields,{
  };
  for(const key of ['date','dueDate','customerName','referenceNumber','remarks',
   'verifiedBy','verifiedByEmail','approvedBy','approvedByEmail'])addText(key);
+ if(type==='quotation')addText('customerAddress');
  const validDocumentDate=value=>!value||/^\d{4}-\d{2}-\d{2}$/.test(value)&&
   Number.isFinite(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;
  if(!validDocumentDate(draft.date)||!validDocumentDate(draft.dueDate))
@@ -298,8 +299,13 @@ export function parseTradeLinkDraftForm(fields,{
    for(const key of ['customerTin','verifiedBy','approvedBy'])
     addText(key,{required:true});
   }else if(type==='quotation'){
-   for(const key of ['customerEmail','customerPhone','validity',
-    'deliveryCommitment','paymentTerms','approvedBy'])addText(key);
+   for(const key of ['customerEmail','customerPhone'])addText(key);
+   for(const key of ['validity','deliveryCommitment','paymentTerms']){
+    const text=value(key)===QUOTATION_CUSTOM_CHOICE?value(key+'Custom'):value(key);
+    if(text.length>5000)throw new ApiError('Invalid TradeLink '+key+'.',400);
+    if(text)draft[key]=text;
+   }
+   addText('approvedBy');
    if(!incompleteQuotationSave&&((!draft.customerEmail&&!draft.customerPhone)||
      !draft.validity||!draft.deliveryCommitment||
      !draft.paymentTerms||!draft.approvedBy))
@@ -957,9 +963,9 @@ const localSummaryRows=Object.freeze({
   ['chequeAmount','Cheque amount'],['bankName','Cheque bank'],
   ['chequeNumber','Cheque number'],['receivedBy','Received by'],
   ['verifiedBy','Verified by']],
- quotation:[['customerEmail','Client email'],['customerPhone','Client phone'],
+ quotation:[['customerAddress','Client Address'],['customerEmail','Client email'],['customerPhone','Client phone'],
   ['lineDescription','Priced item'],['lineQuantity','Quantity'],
-  ['lineUnitPrice','Unit price'],['validity','Offer validity'],
+  ['lineUnitPrice','Unit price'],['validity','Validity of Quotation'],
   ['deliveryCommitment','Delivery commitment'],['paymentTerms','Payment terms'],
   ['approvedBy','Intended approver'],...commercialSummaryRows],
  po:[['poNumber','Supplier PO reference'],['targetDeliveryDate','Target delivery date'],
@@ -1056,8 +1062,38 @@ export const TRADELINK_COMMERCIAL_SUGGESTIONS=Object.freeze({
   '16 Weeks','20 Weeks','24 Weeks'
  ])
 });
+// UI-only sentinel. The Save parser writes the chosen or custom text to
+// the established document field, never this sentinel or helper field.
+const QUOTATION_CUSTOM_CHOICE='__custom__';
+const quotationCommercialChoices={
+ paymentTerms:{label:'Payment terms',placeholder:'Select payment terms...',
+  customLabel:'Other (Custom)',customInput:'Custom payment terms',
+  values:TRADELINK_COMMERCIAL_SUGGESTIONS.paymentTerms.map(v=>v==='Installment plans'?'installment plans':v)},
+ deliveryCommitment:{label:'Delivery commitment',placeholder:'Select delivery time...',
+  customLabel:'Others (Custom)',customInput:'Custom delivery time',
+  values:TRADELINK_COMMERCIAL_SUGGESTIONS.deliveryCommitment.map(v=>v==='3 Days (in Stock)'?'3 Days (in stock)':v)},
+ validity:{label:'Validity of Quotation',placeholder:'Select validity period...',
+  customLabel:'Others (Custom Date)',customInput:'Custom validity date',
+  values:TRADELINK_COMMERCIAL_SUGGESTIONS.validity}
+};
+function quotationCommercialField(name,savedValue,customValue=''){
+ const config=quotationCommercialChoices[name];
+ const text=String(savedValue??'');
+ const custom=text===QUOTATION_CUSTOM_CHOICE||text!==''&&!config.values.includes(text);
+ const selected=custom?QUOTATION_CUSTOM_CHOICE:text;
+ const customText=custom&&text!==QUOTATION_CUSTOM_CHOICE?text:customValue;
+ const id='tl-quotation-'+name;
+ return '<div class="tl-draft-field" data-tl-commercial-choice>'+
+  '<label for="'+id+'"><span>'+escape(config.label)+'</span></label>'+
+  '<select id="'+id+'" name="'+name+'" required aria-controls="'+id+'-custom">'+
+   options([['',config.placeholder],...config.values.map(v=>[v,v]),[QUOTATION_CUSTOM_CHOICE,config.customLabel]],selected)+'</select>'+
+  '<div id="'+id+'-custom" data-tl-commercial-custom'+(custom?'':' hidden')+'>'+
+   '<label class="tl-draft-field"><span>'+escape(config.customInput)+'</span>'+
+   '<input name="'+name+'Custom" value="'+escape(customText)+'" maxlength="5000"'+
+   (name==='validity'?' placeholder="Enter date or custom validity"':'')+(custom?' required':'')+'></label></div></div>';
+}
 function commercialSuggestionLists(type){
- if(type!=='quotation'&&type!=='po')return '';
+ if(type!=='po')return '';
  return '<div class="tl-reference-suggestion-lists">'+
   Object.entries(TRADELINK_COMMERCIAL_SUGGESTIONS).map(([name,values])=>
    '<datalist id="tl-suggest-'+name+'">'+
@@ -1280,6 +1316,9 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
     '<div class="tl-draft-form-grid">'+
      field(commonPartyLabel,'customerName',fieldValue('customerName',data.customerName||''),
       'maxlength="5000"'+(physical||payment||priced?' required':''))+
+     (type==='quotation'?'<label class="tl-draft-field"><span>Client Address</span>'+
+      '<textarea name="customerAddress" rows="2" maxlength="5000">\n'+
+      escape(fieldValue('customerAddress',data.customerAddress||''))+'</textarea></label>':'')+
      field(physical?'Source reference':'Reference information','referenceNumber',
       fieldValue('referenceNumber',data.referenceNumber||''),
       'maxlength="5000"'+(physical?' required':''))+
@@ -1295,13 +1334,9 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
        'type="email" maxlength="5000"')+
       field('Client phone (or email)','customerPhone',fieldValue('customerPhone',data.customerPhone||''),
        'maxlength="5000"')+
-      field('Payment terms','paymentTerms',fieldValue('paymentTerms',data.paymentTerms||''),
-       'maxlength="5000" list="tl-suggest-paymentTerms" required')+
-      field('Offer validity','validity',fieldValue('validity',data.validity||''),
-       'maxlength="5000" list="tl-suggest-validity" required')+
-      field('Delivery commitment','deliveryCommitment',
-       fieldValue('deliveryCommitment',data.deliveryCommitment||''),
-       'maxlength="5000" list="tl-suggest-deliveryCommitment" required'):'')+
+      quotationCommercialField('paymentTerms',fieldValue('paymentTerms',data.paymentTerms||''),fieldValue('paymentTermsCustom',''))+
+      quotationCommercialField('validity',fieldValue('validity',data.validity||''),fieldValue('validityCustom',''))+
+      quotationCommercialField('deliveryCommitment',fieldValue('deliveryCommitment',data.deliveryCommitment||''),fieldValue('deliveryCommitmentCustom','')):'')+
      (type==='po'?
       field('Supplier PO number (optional)','poNumber',fieldValue('poNumber',data.poNumber||''),
        'maxlength="5000"')+

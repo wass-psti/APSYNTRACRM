@@ -43,13 +43,24 @@ async function launch(){
  });
  const page=context.pages()[0]||await context.newPage();page.on('pageerror',e=>console.log('PAGE ERROR',e.message));await page.goto('http://localhost');await page.waitForFunction(()=>!!window.qa);return page;
 }
-function markup(type){return renderTradeLinkApplication({detail,workspaceId,section:'drafts',draftView:initialTradeLinkDraftView(type),canManage:true});}
-async function show(page,type){await page.locator('body > main').evaluate((el,html)=>{el.innerHTML=html;},markup(type));}
+function markup(type,formValues=null){return renderTradeLinkApplication({detail,workspaceId,section:'drafts',draftView:formValues?{...initialTradeLinkDraftView(type),formValues}:initialTradeLinkDraftView(type),canManage:true});}
+async function show(page,type,fields=null){await page.locator('body > main').evaluate((el,html)=>{el.innerHTML=html;},markup(type,fields));}
 try{
  let page=await launch();const ids={};
  for(const type of types){
   await show(page,type);await page.locator('[name=customerName]').fill('Disposable '+type);
   await page.locator('[name=remarks]').fill('Preserve '+type);
+  if(type==='quotation'){
+   await page.locator('[name=customerAddress]').fill('  12 QA Street\nCebu City  ');
+   for(const [key,standard,custom] of [['paymentTerms','30 Days Net','  40% deposit  '],['validity','30 Days','2027-01-15'],['deliveryCommitment','4 Weeks','Within 10 working days']]){
+    const select=page.locator('select[name='+key+']'),input=page.locator('input[name='+key+'Custom]');
+    assert.equal(await input.isVisible(),false);
+    await select.selectOption('__custom__');assert.equal(await input.isVisible(),true);
+    await input.fill(custom);
+    await select.selectOption(standard);assert.equal(await input.isVisible(),false);
+    await select.selectOption('__custom__');assert.equal(await input.inputValue(),custom);
+   }
+  }
   await page.waitForFunction(()=>document.querySelector('[data-tradelink-recovery-status]').textContent==='Inputs preserved on this device.',null,{timeout:4000}).catch(async e=>{console.log(await page.evaluate(()=>({secure:isSecureContext,uuid:typeof crypto.randomUUID,id:window.qa.id(),status:document.querySelector('[data-tradelink-recovery-status]')?.textContent,fields:window.qa.state.tradeLinkDraft.formValues,entries:[...window.qa.controller.entries.values()].map(e=>({status:e.status,version:e.version}))})));throw e;});
   const rows=await page.evaluate(async ({userId,workspaceId,type})=>window.qa.store.list(userId,workspaceId,type),{userId,workspaceId,type});
   assert.equal(rows.length,1);assert.equal(rows[0].fields.remarks,'Preserve '+type);ids[type]=rows[0].instanceId;
@@ -71,6 +82,16 @@ try{
   await page.evaluate(id=>window.qa.resume(id),ids[type]);
   const state=await page.evaluate(()=>window.qa.state.tradeLinkDraft);
   assert.equal(state.formValues.remarks,'Preserve '+type);
+  if(type==='quotation'){
+   assert.equal(state.formValues.customerAddress,'  12 QA Street\nCebu City  ');
+   await show(page,type,state.formValues);
+   for(const [key,custom] of [['paymentTerms','  40% deposit  '],['validity','2027-01-15'],['deliveryCommitment','Within 10 working days']]){
+    assert.equal(await page.locator('select[name='+key+']').inputValue(),'__custom__');
+    const input=page.locator('input[name='+key+'Custom]');
+    assert.equal(await input.isVisible(),true);assert.equal(await input.inputValue(),custom);
+   }
+   console.log('PASS all three custom dropdown values restore visibly after browser restart');
+  }
   assert.equal(await page.evaluate(()=>window.qa.id()),ids[type]);
   await page.evaluate(()=>window.qa.next());
  }

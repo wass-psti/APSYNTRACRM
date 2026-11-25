@@ -13839,6 +13839,16 @@ async function discardTradeLinkRecovery(){
 function captureTradeLinkDraftFields(event){
  const form=event.target?.closest?.('[data-tradelink-draft-form]');
  if(!form||!tradeLinkDraftRoute()||state.tradeLinkDraft.busy||state.tradeLinkDraft.pendingSave)return false;
+ // Switch only the associated custom input; never re-render the editor.
+ const choice=event.target?.closest?.('[data-tl-commercial-choice]');
+ if(choice&&event.target.matches('select')){
+  const custom=choice.querySelector('[data-tl-commercial-custom]');
+  if(custom){
+   const show=event.target.value==='__custom__';
+   custom.hidden=!show;
+   custom.querySelector('input').required=show;
+  }
+ }
  const values=captureRecoveryFields(new FormData(form));
  state.tradeLinkDraft.formValues=values;
  state.tradeLinkDraft.lineDrafts=snapshotTradeLinkDraftLineItems(form);

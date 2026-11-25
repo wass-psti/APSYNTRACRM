@@ -15,14 +15,17 @@ const render=type=>renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
 test('reference options preserve user-editable commercial terms',()=>{
  const quote=render('quotation');
  const po=render('po');
+ assert.match(po,/name="paymentTerms"[^>]+list="tl-suggest-paymentTerms"/);
+ assert.match(po,/<datalist id="tl-suggest-paymentTerms">/);
  for(const html of [quote,po]){
-  assert.match(html,/name="paymentTerms"[^>]+list="tl-suggest-paymentTerms"/);
-  assert.match(html,/<datalist id="tl-suggest-paymentTerms">/);
   assert.match(html,/value="COD \(Cash on Delivery\)"/);
   assert.match(html,/value="90 Days Net"/);
  }
- assert.match(quote,/name="validity"[^>]+list="tl-suggest-validity"/);
- assert.match(quote,/name="deliveryCommitment"[^>]+list="tl-suggest-deliveryCommitment"/);
+ for(const field of ['paymentTerms','validity','deliveryCommitment']){
+  assert.match(quote,new RegExp('<select[^>]+name="'+field+'"'));
+  assert.match(quote,new RegExp('name="'+field+'Custom"'));
+ }
+ assert.doesNotMatch(quote,/tl-suggest-paymentTerms/);
  assert.match(quote,/value="24 Weeks"/);
  assert.equal(TRADELINK_COMMERCIAL_SUGGESTIONS.validity.length,6);
  for(const type of ['esi','packing','delivery','payment']){
