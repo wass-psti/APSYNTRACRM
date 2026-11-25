@@ -203,54 +203,8 @@ BEGIN
       WHERE config_key='default')
     AND q.enrollment_clock_in_at>=v_cutoff$new$),
  ('public.timetracker_auto_clockout_snapshot(uuid)',
-  $old
-  'v_record_id text; v_clock_in timestamptz;'),
- ('public.timetracker_auto_clockout_snapshot(uuid)',
-  $old$SELECT elem->>'id' INTO v_record_id$old$,
-  $new$SELECT elem->>'id',(elem#>>'{clockIn,timestamp}')::timestamptz INTO v_record_id,v_clock_in$new$),
- ('public.timetracker_auto_clockout_snapshot(uuid)',
-  $old$AND s.employee_id=v_actor AND s.record_id=v_record_id::uuid;$old$,
-  $new$AND s.employee_id=v_actor AND s.record_id=v_record_id::uuid
-      -- Never advertise a stale deadline or foreground pending action.
-      AND s.clock_in_at=v_clock_in;$new$)
- LOOP
-  d:=pg_catalog.pg_get_functiondef(target::regprocedure);
-  IF pg_catalog.cardinality(pg_catalog.string_to_array(d,old))<>2 THEN
-   RAISE EXCEPTION 'Clock-in correction baseline differs: %',target USING ERRCODE='55000';
-  END IF;
-  EXECUTE pg_catalog.replace(d,old,replacement);
- END LOOP;
-END;
-$patch$;
-
-REVOKE ALL ON FUNCTION private.tt_reconcile_auto_clockout_sessions() FROM PUBLIC,anon,authenticated,service_role;
-REVOKE ALL ON FUNCTION private.tt_process_auto_clockouts() FROM PUBLIC,anon,authenticated,service_role;
-COMMIT;
-recordId',s.record_id::text,$old$,
-  $new
-  'v_record_id text; v_clock_in timestamptz;'),
- ('public.timetracker_auto_clockout_snapshot(uuid)',
-  $old$SELECT elem->>'id' INTO v_record_id$old$,
-  $new$SELECT elem->>'id',(elem#>>'{clockIn,timestamp}')::timestamptz INTO v_record_id,v_clock_in$new$),
- ('public.timetracker_auto_clockout_snapshot(uuid)',
-  $old$AND s.employee_id=v_actor AND s.record_id=v_record_id::uuid;$old$,
-  $new$AND s.employee_id=v_actor AND s.record_id=v_record_id::uuid
-      -- Never advertise a stale deadline or foreground pending action.
-      AND s.clock_in_at=v_clock_in;$new$)
- LOOP
-  d:=pg_catalog.pg_get_functiondef(target::regprocedure);
-  IF pg_catalog.cardinality(pg_catalog.string_to_array(d,old))<>2 THEN
-   RAISE EXCEPTION 'Clock-in correction baseline differs: %',target USING ERRCODE='55000';
-  END IF;
-  EXECUTE pg_catalog.replace(d,old,replacement);
- END LOOP;
-END;
-$patch$;
-
-REVOKE ALL ON FUNCTION private.tt_reconcile_auto_clockout_sessions() FROM PUBLIC,anon,authenticated,service_role;
-REVOKE ALL ON FUNCTION private.tt_process_auto_clockouts() FROM PUBLIC,anon,authenticated,service_role;
-COMMIT;
-recordId',s.record_id::text,'clockInAt',s.clock_in_at,$new$),
+  $old$'recordId',s.record_id::text,$old$,
+  $new$'recordId',s.record_id::text,'clockInAt',s.clock_in_at,$new$),
  ('public.timetracker_auto_clockout_snapshot(uuid)',
   'v_record_id text;',
   'v_record_id text; v_clock_in timestamptz;'),
