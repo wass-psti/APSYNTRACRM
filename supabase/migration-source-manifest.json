@@ -2345,6 +2345,13 @@
       "file": "20261126090000_cp_tt_active_clockin_scheduler_correction.sql",
       "bytes": 16376,
       "sha256": "224a30059b898348a61bf06f381326233673b841fa09d68d1ac5f73277cb3bc4"
+    },
+    {
+      "version": "20261126091000",
+      "name": "cp_tt_admin_completed_manual_attendance",
+      "file": "20261126091000_cp_tt_admin_completed_manual_attendance.sql",
+      "bytes": 10548,
+      "sha256": "b7f1d2c67fb3cada9a466057afe2ee42573867a3c8053555a05e638a4041114a"
     }
   ]
 }
