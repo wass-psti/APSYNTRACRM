@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 const css=readFileSync('frontend/tradelink-reference-ui.css','utf8');
+const refreshCss=readFileSync('frontend/tradelink-ui-refresh.css','utf8');
 const app=readFileSync('frontend/tradelink-application.js','utf8');
 const client=readFileSync('frontend/tradelink-domain-client.js','utf8');
 
@@ -18,7 +19,10 @@ test('rebuilt TradeLink shell is scoped, flat, and does not alter security contr
  assert.match(css,/@media\(max-width:850px\)/);
  assert.match(css,/@media\(max-width:620px\)/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
- assert.match(app,/renderTradeLinkDraftWorkspace\(\{detail,workspaceId,view:draftView,canManage,canCreate,actorId,actorName,actorEmail,actorModuleRole,showModuleTabs:false\}\)/);
+ assert.match(app,/renderTradeLinkDraftWorkspace\(\{detail,workspaceId,view:draftView,canManage,canCreate,actorId,actorName,actorEmail,actorModuleRole,showModuleTabs:false,moduleNavigation:workspaceNavigation\}\)/);
+ assert.match(refreshCss,/CP-TL-DOCUMENT-TYPE-UI-01/);
+ assert.match(refreshCss,/grid-template-columns:minmax\(0,1fr\)/);
+ assert.match(refreshCss,/grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
  assert.match(app,/renderTradeLinkDocumentRepository\(\{detail,workspaceId,view:draftView,canManage,canReview,actorEmail,canCreate,actorId\}\)/);
  assert.match(client,/TL03_DOMAIN_WRITES_ENABLED/);
 });

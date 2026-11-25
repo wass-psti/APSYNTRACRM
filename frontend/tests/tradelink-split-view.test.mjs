@@ -11,20 +11,23 @@ const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:workspaceId,
  groups:[],items:[],columns:[]};
 const base={detail,workspaceId,canManage:true};
 
-test('TradeLink renders an accessible split workspace with document navigation and a main content pane',()=>{
+test('TradeLink places the full-width document selector below the document header',()=>{
  const html=renderTradeLinkApplication({...base,section:'drafts',
   draftView:{formValues:{documentType:'quotation'},mode:'create'}});
- assert.match(html,/<div class="tl-app-layout">\s*<nav class="tl-app-nav" aria-label="TradeLink document modules">/);
- assert.match(html,/<main class="tl-app-main">/);
+ const main=html.indexOf('<main class="tl-app-main">');
+ const header=html.indexOf('class="tl-reference-document-topcard"');
+ const nav=html.indexOf('class="tl-app-nav"');
+ const editor=html.indexOf('class="tl-reference-editor-content"');
+ assert.ok(main>=0&&header>main&&nav>header&&editor>nav);
  assert.match(html,/class="tl-app-nav-heading"/);
+ assert.match(html,/TRADELINK WORKSPACE/);
+ assert.match(html,/Document Types/);
+ assert.match(html,/Choose a document to prepare/);
+ assert.equal((html.match(/data-tl-module-nav=/g)||[]).length,6);
  assert.match(html,/data-tl-tab="documents"[^>]*>[^<]*<span aria-hidden="true">☷<\/span> All Documents<\/a>/);
  assert.match(html,/data-tl-tab="activity"[^>]*>[^<]*<span aria-hidden="true">◷<\/span> Activity<\/a>/);
- assert.match(html,/Electronic SI/);
- assert.match(html,/Packing List/);
- assert.match(html,/Delivery Receipt/);
- assert.match(html,/Payment AR/);
- assert.match(html,/Quotation/);
- assert.match(html,/PO to Suppliers/);
+ for(const label of ['Electronic SI','Packing List','Delivery Receipt','Payment AR','Quotation','PO to Suppliers'])
+  assert.ok(html.includes(label),label);
  assert.match(html,/href="#\/tradelink\/drafts\/quotation"/);
  assert.match(html,/aria-current="page"/);
  assert.doesNotMatch(html,/class="tl-reference-document-tabs"/);
@@ -43,7 +46,7 @@ test('split navigation follows the active module, All Documents, and Activity ro
 test('split navigation preserves existing signed routes and refuses a foreign workspace',()=>{
  const source=readFileSync('frontend/tradelink-application.js','utf8');
  assert.match(source,/renderTradeLinkDocumentRepository\(\{detail,workspaceId,view:draftView,canManage,canReview,actorEmail,canCreate,actorId\}\)/);
- assert.match(source,/renderTradeLinkDraftWorkspace\(\{detail,workspaceId,view:draftView,canManage,canCreate,actorId,actorName,actorEmail,actorModuleRole,showModuleTabs:false\}\)/);
+ assert.match(source,/renderTradeLinkDraftWorkspace\(\{detail,workspaceId,view:draftView,canManage,canCreate,actorId,actorName,actorEmail,actorModuleRole,showModuleTabs:false,moduleNavigation:workspaceNavigation\}\)/);
  const denied=renderTradeLinkApplication({...base,workspaceId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'});
  assert.match(denied,/signed workspace access is unavailable/);
  assert.doesNotMatch(denied,/class="tl-app-nav"|data-tradelink-draft-form/);
@@ -112,23 +115,23 @@ test('reviewer and activity routes retain their existing entry points without ex
  assert.match(activity,/data-tl-tab="activity"[^>]*aria-current="page"/);
 });
 
-test('split view is responsive, keyboard accessible, reduced-motion aware, and CSS scoped to TradeLink',()=>{
- const css=readFileSync('frontend/tradelink-reference-ui.css','utf8');
+test('document selector is full-width, responsive, keyboard accessible and scoped to TradeLink',()=>{
+ const baseCss=readFileSync('frontend/tradelink-reference-ui.css','utf8');
+ const css=readFileSync('frontend/tradelink-ui-refresh.css','utf8');
  const fixture=readFileSync('scripts/cp-tl03d-render-reference-fixture.mjs','utf8');
- assert.match(css,/CP-TL-SPLIT-01/);
- assert.match(css,/data-tl-section=\"drafts\"\]\[data-tl-can-create=\"true\"\] \.tl-app-layout/);
- assert.match(css,/grid-template-columns:minmax\(220px,260px\) minmax\(0,1fr\)/);
- assert.doesNotMatch(css,/\.tl-document-split-view|\.tl-document-preview-empty/);
- assert.match(css,/\.tl-document-list-pane\{min-width:0;width:100%\}/);
- assert.match(css,/data-tl-section=\"drafts\"\]\[data-tl-can-create=\"true\"\] \.tl-app-nav \.tl-module-link\{\s*display:flex/);
+ assert.match(baseCss,/CP-TL-SPLIT-01/);
+ assert.doesNotMatch(baseCss,/\.tl-document-split-view|\.tl-document-preview-empty/);
+ assert.match(css,/CP-TL-DOCUMENT-TYPE-UI-01/);
+ assert.match(css,/data-tl-section="drafts"\]\[data-tl-can-create="true"\] \.tl-app-layout\{\s*display:grid;grid-template-columns:minmax\(0,1fr\)/);
+ assert.match(css,/\.tl-app-nav-links\{\s*display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
+ assert.match(css,/@media\(max-width:1050px\)[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+ assert.match(css,/@media\(max-width:620px\)[\s\S]*?grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+ assert.match(css,/@media\(max-width:360px\)[\s\S]*?grid-template-columns:minmax\(0,1fr\)/);
  assert.match(css,/\.tl-reference-portal \.tl-app-nav a:focus-visible/);
  assert.match(fixture,/moduleNavVisible/);
- assert.match(fixture,/navBeforeMain/);
+ assert.match(fixture,/selectorBelowHeader/);
+ assert.match(fixture,/selectorFullWidth/);
  assert.match(fixture,/tl-app-nav/);
- assert.doesNotMatch(fixture,/tl-reference-document-tabs/);
- assert.match(css,/@media\(max-width:850px\)/);
- assert.match(css,/data-tl-section=\"drafts\"\]\[data-tl-can-create=\"true\"\] \.tl-app-layout\{\s*grid-template-columns:minmax\(0,1fr\)/);
- assert.match(css,/@media\(max-width:620px\)/);
+ assert.doesNotMatch(fixture,/navBeforeMain|tl-reference-document-tabs/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
- assert.match(css,/\.tl-reference-portal \.tl-app-nav/);
 });

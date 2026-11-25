@@ -8,7 +8,7 @@ import {
 import { TRADELINK_BOARD_ID } from "../tradelink-board-items.js";
 import { initialTradeLinkDraftView } from "../tradelink-draft-workspace.js";
 
-const css = readFileSync("frontend/tradelink-document-type-ui.css", "utf8");
+const css = readFileSync("frontend/tradelink-ui-refresh.css", "utf8");
 const bundle = readFileSync("frontend/apsyntra-styles.bundle.css", "utf8");
 const workspaceId = "00000000-0000-4000-8000-000000000001";
 const detail = {
@@ -89,7 +89,7 @@ test("selector is placed directly below the document header and before the edito
 
 test("source and generated CSS provide six desktop columns and responsive three/two-column layouts", () => {
   const manifest = readFileSync("scripts/priority5-style-manifest.mjs", "utf8");
-  assert.ok(manifest.indexOf("frontend/tradelink-document-type-ui.css") > manifest.indexOf("frontend/board-overhaul-experience.css"));
+  assert.ok(manifest.includes("frontend/tradelink-ui-refresh.css"));
   for (const text of [css, bundle]) {
     assert.match(text, /grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
     assert.match(text, /@media\(max-width:1050px\)[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);

@@ -29,6 +29,7 @@ const html='<!doctype html><html lang="en"><head>'+
  '<title>TradeLink synthetic reference fixture · '+type+'</title>'+
  '<link rel="stylesheet" href="'+stylesheet('tradelink-application.css')+'">'+
  '<link rel="stylesheet" href="'+stylesheet('tradelink-reference-ui.css')+'">'+
+ '<link rel="stylesheet" href="'+stylesheet('tradelink-ui-refresh.css')+'">'+
  '<style>html{box-sizing:border-box}*,*::before,*::after{box-sizing:inherit}'+
  'body{margin:0;padding:24px 28px;background:#f8fafc;color:#17191e;'+
  'font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}'+
@@ -43,12 +44,15 @@ const html='<!doctype html><html lang="en"><head>'+
  'top=r(".tl-reference-document-topcard"),editor=r(".tl-reference-editor-content");'+
  'const moduleLinks=[...document.querySelectorAll(".tl-app-nav .tl-module-link")];'+
  'const moduleNavVisible=moduleLinks.length===6&&moduleLinks.every(x=>x.getBoundingClientRect().height>0);'+
- 'const navBeforeMain=!!nav&&!!main&&(innerWidth>850?nav.left+nav.width<=main.left+1:nav.bottom<=main.top+1);'+
+ 'const selectorBelowHeader=!!top&&!!nav&&nav.top>=top.bottom-1;'+
+ 'const selectorFullWidth=!!nav&&!!main&&Math.abs(nav.left-main.left)<=2&&Math.abs(nav.width-main.width)<=2;'+
  'const ordered=!!header&&!!layout&&!!nav&&!!main&&!!top&&!!editor&&moduleNavVisible&&'+
- 'layout.top>=header.bottom&&navBeforeMain&&top.top>=main.top&&editor.top>=top.bottom;'+
+ 'layout.top>=header.bottom&&top.top>=main.top&&selectorBelowHeader&&selectorFullWidth&&editor.top>=nav.bottom;'+
  'h.dataset.tlHorizontalOverflow=String(overflow);'+
- 'h.dataset.tlGeometryValid=String(ordered&&header.width>=300&&nav.width>0&&main.width>=300&&top.width>=300&&editor.width>=300);'+
+ 'h.dataset.tlGeometryValid=String(ordered&&header.width>=300&&nav.width>=main.width*.95&&main.width>=300&&top.width>=300&&editor.width>=300);'+
  'h.dataset.tlModuleNavVisible=String(moduleNavVisible);'+
+ 'h.dataset.tlSelectorBelowHeader=String(selectorBelowHeader);'+
+ 'h.dataset.tlSelectorFullWidth=String(selectorFullWidth);'+
  'h.dataset.tlViewport=String(innerWidth);'+
  '});</script></body></html>';
 mkdirSync(dirname(output),{recursive:true});
