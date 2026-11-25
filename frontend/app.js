@@ -913,7 +913,7 @@ async function refreshCorrectedTimeTrackerClock({onFocus=false}={}){
      state.context?.user_id!==actor||state.context?.workspace_id!==workspace||
      fresh?.status!=='VERIFIED_READ'||fresh.access?.userId!==actor||
      fresh.access?.workspaceId!==workspace||fresh.access?.boardId!==boardId||
-     Number(fresh.revision)<Number(state.ttAttendance?.revision))return;
+     Number(fresh.revision)<=Number(state.ttAttendance?.revision))return;
   const previous=state.ttAttendance;
   const sessionChanged=previous.active?.id!==fresh.active?.id;
   const changed=sessionChanged||
@@ -935,8 +935,8 @@ async function refreshCorrectedTimeTrackerClock({onFocus=false}={}){
   state.ttAttendance=fresh;
   const reconciled=state.ttClockPending&&reconcileTimeTrackerClock(fresh)==='CONFIRMED';
   if(sessionChanged||reconciled){
-   // A signed session start/end changes the action form itself. Re-render
-   // with current signed capabilities, greeting, and retained work-plan draft.
+   // A signed session start/end changes the action form itself. Reconcile
+   // locally with current signed capabilities and retained work-plan draft.
    state.ttClockStage='idle';state.ttGeoPromptVisible=false;
    state.ttGeoMessage='';state.ttGeoPermission='unknown';
    if(!state.ttClockPending){
@@ -945,10 +945,13 @@ async function refreshCorrectedTimeTrackerClock({onFocus=false}={}){
      'Active attendance synchronized from the server.':
      'Attendance closed on the server. You can start a new session.';
    }
-   render();
-  }else if(changed&&!state.ttClockPending){
+  }
+  if(sessionChanged||reconciled||(changed&&!state.ttClockPending)){
    syncTimeTrackerClockView(root,{
     result:fresh,now:new Date(),clockPending:!!state.ttClockPending,
+    forceReconcile:sessionChanged||!!reconciled,clearError:!state.ttError,
+    displayName:name(),referenceShell:state.ttStandalone===true,
+    gpsDiagnosticsAvailable:getTimeTrackerGpsDiagnostics().events.length>0,
     clockPendingAction:state.ttClockPending?.action||'clock-out',
     locationPreference:readTimeTrackerLocationPreference(
      typeof localStorage==='undefined'?null:localStorage,
