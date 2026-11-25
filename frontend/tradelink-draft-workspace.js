@@ -176,7 +176,7 @@ export function parseTradeLinkDraftForm(fields,{
    throw new ApiError('Invalid or missing TradeLink '+key+'.',400);
   if(text)draft[key]=text;
  };
- for(const key of ['date','dueDate','customerName','referenceNumber','remarks',
+ for(const key of ['date','dueDate','customerName','customerContact','referenceNumber','remarks',
   'verifiedBy','verifiedByEmail','approvedBy','approvedByEmail'])addText(key);
  if(type==='quotation')addText('customerAddress');
  const validDocumentDate=value=>!value||/^\d{4}-\d{2}-\d{2}$/.test(value)&&
@@ -1409,6 +1409,8 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
     '<div class="tl-draft-form-grid">'+
      field(commonPartyLabel,'customerName',fieldValue('customerName',data.customerName||''),
       'maxlength="5000"'+(physical||payment||priced?' required':''),partyPlaceholders[type])+
+     field('Contact Person','customerContact',fieldValue('customerContact',data.customerContact||''),
+      'maxlength="5000"','Enter contact person name')+
      (type==='quotation'?'<label class="tl-draft-field tl-reference-address-field"><span>Client Address</span>'+
       '<textarea name="customerAddress" rows="2" maxlength="5000" placeholder="Enter client address">\n'+
       escape(fieldValue('customerAddress',data.customerAddress||''))+'</textarea></label>':'')+
@@ -1688,7 +1690,7 @@ export function renderTradeLinkSavedDocumentPreview(record,workspaceId,documentI
  }
  const type=typeLabels.find(([id])=>id===row.document_type)?.[1]||row.document_type;
  const details=[...commonSummaryRowsFor(row.document_type),...localSummaryRows[row.document_type],
-  ['remarks','Remarks'],['customerAddress','Party address'],['referenceNumber','Source reference'],
+  ['customerContact','Contact Person'],['remarks','Remarks'],['customerAddress','Party address'],['referenceNumber','Source reference'],
   ['customerTin','Tax identity'],['dueDate','Due date'],['paymentTerms','Payment terms'],
   ['verifiedBy','Intended verifier'],['approvedBy','Intended approver']]
   .filter(([key],i,all)=>all.findIndex(([name])=>name===key)===i);
