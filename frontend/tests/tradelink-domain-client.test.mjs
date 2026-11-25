@@ -7,6 +7,7 @@ import {
  validateTradeLinkDraftEnvelope,normalizeTradeLinkDomainReceipt,
  normalizeTradeLinkDomainRow
 } from '../tradelink-domain-client.js';
+import {TRADELINK_MAX_PAYLOAD_BYTES,tradeLinkJsonbTextByteLength} from '../tradelink/limits.js';
 
 const id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const item='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -24,9 +25,33 @@ test('document contract matches the six source types and denies mutable server f
   {...draft,status:'Approved'},
   {...draft,approvedAt:'2026-11-05'},
   {...draft,role:'system-admin'},
-  {...draft,items:Array.from({length:101},()=>({}))}])
+  {...draft,items:Array.from({length:251},()=>({}))}])
   assert.throws(()=>validateTradeLinkDraftEnvelope(bad));
 });
+
+test('250-item and 2 MiB JSONB capacities are exact, UTF-8 byte-accurate and duplicate-safe',()=>{
+ const items=Array.from({length:250},(_,index)=>({...draft.items[0],id:'line-'+(index+1)}));
+ assert.equal(validateTradeLinkDraftEnvelope({...draft,items:items.slice(0,249)}).items.length,249);
+ assert.equal(validateTradeLinkDraftEnvelope({...draft,items}).items.length,250);
+ assert.throws(()=>validateTradeLinkDraftEnvelope({...draft,items:[...items,{...items[0],id:'line-251'}]}),/250-item/);
+ assert.throws(()=>validateTradeLinkDraftEnvelope({...draft,items:[items[0],{...items[1],id:items[0].id}]}),/Duplicate/);
+ const unicode={name:'Café 漢字 😀',n:1e-7,list:[1,2],ok:true};
+ assert.equal(tradeLinkJsonbTextByteLength(unicode),73);
+ assert.equal(tradeLinkJsonbTextByteLength({a:1,bb:2}),17);
+ assert.equal(tradeLinkJsonbTextByteLength({s:'line\nquote"slash\\'}),29);
+ const base={...draft,items:[{...draft.items[0],unit:''}]};
+ const fillerLength=TRADELINK_MAX_PAYLOAD_BYTES-tradeLinkJsonbTextByteLength(base);
+ const exact={...base,items:[{...base.items[0],unit:'x'.repeat(fillerLength)}]};
+ assert.equal(tradeLinkJsonbTextByteLength(exact),TRADELINK_MAX_PAYLOAD_BYTES);
+ assert.doesNotThrow(()=>validateTradeLinkDraftEnvelope(exact));
+ const below={...exact,items:[{...exact.items[0],unit:exact.items[0].unit.slice(0,-1)}]};
+ assert.equal(tradeLinkJsonbTextByteLength(below),TRADELINK_MAX_PAYLOAD_BYTES-1);
+ assert.doesNotThrow(()=>validateTradeLinkDraftEnvelope(below));
+ const over={...exact,items:[{...exact.items[0],unit:exact.items[0].unit+'x'}]};
+ assert.equal(tradeLinkJsonbTextByteLength(over),TRADELINK_MAX_PAYLOAD_BYTES+1);
+ assert.throws(()=>validateTradeLinkDraftEnvelope(over),/2 MiB/);
+});
+
 test('server revision and item-link receipts are mandatory',()=>{
  const receipt={documentId:id,boardItemId:item,documentNumber:'Q-011130',revision:1,state:'draft',
   operation:'create',idempotent:false};

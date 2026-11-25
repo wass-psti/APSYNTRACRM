@@ -41,6 +41,20 @@ test('missing source-specific fields are advisory, precise, and do not reveal va
   assert.doesNotMatch(summary,/client@example\.test|TIN-123|SO-12/); // Never disclose field values.
  }
 });
+
+test('signed submit readiness accepts 250 items and rejects item or 2 MiB capacity overflow',()=>{
+ const large=make('quotation');
+ large.content.items=Array.from({length:250},(_,index)=>({
+  id:'line-'+(index+1),kind:'item',description:'Item '+(index+1),quantity:1,unitPrice:10
+ }));
+ assert.equal(inspectTradeLinkSubmitReadiness(large).ready,true);
+ large.content.items.push({...large.content.items[0],id:'line-251'});
+ assert.match(inspectTradeLinkSubmitReadiness(large).missing.join(' '),/Valid line items/);
+ const tooLarge=make('quotation');
+ tooLarge.content.items[0].unit='x'.repeat(2*1024*1024);
+ assert.match(inspectTradeLinkSubmitReadiness(tooLarge).missing.join(' '),/2 MiB capacity/);
+});
+
 test('malformed items, stale identity, and cheque instructions are flagged without persistence',()=>{
  const esi=make('esi');esi.content.items=[{description:'',quantity:1,unitPrice:10}];
  assert.match(inspectTradeLinkSubmitReadiness(esi).missing.join(),/Valid line items/);

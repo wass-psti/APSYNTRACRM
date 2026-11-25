@@ -88,6 +88,19 @@ test('commercial print totals use all saved lines, source VAT, discount and curr
  assert.match(fx,/997\.92 USD/);
  assert.match(fx,/₱57,879\.36/);
 });
+
+test('saved official output renders all 250 line items and rejects the 251st',()=>{
+ const items=Array.from({length:250},(_,index)=>({...line,id:'line-'+(index+1),
+  description:'Capacity item '+(index+1),quantity:1,unitPrice:1}));
+ const content={...docs.quotation,items};
+ const html=renderTradeLinkSavedDocumentOutput(record('quotation',content),workspace,id);
+ assert.match(html,/data-tradelink-signed-output/);
+ assert.match(html,/Capacity item 250/);
+ assert.throws(()=>renderTradeLinkSavedDocumentOutput(record('quotation',{
+  ...content,items:[...items,{...items[0],id:'line-251'}]
+ }),workspace,id),/cannot be verified/);
+});
+
 test('incomplete Drafts and note-only rows remain truthful and render terms without fabricated values',()=>{
  const content={documentType:'packing',documentNumber:'PK-INCOMPLETE',
   items:[{id:'note-1',kind:'note'},{...line,kind:'item',description:'Packed cartons'}]};
@@ -173,7 +186,7 @@ test('no verified print for mismatched, stale, cross-workspace or malformed sign
   {...base,content:{...base.content,documentNumber:'OTHER'}},
   {...base,content:{...base.content,documentType:'esi'}},
   {...base,content:{...base.content,items:[{...line,quantity:NaN}]}},
-  {...base,content:{...base.content,items:Array.from({length:101},()=>line)}},
+  {...base,content:{...base.content,items:Array.from({length:251},()=>line)}},
   {...base,content:{...base.content,customerName:null}},
   null
  ];

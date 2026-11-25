@@ -1,3 +1,4 @@
+import {TRADELINK_MAX_ITEMS,TRADELINK_MAX_PAYLOAD_BYTES,tradeLinkJsonbTextByteLength} from './tradelink/limits.js';
 /** CP-TL-FINAL-08 — advisory only, non-mutating source-submit readiness.
  * The signed PostgreSQL RPC is ALWAYS authoritative for actual submission.
  * Never use this preview as a replacement for server validation or permissions.
@@ -21,11 +22,13 @@ export function inspectTradeLinkSubmitReadiness(record){
  need(present(c.customerName),'Customer or supplier name');
  const priced=['esi','quotation','po'].includes(type);
  if(['esi','quotation','po','packing','delivery'].includes(type)){
-  need(Array.isArray(c.items)&&c.items.length>=1&&c.items.length<=100&&
+  need(Array.isArray(c.items)&&c.items.length>=1&&c.items.length<=TRADELINK_MAX_ITEMS&&
    c.items.every(item=>item&&present(item.description)&&
     amount(item.quantity)>0&&(!priced||amount(item.unitPrice)>0)),
    'Valid line items (description, positive quantity'+(priced?' and unit price':'')+')');
  }
+ need(tradeLinkJsonbTextByteLength(c)<=TRADELINK_MAX_PAYLOAD_BYTES,
+  'Document payload within 2 MiB capacity');
  if(['packing','delivery'].includes(type))
   need(present(c.referenceNumber),'Shipment reference number');
  if(type==='delivery'){

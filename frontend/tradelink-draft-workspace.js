@@ -2,6 +2,7 @@
  * No local persistence, fabricated records, second login, or write bypass.
  */
 import {ApiError} from './session.js';
+import {TRADELINK_MAX_ITEMS} from './tradelink/limits.js';
 import {GM_SALES_EXEMPT_POLICY,tradeLinkGmApprovalPreview} from './tradelink/approval-policy.js';
 import {validUuid} from './data.js';
 import {calculateTradeLinkAmounts,formatTradeLinkAmount,TRADELINK_CURRENCIES,TRADELINK_VAT_CODES} from './tradelink-finance.js';
@@ -223,7 +224,7 @@ export function parseTradeLinkDraftForm(fields,{
  const anyLine=[...descriptions,...quantities,...prices,...units,...ids,...serials]
   .some(Boolean);
  if((physical||priced)&&!incompleteQuotationSave||anyLine){
-  if(count<1||count>100)throw new ApiError('Invalid Draft line-item count.',400);
+  if(count<1||count>TRADELINK_MAX_ITEMS)throw new ApiError('Invalid Draft line-item count.',400);
   draft.items=[];
   for(let index=0;index<count;index++){
    const description=descriptions[index]||'',quantity=quantities[index]||'',
@@ -349,6 +350,46 @@ export function parseTradeLinkDraftForm(fields,{
  * A changed form must never reuse an uncertain document ID: this avoids
  * inconsistent retries and duplicate authoritative Board projections.
  */
+export function restoreTradeLinkPendingSave(pendingSave,lines){
+ if(!pendingSave||pendingSave.itemsStoredInLines!==true)return pendingSave;
+ const command=pendingSave.command,draft=command?.draft;
+ if(!draft||!Array.isArray(lines)||lines.length>TRADELINK_MAX_ITEMS)
+  throw new ApiError('Saved recovery data cannot restore its pending line items.',409);
+ const physical=draft.documentType==='packing'||draft.documentType==='delivery';
+ const priced=['esi','quotation','po'].includes(draft.documentType);
+ const lineIds=new Set();
+ const items=lines.map(line=>{
+  const id=String(line?.id??''),kind=line?.kind||'item';
+  const description=String(line?.description??'').trim();
+  if(!id||id.length>120||lineIds.has(id)||!['item','note'].includes(kind)||
+    !description||description.length>2000)
+   throw new ApiError('Saved recovery line identity or description is invalid.',409);
+  lineIds.add(id);
+  if(kind==='note'){
+   if(String(line.quantity??'').trim()||String(line.unitPrice??'').trim()||
+     String(line.unit??'').trim())
+    throw new ApiError('Saved recovery note contains item-only values.',409);
+   return {id,kind:'note',description};
+  }
+  const quantityText=String(line.quantity??'').trim();
+  const unitPriceText=String(line.unitPrice??'').trim();
+  const quantity=Number(quantityText),unitPrice=physical?0:Number(unitPriceText);
+  if(!quantityText||(!physical&&!unitPriceText)||!Number.isFinite(quantity)||
+    !Number.isFinite(unitPrice)||quantity<0||unitPrice<0||quantity>1000000000||
+    unitPrice>1000000000||((physical||priced)&&quantity===0)||(priced&&unitPrice===0))
+   throw new ApiError('Saved recovery quantity or unit price is invalid.',409);
+  const unit=String(line.unit??'').trim();
+  const item={id,kind:'item',description,quantity,unitPrice,...(unit?{unit}:{})};
+  if(draft.documentType==='delivery'){
+   const serial=String(line.serialNumber??'').trim();
+   if(serial.length>120)throw new ApiError('Saved recovery serial number is invalid.',409);
+   if(serial)item.serialNumber=serial;
+  }
+  return item;
+ });
+ const {itemsStoredInLines,...rest}=pendingSave;
+ return {...rest,command:{...command,draft:{...draft,items}}};
+}
 export function prepareTradeLinkDraftCommand(view,fields,{
  documentId=()=>globalThis.crypto?.randomUUID?.(),
  lineId=()=>globalThis.crypto?.randomUUID?.()
@@ -820,7 +861,7 @@ export function calculateTradeLinkDraftLocalAmounts(fields){
   kinds=rows('lineKind');
  const count=Math.max(quantities.length,prices.length);
  const currency=value('currency'),vatType=value('vatType');
- if(count<1||count>100||!currencies.includes(currency)||
+ if(count<1||count>TRADELINK_MAX_ITEMS||!currencies.includes(currency)||
     !TRADELINK_VAT_CODES.includes(vatType))return null;
  const items=[];
  for(let i=0;i<count;i++){
@@ -1245,7 +1286,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
  const editing=mode==='edit'&&
   ['draft','for-approval','revision-required','approved'].includes(row?.workflow_state)&&
   row.content&&typeof row.content==='object'&&
-  (!Array.isArray(row.content.items)||row.content.items.length<=100);
+  (!Array.isArray(row.content.items)||row.content.items.length<=TRADELINK_MAX_ITEMS);
  const data=editing?row.content:{};
  const fieldValue=(name,fallback='')=>formValues&&Object.hasOwn(formValues,name)?formValues[name]:fallback;
  const line=Array.isArray(data.items)?data.items[0]||{}:{};
@@ -1390,11 +1431,11 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
      '<div class="tl-ref-items-toolbar">'+
 
       '<button type="button" class="tl-ref-add-blank" data-action="tradelink-draft-add-line"'+
-       (lines.length>=100?' disabled':'')+'>＋ Add Blank</button>'+
+       (lines.length>=TRADELINK_MAX_ITEMS?' disabled':'')+'>＋ Add Blank</button>'+
       '<button type="button" class="tl-ref-add-note" data-action="tradelink-draft-add-note"'+
-       (lines.length>=100?' disabled':'')+'>Add Note</button></div>'+
+       (lines.length>=TRADELINK_MAX_ITEMS?' disabled':'')+'>Add Note</button></div>'+
      '<div class="tl-reference-items-note">'+(physical?'Physical shipment item (required for local readiness). ':'')+
-      'Up to 100 items and notes per Draft. Reorder by dragging or use the arrow controls.</div>'+
+      'Up to 250 items and notes per Draft (2 MiB maximum). Reorder by dragging or use the arrow controls.</div>'+
      '<div data-tradelink-draft-line-items>'+
       lines.map((item,index)=>renderTradeLinkDraftLineItem(item,type,inputUnit,index)).join('')+
      '</div>'+
@@ -1602,7 +1643,7 @@ export function renderTradeLinkSavedDocumentPreview(record,workspaceId,documentI
    !Object.hasOwn(localSummaryRows,data.documentType))
   throw new ApiError('TradeLink saved document content mismatch.',409);
  const summary={...tradeLinkDraftLocalSummaryValues(data)};
- // Saved documents may contain up to 100 items. Never reuse the one-line
+ // Saved documents may contain up to 250 items. Never reuse the one-line
  // local form estimator for authoritative multi-line monetary totals.
  if(['esi','quotation','po'].includes(row.document_type)){
   const amounts=calculateTradeLinkAmounts(data);
@@ -1622,7 +1663,7 @@ export function renderTradeLinkSavedDocumentPreview(record,workspaceId,documentI
   ['verifiedBy','Intended verifier'],['approvedBy','Intended approver']]
   .filter(([key],i,all)=>all.findIndex(([name])=>name===key)===i);
  const currency=currencyUnit(data.currency);
- const items=Array.isArray(data.items)?data.items.slice(0,100):[];
+ const items=Array.isArray(data.items)?data.items.slice(0,TRADELINK_MAX_ITEMS):[];
  return '<section data-tradelink-saved-preview class="tl-draft-summary" '+
   'aria-labelledby="tl-saved-document-title">'+
   '<div class="tl-panel-heading"><div><p class="tl-eyebrow">Authoritative saved record</p>'+
