@@ -19,6 +19,9 @@ DECLARE
  v_later timestamptz; v_due timestamptz; v_epoch uuid; v_state jsonb;
  v_template jsonb; v_prior jsonb; v_corrected jsonb; v_result jsonb;
  v_ojt jsonb; v_out jsonb; v_audits bigint; v_job record;
+ v_admin constant uuid:='00000000-0000-4000-8000-000000000104';
+ v_session constant uuid:='00000000-0000-4000-8000-000000000106';
+ v_revision bigint; v_completed jsonb; v_expected_out timestamptz; v_edited jsonb;
 BEGIN
  IF current_setting('apsyntra.test_disposable',true) IS DISTINCT FROM 'on'
  OR current_setting('cron.launch_active_jobs',true) IS DISTINCT FROM 'off'
@@ -43,6 +46,26 @@ BEGIN
  OR (v_template->'clockOut' IS NOT NULL AND v_template->'clockOut'<>'null'::jsonb)
  THEN RAISE EXCEPTION 'Synthetic fixture identity mismatch'; END IF;
 
+ -- Signed admin fixture, rolled back together with all test state.
+ INSERT INTO auth.users (id,email,aud,role,email_confirmed_at,created_at,updated_at)
+ VALUES(v_admin,'tt-test-admin@example.invalid','authenticated','authenticated',now(),now(),now());
+ INSERT INTO public.profiles(id,email,platform_role,status)
+ VALUES(v_admin,'tt-test-admin@example.invalid','employee','active')
+ ON CONFLICT(id) DO UPDATE SET status='active';
+ INSERT INTO public.workspace_members(workspace_id,user_id,active)
+ VALUES(v_workspace,v_admin,true);
+ INSERT INTO public.apsyntra_workspace_module_roles(workspace_id,user_id,module_id,role,enabled)
+ VALUES(v_workspace,v_admin,'time-tracker','System Admin',true);
+ INSERT INTO auth.sessions(id,user_id,created_at,updated_at,not_after)
+ VALUES(v_session,v_admin,now(),now(),now()+interval '1 hour');
+ UPDATE public.work_boards SET description='[APSYNTRA:MODULE:timetracker:v1]' WHERE id=v_board;
+ v_state:=jsonb_set(v_state,'{version}','1'::jsonb);
+ v_template:=jsonb_set(v_template,'{clockIn}',
+  (v_template->'clockIn')||jsonb_build_object('location','Office-Base Duty',
+   'department','Engineering','geo',jsonb_build_object(
+   'status','captured','source','browser-geolocation','latitude',0,'longitude',0,'accuracy',10,
+   'capturedAt',to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'))));
+
  SELECT jsonb_agg(to_jsonb(j) ORDER BY jobid) INTO v_ojt FROM cron.job j
  WHERE jobname='tt-ojt-auto-clockout-9h';
  v_cutoff:=v_now-interval '1 hour';
@@ -59,6 +82,11 @@ BEGIN
  UPDATE public.module_state_entries SET value=v_state::text,revision=revision+1
  WHERE workspace_id=v_workspace AND module_id='time-tracker'
  AND state_key='timetracker.attendance.v1' AND scope='shared' AND owner_key='*';
+
+ SELECT revision INTO v_revision FROM public.module_state_entries
+ WHERE workspace_id=v_workspace AND module_id='time-tracker'
+ AND state_key='timetracker.attendance.v1' AND scope='shared' AND owner_key='*';
+ PERFORM private.tt_board_projection_upsert(v_board,v_workspace,v_employee,v_prior,v_revision,'clock-in');
 
  -- Test-only boundary to exercise earlier/later corrections at any local hour.
  -- The real activation API still requires current Manila date and reviewed count.
@@ -139,6 +167,58 @@ BEGIN
  WHERE record_id=v_record::text AND source='automatic';
  IF v_audits<>1 OR private.tt_process_auto_clockouts()->>'processed' IS DISTINCT FROM '0'
  THEN RAISE EXCEPTION 'Automatic audit or idempotence failed'; END IF;
+
+ -- Correct an actual server-generated completed record through the signed admin
+ -- mutation path. The fixture uses role/claims, not a cryptographically signed JWT.
+ v_completed:=v_state#>'{records,0}';
+ v_expected_out:=v_due+interval '9 hours 30 minutes';
+ IF NOT private.tt_is_server_clockout_evidence(v_workspace,v_completed) THEN
+  RAISE EXCEPTION 'Automatic closure audit provenance not recognized';
+ END IF;
+ IF private.tt_is_server_clockout_evidence(v_workspace,
+   jsonb_set(v_completed,'{clockOut,geo,generatedAt}',to_jsonb('2000-01-01T00:00:00Z'::text)))
+ OR private.tt_is_server_clockout_evidence(v_workspace,
+   jsonb_set(v_completed,'{clockOut,geo,latitude}','0'::jsonb))
+ THEN RAISE EXCEPTION 'Fabricated automatic evidence accepted'; END IF;
+ SELECT revision INTO v_revision FROM public.module_state_entries
+ WHERE workspace_id=v_workspace AND module_id='time-tracker'
+ AND state_key='timetracker.attendance.v1' AND scope='shared' AND owner_key='*';
+ PERFORM set_config('request.jwt.claim.sub',v_admin::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',v_admin::text,
+  'role','authenticated','aal','aal1','session_id',v_session::text)::text,true);
+ SET LOCAL ROLE authenticated;
+ v_result:=public.timetracker_attendance_admin_mutate(v_board,'edit',ARRAY[v_record::text],
+  jsonb_build_object('clockOutAt',v_expected_out),'Synthetic automatic clock-out correction',v_revision);
+ RESET ROLE;
+ SELECT value::jsonb INTO v_state FROM public.module_state_entries
+ WHERE workspace_id=v_workspace AND module_id='time-tracker'
+ AND state_key='timetracker.attendance.v1' AND scope='shared' AND owner_key='*';
+ v_edited:=v_state#>'{records,0}';
+ IF v_result->>'mode' IS DISTINCT FROM 'COMMITTED'
+ OR (v_result->>'revision')::bigint IS DISTINCT FROM v_revision+1
+ OR (v_edited#>>'{clockOut,timestamp}')::timestamptz IS DISTINCT FROM v_expected_out
+ OR v_edited#>'{clockOut,geo}' IS DISTINCT FROM v_completed#>'{clockOut,geo}'
+ OR v_edited#>'{clockOut,automatic}' IS DISTINCT FROM v_completed#>'{clockOut,automatic}'
+ OR v_edited#>'{clockOut,reason}' IS DISTINCT FROM v_completed#>'{clockOut,reason}'
+ OR v_edited->>'ownerId' IS DISTINCT FROM v_completed->>'ownerId'
+ OR NOT EXISTS(SELECT 1 FROM private.tt_attendance_board_projection
+  WHERE board_id=v_board AND record_id=v_record AND source_revision=v_revision+1
+   AND clock_out_at=v_expected_out AND clock_out_geo=v_out->'geo'
+   AND credited_ms=34200000)
+ OR NOT EXISTS(SELECT 1 FROM private.tt_attendance_admin_audit
+  WHERE board_id=v_board AND record_ids=ARRAY[v_record::text]
+   AND actor_id=v_admin AND action='edit'
+   AND committed_revision=v_revision+1
+   AND before_records->0=v_completed AND after_records->0=v_edited)
+ THEN RAISE EXCEPTION 'Signed no-GPS time correction or projection/audit failed: %',v_result; END IF;
+ -- Do not let the general edit path create a new no-GPS closure.
+ BEGIN
+  PERFORM private.tt_attendance_admin_apply_patch(v_prior,
+   jsonb_build_object('clockOutAt',v_now),v_admin,v_workspace);
+  RAISE EXCEPTION 'Unverified no-GPS closure unexpectedly allowed';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL;
+ END;
+ RAISE NOTICE 'PASS: signed-context automatic clock-out correction, preserved evidence, projection, audit and forged-evidence rejection';
 
  -- A deleted active session is cancelled promptly, even before its deadline.
  v_corrected:=v_prior||jsonb_build_object('id',v_delete::text);
