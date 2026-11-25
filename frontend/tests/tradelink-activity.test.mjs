@@ -107,7 +107,7 @@ test('TradeLink User Manual has a dedicated canonical route and structured guide
 });
 test('TradeLink navigation opens User Manual as a page instead of a popover',()=>{
  const html=renderTradeLinkApplication({detail,workspaceId:ws,section:'manual'});
- assert.match(html,/href="#\\/tradelink\\/manual"/);
+ assert.ok(html.includes('href="#/tradelink/manual"'));
  assert.match(html,/data-tl-tab="manual" aria-current="page"/);
  assert.match(html,/data-tl-screen="manual"/);
  assert.doesNotMatch(html,/<details class="tl-reference-manual">/);
