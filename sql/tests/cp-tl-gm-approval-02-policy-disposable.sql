@@ -130,3 +130,19 @@ BEGIN
  RESET ROLE;
  RAISE NOTICE 'PASS: policy, isolation, revision, signed review and idempotent retry assertions';
 END $test$;
+
+-- The restored owner-read branch does not authorize another creator's document.
+DO $read_boundary$
+DECLARE denied boolean:=false;
+BEGIN
+ PERFORM set_config('request.jwt.claim.sub','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',true);
+ PERFORM set_config('request.jwt.claim.session_id','22222222-2222-4222-8222-222222222222',true);
+ SET LOCAL ROLE authenticated;
+ BEGIN
+  PERFORM public.tl03_document_read('264ca40d-6e4a-4e4f-97e6-3bd77c97cd88','88888888-8888-4888-8888-888888888881');
+ EXCEPTION WHEN insufficient_privilege THEN denied:=true;
+ END;
+ RESET ROLE;
+ ASSERT denied;
+ RAISE NOTICE 'PASS: unrelated ordinary user cannot read GM-owned quotation';
+END $read_boundary$;
