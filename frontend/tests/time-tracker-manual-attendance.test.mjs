@@ -54,3 +54,17 @@ test('only selected roster identities and valid manual evidence accepted',()=>{
  assert.equal(build({location:'Offsite (Home)',workNote:'Project work'}).workNote,'Project work');
  assert.throws(()=>buildManualAttendanceEntry(base,{now,roster:[{id:regular,type:'regular',active:false}]}),/active employee/);
 });
+
+test('hourly presets and manually typed AM/PM minutes produce correct Philippine timestamps',()=>{
+ assert.equal(build({clockInTime:'8:45 am'}).clockInAt,'2026-11-24T00:45:00.000Z');
+ assert.equal(build({clockInTime:'12:00 AM'}).clockInAt,'2026-11-23T16:00:00.000Z');
+ assert.equal(build({clockInTime:'12:00 PM'}).clockInAt,'2026-11-24T04:00:00.000Z');
+ assert.equal(build({date:'2026-11-23',status:'completed',clockInTime:'6:00 PM',
+  clockOutDate:'2026-11-24',clockOutTime:'3:00 AM'}).clockOutAt,'2026-11-23T19:00:00.000Z');
+ assert.throws(()=>build({clockInTime:'13:00 AM'}),/valid Philippine/);
+ assert.throws(()=>build({clockInTime:'8:60 AM'}),/valid Philippine/);
+});
+test('office entries never carry a hidden offsite note',()=>{
+ assert.equal(build({workNote:'previous offsite draft'}).workNote,null);
+ assert.equal(build({location:'Offsite (Home)',workNote:'Actual Work Plan'}).workNote,'Actual Work Plan');
+});
