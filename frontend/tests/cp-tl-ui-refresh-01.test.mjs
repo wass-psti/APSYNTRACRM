@@ -75,9 +75,13 @@ test('refresh styles stay scoped, responsive, keyboard accessible and reduced-mo
   assert.ok(STYLE_SOURCES.includes('frontend/tradelink-reference-ui.css'));
   assert.ok(STYLE_SOURCES.includes('frontend/tradelink-ui-refresh.css'));
   assert.equal(STYLE_BUNDLE,'frontend/apsyntra-styles.bundle.css');
-  assert.equal(
-    STYLE_SOURCES.indexOf('frontend/tradelink-ui-refresh.css'),
-    STYLE_SOURCES.length-1
+  assert.ok(
+    STYLE_SOURCES.indexOf('frontend/tradelink-ui-refresh.css')>
+    STYLE_SOURCES.indexOf('frontend/tradelink-reference-ui.css')
+  );
+  assert.ok(
+    STYLE_SOURCES.indexOf('frontend/tradelink-ui-refresh.css')<
+    STYLE_SOURCES.indexOf('frontend/select-experience.css')
   );
   assert.match(css,/CP-TL-UI-REFRESH-01/);
   assert.ok(css.includes('.tl-reference-portal .tl-reference-document-topcard{'));

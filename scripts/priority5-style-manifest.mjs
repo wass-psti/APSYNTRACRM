@@ -40,6 +40,7 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/tradelink-application.css",
  "frontend/order-intake-application.css",
  "frontend/tradelink-reference-ui.css",
+ "frontend/tradelink-ui-refresh.css",
  "frontend/select-experience.css",
  "frontend/action-menu-experience.css",
  "frontend/search-experience.css",
@@ -81,6 +82,5 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/dark-workspace-account-completion.css",
  "frontend/dark-simplified-system.css",
  "frontend/board-overhaul-experience.css",
- "frontend/tradelink-ui-refresh.css",
 ]);
 export const STYLE_BUNDLE="frontend/apsyntra-styles.bundle.css";

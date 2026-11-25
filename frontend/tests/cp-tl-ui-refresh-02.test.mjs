@@ -140,7 +140,14 @@ test('All three screens use the same scoped light-mode refresh stylesheet and re
  const manifest=readFileSync('scripts/priority5-style-manifest.mjs','utf8');
  assert.ok(STYLE_SOURCES.includes('frontend/tradelink-ui-refresh.css'));
  assert.equal(STYLE_BUNDLE,'frontend/apsyntra-styles.bundle.css');
- assert.equal(STYLE_SOURCES.at(-1),'frontend/tradelink-ui-refresh.css');
+ assert.ok(
+  STYLE_SOURCES.indexOf('frontend/tradelink-ui-refresh.css')>
+  STYLE_SOURCES.indexOf('frontend/tradelink-reference-ui.css')
+ );
+ assert.ok(
+  STYLE_SOURCES.indexOf('frontend/tradelink-ui-refresh.css')<
+  STYLE_SOURCES.indexOf('frontend/select-experience.css')
+ );
  for(const selector of [
   '.tl-document-repository','.tl-reference-document-filter-tabs',
   '.tl-activity-timeline','.tl-activity-card','.tl-analytics-kpis',
