@@ -109,7 +109,7 @@ try {
       await import("/frontend/time-tracker-time-format.js");
     const { renderTimeTrackerOvertime, updateTimeTrackerOvertimePreview } =
       await import("/frontend/time-tracker-overtime.js");
-    const { renderTimeTrackerAdminEditor } =
+    const { renderTimeTrackerAdminEditor, buildTimeTrackerAdminPatch } =
       await import("/frontend/time-tracker-record-management.js");
     const host = document.createElement("div");
     host.innerHTML = renderTimeTrackerOvertime({
@@ -163,6 +163,19 @@ try {
       },
     });
     const adminInput = host.querySelector('input[name="clockInAt"]');
+    const adminDate = host.querySelector('input[name="clockInDate"]');
+    const adminValue = adminInput?.value;
+    adminInput.value = "06:06 PM";
+    const adminPatch = buildTimeTrackerAdminPatch(
+      new FormData(host.querySelector("#tt-attendance-admin-form")),
+      {
+        mode: "single",
+        record: {
+          clockIn: { timestamp: "2026-11-20T10:05:00.000Z" },
+          clockOut: null,
+        },
+      },
+    ).patch;
     return {
       midnight: formatTimeTrackerClock("2026-11-20T16:00:00Z"),
       noon: formatTimeTrackerClock("2026-11-20T04:00:00Z"),
@@ -174,7 +187,10 @@ try {
       otProgress,
       otReasonCount,
       adminType: adminInput?.type,
-      adminValue: adminInput?.value,
+      adminValue,
+      adminDateType: adminDate?.type,
+      adminDateValue: adminDate?.value,
+      adminPatch,
     };
   });
   assert.equal(twelveHour.midnight, "12:00 AM");
@@ -187,7 +203,12 @@ try {
   assert.equal(twelveHour.otProgress, 120);
   assert.equal(twelveHour.otReasonCount, "26 / 500");
   assert.equal(twelveHour.adminType, "text");
-  assert.equal(twelveHour.adminValue, "2026-11-20 06:05 PM");
+  assert.equal(twelveHour.adminValue, "06:05 PM");
+  assert.equal(twelveHour.adminDateType, "date");
+  assert.equal(twelveHour.adminDateValue, "2026-11-20");
+  assert.deepEqual(twelveHour.adminPatch, {
+    clockInAt: "2026-11-20T10:06:00.000Z",
+  });
 
   const desktopLayout = await page.evaluate(() => {
     const app = document.querySelector(".fm1-app");
