@@ -100,7 +100,7 @@ import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftFor
  tradeLinkDraftHasUnsavedChanges,reconcileTradeLinkSavedListing,tradeLinkSaveDefinitelyRejected,
  serializeTradeLinkDocumentCsv,
  prepareTradeLinkDraftCommand,
- renderTradeLinkDraftLineItem,snapshotTradeLinkDraftLineItems,updateTradeLinkDraftLocalAmounts,
+ renderTradeLinkDraftLineItem,snapshotTradeLinkDraftLineItems,restoreTradeLinkPendingSave,updateTradeLinkDraftLocalAmounts,
  updateTradeLinkLineRowTotals,updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary,
  normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI} from './tradelink-draft-workspace.js';
 import {summarizeTradeLinkSubmitReadiness} from './tradelink-submit-readiness.js';
@@ -8917,7 +8917,7 @@ async function action(name,button){
   const container=form?.querySelector('[data-tradelink-draft-line-items]');
   const rows=container?.querySelectorAll('[data-tradelink-line-item]');
   const module=form?.querySelector('[name="documentType"]')?.value;
-  if(!container||!rows||rows.length>=100||
+  if(!container||!rows||rows.length>=250||
      !['esi','packing','delivery','quotation','po'].includes(module))break;
   const currency=form.querySelector('[name="currency"]')?.value||'PHP';
   const kind=name==='tradelink-draft-add-note'?'note':'item';
@@ -13815,12 +13815,14 @@ async function selectTradeLinkRecovery(id,remove=false){
   const latest=(await tradeLinkRecovery.store.list(scope.userId,scope.workspaceId,scope.documentType)).find(item=>item.instanceId===id);
   if(!sameTradeLinkRecoveryScope(scope)||!latest||latest.version!==row.version)
    throw new Error('Recovery record changed. Refresh and retry.');
+  const restoredPendingSave=latest.pendingSave?
+   restoreTradeLinkPendingSave(latest.pendingSave,latest.lines):null;
   tradeLinkRecovery.resume(latest);
   tradeLinkRecoveryEditor={id,route:scope.route,userId:scope.userId,workspaceId:scope.workspaceId,documentType:scope.documentType,status:'saved'};
   state.tradeLinkDraft={...state.tradeLinkDraft,formValues:latest.fields,lineDrafts:latest.lines,
-   pendingSave:latest.pendingSave?{...latest.pendingSave,uncertain:!latest.pendingSave.receipt}:null,
-   pendingCreateId:latest.pendingSave?.command.documentId||null,
-   pendingCreateDraft:latest.pendingSave?.command.draft||null,
+   pendingSave:restoredPendingSave?{...restoredPendingSave,uncertain:!restoredPendingSave.receipt}:null,
+   pendingCreateId:restoredPendingSave?.command.documentId||null,
+   pendingCreateDraft:restoredPendingSave?.command.draft||null,
    unsavedChanges:true,draftNotice:'Unfinished inputs restored from this device.',error:'',message:''};
   render();
  }catch{if(sameTradeLinkRecoveryScope(scope))toast('Unable to complete local recovery. Refresh the recovery choices and try again.',true);}

@@ -2270,6 +2270,13 @@
       "sha256": "d2417020aae9aa021386daba47966e94f923bfa57203cd7aba35f9476bfb93c7"
     },
     {
+      "version": "20261125014338",
+      "name": "cp_tl_large_save_02_capacity",
+      "file": "20261125014338_cp_tl_large_save_02_capacity.sql",
+      "bytes": 23963,
+      "sha256": "c1f66056a5c6770ebb4d977f37a677baf6eca1f3647853e3d4a2d11889d3d5ed"
+    },
+    {
       "version": "20261125090000",
       "name": "cp_tt_admin_manual_clockin",
       "file": "20261125090000_cp_tt_admin_manual_clockin.sql",
