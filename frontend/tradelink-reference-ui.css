@@ -1422,7 +1422,7 @@
 .tl-reference-portal .tl-manual-section[hidden],.tl-reference-portal .tl-manual-index a[hidden],.tl-reference-portal .tl-manual-empty[hidden]{display:none!important}
 .tl-reference-portal .tl-manual-section{transition:border-color .15s ease,box-shadow .15s ease}
 .tl-reference-portal .tl-manual-section:hover{border-color:#d4dfed;box-shadow:0 5px 16px rgba(27,52,88,.045)}
-.tl-reference-portal .tl-manual-section:target{border-color:#a9c1e5;box-shadow:0 0 0 3px rgba(74,119,186,.08)}
+.tl-reference-portal .tl-manual-section:target,.tl-reference-portal .tl-manual-section.is-targeted{border-color:#a9c1e5;box-shadow:0 0 0 3px rgba(74,119,186,.08)}
 .tl-reference-portal .tl-manual-index a:focus-visible,.tl-reference-portal .tl-manual-hero-actions a:focus-visible,.tl-reference-portal .tl-manual-search-control button:focus-visible{outline:2px solid #7ca4e8;outline-offset:3px}
 @media(max-width:900px){
  .tl-reference-portal .tl-manual-quickstart{grid-template-columns:minmax(0,1fr);gap:12px}
