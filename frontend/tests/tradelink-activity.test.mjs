@@ -105,7 +105,7 @@ test('TradeLink User Manual has a dedicated canonical route and structured guide
  assert.match(html,/tl-manual-index/);
  assert.match(html,/data-tl-manual-search/);
  assert.match(html,/data-tl-manual-target="lifecycle"/);
- assert.match(html,/href="#\\/tradelink\\/manual"/);
+ assert.ok(html.includes('href="#/tradelink/manual"'));
  assert.match(html,/QUICK START/);
  assert.match(html,/From document to approval/);
  assert.equal((html.match(/class="tl-manual-section"/g)||[]).length,7);
