@@ -28,7 +28,8 @@ test('reference portal is scoped to the genuine signed TradeLink board and uses 
  assert.match(html,/Create New/);
  assert.match(html,/All Documents/);
  assert.match(html,/href="#\/tradelink\/documents"/);
- assert.match(html,/class="tl-reference-manual"/);
+ assert.match(html,/<a data-tl-tab="manual" href="#\/tradelink\/manual"/);
+ assert.doesNotMatch(html,/<details class="tl-reference-manual">/);
  assert.doesNotMatch(html,/Disaster Recovery|tl-reference-unavailable/);
  assert.doesNotMatch(html,/Signed workspace<\/div>|tl-reference-workspace/);
  assert.doesNotMatch(html,/(?:Save successful|Draft saved \d|PDF generated)/);
