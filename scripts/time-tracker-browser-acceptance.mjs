@@ -821,8 +821,8 @@ try {
     ],
   );
   assert.match(
-    await page.locator(".tt-log-row-clock").textContent(),
-    /08:00:00/,
+    await page.locator(".tt-log-row-clock strong").textContent(),
+    /^08:00:00 AM$/,
   );
   assert.match(
     await page.locator(".tt-log-row-department").textContent(),
