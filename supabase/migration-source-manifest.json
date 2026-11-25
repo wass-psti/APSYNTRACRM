@@ -2338,6 +2338,13 @@
       "file": "20261125151922_cp_tt_manual_ot_workspace_resolution_03a.sql",
       "bytes": 3651,
       "sha256": "de2bfd4a8b8c5ea533a22781670609f3cb1199a930c31116828aa9ade367825e"
+    },
+    {
+      "version": "20261126090000",
+      "name": "cp_tt_active_clockin_scheduler_correction",
+      "file": "20261126090000_cp_tt_active_clockin_scheduler_correction.sql",
+      "bytes": 11985,
+      "sha256": "5774663ec5faf4d28072a43eac9ccebaedae8e750f641cf4a7f78b0f61e429da"
     }
   ]
 }
