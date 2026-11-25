@@ -2343,8 +2343,8 @@
       "version": "20261126090000",
       "name": "cp_tt_active_clockin_scheduler_correction",
       "file": "20261126090000_cp_tt_active_clockin_scheduler_correction.sql",
-      "bytes": 12528,
-      "sha256": "a5206c5e8a4743a345f7502aac11d7abf87df5ed782118197fd6ecb01be52516"
+      "bytes": 16376,
+      "sha256": "224a30059b898348a61bf06f381326233673b841fa09d68d1ac5f73277cb3bc4"
     }
   ]
 }
