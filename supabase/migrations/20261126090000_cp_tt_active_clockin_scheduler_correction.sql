@@ -265,6 +265,18 @@ DECLARE d text; old text; replacement text; target text;
 BEGIN
  FOR target,old,replacement IN VALUES
  ('private.tt_attendance_admin_apply_patch(jsonb,jsonb,uuid,uuid)',
+  $old$pg_catalog.jsonb_typeof(v_clock_out->'geo')<>'object'$old$,
+  $new$pg_catalog.jsonb_typeof(v_clock_out->'geo') IS DISTINCT FROM 'object'$new$),
+ ('private.tt_attendance_admin_apply_patch(jsonb,jsonb,uuid,uuid)',
+  $old$v_clock_out#>>'{geo,status}'<>'captured'$old$,
+  $new$v_clock_out#>>'{geo,status}' IS DISTINCT FROM 'captured'$new$),
+ ('private.tt_attendance_admin_sync_projection(uuid,uuid,uuid,jsonb,bigint)',
+  $old$pg_catalog.jsonb_typeof(v_out_geo)<>'object'$old$,
+  $new$pg_catalog.jsonb_typeof(v_out_geo) IS DISTINCT FROM 'object'$new$),
+ ('private.tt_attendance_admin_sync_projection(uuid,uuid,uuid,jsonb,bigint)',
+  $old$v_out_geo->>'status'<>'captured'$old$,
+  $new$v_out_geo->>'status' IS DISTINCT FROM 'captured'$new$),
+ ('private.tt_attendance_admin_apply_patch(jsonb,jsonb,uuid,uuid)',
   $old$AND COALESCE(v_clock_out#>>'{geo,source}','')='admin-manual-clockout'))) THEN$old$,
   $new$AND COALESCE(v_clock_out#>>'{geo,source}','')='admin-manual-clockout')))
      AND NOT (
