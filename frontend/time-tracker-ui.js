@@ -30,8 +30,8 @@ const date=v=>v&&Number.isFinite(Date.parse(v))?
 const hrs=formatTimeTrackerDurationMs;
 const sections=[
  ['overview','Overview',true],['clock','Clock',true],['employees','Employees',true],['log','Log',true],
- ['reports','Reports',true],['calendar','Calendar',true],
- ['ot','OT',true],['hours','My Hours',true],['team','Team',true],
+ ['ot','OT',true],['reports','Reports',true],['calendar','Calendar',true],
+ ['hours','My Hours',true],['team','Team',true],
  ['monitor','Monitor',true],['gps','GPS',true]
 ];
 const sectionMeta=Object.freeze({

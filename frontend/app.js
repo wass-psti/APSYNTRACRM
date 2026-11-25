@@ -22,7 +22,7 @@ import {AuthClient,ApiError} from './session.js';
 import {createTimeTrackerPendingRecovery,timeTrackerPendingKeyMatches} from './time-tracker-pending-recovery.js';
 import {formatTimeTrackerAutoClockoutTime} from './apps/TimeTracker/time-tracker-auto-clockout.js';
 import {runPendingTimeTrackerAutoClockout} from './apps/TimeTracker/time-tracker-auto-clockout-execution.js';
-import {readTimeTrackerLocationPreference,saveTimeTrackerLocationPreference} from './apps/TimeTracker/time-tracker-preferences.js';
+import {readTimeTrackerLocationPreference,saveTimeTrackerLocationPreference,readTimeTrackerViewPreference,saveTimeTrackerViewPreference} from './apps/TimeTracker/time-tracker-preferences.js';
 import {avatarPreviewMarkup,mountAvatarPreview,stopAvatarPreview,mergeProfileAvatarContext} from './profile-avatar.js';
 import {ProfileAvatarClient} from './profile-avatar-client.js';
 import {mountAvatarImages} from './profile-avatar.js';
@@ -3517,7 +3517,11 @@ async function loadMoreBoardItems(){
   }
  }
 }
+function timeTrackerViewStorage(){
+ try{return globalThis.sessionStorage??null;}catch{return null;}
+}
 async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeContext=null){
+ const enteringTimeTracker=state.boardId!==boardId||state.tab!=='attendance';
  const nativeModuleId=nativeApplicationModuleForBoardRoute(boardId,tab);
  if(nativeModuleId&&(!nativeContext||nativeContext.moduleId!==nativeModuleId||
     nativeContext.userId!==state.context?.user_id||
@@ -3703,8 +3707,12 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
  if(tab==='tradelink'&&['drafts','documents'].includes(state.tradeLinkSection)&&
     TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID)
   await loadTradeLinkDrafts(seq);
- if(tab==='attendance'&&moduleByBoardName(state.board.board?.name)?.key==='timetracker')
+ if(tab==='attendance'&&moduleByBoardName(state.board.board?.name)?.key==='timetracker'){
+  if(enteringTimeTracker)state.ttView=readTimeTrackerViewPreference(timeTrackerViewStorage(),timeTrackerWorkNoteScope()||{});
   await loadTimeTracker(seq,nativeModuleId==='time-tracker'?nativeContext:null);
+  if(seq===routeSerial&&state.ttView==='log'&&state.ttAttendance?.status==='VERIFIED_READ')
+   await loadTimeTrackerLogGps();
+ }
  if(tab==='finance'&&moduleByBoardName(state.board.board?.name)?.key==='frt'){
   const pending=pendingNativeSearchSelection?.applicationId==='frt'&&
    pendingNativeSearchSelection.userId===auth.userId&&
@@ -4952,6 +4960,8 @@ async function loadTimeTracker(seq=routeSerial,nativeContext=null){
   if(run===state.ttRunId&&seq===routeSerial&&auth.isSignedIn&&
     state.context?.user_id===identity&&state.context?.workspace_id===ws)
    {state.ttAttendance=snapshot;
+    if(['SHARED_LOGIN','SHARED_DISABLED','SERVICE_UNAVAILABLE','SETUP_REQUIRED'].includes(snapshot.ojtRoster?.mode))
+     state.ttView='clock';
     if(state.ttView==='employees'&&(snapshot?.status!=='VERIFIED_READ'||!canViewTimeTrackerEmployees(snapshot.access))){
      state.ttView='clock';state.ttEmployeesTab='directory';state.ttEmployeesSearch='';state.ttEmployeesDepartment='';
     }
@@ -10529,7 +10539,9 @@ async function action(name,button){
   if(next===state.ttView)return;
   state.ttGeoPromptVisible=false;state.ttGeoMessage='';
   if(next!=='log'){state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogSelectedIds=[];state.ttLogAdminError='';state.ttLogAdminSuccess='';}
-  state.ttView=next;render();
+  state.ttView=next;
+  saveTimeTrackerViewPreference(timeTrackerViewStorage(),timeTrackerWorkNoteScope()||{},next);
+  render();
   animateTabContent('.tt-secondary-content, .tt-clock-stage');
   // Clock opens with only critical signed reads. Hydrate secondary views on demand.
   const requiresDetail=next!=='clock'&&state.ttAttendance?.clockOnly===true;
