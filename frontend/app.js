@@ -5026,7 +5026,9 @@ async function loadTimeTracker(seq=routeSerial,nativeContext=null){
      }
      pendingNativeSearchSelection=null;
     }
-    if(state.ttClockPending)reconcileTimeTrackerClock(snapshot);}
+    if(state.ttClockPending)reconcileTimeTrackerClock(snapshot,{
+     resolveUncommittedClockIn:true
+    });}
  }catch(err){
   if(run===state.ttRunId&&seq===routeSerial){
    state.ttAttendance=null;clearTimeTrackerOjtSelection();state.ttError=errorMessage(err);
@@ -5550,7 +5552,9 @@ function restoreTimeTrackerClockPending(){
   state.ttError='A previous attendance action needs a signed status check. Verify the session before another Clock In or Clock Out.';
  }
 }
-function reconcileTimeTrackerClock(snapshot,{allowRetry=false}={}){
+function reconcileTimeTrackerClock(snapshot,{
+ allowRetry=false,resolveUncommittedClockIn=false
+}={}){
  const pending=state.ttClockPending;
  if(!pending)return null;
  const action=pending.action||'clock-out';
@@ -5562,16 +5566,23 @@ function reconcileTimeTrackerClock(snapshot,{allowRetry=false}={}){
   state.ttSuccess=(action==='clock-in'?'Clock In':'Clock Out')+
    ' confirmed — successfully recorded in your signed attendance history.';
   state.ttError='';
- }else if(allowRetry&&!pending.receiptVerified&&
-   ((action==='clock-out'&&outcome==='STILL_ACTIVE')||
-    (action==='clock-in'&&outcome==='NOT_COMMITTED'))){
-  // Only a distinct, user-triggered signed reconciliation may unlock another
-  // submission. The database's per-actor transaction lock still rejects races.
+ }else if(!pending.receiptVerified&&
+   ((action==='clock-out'&&allowRetry&&outcome==='STILL_ACTIVE')||
+    (action==='clock-in'&&(allowRetry||resolveUncommittedClockIn)&&
+     outcome==='NOT_COMMITTED'))){
+  // A fresh signed read can clear an uncommitted Clock-In even when another
+  // employee advanced the shared revision. Clock-Out recovery still requires
+  // the explicit Verify action; a receipt-confirmed write is never discarded.
   clearTimeTrackerClockPending();
-  state.ttSuccess='';
-  state.ttError=action==='clock-in'?
-   'Clock In was not committed. Your signed attendance state is unchanged; you may try again.':
-   'Your signed attendance record is still active. Clock Out was not completed; you may try again.';
+  if(resolveUncommittedClockIn&&!allowRetry&&action==='clock-in'){
+   state.ttSuccess='Previous Clock In was not committed. You can start a new session.';
+   state.ttError='';
+  }else{
+   state.ttSuccess='';
+   state.ttError=action==='clock-in'?
+    'Clock In was not committed. Your signed attendance state is unchanged; you may try again.':
+    'Your signed attendance record is still active. Clock Out was not completed; you may try again.';
+  }
  }
  return outcome;
 }

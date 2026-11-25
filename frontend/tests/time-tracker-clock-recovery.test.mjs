@@ -167,12 +167,28 @@ test('Clock-In signed reconciliation confirms only a new matching session and re
  assert.equal(clockInSnapshotOutcome({...after,active:null},pending),'UNVERIFIED');
  assert.equal(clockInSnapshotOutcome({...after,records:[{...fresh,location:'Offsite (Home)'},old],
   active:{...fresh,location:'Offsite (Home)'}},pending),'UNVERIFIED');
+ // The shared revision can advance because another employee changed attendance.
+ // No new record for this actor and an explicit null active session is not committed.
+ const unrelatedRevision={...before,records:[old],active:null,revision:12};
+ assert.equal(clockInSnapshotOutcome(unrelatedRevision,pending),'NOT_COMMITTED');
+ assert.equal(attendanceSnapshotOutcome(unrelatedRevision,pending),'NOT_COMMITTED');
+ assert.equal(clockInSnapshotOutcome({...unrelatedRevision,revision:3},pending),'UNVERIFIED');
+ assert.equal(clockInSnapshotOutcome({...unrelatedRevision,active:old},pending),'UNVERIFIED');
+ assert.equal(clockInSnapshotOutcome({...unrelatedRevision,active:undefined},pending),'UNVERIFIED');
+ assert.equal(clockInSnapshotOutcome(unrelatedRevision,
+  {...pending,recordId:'receipt-confirmed-record'}),'UNVERIFIED');
+ // A new record that does not match the attempted action remains ambiguous.
+ assert.equal(clockInSnapshotOutcome({...after,
+  records:[{...fresh,location:'Offsite (Home)'},old],active:null},pending),'UNVERIFIED');
+ const idleHtml=renderTimeTrackerNative({result:unrelatedRevision,view:'clock',clockPending:false});
+ assert.match(idleHtml,/Not clocked in/);
+ assert.match(idleHtml,/name=\"tt-action\" value=\"clock-in\"/);
+ assert.doesNotMatch(idleHtml,/Verify session status/);
  for(const changed of [
   {access:{...after.access,userId:'foreign'}},
   {access:{...after.access,workspaceId:'foreign'}},
   {access:{...after.access,boardId:'foreign'}},
   {status:'UNAVAILABLE'},
-  {records:[old],active:null,revision:5},
   {records:[fresh,fresh,old],active:fresh,revision:5}
  ])assert.equal(clockInSnapshotOutcome({...after,...changed},pending),'UNVERIFIED');
 });
@@ -193,7 +209,7 @@ test('verified signed TimeTracker reload clears stale bootstrap errors without u
  const load=app.slice(start,end);
  assert.ok(start>=0&&end>start);
  assert.match(load,/state\.ttAttendance=snapshot;[\s\S]*if\(snapshot\?\.status==='VERIFIED_READ'&&!state\.ttClockPending\)\s*state\.ttError='';/);
- assert.match(load,/if\(state\.ttClockPending\)reconcileTimeTrackerClock\(snapshot\)/);
+ assert.match(load,/if\(state\.ttClockPending\)reconcileTimeTrackerClock\(snapshot,\{\s*resolveUncommittedClockIn:true\s*\}\)/);
 });
 
 test('signed administrative closure reconciles a pending employee clock-out and restores Start session',()=>{

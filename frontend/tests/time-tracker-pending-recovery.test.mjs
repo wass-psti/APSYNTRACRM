@@ -87,6 +87,8 @@ test('restored markers can reconcile only from a fresh matching signed snapshot'
  assert.equal(attendanceSnapshotOutcome(snapshot,restored),'CONFIRMED');
  assert.equal(attendanceSnapshotOutcome({...snapshot,
   access:{...scope,userId:'40000000-0000-4000-8000-000000000001'}},restored),'UNVERIFIED');
+ const noSessionAfterOtherEmployeeChange={...snapshot,revision:17,records:[],active:null};
+ assert.equal(attendanceSnapshotOutcome(noSessionAfterOtherEmployeeChange,restored),'NOT_COMMITTED');
 });
 test('controller saves before invoking non-idempotent RPC and restores on initial load',()=>{
  const app=readFileSync('frontend/app.js','utf8');
@@ -100,4 +102,14 @@ test('controller saves before invoking non-idempotent RPC and restores on initia
  assert.match(app,/clearTimeTrackerClockPending\(\)/);
  assert.match(app,/timeTrackerPendingRecovery\.read/);
  assert.equal((submit.match(/timeTracker\.commit\(/g)||[]).length,1);
+ const loadStart=app.indexOf('async function loadTimeTracker(seq=routeSerial,nativeContext=null)');
+ const loadEnd=app.indexOf('function timeTrackerAdminLogReady()',loadStart);
+ const load=app.slice(loadStart,loadEnd);
+ assert.match(load,/reconcileTimeTrackerClock\(snapshot,\{\s*resolveUncommittedClockIn:true\s*\}\)/);
+ assert.doesNotMatch(load,/timeTracker\.commit\(/);
+ const reconcileStart=app.indexOf('function reconcileTimeTrackerClock(');
+ const reconcileEnd=app.indexOf('async function verifyTimeTrackerAttendance()',reconcileStart);
+ const reconcile=app.slice(reconcileStart,reconcileEnd);
+ assert.match(reconcile,/!pending\.receiptVerified/);
+ assert.match(reconcile,/resolveUncommittedClockIn/);
 });
