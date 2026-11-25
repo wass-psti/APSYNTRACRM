@@ -102,7 +102,12 @@ test('TradeLink User Manual has a dedicated canonical route and structured guide
  assert.match(html,/Quotation status/);
  assert.match(html,/Print and PDF/);
  assert.match(html,/Analytics and receivables/);
- assert.match(html,/tl-manual-index/);\n assert.match(html,/data-tl-manual-search/);\n assert.match(html,/data-tl-manual-target="lifecycle"/);\n assert.match(html,/href="#\\/tradelink\\/manual"/);\n assert.match(html,/QUICK START/);\n assert.match(html,/From document to approval/);
+ assert.match(html,/tl-manual-index/);
+ assert.match(html,/data-tl-manual-search/);
+ assert.match(html,/data-tl-manual-target="lifecycle"/);
+ assert.match(html,/href="#\\/tradelink\\/manual"/);
+ assert.match(html,/QUICK START/);
+ assert.match(html,/From document to approval/);
  assert.equal((html.match(/class="tl-manual-section"/g)||[]).length,7);
 });
 test('TradeLink navigation opens User Manual as a page instead of a popover',()=>{
