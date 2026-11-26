@@ -1005,15 +1005,39 @@ try {
     '#tt-attendance-admin-form select[name="location"]',
     '#tt-attendance-admin-form select[name="department"]',
     '#tt-attendance-admin-form select[name="status"]',
+    '#tt-attendance-admin-form input[name="clockInDate"]',
     '#tt-attendance-admin-form input[name="clockInAt"]',
+    '#tt-attendance-admin-form input[name="clockOutDate"]',
     '#tt-attendance-admin-form input[name="clockOutAt"]',
     '#tt-attendance-admin-form input[name="clockInGeolatitude"]',
     '#tt-attendance-admin-form input[name="clockInGeolongitude"]',
     '#tt-attendance-admin-form input[name="clockInGeoaccuracy"]',
-    '#tt-attendance-admin-form input[name="durationHours"]',
+    '#tt-attendance-admin-form input[name="clockOutGeolatitude"]',
+    '#tt-attendance-admin-form input[name="clockOutGeolongitude"]',
+    '#tt-attendance-admin-form input[name="clockOutGeoaccuracy"]',
   ]) {
     await page.locator(selector).waitFor();
   }
+  const advancedDuration = page.locator(".tt-edit-record-advanced");
+  const durationInput = page.locator(
+    '#tt-attendance-admin-form input[name="durationHours"]',
+  );
+  const durationMode = page.locator(
+    '#tt-attendance-admin-form select[name="durationMode"]',
+  );
+  assert.equal(await advancedDuration.count(), 1);
+  assert.equal(await advancedDuration.evaluate((details) => details.open), false);
+  await durationInput.waitFor({ state: "hidden" });
+  await checkAccessibilityWithin(
+    ".tt-admin-editor",
+    "System Admin individual attendance editor (collapsed advanced duration)",
+  );
+  await advancedDuration.locator("summary").click();
+  assert.equal(await advancedDuration.evaluate((details) => details.open), true);
+  await durationMode.waitFor();
+  await durationInput.waitFor();
+  assert.equal(await durationMode.inputValue(), "auto");
+  assert.match(await durationInput.inputValue(), /^\d+:\d{2}:\d{2}$/);
   assert.equal(
     await page
       .locator('#tt-attendance-admin-form select[name="employeeId"] option')
