@@ -66,7 +66,7 @@ test('existing OT navigation, role checks, search and staged write restrictions 
  const employee=render({modalOpen:true,filters:{status:'Approved'}});
  for(const token of ['tt-ot-prev','tt-ot-next','tt-ot-current','tt-ot-status',
   'tt-ot-sort','tt-ot-search','tt-ot-open','tt-ot-reference-metrics','tt-ot-reference-table',
-  'tt-ot-form','tt-ot-date','tt-ot-start','tt-ot-end'])
+  'tt-ot-form','tt-ot-date','tt-ot-duration-hours'])
   assert.ok(employee.includes(token),token);
  assert.match(employee,/type="submit" disabled/);
  assert.doesNotMatch(employee,/tt-ot-review-actions/);

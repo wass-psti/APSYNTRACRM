@@ -128,13 +128,12 @@ try {
         },
       ],
     });
-    const otStart = host.querySelector("#tt-ot-start");
-    const otEnd = host.querySelector("#tt-ot-end");
+    const otHours = host.querySelector("#tt-ot-duration-hours");
+    const hasOtRangeInputs = Boolean(host.querySelector("#tt-ot-start,#tt-ot-end"));
     const otReason = host.querySelector("#tt-ot-reason");
     const otForm = host.querySelector("#tt-ot-form");
     const otDetails = host.querySelector(".tt-ot-detail")?.textContent;
-    otStart.value = "18:00";
-    otEnd.value = "20:00";
+    otHours.value = "2";
     otReason.value = "Emergency maintenance work";
     updateTimeTrackerOvertimePreview(otForm);
     const otDuration = host.querySelector(
@@ -146,8 +145,8 @@ try {
     const otReasonCount = host.querySelector(
       "[data-tt-ot-reason-count]",
     )?.textContent;
-    const otStartType = otStart?.type;
-    const otStartValue = otStart?.value;
+    const otHoursType = otHours?.type;
+    const otHoursValue = otHours?.value;
     host.innerHTML = renderTimeTrackerAdminEditor({
       timeOnly: true,
       editor: {
@@ -180,8 +179,9 @@ try {
       midnight: formatTimeTrackerClock("2026-11-20T16:00:00Z"),
       noon: formatTimeTrackerClock("2026-11-20T04:00:00Z"),
       date: formatTimeTrackerDateTime("2026-11-20T10:05:00Z"),
-      otStartType,
-      otStartValue,
+      otHoursType,
+      otHoursValue,
+      hasOtRangeInputs,
       otDetails,
       otDuration,
       otProgress,
@@ -196,9 +196,11 @@ try {
   assert.equal(twelveHour.midnight, "12:00 AM");
   assert.equal(twelveHour.noon, "12:00 PM");
   assert.equal(twelveHour.date, "Nov 20, 2026, 06:05 PM");
-  assert.equal(twelveHour.otStartType, "time");
-  assert.equal(twelveHour.otStartValue, "18:00");
-  assert.match(twelveHour.otDetails, /06:00 PM/);
+  assert.equal(twelveHour.otHoursType, "number");
+  assert.equal(twelveHour.otHoursValue, "2");
+  assert.equal(twelveHour.hasOtRangeInputs, false);
+  assert.match(twelveHour.otDetails, /Requested duration: 2h/);
+  assert.doesNotMatch(twelveHour.otDetails, /06:00 PM|08:00 PM/);
   assert.equal(twelveHour.otDuration, "2 hr 00 min");
   assert.equal(twelveHour.otProgress, 120);
   assert.equal(twelveHour.otReasonCount, "26 / 500");
@@ -509,6 +511,7 @@ try {
     access: {
       ...verifiedResult.access,
       otContractActive: true,
+      durationOtContractActive: true,
       bootstrapApprover: false,
     },
   };
@@ -622,6 +625,7 @@ try {
       ...otFixture.access,
       moduleRole: "System Admin",
       manualOtManager: true,
+      manualDurationOtContractActive: true,
       bootstrapApprover: false,
       overviewDirectory: [
         {
@@ -651,6 +655,8 @@ try {
   );
   assert.equal(await page.locator("#tt-ot-manual-form").count(), 1);
   assert.equal(await page.locator("#tt-ot-manual-employee option").count(), 3);
+  assert.equal(await page.locator("#tt-ot-manual-duration-hours").count(), 1);
+  assert.equal(await page.locator("#tt-ot-manual-start,#tt-ot-manual-end").count(), 0);
   assert.equal(
     await page.locator("#tt-ot-manual-form button[type=submit]").isDisabled(),
     false,
