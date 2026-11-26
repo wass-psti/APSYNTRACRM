@@ -3,7 +3,7 @@
  */
 import {ApiError} from './session.js';
 import {TRADELINK_MAX_ITEMS} from './tradelink/limits.js';
-import {GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY,tradeLinkGmApprovalPreview} from './tradelink/approval-policy.js';
+import {GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY,tradeLinkGmApprovalPreview} from './tradelink/approval-policy.js?v=cp-tl-gm-06f-20261126-01';
 import {validUuid} from './data.js';
 import {calculateTradeLinkAmounts,formatTradeLinkAmount,TRADELINK_CURRENCIES,TRADELINK_VAT_CODES} from './tradelink-finance.js';
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
@@ -19,7 +19,7 @@ import {TradeLinkNativeClient,TL03_DOMAIN_READS_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
  TL03_WORKFLOW_OPERATIONAL_ENABLED,TL03_DUAL_REVIEW_ENABLED,
  validateTradeLinkDraftEnvelope,
- normalizeTradeLinkDomainRow} from './tradelink-native.js';
+ normalizeTradeLinkDomainRow} from './tradelink-native.js?v=cp-tl-gm-06f-20261126-01';
 
 export const TL03_DRAFT_INTERFACE_ENABLED=true; // presentation only
 const typeLabels=Object.freeze([

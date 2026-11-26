@@ -9,8 +9,8 @@ import {renderTradeLinkFinancePreview} from './tradelink-finance.js';
 import {renderTradeLinkWorkflowReference} from './tradelink-workflow-reference.js';
 import {renderTradeLinkAnalytics} from './tradelink-analytics.js';
 import {renderTradeLinkDraftWorkspace,renderTradeLinkDocumentRepository,
- initialTradeLinkDraftView,tradeLinkDraftEditHref} from './tradelink-draft-workspace.js?v=cp-tl-document-menu-02-20261126-01';
-import {TL03_DOMAIN_READS_ENABLED,TL03_DOMAIN_WRITES_ENABLED} from './tradelink-domain-client.js';
+ initialTradeLinkDraftView,tradeLinkDraftEditHref} from './tradelink-draft-workspace.js?v=cp-tl-gm-06f-20261126-01';
+import {TL03_DOMAIN_READS_ENABLED,TL03_DOMAIN_WRITES_ENABLED} from './tradelink-domain-client.js?v=cp-tl-gm-06f-20261126-01';
 import {TRADELINK_APPLICATION_ROUTE,tradeLinkApplicationHref} from './tradelink-application-route.js';
 
 export const TRADELINK_SOURCE_MODULES=Object.freeze([
