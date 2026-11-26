@@ -47,8 +47,11 @@ ON CONFLICT(jobname) DO NOTHING;
 -- Workspace provisioning prerequisites used by the current-main scope migration.
 -- These are test doubles for unrelated provisioning services; attendance and
 -- scheduler functions under test are the repository migrations themselves.
+CREATE TABLE IF NOT EXISTS public.workspaces(id uuid PRIMARY KEY);
 INSERT INTO public.workspaces(id)
-VALUES('00000000-0000-4000-8000-000000000001')
+VALUES
+ ('00000000-0000-4000-8000-000000000001'),
+ ('10000000-0000-4000-8000-000000000001')
 ON CONFLICT(id) DO NOTHING;
 ALTER TABLE public.apsyntra_crm_platform_roles
  ADD COLUMN IF NOT EXISTS assigned_by uuid;
@@ -70,7 +73,11 @@ CREATE TABLE public.module_role_assignments(
 
 CREATE OR REPLACE FUNCTION public.is_platform_admin(p_user_id uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
-AS $$ SELECT p_user_id='20000000-0000-4000-8000-000000000001'::uuid $$;
+AS $ SELECT p_user_id='20000000-0000-4000-8000-000000000001'::uuid $;
+CREATE OR REPLACE FUNCTION public.module_role_for(p_module_id text,p_user_id uuid)
+RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
+AS $ SELECT CASE WHEN public.is_platform_admin(p_user_id)
+                  THEN 'System Admin' ELSE 'Employee' END $;
 CREATE OR REPLACE FUNCTION public.apsyntra_crm_effective_role(p_user_id uuid,p_workspace_id uuid)
 RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
 AS $$
