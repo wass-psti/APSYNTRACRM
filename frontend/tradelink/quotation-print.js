@@ -1,6 +1,6 @@
 // Reference quotation layouts: print-only presentation of an already verified revision.
 import {calculateTradeLinkAmounts,formatTradeLinkAmount} from '../tradelink-finance.js';
-import {GM_SALES_EXEMPT_POLICY} from './approval-policy.js';
+import {GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY} from './approval-policy.js';
 
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const display=value=>value==null||value===''?'—':escape(value);
@@ -37,12 +37,13 @@ function totals(data,currency){
 function approval(row,data,creatorName){
  const approved=row.workflow_state==='approved';
  const exempt=row.approval_policy===GM_SALES_EXEMPT_POLICY;
+ const approvalFree=row.approval_policy===GM_CREATOR_APPROVAL_FREE_POLICY;
  const stage=(title,identity,at)=>'<div><h3>'+title+'</h3><strong>'+display(identity)+'</strong><p class="'+(stamp(at)?'tl-quote-reviewed':'')+'">'+(stamp(at)?'Recorded validation on '+escape(stamp(at)):'No recorded validation')+'</p></div>';
  return '<section class="tl-quote-approval" aria-label="Workflow assignments / recorded responsibility">'+
  '<div><h3>CREATED BY:</h3><strong>'+display(creatorName||'Recorded creator (name unavailable)')+'</strong><p>'+display(stamp(row.created_at))+'</p></div>'+
- (exempt?'<div><h3>REVIEWED BY:</h3><strong>Not Applicable</strong><p>Sales Supervisor approval — Exempted</p></div>':
+ (approvalFree?'<div><h3>REVIEWED BY:</h3><strong>Not Applicable</strong></div>':exempt?'<div><h3>REVIEWED BY:</h3><strong>Not Applicable</strong><p>Sales Supervisor approval — Exempted</p></div>':
  stage('REVIEWED BY:',data.verifiedByEmail||data.verifiedBy,row.primary_reviewed_at))+
- stage('APPROVED BY:',data.approvedByEmail||data.approvedBy,row.secondary_reviewed_at)+
+ (approvalFree?'<div><h3>APPROVED BY:</h3><strong>Not Applicable</strong></div>':stage('APPROVED BY:',data.approvedByEmail||data.approvedBy,row.secondary_reviewed_at))+
  '<p class="tl-quote-print-proof"><b class="tl-official-approval-stamp '+(approved?'is-approved':'is-not-approved')+'">'+(approved?'APPROVED':'NOT APPROVED')+'</b> · '+(approved?'WORKFLOW APPROVED · PDF NOT ISSUED · Approved revision '+escape(row.revision):'This print view does not approve the document')+
  '. Electronic PDF approval and issuance have NOT been verified.</p></section>';
 }

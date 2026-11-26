@@ -97,3 +97,15 @@ test('explicit creator approval-free policy requires no reviewer evidence', () =
   assert.equal(tradeLinkReviewEvidenceComplete(GM_CREATOR_APPROVAL_FREE_POLICY, null, time), false);
   assert.equal(tradeLinkReviewEvidenceComplete(GM_SALES_EXEMPT_POLICY, null, null), false);
 });
+
+test('approval-free revision normalizes and prints without reviewer evidence',()=>{
+ const free={...saved,approval_policy:GM_CREATOR_APPROVAL_FREE_POLICY,primary_reviewed_at:null,secondary_reviewed_at:null};
+ const freeMeta={...meta,approvalPolicy:GM_CREATOR_APPROVAL_FREE_POLICY,primaryAt:null,secondaryAt:null};
+ const bundle={documentId,boardItemId,currentRevision:1,revisions:[freeMeta],selected:free};
+ const normalized=normalizeTradeLinkRevisionBundle(bundle,workspaceId,documentId,1);
+ assert.equal(normalized.selected.approved,true);
+ const markup=renderTradeLinkSavedDocumentOutput(normalized.selected,workspaceId,documentId);
+ assert.equal((markup.match(/Not Applicable/g)||[]).length,2);
+ assert.doesNotMatch(markup,/Recorded validation on/);
+ assert.throws(()=>normalizeTradeLinkRevisionBundle({...bundle,selected:{...free,secondary_reviewed_at:time}},workspaceId,documentId,1));
+});

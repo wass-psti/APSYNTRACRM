@@ -7,7 +7,7 @@ import {TRADELINK_MAX_ITEMS,TRADELINK_MAX_PAYLOAD_BYTES,tradeLinkJsonbTextByteLe
 import {validUuid} from './data.js';
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
 import {normalizeTradeLinkAnalyticsSummary} from './tradelink-analytics.js';
-import {STANDARD_APPROVAL_POLICY,GM_SALES_EXEMPT_POLICY,tradeLinkReviewEvidenceComplete} from './tradelink/approval-policy.js';
+import {STANDARD_APPROVAL_POLICY,GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY,tradeLinkReviewEvidenceComplete} from './tradelink/approval-policy.js';
 // Stage A read RPCs enforce signed-session, board and General Manager checks.
 export const TL03_DOMAIN_READS_ENABLED=true;
 // Stage B authenticated EXECUTE grants are live; server enforces session and workspace permissions.
@@ -43,7 +43,7 @@ const STATES=new Set(['draft','for-approval','submitted','under-review','revisio
 const OPS=new Set(['create','update','revise-approved','archive','restore']);
 const deny=(message,status=403)=>{throw new ApiError(message,status);};
 const knownApprovalPolicy=policy=>policy===undefined||
- policy===STANDARD_APPROVAL_POLICY||policy===GM_SALES_EXEMPT_POLICY;
+ policy===STANDARD_APPROVAL_POLICY||policy===GM_SALES_EXEMPT_POLICY||policy===GM_CREATOR_APPROVAL_FREE_POLICY;
 const approvalEvidenceComplete=(policy,primaryAt,secondaryAt)=>
  knownApprovalPolicy(policy)&&tradeLinkReviewEvidenceComplete(policy,primaryAt,secondaryAt);
 
@@ -158,7 +158,7 @@ export function normalizeTradeLinkRevisionBundle(value,workspaceId,documentId,re
    (selected.secondary_reviewed_at!=null&&
     (typeof selected.secondary_reviewed_at!=='string'||!Number.isFinite(Date.parse(selected.secondary_reviewed_at))))||
    !knownApprovalPolicy(selected.approval_policy)||
-   (selected.approval_policy===GM_SALES_EXEMPT_POLICY&&!['quotation','po'].includes(selected.document_type))||
+   ([GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY].includes(selected.approval_policy)&&!['quotation','po'].includes(selected.document_type))||
    (selected.approved&&!approvalEvidenceComplete(selected.approval_policy,selected.primary_reviewed_at,selected.secondary_reviewed_at))||
    !revisions.some(row=>row.revision===selected.revision&&
     row.approved===selected.approved&&row.snapshotSource===selected.snapshot_source&&
@@ -575,7 +575,8 @@ export class TradeLinkDomainClient{
    !Number.isSafeInteger(result.revision)||result.revision<1||
    !STATES.has(result.state)||!validStage(result.primary)||
    !validStage(result.secondary)||!knownApprovalPolicy(result.approvalPolicy)||
-   (result.approvalPolicy===GM_SALES_EXEMPT_POLICY&&result.primary!==null))
+   (result.approvalPolicy===GM_SALES_EXEMPT_POLICY&&result.primary!==null)||
+    (result.approvalPolicy===GM_CREATOR_APPROVAL_FREE_POLICY&&(result.primary!==null||result.secondary!==null)))
    deny('Invalid signed TradeLink review-stage response.',409);
   return result;
  }
@@ -629,7 +630,8 @@ export class TradeLinkDomainClient{
    (stage==='primary'&&result.primaryAt!==result.recordedAt)||
    (stage==='secondary'&&result.secondaryAt!==result.recordedAt)||
    !knownApprovalPolicy(result.approvalPolicy)||
-   (result.approvalPolicy===GM_SALES_EXEMPT_POLICY&&(stage!=='secondary'||result.primaryAt!=null))||
+   result.approvalPolicy===GM_CREATOR_APPROVAL_FREE_POLICY||
+    (result.approvalPolicy===GM_SALES_EXEMPT_POLICY&&(stage!=='secondary'||result.primaryAt!=null))||
    (result.state==='approved'&&!approvalEvidenceComplete(result.approvalPolicy,result.primaryAt,result.secondaryAt))||
    typeof result.idempotent!=='boolean')
    deny('Signed TradeLink review receipt mismatch.',409);
