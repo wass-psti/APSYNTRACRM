@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {saveDepartment,savePerson,filterActivities,supervisorFor} from '../apps/DailyDepartmentActivity/activity-model.js';
+import {saveDepartment,savePerson,filterActivities,supervisorFor,searchPersonnel,teamMembers} from '../apps/DailyDepartmentActivity/activity-model.js';
 import {createActivityController} from '../apps/DailyDepartmentActivity/activity-controller.js';
 const directory={departments:[{id:'d',name:'Operations',parentId:null},{id:'u',name:'Unit',parentId:'d'}],people:[{id:'p',name:'Person',departmentId:'d'}],unassigned:[{id:'q',name:'New member'}]};
 test('DDA department creation and editing preserve stable IDs and validate hierarchy',()=>{
@@ -47,4 +47,16 @@ test('DDA organizational reporting fields and parent rollups preserve source ide
  assert.equal(filterActivities([{departmentId:'u'},{departmentId:'d'},{departmentId:'other'}],{departmentId:'d'},directory.departments).length,2);
  assert.equal(filterActivities([{departmentId:'u'},{departmentId:'d'}],{departmentId:'u'},directory.departments).length,1);
  assert.throws(()=>saveDepartment(directory,{name:'Long',short:'123456789'}),/abbreviation/);
+});
+
+test('directory search includes assigned and unassigned people; team views retain former contributors',()=>{
+ const roster={...directory,people:[{...directory.people[0],employeeId:'E-100',position:'Engineer',company:'PSTI',departmentId:'u'},{id:'former',name:'Former',departmentId:'other'}],departments:[...directory.departments,{id:'other',name:'Other'}]};
+ assert.deepEqual(searchPersonnel(roster,{query:'e-100'}).map(row=>row.id),['p']);
+ assert.deepEqual(searchPersonnel(roster,{query:'new member'}).map(row=>row.id),['q']);
+ assert.deepEqual(searchPersonnel(roster,{query:'psti',departmentId:'d'}).map(row=>row.id),['p']);
+ assert.equal(searchPersonnel(roster,{departmentId:'u',query:'new member'}).length,0);
+ const records=[{personId:'former',departmentId:'d',date:'2026-11-26'}];
+ const members=teamMembers(roster,records,{date:'2026-11-26',departmentId:'d'});
+ assert.deepEqual(members.map(row=>[row.id,row.formerContributor]),[['p',false],['former',true]]);
+ assert.equal(teamMembers(roster,records,{date:'2026-11-27',departmentId:'d'}).length,1);
 });

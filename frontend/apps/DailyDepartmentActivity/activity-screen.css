@@ -17,3 +17,8 @@
 .dda-app .dda-actions {display:flex;flex-wrap:wrap;gap:.5rem}
 .dda-app [role="alert"]:empty,.dda-app [role="status"]:empty {display:none}
 @media(max-width:760px){.dda-app .dda-layout{grid-template-columns:minmax(0,1fr)}.dda-app .dda-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.dda-app .dda-report-row {display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;padding:.65rem 0;border-bottom:1px solid currentColor;overflow-wrap:anywhere}
+.dda-app .dda-report-row:last-child {border-bottom:0}
+.dda-app details summary {cursor:pointer;padding:.35rem 0}
+.dda-app input[type=checkbox] {width:auto;justify-self:start}

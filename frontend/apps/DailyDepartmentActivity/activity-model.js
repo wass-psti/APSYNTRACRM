@@ -53,7 +53,7 @@ export function deleteActivity(records, id) {
 export function filterActivities(records, filters = {}, departments = []) {
   const {date, departmentId, personId, status, categoryId, query} = filters;
   const term = clean(query).toLowerCase();
-  const scope = new Set([departmentId, ...departments.filter(row => row.parentId === departmentId).map(row => row.id)]);
+  const scope = departmentScope(departments, departmentId);
   return records.filter(record =>
     (!date || record.date === date) &&
     (!departmentId || scope.has(record.departmentId)) &&
@@ -102,4 +102,28 @@ export function supervisorFor(person, directory) {
   if (direct) return direct;
   const parentId = directory.departments.find(row => row.id === person.departmentId)?.parentId;
   return parentId ? directory.people.find(row => row.departmentId === parentId && row.isHead && row.id !== person.id) : undefined;
+}
+
+// A department scope includes its immediate organizational units.
+export function departmentScope(departments, departmentId) {
+  return new Set([departmentId, ...departments.filter(row => row.parentId === departmentId).map(row => row.id)]);
+}
+
+export function searchPersonnel(directory, filters = {}) {
+  const term = clean(filters.query).toLowerCase();
+  const scope = departmentScope(directory.departments, filters.departmentId);
+  const candidates = [...directory.people, ...(directory.unassigned || [])];
+  return candidates.filter(person =>
+    (!filters.departmentId || scope.has(person.departmentId)) &&
+    (!term || [person.name, person.employeeId, person.position, person.company].some(value => clean(value).toLowerCase().includes(term)))
+  );
+}
+
+export function teamMembers(directory, records, filters = {}) {
+  const scope = departmentScope(directory.departments, filters.departmentId);
+  const historical = new Set(filterActivities(records, {date:filters.date,departmentId:filters.departmentId}, directory.departments).map(row => row.personId));
+  return directory.people.filter(person =>
+    (!filters.personId || person.id === filters.personId) &&
+    (!filters.departmentId || scope.has(person.departmentId) || historical.has(person.id))
+  ).map(person => ({...person,formerContributor:Boolean(filters.departmentId && !scope.has(person.departmentId))}));
 }

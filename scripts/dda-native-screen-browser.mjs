@@ -41,7 +41,7 @@ try {
         else if(action==='delete-activity')snapshot.records=snapshot.records.filter(row=>row.id!==record.id);
         else if(action==='save-category')snapshot.categories=[...snapshot.categories.filter(row=>row.id!==record.id),record];
         else if(action==='save-department')snapshot.directory.departments=[...snapshot.directory.departments.filter(row=>row.id!==record.id),record];
-        else if(action==='save-person'){snapshot.directory.people=[...snapshot.directory.people.filter(row=>row.id!==record.id),record];snapshot.directory.unassigned=snapshot.directory.unassigned.filter(row=>row.id!==record.id);}
+        else if(action==='save-person'){snapshot.directory.people=[...snapshot.directory.people.filter(row=>row.id!==record.id).map(row=>record.isHead&&row.departmentId===record.departmentId?{...row,isHead:false}:row),record];snapshot.directory.unassigned=snapshot.directory.unassigned.filter(row=>row.id!==record.id);}
         else throw Error('Unknown command');
         snapshot.revision++;
         receipt={acknowledgedRequestId:args.p_request_id,acknowledgedRevision:snapshot.revision};
@@ -97,17 +97,33 @@ try {
   await form('filters').getByRole('button',{name:'Apply filters'}).click();
   assert.equal(await page.locator('.dda-entry').count(),1);
   await form('department').getByLabel('Department name').fill('Field operations');
+  await form('department').getByLabel('Abbreviation').fill('FO');
   await form('department').getByRole('button',{name:'Save department'}).click();
   await notice('Department saved.');
   await form('person').getByLabel('Personnel to assign').selectOption('p2');
   assert.equal(await form('person').getByLabel('Personnel display name').inputValue(),'Unassigned fixture');
   await form('person').getByLabel('Assign department').selectOption({label:'Field operations'});
+  await form('person').getByLabel('Employee ID').fill('E-101');
+  await form('person').getByLabel('Position').fill('Engineer');
+  await form('person').getByLabel('Company').selectOption('PSTI');
+  await form('person').getByLabel('Designate department or unit supervisor').check();
   await form('person').getByRole('button',{name:'Save personnel'}).click();
   await notice('Personnel saved.');
+  await form('directory').getByLabel('Directory search').fill('E-101');
+  await form('directory').getByRole('button',{name:'Apply personnel filters'}).click();
+  assert.equal(await form('person').locator('select[name=id] option').count(),2);
+  await form('person').getByLabel('Personnel to assign').selectOption('p2');
+  assert.equal(await form('person').getByLabel('Position').inputValue(),'Engineer');
+  assert.equal(await form('person').getByLabel('Designate department or unit supervisor').isChecked(),true);
+  await form('directory').getByLabel('Directory search').fill('');
+  await form('directory').getByRole('button',{name:'Apply personnel filters'}).click();
   await form('person').getByLabel('Personnel to assign').selectOption('p');
   await form('person').getByLabel('Assign department').selectOption({label:'Field operations'});
+  await form('person').getByLabel('Designate department or unit supervisor').check();
   await form('person').getByRole('button',{name:'Save personnel'}).click();
   await notice('Personnel saved.');
+  await form('person').getByLabel('Personnel to assign').selectOption('p2');
+  assert.equal(await form('person').getByLabel('Designate department or unit supervisor').isChecked(),false);
   assert.match(await page.locator('.dda-entry').innerText(),/Operations/);
   await page.setViewportSize({width:390,height:844});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);

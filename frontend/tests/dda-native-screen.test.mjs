@@ -26,3 +26,11 @@ test('DDA editor retains field values and blocks writes during uncertain persist
   assert.match(html,/value="Pending" selected/);
   assert.match(html,/value="c" selected/);
 });
+
+test('DDA reporting overview and directory filtering include historical contributors and escape directory text',()=>{
+ const directory={departments:[{id:'d',name:'Operations'},{id:'e',name:'Engineering'}],people:[{id:'p',name:'<Former>',departmentId:'e',employeeId:'E-100'}],unassigned:[]};
+ const record={id:'a',personId:'p',departmentId:'d',date:filters.date,title:'Prior work',details:'',status:'Completed',categoryId:null};
+ const html=renderActivityScreen({...base,snapshot:{...snapshot,directory,records:[record]},records:[record],filters:{...filters,departmentId:'d'},directoryFilters:{query:'E-100',departmentId:''}});
+ assert.match(html,/Former contributor/);assert.match(html,/&lt;Former&gt;/);assert.doesNotMatch(html,/<Former>/);
+ assert.match(html,/1 matching personnel of 1/);assert.match(html,/Personnel activity overview \(1\)/);
+});

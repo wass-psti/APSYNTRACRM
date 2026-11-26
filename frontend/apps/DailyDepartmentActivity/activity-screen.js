@@ -1,4 +1,4 @@
-import {statuses,supervisorFor} from './activity-model.js';
+import {statuses,supervisorFor,searchPersonnel,teamMembers,departmentScope} from './activity-model.js';
 import {matchesActivityDraft} from './activity-repository.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
@@ -10,7 +10,22 @@ const emptyFields = () => ({title:'',details:'',status:'Completed',categoryId:''
 const statusRows = statuses.map(name=>({id:name,name}));
 const any = (name,rows) => [{id:'',name},...rows];
 
-export function renderActivityScreen({snapshot,records,filters,editor,fields,busy,notice,error,requiresReload}) {
+function reportingOverview(snapshot,records,filters,busy) {
+  const {directory}=snapshot;
+  const {departments,people}=directory;
+  const rows=departments.filter(row=>!row.parentId).map(department=>{
+    const scope=departmentScope(departments,department.id);
+    const activities=records.filter(row=>scope.has(row.departmentId));
+    const count=people.filter(person=>scope.has(person.departmentId)).length;
+    const reporting=new Set(activities.map(row=>row.personId)).size;
+    return '<article class="dda-report-row"><div><strong>'+esc(department.short?department.short+' · '+department.name:department.name)+'</strong><p>'+count+' personnel · '+activities.length+' activities · '+reporting+' reporting · '+activities.filter(row=>row.status==='Completed').length+' completed</p></div><button type="button" class="secondary" data-dda-action="team" data-id="'+esc(department.id)+'"'+(busy?' disabled':'')+'>View team</button></article>';
+  }).join('');
+  const members=teamMembers(directory,snapshot.records,filters);
+  const roster=members.map(person=>'<article class="dda-report-row"><div><strong>'+esc(person.name)+'</strong><p>'+esc(person.formerContributor?'Former contributor · Current: ':'')+esc(nameOf(departments,person.departmentId))+'</p></div><span>'+records.filter(row=>row.personId===person.id).length+' activities</span></article>').join('');
+  return '<section class="dda-panel"><details><summary>Department activity overview</summary>'+rows+'</details><details'+(filters.departmentId?' open':'')+'><summary>Personnel activity overview ('+members.length+')</summary>'+(roster||'<p>No personnel match the selected filters.</p>')+'</details></section>';
+}
+
+export function renderActivityScreen({snapshot,records,filters,editor,fields,busy,notice,error,requiresReload,directoryFilters={query:'',departmentId:''}}) {
   const disabled = busy || requiresReload ? ' disabled' : '';
   const top = '<header><div><h1>Daily Department Activity</h1><p>Record and review departmental work.</p></div><button type="button" class="secondary" data-dda-action="refresh"'+(busy?' disabled':'')+'>Refresh</button></header>';
   const messages = '<p role="status" data-dda-notice>'+esc(notice)+'</p><p role="alert" data-dda-error>'+esc(error)+'</p>';
@@ -31,6 +46,11 @@ export function renderActivityScreen({snapshot,records,filters,editor,fields,bus
   const categoryMarkup = '<section class="dda-panel"><h2>Categories</h2><form data-dda-form="category"><fieldset'+disabled+'>'+select('id','Category to edit',any('New category',categories),'')+'<label>Category name<input name="name" required maxlength="120"></label><button type="submit" class="secondary">Save category</button></fieldset></form></section>';
   const list = '<section class="dda-panel"><h2>Recorded activities</h2>'+(records.length?records.map(row=>'<article class="dda-entry"><div><h3>'+esc(row.title)+'</h3><p>'+esc(nameOf(people,row.personId))+' · '+esc(nameOf(departments,row.departmentId))+' · '+esc(row.date)+'</p><p>'+esc(row.status)+' · '+esc(row.categoryId?nameOf(categories,row.categoryId):'Uncategorized')+'</p><p class="dda-details">'+esc(row.details)+'</p></div><div class="dda-actions"><button type="button" class="secondary" data-dda-action="edit" data-id="'+esc(row.id)+'"'+disabled+'>Edit</button><button type="button" class="secondary" data-dda-action="delete" data-id="'+esc(row.id)+'"'+disabled+'>Delete</button></div></article>').join(''):'<p>No matching activities.</p>')+'</section>';
   const unassigned=snapshot.directory.unassigned;
+  const matching=searchPersonnel(snapshot.directory,directoryFilters);
+  const matchingIds=new Set(matching.map(row=>row.id));
+  const searching=Boolean(directoryFilters.query||directoryFilters.departmentId);
+  const visiblePeople=people.filter(row=>matchingIds.has(row.id));
+  const visibleUnassigned=(unassigned||[]).filter(row=>matchingIds.has(row.id));
   const management=Array.isArray(unassigned)?
     '<p>DDA reporting assignments do not change the shared CRM or AGT directory.</p>'+
     '<form data-dda-form="department"><fieldset'+disabled+'>'+select('id','Department to edit',any('New department',departments),'')+
@@ -38,20 +58,22 @@ export function renderActivityScreen({snapshot,records,filters,editor,fields,bus
     select('parentId','Parent department',any('None (top level)',departments.filter(row=>!row.parentId)),'')+
     '<button type="submit" class="secondary">Save department</button></fieldset></form>'+
     '<p>'+unassigned.length+' available unassigned personnel</p>'+
-    '<form data-dda-form="person"><fieldset'+disabled+'>'+select('id','Personnel to assign',any('Choose personnel',[...people,...unassigned.map(row=>({...row,name:row.name+' (unassigned)'}))]),'')+
+    '<form data-dda-form="directory"><label>Directory search<input type="search" name="query" value="'+esc(directoryFilters.query)+'" placeholder="Name, employee ID, position or company"></label>'+select('departmentId','Reporting department',any('All departments',departments),directoryFilters.departmentId)+'<button type="submit" class="secondary"'+(busy?' disabled':'')+'>Apply personnel filters</button></form><p>'+matching.length+' matching personnel of '+(people.length+unassigned.length)+'</p>'+
+    '<form data-dda-form="person"><fieldset'+disabled+'>'+select('id','Personnel to assign',any('Choose personnel',[...visiblePeople,...visibleUnassigned.map(row=>({...row,name:row.name+' (unassigned)'}))]),'')+
     '<label>Personnel display name<input name="name" required maxlength="160"></label><label>Employee ID<input name="employeeId" maxlength="80"></label><label>Position<input name="position" maxlength="120"></label>'+select('company','Company',[{id:'',name:'Not specified'},...['WASS','WAO','PSTI'].map(name=>({id:name,name}))],'')+
     select('departmentId','Assign department',any('Choose department',departments),'')+
     '<label><input type="checkbox" name="isHead"> Designate department or unit supervisor</label><p>Designating a supervisor replaces the current supervisor of that scope. Unverified personnel details may be left blank.</p><button type="submit" class="secondary">Save personnel</button></fieldset></form>':'';
-  const directory = '<section class="dda-panel"><h2>Department directory</h2>'+management+departments.map(department=>'<details><summary>'+esc(department.parentId?nameOf(departments,department.parentId)+' / '+department.name:department.name)+' ('+people.filter(person=>person.departmentId===department.id).length+')</summary><ul>'+people.filter(person=>person.departmentId===department.id).map(person=>{const head=supervisorFor(person,snapshot.directory);return '<li>'+esc(person.name)+(person.isHead?' · Supervisor':'')+(person.employeeId?' · '+esc(person.employeeId):'')+(person.position?' · '+esc(person.position):'')+(person.company?' · '+esc(person.company):'')+(head?' · Reports to '+esc(head.name):'')+'</li>';}).join('')+'</ul></details>').join('')+'</section>';
-  return '<section class="dda-app">'+top+messages+filterForm+stats+'<div class="dda-layout"><div>'+editorMarkup+categoryMarkup+directory+'</div>'+list+'</div></section>';
+  const directory = '<section class="dda-panel"><h2>Department directory</h2>'+management+departments.filter(department=>!searching||visiblePeople.some(person=>person.departmentId===department.id)).map(department=>'<details'+(searching?' open':'')+'><summary>'+esc(department.parentId?nameOf(departments,department.parentId)+' / '+department.name:department.name)+' ('+visiblePeople.filter(person=>person.departmentId===department.id).length+')</summary><ul>'+visiblePeople.filter(person=>person.departmentId===department.id).map(person=>{const head=supervisorFor(person,snapshot.directory);return '<li>'+esc(person.name)+(person.isHead?' · Supervisor':'')+(person.employeeId?' · '+esc(person.employeeId):'')+(person.position?' · '+esc(person.position):'')+(person.company?' · '+esc(person.company):'')+(head?' · Reports to '+esc(head.name):'')+'</li>';}).join('')+'</ul></details>').join('')+'</section>';
+  return '<section class="dda-app">'+top+messages+filterForm+stats+reportingOverview(snapshot,records,filters,busy)+'<div class="dda-layout"><div>'+editorMarkup+categoryMarkup+directory+'</div>'+list+'</div></section>';
 }
 
 // The CRM host owns the controller and must call dispose on route exit.
 export function mountDailyDepartmentActivity(host,controller,{today=manilaDate(),confirmDelete=()=>window.confirm('Delete this activity?')}={}) {
   let snapshot=null,editor=null,fields=emptyFields(),notice='',error='',busy=false,disposed=false;
   let filters={date:today,departmentId:'',personId:'',status:'',categoryId:'',query:''};
+  let directoryFilters={query:'',departmentId:''};
   function paint() {
-    if (!disposed) host.innerHTML=renderActivityScreen({snapshot,records:snapshot?controller.getRecords(filters):[],filters,editor,fields,busy,notice,error,requiresReload:controller.requiresReload});
+    if (!disposed) host.innerHTML=renderActivityScreen({snapshot,records:snapshot?controller.getRecords(filters):[],filters,editor,fields,busy,notice,error,directoryFilters,requiresReload:controller.requiresReload});
   }
   function messages() {
     if(disposed)return;
@@ -102,6 +124,7 @@ export function mountDailyDepartmentActivity(host,controller,{today=manilaDate()
     const data=Object.fromEntries(new FormData(form));
     const kind=form.dataset.ddaForm;
     if(kind==='filters'){filters=data;paint();return;}
+    if(kind==='directory'){directoryFilters=data;paint();return;}
     if(kind==='new'){openEditor({personId:data.personId,date:data.date,activityId:''},emptyFields());return;}
     if(kind==='activity'&&editor){
       captureDraft(form);
@@ -143,6 +166,7 @@ export function mountDailyDepartmentActivity(host,controller,{today=manilaDate()
     const action=button.dataset.ddaAction;
     const record=snapshot?.records.find(row=>row.id===button.dataset.id);
     if(action==='refresh')void run(async()=>{notice='Activities refreshed.';acceptLoaded(await controller.load());});
+    else if(action==='team'&&snapshot?.directory.departments.some(row=>row.id===button.dataset.id)){filters={...filters,departmentId:button.dataset.id,personId:''};paint();}
     else if(action==='edit'&&record)openEditor({personId:record.personId,date:record.date,activityId:record.id},{title:record.title,details:record.details,status:record.status,categoryId:record.categoryId||''});
     else if(action==='close-editor'){editor=null;fields=emptyFields();paint();}
     else if(action==='discard'&&editor){try{controller.discardDraft(editor);editor=null;fields=emptyFields();notice='Draft discarded.';}catch{error='Draft could not be discarded.';}paint();}
