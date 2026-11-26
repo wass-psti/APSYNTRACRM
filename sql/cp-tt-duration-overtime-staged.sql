@@ -190,6 +190,7 @@ BEGIN
  AND r.decided_at<p_threshold AND r.submitted_at<=r.decided_at
  FOR UPDATE NOWAIT;
  IF NOT FOUND THEN RETURN 0; END IF;
+ IF private.tt_role_in_workspace(p_owner,p_workspace) IS NOT DISTINCT FROM 'OJT' THEN RETURN 0; END IF;
  IF NOT EXISTS(SELECT 1 FROM private.tt_duration_ot_matching_records(p_state,p_owner,v_day) r
  WHERE r->>'id'=p_record_id::text AND (r#>>'{clockIn,timestamp}')::timestamptz=p_clock_in
  AND (r->'clockOut' IS NULL OR r->'clockOut'='null'::jsonb)) THEN RETURN 0; END IF;
@@ -208,6 +209,31 @@ $f$;
 REVOKE ALL ON FUNCTION private.tt_duration_ot_worker_minutes(uuid,uuid,uuid,timestamptz,timestamptz,jsonb)
  FROM PUBLIC,anon,authenticated,service_role;
 
+-- Find the exact cutoff using the same authoritative lunch-overlap function
+-- as the ordinary nine-hour threshold. OT can itself cross a noon break.
+CREATE FUNCTION private.tt_duration_ot_cutoff(p_clock_in timestamptz,p_threshold timestamptz,p_minutes integer)
+RETURNS timestamptz LANGUAGE plpgsql IMMUTABLE SECURITY INVOKER SET search_path=''
+AS $f$
+DECLARE lo integer:=0; hi integer:=172800000; mid integer; target bigint;
+BEGIN
+ IF p_minutes=0 THEN RETURN p_threshold; END IF;
+ IF p_clock_in IS NULL OR NOT pg_catalog.isfinite(p_clock_in)
+  OR p_minutes IS NULL OR p_minutes NOT BETWEEN 30 AND 360 THEN
+  RAISE EXCEPTION 'Invalid duration cutoff inputs' USING ERRCODE='22023'; END IF;
+ target:=(540+p_minutes)::bigint*60000;
+ IF private.tt_attendance_credited_ms(p_clock_in,p_clock_in+hi*INTERVAL '1 millisecond')<target THEN
+  RAISE EXCEPTION 'Extended credited threshold outside supported window'; END IF;
+ WHILE lo<hi LOOP
+  mid:=lo+(hi-lo)/2;
+  IF private.tt_attendance_credited_ms(p_clock_in,p_clock_in+mid*INTERVAL '1 millisecond')>=target
+  THEN hi:=mid; ELSE lo:=mid+1; END IF;
+ END LOOP;
+ RETURN p_clock_in+lo*INTERVAL '1 millisecond';
+END;
+$f$;
+REVOKE ALL ON FUNCTION private.tt_duration_ot_cutoff(timestamptz,timestamptz,integer)
+ FROM PUBLIC,anon,authenticated,service_role;
+
 -- Patch only the legacy OT selection block; preserve #914-independent locks,
 -- activation epoch, attendance revisions, projection, GPS and OJT isolation.
 DO $worker$
@@ -218,7 +244,7 @@ BEGIN
       -- that cutoff. Late approval cannot revive an expired session.
       FOR v_ot IN$old$;
  replacement:=$new$      -- Duration requests use the original Philippine clock-in date.
-      v_cutoff:=v_threshold+pg_catalog.make_interval(mins=>private.tt_duration_ot_worker_minutes(
+      v_cutoff:=private.tt_duration_ot_cutoff(v_clock_in,v_threshold,private.tt_duration_ot_worker_minutes(
         v_session.workspace_id,v_session.employee_id,v_session.record_id,v_clock_in,v_threshold,v_state));
       v_has_ot:=v_cutoff>v_threshold;
       -- Legacy time ranges retain their existing behavior only when duration OT
@@ -241,6 +267,26 @@ BEGIN
       END IF;
 
       v_reason:=NULL;$new$);
+ -- Evaluate approved requests before the regular threshold to bind pre-filed
+ -- OT and advertise an extended cutoff. Always prioritize already-due or
+ -- corrected/missing canonical sessions; do not starve ordinary clock-outs.
+ old:='AND (s.threshold_at<=v_now OR a.clock_in_at IS DISTINCT FROM s.clock_in_at)';
+ replacement:=$new$AND (s.threshold_at<=v_now OR a.clock_in_at IS DISTINCT FROM s.clock_in_at
+       OR (s.overtime_cutoff_at IS NULL AND EXISTS(
+         SELECT 1 FROM public.timetracker_ot_requests r
+         WHERE r.workspace_id=s.workspace_id AND r.owner_id=s.employee_id
+          AND r.ot_policy='duration-v1' AND r.status='Approved'
+          AND r.ot_date=(a.clock_in_at AT TIME ZONE 'Asia/Manila')::date
+          AND (r.attendance_record_id IS NULL OR r.attendance_record_id=s.record_id))))$new$;
+ IF pg_catalog.cardinality(pg_catalog.string_to_array(d,old))<>2 THEN
+  RAISE EXCEPTION 'Worker candidate baseline drift'; END IF;
+ d:=pg_catalog.replace(d,old,replacement);
+ old:='ORDER BY s.last_evaluated_at NULLS FIRST,COALESCE(s.overtime_cutoff_at,s.threshold_at),s.record_id';
+ replacement:=$new$ORDER BY (s.threshold_at<=v_now OR a.clock_in_at IS DISTINCT FROM s.clock_in_at) DESC,
+     s.last_evaluated_at NULLS FIRST,COALESCE(s.overtime_cutoff_at,s.threshold_at),s.record_id$new$;
+ IF pg_catalog.cardinality(pg_catalog.string_to_array(d,old))<>2 THEN
+  RAISE EXCEPTION 'Worker candidate priority baseline drift'; END IF;
+ d:=pg_catalog.replace(d,old,replacement);
  EXECUTE d;
 END;
 $worker$;
