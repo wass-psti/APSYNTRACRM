@@ -1,0 +1,371 @@
+-- CP-DDA-FE-03A candidate: internal transaction contract only.
+-- Not an automatically deployed migration. Host authentication and workspace
+-- authorization must be resolved before any public wrapper is introduced.
+create schema dda;
+revoke all on schema dda from public;
+
+create table dda.workspace_state (
+  workspace_id uuid primary key references agt.workspace(id),
+  revision bigint not null default 0 check (revision >= 0)
+);
+
+-- DDA owns its reporting directory, seeded from the reviewed AGT identities.
+-- No DDA command changes AGT classifications, CRM profiles or memberships.
+create table dda.department (
+  workspace_id uuid not null references agt.workspace(id),
+  id text not null check (char_length(id) between 1 and 120),
+  name text not null check (name=btrim(name) and char_length(name) between 1 and 120),
+  parent_id text,
+  abbreviation text not null default '' check (abbreviation=btrim(abbreviation) and char_length(abbreviation)<=8),
+  primary key(workspace_id,id),
+  foreign key(workspace_id,parent_id) references dda.department(workspace_id,id),
+  check (parent_id is distinct from id)
+);
+create unique index dda_department_name_idx on dda.department(workspace_id,lower(name));
+create table dda.person (
+  workspace_id uuid not null references agt.workspace(id),
+  id uuid not null,
+  name text not null check (name=btrim(name) and char_length(name) between 1 and 160),
+  department_id text not null,
+  employee_id text not null default '' check (employee_id=btrim(employee_id) and char_length(employee_id)<=80),
+  position text not null default '' check (position=btrim(position) and char_length(position)<=120),
+  company text not null default '' check (company in ('','WASS','WAO','PSTI')),
+  is_head boolean not null default false,
+  primary key(workspace_id,id),
+  foreign key(workspace_id,department_id) references dda.department(workspace_id,id)
+);
+create unique index dda_person_employee_id_idx on dda.person(workspace_id,lower(employee_id)) where employee_id<>'';
+create unique index dda_person_supervisor_idx on dda.person(workspace_id,department_id) where is_head;
+
+insert into dda.department(workspace_id,id,name,parent_id)
+  select w.id,d.code,d.name,d.parent_code from agt.workspace w cross join agt.department d;
+insert into dda.person(workspace_id,id,name,department_id)
+  select workspace_id,user_id,display_name,department_code from agt.person;
+
+-- Only existing workforce identities and active CRM members may be assigned.
+-- Unassigned members are not automatically placed in an invented department.
+create function dda.unassigned_people(w uuid)
+returns table(id uuid,name text) language sql stable set search_path='' as $unassigned$
+  with candidates as (
+    select a.user_id id,a.display_name name,0 priority from agt.person a where a.workspace_id=w
+    union all
+    select p.id,p.display_name,1 from public.profiles p
+      join public.workspace_members m on m.user_id=p.id
+      where m.workspace_id=w and m.active is true and p.status='active'
+  )
+  select distinct on (c.id) c.id,btrim(c.name)
+    from candidates c
+    where c.name is not null and char_length(btrim(c.name)) between 1 and 160
+      and not exists(select 1 from dda.person d where d.workspace_id=w and d.id=c.id)
+    order by c.id,c.priority
+$unassigned$;
+
+create table dda.category (
+  workspace_id uuid not null references dda.workspace_state(workspace_id),
+  id uuid not null,
+  name text not null check (name = btrim(name) and char_length(name) between 1 and 120),
+  primary key (workspace_id,id)
+);
+create unique index dda_category_name_idx on dda.category(workspace_id,lower(name));
+create table dda.activity (
+  workspace_id uuid not null references dda.workspace_state(workspace_id),
+  id uuid not null,
+  person_id uuid not null,
+  department_id text not null,
+  activity_date date not null,
+  title text not null check (title = btrim(title) and char_length(title) between 1 and 160),
+  details text not null check (char_length(details) <= 2000),
+  status text not null check (status in ('Pending','In Progress','Completed')),
+  category_id uuid,
+  primary key (workspace_id,id),
+  foreign key (workspace_id,person_id) references dda.person(workspace_id,id),
+  foreign key (workspace_id,department_id) references dda.department(workspace_id,id),
+  foreign key (workspace_id,category_id) references dda.category(workspace_id,id)
+);
+create index dda_activity_date_idx on dda.activity(workspace_id,activity_date,person_id);
+create table dda.command_receipt (
+  workspace_id uuid not null references dda.workspace_state(workspace_id),
+  request_id uuid not null,
+  command jsonb not null,
+  committed_revision bigint,
+  rejection_reason text,
+  check ((committed_revision is null) <> (rejection_reason is null)),
+  primary key (workspace_id,request_id)
+);
+create table dda.activity_event (
+  workspace_id uuid not null,
+  request_id uuid not null,
+  record_id text not null,
+  actor_id uuid not null,
+  action text not null check (action in ('save-activity','delete-activity','save-category','save-department','save-person')),
+  before_record jsonb,
+  after_record jsonb,
+  recorded_at timestamptz not null default clock_timestamp(),
+  primary key (workspace_id,request_id),
+  foreign key (workspace_id,request_id) references dda.command_receipt(workspace_id,request_id)
+);
+
+create function dda.activity_json(a dda.activity) returns jsonb
+language sql immutable set search_path='' as $$
+  select jsonb_build_object('id',a.id,'personId',a.person_id,'departmentId',a.department_id,
+    'date',to_char(a.activity_date,'YYYY-MM-DD'),'title',a.title,'details',a.details,
+    'status',a.status,'categoryId',a.category_id)
+$$;
+
+create function dda.person_json(p dda.person) returns jsonb
+language sql immutable set search_path='' as $person_json$
+  select jsonb_build_object('id',p.id,'name',p.name,'departmentId',p.department_id,'employeeId',p.employee_id,'position',p.position,'company',p.company,'isHead',p.is_head)
+$person_json$;
+
+create function dda.snapshot(w uuid) returns jsonb
+language sql stable set search_path='' as $$
+  select jsonb_build_object(
+    'workspaceId',w,
+    'revision',coalesce((select revision from dda.workspace_state where workspace_id=w),0),
+    'directory',jsonb_build_object(
+      'departments',coalesce((select jsonb_agg(jsonb_build_object('id',d.id,'name',d.name,'parentId',d.parent_id,'short',d.abbreviation) order by d.name,d.id)
+        from dda.department d where d.workspace_id=w),'[]'::jsonb),
+      'people',coalesce((select jsonb_agg(dda.person_json(p) order by p.name,p.id)
+        from dda.person p where p.workspace_id=w),'[]'::jsonb),
+      'unassigned',coalesce((select jsonb_agg(jsonb_build_object('id',u.id,'name',u.name) order by u.name,u.id)
+        from dda.unassigned_people(w) u),'[]'::jsonb)),
+    'categories',coalesce((select jsonb_agg(jsonb_build_object('id',c.id,'name',c.name) order by c.name,c.id)
+      from dda.category c where c.workspace_id=w),'[]'::jsonb),
+    'records',coalesce((select jsonb_agg(dda.activity_json(a) order by a.activity_date desc,a.id)
+      from dda.activity a where a.workspace_id=w),'[]'::jsonb))
+  from agt.workspace where id=w
+$$;
+
+-- The trusted host must supply the authenticated actor, never a client actor ID.
+-- All writes are serialized per workspace. Receipts are checked before revisions
+-- so retrying the exact command cannot duplicate a successful write.
+create function dda.mutate(w uuid, actor uuid, request_key uuid, expected bigint, action text, record jsonb)
+returns jsonb language plpgsql set search_path='' as $$
+declare
+  rev bigint;
+  input jsonb;
+  receipt dda.command_receipt%rowtype;
+  previous dda.activity%rowtype;
+  updated dda.activity%rowtype;
+  cat dda.category%rowtype;
+  record_id uuid;
+  record_key text;
+  parent_key text;
+  dept dda.department%rowtype;
+  subject dda.person%rowtype;
+  source_name text;
+  head_flag boolean;
+  replaced_head dda.person%rowtype;
+  person_id uuid;
+  department_id text;
+  activity_date date;
+  before_value jsonb;
+  after_value jsonb;
+begin
+  if w is null or actor is null or request_key is null or expected is null or expected<0 or
+     action is null or jsonb_typeof(record) is distinct from 'object' then
+    raise exception 'Invalid DDA command';
+  end if;
+  -- The signed RPC boundary supplies the authenticated CRM actor.
+  -- Activity subjects, unlike actors, must exist in the workforce directory.
+  insert into dda.workspace_state(workspace_id) values(w) on conflict do nothing;
+  select revision into strict rev from dda.workspace_state where workspace_id=w for update;
+  input:=jsonb_build_object('actor',actor,'expectedRevision',expected,'action',action,'record',record);
+  select * into receipt from dda.command_receipt where workspace_id=w and request_id=request_key;
+  if found then
+    if receipt.command<>input then raise exception 'DDA request ID reused with different input'; end if;
+    if receipt.rejection_reason is not null then raise exception 'DDA command already rejected'; end if;
+    return dda.snapshot(w)||jsonb_build_object('acknowledgedRequestId',request_key,'acknowledgedRevision',receipt.committed_revision,'replayed',true);
+  end if;
+  if rev<>expected then raise exception 'DDA revision conflict'; end if;
+  record_key:=nullif(btrim(record->>'id'),'');
+  if record_key is null then raise exception 'Missing DDA record ID'; end if;
+  if action<>'save-department' then record_id:=record_key::uuid; end if;
+
+  if action='save-activity' then
+    select * into previous from dda.activity a where a.workspace_id=w and a.id=record_id;
+    person_id:=(record->>'personId')::uuid;
+    activity_date:=(record->>'date')::date;
+    if activity_date is null or to_char(activity_date,'YYYY-MM-DD') is distinct from record->>'date' then
+      raise exception 'Invalid DDA activity date';
+    end if;
+    if previous.id is not null then
+      if previous.person_id is distinct from person_id or previous.activity_date is distinct from activity_date then
+        raise exception 'DDA activity identity and date cannot change';
+      end if;
+      department_id:=previous.department_id;
+      before_value:=dda.activity_json(previous);
+    else
+      select p.department_id into strict department_id from dda.person p where p.workspace_id=w and p.id=person_id;
+    end if;
+    if department_id is distinct from record->>'departmentId' then raise exception 'DDA department mismatch'; end if;
+    insert into dda.activity(workspace_id,id,person_id,department_id,activity_date,title,details,status,category_id)
+      values(w,record_id,person_id,department_id,activity_date,btrim(record->>'title'),btrim(coalesce(record->>'details','')),
+        record->>'status',nullif(record->>'categoryId','')::uuid)
+      on conflict (workspace_id,id) do update set title=excluded.title,details=excluded.details,status=excluded.status,category_id=excluded.category_id
+      returning * into updated;
+    after_value:=dda.activity_json(updated);
+  elsif action='delete-activity' then
+    delete from dda.activity a where a.workspace_id=w and a.id=record_id returning * into previous;
+    if not found then raise exception 'DDA activity not found'; end if;
+    before_value:=dda.activity_json(previous);
+  elsif action='save-category' then
+    select * into cat from dda.category c where c.workspace_id=w and c.id=record_id;
+    if found then before_value:=jsonb_build_object('id',cat.id,'name',cat.name); end if;
+    insert into dda.category(workspace_id,id,name) values(w,record_id,btrim(record->>'name'))
+      on conflict (workspace_id,id) do update set name=excluded.name returning * into cat;
+    after_value:=jsonb_build_object('id',cat.id,'name',cat.name);
+  elsif action='save-department' then
+    parent_key:=nullif(record->>'parentId','');
+    select * into dept from dda.department d where d.workspace_id=w and d.id=record_key;
+    if found then
+      before_value:=jsonb_build_object('id',dept.id,'name',dept.name,'parentId',dept.parent_id,'short',dept.abbreviation);
+    else
+      -- New department IDs are generated by the client, never source codes.
+      perform record_key::uuid;
+    end if;
+    if parent_key is not null and (parent_key=record_key or
+       not exists(select 1 from dda.department d where d.workspace_id=w and d.id=parent_key and d.parent_id is null) or
+       exists(select 1 from dda.department d where d.workspace_id=w and d.parent_id=record_key)) then
+      raise exception 'Invalid DDA department hierarchy';
+    end if;
+    insert into dda.department(workspace_id,id,name,parent_id,abbreviation) values(w,record_key,btrim(record->>'name'),parent_key,btrim(coalesce(record->>'short',dept.abbreviation,'')))
+      on conflict(workspace_id,id) do update set name=excluded.name,parent_id=excluded.parent_id,abbreviation=excluded.abbreviation returning * into dept;
+    after_value:=jsonb_build_object('id',dept.id,'name',dept.name,'parentId',dept.parent_id,'short',dept.abbreviation);
+  elsif action='save-person' then
+    select * into subject from dda.person d where d.workspace_id=w and d.id=record_id;
+    if found then
+      before_value:=dda.person_json(subject);
+    else
+      select u.name into strict source_name from dda.unassigned_people(w) u where u.id=record_id;
+      if btrim(record->>'name') is distinct from source_name then raise exception 'DDA source name changed'; end if;
+    end if;
+    if record ? 'isHead' and jsonb_typeof(record->'isHead') is distinct from 'boolean' then raise exception 'Invalid DDA supervisor value'; end if;
+    head_flag:=coalesce((record->>'isHead')::boolean,subject.is_head and subject.department_id=record->>'departmentId',false);
+    if head_flag then
+      update dda.person p set is_head=false where p.workspace_id=w and p.department_id=record->>'departmentId' and p.id<>record_id and p.is_head returning * into replaced_head;
+      if found then before_value:=coalesce(before_value,'{}'::jsonb)||jsonb_build_object('replacedSupervisorId',replaced_head.id); end if;
+    end if;
+    insert into dda.person(workspace_id,id,name,department_id,employee_id,position,company,is_head)
+      values(w,record_id,btrim(record->>'name'),record->>'departmentId',btrim(coalesce(record->>'employeeId',subject.employee_id,'')),btrim(coalesce(record->>'position',subject.position,'')),btrim(coalesce(record->>'company',subject.company,'')),head_flag)
+      on conflict(workspace_id,id) do update set name=excluded.name,department_id=excluded.department_id,employee_id=excluded.employee_id,position=excluded.position,company=excluded.company,is_head=excluded.is_head returning * into subject;
+    after_value:=dda.person_json(subject);
+  else
+    raise exception 'Unknown DDA command';
+  end if;
+  rev:=rev+1;
+  update dda.workspace_state set revision=rev where workspace_id=w;
+  insert into dda.command_receipt(workspace_id,request_id,command,committed_revision) values(w,request_key,input,rev);
+  insert into dda.activity_event(workspace_id,request_id,record_id,actor_id,action,before_record,after_record)
+    values(w,request_key,record_key,actor,action,before_value,after_value);
+  return dda.snapshot(w)||jsonb_build_object('acknowledgedRequestId',request_key,'acknowledgedRevision',rev,'replayed',false);
+end $$;
+
+-- Terminal outcomes are recorded atomically for both accepted and rejected commands.
+-- The future signed host wrapper must derive actor from its existing session.
+create function dda.submit(w uuid, actor uuid, request_key uuid, expected bigint, action text, record jsonb)
+returns jsonb language plpgsql set search_path='' as $submit$
+declare
+  input jsonb;
+  receipt dda.command_receipt%rowtype;
+  reason text;
+begin
+  if w is null or actor is null or request_key is null or expected is null or expected<0 or
+     action is null or jsonb_typeof(record) is distinct from 'object' then
+    raise exception 'Invalid DDA command';
+  end if;
+  -- The signed RPC boundary supplies the authenticated CRM actor.
+  -- Activity subjects, unlike actors, must exist in the workforce directory.
+  insert into dda.workspace_state(workspace_id) values(w) on conflict do nothing;
+  perform 1 from dda.workspace_state where workspace_id=w for update;
+  input:=jsonb_build_object('actor',actor,'expectedRevision',expected,'action',action,'record',record);
+  select * into receipt from dda.command_receipt where workspace_id=w and request_id=request_key;
+  if found then
+    if receipt.command<>input then raise exception 'DDA request ID reused with different input'; end if;
+    if receipt.rejection_reason is not null then
+      return dda.snapshot(w)||jsonb_build_object('rejectedRequestId',request_key,'rejectionReason',receipt.rejection_reason,'replayed',true);
+    end if;
+    return dda.mutate(w,actor,request_key,expected,action,record);
+  end if;
+  begin
+    return dda.mutate(w,actor,request_key,expected,action,record);
+  exception
+    when unique_violation then reason:='Duplicate record or category.';
+    when check_violation or not_null_violation or foreign_key_violation or invalid_text_representation
+      or datetime_field_overflow or invalid_datetime_format or no_data_found then reason:='Invalid activity data or reference.';
+    when raise_exception then
+      if sqlerrm='DDA revision conflict' then reason:='Activity data changed. Review the latest records before saving again.';
+      elsif sqlerrm in ('Missing DDA record ID','Invalid DDA activity date','DDA activity identity and date cannot change','DDA department mismatch','DDA activity not found','Unknown DDA command','Invalid DDA department hierarchy','DDA source name changed','Invalid DDA supervisor value') then
+        reason:=sqlerrm;
+      else raise;
+      end if;
+  end;
+  insert into dda.command_receipt(workspace_id,request_id,command,rejection_reason) values(w,request_key,input,reason);
+  return dda.snapshot(w)||jsonb_build_object('rejectedRequestId',request_key,'rejectionReason',reason,'replayed',false);
+end $submit$;
+
+revoke all on all tables in schema dda from public;
+revoke all on all functions in schema dda from public;
+
+-- CP-DDA-FE-03A: candidate RPC boundary, not deployed automatically.
+-- Depends on dda-activity-persistence.sql and existing CRM session/workspace helpers.
+-- DDA has no independent role hierarchy. The active CRM workspace and existing
+-- active membership are the authority; actor IDs never come from the browser.
+
+revoke all on schema dda from public, anon, authenticated, service_role;
+revoke all on all tables in schema dda from public, anon, authenticated, service_role;
+revoke all on all functions in schema dda from public, anon, authenticated, service_role;
+
+create function dda.require_actor(p_workspace_id uuid)
+returns uuid language plpgsql stable security invoker set search_path='' as $actor$
+declare
+  v_actor uuid := auth.uid();
+begin
+  if v_actor is null or not coalesce(private.wm_board_config_session_active(),false) then
+    raise exception 'A signed CRM session is required' using errcode='28000';
+  end if;
+  if p_workspace_id is null or public.current_workspace_id(v_actor) is distinct from p_workspace_id then
+    raise exception 'DDA requires the active CRM workspace' using errcode='42501';
+  end if;
+  if not exists(select 1 from agt.workspace w where w.id=p_workspace_id) then
+    raise exception 'DDA workspace unavailable' using errcode='42501';
+  end if;
+  return v_actor;
+end $actor$;
+
+-- Private definer entry points are required because AGT and DDA tables are not
+-- directly readable/writable by authenticated roles. Each entry checks the
+-- current session and workspace before invoking the internal transaction.
+create function dda.signed_snapshot(p_workspace_id uuid)
+returns jsonb language plpgsql stable security definer set search_path='' as $snapshot$
+begin
+  perform dda.require_actor(p_workspace_id);
+  return dda.snapshot(p_workspace_id);
+end $snapshot$;
+
+create function dda.signed_submit(p_workspace_id uuid,p_request_id uuid,
+    p_expected_revision bigint,p_action text,p_record jsonb)
+returns jsonb language plpgsql volatile security definer set search_path='' as $submit$
+declare
+  v_actor uuid := dda.require_actor(p_workspace_id);
+begin
+  return dda.submit(p_workspace_id,v_actor,p_request_id,p_expected_revision,p_action,p_record);
+end $submit$;
+
+-- The exposed functions remain SECURITY INVOKER, matching the CRM pattern.
+create function public.dda_snapshot_v1(p_workspace_id uuid)
+returns jsonb language sql stable security invoker set search_path='' as $rpc$
+  select dda.signed_snapshot(p_workspace_id)
+$rpc$;
+create function public.dda_submit_v1(p_workspace_id uuid,p_request_id uuid,
+    p_expected_revision bigint,p_action text,p_record jsonb)
+returns jsonb language sql volatile security invoker set search_path='' as $rpc$
+  select dda.signed_submit(p_workspace_id,p_request_id,p_expected_revision,p_action,p_record)
+$rpc$;
+
+revoke all on function dda.require_actor(uuid),dda.signed_snapshot(uuid),
+  dda.signed_submit(uuid,uuid,bigint,text,jsonb),public.dda_snapshot_v1(uuid),
+  public.dda_submit_v1(uuid,uuid,bigint,text,jsonb) from public,anon,authenticated,service_role;
+grant usage on schema dda to authenticated;
+grant execute on function dda.signed_snapshot(uuid),dda.signed_submit(uuid,uuid,bigint,text,jsonb),
+  public.dda_snapshot_v1(uuid),public.dda_submit_v1(uuid,uuid,bigint,text,jsonb) to authenticated;
