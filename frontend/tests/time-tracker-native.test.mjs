@@ -778,14 +778,14 @@ test('administrative clock-in becomes the employee active Clock session without 
  assert.equal(f.lastWrite().p_action,'clock-out');
 });
 test('manual clock-in accepts only signed System Admin capability and receipt',async()=>{
- const entry={employeeId:other,employeeType:'regular',status:'active',clockOutAt:null,
+ const entry={employeeId:other,employeeType:'regular',status:'active',clockOutAt:null,clockOutMode:null,
   clockInAt:stamp(8),location:TT_LOCATIONS[0],workNote:null,reason:'Missed clock-in'};
  const f=setup({role:'System Admin'});
  const original=f.api.rpc;
  let writes=0;
  f.api.rpc=async(name,args,options)=>{
   if(name==='timetracker_attendance_admin_create_capability')
-   return {contract:'tt-admin-clockin-capability-1',actorId:user,workspaceId:workspace,boardId:board,ready:true};
+   return {contract:'tt-admin-attendance-capability-3',actorId:user,workspaceId:workspace,boardId:board,activeReady:true,historicalReady:true,schedulerMode:'active'};
   if(name==='timetracker_attendance_admin_create'){
    writes++;
    assert.equal(options.retryUnauthorized,false);
@@ -797,7 +797,7 @@ test('manual clock-in accepts only signed System Admin capability and receipt',a
   }
   return original(name,args,options);
  };
- assert.equal(await f.client.manualClockInCapability(board),true);
+ assert.deepEqual(await f.client.manualClockInCapability(board),{activeReady:true,historicalReady:true,schedulerMode:'active'});
  assert.deepEqual(await f.client.createManualClockIn(board,entry,2),{recordId:autoRecordId,revision:3});
  await assert.rejects(f.client.createManualClockIn(board,{...entry,employeeType:'ojt'},2),/Invalid/);
  await assert.rejects(setup({role:'Employee'}).client.createManualClockIn(board,entry,2),/Invalid/);
@@ -810,4 +810,96 @@ test('a stale End Session action never closes an admin-created replacement sessi
  await assert.rejects(f.client.commit(board,{action:'clock-out',expectedRecordId:'old-session',
   geo:{status:'captured',latitude:12.3,longitude:123.4,accuracy:10}}),/Active attendance changed/);
  assert.equal(f.commits(),0);
+});
+
+
+test('manual clock-in fails closed when the regular auto-clockout scheduler is suspended',async()=>{
+ const entry={employeeId:other,employeeType:'regular',status:'active',clockOutAt:null,clockOutMode:null,
+  clockInAt:stamp(8),location:TT_LOCATIONS[0],workNote:null,reason:'Missed clock-in'};
+ const f=setup({role:'System Admin'});
+ const original=f.api.rpc;
+ let createCalls=0;
+ f.api.rpc=async(name,args,options)=>{
+  if(name==='timetracker_attendance_admin_create_capability')
+   return {contract:'tt-admin-attendance-capability-3',actorId:user,workspaceId:workspace,boardId:board,activeReady:false,historicalReady:true,schedulerMode:'suspended'};
+  if(name==='timetracker_attendance_admin_create'){
+   createCalls++;
+   throw new Error('Manual clock-in requires active regular nine-hour auto-clock-out');
+  }
+  return original(name,args,options);
+ };
+ assert.deepEqual(await f.client.manualClockInCapability(board),{activeReady:false,historicalReady:true,schedulerMode:'suspended'});
+ await assert.rejects(f.client.createManualClockIn(board,entry,2),/Regular employee auto clock-out is not active/);
+ assert.equal(createCalls,0);
+});
+
+
+test('manual clock-in rejects the pre-gate capability contract during a staged deployment',async()=>{
+ const f=setup({role:'System Admin'});
+ const original=f.api.rpc;
+ f.api.rpc=async(name,args,options)=>{
+  if(name==='timetracker_attendance_admin_create_capability')
+   return {contract:'tt-admin-attendance-capability-2',actorId:user,workspaceId:workspace,boardId:board,activeReady:true,historicalReady:true,schedulerMode:'active'};
+  return original(name,args,options);
+ };
+ await assert.rejects(f.client.manualClockInCapability(board),/Manual attendance capability is unverified/);
+});
+
+
+test('historical manual attendance uses its separate signed RPC and preserves clock-out method',async()=>{
+ const entry={employeeId:other,employeeType:'regular',date:'2026-11-23',status:'completed',
+  clockInAt:stamp(8),clockOutAt:null,clockOutMode:'standard',location:TT_LOCATIONS[0],
+  workNote:null,reason:'Forgot to clock in'};
+ const f=setup({role:'System Admin'});
+ const original=f.api.rpc;
+ let writes=0;
+ f.api.rpc=async(name,args,options)=>{
+  if(name==='timetracker_attendance_admin_create_capability')
+   return {contract:'tt-admin-attendance-capability-3',actorId:user,workspaceId:workspace,boardId:board,
+    activeReady:true,historicalReady:true,schedulerMode:'active'};
+  if(name==='timetracker_attendance_admin_create_historical'){
+   writes++;
+   assert.equal(options.retryUnauthorized,false);
+   assert.equal(args.p_attendance_day,'2026-11-23');
+   assert.equal(args.p_clock_out_mode,'standard');
+   assert.equal(args.p_clock_out_at,null);
+   assert.equal(args.p_expected_revision,2);
+   assert.equal(args.p_request_id,'33333333-3333-4333-8333-333333333333');
+   return {mode:'COMMITTED',contract:'tt-admin-historical-attendance-1',actorId:user,
+    workspaceId:workspace,boardId:board,employeeId:other,recordId:autoRecordId,revision:3,
+    clockOutAt:stamp(18),clockOutMethod:'standard_nine_credited_hours',replayed:false,committedAt:stamp(19)};
+  }
+  return original(name,args,options);
+ };
+ const result=await f.client.createHistoricalAttendance(board,entry,2,'33333333-3333-4333-8333-333333333333');
+ assert.deepEqual(result,{recordId:autoRecordId,revision:3,clockOutAt:stamp(18),
+  clockOutMethod:'standard_nine_credited_hours',replayed:false});
+ assert.equal(writes,1);
+});
+
+test('historical actual clock-out override is sent explicitly and never uses live clock-in RPC',async()=>{
+ const entry={employeeId:other,employeeType:'regular',date:'2026-11-23',status:'completed',
+  clockInAt:stamp(8),clockOutAt:stamp(12),clockOutMode:'actual',location:TT_LOCATIONS[0],
+  workNote:null,reason:'Short shift approved'};
+ const f=setup({role:'System Admin'});
+ const original=f.api.rpc;
+ let historical=0,live=0;
+ f.api.rpc=async(name,args,options)=>{
+  if(name==='timetracker_attendance_admin_create_capability')
+   return {contract:'tt-admin-attendance-capability-3',actorId:user,workspaceId:workspace,boardId:board,
+    activeReady:false,historicalReady:true,schedulerMode:'suspended'};
+  if(name==='timetracker_attendance_admin_create_historical'){
+   historical++;
+   assert.equal(args.p_clock_out_at,stamp(12));
+   assert.equal(args.p_clock_out_mode,'actual');
+   return {mode:'COMMITTED',contract:'tt-admin-historical-attendance-1',actorId:user,
+    workspaceId:workspace,boardId:board,employeeId:other,recordId:autoRecordId,revision:3,
+    clockOutAt:stamp(12),clockOutMethod:'admin_entered_actual',replayed:false,committedAt:stamp(19)};
+  }
+  if(name==='timetracker_attendance_admin_create')live++;
+  return original(name,args,options);
+ };
+ const result=await f.client.createHistoricalAttendance(board,entry,2,'44444444-4444-4444-8444-444444444444');
+ assert.equal(result.clockOutMethod,'admin_entered_actual');
+ assert.equal(historical,1);assert.equal(live,0);
 });
