@@ -77,7 +77,7 @@ try {
  assert.equal(await page.locator('.ft3-analytics-metric-filter a').count(),3);
  assert.equal(await page.locator('.ft3-analytics-export').count(),1);
  assert.equal(await page.locator('.ft3-analytics-export').isEnabled(),true);
- assert.match(await page.locator('.ft3-analytics-range a').last().getAttribute('href'),/analytics\\/fuel-price\\/week\\/both/);
+ assert.match(await page.locator('.ft3-analytics-range a').last().getAttribute('href'),/analytics\/fuel-price\/week\/both/);
  assert.match(await page.locator('.ft3-analytics-hero').innerText(),/Verified signed data/);
  await page.locator('html').evaluate(el=>el.setAttribute('data-aps-monday-theme','dark'));
  const darkKpi=await page.locator('.ft3-analytics-kpi').first().evaluate(el=>getComputedStyle(el).backgroundColor);
