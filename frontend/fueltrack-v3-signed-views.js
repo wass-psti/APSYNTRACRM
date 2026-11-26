@@ -167,8 +167,7 @@ export function renderFuelTrackSignedRequestsRich(snapshot,filters={}){
      '<section class="ft3-request-detail ft3-requests-detail" aria-label="Verified request details">'+
       '<div class="ft3-requests-detail-heading"><span>REQUEST INFORMATION</span><strong>'+esc(reference)+'</strong></div>'+
       '<div class="ft3-request-detail-grid ft3-requests-detail-grid">'+
-       [['Requestor',name],['Reference',reference],['Status',labels[r.state]],['Submitted',fmtDate(r.created_at)],['Purpose',purpose],['Request type',requestType]]+
-       .map(([k,v])=>'<div class="ft3-request-field"><small>'+esc(k)+'</small><strong>'+esc(v)+'</strong></div>').join('')+
+       [['Requestor',name],['Reference',reference],['Status',labels[r.state]],['Submitted',fmtDate(r.created_at)],['Purpose',purpose],['Request type',requestType]].map(([k,v])=>'<div class="ft3-request-field"><small>'+esc(k)+'</small><strong>'+esc(v)+'</strong></div>').join('')+
       '</div></section></td></tr>':'');
   }).join('')+'</tbody></table></div>':
   '<div class="ft3-requests-empty"><span aria-hidden="true">⌕</span>'+
