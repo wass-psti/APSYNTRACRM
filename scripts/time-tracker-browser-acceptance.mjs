@@ -1163,10 +1163,7 @@ try {
       .inputValue(),
     "completed",
   );
-  assert.equal(
-    await page.locator("[data-tt-manual-history]").isVisible(),
-    true,
-  );
+  assert.equal(await page.locator("[data-tt-manual-history]").isVisible(), true);
   await page
     .locator('#tt-attendance-admin-form select[name="clockOutMode"]')
     .selectOption("actual");
@@ -1179,10 +1176,7 @@ try {
       new Date("2026-11-26T04:00:00Z"),
     );
   });
-  assert.equal(
-    await page.locator("[data-tt-manual-out]").isVisible(),
-    true,
-  );
+  assert.equal(await page.locator("[data-tt-manual-out]").isVisible(), true);
 
   await page
     .locator('#tt-attendance-admin-form input[name="date"]')
@@ -1205,10 +1199,7 @@ try {
       .inputValue(),
     "active",
   );
-  assert.equal(
-    await page.locator("[data-tt-manual-history]").isVisible(),
-    false,
-  );
+  assert.equal(await page.locator("[data-tt-manual-history]").isVisible(), false);
   assert.equal(
     await page.locator("[data-tt-manual-work-note]").isVisible(),
     false,
