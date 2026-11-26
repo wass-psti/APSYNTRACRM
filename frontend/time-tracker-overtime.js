@@ -194,7 +194,7 @@ const row=(r,access,query='',expandedRequestIds=[],otContractActive=false)=>{
   '</div></details></div></article>';
 };
 const shiftPhtDay=(day,offset)=>new Date(Date.parse(day+'T00:00:00Z')+offset*msDay).toISOString().slice(0,10);
-export function timeTrackerOtDurationLabel(export function timeTrackerOtDurationLabel(minutes){
+export function timeTrackerOtDurationLabel(minutes){
  if(!Number.isInteger(minutes)||minutes<0||minutes>360)return '—';
  const hours=Math.floor(minutes/60),remaining=minutes%60;
  return hours?hours+' hr '+String(remaining).padStart(2,'0')+' min':remaining+' min';
