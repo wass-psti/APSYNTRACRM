@@ -81,3 +81,9 @@ test('initial load, background refresh, explicit Refresh and route reuse use the
  const mutation=source.slice(source.indexOf('async function applyTradeLinkDocumentBulkAction('),source.indexOf('async function changeTradeLinkDraftState('));
  assert.match(mutation,/!state\.boardManage/);
 });
+
+
+test('initial All Documents load rechecks a missing management decision for a signed General Manager',()=>{
+ const initial=source.slice(source.indexOf("state.nativeInitialRead=['attendance'"),source.indexOf("if(tab==='attendance'&&moduleByBoardName(state.board.board?.name)?.key==='timetracker')"));
+ assert.match(initial,/state\.tradeLinkSection==='documents'&&!state\.boardManage&&\s*state\.tradeLinkModuleRole==='General Manager'\)\s*await loadTradeLinkDrafts\(seq,\{recheckManage:true\}\)/);
+});

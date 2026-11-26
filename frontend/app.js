@@ -3782,8 +3782,14 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
     !state.tradeLinkAnalytics&&!state.tradeLinkAnalyticsError)
   await loadTradeLinkAnalytics(seq);
  if(tab==='tradelink'&&['drafts','documents'].includes(state.tradeLinkSection)&&
-    TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID)
-  await loadTradeLinkDrafts(seq);
+    TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID){
+  // Recheck after the signed native context and board have settled. A
+  // manager-role hint triggers only a read, never a permission grant.
+  if(state.tradeLinkSection==='documents'&&!state.boardManage&&
+     state.tradeLinkModuleRole==='General Manager')
+   await loadTradeLinkDrafts(seq,{recheckManage:true});
+  else await loadTradeLinkDrafts(seq);
+ }
  if(tab==='attendance'&&moduleByBoardName(state.board.board?.name)?.key==='timetracker'){
   if(enteringTimeTracker)state.ttView=readTimeTrackerViewPreference(timeTrackerViewStorage(),timeTrackerWorkNoteScope()||{});
   await loadTimeTracker(seq,nativeModuleId==='time-tracker'?nativeContext:null);
