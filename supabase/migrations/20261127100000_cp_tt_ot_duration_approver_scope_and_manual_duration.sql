@@ -12,6 +12,7 @@ BEGIN
   OR pg_catalog.to_regprocedure('public.timetracker_ot_snapshot(uuid)') IS NULL
   OR pg_catalog.to_regprocedure('public.timetracker_ot_decide(uuid,uuid,text)') IS NULL
   OR pg_catalog.to_regprocedure('public.timetracker_ot_decide_duration(uuid,uuid,text)') IS NULL
+  OR pg_catalog.to_regprocedure('public.timetracker_ot_submit_duration(uuid,date,integer,text)') IS NULL
   OR pg_catalog.to_regprocedure('public.list_module_directory(text)') IS NULL
   OR pg_catalog.to_regclass('public.timetracker_ot_requests') IS NULL
   OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_constraint
@@ -44,6 +45,7 @@ ALTER TABLE public.timetracker_ot_requests
   OR (ot_policy='manual-duration-v1' AND submission_source='manual_admin'
    AND start_time IS NULL AND end_time IS NULL AND submitted_by IS NOT NULL
    AND attendance_record_id IS NULL AND attendance_clock_in_at IS NULL)
+   AND duration_minutes BETWEEN 30 AND 360 AND duration_minutes % 30=0
  );
 
 CREATE UNIQUE INDEX tt_ot_manual_duration_live_day
@@ -88,8 +90,9 @@ BEGIN
  v_today:=(pg_catalog.clock_timestamp() AT TIME ZONE 'Asia/Manila')::date;
  IF p_date IS NULL OR p_date>=v_today
   OR p_duration_minutes IS NULL OR p_duration_minutes NOT BETWEEN 30 AND 360
+   OR p_duration_minutes % 30 <> 0
   OR pg_catalog.length(v_reason) NOT BETWEEN 10 AND 500 THEN
-  RAISE EXCEPTION 'Manual duration OT requires a past date, 30–360 minutes and a valid reason'
+  RAISE EXCEPTION 'Manual duration OT requires a past date, 30–360 minutes in 0.5-hour increments and a valid reason'
    USING ERRCODE='22023';
  END IF;
 
@@ -131,6 +134,20 @@ REVOKE ALL ON FUNCTION public.timetracker_ot_submit_manual_duration(uuid,uuid,da
  FROM PUBLIC,anon,authenticated,service_role;
 GRANT EXECUTE ON FUNCTION public.timetracker_ot_submit_manual_duration(uuid,uuid,date,integer,text)
  TO authenticated;
+
+-- Enforce half-hour increments server-side for employee duration requests.
+-- Attendance binding and the automatic clock-out worker are unchanged.
+DO $duration_submit$
+DECLARE d text; old text; replacement text;
+BEGIN
+ d:=pg_catalog.pg_get_functiondef('public.timetracker_ot_submit_duration(uuid,date,integer,text)'::regprocedure);
+ old:='OR p_duration_minutes IS NULL OR p_duration_minutes NOT BETWEEN 30 AND 360';
+ replacement:=old||' OR p_duration_minutes % 30 <> 0';
+ IF pg_catalog.cardinality(pg_catalog.string_to_array(d,old))<>2 THEN
+  RAISE EXCEPTION 'Duration OT submission validation baseline drift'; END IF;
+ EXECUTE pg_catalog.replace(d,old,replacement);
+END;
+$duration_submit$;
 
 -- A historical manual-duration approval is a status/audit decision only.
 -- It cannot create an attendance association or alter the automatic clock-out cutoff.
@@ -288,7 +305,7 @@ BEGIN
  v_hr:=COALESCE(private.tt_role_in_workspace(v_user,v_ws)=''HR'',false);
  v_ot_approver:=v_bootstrap OR v_manual_admin OR v_hr OR COALESCE(public.is_platform_admin(v_user),false);'),
  ($old$'start',to_char(r.start_time,'HH24:MI'),
-   'end',to_char(r.end_time,'HH24:MI'),
+  'end',to_char(r.end_time,'HH24:MI'),
 $old$,''),
  ('''canReviewDuration'',(v_hr AND r.ot_policy=''duration-v1'' AND r.status=''Submitted''
     AND r.owner_id<>v_user AND wm.user_id IS NOT NULL),',
