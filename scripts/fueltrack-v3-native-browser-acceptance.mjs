@@ -10,7 +10,7 @@ const detail={board:{id:FUELTRACK_V3_ID,workspace_id:workspaceId,name:'FuelTrack
 const row={id:requestId,kind:'vehicle',revision:4,state:'completed',requestor_name:'Browser Acceptance',details:{plate:'GAN 8289',purpose:'Controlled regression fixture'},created_at:'2026-11-10T04:00:00Z',completed_at:'2026-11-10T07:00:00Z',actual_amount:500,fuel_liters:10};
 const snapshot={status:'VERIFIED_READ',boardId:FUELTRACK_V3_ID,workspaceId,role:'Admin',rows:[row],summary:{total:1,submitted:0,approved:0,rejected:0,refuelingDone:0,completed:1,totalAmount:500,totalLiters:10,approvedToday:0,rejectedToday:0,decisionsToday:0,pendingCount:0,activeQueue:0,completedToday:0,overdueCount:0}};
 const analytics={status:'VERIFIED_READ',boardId:FUELTRACK_V3_ID,workspaceId,daily:[{day:'2026-11-10',transactions:1,amount:500,liters:10}]};
-const styles=readFileSync('frontend/apsyntra-styles.bundle.css','utf8');
+const styles=readFileSync('frontend/apsyntra-styles.bundle.css','utf8')+'\n'+readFileSync('frontend/fueltrack-v3-all-requests-redesign.css','utf8');
 const browser=await chromium.launch({headless:true});
 let checks=0;
 try {
@@ -42,6 +42,28 @@ try {
    assert.equal(await page.locator('.ft3-dashboard-stage').first().evaluate(el=>getComputedStyle(el).backgroundColor),darkTheme.surface);
    assert.equal(await page.locator('.ft3-dashboard-stage-label').first().evaluate(el=>getComputedStyle(el).color),darkTheme.muted);
    await page.locator('html').evaluate(el=>el.removeAttribute('data-aps-monday-theme'));
+  }
+  if(section==='requests'){
+   assert.equal(await page.locator('.ft3-request-stat').count(),6);
+   assert.equal(await page.locator('.ft3-request-filter').count(),6);
+   assert.equal(await page.locator('.ft3-request-table tbody tr.ft3-request-row').count(),1);
+   assert.equal(await page.locator('.ft3-request-view').count(),1);
+   assert.match(await page.locator('.ft3-request-table').innerText(),/GAN 8289/);
+   const expanded=renderFuelTrackV3Application({
+    detail,section:'requests',actorName:'Browser Acceptance',
+    backend:{snapshot,analytics},requestsFilters:{expandedId:requestId}
+   });
+   await page.setContent('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><main id="app">'+expanded+'</main></body></html>');
+   await page.addStyleTag({content:styles});
+   assert.match(await page.locator('.ft3-request-detail').innerText(),/Controlled regression fixture/);
+   await page.setViewportSize({width:390,height:844});
+   assert.equal(await page.locator('.ft3-request-table tr.ft3-request-row').evaluate(el=>getComputedStyle(el).display),'grid');
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'No All Requests page-level overflow at 390px');
+   await page.locator('html').evaluate(el=>el.setAttribute('data-aps-monday-theme','dark'));
+   const darkSurface=await page.locator('.ft3-request-workspace').evaluate(el=>getComputedStyle(el).backgroundColor);
+   assert.notEqual(darkSurface,'rgb(255, 255, 255)','All Requests workspace uses its dark surface');
+   await page.locator('html').evaluate(el=>el.removeAttribute('data-aps-monday-theme'));
+   checks+=6;
   }
   if(section==='new-request'){
    assert.equal(await page.locator('#ft3-new-request-form').count(),1);
