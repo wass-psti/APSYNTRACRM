@@ -140,3 +140,35 @@ html[data-aps-monday-theme="dark"] #app :is(
   .tl-reference-portal,.frt-ref,.ft3-app,.tb-app,.tt-native
  ) :is(button,input,select,textarea){transition:none}
 }
+
+/* CP-FRT-UI-01 — Liquidation Aging remains legible in dark appearance. */
+html[data-aps-monday-theme="dark"] #app .frt-ref .frt-exec-aging{
+ background:var(--crm-native-panel);
+ border-color:var(--crm-native-border);
+ color:var(--crm-native-ink);
+}
+html[data-aps-monday-theme="dark"] #app .frt-ref .frt-exec-aging>header{
+ border-bottom-color:var(--crm-native-border);
+}
+html[data-aps-monday-theme="dark"] #app .frt-ref .frt-exec-aging>header h3,
+html[data-aps-monday-theme="dark"] #app .frt-ref .frt-exec-aging .frt-exec-aging-value{
+ color:var(--crm-native-ink);
+}
+html[data-aps-monday-theme="dark"] #app .frt-ref .frt-exec-aging>header p,
+html[data-aps-monday-theme="dark"] #app .frt-ref .frt-exec-aging .frt-exec-aging-label{
+ color:var(--crm-native-muted);
+}
+html[data-aps-monday-theme="dark"] #app .frt-ref .frt-exec-aging-card{
+ background:var(--crm-native-elevated);
+ border-color:var(--crm-native-border);
+ border-left-color:var(--frt-aging-accent);
+}
+html[data-aps-monday-theme="dark"] #app .frt-ref .frt-exec-aging-disclosure,
+html[data-aps-monday-theme="dark"] #app .frt-ref .frt-exec-aging-empty{
+ background:var(--crm-native-elevated);
+ border-color:var(--crm-native-border);
+ color:var(--crm-native-muted);
+}
+html[data-aps-monday-theme="dark"] #app .frt-ref .frt-exec-aging-disclosure strong{
+ color:var(--crm-native-ink);
+}

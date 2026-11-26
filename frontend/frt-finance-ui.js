@@ -142,21 +142,25 @@ function renderOpexUnavailable(title,explanation){
 
 function renderFRTLiquidationAging(result){
  const aging=result.aging;
+ const heading='<header><div><h3>Liquidation aging</h3>'+
+  '<p>Signed '+escape(result.companyCode)+' aggregate · 72 hours after recorded bank execution</p></div></header>';
  if(result.agingStatus!=='PASS'||!aging)
-  return '<section class="frt-exec-panel" aria-label="Liquidation aging"><h3>Liquidation aging</h3><p>Signed company aging is unavailable; no overdue totals are inferred from GM verification.</p></section>';
- const labels=[
-  ['Awaiting bank execution',aging.awaiting_bank_execution],
-  ['Due after 24 hours',aging.on_track],
-  ['Due within 24 hours',aging.due_soon],
-  ['Overdue',aging.overdue],
-  ['Liquidation approved',aging.completed]
+  return '<section class="frt-exec-panel frt-exec-aging frt-exec-aging-unavailable" aria-label="Liquidation aging">'+
+   heading+'<p class="frt-exec-aging-empty" role="status">Signed company aging is unavailable; no overdue totals are inferred from GM verification.</p></section>';
+ const metrics=[
+  ['Awaiting bank execution',aging.awaiting_bank_execution,'is-awaiting'],
+  ['Due after 24 hours',aging.on_track,'is-on-track'],
+  ['Due within 24 hours',aging.due_soon,'is-due-soon'],
+  ['Overdue',aging.overdue,'is-overdue'],
+  ['Liquidation approved',aging.completed,'is-approved']
  ];
- return '<section class="frt-exec-panel" aria-label="Liquidation aging"><header><div><h3>Liquidation aging</h3>'+
-  '<p>Signed '+escape(result.companyCode)+' aggregate · 72 hours after recorded bank execution</p></div></header>'+
-  '<div class="settings-grid">'+labels.map(([name,value])=>'<div class="settings-detail"><label>'+
-   escape(name)+'</label><strong>'+count(value)+'</strong></div>').join('')+
-  '</div><p class="frt-exec-disclosure">Pending: '+count(aging.pending_total)+
-  '. Bank execution reflects staff-entered evidence, not bank API confirmation. Unrecorded disbursements have no computed deadline. Approved liquidation is excluded from overdue totals.</p></section>';
+ return '<section class="frt-exec-panel frt-exec-aging" aria-label="Liquidation aging">'+heading+
+  '<div class="frt-exec-aging-grid" role="list">'+metrics.map(([label,value,tone])=>
+   '<article class="frt-exec-aging-card '+tone+'" role="listitem">'+
+   '<span class="frt-exec-aging-label">'+escape(label)+'</span>'+
+   '<strong class="frt-exec-aging-value">'+count(value)+'</strong></article>').join('')+
+  '</div><p class="frt-exec-aging-disclosure"><strong>Pending: '+count(aging.pending_total)+
+  '.</strong> Bank execution reflects staff-entered evidence, not bank API confirmation. Unrecorded disbursements have no computed deadline. Approved liquidation is excluded from overdue totals.</p></section>';
 }
 function renderFRTExecutiveDashboard(result){
  const summary=result.summary||{},analytics=result.analytics;
