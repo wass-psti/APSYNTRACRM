@@ -756,3 +756,6 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-overtime
   animation:none!important;transition:none!important;
  }
 }
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-reference-time{display:grid;gap:2px;min-width:0}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-reference-time small{font-size:12px;color:var(--tt-ref-muted,#5b6673)}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-requested-duration{font-weight:700}

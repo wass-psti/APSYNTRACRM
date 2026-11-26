@@ -159,7 +159,12 @@ const row=(r,access,query='',expandedRequestIds=[],otContractActive=false)=>{
   (query&&!r.searchText.includes(query)?' hidden':'')+'>'+
   '<div class="tt-ot-reference-person"><span class="tt-ot-reference-avatar" aria-hidden="true">'+esc(initials)+'</span><strong>'+esc(r.name)+'</strong></div>'+
   '<span class="tt-ot-reference-date">'+esc(fmt(r.date))+'</span>'+
-  '<span class="tt-ot-reference-time">'+(r.otPolicy==='duration-v1'?(r.attendanceCredit?'Paid OT: '+esc(minutesLabel(r.attendanceCredit.payableMinutes).trim()):'Duration-based'):esc(formatTimeTrackerWallClock(r.start))+' – '+esc(formatTimeTrackerWallClock(r.end)))+'</span>'+
+  '<span class="tt-ot-reference-time">'+(r.otPolicy==='duration-v1'?
+   '<b class="tt-ot-requested-duration">Requested '+esc(timeTrackerOtDurationLabel(r.durationMinutes))+'</b>'+
+   '<small>'+(r.attendanceCredit?'Paid OT: '+esc(minutesLabel(r.attendanceCredit.payableMinutes).trim()):
+    r.status==='Rejected'?'Not approved':r.status==='Approved'?'Awaiting attendance':'Pending approval')+'</small>':
+   esc(formatTimeTrackerWallClock(r.start))+' – '+esc(formatTimeTrackerWallClock(r.end))+
+   '<small>'+esc(timeTrackerOtDurationLabel(r.durationMinutes))+'</small>')+'</span>'+
   '<strong class="tt-ot-reference-hours">'+esc(minutesLabel(r.durationMinutes).trim())+'</strong>'+
   '<span class="tt-ot-reference-reason">'+esc(r.task||'Not supplied')+(r.isManual?' <em class="tt-ot-manual-badge">Manual Entry</em>':'')+'</span>'+
   '<span class="tt-ot-pill tt-ot-'+r.status.toLowerCase()+'">'+esc(r.status==='Submitted'?'Pending':r.status)+'</span>'+
@@ -327,7 +332,7 @@ export function renderTimeTrackerOvertime({
  '<button type="button" data-action="tt-ot-status" data-status="'+status+'" aria-pressed="'+(opts.status===status)+'"'+(opts.status===status?' class="is-active"':'')+'>'+label+' <span>'+count+'</span></button>').join('')+'</div>'+
  '<span class="tt-ot-reference-workflow">'+(access.otContractActive===true?'● Workflow verified':'Read-only workflow')+'</span></div>'+
  '<div class="tt-ot-reference-search"><label for="tt-ot-search">Search requests</label><input id="tt-ot-search" type="search" maxlength="120" placeholder="Search employee or reason…" value="'+esc(opts.search)+'"><button type="button" data-action="tt-ot-sort">Date '+(opts.sort==='oldest'?'↑':'↓')+'</button></div>'+
- '<div class="tt-ot-reference-row tt-ot-reference-labels" aria-hidden="true"><span>Employee</span><span>Date</span><span>Time</span><span>Hours</span><span>Reason</span><span>Status</span><span>Actions</span></div>'+
+ '<div class="tt-ot-reference-row tt-ot-reference-labels" aria-hidden="true"><span>Employee</span><span>Date</span><span>Requested time</span><span>Hours</span><span>Reason</span><span>Status</span><span>Actions</span></div>'+
  m.statusRows.map(r=>row(r,access,m.search,expandedRequestIds,access.otContractActive===true)).join('')+
  '<div class="tt-ot-empty" data-tt-ot-empty'+(m.visible.length?' hidden':'')+'><span class="tt-ot-reference-empty-icon" aria-hidden="true">◷</span>'+
  (m.submitted+m.approved+m.rejected===0?'<strong>No overtime this week</strong><p>Overtime requests for this week will appear here.</p><button type="button" class="tt-ot-reference-primary" data-action="'+(canManage?'tt-ot-manual-open':'tt-ot-open')+'">+ File Overtime</button>':'<strong>No matching requests</strong><p>Try a different week, search or status.</p>')+'</div>'+

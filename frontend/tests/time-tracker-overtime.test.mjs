@@ -446,3 +446,17 @@ test('HR signed scope reviews duration only and rejects non-HR claims',async()=>
  assert.equal((await client.decideOvertime(board,durationRow.id,'Approved')).status,'Approved');
  await assert.rejects(()=>setup({role:'Employee',snapshot}).snapshot(board),/review role/);
 });
+test('duration-based OT rows show the requested hours in the time column',()=>{
+ const now=new Date('2026-11-04T08:00:00.000Z');
+ const base={ownerId:'cloud:a',name:'Employee A',date:'2026-11-04',task:'Deployment support'};
+ const html=renderTimeTrackerOvertime({now,access:{},requests:[
+  {...base,id:'d1',status:'Submitted',otPolicy:'duration-v1',durationMinutes:180},
+  {...base,id:'d2',status:'Approved',otPolicy:'duration-v1',durationMinutes:90,
+   attendanceCredit:{actualMinutes:60,payableMinutes:60}},
+  {...base,id:'l1',status:'Approved',start:'18:00',end:'21:00',durationMinutes:180}]});
+ assert.match(html,/Requested 3 hr 00 min<\/b><small>Pending approval/);
+ assert.match(html,/Requested 1 hr 30 min<\/b><small>Paid OT: /);
+ assert.match(html,/06:00 PM – 09:00 PM<small>3 hr 00 min<\/small>/);
+ assert.doesNotMatch(html,/Duration-based/);
+ assert.match(html,/<span>Requested time<\/span>/);
+});
