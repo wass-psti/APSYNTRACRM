@@ -981,12 +981,12 @@ test('disabled document reads redact even injected authorized-state list rows an
   draftView:forged,canManage:true});
  assert.match(html,/HIDDEN-DOC-100/);
  assert.match(html,/data-tradelink-domain-filter/);
- assert.match(html,/1 of 1 authorized records in this response/);
+ assert.match(html,/1 of 1 documents in this response/);
  const client=new TradeLinkDraftWorkspace({
   auth:{getVerifiedUser:async()=>{throw Error('unexpected auth');}},
   api:{rpc:async()=>{throw Error('unexpected request');}}
  });
- await assert.rejects(()=>client.list(),/Signed TradeLink domain API unavailable/);
+ await assert.rejects(()=>client.list(),/Signed TradeLink reviewer API unavailable/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
 });
