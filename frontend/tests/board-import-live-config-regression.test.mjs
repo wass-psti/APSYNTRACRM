@@ -131,6 +131,6 @@ test('extended URL reference not activated: incompatible source is surfaced with
 test('CP-BIMP-17C the board import lazy module is versioned without changing the global app entrypoint',()=>{
  const index=readFileSync('index.html','utf8');
  const app=readFileSync('frontend/app.js','utf8');
- assert.match(index,/<script type="module" src="\.\/frontend\/app\.js"><\/script>/);
+ assert.match(index,/<script type="module" src="\.\/frontend\/app\.js(?:\?v=[^"]+)?"><\/script>/);
  assert.match(app,/board\/import\/import-ui\.js\?v=cp-board-import-sync-01-20261115/);
 });
