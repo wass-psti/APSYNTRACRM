@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {chromium} from 'playwright';
 
 const root = new URL('../frontend/apps/DailyDepartmentActivity/',import.meta.url);
-const files = new Set(['activity-screen.js','activity-screen.css','activity-model.js','activity-drafts.js','activity-controller.js']);
+const files = new Set(['activity-screen.js','activity-screen.css','activity-model.js','activity-drafts.js','activity-controller.js','activity-repository.js']);
 const server = createServer(async (req,res)=>{
   try {
     if(req.url==='/'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DDA test fixture</title><link rel="stylesheet" href="/activity-screen.css"><div id="host"></div></html>');return;}
@@ -25,22 +25,33 @@ try {
   await page.evaluate(async()=>{
     const {createActivityController}=await import('/activity-controller.js');
     const {mountDailyDepartmentActivity}=await import('/activity-screen.js');
+    const {createActivityRepository}=await import('/activity-repository.js');
     let snapshot={workspaceId:'fixture',revision:0,directory:{departments:[{id:'d',name:'Operations'}],people:[{id:'p',name:'Synthetic person',departmentId:'d'}]},categories:[],records:[]};
-    const repository={
-      async load(){return structuredClone(snapshot);},
-      async mutate(command){
-        if(command.expectedRevision!==snapshot.revision)throw Error('Conflict');
-        const {action,record}=command;
+    const receipts=new Map();
+    const auth={isSignedIn:true,userId:'fixture-user'};
+    const api={async rpc(name,args){
+      if(name==='dda_snapshot_v1')return structuredClone(snapshot);
+      if(name!=='dda_submit_v1')throw Error('Unknown RPC');
+      let receipt=receipts.get(args.p_request_id);
+      if(receipt)return structuredClone({...snapshot,...receipt,replayed:true});
+      if(args.p_expected_revision!==snapshot.revision){
+        receipt={rejectedRequestId:args.p_request_id,rejectionReason:'Revision conflict'};
+      }else{
+        const action=args.p_action,record=args.p_record;
         if(action==='save-activity')snapshot.records=[...snapshot.records.filter(row=>row.id!==record.id),record];
         else if(action==='delete-activity')snapshot.records=snapshot.records.filter(row=>row.id!==record.id);
         else if(action==='save-category')snapshot.categories=[...snapshot.categories.filter(row=>row.id!==record.id),record];
         else throw Error('Unknown command');
         snapshot.revision++;
-        return structuredClone(snapshot);
+        receipt={acknowledgedRequestId:args.p_request_id,acknowledgedRevision:snapshot.revision};
       }
-    };
+      receipts.set(args.p_request_id,receipt);
+      if(window.interruptNextSave){window.interruptNextSave=false;throw Error('Connection interrupted');}
+      return structuredClone({...snapshot,...receipt});
+    }};
     window.mountFixture=async()=>{
       window.fixture?.dispose();
+      const repository=createActivityRepository({auth,api,workspaceId:'fixture',storage:localStorage});
       const controller=createActivityController({repository,workspaceId:'fixture',userId:'fixture-user',draftStorage:localStorage});
       window.fixture=mountDailyDepartmentActivity(document.querySelector('#host'),controller,{today:'2026-11-26',confirmDelete:()=>true});
       await window.fixture.ready;
@@ -62,9 +73,16 @@ try {
   await notice('Unsaved draft restored.');
   assert.equal(await form('activity').getByLabel('Activity title').inputValue(),'Daily <img src=x> report');
   assert.equal(await form('activity').getByLabel('Details').inputValue(),'Draft notes');
+  await page.evaluate(()=>{window.interruptNextSave=true;});
   await form('activity').getByRole('button',{name:'Save activity'}).click();
-  await notice('Activity saved.');
+  await page.waitForFunction(()=>document.querySelector('[data-dda-error]')?.textContent==='Connection interrupted');
+  await page.getByRole('button',{name:'Refresh',exact:true}).click();
+  await notice('Previous request confirmed without a duplicate save.');
   assert.equal(await page.locator('.dda-entry').count(),1);
+  assert.equal(await form('activity').count(),0);
+  await form('new').getByRole('button',{name:'New activity'}).click();
+  assert.equal(await form('activity').getByLabel('Activity title').inputValue(),'');
+  await form('activity').getByRole('button',{name:'Close (keep draft)'}).click();
   assert.equal(await page.locator('.dda-entry img').count(),0);
   await page.locator('.dda-entry').getByRole('button',{name:'Edit'}).click();
   await form('activity').getByLabel('Activity title').fill('Revised report');
@@ -85,7 +103,7 @@ try {
   await page.evaluate(()=>window.fixture.dispose());
   assert.equal(await page.locator('#host').evaluate(el=>el.children.length),0);
   assert.deepEqual(errors,[]);
-  console.log('PASS: native screen category, draft remount, create, edit, filter, delete, escaped text, mobile layout, labeled controls and disposal');
+  console.log('PASS: native screen category, draft remount, lost-response receipt recovery, create, edit, filter, delete, escaped text, mobile layout, labeled controls and disposal');
 } finally {
   try {await browser?.close();} finally {await new Promise(resolve=>server.close(resolve));}
 }
