@@ -74,10 +74,6 @@ CREATE TABLE public.module_role_assignments(
 CREATE OR REPLACE FUNCTION public.is_platform_admin(p_user_id uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
 AS $ SELECT p_user_id='20000000-0000-4000-8000-000000000001'::uuid $;
-CREATE OR REPLACE FUNCTION public.module_role_for(p_module_id text,p_user_id uuid)
-RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
-AS $ SELECT CASE WHEN public.is_platform_admin(p_user_id)
-                  THEN 'System Admin' ELSE 'Employee' END $;
 CREATE OR REPLACE FUNCTION public.apsyntra_crm_effective_role(p_user_id uuid,p_workspace_id uuid)
 RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
 AS $$
