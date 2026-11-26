@@ -1,0 +1,28 @@
+name: DDA native domain validation
+on:
+  push:
+    branches: [main, cp-dda-fe-03a-reference-ci]
+    paths:
+      - 'frontend/apps/DailyDepartmentActivity/**'
+      - 'frontend/tests/dda-native-domain.test.mjs'
+      - '.github/workflows/cp-dda-fe-03a-native-domain.yml'
+  pull_request:
+    paths:
+      - 'frontend/apps/DailyDepartmentActivity/**'
+      - 'frontend/tests/dda-native-domain.test.mjs'
+      - '.github/workflows/cp-dda-fe-03a-native-domain.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  domain:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check frontend/apps/DailyDepartmentActivity/activity-model.js
+      - run: node --check frontend/apps/DailyDepartmentActivity/activity-drafts.js
+      - run: node --test frontend/tests/dda-native-domain.test.mjs
