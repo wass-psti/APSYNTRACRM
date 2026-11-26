@@ -2380,6 +2380,20 @@
       "file": "20261126093001_cp_tl_gm_ar_reconciliation.sql",
       "bytes": 17097,
       "sha256": "bd3786d469ddf5637b711c666e5d70fa5c6ba59f905b268198a1bf0a6f5ac133"
+    },
+    {
+      "version": "20261126100000",
+      "name": "cp_tt_admin_manual_clockin_scheduler_gate",
+      "file": "20261126100000_cp_tt_admin_manual_clockin_scheduler_gate.sql",
+      "bytes": 4423,
+      "sha256": "39ac9f9043b1960a18eabf83ba6ca46aa37ce65640a7a53f4f65df8150195eda"
+    },
+    {
+      "version": "20261126110000",
+      "name": "cp_tt_admin_manual_attendance_hybrid",
+      "file": "20261126110000_cp_tt_admin_manual_attendance_hybrid.sql",
+      "bytes": 19256,
+      "sha256": "7e6a51f76f731551fc1d3ce802898e44511fb9119a2f642cf76583492069dbc9"
     }
   ],
   "applied_only": [
