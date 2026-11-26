@@ -1226,7 +1226,7 @@ function referenceDocumentHeader(type,editing,canSave=false,status='for-approval
    '<div class="tl-reference-document-toolbar" aria-label="Document actions">'+
     '<button type="button" class="tl-reference-tool" disabled title="Templates are not activated in APSYNTRA CRM">Templates</button>'+
     '<button type="button" class="tl-reference-tool" '+(approved?'data-action="tradelink-document-print" data-id="'+escape(documentId)+'"':'disabled')+
-     ' title="'+(approved?'Print the verified Approved document':'PDF printing is available only after both reviewers approve')+'">Print PDF</button>'+
+     ' title="'+(approved?'Print the verified Approved document':'PDF printing is available only after all required reviewers approve')+'">Print PDF</button>'+
     '<button type="button" class="tl-reference-save" data-action="tradelink-draft-submit"'+
      (canSave?'':' disabled title="Signed document saving is unavailable"')+
      '>'+(revisingApproved?'Save New Revision':editing?'Save Changes':'Save')+'</button>'+
@@ -1362,7 +1362,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
   '<div data-tradelink-recovery-choices></div>'+
   '<p hidden data-tradelink-recovery-status class="tl-draft-feedback" role="status" aria-live="polite"></p>'+
   '<div class="tl-reference-editor-content">'+
-   (editing&&row.workflow_state==='approved'?'<p role="status" class="tl-draft-feedback">Revise Approved: the existing approved revision remains printable. Saving creates a new For Approval revision requiring both assigned reviewers again.</p>':'')+
+   (editing&&row.workflow_state==='approved'?'<p role="status" class="tl-draft-feedback">Revise Approved: the existing approved revision remains printable. Saving creates a new For Approval revision requiring all applicable reviewers again.</p>':'')+
    (showModuleTabs?referenceDraftTabs(type):'')+
   renderModuleGuidance(type)+referenceDraftSectionNavigation(type)+
   '<form data-tradelink-draft-form'+(type==='quotation'?' novalidate':'')+'>'+
@@ -1386,7 +1386,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
        const disabled=!selectable;
        return '<option value="'+escape(id)+'"'+(id===selectedStatus?' selected':'')+
         (disabled?' disabled':'')+'>'+escape(label)+'</option>';
-      }).join('')+'</select><small id="tl-reference-status-help">Save defaults to For Approval. Select Draft explicitly to save as Draft. Approved is assigned automatically after both reviewers validate.</small></label>'+
+      }).join('')+'</select><small id="tl-reference-status-help">Save defaults to For Approval. Select Draft explicitly to save as Draft. Approved is assigned automatically after all required reviewers validate.</small></label>'+
      '<label class="tl-draft-field"><span>Document number</span>'+
       '<input name="documentNumber" value="'+escape(fieldValue('documentNumber',data.documentNumber||''))+'" '+
        (editing||TL03_AUTOMATIC_NUMBERING_ENABLED?'readonly ':'required maxlength="120" pattern="[A-Za-z0-9][A-Za-z0-9._ /-]*" ')+
