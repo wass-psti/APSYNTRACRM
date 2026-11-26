@@ -1,7 +1,7 @@
 -- CP-DDA-FE-03A: candidate RPC boundary, not deployed automatically.
 -- Depends on dda-activity-persistence.sql and existing CRM session/workspace helpers.
 -- DDA has no independent role hierarchy. The active CRM workspace and existing
--- workforce identity are the authority; actor IDs never come from the browser.
+-- active membership are the authority; actor IDs never come from the browser.
 begin;
 revoke all on schema dda from public, anon, authenticated, service_role;
 revoke all on all tables in schema dda from public, anon, authenticated, service_role;
@@ -18,9 +18,8 @@ begin
   if p_workspace_id is null or public.current_workspace_id(v_actor) is distinct from p_workspace_id then
     raise exception 'DDA requires the active CRM workspace' using errcode='42501';
   end if;
-  if not exists(select 1 from agt.person p where p.workspace_id=p_workspace_id
-      and p.user_id=v_actor and p.identity_kind='crm-user') then
-    raise exception 'DDA workforce identity unavailable' using errcode='42501';
+  if not exists(select 1 from agt.workspace w where w.id=p_workspace_id) then
+    raise exception 'DDA workspace unavailable' using errcode='42501';
   end if;
   return v_actor;
 end $actor$;

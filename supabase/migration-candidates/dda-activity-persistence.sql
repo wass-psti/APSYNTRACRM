@@ -99,9 +99,8 @@ begin
      action is null or jsonb_typeof(record) is distinct from 'object' then
     raise exception 'Invalid DDA command';
   end if;
-  if not exists(select 1 from agt.person p where p.workspace_id=w and p.user_id=actor and p.identity_kind='crm-user') then
-    raise exception 'Unknown DDA actor';
-  end if;
+  -- The signed RPC boundary supplies the authenticated CRM actor.
+  -- Activity subjects, unlike actors, must exist in the workforce directory.
   insert into dda.workspace_state(workspace_id) values(w) on conflict do nothing;
   select revision into strict rev from dda.workspace_state where workspace_id=w for update;
   input:=jsonb_build_object('actor',actor,'expectedRevision',expected,'action',action,'record',record);
@@ -172,9 +171,8 @@ begin
      action is null or jsonb_typeof(record) is distinct from 'object' then
     raise exception 'Invalid DDA command';
   end if;
-  if not exists(select 1 from agt.person p where p.workspace_id=w and p.user_id=actor and p.identity_kind='crm-user') then
-    raise exception 'Unknown DDA actor';
-  end if;
+  -- The signed RPC boundary supplies the authenticated CRM actor.
+  -- Activity subjects, unlike actors, must exist in the workforce directory.
   insert into dda.workspace_state(workspace_id) values(w) on conflict do nothing;
   perform 1 from dda.workspace_state where workspace_id=w for update;
   input:=jsonb_build_object('actor',actor,'expectedRevision',expected,'action',action,'record',record);

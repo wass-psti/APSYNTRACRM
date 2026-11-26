@@ -72,14 +72,14 @@ test('application navigation is rendered only for the owning Work Management wor
  assert.equal(applicationHrefs.length,15);
  for(const href of applicationHrefs)assert.ok(applicationSection.includes('href=\"'+href+'\"'),href);
  for(const label of ['FM1 Ticketing','TimeTracker','Fund Tracker','FuelTrack+','TradeLink',
-  'Paseo de Lomboy','TalkBox','FuelTrans Standalone','Tool Traceability','Toolbox Issues',
+  'Paseo de Lomboy','TalkBox','FuelTrans Support Portal','Tool Traceability','Toolbox Issues',
   'Order Intake','Employee Evaluation','Charter Navigator','APS AIMS','Material Request Hub'])
   assert.ok(applicationSection.includes(label),label);
 
  const otherWorkspace=render({workspaceId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   boards:[{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',name:'Personal board'}]});
  const otherPrimary=otherWorkspace.split('<nav class="nav-list" aria-label="Primary">')[1].split('</nav>')[0];
- assert.doesNotMatch(otherPrimary,/Applications|FM1 Ticketing|TimeTracker|Fund Tracker|FuelTrack\+|TradeLink|Paseo de Lomboy|TalkBox|Tool Traceability|Toolbox Issues/);
+ assert.doesNotMatch(otherPrimary,/Applications|FM1 Ticketing|TimeTracker|Fund Tracker|FuelTrack\+|TradeLink|Paseo de Lomboy|TalkBox|FuelTrans Support Portal|Tool Traceability|Toolbox Issues/);
  for(const href of ['#/overview','#/boards','#/user-role-management','#/settings'])
   assert.ok(otherPrimary.includes('href=\"'+href+'\"'),href);
  assert.match(otherWorkspace,/Personal board/);

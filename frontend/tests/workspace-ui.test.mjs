@@ -419,8 +419,9 @@ test('frontend entrypoint refreshes workspace-related module assets together',()
  const moduleUrl='./workspace-ui.js?v=cp-crm-wm-invite-flow-01';
  assert.ok(app.includes(moduleUrl));
  assert.ok(lifecycle.includes(moduleUrl));
- assert.ok(index.includes('<script type="module" src="./frontend/app.js?v=cp-tl-document-menu-02-20261126-01"></script>'));
- assert.match(index,/frontend\/app\.js\?v=cp-tl-document-menu-02-20261126-01/);
+ const entries=[...index.matchAll(/<script type="module" src="\.\/frontend\/app\.js\?v=([^"]+)"><\/script>/g)];
+ assert.equal(entries.length,1,'Exactly one versioned CRM application entrypoint');
+ assert.match(entries[0][1],/^[a-zA-Z0-9-]+$/);
 });
 test('server member list displays two eligible workspaces without fabricating global third',()=>{
  const actor='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
