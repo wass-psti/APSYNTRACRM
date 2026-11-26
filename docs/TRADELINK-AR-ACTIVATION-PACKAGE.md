@@ -15,3 +15,7 @@ Before authorized activation, run `sql/candidates/cp-tl-gm-04c-ar-production-pre
 - Production preflight passed in a read-only transaction. Recheck migration high-water mark and preflight immediately before activation.
 
 The staged file is intentionally outside `supabase/migrations`. Do not use an endpoint that generates an earlier migration version; the available apply_migration API accepts name and SQL but no explicit version. Use the existing authorized deployment mechanism capable of preserving the ordered version, or wait until the service-generated version exceeds the current high-water mark and record the actual version returned. Do not manually edit migration history. Production activation and signed acceptance remain pending.
+
+## Production activation — 2026-11-26
+
+Supabase CLI 2.121.0 applied only `20261126093001_cp_tl_gm_ar_reconciliation.sql` to APSYNTRACRM (`jtlusodorfnyzgyuewkz`) after a successful single-migration dry run and read-only preflight. SHA-256 `bd3786d469ddf5637b711c666e5d70fa5c6ba59f905b268198a1bf0a6f5ac133`. CLI exit 0, runtime 11.05s. Independent database readback verified migration history version `20261126093001`, private clearance ledger and both public clearance RPCs. Activated analytics definition MD5 `a6ac58528fe92daddc722661ea163812`. Active migration file now records the exact deployed SQL. No commercial records were changed by the deployment procedure. Signed live Payment AR acceptance remains pending; disposable financial regression is not signed production acceptance.
