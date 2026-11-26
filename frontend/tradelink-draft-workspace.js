@@ -1733,7 +1733,7 @@ export function renderTradeLinkSavedDocumentPreview(record,workspaceId,documentI
 }
 function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=false,canCreate=canManage,actorEmail=''}={}){
  const creatorMode=canCreate&&!canManage;
- const enabled=TL03_DOMAIN_READS_ENABLED&&(canManage||canReview||canCreate)&&view.status==='AUTHORIZED_READ';
+ const enabled=TL03_DOMAIN_READS_ENABLED&&(view.sharedVisibility===true||canManage||canReview||canCreate)&&view.status==='AUTHORIZED_READ';
  const records=enabled?rows:[];
  const filters=normalizeTradeLinkDraftListFilters(view.listFilters);
  const selectedIds=new Set(Array.isArray(view.selectedDocumentIds)?view.selectedDocumentIds:[]);
