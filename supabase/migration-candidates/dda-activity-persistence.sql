@@ -162,7 +162,7 @@ end $$;
 -- Terminal outcomes are recorded atomically for both accepted and rejected commands.
 -- The future signed host wrapper must derive actor from its existing session.
 create function dda.submit(w uuid, actor uuid, request_key uuid, expected bigint, action text, record jsonb)
-returns jsonb language plpgsql set search_path='' as $
+returns jsonb language plpgsql set search_path='' as $submit$
 declare
   input jsonb;
   receipt dda.command_receipt%rowtype;
@@ -201,7 +201,7 @@ begin
   end;
   insert into dda.command_receipt(workspace_id,request_id,command,rejection_reason) values(w,request_key,input,reason);
   return dda.snapshot(w)||jsonb_build_object('rejectedRequestId',request_key,'rejectionReason',reason,'replayed',false);
-end $;
+end $submit$;
 
 revoke all on all tables in schema dda from public;
 revoke all on all functions in schema dda from public;
