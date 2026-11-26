@@ -277,7 +277,7 @@ function requestForm({date='',reason='',durationMinutes=120}={},now=new Date(),o
 }
 function manualRequestForm({employeeId='',date='',durationMinutes=120,reason=''}={},access={},now=new Date(),busy=false){
  const directory=Array.isArray(access.overviewDirectory)?access.overviewDirectory:[];
- const canManage=access.manualOtManager===true&&access.moduleRole==='System Admin';
+ const canManage=access.manualOtManager===true;
  if(!canManage)return '';
  const enabled=TT_OT_WRITES_ACCEPTED&&access.otContractActive===true&&
   access.durationOtContractActive===true&&!busy;
@@ -315,7 +315,7 @@ export function renderTimeTrackerOvertime({
 }={}){
  const opts={...TT_OT_DEFAULT_FILTERS,...filters},m=timeTrackerOtMetrics(requests,opts,now);
  const statuses=[['All','All',m.submitted+m.approved+m.rejected],['Submitted','Pending',m.submitted],['Approved','Approved',m.approved],['Rejected','Rejected',m.rejected]];
- const canManage=access.moduleRole==='System Admin'&&access.manualOtManager===true;
+ const canManage=access.manualOtManager===true;
  const metric=(label,value,detail,cls='')=>'<article class="tt-ot-reference-metric '+cls+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small>'+esc(detail)+'</small></article>';
  return '<section class="tt-overtime tt-overtime-command tt-ot-reference" aria-label="TimeTracker overtime requests">'+
  '<header class="tt-ot-reference-header"><div><h3>Overtime</h3><p>Review overtime requests and their current workflow state.</p></div><div class="tt-ot-reference-header-actions">'+
