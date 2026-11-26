@@ -68,8 +68,11 @@ DECLARE
  v_id uuid;
 BEGIN
  v_ws:=public.timetracker_ot_require_scope(p_board_id);
- IF private.tt_role_in_workspace(v_actor,v_ws) IS DISTINCT FROM 'System Admin' THEN
-  RAISE EXCEPTION 'System Admin manual OT submission required' USING ERRCODE='42501';
+ IF NOT (
+  COALESCE(private.tt_role_in_workspace(v_actor,v_ws)='System Admin',false)
+  OR COALESCE(public.is_platform_admin(v_actor),false)
+ ) THEN
+  RAISE EXCEPTION 'System Admin or platform Admin manual OT submission required' USING ERRCODE='42501';
  END IF;
 
  IF p_owner_id IS NULL OR NOT EXISTS(
@@ -259,7 +262,7 @@ DECLARE d text; old text; replacement text;
 BEGIN
  d:=pg_catalog.pg_get_functiondef('public.list_module_directory(text)'::regprocedure);
  old:='caller_role:=public.module_role_for(p_module_id,caller);';
- replacement:='caller_role:=CASE WHEN p_module_id=''time-tracker'' THEN private.tt_role_in_workspace(caller,ws) ELSE public.module_role_for(p_module_id,caller) END;';
+ replacement:='caller_role:=CASE WHEN p_module_id=''time-tracker'' AND public.is_platform_admin(caller) THEN ''System Admin'' WHEN p_module_id=''time-tracker'' THEN private.tt_role_in_workspace(caller,ws) ELSE public.module_role_for(p_module_id,caller) END;';
  IF pg_catalog.cardinality(pg_catalog.string_to_array(d,old))<>2 THEN
   RAISE EXCEPTION 'TimeTracker directory role-resolution drift'; END IF;
  EXECUTE pg_catalog.replace(d,old,replacement);
@@ -280,7 +283,8 @@ BEGIN
   'v_bootstrap:=COALESCE(public.apsyntra_role_is_bootstrap(),false);'),
  ('v_manual_admin:=public.module_role_for(''time-tracker'',v_user)=''System Admin'';
  v_hr:=COALESCE(private.tt_role_in_workspace(v_user,v_ws)=''HR'',false);',
-  'v_manual_admin:=COALESCE(private.tt_role_in_workspace(v_user,v_ws)=''System Admin'',false);
+  'v_manual_admin:=COALESCE(private.tt_role_in_workspace(v_user,v_ws)=''System Admin'',false)
+  OR COALESCE(public.is_platform_admin(v_user),false);
  v_hr:=COALESCE(private.tt_role_in_workspace(v_user,v_ws)=''HR'',false);
  v_ot_approver:=v_bootstrap OR v_manual_admin OR v_hr OR COALESCE(public.is_platform_admin(v_user),false);'),
  ($old$'start',to_char(r.start_time,'HH24:MI'),
