@@ -347,7 +347,7 @@ test('existing TradeLink User module role can create and list own Drafts without
  assert.equal(receipt.documentNumber,'Q-20261119000001');
  await assert.rejects(()=>client.commit({documentId:id,expectedRevision:1,
   operation:'archive',expectedState:'draft',draft:null}),
-  /supports document creation and own Draft updates only/);
+  /manager capability is required for archive and restore/);
  assert.ok(calls.some(call=>call[0]==='allowed'&&call[2]==='manage'));
  assert.ok(calls.some(call=>call[0]==='native'&&call[1]==='tradelink'));
  assert.ok(calls.some(call=>call[0]==='rpc'&&call[1]==='tl03_document_create'));

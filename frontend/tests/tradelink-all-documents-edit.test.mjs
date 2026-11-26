@@ -96,18 +96,18 @@ test('All Documents exposes signed edit, archive and restore for the matching Dr
  assert.doesNotMatch(html,/drafts\/edit\/9be2aeba/);
 });
 
-test('legacy saved preview offers Edit this Draft only when its revision is current',()=>{
+test('legacy saved preview offers Preview/Edit only when its revision is current',()=>{
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view:{...authorizedView,documentPreview:{documentId:id,record:saved}},canManage:true});
  assert.match(html,/data-tradelink-saved-preview/);
- assert.match(html,/Edit this Draft/);
+ assert.match(html,/tl-document-edit-action[^>]*><a[^>]*>Preview\/Edit<\/a>/);
  assert.match(html,/Q-QA-20261108-01/);
  assert.match(html,/Pump/);
  assert.equal((html.match(/data-tradelink-document-edit/g)||[]).length,2);
  const stale=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view:{...authorizedView,documentPreview:{documentId:id,record:{...saved,revision:2}}},canManage:true});
  assert.doesNotMatch(stale,/data-tradelink-saved-preview/);
- assert.doesNotMatch(stale,/Edit this Draft/);
+ assert.doesNotMatch(stale,/tl-document-edit-action/);
 });
 
 test('All Documents no longer duplicates Board projection and stays signed',()=>{

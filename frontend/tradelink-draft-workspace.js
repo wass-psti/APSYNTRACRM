@@ -3,7 +3,7 @@
  */
 import {ApiError} from './session.js';
 import {TRADELINK_MAX_ITEMS} from './tradelink/limits.js';
-import {GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY,tradeLinkGmApprovalPreview} from './tradelink/approval-policy.js?v=cp-tl-gm-06f-20261126-01';
+import {GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY,tradeLinkGmApprovalPreview} from './tradelink/approval-policy.js?v=cp-tl-universal-edit-01f-20261126-01';
 import {validUuid} from './data.js';
 import {calculateTradeLinkAmounts,formatTradeLinkAmount,TRADELINK_CURRENCIES,TRADELINK_VAT_CODES} from './tradelink-finance.js';
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
@@ -19,7 +19,7 @@ import {TradeLinkNativeClient,TL03_DOMAIN_READS_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
  TL03_WORKFLOW_OPERATIONAL_ENABLED,TL03_DUAL_REVIEW_ENABLED,
  validateTradeLinkDraftEnvelope,
- normalizeTradeLinkDomainRow} from './tradelink-native.js?v=cp-tl-gm-06f-20261126-01';
+ normalizeTradeLinkDomainRow} from './tradelink-native.js?v=cp-tl-universal-edit-01f-20261126-01';
 
 export const TL03_DRAFT_INTERFACE_ENABLED=true; // presentation only
 const typeLabels=Object.freeze([
@@ -1356,9 +1356,9 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
  const line=Array.isArray(data.items)?data.items[0]||{}:{};
  const writeEnabled=editing||mode==='create';
  const live=TL03_DOMAIN_WRITES_ENABLED&&writeEnabled&&(canManage||(editing?canEditOwnDraft:canCreate));
- const workflowState=editing&&row.workflow_state!=='approved'&&row.workflow_state!=='revision-required'?row.workflow_state:'for-approval';
+ const workflowState=editing&&row.workflow_state!=='approved'?row.workflow_state:'for-approval';
  const documentId=editing?row.id:'';
- const selectedStatus=fieldValue('documentStatus',workflowState);
+ const selectedStatus=fieldValue('documentStatus',workflowState==='revision-required'?'for-approval':workflowState);
  const type=editing?data.documentType:fieldValue('documentType','quotation');
  const approvalFree=['quotation','po'].includes(type)&&tradeLinkApprovalFreeDraftPreview({
   executivePreview:tradeLinkGmApprovalPreview(actorEmail,actorModuleRole),actorId,record:editing?row:null});
@@ -1420,7 +1420,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
        ...(workflowState&&!TRADELINK_DOCUMENT_STATUS_OPTIONS.some(([id])=>id===workflowState)?
         [[workflowState,tradeLinkWorkflowLabel(workflowState)]]:[])] .map(([id,label])=>{
        const selectable=['draft','for-approval'].includes(id)&&
-        ['draft','for-approval'].includes(workflowState)&&
+        ['draft','for-approval','revision-required'].includes(workflowState)&&
         !(editing&&row.workflow_state==='approved'&&id==='draft');
        const disabled=!selectable;
        return '<option value="'+escape(id)+'"'+(id===selectedStatus?' selected':'')+

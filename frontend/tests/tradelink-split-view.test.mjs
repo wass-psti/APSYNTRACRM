@@ -98,7 +98,7 @@ test('a verified saved document is rendered inside the on-demand detail view wit
  assert.match(pane,/Saved document · Q-SPLIT-02/);
  assert.match(pane,/Revision 5/);
  assert.match(pane,/Verified preview customer/);
- assert.match(pane,/Edit this Draft/);
+ assert.match(pane,/Preview\/Edit/);
  assert.match(pane,/Close document preview/);
  assert.doesNotMatch(pane,/Select a document/);
 });

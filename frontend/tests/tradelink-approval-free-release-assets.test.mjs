@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 
 const read=path=>readFileSync(new URL('../../'+path,import.meta.url),'utf8');
 test('TradeLink approval-free release uses consistent browser asset identities',()=>{
- const tag='cp-tl-gm-06f-20261126-01';
+ const tag='cp-tl-universal-edit-01f-20261126-01';
  const imports=[
   ['index.html','./frontend/app.js'],
   ['frontend/app.js','./tradelink-ui.js'],

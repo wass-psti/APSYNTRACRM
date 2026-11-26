@@ -1,5 +1,5 @@
-import {renderTradeLinkQuotationPrint} from './tradelink/quotation-print.js?v=cp-tl-gm-06f-20261126-01';
-import {GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY} from './tradelink/approval-policy.js?v=cp-tl-gm-06f-20261126-01';
+import {renderTradeLinkQuotationPrint} from './tradelink/quotation-print.js?v=cp-tl-universal-edit-01f-20261126-01';
+import {GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY} from './tradelink/approval-policy.js?v=cp-tl-universal-edit-01f-20261126-01';
 /**
  * CP-TL-09B — Official TradeLink output from an authenticated, revision-matched
  * saved document. Uses recovered v1.42 company profiles and six module layouts.
@@ -8,7 +8,7 @@ import {GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY} from './tradelin
  */
 import {ApiError} from './session.js';
 import {TRADELINK_MAX_ITEMS} from './tradelink/limits.js';
-import {normalizeTradeLinkDomainRow} from './tradelink-domain-client.js?v=cp-tl-gm-06f-20261126-01';
+import {normalizeTradeLinkDomainRow} from './tradelink-domain-client.js?v=cp-tl-universal-edit-01f-20261126-01';
 import {calculateTradeLinkAmounts,formatTradeLinkAmount,TRADELINK_CURRENCIES} from './tradelink-finance.js';
 import {resolveTradeLinkOfficialTemplate,TRADELINK_DEFAULT_TERMS,
  TRADELINK_TEMPLATE_VERSION} from './tradelink-official-templates.js';

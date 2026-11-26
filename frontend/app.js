@@ -94,7 +94,7 @@ import {TRADELINK_APPLICATION_ROUTE,tradeLinkApplicationHref,parseTradeLinkAppli
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows,
  searchTradeLinkBoardItems,captureTradeLinkTabMotion,mountTradeLinkTabMotion} from './tradelink-ui.js?v=cp-tl-universal-edit-01f-20261126-01';
 import {renderTradeLinkSavedDocumentOutput,mountTradeLinkSavedDocumentOutput,
- closeTradeLinkSavedDocumentOutput} from './tradelink-saved-document-output.js?v=cp-tl-gm-06f-20261126-01';
+ closeTradeLinkSavedDocumentOutput} from './tradelink-saved-document-output.js?v=cp-tl-universal-edit-01f-20261126-01';
 import {TradeLinkAttachmentClient,TL03_ATTACHMENTS_ENABLED}
  from './tradelink-attachments.js';
 import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftForm,parseTradeLinkDraftForm,
@@ -110,7 +110,7 @@ import {summarizeTradeLinkSubmitReadiness} from './tradelink-submit-readiness.js
 import {TL03_DOMAIN_READS_ENABLED,TL03_ANALYTICS_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
  TL03_WORKFLOW_OPERATIONAL_ENABLED,TL03_DUAL_REVIEW_ENABLED,
- tradeLinkBoardProjectionMatches,tradeLinkSavedDraftMatches} from './tradelink-native.js?v=cp-tl-gm-06f-20261126-01';
+ tradeLinkBoardProjectionMatches,tradeLinkSavedDraftMatches} from './tradelink-native.js?v=cp-tl-universal-edit-01f-20261126-01';
 import {runTradeLinkStageASignedReadOnly,renderTradeLinkStageAAcceptance,sanitizeTradeLinkStageAReport} from './tradelink-stage-a-signed-acceptance.js';
 import {runTradeLinkLocalSessionRevocation,renderTradeLinkSessionRevocation,renderTradeLinkSignedOutRevocationResult,sanitizeTradeLinkRevocationReport} from './tradelink-revoked-session-acceptance.js';
 import {runWs01B2SignedDiscovery,renderWs01B2SignedAcceptance,sanitizeWs01B2Report} from './workspace-b2-signed-acceptance.js';

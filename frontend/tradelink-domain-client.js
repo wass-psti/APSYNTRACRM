@@ -7,7 +7,7 @@ import {TRADELINK_MAX_ITEMS,TRADELINK_MAX_PAYLOAD_BYTES,tradeLinkJsonbTextByteLe
 import {validUuid} from './data.js';
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
 import {normalizeTradeLinkAnalyticsSummary} from './tradelink-analytics.js';
-import {STANDARD_APPROVAL_POLICY,GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY,tradeLinkReviewEvidenceComplete} from './tradelink/approval-policy.js?v=cp-tl-gm-06f-20261126-01';
+import {STANDARD_APPROVAL_POLICY,GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY,tradeLinkReviewEvidenceComplete} from './tradelink/approval-policy.js?v=cp-tl-universal-edit-01f-20261126-01';
 // Stage A read RPCs enforce signed-session, board and General Manager checks.
 export const TL03_DOMAIN_READS_ENABLED=true;
 // Stage B authenticated EXECUTE grants are live; server enforces session and workspace permissions.

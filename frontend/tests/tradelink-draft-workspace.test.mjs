@@ -863,7 +863,7 @@ test('TradeLink User All Documents shows own Draft edit and assigned reviewer ac
  assert.match(html,/All Documents <span/);
  assert.match(html,/Create New Document/);
  assert.match(html,/Q-OWN-001/);
- assert.match(html,/Edit Draft/);
+ assert.match(html,/Preview\/Edit/);
  assert.match(html,/Q-REVIEW-001/);
  assert.match(html,/Use Time Now/);
  assert.doesNotMatch(html,/data-tl-select-document|data-tl-select-all/);

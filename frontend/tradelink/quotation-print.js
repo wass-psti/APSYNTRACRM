@@ -1,6 +1,6 @@
 // Reference quotation layouts: print-only presentation of an already verified revision.
 import {calculateTradeLinkAmounts,formatTradeLinkAmount} from '../tradelink-finance.js';
-import {GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY} from './approval-policy.js?v=cp-tl-gm-06f-20261126-01';
+import {GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY} from './approval-policy.js?v=cp-tl-universal-edit-01f-20261126-01';
 
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const display=value=>value==null||value===''?'—':escape(value);
