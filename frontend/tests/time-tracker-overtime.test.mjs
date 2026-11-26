@@ -309,25 +309,22 @@ test('signed bootstrap client decides self-submitted OT and reads former members
 });
 
 
-test('employee OT request markup uses native time controls and clear user guidance',()=>{
+test('employee OT filing collects date, hours and reason only',()=>{
  const html=renderTimeTrackerOvertime({
-  requests:rows,access:{bootstrapApprover:false,otContractActive:true},modalOpen:true,now
+  requests:rows,access:{bootstrapApprover:false,otContractActive:true,durationOtContractActive:true},
+  modalOpen:true,now
  });
- assert.match(html,/id="tt-ot-start" name="start" type="time"/);
- assert.match(html,/id="tt-ot-end" name="end" type="time"/);
- assert.match(html,/value="18:00"/);
- assert.match(html,/value="20:00"/);
- assert.match(html,/min="2026-10-03"/);
+ assert.match(html,/id="tt-ot-duration-hours"/);
+ assert.match(html,/min="0\.5" max="6" step="0\.5"/);
+ assert.match(html,/min="2026-11-02"/);
  assert.match(html,/max="2026-11-09"/);
+ assert.doesNotMatch(html,/id="tt-ot-(start|end)"/);
  assert.match(html,/data-tt-ot-duration-progress/);
- assert.match(html,/Your request will be sent for approval/);
- assert.match(html,/You can check its status in OT requests/);
- assert.doesNotMatch(html,/signed OT RPC|audit workflow/i);
+ assert.match(html,/authorized OT approval queue for System Admin, Admin, or HR review/);
  assert.match(html,/maxlength="500"/);
- assert.match(html,/past 30 days or next 7 days/);
  assert.match(html,/Provide at least 10 characters/);
 });
-test('OT duration preview updates the duration, progress, reason count and inline validity',()=>{
+test('OT duration preview updates hours, progress, reason count and inline validity',()=>{
  const control=value=>({
   value,textContent:'',validationMessage:'',attributes:{},
   setAttribute(name,next){this.attributes[name]=next;},
@@ -335,8 +332,7 @@ test('OT duration preview updates the duration, progress, reason count and inlin
   setCustomValidity(message){this.validationMessage=message;}
  });
  const nodes={
-  '#tt-ot-start':control('18:00'),
-  '#tt-ot-end':control('20:00'),
+  '#tt-ot-duration-hours':control('2'),
   '#tt-ot-reason':control('Emergency maintenance work'),
   '[data-tt-ot-duration-value]':control(''),
   '[data-tt-ot-duration-progress]':control(''),
@@ -350,18 +346,14 @@ test('OT duration preview updates the duration, progress, reason count and inlin
  assert.equal(nodes['[data-tt-ot-duration-message]'].textContent,
   '4 hr 00 min remaining within the 6-hour maximum.');
  assert.equal(nodes['[data-tt-ot-reason-count]'].textContent,'26 / 500');
- assert.equal(nodes['#tt-ot-end'].validationMessage,'');
+ assert.equal(nodes['#tt-ot-duration-hours'].validationMessage,'');
  assert.equal(nodes['#tt-ot-reason'].validationMessage,'');
- nodes['#tt-ot-start'].value='20:00';
- nodes['#tt-ot-end'].value='19:00';
- nodes['#tt-ot-reason'].value='     ';
- updateTimeTrackerOvertimePreview(form);
- assert.match(nodes['#tt-ot-reason'].validationMessage,/at least 10 characters/);
+ nodes['#tt-ot-duration-hours'].value='0.25';
  nodes['#tt-ot-reason'].value='Short';
  updateTimeTrackerOvertimePreview(form);
  assert.equal(nodes['[data-tt-ot-duration-value]'].textContent,'—');
  assert.equal(nodes['[data-tt-ot-duration-progress]'].value,0);
- assert.match(nodes['#tt-ot-end'].validationMessage,/30 minutes and 6 hours/);
+ assert.match(nodes['#tt-ot-duration-hours'].validationMessage,/0.5 to 6 hours/);
  assert.match(nodes['#tt-ot-reason'].validationMessage,/at least 10 characters/);
  assert.equal(nodes['[data-tt-ot-reason-count]'].textContent,'5 / 500');
 });
@@ -382,6 +374,7 @@ test('employee OT modal wiring captures edits, preserves retry drafts and manage
  assert.match(app,/\.catch\(notice\)\.finally\(\(\)=>\{\s*state\.ttBusy=false;render\(\)/);
  assert.match(app,/if\(state\.ttOtModalOpen\)root\.querySelector\('#tt-ot-date'\)/);
  assert.match(app,/data-tt-ot-backdrop/);
+ assert.doesNotMatch(app,/tt-ot-start|tt-ot-end|tt-ot-manual-start|tt-ot-manual-end/);
  assert.match(app,/const overtimeDialog=root\.querySelector\('\.tt-ot-modal'\)/);
 });
 
