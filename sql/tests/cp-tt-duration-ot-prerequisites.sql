@@ -120,59 +120,37 @@ $threshold$;
 REVOKE ALL ON FUNCTION private.tt_auto_clockout_threshold(timestamptz)
  FROM PUBLIC,anon,authenticated,service_role;
 
--- Small but structurally faithful baseline used to exercise the migration's
--- exact, guarded pg_get_functiondef patch anchors.
-CREATE FUNCTION private.tt_process_auto_clockouts()
-RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
-AS $worker$
-DECLARE
- v_candidate record;
- v_session record;
- v_ot record;
- v_clock_in timestamptz;
- v_threshold timestamptz;
- v_cutoff timestamptz;
- v_has_ot boolean;
- v_reason text;
- v_state jsonb;
- v_now timestamptz:=clock_timestamp();
- v_activated_at timestamptz:=clock_timestamp()-INTERVAL '1 day';
-BEGIN
- FOR v_candidate IN
-    SELECT workspace_id,board_id,record_id,employee_id
-    FROM private.tt_auto_clockout_sessions
-    WHERE status IN ('MONITORING','GRACE','OVERTIME','PENDING_GPS','ERROR')
-      AND threshold_at<=v_now AND clock_in_at>=v_activated_at
-    ORDER BY last_evaluated_at NULLS FIRST,COALESCE(overtime_cutoff_at,threshold_at),record_id
-    LIMIT 100
- LOOP
-  SELECT * INTO v_session FROM private.tt_auto_clockout_sessions s
-  WHERE s.workspace_id=v_candidate.workspace_id AND s.board_id=v_candidate.board_id
-   AND s.record_id=v_candidate.record_id AND s.employee_id=v_candidate.employee_id;
-  v_clock_in:=v_session.clock_in_at;
-  v_threshold:=private.tt_auto_clockout_threshold(v_clock_in);
-  v_cutoff:=v_threshold;
-  v_has_ot:=false;
-  v_state:='{}'::jsonb;
-
-      -- Approved OT must continuously cover the cutoff and be approved by
-      -- that cutoff. Late approval cannot revive an expired session.
-      FOR v_ot IN
-        SELECT r.ot_date,r.start_time,r.end_time,r.decided_at,r.status
-        FROM public.timetracker_ot_requests r
-        WHERE r.workspace_id=v_session.workspace_id
-          AND r.owner_id=v_session.employee_id
-          AND r.ot_date=(v_threshold AT TIME ZONE 'Asia/Manila')::date
-        ORDER BY r.start_time,r.end_time
-      LOOP
-       NULL;
-      END LOOP;
-
-      v_reason:=NULL;
- END LOOP;
- RETURN '{}'::jsonb;
-END;
-$worker$;
-REVOKE ALL ON FUNCTION private.tt_process_auto_clockouts()
- FROM PUBLIC,anon,authenticated,service_role;
+-- Surrounding fixture only. Install the worker directly from the three
+-- actual repository migrations via the shell harness, never a stub worker.
+ALTER TABLE private.tt_auto_clockout_sessions
+ ADD COLUMN pending_at timestamptz,
+ ADD COLUMN scheduled_clock_out_at timestamptz,
+ ADD COLUMN grace_started_at timestamptz,
+ ADD COLUMN grace_deadline_at timestamptz,
+ ADD COLUMN completed_at timestamptz,
+ ADD COLUMN clock_out_reason text,
+ ADD COLUMN last_error text,
+ ADD COLUMN updated_at timestamptz DEFAULT clock_timestamp();
+CREATE TABLE private.tt_auto_clockout_config(
+ config_key text PRIMARY KEY, activated_at timestamptz NOT NULL, activation_epoch uuid NOT NULL);
+INSERT INTO private.tt_auto_clockout_config VALUES
+ ('default','infinity','40000000-0000-4000-8000-000000000001');
+CREATE FUNCTION private.tt_auto_clockout_mode() RETURNS text LANGUAGE sql STABLE SET search_path=''
+AS $$ SELECT CASE WHEN pg_catalog.isfinite(activated_at) THEN 'active' ELSE 'suspended' END
+ FROM private.tt_auto_clockout_config WHERE config_key='default' $$;
+CREATE TABLE public.timetracker_attendance_mutation_audit(
+ workspace_id uuid, board_id uuid, actor_id uuid, record_id text, action text,
+ revision bigint, committed_at timestamptz, offsite_note_supplied boolean, source text);
+CREATE TABLE private.tt_attendance_board_projection(board_id uuid,record_id uuid);
+-- Projection is deliberately not modeled in this worker-only acceptance.
+-- Fail if unexpectedly invoked; production projection acceptance is separate.
+CREATE FUNCTION private.tt_auto_clockout_project(uuid,uuid,uuid,jsonb,bigint)
+RETURNS void LANGUAGE plpgsql SET search_path='' AS $$
+BEGIN RAISE EXCEPTION 'Projection fixture is not a production projection test'; END $$;
+CREATE FUNCTION public.module_state_invariants_valid(text,text,text)
+RETURNS boolean LANGUAGE sql IMMUTABLE SET search_path=''
+AS $$ SELECT $1='time-tracker' AND $2='timetracker.attendance.v1'
+ AND pg_catalog.jsonb_typeof($3::jsonb->'records')='array' $$;
+INSERT INTO public.work_boards(id,workspace_id,name,status)
+ VALUES ('46bf4ee7-368a-4c35-842c-8593ea1f6ac3','10000000-0000-4000-8000-000000000001','TimeTracker Attendance','active');
 COMMIT;

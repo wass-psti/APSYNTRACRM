@@ -276,30 +276,29 @@ BEGIN
       v_reason:=NULL;$new$);
  -- Evaluate approved duration requests before the regular cutoff so the
  -- worker binds the exact canonical record even when HR approves pre-shift.
- old:=$old$    SELECT workspace_id,board_id,record_id,employee_id
-    FROM private.tt_auto_clockout_sessions
-    WHERE status IN ('MONITORING','GRACE','OVERTIME','PENDING_GPS','ERROR')
-      AND threshold_at<=v_now AND clock_in_at>=v_activated_at
-    ORDER BY last_evaluated_at NULLS FIRST,COALESCE(overtime_cutoff_at,threshold_at),record_id
-    LIMIT 100$old$;
- replacement:=$new$    SELECT s.workspace_id,s.board_id,s.record_id,s.employee_id
-    FROM private.tt_auto_clockout_sessions s
-    WHERE s.status IN ('MONITORING','GRACE','OVERTIME','PENDING_GPS','ERROR')
-      AND s.clock_in_at>=v_activated_at
-      AND (s.threshold_at<=v_now OR (s.overtime_cutoff_at IS NULL AND EXISTS(
-        SELECT 1 FROM public.timetracker_ot_requests r
-        WHERE r.workspace_id=s.workspace_id AND r.owner_id=s.employee_id
+ -- Patch only the candidate predicate and ordering from the current-main
+ -- 20261126090000 correction migration; never replace the canonical CTE or
+ -- relax activation-epoch checks. Preserve priority for already due/corrected rows.
+ old:=$old$AND (s.threshold_at<=v_now OR a.clock_in_at IS DISTINCT FROM s.clock_in_at)$old$;
+ replacement:=$new$AND (s.threshold_at<=v_now OR a.clock_in_at IS DISTINCT FROM s.clock_in_at
+       OR (s.overtime_cutoff_at IS NULL AND a.clock_in_at IS NOT NULL AND EXISTS(
+         SELECT 1 FROM public.timetracker_ot_requests r
+         WHERE r.workspace_id=s.workspace_id AND r.owner_id=s.employee_id
           AND r.ot_policy='duration-v1' AND r.status='Approved'
-          AND r.ot_date=(s.clock_in_at AT TIME ZONE 'Asia/Manila')::date
-          AND (r.attendance_record_id IS NULL OR r.attendance_record_id=s.record_id)
+          AND r.ot_date=(a.clock_in_at AT TIME ZONE 'Asia/Manila')::date
+          AND (r.attendance_record_id IS NULL OR (r.attendance_record_id=s.record_id
+           AND r.attendance_clock_in_at=a.clock_in_at))
           AND r.decided_at<s.threshold_at AND r.submitted_at<=r.decided_at
           AND private.tt_role_in_workspace(s.employee_id,s.workspace_id) IS DISTINCT FROM 'OJT'
-      )))
-    ORDER BY (s.threshold_at<=v_now) DESC,s.last_evaluated_at NULLS FIRST,
-      COALESCE(s.overtime_cutoff_at,s.threshold_at),s.record_id
-    LIMIT 100$new$;
+       )))$new$;
  IF pg_catalog.cardinality(pg_catalog.string_to_array(d,old))<>2 THEN
-  RAISE EXCEPTION 'Worker candidate baseline drift'; END IF;
+  RAISE EXCEPTION 'Current-main worker candidate baseline drift'; END IF;
+ d:=pg_catalog.replace(d,old,replacement);
+ old:='ORDER BY s.last_evaluated_at NULLS FIRST,COALESCE(s.overtime_cutoff_at,s.threshold_at),s.record_id';
+ replacement:=$new$ORDER BY (s.threshold_at<=v_now OR a.clock_in_at IS DISTINCT FROM s.clock_in_at) DESC,
+     s.last_evaluated_at NULLS FIRST,COALESCE(s.overtime_cutoff_at,s.threshold_at),s.record_id$new$;
+ IF pg_catalog.cardinality(pg_catalog.string_to_array(d,old))<>2 THEN
+  RAISE EXCEPTION 'Current-main worker priority baseline drift'; END IF;
  d:=pg_catalog.replace(d,old,replacement);
  EXECUTE d;
 END;

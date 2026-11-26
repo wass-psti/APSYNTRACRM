@@ -150,5 +150,113 @@ BEGIN
  RAISE NOTICE 'PASS: signed filing, HR review, no self-approval, OJT isolation, scheduler allocation and payable OT';
 END;
 $rpc$;
+ROLLBACK;
+
+BEGIN;
+DO $worker_acceptance$
+DECLARE
+ ws constant uuid:='10000000-0000-4000-8000-000000000001';
+ board constant uuid:='46bf4ee7-368a-4c35-842c-8593ea1f6ac3';
+ emp constant uuid:=current_setting('apsyntra.test_emp')::uuid;
+ hr constant uuid:=current_setting('apsyntra.test_hr')::uuid;
+ epoch constant uuid:='40000000-0000-4000-8000-000000000001';
+ rec_id constant uuid:='40000000-0000-4000-8000-000000000002';
+ case_name text; phase integer; started timestamptz; base timestamptz; extended timestamptz;
+ now_at timestamptz; d date; expected timestamptz; req_id uuid; state jsonb; actual jsonb;
+ out_at timestamptz; result jsonb; session_status text; current_cutoff timestamptz; req_status text;
+ rev bigint; audit_count integer; source text; expected_reason text; approved_at timestamptz;
+BEGIN
+ -- Use relative timestamps on a fresh, rollback-only fixture. Never wait nine hours.
+ IF current_setting('apsyntra.test_disposable',true) IS DISTINCT FROM 'on' THEN
+  RAISE EXCEPTION 'Disposable database required'; END IF;
+ now_at:=date_trunc('milliseconds',clock_timestamp());
+ UPDATE private.tt_auto_clockout_config SET activated_at=now_at-INTERVAL '2 days'
+  WHERE config_key='default';
+ -- Each scenario gets its own employee work date/record via subtransaction rollback.
+ FOREACH case_name IN ARRAY ARRAY['regular','pending','rejected','withdrawn','approved-active',
+  'approved-due','prefiled-manual','late','stale-epoch','historical','corrected'] LOOP
+  BEGIN
+   started:=now_at-CASE WHEN case_name='approved-active' THEN INTERVAL '10 hours 30 minutes'
+      WHEN case_name='prefiled-manual' THEN INTERVAL '2 hours'
+      ELSE INTERVAL '17 hours' END;
+   base:=private.tt_auto_clockout_threshold(started);
+   extended:=private.tt_duration_ot_cutoff(started,base,180);
+   d:=(started AT TIME ZONE 'Asia/Manila')::date;
+   source:=CASE WHEN case_name IN ('prefiled-manual','historical','corrected')
+     THEN 'admin-manual-clockin' ELSE 'browser' END;
+   state:=jsonb_build_object('version',1,'records',jsonb_build_array(jsonb_build_object(
+    'id',rec_id::text,'ownerId','cloud:'||emp::text,
+    'clockIn',jsonb_build_object('timestamp',started,'geo',jsonb_build_object('source',source)),
+    'clockOut',CASE WHEN case_name='historical' THEN jsonb_build_object('timestamp',base,
+       'manualMethod','standard-shift') ELSE NULL END)));
+   INSERT INTO public.module_state_entries(workspace_id,module_id,state_key,scope,owner_key,value,revision,updated_by)
+    VALUES(ws,'time-tracker','timetracker.attendance.v1','shared','*',state::text,1,emp);
+   INSERT INTO private.tt_auto_clockout_sessions(workspace_id,board_id,record_id,employee_id,status,
+      clock_in_at,threshold_at,enrollment_epoch,enrollment_clock_in_at)
+    VALUES(ws,board,rec_id,emp,'MONITORING',
+     CASE WHEN case_name='corrected' THEN started+INTERVAL '1 hour' ELSE started END,
+     CASE WHEN case_name='corrected' THEN private.tt_auto_clockout_threshold(started+INTERVAL '1 hour') ELSE base END,
+     CASE WHEN case_name='stale-epoch' THEN '40000000-0000-4000-8000-000000000003'::uuid ELSE epoch END,
+     started);
+   req_status:=CASE case_name WHEN 'regular' THEN NULL WHEN 'pending' THEN 'Submitted'
+    WHEN 'rejected' THEN 'Rejected' WHEN 'withdrawn' THEN 'Withdrawn' WHEN 'corrected' THEN NULL ELSE 'Approved' END;
+   IF req_status IS NOT NULL THEN
+    approved_at:=CASE WHEN case_name='late' THEN base+INTERVAL '1 minute' ELSE started-INTERVAL '1 minute' END;
+    INSERT INTO public.timetracker_ot_requests(workspace_id,owner_id,ot_date,duration_minutes,
+     reason,status,submitted_at,submitted_by,submission_source,ot_policy,decided_by,decided_at,
+     attendance_record_id,attendance_clock_in_at)
+    VALUES(ws,emp,d,180,'Disposable scheduler test only',req_status,started-INTERVAL '2 minutes',
+     emp,'employee','duration-v1',CASE WHEN req_status='Submitted' THEN NULL ELSE hr END,
+     CASE WHEN req_status='Submitted' THEN NULL ELSE approved_at END,
+     NULL,NULL)
+    RETURNING id INTO req_id;
+   END IF;
+   result:=private.tt_process_auto_clockouts();
+   SELECT value::jsonb,revision INTO actual,rev FROM public.module_state_entries
+    WHERE workspace_id=ws AND module_id='time-tracker' AND state_key='timetracker.attendance.v1'
+     AND scope='shared' AND owner_key='*';
+   SELECT status,overtime_cutoff_at INTO session_status,current_cutoff
+    FROM private.tt_auto_clockout_sessions WHERE board_id=board AND record_id=rec_id;
+   out_at:=(actual#>>'{records,0,clockOut,timestamp}')::timestamptz;
+   SELECT count(*) INTO audit_count FROM public.timetracker_attendance_mutation_audit
+    WHERE workspace_id=ws AND record_id=rec_id::text;
+   IF result->>'failed'<>'0' THEN
+    RAISE EXCEPTION 'Real worker failed (%): % / %',case_name,result,
+     (SELECT last_error FROM private.tt_auto_clockout_sessions WHERE board_id=board AND record_id=rec_id); END IF;
+   IF case_name IN ('approved-active','prefiled-manual') THEN
+    IF out_at IS NOT NULL OR rev<>1 OR audit_count<>0 OR current_cutoff IS DISTINCT FROM extended
+     OR session_status IS DISTINCT FROM (CASE WHEN case_name='approved-active' THEN 'OVERTIME' ELSE 'MONITORING' END)
+     OR (SELECT attendance_record_id FROM public.timetracker_ot_requests WHERE id=req_id) IS DISTINCT FROM rec_id
+    THEN RAISE EXCEPTION 'Extended active allocation failed (%): %, %, %',case_name,result,session_status,current_cutoff; END IF;
+   ELSIF case_name IN ('stale-epoch','historical') THEN
+    IF actual IS DISTINCT FROM state OR rev<>1 OR audit_count<>0
+    THEN RAISE EXCEPTION 'Historical/stale-epoch record was modified (%)',case_name; END IF;
+   ELSE
+    expected:=CASE WHEN case_name='approved-due' THEN extended ELSE base END;
+    expected_reason:=CASE WHEN case_name='approved-due' THEN 'approved_overtime_ended'
+     ELSE 'nine_hour_threshold_grace_expired' END;
+    IF out_at IS DISTINCT FROM expected OR rev<>2 OR audit_count<>1 OR session_status<>'COMPLETED'
+     OR actual#>>'{records,0,clockOut,reason}' IS DISTINCT FROM expected_reason
+    THEN RAISE EXCEPTION 'Real worker completion failed (%): %, %, %',case_name,result,session_status,actual; END IF;
+    -- Repeat cycle: no duplicate canonical update or audit.
+    PERFORM private.tt_process_auto_clockouts();
+    IF (SELECT revision FROM public.module_state_entries WHERE workspace_id=ws AND module_id='time-tracker'
+       AND state_key='timetracker.attendance.v1' AND scope='shared' AND owner_key='*')<>2
+     OR (SELECT count(*) FROM public.timetracker_attendance_mutation_audit
+       WHERE workspace_id=ws AND record_id=rec_id::text)<>1
+    THEN RAISE EXCEPTION 'Duplicate completion (%)',case_name; END IF;
+   END IF;
+   RAISE NOTICE 'PASS: production worker source / %',case_name;
+   -- Roll back each scenario without deleting immutable audit records.
+   RAISE EXCEPTION USING ERRCODE='PT999',MESSAGE='rollback test case';
+  EXCEPTION WHEN SQLSTATE 'PT999' THEN NULL;
+  END;
+ END LOOP;
+ UPDATE private.tt_auto_clockout_config SET activated_at='infinity' WHERE config_key='default';
+ result:=private.tt_process_auto_clockouts();
+ IF result->>'suspended'<>'true' THEN RAISE EXCEPTION 'Worker suspension guard failed'; END IF;
+ RAISE NOTICE 'PASS: current-main worker source, canonical closure, revisions, approval gating and suspension';
+END;
+$worker_acceptance$;
 
 ROLLBACK;

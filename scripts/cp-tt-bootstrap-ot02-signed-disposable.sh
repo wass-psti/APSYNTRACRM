@@ -47,6 +47,64 @@ done
 # same isolated PG17 database. The migration has an explicit disposable-only gate.
 docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres \
  -f /repo/sql/tests/cp-tt-duration-ot-prerequisites.sql
+# Load the actual worker and replay its exact migration patches (not a mock).
+python3 - "$ROOT" <<'PY' | docker exec -i "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres
+from pathlib import Path
+import re,sys
+root=Path(sys.argv[1])/'supabase/migrations'
+base=(root/'20261125100000_cp_tt_auto_clockout_isolation.sql').read_text()
+start=base.index('CREATE OR REPLACE FUNCTION private.tt_process_auto_clockouts()')
+end=base.index('REVOKE ALL ON FUNCTION private.tt_process_auto_clockouts()',start)
+worker=base[start:end]
+# Parse the SQL single-quoted and dollar-quoted literal tuples for this worker.
+literal=r"(?:'(?:[^']|'')*'|\$[A-Za-z_][A-Za-z0-9_]*\$[\s\S]*?\$[A-Za-z_][A-Za-z0-9_]*\$)"
+def decode(s):
+    if s.startswith("'"): return s[1:-1].replace("''","'")
+    tag=s[:s.index(' "/tmp/$ID-duration-ot-apply.sql" <<'SQL'
+SET apsyntra.test_disposable='on';
+\i /repo/sql/cp-tt-duration-overtime-staged.sql
+SQL
+docker cp "/tmp/$ID-duration-ot-apply.sql" "$DB:/tmp/duration-ot-apply.sql"
+rm -f "/tmp/$ID-duration-ot-apply.sql"
+docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -f /tmp/duration-ot-apply.sql
+echo CP_TT_DURATION_OT_STAGED_DDL_PASS
+docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -c "CREATE ROLE authenticator LOGIN PASSWORD '$PASSWORD'; GRANT authenticated,anon TO authenticator; GRANT USAGE ON SCHEMA public TO authenticator,authenticated;"
+docker run -d --rm --name "$AUTH" --network "$NETWORK" -p 127.0.0.1::9999 \
+ -e GOTRUE_DB_DRIVER=postgres -e GOTRUE_DB_DATABASE_URL="postgres://postgres:$PASSWORD@$DB:5432/postgres?sslmode=disable" \
+ -e DATABASE_URL="postgres://postgres:$PASSWORD@$DB:5432/postgres?sslmode=disable" \
+ -e DB_NAMESPACE=auth -e GOTRUE_DB_DB_NAMESPACE=auth -e GOTRUE_API_HOST=0.0.0.0 -e GOTRUE_API_PORT=9999 \
+ -e API_EXTERNAL_URL=http://127.0.0.1:9999 -e GOTRUE_SITE_URL=http://127.0.0.1:9999 \
+ -e GOTRUE_JWT_SECRET="$JWT_SECRET" -e GOTRUE_JWT_KEYS='[]' -e GOTRUE_JWT_EXP=3600 \
+ -e GOTRUE_JWT_AUD=authenticated -e GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated \
+ -e GOTRUE_EXTERNAL_EMAIL_ENABLED=true -e GOTRUE_DISABLE_SIGNUP=false -e GOTRUE_MAILER_AUTOCONFIRM=true \
+ supabase/gotrue:v2.197.0 >/dev/null
+docker run -d --rm --name "$REST" --network "$NETWORK" -p 127.0.0.1::3000 \
+ -e PGRST_DB_URI="postgres://authenticator:$PASSWORD@$DB:5432/postgres" \
+ -e PGRST_DB_SCHEMAS=public -e PGRST_DB_ANON_ROLE=anon -e PGRST_JWT_SECRET="$JWT_SECRET" \
+ postgrest/postgrest:v16.4 >/dev/null
+AUTH_PORT="$(docker port "$AUTH" 9999/tcp | tail -1 | sed 's/.*://')"
+REST_PORT="$(docker port "$REST" 3000/tcp | tail -1 | sed 's/.*://')"
+if ! CP_TT_OT03_BROWSER="${CP_TT_OT03_BROWSER:-0}" node "$ROOT/scripts/cp-tt-bootstrap-ot02-signed-disposable.mjs" "$AUTH_PORT" "$REST_PORT" "$DB"; then
+ echo 'ISOLATED_RUNTIME_DIAGNOSTICS (sanitized)'
+ docker logs --tail 8 "$AUTH" 2>&1 | sed -E 's@postgres://[^ ]+@postgres://[redacted]@g;s/(password|secret|token)[=:][^ ]+/\1=[redacted]/gi'
+ exit 1
+fi
+echo CP_TT_BOOTSTRAP_OT02_SIGNED_DISPOSABLE_PASS
+,1)+1]
+    assert s.endswith(tag)
+    return s[len(tag):-len(tag)]
+for filename,expected in [('20261125130000_cp_tt_auto_clockout_reactivation.sql',2),
+                          ('20261126090000_cp_tt_active_clockin_scheduler_correction.sql',5)]:
+    source=(root/filename).read_text()
+    pairs=re.findall(r"\('private\.tt_process_auto_clockouts\(\)',\s*("+literal+r"),\s*("+literal+r")\)",source)
+    assert len(pairs)==expected,(filename,len(pairs))
+    for old,new in pairs:
+        old,new=decode(old),decode(new)
+        assert worker.count(old)==1,(filename,old)
+        worker=worker.replace(old,new)
+print(worker)
+print("REVOKE ALL ON FUNCTION private.tt_process_auto_clockouts() FROM PUBLIC,anon,authenticated,service_role;")
+PY
 cat > "/tmp/$ID-duration-ot-apply.sql" <<'SQL'
 SET apsyntra.test_disposable='on';
 \i /repo/sql/cp-tt-duration-overtime-staged.sql
