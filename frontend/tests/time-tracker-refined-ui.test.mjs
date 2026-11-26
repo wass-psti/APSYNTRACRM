@@ -44,6 +44,22 @@ test('rendering matches the compact blue and purple clock reference without weak
  assert.doesNotMatch(html,/<canvas|style=|onclick=/);
 });
 
+test('approved overtime extends the signed Clock progress target and final cutoff',()=>{
+ const clockIn='2026-11-24T00:00:00.000Z';
+ const record={...active,id:'approved-ot-session',clockIn};
+ const cutoff='2026-11-24T13:00:00.000Z';
+ const now=new Date('2026-11-24T11:00:00.000Z');
+ const html=renderTimeTrackerNative({result:{
+  status:'VERIFIED_READ',access,records:[record],active:record,otRequests:[],
+  autoClockout:{recordId:record.id,status:'OVERTIME',
+   thresholdAt:'2026-11-24T10:00:00.000Z',overtimeCutoffAt:cutoff,nextAt:cutoff}
+ },now,view:'clock'});
+ assert.match(html,/data-goal-target-ms="43200000"/);
+ assert.match(html,/of 12h goal/);
+ assert.match(html,/Approved overtime active · automatic clock-out at/);
+ assert.match(html,/data-tt-goal-remaining="2026-11-24T00:00:00\.000Z" data-tt-goal-target-ms="43200000">2h 0m to goal/);
+ assert.match(html,/data-tt-auto-clockout-inline-time>09:00 PM/);
+});
 test('idle state displays the original clock-in form without a misleading session ring',()=>{
  const html=renderTimeTrackerNative({
   result:{status:'VERIFIED_READ',access,records:[],active:null,otRequests:[]},
@@ -108,6 +124,27 @@ test('Clock view never starts hidden decorative GPU work',()=>{
 });
 
 
+test('live Clock ticks preserve the approved overtime target instead of reverting to nine hours',()=>{
+ const clockIn='2026-11-24T00:00:00.000Z';
+ const target=12*60*60*1000;
+ const elapsed={dataset:{clockIn,goalTargetMs:String(target)},textContent:''};
+ const progress={setAttribute(key,value){this[key]=value;}};
+ const goal={dataset:{ttGoalRemaining:clockIn,ttGoalTargetMs:String(target)},textContent:''};
+ const clock={textContent:''};
+ const nodes={'#tt-clock-hours':clock,'#tt-session-elapsed':elapsed,'#tt-session-progress':progress,
+  '[data-tt-goal-remaining]':goal};
+ const root={querySelector(selector){return nodes[selector]||null;}};
+ const tenHours=new Date('2026-11-24T11:00:00Z');
+ syncTimeTrackerClock(root,tenHours);
+ assert.equal(elapsed.textContent,'10:00:00');
+ assert.equal(goal.textContent,'2h 0m to goal');
+ assert.equal(progress['stroke-dashoffset'],(339.292*(1-10/12)).toFixed(3));
+ const cutoff=new Date('2026-11-24T13:00:00Z');
+ syncTimeTrackerClock(root,cutoff);
+ assert.equal(elapsed.textContent,'12:00:00');
+ assert.equal(goal.textContent,'12h goal reached');
+ assert.equal(progress['stroke-dashoffset'],'0.000');
+});
 test('credited Clock and ring pause throughout Philippine lunch and resume at 1 PM',()=>{
  const clockIn='2026-11-24T00:00:00Z';
  const cases=[
