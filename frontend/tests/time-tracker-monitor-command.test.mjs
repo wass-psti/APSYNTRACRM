@@ -129,5 +129,5 @@ test('GitHub Pages includes Monitor module and stylesheet under existing CSP',()
  assert.match(smoke,/'frontend\/time-tracker-monitor-command\.css'/);
  assert.match(smoke,/'frontend\/time-tracker-monitor\.js'/);
  assert.match(index,/style-src-attr 'none'/);
- assert.match(index,/script type="module" src="\.\/frontend\/app\.js"/);
+ assert.match(index,/script type="module" src="\.\/frontend\/app\.js(?:\?v=[^"]+)?"/);
 });
