@@ -3,10 +3,21 @@
  * Integration must run equivalent rules against locked authoritative server rows.
  * Legacy range-based OT and historical manual OT must not enter this policy.
  */
+import {creditedAttendanceMs} from './time-tracker-policy.js';
 export const TT_REGULAR_WORK_MINUTES=540;
 export const TT_OT_MIN_MINUTES=30;
 export const TT_OT_MAX_MINUTES=360;
 const minuteMs=60_000;
+function extendedCutoff(base,minutes){
+ const target=minutes*minuteMs;
+ let lo=0,hi=48*60*minuteMs;
+ if(creditedAttendanceMs(base,base+hi)<target)throw new RangeError('OT target outside supported window');
+ while(lo<hi){
+  const mid=lo+Math.floor((hi-lo)/2);
+  if(creditedAttendanceMs(base,base+mid)>=target)hi=mid;else lo=mid+1;
+ }
+ return base+lo;
+}
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isId=value=>typeof value==='string'&&uuid.test(value);
 const instant=value=>{
@@ -62,7 +73,7 @@ export function resolveDurationOvertime({workspaceId,employeeId,recordId,clockIn
  return {reason:'approved-duration-ot',attendanceRecordId:recordId,workDate:date,
   requestId:request.requestId,approvedMinutes:request.durationMinutes,
   targetMinutes:TT_REGULAR_WORK_MINUTES+request.durationMinutes,
-  cutoffAt:new Date(base+request.durationMinutes*minuteMs).toISOString()};
+  cutoffAt:new Date(extendedCutoff(base,request.durationMinutes)).toISOString()};
 }
 /** Credited minutes must already exclude unpaid breaks. Approval is a cap,
  * not proof of worked hours. Only use an independently verified association.
