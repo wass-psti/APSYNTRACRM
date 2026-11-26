@@ -18012,6 +18012,73 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-overtime
 /* Standalone host route keeps the existing FuelTrack surface without Board chrome. */
 #app .aps-board-shell.aps-fueltrack-shell .ft3-app{margin-top:0}
 
+/* CP-FUELTRACK-DASHBOARD-UI-01 — premium signed operations dashboard. */
+#app .ft3-dashboard-view{display:grid;gap:18px;min-width:0}
+#app .ft3-dashboard-hero{position:relative;isolation:isolate;overflow:hidden;padding:25px 28px 19px;border:1px solid #21465e;border-radius:22px;background:linear-gradient(125deg,#132a43 0%,#17425d 58%,#126d73 100%);color:#f7fbff;box-shadow:0 16px 34px rgba(16,43,65,.16)}
+#app .ft3-dashboard-hero::after{content:"";position:absolute;z-index:-1;top:-175px;right:-100px;width:330px;height:330px;border:1px solid rgba(255,255,255,.12);border-radius:50%;box-shadow:0 0 0 34px rgba(255,255,255,.035),0 0 0 72px rgba(255,255,255,.025);pointer-events:none}
+#app .ft3-dashboard-hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+#app .ft3-dashboard-kicker{display:block;color:#9bdedb;font-size:10px;font-weight:850;letter-spacing:.16em}
+#app .ft3-dashboard-hero h2{margin:8px 0 5px;color:#fff;font-size:27px;font-weight:780;letter-spacing:-.04em;line-height:1.2}
+#app .ft3-dashboard-hero-top p{margin:0;color:rgba(235,247,251,.74);font-size:12px;line-height:1.55}
+#app .ft3-dashboard-live{display:inline-flex;align-items:center;gap:8px;flex:none;padding:8px 11px;border:1px solid rgba(190,239,232,.22);border-radius:999px;background:rgba(255,255,255,.075);color:#d5f4ef;font-size:10px;font-weight:750}
+#app .ft3-dashboard-live>span{width:7px;height:7px;border-radius:50%;background:#72e0bb;box-shadow:0 0 0 4px rgba(114,224,187,.13)}
+#app .ft3-dashboard-hero-main{display:grid;grid-template-columns:minmax(0,1fr) 218px;align-items:center;gap:24px;margin-top:22px}
+#app .ft3-dashboard-financials{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#app .ft3-dashboard-financial-card{display:flex;min-width:0;min-height:132px;flex-direction:column;justify-content:center;gap:9px;padding:17px 19px;border:1px solid rgba(224,244,250,.16);border-radius:16px;background:rgba(255,255,255,.085);backdrop-filter:blur(8px)}
+#app .ft3-dashboard-financial-label{color:rgba(235,247,251,.75);font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+#app .ft3-dashboard-financial-value{display:block;min-width:0;color:#fff;font-size:clamp(25px,3vw,34px);font-weight:820;letter-spacing:-.045em;line-height:1.08;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#app .ft3-dashboard-financial-note{color:rgba(235,247,251,.68);font-size:10px;line-height:1.45}
+#app .ft3-dashboard-completion{display:flex;align-items:center;flex-direction:column;justify-content:center;gap:8px;min-width:0}
+#app .ft3-dashboard-progress-wrap{position:relative;width:112px;height:112px;flex:none}
+#app .ft3-dashboard-progress{display:block;width:100%;height:100%;overflow:visible}
+#app .ft3-dashboard-progress-track{fill:none;stroke:rgba(255,255,255,.16);stroke-width:8}
+#app .ft3-dashboard-progress-value{fill:none;stroke:#72e0bb;stroke-width:8;stroke-linecap:round}
+#app .ft3-dashboard-progress-copy{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px}
+#app .ft3-dashboard-progress-copy strong{color:#fff;font-size:25px;font-weight:820;line-height:1;font-variant-numeric:tabular-nums}
+#app .ft3-dashboard-progress-copy span{color:rgba(235,247,251,.76);font-size:9px;font-weight:750;letter-spacing:.08em;text-transform:uppercase}
+#app .ft3-dashboard-completion>p{margin:0;color:rgba(235,247,251,.78);font-size:10px;text-align:center}
+#app .ft3-dashboard-hero-footer{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:22px;padding-top:15px;border-top:1px solid rgba(224,244,250,.18)}
+#app .ft3-dashboard-hero-footer>div{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+#app .ft3-dashboard-hero-footer span{color:rgba(235,247,251,.7);font-size:10px;font-weight:650}
+#app .ft3-dashboard-hero-footer strong{color:#fff;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+#app .ft3-dashboard-pipeline{background:#fff;border-radius:18px;box-shadow:0 8px 24px rgba(30,62,82,.045)}
+#app .ft3-dashboard-pipeline .ft3-panel-head,#app .ft3-dashboard-recent .ft3-panel-head{padding:17px 20px}
+#app .ft3-dashboard-pipeline-total{flex:none;padding:6px 9px;border:1px solid #e0e9f0;border-radius:999px;background:#f5f8fb;color:#6c8192;font-size:9px;font-weight:800}
+#app .ft3-dashboard-pipeline-body{padding:17px 19px 19px}
+#app .ft3-dashboard-status-track{display:block;width:100%;height:14px;margin:0 0 16px;border-radius:8px;overflow:hidden}
+#app .ft3-dashboard-status-track-base{fill:#eaf0f5}
+#app .ft3-dashboard-status-segment{stroke:none}
+#app .ft3-dashboard-status-submitted{fill:#e4a63e}
+#app .ft3-dashboard-status-approved{fill:#4598d1}
+#app .ft3-dashboard-status-refueling_done{fill:#2ca7a0}
+#app .ft3-dashboard-status-completed{fill:#2caa76}
+#app .ft3-dashboard-status-rejected{fill:#d76572}
+#app .ft3-dashboard-stage-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+#app .ft3-dashboard-stage{display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;gap:9px;min-width:0;padding:13px 12px;border:1px solid #e5ebf1;border-radius:13px;background:#f8fafc}
+#app .ft3-dashboard-stage-dot{width:8px;height:8px;border-radius:50%;background:var(--ft3-stage-accent,#8294a5)}
+#app .ft3-dashboard-stage-submitted{--ft3-stage-accent:#d59a35}
+#app .ft3-dashboard-stage-approved{--ft3-stage-accent:#4598d1}
+#app .ft3-dashboard-stage-refueling_done{--ft3-stage-accent:#2ca7a0}
+#app .ft3-dashboard-stage-completed{--ft3-stage-accent:#2caa76}
+#app .ft3-dashboard-stage-rejected{--ft3-stage-accent:#d76572}
+#app .ft3-dashboard-stage-copy{display:flex;min-width:0;flex-direction:column;gap:5px}
+#app .ft3-dashboard-stage-label{color:#718296;font-size:9px;font-weight:750;line-height:1.35;overflow-wrap:anywhere}
+#app .ft3-dashboard-stage-count{color:#24394e;font-size:21px;font-weight:820;line-height:1;font-variant-numeric:tabular-nums}
+#app .ft3-dashboard-stage-percent{color:#8292a3;font-size:10px;font-weight:750;font-variant-numeric:tabular-nums}
+#app .ft3-dashboard-recent{background:#fff;border-radius:18px;box-shadow:0 8px 24px rgba(30,62,82,.045);overflow:hidden}
+#app .ft3-dashboard-recent .ft3-panel-head{background:#fff}
+#app .ft3-dashboard-recent .ft3-recent-scroll{max-height:390px}
+#app .ft3-dashboard-recent .ft3-recent-table th{background:#f7f9fc;color:#7b8b9b;font-size:9px;letter-spacing:.09em}
+#app .ft3-dashboard-recent .ft3-recent-table td{padding-top:14px;padding-bottom:14px;border-bottom-color:#edf1f5}
+#app .ft3-dashboard-recent .ft3-recent-table tbody tr:hover td{background:#f8fbfd}
+#app .ft3-dashboard-recent .ft3-request-title{color:#273d52;font-size:11px}
+#app .ft3-dashboard-recent .ft3-empty{min-height:150px}
+@media(max-width:1120px){#app .ft3-dashboard-hero-main{grid-template-columns:minmax(0,1fr) 180px}#app .ft3-dashboard-stage-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){#app .ft3-dashboard-hero{padding:22px 20px 17px}#app .ft3-dashboard-hero-main{grid-template-columns:1fr;gap:18px}#app .ft3-dashboard-completion{flex-direction:row;justify-content:flex-start;gap:15px;padding-top:16px;border-top:1px solid rgba(224,244,250,.18)}#app .ft3-dashboard-completion>p{text-align:left}#app .ft3-dashboard-progress-wrap{width:88px;height:88px}#app .ft3-dashboard-hero-footer{margin-top:17px}#app .ft3-dashboard-stage-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:460px){#app .ft3-dashboard-hero{padding:19px 15px 15px;border-radius:17px}#app .ft3-dashboard-hero-top{flex-direction:column;gap:12px}#app .ft3-dashboard-hero h2{font-size:23px}#app .ft3-dashboard-financials{grid-template-columns:1fr}#app .ft3-dashboard-financial-card{min-height:112px}#app .ft3-dashboard-hero-footer{gap:8px}#app .ft3-dashboard-hero-footer>div{align-items:flex-start;flex-direction:column;gap:4px}#app .ft3-dashboard-hero-footer strong{font-size:14px}#app .ft3-dashboard-pipeline .ft3-panel-head,#app .ft3-dashboard-recent .ft3-panel-head{padding:15px 14px}#app .ft3-dashboard-pipeline-body{padding:14px}#app .ft3-dashboard-stage{padding:12px}#app .ft3-dashboard-recent .ft3-recent-table{min-width:570px}}
+@media(max-width:380px){#app .ft3-dashboard-stage-grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){#app .ft3-dashboard-view *{scroll-behavior:auto;transition:none}}
+
 /* frontend/tradelink-application.css */
 /* TradeLink source-aligned application shell. Scoped to avoid board/TimeTracker regressions. */
 .aps-tradelink-app{--tl-ink:var(--ink,#20263b);--tl-line:var(--line,#e8ebf2);--tl-accent:var(--purple,#5d61e8);color:var(--tl-ink);display:grid;gap:19px;min-width:0}
@@ -36054,6 +36121,23 @@ html[data-aps-monday-theme="dark"] #app .frt-ref .frt-exec-aging-empty{
 html[data-aps-monday-theme="dark"] #app .frt-ref .frt-exec-aging-disclosure strong{
  color:var(--crm-native-ink);
 }
+
+/* CP-FUELTRACK-DASHBOARD-UI-01 — FuelTrack dashboard dark appearance. */
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-pipeline,
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recent{background:var(--crm-native-panel);border-color:var(--crm-native-border);color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-stage{background:var(--crm-native-elevated);border-color:var(--crm-native-border)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-stage-label,
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-stage-percent{color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-stage-count,
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-request-title{color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-pipeline-total{background:var(--crm-native-elevated);border-color:var(--crm-native-border);color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-status-track-base{fill:var(--crm-native-border)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recent .ft3-panel-head,
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recent .ft3-recent-table th{background:var(--crm-native-elevated);color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recent .ft3-recent-table td{background:var(--crm-native-panel);border-color:var(--crm-native-border);color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recent .ft3-recent-table tbody tr:hover td{background:var(--crm-native-elevated)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recent .ft3-empty strong{color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recent .ft3-empty p{color:var(--crm-native-muted)}
 
 /* frontend/dark-enterprise-monday.css */
 /* CP-CRM-DARK-03: compact enterprise dark mode, based on supplied visual reference.
