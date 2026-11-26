@@ -47,12 +47,32 @@ test('ordinary TradeLink users render the shared All Documents collection withou
  assert.match(html,/Original Creator One/);
  assert.match(html,/Original Creator Two/);
  assert.match(html,/View document/);
+ assert.match(html,/tl-ref-row-action-trigger/);
+ assert.match(html,/popovertarget="tl-doc-menu-/);
+ assert.doesNotMatch(html,/tl-reviewer-row-actions/);
  assert.doesNotMatch(html,/Delete Selected/);
  assert.doesNotMatch(html,/Hide Selected/);
  assert.doesNotMatch(html,/Unhide Selected/);
  assert.doesNotMatch(html,/My Assigned Documents/);
  assert.doesNotMatch(html,/Only documents assigned to the signed account/);
  assert.doesNotMatch(html,/Print PDF/);
+});
+
+test('ordinary assigned reviewers use the compact action menu while retaining document and validation actions',()=>{
+ const assigned={...row(firstId,'Q-REVIEW-001','Original Creator One'),
+  assignedStage:'secondary',primaryAt:null,secondaryAt:null,workflowState:'for-approval'};
+ const view={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',
+  rows:[assigned],sharedVisibility:true,assignedOnly:false};
+ const html=renderTradeLinkDocumentRepository({
+  detail:{board,groups:[],columns:[],items:[]},
+  workspaceId:workspace,view,canManage:false,canReview:true,canCreate:false,
+  actorEmail:'reviewer@example.test'
+ });
+ assert.match(html,/tl-ref-row-action-trigger/);
+ assert.match(html,/data-action="tradelink-review-document-open"/);
+ assert.match(html,/data-action="tradelink-document-review-stage"/);
+ assert.match(html,/Use Time Now/);
+ assert.doesNotMatch(html,/tl-reviewer-row-actions/);
 });
 
 test('ordinary TradeLink users without reviewer or creator roles can still view the shared All Documents collection',()=>{
