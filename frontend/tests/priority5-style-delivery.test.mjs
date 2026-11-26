@@ -37,7 +37,7 @@ test('Priority 5 preserves restrictive CSP, existing source modules and Pages so
  const verify=readFileSync('scripts/verify-pages-source.mjs','utf8');
  assert.ok(smoke.includes(STYLE_BUNDLE));
  assert.match(index,/style-src-attr 'none'/);
- assert.match(index,/<script type="module" src="\.\/frontend\/app\.js"><\/script>/);
+ assert.match(index,/<script type="module" src="\.\/frontend\/app\.js(?:\?v=[^"]+)?"><\/script>/);
  assert.match(verify,/Public|Pages-first static asset graph|https/);
  assert.doesNotMatch(source,/@import\b|url\(/);
 });
