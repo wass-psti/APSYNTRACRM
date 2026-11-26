@@ -43,7 +43,7 @@ test('invalid, missing, equal, reversed and future timestamps fail closed',()=>{
  assert.throws(()=>build({status:'completed'}),/valid Philippine/);
  assert.throws(()=>build({status:'completed',clockOutTime:'08:00'}),/later/);
  assert.throws(()=>build({status:'completed',clockOutTime:'07:00'}),/later/);
- assert.throws(()=>build({status:'completed',clockOutTime:'17:00'}),/future/);
+ assert.throws(()=>build({date:'2026-11-23',status:'completed',clockOutMode:'actual',clockOutDate:'2026-11-24',clockOutTime:'13:00'}),/future/);
  assert.throws(()=>build({clockOutTime:'11:00'}),/Active attendance/);
 });
 test('only selected roster identities and valid manual evidence accepted',()=>{
