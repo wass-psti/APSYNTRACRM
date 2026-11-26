@@ -110,6 +110,11 @@ export function projectTimeTrackerOtRows(rows=[]){
    otPolicy:r.otPolicy==='duration-v1'?'duration-v1':'legacy-range',
    attendanceRecordId:typeof r.attendanceRecordId==='string'?r.attendanceRecordId:null,
    canReviewDuration:r.otPolicy==='duration-v1'&&r.canReviewDuration===true,
+   attendanceCredit:r.otPolicy==='duration-v1'&&r.status==='Approved'&&
+    Number.isSafeInteger(r.attendanceCredit?.actualMinutes)&&r.attendanceCredit.actualMinutes>=0&&
+    Number.isSafeInteger(r.attendanceCredit?.payableMinutes)&&r.attendanceCredit.payableMinutes>=0&&
+    r.attendanceCredit.payableMinutes<=r.attendanceCredit.actualMinutes&&r.attendanceCredit.payableMinutes<=r.durationMinutes?
+    Object.freeze({actualMinutes:r.attendanceCredit.actualMinutes,payableMinutes:r.attendanceCredit.payableMinutes}):null,
    start:String(r.start||'').slice(0,5),end:String(r.end||'').slice(0,5),
    durationMinutes:Number.isInteger(r.durationMinutes)&&r.durationMinutes>=0&&
     r.durationMinutes<=360?r.durationMinutes:null,
@@ -154,7 +159,7 @@ const row=(r,access,query='',expandedRequestIds=[],otContractActive=false)=>{
   (query&&!r.searchText.includes(query)?' hidden':'')+'>'+
   '<div class="tt-ot-reference-person"><span class="tt-ot-reference-avatar" aria-hidden="true">'+esc(initials)+'</span><strong>'+esc(r.name)+'</strong></div>'+
   '<span class="tt-ot-reference-date">'+esc(fmt(r.date))+'</span>'+
-  '<span class="tt-ot-reference-time">'+(r.otPolicy==='duration-v1'?'Duration-based':esc(formatTimeTrackerWallClock(r.start))+' – '+esc(formatTimeTrackerWallClock(r.end)))+'</span>'+
+  '<span class="tt-ot-reference-time">'+(r.otPolicy==='duration-v1'?(r.attendanceCredit?'Paid OT: '+esc(minutesLabel(r.attendanceCredit.payableMinutes).trim()):'Duration-based'):esc(formatTimeTrackerWallClock(r.start))+' – '+esc(formatTimeTrackerWallClock(r.end)))+'</span>'+
   '<strong class="tt-ot-reference-hours">'+esc(minutesLabel(r.durationMinutes).trim())+'</strong>'+
   '<span class="tt-ot-reference-reason">'+esc(r.task||'Not supplied')+(r.isManual?' <em class="tt-ot-manual-badge">Manual Entry</em>':'')+'</span>'+
   '<span class="tt-ot-pill tt-ot-'+r.status.toLowerCase()+'">'+esc(r.status==='Submitted'?'Pending':r.status)+'</span>'+
@@ -164,7 +169,9 @@ const row=(r,access,query='',expandedRequestIds=[],otContractActive=false)=>{
   '<details class="tt-ot-reference-details"'+(expandedRequestIds.includes(r.id)?' open':'')+'><summary>View</summary>'+
   '<div class="tt-ot-detail">'+(r.otPolicy==='duration-v1'?
   '<span><b>Requested duration:</b> '+esc(minutesLabel(r.durationMinutes).trim())+'</span>'+
-  '<span><b>Attendance:</b> '+(r.attendanceRecordId?'Matched':'Awaiting matching record')+'</span>':
+  '<span><b>Attendance:</b> '+(r.attendanceRecordId?'Matched':'Awaiting matching record')+'</span>'+
+  '<span><b>Actual OT:</b> '+esc(r.attendanceCredit?minutesLabel(r.attendanceCredit.actualMinutes).trim():'Not finalized')+'</span>'+
+  '<span><b>Payable OT:</b> '+esc(r.attendanceCredit?minutesLabel(r.attendanceCredit.payableMinutes).trim():'Not finalized')+'</span>':
   '<span><b>Start:</b> '+esc(formatTimeTrackerWallClock(r.start))+'</span>'+
   '<span><b>End:</b> '+esc(formatTimeTrackerWallClock(r.end))+'</span>')+
   '<p><b>Reason:</b> '+esc(r.task||'Not supplied')+'</p>'+
