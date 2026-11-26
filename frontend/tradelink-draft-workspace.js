@@ -1860,7 +1860,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
       row.workflowState==='draft'&&!row.archived;
      const clientName=typeof row.clientName==='string'&&row.clientName.trim()?row.clientName:'—';
      const createdByName=typeof row.createdByName==='string'&&row.createdByName.trim()?row.createdByName:'—';
-     const canEditRow=ownerDraft||(canManage&&TL03_DOMAIN_WRITES_ENABLED&&
+     const canEditRow=ownerDraft||((canManage||view.sharedVisibility===true)&&TL03_DOMAIN_WRITES_ENABLED&&
       !row.archived&&['draft','for-approval','revision-required','approved'].includes(row.workflowState));
      return '<tr data-tradelink-domain-record data-document-id="'+escape(row.documentId)+'" data-document-number="'+
       escape(row.documentNumber)+'" data-client-name="'+escape(row.clientName??'')+
@@ -1896,7 +1896,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
         if(canEditRow&&tradeLinkDraftEditHref(row.documentId)){
          actions.push('<a class="secondary" data-tradelink-document-edit href="'+
           escape(tradeLinkDraftEditHref(row.documentId))+'">'+
-          (canManage?'Preview/Edit':'Edit Draft')+'</a>');
+          'Preview/Edit'+'</a>');
         }else{
          actions.push('<button type="button" class="secondary" data-action="tradelink-document-open" '+
           'data-id="'+escape(row.documentId)+'"'+(view.busy?' disabled':'')+
@@ -2189,7 +2189,7 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
   return '<section role="alert" class="tl-draft-panel">Signed TradeLink workspace unavailable.</section>';
  const rows=TL03_DOMAIN_READS_ENABLED&&(canManage||canCreate)&&view.status==='AUTHORIZED_READ'&&Array.isArray(view.rows)?view.rows:[];
  const ownerSelected=canCreate&&validUuid(actorId)&&view.canEditOwnDraft===true&&view.selected?.record?.created_by===actorId;
- const selected=TL03_DOMAIN_READS_ENABLED&&(canManage||ownerSelected)&&view.mode==='edit'&&view.selected?.documentId?
+ const selected=TL03_DOMAIN_READS_ENABLED&&(canManage||ownerSelected||view.canEditExisting===true)&&view.mode==='edit'&&view.selected?.documentId?
    view.selected:null;
  const pendingEdit=view.editRequestId&&!selected;
  return '<div class="tl-draft-workspace">'+
@@ -2201,6 +2201,6 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
    renderEditor(selected?.record,view.mode,canManage,
    view.mode==='edit'&&!selected?null:view.formValues,view.draftNotice||'',
    view.error||'',view.message||'',view.lineDrafts,actorName,actorEmail,view.reviewStages||null,showModuleTabs,
-   canCreate,view.canEditOwnDraft===true,actorModuleRole,moduleNavigation,actorId))+
+   canCreate,view.canEditExisting===true||view.canEditOwnDraft===true,actorModuleRole,moduleNavigation,actorId))+
   '</div>';
 }

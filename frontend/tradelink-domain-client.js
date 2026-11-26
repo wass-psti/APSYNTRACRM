@@ -810,9 +810,9 @@ export class TradeLinkDomainClient{
    deny('Invalid TradeLink revision, operation or payload.',400);
   if(['create','update','revise-approved'].includes(operation))validateTradeLinkDraftEnvelope(draft,
    {allowUnassignedNumber:operation==='create'&&this.automaticNumberingEnabled});
-  const session=await this.session({allowCreateUser:true});
-  if(!session.canManage&&!['create','update'].includes(operation))
-   deny('TradeLink User capability supports document creation and own Draft updates only.',403);
+  const session=['update','revise-approved'].includes(operation)?await this.documentReadSession():await this.session({allowCreateUser:true});
+  if(!session.canManage&&!['create','update','revise-approved'].includes(operation))
+   deny('TradeLink manager capability is required for archive and restore.',403);
   const receipt=operation==='create'&&this.automaticNumberingEnabled?
    await this.api.rpc('tl03_document_create',{
     p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
