@@ -93,3 +93,13 @@ test('early clock-out pays only actual eligible overtime, capped by approval',()
  assert.equal(computeDurationOvertimeCredit(720,0).excessUnapprovedMinutes,180);
  assert.throws(()=>computeDurationOvertimeCredit(-1,180),TypeError);
 });
+
+test('OT crossing an additional unpaid lunch preserves the full credited duration',()=>{
+ // 2 AM Philippine clock-in, 11 AM regular cutoff, 3h OT -> 3 PM.
+ const start='2026-11-25T18:00:00Z',cutoff='2026-11-26T03:00:00Z';
+ const result=resolve({clockInAt:start,regularCutoffAt:cutoff,
+  records:[{...record,clockInAt:start}],
+  requests:[{...request,approvedAt:'2026-11-25T17:00:00Z'}]});
+ assert.equal(result.targetMinutes,720);
+ assert.equal(result.cutoffAt,'2026-11-26T07:00:00.000Z');
+});
