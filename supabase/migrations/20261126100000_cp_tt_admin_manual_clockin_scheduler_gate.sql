@@ -65,13 +65,26 @@ GRANT EXECUTE ON FUNCTION public.timetracker_attendance_admin_create_capability(
 -- The independent reconciler still enrolls the committed session on its
 -- normal 30-second sweep; no scheduler table is written from this transaction.
 DO $patch$
-DECLARE d text; old text; replacement text;
+DECLARE
+ d text;
+ guard_pattern text;
+ patch_pattern text;
+ replacement text;
+ guard_matches integer;
+ patch_matches integer;
+ lock_matches integer;
+ patched text;
 BEGIN
  d:=pg_catalog.pg_get_functiondef(
   'public.timetracker_attendance_admin_create(uuid,uuid,timestamptz,text,text,text,bigint)'::pg_catalog.regprocedure);
- old:=$old$ IF NOT private.tt_admin_manual_clockin_ready()
- THEN RAISE EXCEPTION 'Manual clock-in unavailable until scheduler compatibility is verified' USING ERRCODE='55000'; END IF;$old$;
- replacement:=$new$ IF NOT pg_catalog.pg_try_advisory_xact_lock_shared(
+
+ -- Match the readiness condition independently from its body so an altered
+ -- message/SQLSTATE or a duplicate guard fails closed instead of being skipped.
+ -- POSIX whitespace classes tolerate pg_get_functiondef formatting differences
+ -- (single-line, multiline, tabs and CRLF) without normalizing SQL string literals.
+ guard_pattern:=$guard$IF[[:space:]]+NOT[[:space:]]+private[.]tt_admin_manual_clockin_ready[(][)][[:space:]]+THEN$guard$;
+ patch_pattern:=$pattern$IF[[:space:]]+NOT[[:space:]]+private[.]tt_admin_manual_clockin_ready[(][)][[:space:]]+THEN[[:space:]]+RAISE[[:space:]]+EXCEPTION[[:space:]]+'Manual clock-in unavailable until scheduler compatibility is verified'[[:space:]]+USING[[:space:]]+ERRCODE[[:space:]]*=[[:space:]]*'55000'[[:space:]]*;[[:space:]]+END[[:space:]]+IF[[:space:]]*;$pattern$;
+ replacement:=$new$IF NOT pg_catalog.pg_try_advisory_xact_lock_shared(
   pg_catalog.hashtextextended('tt-auto-clockout-control',0)) THEN
   RAISE EXCEPTION 'Automatic clock-out scheduler is changing; retry manual clock-in'
    USING ERRCODE='55P03';
@@ -80,11 +93,28 @@ BEGIN
   RAISE EXCEPTION 'Manual clock-in requires active regular nine-hour auto-clock-out'
    USING ERRCODE='55000';
  END IF;$new$;
- IF pg_catalog.cardinality(pg_catalog.string_to_array(d,old))<>2 THEN
+
+ SELECT count(*) INTO guard_matches
+ FROM pg_catalog.regexp_matches(d,guard_pattern,'g');
+ SELECT count(*) INTO patch_matches
+ FROM pg_catalog.regexp_matches(d,patch_pattern,'g');
+ IF guard_matches<>1 OR patch_matches<>1 THEN
   RAISE EXCEPTION 'Manual clock-in create-function baseline differs; refusing an unsafe patch'
    USING ERRCODE='55000';
  END IF;
- EXECUTE pg_catalog.replace(d,old,replacement);
+
+ patched:=pg_catalog.regexp_replace(d,patch_pattern,replacement,'g');
+ SELECT count(*) INTO lock_matches
+ FROM pg_catalog.regexp_matches(
+  patched,
+  $lock$pg_catalog[.]pg_try_advisory_xact_lock_shared[[:space:]]*[(]$lock$,
+  'g');
+ IF lock_matches<>1 OR patched=d THEN
+  RAISE EXCEPTION 'Manual clock-in scheduler lock replacement did not produce one exact result'
+   USING ERRCODE='55000';
+ END IF;
+
+ EXECUTE patched;
 END;
 $patch$;
 
