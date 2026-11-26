@@ -37,6 +37,7 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/frt-voucher.css",
  "frontend/fund-tracker-application.css",
  "frontend/fueltrack-v3-application.css",
+ "frontend/fueltrack-v3-approvals-redesign.css",
  "frontend/fueltrack-v3-analytics.css",
  "frontend/tradelink-application.css",
  "frontend/order-intake-application.css",
