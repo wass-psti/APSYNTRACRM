@@ -356,7 +356,7 @@ BEGIN
   ''durationOtHrApprover'',v_hr,'),
  ('OR (wm.user_id IS NOT NULL AND (v_bootstrap OR r.owner_id=v_user))',
   'OR (wm.user_id IS NOT NULL AND (v_bootstrap OR r.owner_id=v_user OR
-    (v_hr AND r.ot_policy=''duration-v1'' AND r.status=''Submitted'')))')
+    (v_hr AND r.ot_policy=''duration-v1'')))')
  LOOP
   IF pg_catalog.cardinality(pg_catalog.string_to_array(d,old))<>2 THEN
    RAISE EXCEPTION 'OT snapshot baseline drift: %',old; END IF;
