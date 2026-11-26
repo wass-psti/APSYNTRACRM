@@ -50,7 +50,7 @@ test('All Requests renders a redesigned signed ledger and every verified status 
  assert.match(html,/data-status="refueling_done"/);
  assert.match(html,/data-status="rejected"/);
  assert.match(html,/aria-pressed="true"/);
- assert.match(html,/2 matching records/);
+ assert.match(html,/2 matching · 2 shown/);
  assert.match(html,/Request Log/);
  assert.match(html,/aria-label="Search verified fuel requests"/);
 });
