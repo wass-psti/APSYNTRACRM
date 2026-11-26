@@ -87,7 +87,7 @@ import {renderFuelTrackRequests,fuelTrackRequestsModel,fuelTrackRequestsSummary,
 import {FUELTRACK_ACTIVITY_FILTER_DEFAULTS,fuelTrackActivityModel,fuelTrackActivityCsv} from './fueltrack-v3-activity.js';
 import {FuelTrackV3DomainClient,verifyFuelTrackSubmission} from './fueltrack-v3-native.js';
 import {runFuelTrackSignedPreflight} from './fueltrack-v3-signed-preflight.js';
-import {fuelTrackNewRequestPayload} from './fueltrack-v3-new-request.js';
+import {fuelTrackNewRequestPayload} from './fueltrack-v3-new-request.js?v=cp-ft-new-request-redesign-01-20261126';
 import {FuelTrackV3ReceiptStorageClient,validFuelTrackReceiptFile} from './fueltrack-v3-receipt-storage.js';
 import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns,
  isTradeLinkBoard} from './tradelink-board-items.js';
