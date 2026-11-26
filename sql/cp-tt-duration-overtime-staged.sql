@@ -245,5 +245,56 @@ BEGIN
 END;
 $worker$;
 REVOKE ALL ON FUNCTION private.tt_process_auto_clockouts() FROM PUBLIC,anon,authenticated,service_role;
+-- Extend the existing signed snapshot without widening legacy OT visibility.
+-- A verified HR actor may review duration requests only in the same workspace.
+DO $snapshot$
+DECLARE d text; old text; replacement text;
+BEGIN
+ d:=pg_catalog.pg_get_functiondef('public.timetracker_ot_snapshot(uuid)'::regprocedure);
+ FOR old,replacement IN VALUES
+ ('v_manual_admin boolean;', 'v_manual_admin boolean; v_hr boolean;'),
+ ($old$v_manual_admin:=public.module_role_for('time-tracker',v_user)='System Admin';$old$,
+  $new$v_manual_admin:=public.module_role_for('time-tracker',v_user)='System Admin';
+ v_hr:=COALESCE(private.tt_role_in_workspace(v_user,v_ws)='HR',false);$new$),
+ ($old
+COMMIT;
+durationMinutes',r.duration_minutes,$old$,
+  $new
+COMMIT;
+durationMinutes',r.duration_minutes,'otPolicy',r.ot_policy,
+  'attendanceRecordId',r.attendance_record_id,
+  'attendanceClockInAt',r.attendance_clock_in_at,
+  'canReviewDuration',(v_hr AND r.ot_policy='duration-v1' AND r.status='Submitted'
+    AND r.owner_id<>v_user AND wm.user_id IS NOT NULL),$new$),
+ ($old$v_bootstrap OR r.submission_source='manual_admin'$old$,
+  $new$v_bootstrap OR r.submission_source='manual_admin'
+  OR (v_hr AND r.ot_policy='duration-v1' AND wm.user_id IS NOT NULL)$new$),
+ ($old
+COMMIT;
+scope',CASE WHEN v_bootstrap THEN 'AUTHORIZED_WORKSPACE_TEAM'$old$,
+  $new
+COMMIT;
+scope',CASE WHEN v_bootstrap OR v_hr THEN 'AUTHORIZED_WORKSPACE_TEAM'$new$),
+ ($old
+COMMIT;
+bootstrapApprover',v_bootstrap,$old$,
+  $new
+COMMIT;
+bootstrapApprover',v_bootstrap,'durationOtContract','tt-duration-ot-1',
+  'durationOtHrApprover',v_hr,$new$)
+ LOOP
+  IF pg_catalog.cardinality(pg_catalog.string_to_array(d,old))<>2 THEN
+   RAISE EXCEPTION 'OT snapshot baseline drift: %',old; END IF;
+  d:=pg_catalog.replace(d,old,replacement);
+ END LOOP;
+ EXECUTE d;
+END;
+$snapshot$;
+
+-- Disallow the retired employee time-range submission after activation of this
+-- staged migration. Historical manual entries retain their separate RPC.
+REVOKE EXECUTE ON FUNCTION public.timetracker_ot_submit(uuid,date,time,time,text)
+ FROM PUBLIC,anon,authenticated,service_role;
+
 NOTIFY pgrst,'reload schema';
 COMMIT;
