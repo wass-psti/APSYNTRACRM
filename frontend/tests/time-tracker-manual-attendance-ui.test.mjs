@@ -12,14 +12,42 @@ const render=(draft={},extras={})=>renderManualAttendanceEditor({
 test('manual form defaults to an active same-day regular employee session',()=>{
  const html=render();
  assert.match(html,/Add Attendance Log/);
+ assert.match(html,/data-tt-manual-attendance/);
+ assert.match(html,/tt-manual-add-icon/);
+ assert.match(html,/<span>Employee<\/span>/);
+ assert.match(html,/name="clockInTime" type="time"/);
+ assert.match(html,/Session status/);
+ assert.match(html,/Work location/);
+ assert.match(html,/name="reason" maxlength="500" rows="2" required/);
+ assert.match(html,/Times are in Philippine Time\. Ongoing sessions can only be added for today\./);
+ assert.match(html,/The employee can clock out from their own Clock screen\./);
+ assert.match(html,/data-tt-manual-work-note hidden/);
  assert.match(html,/name="date" type="date" value="2026-11-24" required max="2026-11-24"/);
  assert.match(html,/value="active" selected/);
  assert.match(html,/data-tt-manual-clockout-mode hidden/);
  assert.match(html,/data-tt-manual-out hidden/);
  assert.match(html,/Employee &lt;A&gt;/);
  assert.doesNotMatch(html,/Intern B/);
- assert.match(html,/type="submit">Save Attendance Log/);
- assert.match(html,/existing nine-credited-hour auto clock-out applies/);
+ assert.match(html,/type="submit" class="primary">Save Attendance Log/);
+ assert.match(html,/value="active" selected/);
+});
+
+
+test('Offsite Home reveals a required work note while the regular office default keeps it out of the way',()=>{
+ const html=render({location:'Offsite (Home)',workNote:'Working from home, coordinating with the client.'});
+ assert.match(html,/data-tt-manual-work-note[^>]*><span>Work note <span class="tt-manual-required"[^>]*>Required/);
+ assert.match(html,/textarea name="workNote" maxlength="500" required/);
+ assert.match(html,/Offsite – Home/);
+ assert.doesNotMatch(html,/data-tt-manual-work-note hidden/);
+});
+test('manual attendance presentation styles are scoped and retain dark theme support',()=>{
+ const light=readFileSync(new URL('../time-tracker-log-admin.css',import.meta.url),'utf8');
+ const dark=readFileSync(new URL('../dark-attendance-admin.css',import.meta.url),'utf8');
+ assert.match(light,/\.tt-admin-editor\[data-tt-manual-attendance\]/);
+ assert.match(light,/tt-manual-required/);
+ assert.match(light,/backdrop-filter:blur\(4px\)/);
+ assert.match(dark,/\.tt-admin-editor\[data-tt-manual-attendance\]/);
+ assert.match(dark,/--tt-manual-bg:#252631/);
 });
 
 test('past dates become completed historical records with standard calculation by default',()=>{
@@ -30,6 +58,7 @@ test('past dates become completed historical records with standard calculation b
  assert.match(html,/Standard · 9 credited hours/);
  assert.match(html,/data-tt-manual-out hidden/);
  assert.match(html,/Historical records never enter today/);
+ assert.match(html,/data-tt-manual-history/);
  assert.match(html,/Historical corrections create completed HR records/);
 });
 
@@ -54,7 +83,7 @@ test('signed roster preview includes only active regular employees and excludes 
 test('unverified or uncertain service cannot submit',()=>{
  assert.throws(()=>validateManualAttendanceForm(null,{signedCreateReady:false},now),/unavailable/);
  assert.throws(()=>validateManualAttendanceForm(null,{signedCreateReady:true,uncertain:true},now),/unavailable/);
- assert.match(render({},{uncertain:true}),/type="submit" disabled/);
+ assert.match(render({},{uncertain:true}),/type="submit" class="primary" disabled/);
 });
 
 test('application routes current-day and historical writes through separate signed RPC methods',()=>{
@@ -74,17 +103,17 @@ test('application routes current-day and historical writes through separate sign
 test('same-day manual clock-in remains disabled when regular scheduler is suspended',()=>{
  const html=render({},{capability:{activeReady:false,historicalReady:true,schedulerMode:'suspended'}});
  assert.match(html,/Today’s active manual clock-in is disabled/);
- assert.match(html,/type="submit" disabled/);
+ assert.match(html,/type="submit" class="primary" disabled/);
 });
 
 test('historical correction remains available while the regular scheduler is suspended',()=>{
  const html=render({date:'2026-11-23',status:'completed'},{capability:{activeReady:false,historicalReady:true,schedulerMode:'suspended'}});
  assert.doesNotMatch(html,/Historical attendance service is not verified/);
- assert.match(html,/type="submit">Save Attendance Log/);
+ assert.match(html,/type="submit" class="primary">Save Attendance Log/);
 });
 
 test('historical correction is unavailable if the signed historical capability is absent',()=>{
  const html=render({date:'2026-11-23',status:'completed'},{capability:{activeReady:true,historicalReady:false,schedulerMode:'active'}});
  assert.match(html,/Historical attendance service is not verified/);
- assert.match(html,/type="submit" disabled/);
+ assert.match(html,/type="submit" class="primary" disabled/);
 });

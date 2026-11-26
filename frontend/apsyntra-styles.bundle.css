@@ -13117,6 +13117,161 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-ed
  #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-edit-record][data-mode="single"] .tt-admin-editor-footnote{max-width:none}
 }
 
+/* Add Attendance Log — supplied reference layout. Scoped away from Edit record and manual clock-out. */
+#app .aps-board-shell .tt-native .tt-admin-editor-backdrop:has(> .tt-admin-editor[data-tt-manual-attendance]){
+ background:#302a4b88;backdrop-filter:blur(4px);
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance]{
+ --tt-manual-bg:#fff;--tt-manual-footer:#f7f7fb;--tt-manual-ink:#1c2035;
+ --tt-manual-muted:#626878;--tt-manual-line:#dfe2eb;--tt-manual-control:#cbd1df;
+ --tt-manual-accent:#5036c8;--tt-manual-tint:#eee9fb;
+ width:min(768px,100%);max-height:calc(100dvh - 32px);overflow:hidden;
+ border:1px solid var(--tt-manual-line);border-radius:18px;
+ background:var(--tt-manual-bg);color:var(--tt-manual-ink);
+ box-shadow:0 24px 64px #19152b48;font:400 14px/1.45 Inter,system-ui,sans-serif;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] *{box-sizing:border-box}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-head{
+ flex:none;align-items:flex-start;padding:22px 28px 12px;gap:14px;
+ border:0;background:var(--tt-manual-bg);box-shadow:none;
+}
+#app .aps-board-shell .tt-native .tt-manual-attendance-heading{
+ display:flex;align-items:center;gap:15px;min-width:0;
+}
+#app .aps-board-shell .tt-native .tt-manual-add-icon{
+ display:grid;place-items:center;flex:none;width:46px;height:46px;border-radius:13px;
+ background:var(--tt-manual-tint);color:var(--tt-manual-accent);
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-title-group{
+ min-width:0;gap:3px;padding:0;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-head h3{
+ margin:0;color:var(--tt-manual-ink);font:700 22px/1.2 Inter,system-ui,sans-serif;
+ letter-spacing:-.02em;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-head p{
+ margin:3px 0 0;color:var(--tt-manual-muted);font-size:14px;line-height:1.4;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-close{
+ flex:none;width:38px;height:38px;border:1px solid var(--tt-manual-line);
+ border-radius:10px;background:var(--tt-manual-bg);color:var(--tt-manual-muted);
+ box-shadow:none;font-size:20px;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-close:hover:not(:disabled){
+ background:var(--tt-manual-footer);color:var(--tt-manual-ink);transform:none;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-fields{
+ display:flex;flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-body{
+ display:grid;width:100%;gap:14px;padding:12px 28px 20px;
+ overflow:visible;background:var(--tt-manual-bg);
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-field{
+ display:grid;gap:6px;min-width:0;color:var(--tt-manual-ink);
+ font-size:14px;font-weight:600;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-field :is(input,select,textarea){
+ width:100%;min-width:0;min-height:46px;padding:10px 13px;
+ border:1px solid var(--tt-manual-control);border-radius:10px;
+ background:var(--tt-manual-bg);color:var(--tt-manual-ink);
+ font:400 14px/1.45 Inter,system-ui,sans-serif;box-shadow:none;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-field :is(input,select,textarea):hover:not(:disabled){
+ border-color:var(--tt-manual-muted);background:var(--tt-manual-bg);
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-field :is(input,select,textarea):focus-visible,
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-close:focus-visible,
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions button:focus-visible{
+ outline:2px solid var(--tt-manual-accent);outline-offset:2px;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-field :is(input,textarea)::placeholder{
+ color:var(--tt-manual-muted);opacity:1;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-field textarea{
+ min-height:68px;resize:vertical;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-manual-work-note textarea{
+ min-height:90px;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-manual-form-grid{
+ gap:14px 15px;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-manual-required{
+ display:inline-flex;align-items:center;margin-left:7px;padding:2px 8px;
+ border-radius:999px;background:var(--tt-manual-tint);color:var(--tt-manual-accent);
+ font-size:11px;font-weight:700;vertical-align:middle;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-manual-required[hidden],
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-manual-work-note[hidden],
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-manual-history[hidden]{display:none!important}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-manual-history{
+ display:grid;gap:12px;padding:12px;border:1px solid var(--tt-manual-line);
+ border-radius:11px;background:var(--tt-manual-footer);
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-manual-policy{
+ margin:0;color:var(--tt-manual-muted);font-size:13px;line-height:1.45;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions{
+ flex:none;display:flex;align-items:center;justify-content:space-between;gap:14px;
+ padding:15px 28px;border-top:1px solid var(--tt-manual-line);
+ background:var(--tt-manual-footer);box-shadow:none;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-footnote{
+ max-width:56%;color:var(--tt-manual-muted);font-size:13px;font-weight:400;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions>div{
+ display:flex;justify-content:flex-end;gap:10px;flex:none;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions button{
+ min-height:46px;padding:10px 22px;border:1px solid var(--tt-manual-control);
+ border-radius:10px;background:var(--tt-manual-bg);color:var(--tt-manual-ink);
+ font-size:14px;font-weight:600;box-shadow:none;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions button:hover:not(:disabled){
+ background:var(--tt-manual-footer);transform:none;box-shadow:none;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions button.primary,
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions button.primary:hover:not(:disabled){
+ border-color:var(--tt-manual-accent);background:var(--tt-manual-accent);color:#fff;
+}
+#app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions button:disabled{
+ opacity:.55;cursor:not-allowed;
+}
+@media(max-width:650px){
+ #app .aps-board-shell .tt-native .tt-admin-editor-backdrop:has(> .tt-admin-editor[data-tt-manual-attendance]){
+  align-items:center;padding:8px;
+ }
+ #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance]{
+  width:100%;max-height:calc(100dvh - 16px);border-radius:16px;
+ }
+ #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-head,
+ #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-body{
+  padding-left:16px;padding-right:16px;
+ }
+ #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions{
+  flex-direction:column;align-items:stretch;padding:12px 16px;
+ }
+ #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-footnote{
+  max-width:none;
+ }
+ #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions>div{
+  width:100%;
+ }
+ #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions button{
+  flex:1;min-width:0;
+ }
+}
+@media(max-width:420px){
+ #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-grid-two{
+  grid-template-columns:minmax(0,1fr);
+ }
+ #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-head h3{
+  font-size:19px;
+ }
+ #app .aps-board-shell .tt-native .tt-manual-add-icon{width:40px;height:40px}
+}
+
 /* frontend/time-tracker-reports-command.css */
 /* TimeTracker Reports command view. Decoration only; all report records, SVG
  * charts, filtering and export remain existing signed native DOM operations.
@@ -37594,6 +37749,53 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native :is(
   .tt-log-command,.tt-admin-editor,.tt-admin-delete-dialog,.tt-monitor-command
  ) :is(button,input,select,textarea) {animation:none;transition:none;transform:none}
 }
+}
+
+/* Add Attendance Log uses the same neutral dark surface as the redesigned Edit record dialog. */
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance]{
+ --tt-manual-bg:#252631;--tt-manual-footer:#1d1e28;--tt-manual-ink:#f2f2f7;
+ --tt-manual-muted:#b9bdca;--tt-manual-line:#454754;--tt-manual-control:#646779;
+ --tt-manual-tint:#393052;--tt-manual-accent:#6a53d8;
+ background:var(--tt-manual-bg);color:var(--tt-manual-ink);
+ border-color:var(--tt-manual-line);color-scheme:dark;
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-head,
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-body{
+ background:var(--tt-manual-bg);color:var(--tt-manual-ink);
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions{
+ background:var(--tt-manual-footer);border-color:var(--tt-manual-line);
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] :is(
+ .tt-admin-editor-head h3,.tt-admin-field
+){color:var(--tt-manual-ink)}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] :is(
+ .tt-admin-editor-head p,.tt-admin-editor-footnote,.tt-manual-policy
+){color:var(--tt-manual-muted)}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-field :is(input,select,textarea){
+ background:#20212b;color:var(--tt-manual-ink);border-color:var(--tt-manual-control);
+ caret-color:var(--tt-manual-ink);color-scheme:dark;
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-field :is(input,select,textarea):hover:not(:disabled){
+ background:#292a35;border-color:#898da0;
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-manual-history{
+ background:var(--tt-manual-footer);border-color:var(--tt-manual-line);
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-manual-add-icon,
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-manual-required{
+ background:var(--tt-manual-tint);color:#c6baff;
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-close,
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions button:not(.primary){
+ background:#292a35;color:var(--tt-manual-muted);border-color:var(--tt-manual-line);
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions button.primary,
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions button.primary:hover:not(:disabled){
+ background:#6048d3;border-color:#6048d3;color:#fff;
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] :is(input,select,textarea,button):focus-visible{
+ outline:2px solid #c6baff;outline-offset:2px;
 }
 
 /* frontend/dark-workspace-account-completion.css */
