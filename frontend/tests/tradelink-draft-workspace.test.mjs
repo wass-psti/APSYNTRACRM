@@ -127,7 +127,7 @@ test('client denies all operations when signed auth and board APIs are unavailab
   api:{rpc:async()=>{calls++;throw Error('unexpected API');}}
  });
  await assert.rejects(()=>client.list(),/Signed TradeLink reviewer API unavailable/);
- await assert.rejects(()=>client.read('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),/Signed TradeLink domain API unavailable/);
+ await assert.rejects(()=>client.read('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),/Signed TradeLink reviewer API unavailable/);
  await assert.rejects(()=>client.save({draft:{documentType:'quotation',documentNumber:'Q-001'}}),/Signed TradeLink domain API unavailable/i);
  await assert.rejects(()=>client.changeState({
   documentId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',revision:1,operation:'archive'
@@ -890,7 +890,7 @@ test('read-only listing presents filters but never reveals rows or enables RPC u
   auth:{getVerifiedUser:async()=>{throw Error('auth must not be read');}},
   api:{rpc:async()=>{throw Error('RPC must not be called');}}
  });
- await assert.rejects(()=>client.list(),/Signed TradeLink domain API unavailable/);
+ await assert.rejects(()=>client.list(),/Signed TradeLink reviewer API unavailable/);
 });
 
 test('source-bound local document search filters only previously authorized page entries',()=>{
