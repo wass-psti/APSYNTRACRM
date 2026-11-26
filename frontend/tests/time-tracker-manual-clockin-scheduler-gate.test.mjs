@@ -67,7 +67,7 @@ test('existing signed create contract remains employee-owned, active, and withou
 test('hybrid historical attendance migration is registered with exact source bytes and SHA-256', () => {
   const hybridFile = '20261126110000_cp_tt_admin_manual_attendance_hybrid.sql';
   const hybridBytes = readFileSync(new URL('supabase/migrations/' + hybridFile, root));
-  const hybridSql = hybridBytes.toString('utf8').replace(/\\r\\n/g, '\\n');
+  const hybridSql = hybridBytes.toString('utf8').replace(/\r\n/g, '\n');
   const entry = manifest.forward_migrations.find((item) => item.file === hybridFile);
   assert.ok(entry);
   assert.equal(entry.version, '20261126110000');
