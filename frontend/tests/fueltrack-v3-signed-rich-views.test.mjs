@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
  renderFuelTrackSignedDashboardRich,renderFuelTrackSignedAnalyticsRich,
- renderFuelTrackSignedRequestsRich,modelFuelTrackSignedRequests
+ renderFuelTrackSignedRequestsRich,modelFuelTrackSignedRequests,fuelTrackAnalyticsCsv
 } from '../fueltrack-v3-signed-views.js';
 import {renderFuelTrackV3Application,FUELTRACK_V3_ID} from '../fueltrack-v3-application.js';
+import {parseFuelTrackApplicationRoute} from '../fueltrack-v3-application-route.js';
 const boardId=FUELTRACK_V3_ID,workspaceId='11111111-1111-4111-8111-111111111111';
 const detail={board:{id:boardId,workspace_id:workspaceId,name:'FuelTrack+ v3',
  status:'active',description:'[APSYNTRA:MODULE:fueltrack:v1] native'},
@@ -80,6 +81,88 @@ test('signed analytics keeps tabs, date filters, metric filters, chart and daily
  assert.match(html,/href="#\/boards\/7af78b3f-67bf-4600-9aa1-9006d19d486e\/fueltrack\/analytics\/efficiency\/all\/both"/);
  assert.doesNotMatch(html,/271 transactions|258 processed/);
 });
+test('CP-FT-ANALYTICS-01 derives weighted cost per liter and daily frequency only from signed aggregates',()=>{
+ const records={...analytics,daily:[
+  {day:'2026-11-11',transactions:2,amount:500,liters:8.5},
+  {day:'2026-11-12',transactions:1,amount:200,liters:5}
+ ]};
+ const html=renderFuelTrackSignedAnalyticsRich(snapshot,records,{now:new Date('2026-11-12T04:00:00Z')});
+ assert.match(html,/Fuel Analytics/);
+ assert.match(html,/₱700\.00/);
+ assert.match(html,/13\.5 L/);
+ assert.match(html,/₱51\.85/);
+ assert.match(html,/Weighted effective cost per liter/);
+ assert.match(html,/not a posted station price/);
+ assert.match(html,/class="ft3-analytics-series" data-metric="amount"/);
+ assert.match(html,/class="ft3-analytics-series" data-metric="liters"/);
+ const frequency=renderFuelTrackSignedAnalyticsRich(snapshot,records,{view:'frequency',now:new Date('2026-11-12T04:00:00Z')});
+ assert.match(frequency,/Daily completed refueling count/);
+ assert.match(frequency,/class="ft3-analytics-series" data-metric="transactions"/);
+ assert.match(frequency,/3<\/td>/);
+});
+test('analytics reporting windows use the exact requested rolling day count',()=>{
+ const records={...analytics,days:365,daily:[
+  {day:'2026-11-01',transactions:1,amount:100,liters:2},
+  {day:'2026-11-06',transactions:1,amount:200,liters:4},
+  {day:'2026-11-12',transactions:1,amount:300,liters:6},
+  {day:'2026-11-13',transactions:2,amount:900,liters:10}
+ ]};
+ const now=new Date('2026-11-12T04:00:00Z');
+ const week=renderFuelTrackSignedAnalyticsRich(snapshot,records,{range:'week',now});
+ assert.match(week,/Last 7 days/);
+ assert.match(week,/₱500\.00/);
+ assert.doesNotMatch(week,/₱100\.00/);
+ const month=renderFuelTrackSignedAnalyticsRich(snapshot,records,{range:'month',now});
+ assert.match(month,/Last 30 days/);
+ assert.match(month,/₱600\.00/);
+ assert.match(month,/Showing last 30 days/);
+ assert.doesNotMatch(month,/₱900\.00/);
+});
+test('FuelTrack analytics explains unsupported dimensions without inventing fleet metrics',()=>{
+ const records={...analytics,daily:[{day:'2026-11-11',transactions:1,amount:500,liters:8.5}]};
+ const efficiency=renderFuelTrackSignedAnalyticsRich(snapshot,records,{view:'efficiency'});
+ const requestors=renderFuelTrackSignedAnalyticsRich(snapshot,records,{view:'requestors'});
+ const odometer=renderFuelTrackSignedAnalyticsRich(snapshot,records,{view:'odometer'});
+ assert.match(efficiency,/distance travelled, vehicle mileage, or efficiency targets/);
+ assert.match(requestors,/does not expose requestor-level totals/);
+ assert.match(odometer,/Verified odometer readings/);
+ for(const html of [efficiency,requestors,odometer]){
+  assert.match(html,/Additional signed data required/);
+  assert.doesNotMatch(html,/42\.5 km\/L|Plate No\.|Jane Doe|12,500 km/);
+ }
+});
+test('CP-FT-ANALYTICS-01 provides responsive and dark-theme analytics styling',()=>{
+ const css=readFileSync(new URL('../../frontend/fueltrack-v3-analytics.css',import.meta.url),'utf8');
+ for(const token of ['ft3-analytics-hero','ft3-analytics-toolbar','ft3-analytics-kpi','ft3-analytics-trend-grid','ft3-analytics-table','@media(max-width:800px)','@media(max-width:540px)','var(--crm-native-panel)','data-aps-monday-theme="dark"'])assert.ok(css.includes(token),token);
+});
+
+test('CP-FT-ANALYTICS-01 exports only verified daily aggregates and rejects duplicate dates',()=>{
+ const records={...analytics,daily:[
+  {day:'2026-11-11',transactions:2,amount:500,liters:8.5},
+  {day:'2026-11-12',transactions:1,amount:200,liters:5}
+ ]};
+ const csv=fuelTrackAnalyticsCsv(records);
+ assert.ok(csv.startsWith('\uFEFF'));
+ assert.match(csv,/Completion date/);
+ assert.match(csv,/2026-11-11/);
+ assert.match(csv,/51\.85/);
+ assert.match(csv,/40\.00/);
+ assert.equal(fuelTrackAnalyticsCsv({...records,status:'UNVERIFIED'}),null);
+ assert.equal(fuelTrackAnalyticsCsv({...records,daily:[...records.daily,records.daily[0]]}),null);
+ assert.equal(fuelTrackAnalyticsCsv({...records,daily:[{...records.daily[0],day:'2026-02-30'}]}),null);
+});
+test('analytics route links preserve the selected view, reporting window and chart metric',()=>{
+ const route=parseFuelTrackApplicationRoute(['fueltrack','analytics','fuel-price','week','spend']);
+ assert.equal(route.section,'analytics');
+ assert.equal(route.analyticsView,'fuel-price');
+ assert.equal(route.analyticsRange,'week');
+ assert.equal(route.analyticsMetric,'spend');
+ assert.equal(route.canonicalHash,'#/fueltrack/analytics/fuel-price/week/spend');
+ const fallback=parseFuelTrackApplicationRoute(['fueltrack','analytics','unknown','bad','bad']);
+ assert.equal(fallback.analyticsView,'fuel-price');
+ assert.equal(fallback.analyticsRange,'all');
+ assert.equal(fallback.analyticsMetric,'both');
+});
 test('signed analytics tolerates absent or malformed optional period metadata without crashing',()=>{
  for(const days of [undefined,null,'invalid',0,-1,999999]){
   const html=renderFuelTrackSignedAnalyticsRich(snapshot,{...analytics,days});
@@ -121,5 +204,7 @@ test('three signed application routes all use the richer renderers instead of mi
  }
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(source,/case 'ft3-signed-request-status':/);
+ assert.match(source,/case 'ft3-analytics-export':/);
+ assert.match(source,/fuelTrackAnalyticsCsv/);
  assert.match(source,/id==='ft3-signed-request-search'/);
 });
