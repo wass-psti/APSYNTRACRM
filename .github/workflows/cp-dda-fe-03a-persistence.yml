@@ -5,11 +5,17 @@ on:
     paths:
       - 'supabase/migration-candidates/dda-activity-persistence.sql'
       - 'scripts/sql/dda-activity-persistence-test.sql'
+      - 'supabase/migration-candidates/dda-activity-rpc.sql'
+      - 'scripts/sql/dda-activity-rpc-test.sql'
+      - 'scripts/dda-activity-concurrency.sh'
       - '.github/workflows/cp-dda-fe-03a-persistence.yml'
   pull_request:
     paths:
       - 'supabase/migration-candidates/dda-activity-persistence.sql'
       - 'scripts/sql/dda-activity-persistence-test.sql'
+      - 'supabase/migration-candidates/dda-activity-rpc.sql'
+      - 'scripts/sql/dda-activity-rpc-test.sql'
+      - 'scripts/dda-activity-concurrency.sh'
       - '.github/workflows/cp-dda-fe-03a-persistence.yml'
 permissions:
   contents: read
@@ -36,3 +42,14 @@ jobs:
         env:
           PGPASSWORD: fixture-only
         run: psql -h localhost -U postgres -d dda_fixture -v ON_ERROR_STOP=1 -f scripts/sql/dda-activity-persistence-test.sql
+      - name: Run signed RPC acceptance
+        env:
+          PGPASSWORD: fixture-only
+        run: psql -h localhost -U postgres -d dda_fixture -v ON_ERROR_STOP=1 -f scripts/sql/dda-activity-rpc-test.sql
+      - name: Run independent concurrent connection acceptance
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGDATABASE: dda_fixture
+          PGPASSWORD: fixture-only
+        run: bash scripts/dda-activity-concurrency.sh
