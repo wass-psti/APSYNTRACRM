@@ -7,8 +7,8 @@ const root = new URL('../frontend/apps/DailyDepartmentActivity/',import.meta.url
 const files = new Set(['activity-screen.js','activity-screen.css','activity-model.js','activity-drafts.js','activity-controller.js','activity-repository.js','activity-runtime.js','dda-native-host.js']);
 const server = createServer(async (req,res)=>{
   try {
-    if(req.url==='/'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DDA test fixture</title><link rel="stylesheet" href="/activity-screen.css"><div id="host"></div></html>');return;}
-    const file=req.url.slice(1);
+    if(req.url==='/'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DDA test fixture</title><link rel="stylesheet" href="/activity-screen.css?v=cp-dda-ui-01-20261126"><div id="host"></div></html>');return;}
+    const file=new URL(req.url,'http://127.0.0.1').pathname.slice(1);
     if(!files.has(file)){res.writeHead(404).end();return;}
     res.setHeader('Content-Type',file.endsWith('.css')?'text/css':'text/javascript');
     res.end(await readFile(file==='dda-native-host.js'?new URL('../frontend/dda-native-host.js',import.meta.url):new URL(file,root)));

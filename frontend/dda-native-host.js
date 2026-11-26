@@ -1,5 +1,5 @@
 // Demand-load the DDA screen only after the host enters its native route.
-export function createDdaHostSync({load=()=>import('./apps/DailyDepartmentActivity/activity-runtime.js')}={}){
+export function createDdaHostSync({load=()=>import('./apps/DailyDepartmentActivity/activity-runtime.js?v=cp-dda-ui-01-20261126')}={}){
   let active=null,module=null,pending=null;
   function dispose(){
     const previous=active;
