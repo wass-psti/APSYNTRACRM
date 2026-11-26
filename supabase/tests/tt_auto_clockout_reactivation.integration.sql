@@ -1,5 +1,5 @@
--- DISPOSABLE DATABASE ONLY. Requires the three incident migrations and reactivation
--- migration applied; canonical board and at least one same-day eligible open fixture.
+-- DISPOSABLE DATABASE ONLY. Requires the incident migrations, reactivation migration,
+-- and active-only manual clock-in scheduler gate; canonical board and an eligible open fixture.
 -- Set apsyntra.test_disposable=on in the test connection before running this file.
 -- Roll back both activation and all test mutations; do not point at production.
 BEGIN;
@@ -16,8 +16,8 @@ BEGIN
   RAISE EXCEPTION 'Disposable database assertion required';
  END IF;
  IF private.tt_auto_clockout_mode() IS DISTINCT FROM 'suspended'
-  OR NOT private.tt_admin_manual_clockin_ready() THEN
-  RAISE EXCEPTION 'Suspended baseline or admin capability failed';
+  OR private.tt_admin_manual_clockin_ready() THEN
+  RAISE EXCEPTION 'Suspended scheduler must block admin manual clock-in';
  END IF;
  IF has_function_privilege('authenticated','private.tt_activate_isolated_auto_clockout(date,integer)','EXECUTE')
   OR has_function_privilege('anon','private.tt_suspend_isolated_auto_clockout()','EXECUTE') THEN
@@ -69,8 +69,8 @@ BEGIN
  IF v_before IS DISTINCT FROM v_after THEN RAISE EXCEPTION 'Enrollment changed attendance'; END IF;
 
  v_result:=private.tt_suspend_isolated_auto_clockout();
- IF v_result->>'mode' IS DISTINCT FROM 'suspended' OR NOT private.tt_admin_manual_clockin_ready() THEN
-  RAISE EXCEPTION 'Suspension did not preserve admin readiness';
+ IF v_result->>'mode' IS DISTINCT FROM 'suspended' OR private.tt_admin_manual_clockin_ready() THEN
+  RAISE EXCEPTION 'Suspension did not disable admin manual clock-in';
  END IF;
  IF v_ojt IS DISTINCT FROM (SELECT jsonb_agg(to_jsonb(j) ORDER BY jobid) FROM cron.job j
  WHERE jobname='tt-ojt-auto-clockout-9h') THEN

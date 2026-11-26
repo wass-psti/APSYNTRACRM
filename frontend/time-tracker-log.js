@@ -278,7 +278,8 @@ function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=fals
    '<section class="tt-record-card tt-record-details"><h4>Details</h4><div class="tt-record-fields">'+
     field('Department',row.department||'Unassigned')+field('Location',location)+
     field('Arrival',arrival,arrival==='Late'?'tt-record-tone-amber':arrival==='On time'?'tt-record-tone-green':'')+
-    field('Status',status,status==='Completed'?'tt-record-tone-green':active?'tt-record-tone-accent':'')+'</div>'+
+    field('Status',status,status==='Completed'?'tt-record-tone-green':active?'tt-record-tone-accent':'')+
+    field('Clock-out basis',row.clockOutBasis||'Not recorded')+'</div>'+
     (row.location==='Offsite (Home)'&&row.workNote?'<div class="tt-record-note"><small>Offsite work note</small><p>'+esc(row.workNote)+'</p></div>':'')+'</section>'+
    '<section class="tt-record-card tt-record-evidence"><div class="tt-record-card-head"><h4>Evidence</h4><span class="tt-record-chip tt-record-chip-amber">Not independently verified</span></div>'+
     '<div class="tt-record-evidence-list">'+evidence('GPS',gpsStatus,available?'green':'neutral')+evidence('Timing','Recorded','green')+
@@ -318,6 +319,7 @@ function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=fals
     '<span><small>Employee</small>'+esc(row.name||'Signed member')+'</span>'+
     '<span><small>Clock In</small>'+esc(dateTime(row.clockIn))+'</span>'+
     '<span><small>Clock Out</small>'+esc(dateTime(row.clockOut))+'</span>'+
+    '<span><small>Clock-out Basis</small>'+esc(row.clockOutBasis||'Not recorded')+'</span>'+
     '<span><small>Department</small>'+esc(row.department||'Unassigned')+'</span>'+
     '<span><small>Location</small>'+esc(row.location||'Unspecified')+'</span>'+
     '<span><small>Arrival</small>'+esc(row.classification||'Unknown')+'</span></div>'+
@@ -597,10 +599,10 @@ const logCsvCell=value=>{
 /** CSV contains only sanitized, already-authorized Log projections. */
 export function timeTrackerLogCsv(rows=[]){
  return '\uFEFF'+[
-  ['Employee','Department','Location','Clock In','Clock Out','Status','Arrival','Credited Hours'],
+  ['Employee','Department','Location','Clock In','Clock Out','Clock-out Basis','Status','Arrival','Credited Hours'],
   ...safeRows(rows).map(row=>[
    row.name||'Signed member',row.department||'',row.location||'',formatTimeTrackerDateTime(row.clockIn),
-   row.clockOut?formatTimeTrackerDateTime(row.clockOut):'',row.status||'',row.classification||'',creditedHours(row.creditedMs)
+   row.clockOut?formatTimeTrackerDateTime(row.clockOut):'',row.clockOutBasis||'',row.status||'',row.classification||'',creditedHours(row.creditedMs)
   ])
  ].map(row=>row.map(logCsvCell).join(',')).join('\r\n')+'\r\n';
 }

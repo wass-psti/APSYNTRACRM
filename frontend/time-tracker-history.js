@@ -52,11 +52,22 @@ export function projectTimeTrackerLog({value,directory=[],userId,moduleRole}={})
   const status=outTime?'Completed':invalidOut?'Unknown':'Active';
   const location=TT_LOCATIONS.includes(record.clockIn.location)?
    record.clockIn.location:'Unspecified';
+  const clockOutMethod=outTime?
+   (typeof record.clockOut.manualMethod==='string'?record.clockOut.manualMethod:
+    record.clockOut.automatic===true?'automatic':
+    record.clockOut.reason==='admin_manual_clock_out'?'admin_entered_actual':null):null;
+  const clockOutBasis=clockOutMethod==='standard_nine_credited_hours'?
+   'System-calculated standard (9 credited hours)':
+   clockOutMethod==='admin_entered_actual'?
+    'Admin-entered actual clock-out':
+   clockOutMethod==='automatic'?
+    'Automatic (9 credited hours / approved OT)':
+   outTime?'Employee-recorded clock-out':'Not recorded';
   rows.push(Object.freeze({
    id:record.id,ownerId:record.ownerId,name:members.get(record.ownerId).name,
    clockIn:inTime,clockOut:outTime,
    department:text(record.clockIn.department||'Unassigned',80),
-   location,status,classification,
+   location,status,classification,clockOutMethod,clockOutBasis,
    workNote:typeof record.clockIn.workNote==='string'?record.clockIn.workNote.slice(0,500):'',
    creditedMs:outTime?creditedAttendanceRecordMs(record,inTime,outTime):null,
    workDurationMs:outTime?completedLogWorkDurationMs(inTime,outTime,record.creditedMsOverride):null

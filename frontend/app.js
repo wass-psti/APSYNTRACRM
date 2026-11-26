@@ -5281,15 +5281,34 @@ async function saveTimeTrackerAdminEditor(form){
   const seq=routeSerial,boardId=state.boardId;
   state.ttLogAdminBusy=true;state.ttLogAdminError='';render();
   try{
-   const receipt=await timeTracker.createManualClockIn(boardId,entry,editor.revision);
+   let receipt;
+   if(entry.status==='active'){
+    if(editor.capability?.activeReady!==true)
+     throw Error('Regular employee auto clock-out is not active. Today’s manual clock-in is unavailable.');
+    receipt=await timeTracker.createManualClockIn(boardId,entry,editor.revision);
+   }else{
+    if(editor.capability?.historicalReady!==true)
+     throw Error('Historical attendance creation is unavailable.');
+    editor.requestId=editor.requestId||globalThis.crypto?.randomUUID?.();
+    if(!editor.requestId)throw Error('Secure historical attendance request ID generation is unavailable.');
+    receipt=await timeTracker.createHistoricalAttendance(boardId,entry,editor.revision,editor.requestId);
+   }
    if(seq!==routeSerial||state.boardId!==boardId||!timeTrackerAdminLogReady())return;
    state.ttLogAdminEditor=null;state.ttLogAdminBusy=false;
    await loadTimeTracker(seq);
    if(seq!==routeSerial||state.boardId!==boardId)return;
-   if(state.ttAttendance?.status==='VERIFIED_READ'&&
-      (state.ttAttendance.log?.rows||[]).some(row=>row.id===receipt.recordId))
-    state.ttLogAdminSuccess='Manual clock-in recorded. The employee can refresh their Clock.';
-   else state.ttLogAdminError='Clock-in committed. Refresh the signed Log before another change.';
+   const visible=state.ttAttendance?.status==='VERIFIED_READ'&&
+    (state.ttAttendance.log?.rows||[]).some(row=>row.id===receipt.recordId);
+   if(entry.status==='active')
+    state.ttLogAdminSuccess=visible?
+     'Manual clock-in recorded. The employee can refresh their Clock.':
+     'Clock-in committed. Refresh the signed Log before another change.';
+   else
+    state.ttLogAdminSuccess=visible?
+     (receipt.clockOutMethod==='standard_nine_credited_hours'?
+      'Historical attendance recorded. Clock-out was system-calculated at nine credited hours. The employee’s current Clock is unchanged.':
+      'Historical attendance recorded with the admin-entered actual clock-out. The employee’s current Clock is unchanged.'):
+     'Historical attendance committed. Refresh the signed Log before another change.';
   }catch(err){
    if(seq===routeSerial&&state.boardId===boardId&&state.ttLogAdminEditor===editor){
     editor.uncertain=true;
@@ -11025,9 +11044,11 @@ async function action(name,button){
   const seq=routeSerial,boardId=state.boardId;
   state.ttLogAdminBusy=true;render();
   try{
-   const ready=await timeTracker.manualClockInCapability(boardId);
-   if(seq===routeSerial&&state.ttLogAdminEditor===editor&&timeTrackerAdminLogReady()&&ready){
-    editor.signedCreateReady=true;editor.activeOnly=true;
+   const capability=await timeTracker.manualClockInCapability(boardId);
+   if(seq===routeSerial&&state.ttLogAdminEditor===editor&&timeTrackerAdminLogReady()&&
+      capability?.historicalReady===true){
+    editor.capability=capability;
+    editor.signedCreateReady=true;
     editor.revision=state.ttAttendance.revision;
    }
   }catch(err){
@@ -14805,7 +14826,23 @@ function preserveManualAttendanceDraft(event){
  const form=event.target.closest?.('#tt-attendance-admin-form[data-mode="manual"]');
  if(!form||state.ttLogAdminEditor?.mode!=='manual'||!timeTrackerAdminLogReady()||
     state.ttAttendance.access.moduleRole!=='System Admin')return false;
- state.ttLogAdminEditor.draft=syncManualAttendanceForm(form);return true;
+ const draft=syncManualAttendanceForm(form);
+ state.ttLogAdminEditor.draft=draft;
+ const capability=state.ttLogAdminEditor.capability||{};
+ const canSave=draft.status==='active'?capability.activeReady===true:capability.historicalReady===true;
+ const warning=form.querySelector('[data-tt-manual-readiness-warning]');
+ if(warning){
+  const message=state.ttLogAdminEditor.uncertain?
+   'Save confirmation uncertain. Refresh the Log before retrying.':
+   draft.status==='active'&&!capability.activeReady?
+    'Regular employee auto clock-out is not active. Today’s active manual clock-in is disabled; past-date corrections remain available.':
+   draft.status==='completed'&&!capability.historicalReady?
+    'Historical attendance service is not verified. Saving is disabled.':'';
+  warning.textContent=message;warning.hidden=!message;
+ }
+ const submit=form.querySelector('button[type="submit"]');
+ if(submit)submit.disabled=!canSave||state.ttLogAdminEditor.uncertain||state.ttLogAdminBusy;
+ return true;
 }
 function preserveManualClockOutDraft(event){
  const form=event.target.closest?.('#tt-attendance-admin-form[data-tt-manual-clockout]');

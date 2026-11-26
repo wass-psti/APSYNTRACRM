@@ -20,7 +20,7 @@ test('forward migration has a matching source manifest and deploys suspended', (
   assert.doesNotMatch(sql, /ENABLE TRIGGER|cron\.schedule\(/);
 });
 
-test('admin clock-in accepts only coherent suspended or isolated active state', () => {
+test('reactivation migration classifies only coherent suspended or active scheduler states', () => {
   assert.match(sql, /tt_auto_clockout_mode\(\) IN \('suspended','active'\)/);
   assert.match(sql, /t\.tgenabled='D'/);
   assert.match(sql, /BEGINRETURNNEW;END;/);

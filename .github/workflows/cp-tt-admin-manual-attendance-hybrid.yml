@@ -1,0 +1,186 @@
+name: CP-TT Admin Manual Attendance Hybrid
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/cp-tt-admin-manual-attendance-hybrid.yml'
+      - 'supabase/migrations/20261126100000_cp_tt_admin_manual_clockin_scheduler_gate.sql'
+      - 'supabase/migrations/20261126110000_cp_tt_admin_manual_attendance_hybrid.sql'
+      - 'supabase/migrations/20261125090000_cp_tt_admin_manual_clockin.sql'
+      - 'supabase/migrations/20261125100000_cp_tt_auto_clockout_isolation.sql'
+      - 'supabase/migrations/20261125120000_cp_tt_company_provisioning_workspace_scope.sql'
+      - 'supabase/migrations/20261125130000_cp_tt_auto_clockout_reactivation.sql'
+      - 'supabase/migrations/20261126090000_cp_tt_active_clockin_scheduler_correction.sql'
+      - 'supabase/tests/tt_admin_manual_attendance_hybrid.integration.sql'
+      - 'sql/tests/cp-tt-admin-manual-attendance-hybrid-disposable-setup.sql'
+      - 'frontend/apps/TimeTracker/time-tracker-manual-attendance*.js'
+      - 'frontend/time-tracker-native.js'
+      - 'frontend/time-tracker-history.js'
+      - 'frontend/time-tracker-log.js'
+      - 'frontend/app.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hybrid-postgres-17:
+    name: Hybrid attendance PostgreSQL 17 acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/apsyntra_tt_manual_hybrid_disposable
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Create disposable database
+        run: |
+          set -euo pipefail
+          until pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres; do sleep 1; done
+          createdb apsyntra_tt_manual_hybrid_disposable
+
+      - name: Install TimeTracker base fixtures
+        run: |
+          set -euo pipefail
+          for file in \
+            sql/tests/cp-board-collab01-disposable-setup.sql \
+            sql/tests/cp-tt-gps01-disposable-setup.sql \
+            sql/tests/cp-tt-gps01-live-commit-baseline.sql \
+            sql/cp-tt-gps01-atomic-board-projection.sql \
+            sql/tests/cp-tt-admin-record-management-disposable-setup.sql \
+            supabase/migrations/20261116084228_cp_tt_attendance_admin_record_management_01.sql \
+            sql/cp-tt-ot01-staged-bootstrap-approval.sql \
+            sql/tests/cp-tt-auto-clockout-02-disposable-setup.sql
+          do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
+          done
+
+      - name: Apply existing auto-clockout worker migrations
+        run: |
+          set -euo pipefail
+          for file in \
+            supabase/migrations/20261119200735_cp_tt_auto_clockout_01_conditional_session_expiration.sql \
+            supabase/migrations/20261119203503_cp_tt_auto_clockout_01_snapshot_overtime_cutoff.sql \
+            supabase/migrations/20261119203633_cp_tt_auto_clockout_01_snapshot_overtime_cutoff_fix.sql \
+            supabase/migrations/20261119204157_cp_tt_auto_clockout_01_grace_overtime_boundary.sql
+          do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
+          done
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-tt-auto-clockout-02-disposable-acceptance.sql
+
+      - name: Apply department and workspace-scope prerequisites
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+            -f supabase/migrations/20261120100000_cp_tt_employee_departments_qol.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-tt-admin-manual-attendance-hybrid-disposable-setup.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+            -f supabase/migrations/20261120140000_cp_tt_department_catalog_management.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+            -f supabase/migrations/20261120170000_cp_tt_auto_clockout_02c_atomic_board_projection_restore.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+            -f supabase/migrations/20261120120000_cp_tt_employee_departments_and_time_corrections.sql \
+            -f supabase/migrations/20261120183000_cp_tt_optional_attendance_correction_note.sql
+
+      - name: Apply live clock, manual attendance and isolated scheduler migrations
+        run: |
+          set -euo pipefail
+          for file in \
+            supabase/migrations/20261124050317_cp_tt_deferred_foreground_clockout_01.sql \
+            supabase/migrations/20261124193000_cp_tt_default_server_auto_clockout_9h.sql \
+            supabase/migrations/20261124203000_cp_tt_admin_manual_clockout.sql \
+            supabase/migrations/20261125090000_cp_tt_admin_manual_clockin.sql \
+            supabase/migrations/20261125100000_cp_tt_auto_clockout_isolation.sql \
+            supabase/migrations/20261125120000_cp_tt_company_provisioning_workspace_scope.sql \
+            supabase/migrations/20261125130000_cp_tt_auto_clockout_reactivation.sql \
+            supabase/migrations/20261126090000_cp_tt_active_clockin_scheduler_correction.sql \
+            supabase/migrations/20261126100000_cp_tt_admin_manual_clockin_scheduler_gate.sql \
+            supabase/migrations/20261126110000_cp_tt_admin_manual_attendance_hybrid.sql
+          do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
+          done
+
+      - name: Run hybrid manual attendance acceptance
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+            -f supabase/tests/tt_admin_manual_attendance_hybrid.integration.sql
+
+  combined-manual-ot:
+    name: Manual Attendance + OT (${{ matrix.order }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        order: [manual-first, ot-first]
+    env:
+      # Pinned reviewed OT head; updating #915 requires refreshing this reference.
+      OT_HEAD: '25eb037aa0dc63053fac69d3988bf644e010bf39'
+      MANUAL_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify both merge orders on disposable runner only
+        env:
+          MERGE_ORDER: ${{ matrix.order }}
+        run: |
+          set -euo pipefail
+          git cat-file -e "$OT_HEAD^{commit}"
+          git cat-file -e "$MANUAL_HEAD^{commit}"
+          git config user.name 'TimeTracker CI'
+          git config user.email 'timetracker-ci@example.invalid'
+          if [ "$MERGE_ORDER" = manual-first ]; then
+            git checkout --detach "$MANUAL_HEAD"
+            git merge --no-commit --no-ff "$OT_HEAD"
+          else
+            git checkout --detach "$OT_HEAD"
+            git merge --no-commit --no-ff "$MANUAL_HEAD"
+          fi
+          git diff --check
+          test -z "$(git ls-files -u)"
+          echo "MERGE_ORDER_PASS=$MERGE_ORDER"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Run combined frontend and migration manifest verification
+        run: |
+          npm ci --no-audit --no-fund
+          node --check frontend/app.js
+          node --check frontend/time-tracker-native.js
+          node scripts/verify-migration-source-manifest.mjs
+          node scripts/build-priority5-styles.mjs --check
+          npm test
+      - name: Run combined signed overtime and worker acceptance
+        run: bash scripts/cp-tt-bootstrap-ot02-signed-disposable.sh
