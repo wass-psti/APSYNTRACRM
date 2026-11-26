@@ -47,11 +47,13 @@ BEGIN
  cutoff:=private.tt_duration_ot_cutoff(started,private.tt_auto_clockout_threshold(started),180);
  -- A genuine signed-scope RPC path (session table and JWT claims are disposable fixtures).
  PERFORM set_config('request.jwt.claim.sub',emp::text,true);
+ PERFORM set_config('request.jwt.claim.session_id',emp_session::text,true);
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',emp::text,'session_id',emp_session::text,'role','authenticated')::text,true);
  PERFORM set_config('app.tt_admin_test_role','Employee',true);
  receipt:=public.timetracker_ot_submit_duration(board,today,180,'Pre-filed overtime for joint acceptance');
  req:=(receipt->>'id')::uuid;
  PERFORM set_config('request.jwt.claim.sub',hr::text,true);
+ PERFORM set_config('request.jwt.claim.session_id',hr_session::text,true);
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',hr::text,'session_id',hr_session::text,'role','authenticated')::text,true);
  PERFORM set_config('app.tt_admin_test_role','HR',true);
  receipt:=public.timetracker_ot_decide_duration(board,req,'Approved');
@@ -59,6 +61,7 @@ BEGIN
  THEN RAISE EXCEPTION 'Pre-filing approval did not remain unbound: %',receipt; END IF;
  -- The real #914 active manual creation RPC owns the canonical attendance write.
  PERFORM set_config('request.jwt.claim.sub',admin::text,true);
+ PERFORM set_config('request.jwt.claim.session_id',admin_session::text,true);
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin::text,'session_id',admin_session::text,'role','authenticated')::text,true);
  PERFORM set_config('app.tt_admin_test_role','System Admin',true);
  SELECT revision INTO rev FROM public.module_state_entries

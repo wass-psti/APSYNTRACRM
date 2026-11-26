@@ -12,6 +12,7 @@ on:
       - "supabase/migrations/20261126120000_cp_tt_duration_overtime.sql"
       - "sql/tests/cp-tt-duration-ot-prerequisites.sql"
       - "supabase/tests/tt_duration_overtime_staged.integration.sql"
+      - "supabase/tests/tt_manual_attendance_duration_ot_joint.integration.sql"
       - "scripts/cp-tt-bootstrap-ot02-signed-disposable.*"
       - "scripts/cp-tt-bootstrap-ot03-browser.mjs"
       - "scripts/time-tracker-browser-acceptance.mjs"
@@ -30,6 +31,7 @@ on:
       - "supabase/migrations/20261126120000_cp_tt_duration_overtime.sql"
       - "sql/tests/cp-tt-duration-ot-prerequisites.sql"
       - "supabase/tests/tt_duration_overtime_staged.integration.sql"
+      - "supabase/tests/tt_manual_attendance_duration_ot_joint.integration.sql"
       - "scripts/cp-tt-bootstrap-ot02-signed-disposable.*"
       - "scripts/cp-tt-bootstrap-ot03-browser.mjs"
   # Keep disposable SQL fixtures and the registered duration migration in both trigger path lists.
