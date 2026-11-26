@@ -243,7 +243,7 @@ test('SQL server contract is staged and enforces bootstrap decision gate and aud
  assert.match(approverMigration,/durationOtApprover/);
  assert.match(approverMigration,/canReviewOt/);
  assert.match(approverMigration,/caller_role:=CASE WHEN p_module_id='time-tracker'/);
- assert.match(approverMigration,/\\$old\\
+ assert.ok(approverMigration.includes("$old$'start',to_char"));
  const historyMigration=readFileSync('supabase/migrations/20261123170000_cp_tt_hr_ot_all_user_log_01.sql','utf8');
  assert.match(historyMigration,/LEFT JOIN public\.workspace_members wm/);
  assert.match(historyMigration,/r\.submission_source='manual_admin'/);
