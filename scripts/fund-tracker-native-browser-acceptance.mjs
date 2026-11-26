@@ -71,7 +71,7 @@ try {
   const agingGrid = page.locator(".frt-exec-aging-grid");
   const agingCards = page.locator(".frt-exec-aging-card");
   const columnCount = () => agingGrid.evaluate((element) =>
-    getComputedStyle(element).gridTemplateColumns.split(/\\s+/).length,
+    getComputedStyle(element).gridTemplateColumns.split(/\s+/).length,
   );
   assert.equal(await agingPanel.count(), 1);
   assert.equal(await agingCards.count(), 5);
