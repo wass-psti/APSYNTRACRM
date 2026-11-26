@@ -379,17 +379,43 @@ test('duration OT validates future/current work date and exact minute amount',()
   assert.equal(validateDurationOvertimeDraft({...valid,...change},now).valid,false);
  }
 });
-test('signed duration contract renders only a duration input, with HR review controls',()=>{
+test('signed duration contract renders an hours input, with HR review controls',()=>{
  const durationRow={...rows[0],otPolicy:'duration-v1',canReviewDuration:true};
  const access={moduleRole:'HR',userId:admin,durationOtContractActive:true,durationOtHrApprover:true,otContractActive:true};
  const html=renderTimeTrackerOvertime({requests:[durationRow],access,modalOpen:true,now});
- assert.match(html,/id="tt-ot-duration-minutes"/);
+ assert.match(html,/id="tt-ot-duration-hours"/);
+ assert.match(html,/min="0\.5" max="6" step="0\.5"/);
+ assert.match(html,/value="2"/);
  assert.doesNotMatch(html,/id="tt-ot-(start|end)"/);
  assert.match(html,/data-action="tt-ot-approve"/);
  assert.doesNotMatch(renderTimeTrackerOvertime({requests:[durationRow],
   access:{...access,userId:worker,durationOtHrApprover:false},now}),/data-action="tt-ot-approve"/);
  assert.doesNotMatch(renderTimeTrackerOvertime({requests:[durationRow],
   access:{...access,durationOtHrApprover:false,bootstrapApprover:true},now}),/data-action="tt-ot-approve"/);
+});
+test('duration form converts hour selections to exact payroll minutes',()=>{
+ const control=value=>({value,textContent:'',attributes:{},
+  setAttribute(name,next){this.attributes[name]=next;},
+  removeAttribute(name){delete this.attributes[name];}});
+ const nodes={
+  '#tt-ot-duration-hours':control('3'),
+  '#tt-ot-reason':control('Additional engineering work'),
+  '[data-tt-ot-duration-value]':control(''),
+  '[data-tt-ot-duration-progress]':control(''),
+  '[data-tt-ot-duration-message]':control(''),
+  '[data-tt-ot-reason-count]':control('')
+ };
+ const form={id:'tt-ot-form',querySelector:selector=>nodes[selector]||null};
+ assert.equal(updateTimeTrackerOvertimePreview(form),true);
+ assert.equal(nodes['[data-tt-ot-duration-value]'].textContent,'3 hr 00 min');
+ assert.equal(nodes['[data-tt-ot-duration-progress]'].value,180);
+ assert.equal(nodes['[data-tt-ot-duration-message]'].textContent,
+  '3 hr 00 min remaining within the 6-hour maximum.');
+ nodes['#tt-ot-duration-hours'].value='0.25';
+ updateTimeTrackerOvertimePreview(form);
+ assert.equal(nodes['[data-tt-ot-duration-value]'].textContent,'—');
+ assert.equal(nodes['[data-tt-ot-duration-progress]'].value,0);
+ assert.match(nodes['[data-tt-ot-duration-message]'].textContent,/0\.5 to 6 hours/);
 });
 test('duration OT uses signed employee identity and never transmits start/end',async()=>{
  const today=new Date(Date.now()+8*3600000).toISOString().slice(0,10);
