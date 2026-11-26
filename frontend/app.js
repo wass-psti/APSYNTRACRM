@@ -6087,7 +6087,8 @@ async function onRoute(){
  closeTradeLinkSavedDocumentOutput();
  syncFuelTrans({container:null});
  if(!state.context||!auth.isSignedIn)syncDda();
- if(!state.context||initialAccountRoleReadPending)return;
+ if(!state.context)return;
+ if(initialAccountRoleReadPending)return;
  if(state.workspaceTransitionPending){
   syncDda();
   clearOrderIntake();

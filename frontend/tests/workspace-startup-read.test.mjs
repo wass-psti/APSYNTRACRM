@@ -253,3 +253,31 @@ test('optional signed-browser acceptance tools do not require Playwright during 
    'only the executable browser path may load the optional dependency');
  }
 });
+
+
+test('initial account role guard defers both shell rendering and route initialization',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const renderStart=app.indexOf('function render(){');
+ const pendingRender=app.indexOf('if(initialAccountRoleReadPending){root.innerHTML=sharedApplicationLoading();return;}',renderStart);
+ const nextShell=app.indexOf('if(applicationRouteRead){shell(',renderStart);
+ assert.ok(renderStart>=0&&pendingRender>renderStart&&nextShell>pendingRender);
+ const routeStart=app.indexOf('async function onRoute(){');
+ const noContext=app.indexOf('if(!state.context)return;',routeStart);
+ const pendingRoute=app.indexOf('if(initialAccountRoleReadPending)return;',noContext);
+ const routeDispatch=app.indexOf('if(state.workspaceTransitionPending)',routeStart);
+ assert.ok(routeStart>=0&&noContext>routeStart&&pendingRoute>noContext&&routeDispatch>pendingRoute);
+ const guard=app.slice(noContext,routeDispatch);
+ const run=new Function('state','initialAccountRoleReadPending',guard+'return "dispatch";');
+ assert.equal(run({context:null},false),undefined);
+ assert.equal(run({context:{}},true),undefined);
+ assert.equal(run({context:{}},false),'dispatch');
+ const renderGuard=app.slice(pendingRender,nextShell);
+ const render=new Function('initialAccountRoleReadPending','root','sharedApplicationLoading',renderGuard+'return "shell";');
+ const root={innerHTML:''};
+ assert.equal(render(true,root,()=>'<loading>'),undefined);
+ assert.equal(root.innerHTML,'<loading>');
+ assert.equal(render(false,root,()=>'<loading>'),'shell');
+ const startup=app.slice(app.indexOf('async function refreshWorkspace(){'),app.indexOf('async function loadUserRoleManagement(){'));
+ assert.ok(startup.indexOf('initialAccountRoleReadPending=true')<startup.indexOf('await readWorkspaceStartup('));
+ assert.ok(startup.indexOf('state.adminVerified=adminVerified;')<startup.indexOf('initialAccountRoleReadPending=false;'));
+});
