@@ -315,6 +315,13 @@ test('all six saved document types hydrate the shared Create New form with their
   const record={id:documentId,board_id:TRADELINK_BOARD_ID,workspace_id:workspace,
    board_item_id:item,document_type:type,document_number:content.documentNumber,
    workflow_state:'draft',revision:4,archived_at:null,content};
+  const sharedView={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',mode:'edit',canEditExisting:true,
+   selected:{documentId,record:{...record,created_by:'22222222-2222-4222-8222-222222222222'}}};
+  const ordinary=renderTradeLinkApplication({detail,workspaceId:workspace,section:'drafts',
+   actorId:actor,canManage:false,canCreate:false,draftView:sharedView});
+  assert.match(ordinary,/Save Changes/,type+' shared editor');
+  assert.match(ordinary,/data-tradelink-draft-form/,type+' shared form');
+  assert.doesNotMatch(ordinary,/Create New is unavailable/,type+' shared route');
   const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,canManage:true,
    view:{...initialTradeLinkDraftView(),mode:'edit',selected:{documentId,record}}});
   assert.match(html,/<form data-tradelink-draft-form/ ,type);

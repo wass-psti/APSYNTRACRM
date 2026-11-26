@@ -363,8 +363,15 @@ BEGIN
        AND payload->>'vendorId'='watchdog-sales'
        AND payload->>'templateId'='watchdog-sales-reference-v1')
    )
-   OR payload->>'verifiedByEmail' IS DISTINCT FROM d.content->>'verifiedByEmail'
-   OR payload->>'approvedByEmail' IS DISTINCT FROM d.content->>'approvedByEmail'
+   -- A non-creator revising an approval-free historical revision must use
+   -- the standard signed reviewer workflow for the NEW revision. The prior
+   -- snapshot and its approval evidence remain immutable.
+   OR (
+    NOT (private.tl03_revision_approval_policy(d.id,d.revision)='gm-creator-approval-free-v1'
+      AND approval_policy='standard-dual-v1')
+    AND (payload->>'verifiedByEmail' IS DISTINCT FROM d.content->>'verifiedByEmail'
+      OR payload->>'approvedByEmail' IS DISTINCT FROM d.content->>'approvedByEmail')
+   )
   THEN RAISE EXCEPTION 'Approved revision must preserve number, company and reviewers'
     USING ERRCODE='PT409'; END IF;
   IF payload=d.content THEN

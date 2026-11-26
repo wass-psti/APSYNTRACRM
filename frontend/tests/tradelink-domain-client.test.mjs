@@ -442,3 +442,22 @@ test('assigned TradeLink reviewers resolve the native app and one document proje
  assert.ok(calls.some(call=>call[0]==='tl03_board_projection'));
  assert.equal(calls.some(call=>call[0]==='generic-board'||call[0]==='generic-view'),false);
 });
+
+
+test('ordinary signed native TradeLink users update all six types without generic Board manage',async()=>{
+ const board={id:TRADELINK_BOARD_ID,workspace_id:workspace,name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1] canonical board'};
+ const calls=[];
+ const auth={userId:id,getVerifiedUser:async()=>({id})};
+ const api={context:async()=>({user_id:id,workspace_id:workspace,profile:{status:'active'}}),
+  allowed:async()=>false,nativeApplicationBoardContext:async moduleId=>({moduleId,userId:id,workspaceId:workspace,role:'Reviewer',board}),
+  rpc:async(name,args)=>{calls.push({name,args});assert.equal(name,'tl03_document_save');
+   return {documentId:id,boardItemId:item,revision:2,state:'for-approval',operation:'update',idempotent:false};}};
+ const c=new TradeLinkDomainClient({auth,api});
+ for(const type of ['esi','packing','delivery','payment','quotation','po']){
+  const receipt=await c.commit({documentId:id,expectedRevision:1,operation:'update',draft:{...draft,documentType:type},initialState:'for-approval'});
+  assert.equal(receipt.revision,2);
+  assert.equal(calls.at(-1).args.p_data.documentType,type);
+  assert.equal(calls.at(-1).args.p_operation,'update');
+ }
+ assert.equal(calls.length,6);
+});
