@@ -202,5 +202,5 @@ test('Pages registers global action menu assets after global selection assets',(
   index.indexOf('frontend/select-experience.css'));
  assert.match(smoke,/'frontend\/action-menu-experience\.js'/);
  assert.match(smoke,/'frontend\/action-menu-experience\.css'/);
- assert.match(index,/script type="module" src="\.\/frontend\/app\.js"/);
+ assert.match(index,/script type="module" src="\.\/frontend\/app\.js(?:\?v=[^"]+)?"/);
 });
