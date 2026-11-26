@@ -2340,6 +2340,13 @@
       "sha256": "de2bfd4a8b8c5ea533a22781670609f3cb1199a930c31116828aa9ade367825e"
     },
     {
+      "version": "20261126045855",
+      "name": "cp_tl_gm_direct_executive_approval",
+      "file": "20261126045855_cp_tl_gm_direct_executive_approval.sql",
+      "bytes": 31138,
+      "sha256": "a2c489ef884efcd1859de11a137d66249976acac7d1db9806b2f7963da682ea1"
+    },
+    {
       "version": "20261126090000",
       "name": "cp_tt_active_clockin_scheduler_correction",
       "file": "20261126090000_cp_tt_active_clockin_scheduler_correction.sql",
