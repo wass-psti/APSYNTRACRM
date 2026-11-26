@@ -12,7 +12,7 @@ test('DDA department creation and editing preserve stable IDs and validate hiera
 });
 test('DDA personnel assignment uses existing source identity and rejects invented people',()=>{
  assert.deepEqual(savePerson(directory,{id:'q',name:'Override',departmentId:'u'}),{id:'q',name:'New member',departmentId:'u',employeeId:'',position:'',company:'',isHead:false});
- assert.deepEqual(savePerson(directory,{id:'p',name:'Renamed',departmentId:'u',employeeId:'',position:'',company:'',isHead:false}),{id:'p',name:'Renamed',departmentId:'u'});
+ assert.deepEqual(savePerson(directory,{id:'p',name:'Renamed',departmentId:'u'}),{id:'p',name:'Renamed',departmentId:'u',employeeId:'',position:'',company:'',isHead:false});
  assert.throws(()=>savePerson(directory,{id:'unknown',departmentId:'d'}),/existing workforce/);
  assert.throws(()=>savePerson(directory,{id:'q',departmentId:'unknown'}),/Department not found/);
 });

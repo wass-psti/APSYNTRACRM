@@ -113,9 +113,9 @@ language sql immutable set search_path='' as $$
 $$;
 
 create function dda.person_json(p dda.person) returns jsonb
-language sql immutable set search_path='' as $
+language sql immutable set search_path='' as $person_json$
   select jsonb_build_object('id',p.id,'name',p.name,'departmentId',p.department_id,'employeeId',p.employee_id,'position',p.position,'company',p.company,'isHead',p.is_head)
-$;
+$person_json$;
 
 create function dda.snapshot(w uuid) returns jsonb
 language sql stable set search_path='' as $$
