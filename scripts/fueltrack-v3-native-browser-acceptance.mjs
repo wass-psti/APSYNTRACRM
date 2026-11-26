@@ -30,7 +30,7 @@ try {
    assert.equal(await page.locator('.ft3-dashboard-stage').count(),5);
    assert.equal(await page.locator('.ft3-dashboard-progress').count(),1);
    assert.equal(await page.locator('.ft3-dashboard-recent tbody tr').count(),1);
-   assert.equal(await page.locator('.ft3-dashboard-stage-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(/\\s+/).length),5);
+   assert.equal(await page.locator('.ft3-dashboard-stage-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),5);
    await page.locator('html').evaluate(el=>el.setAttribute('data-aps-monday-theme','dark'));
    const darkTheme=await page.locator('html').evaluate(el=>{
     const style=getComputedStyle(el),probe=document.createElement('div');document.body.appendChild(probe);
@@ -54,14 +54,14 @@ try {
  const dashboardHtml=renderFuelTrackV3Application({detail,section:'dashboard',backend:{snapshot,analytics}});
  await page.setContent('<!doctype html><html><head><meta charset="utf-8"></head><body><main id="app">'+dashboardHtml+'</main></body></html>');
  await page.addStyleTag({content:styles});
- assert.equal(await page.locator('.ft3-dashboard-stage-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(/\\s+/).length),5);
+ assert.equal(await page.locator('.ft3-dashboard-stage-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),5);
  await page.setViewportSize({width:768,height:900});
- assert.equal(await page.locator('.ft3-dashboard-stage-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(/\\s+/).length),3);
+ assert.equal(await page.locator('.ft3-dashboard-stage-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),3);
  await page.setViewportSize({width:390,height:844});
- assert.equal(await page.locator('.ft3-dashboard-stage-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(/\\s+/).length),2);
+ assert.equal(await page.locator('.ft3-dashboard-stage-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),2);
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'No page-level overflow at 390px');
  await page.setViewportSize({width:360,height:844});
- assert.equal(await page.locator('.ft3-dashboard-stage-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(/\\s+/).length),1);
+ assert.equal(await page.locator('.ft3-dashboard-stage-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),1);
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'No page-level overflow at 360px');
  checks+=4;
  await page.setViewportSize({width:390,height:844});
