@@ -55,7 +55,8 @@ test('original Create New portal entry remains visible to reviewer accounts with
  assert.match(reviewer,/data-tl-tab="manual"/);
  assert.doesNotMatch(reviewer,/data-tl-tab="create"[^>]*href=/);
  assert.doesNotMatch(reviewer,/data-tradelink-draft-form/);
- assert.match(reviewer,/My Assigned Documents/);
+ assert.match(reviewer,/All Documents/);
+ assert.doesNotMatch(reviewer,/My Assigned Documents/);
 });
 
 
