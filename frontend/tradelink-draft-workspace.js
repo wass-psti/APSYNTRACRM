@@ -1866,15 +1866,16 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
            '>Use Time Now</button>':'<span class="muted">Validation is not available for this status.</span>')+
          '</div>';
        })():'')+
-       (canEditRow&&tradeLinkDraftEditHref(row.documentId)?
-        '<a class="secondary" data-tradelink-document-edit href="'+
-         escape(tradeLinkDraftEditHref(row.documentId))+'">'+
-         (canManage?'Preview/Edit':'Edit Draft')+'</a> '+
-        '<button type="button" class="secondary" data-action="tradelink-document-open" data-id="'+
-         escape(row.documentId)+'">Revision history &amp; details</button> ':
-        '<button type="button" class="secondary" '+
-         'data-action="tradelink-document-open" data-id="'+escape(row.documentId)+
-         '">View document</button> ')+
+       (canReview&&['primary','secondary'].includes(row.assignedStage)?'':
+        canEditRow&&tradeLinkDraftEditHref(row.documentId)?
+         '<a class="secondary" data-tradelink-document-edit href="'+
+          escape(tradeLinkDraftEditHref(row.documentId))+'">'+
+          (canManage?'Preview/Edit':'Edit Draft')+'</a> '+
+         '<button type="button" class="secondary" data-action="tradelink-document-open" data-id="'+
+          escape(row.documentId)+'">Revision history &amp; details</button> ':
+         '<button type="button" class="secondary" '+
+          'data-action="tradelink-document-open" data-id="'+escape(row.documentId)+
+          '">View document</button> ')+
        (canManage||(creatorMode&&row.createdByActor===true)?
         '<button type="button" class="secondary" data-action="tradelink-document-print" '+
          'data-id="'+escape(row.documentId)+'"'+
