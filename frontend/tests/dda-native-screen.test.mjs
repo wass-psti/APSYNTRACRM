@@ -34,3 +34,13 @@ test('DDA reporting overview and directory filtering include historical contribu
  assert.match(html,/Former contributor/);assert.match(html,/&lt;Former&gt;/);assert.doesNotMatch(html,/<Former>/);
  assert.match(html,/1 matching personnel of 1/);assert.match(html,/Personnel activity overview \(1\)/);
 });
+
+test('DDA dashboard separates activity work from organization settings and shows semantic totals',()=>{
+ const html=renderActivityScreen(base);
+ assert.match(html,/class="dda-stats" aria-label="Activity totals"/);
+ for(const key of ['activities','pending','progress','completed'])assert.match(html,new RegExp('dda-metric-'+key));
+ assert.match(html,/class="dda-empty"/);
+ assert.ok(html.indexOf('dda-stats')<html.indexOf('dda-filters'));
+ assert.ok(html.indexOf('dda-records')<html.indexOf('dda-management'));
+ assert.match(html,/Organization &amp; settings/);
+});

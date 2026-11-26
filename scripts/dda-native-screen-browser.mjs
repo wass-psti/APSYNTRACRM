@@ -58,6 +58,19 @@ try {
   });
   const form=name=>page.locator('form[data-dda-form="'+name+'"]');
   const notice=text=>page.waitForFunction(value=>document.querySelector('[data-dda-notice]')?.textContent===value,text);
+  assert.equal(await page.locator('.dda-metric').count(),4);
+  assert.equal(await page.locator('.dda-empty').isVisible(),true);
+  const surfaces=await page.locator('.dda-panel').first().evaluate(el=>{
+    const light=getComputedStyle(el).backgroundColor;
+    document.documentElement.dataset.apsMondayTheme='dark';
+    const dark=getComputedStyle(el).backgroundColor;
+    document.documentElement.removeAttribute('data-aps-monday-theme');
+    return {light,dark};
+  });
+  assert.notEqual(surfaces.light,surfaces.dark);
+  await page.setViewportSize({width:800,height:900});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  await page.setViewportSize({width:1280,height:900});
   await form('category').getByLabel('Category name').fill('Reporting');
   await form('category').getByRole('button',{name:'Save category'}).click();
   await notice('Category saved.');
