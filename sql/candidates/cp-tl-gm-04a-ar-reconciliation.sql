@@ -43,8 +43,8 @@ BEGIN
  OR private.tl03_approval_evidence_complete(d.id,d.revision) IS DISTINCT FROM TRUE THEN
   RAISE EXCEPTION 'Payment must be current, finalized and signed' USING ERRCODE='PT409';
  END IF;
- IF CASE WHEN d.content->>'chequeAmount' ~ '^[0-9]+(\\.[0-9]+)?$'
-   THEN (d.content->>'chequeAmount')::numeric<=0 ELSE TRUE END
+ IF (CASE WHEN d.content->>'chequeAmount' ~ '^[0-9]+(\\.[0-9]+)?$'
+   THEN (d.content->>'chequeAmount')::numeric<=0 ELSE TRUE END)
  OR coalesce(btrim(d.content->>'bankName'),'')=''
  OR coalesce(btrim(d.content->>'chequeNumber'),'')='' THEN
   RAISE EXCEPTION 'Valid cheque details required' USING ERRCODE='22023';
