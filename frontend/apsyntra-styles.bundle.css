@@ -23354,6 +23354,15 @@ body>.modal-backdrop .aps-field-feedback.aps-field-feedback-compact{
  }
 }
 
+/* CRM-wide placeholder guidance also covers search fields and dynamically
+ * rendered controls outside the validation-enhancement selector. */
+#app :is(input,textarea).aps-placeholder-enhanced::placeholder{
+ color:#64748b;opacity:1;
+}
+html[data-aps-monday-theme="dark"] #app :is(input,textarea).aps-placeholder-enhanced::placeholder{
+ color:var(--crm-native-muted,#c0cadb);opacity:1;
+}
+
 /* frontend/metrics-experience.css */
 /* CP-CRM-METRIC-01 — global signed metrics presentation.
  * Preserve exact canonical text, chart contracts and content visibility.

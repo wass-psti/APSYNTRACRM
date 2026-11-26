@@ -11,6 +11,68 @@ export const FORM_FIELD_TYPES=Object.freeze([
  'text','email','password','tel','url','number','date','time',
  'datetime-local','month','week'
 ]);
+// Native date/time pickers do not display placeholder text. Keep their
+// platform controls intact while guiding every text-like field, including search.
+export const PLACEHOLDER_FIELD_SELECTOR=
+ 'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="submit"]):not([type="reset"]):not([type="button"]):not([type="image"]):not([type="date"]):not([type="time"]):not([type="datetime-local"]):not([type="month"]):not([type="week"]):not([readonly]),textarea:not([readonly])';
+const SEARCH_LABELS=Object.freeze({
+ 'board-search':'boards','search-issues':'issues','search-board-items':'board items',
+ 'search-system-roles':'roles','search-workspace-members':'workspace members',
+ 'filter-role-permission-modules':'application modules','search-role-proposals':'role proposals',
+ 'tt-log-search':'attendance logs','tt-report-search':'attendance reports',
+ 'tt-team-search':'team members','tt-ot-search':'overtime requests',
+ 'ft3-request-search':'fuel requests','ft3-activity-search':'fuel activity',
+ 'ft3-signed-request-search':'fuel requests','mrh-tracker-search':'materials and RFQs',
+ 'tb-search-text':'issues','teams-search':'teams','teams-user-search':'team members',
+ 'teams-content-search':'team content','apsm-home-search':'applications',
+ 'tl-manual-search-input':'manual topics','board-activity-search':'board activity',
+ 'board-hide-search':'columns','structure-column-search':'columns',
+ 'tt-employees-search':'employees','tt-log-search':'attendance logs'
+});
+function humanizeFieldName(value){
+ return String(value||'').replace(/([a-z0-9])([A-Z])/g,'$1 $2')
+  .replace(/[_-]+/g,' ').replace(/\b(id|url|tin|rfq|po|php)\b/gi,m=>m.toUpperCase())
+  .replace(/\s+/g,' ').trim().replace(/\s*\*+\s*$/,'')
+  .replace(/\s*\([^)]*required[^)]*\)/ig,'');
+}
+export function describePlaceholder(control){
+ if(!control||!['INPUT','TEXTAREA'].includes(control.tagName)||
+    control.disabled||control.readOnly)return '';
+ const type=String(control.type||'text').toLowerCase();
+ const name=String(control.name||control.id||'');
+ if(!['text','email','password','tel','url','number','search'].includes(type)&&control.tagName!=='TEXTAREA')return '';
+ if(type==='date'||type==='time'||type==='datetime-local'||type==='month'||type==='week')return '';
+ let label=String(control.getAttribute?.('aria-label')||'').trim();
+ if(!label&&control.labels?.length)label=control.labels[0].textContent||'';
+ if(!label)label=control.closest?.('label')?.textContent||'';
+ if(!label)label=control.getAttribute?.('title')||'';
+ label=humanizeFieldName(label).replace(/\s+/g,' ').trim();
+ const isSearch=type==='search'||control.classList?.contains?.('search-input')||
+  control.getAttribute?.('inputmode')==='search'||/^(search|filter)\b/i.test(label);
+ if(isSearch){
+  const subject=SEARCH_LABELS[name]||label.replace(/^search\s*/i,'').replace(/^filter\s*/i,'')||
+   humanizeFieldName(name).replace(/\s*search$/i,'').replace(/^search\s*/i,'')||'records';
+  const action=/^filter\b/i.test(label)?'Filter':'Search';
+  return action+' '+subject.toLocaleLowerCase()+'...';
+ }
+ if(!label)label=humanizeFieldName(name);
+ if(!label)return '';
+ if(/^enter\b/i.test(label)||/^describe\b/i.test(label)||
+    /^write\b/i.test(label)||/^add\b/i.test(label))return label;
+ if(type==='email'&&!/email/i.test(label))return 'Enter email address';
+ if(type==='tel'&&!/phone|telephone|mobile|contact number/i.test(label))return 'Enter phone number';
+ if(type==='url'&&!/url|website|link/i.test(label))return 'Enter web address';
+ if(type==='password')return 'Enter '+label.toLocaleLowerCase();
+ return 'Enter '+label.toLocaleLowerCase();
+}
+function enhancePlaceholder(control){
+ if(!control||control.hasAttribute?.('placeholder'))return false;
+ const placeholder=describePlaceholder(control);
+ if(!placeholder)return false;
+ control.setAttribute('placeholder',placeholder);
+ control.classList?.add?.('aps-placeholder-enhanced');
+ return true;
+}
 let feedbackId=0;
 
 export function isFormField(control){
@@ -173,6 +235,8 @@ export function startInputExperience(root=globalThis.document?.body){
   if(node?.nodeType!==1)return;
   if(node.matches?.(FORM_FIELD_SELECTOR))attach(node);
   node.querySelectorAll?.(FORM_FIELD_SELECTOR).forEach(attach);
+  if(node.matches?.(PLACEHOLDER_FIELD_SELECTOR))enhancePlaceholder(node);
+  node.querySelectorAll?.(PLACEHOLDER_FIELD_SELECTOR).forEach(enhancePlaceholder);
  }
  const observer=new MutationObserver(records=>{
   if(!running)return;
