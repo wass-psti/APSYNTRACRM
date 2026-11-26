@@ -272,6 +272,9 @@ const manualDurationApproval=receipt(await rpc(hr,'timetracker_ot_decide_manual_
  p_board_id:board,p_request_id:manualDuration.id,p_decision:'Approved'
 }),'HR approves manual duration OT');
 assert.equal(manualDurationApproval.status,'Approved');
+const ojtManualSnapshot=receipt(await rpc(ojt,'timetracker_ot_snapshot',{p_board_id:board}),'non-approver manual OT privacy snapshot');
+assert.ok(!ojtManualSnapshot.rows.some(row=>row.id===manualDuration.id),
+ 'non-approver employees do not see another employee manual OT history');
 assert.equal(sql(`SELECT (start_time IS NULL)::text||'|'||(end_time IS NULL)::text||'|'||duration_minutes::text||'|'||ot_policy FROM public.timetracker_ot_requests WHERE id='${manualDuration.id}'`),
  'true|true|150|manual-duration-v1');
 const racing=receipt(await submit(worker,'14:00','15:00','concurrent decision'),'race request');
