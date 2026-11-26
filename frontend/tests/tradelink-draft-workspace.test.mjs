@@ -1145,7 +1145,8 @@ test('app integration is session-cleared and route-scoped, with no new credentia
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
  assert.match(app,/tradeLinkDraftRoute\(\)/);
  assert.match(app,/loadTradeLinkDrafts\(seq\)/);
- assert.match(app,/parseTradeLinkDraftForm\(new FormData\(form\)\)/);
+ assert.match(app,/prepareTradeLinkDraftCommand\(state\.tradeLinkDraft,fields,\{executivePreview:/);
+ assert.match(source,/export function parseTradeLinkDraftForm\(/);
  assert.match(app,/case 'tradelink-draft-preview'/);
  assert.match(app,/case 'tradelink-draft-archive'/);
  assert.match(app,/\!tradeLinkDraftReady\(\)/);
