@@ -171,7 +171,7 @@ test('unauthorized actor, wrong workspace and invalid response cannot reveal sav
  };
  const client=new TradeLinkDomainClient({auth,api});
  await assert.rejects(()=>client.list(),/Signed TradeLink reviewer API unavailable/);
- await assert.rejects(()=>client.read(docId),/manager scope required|Create New context is unavailable/);
+ await assert.rejects(()=>client.read(docId),/Signed TradeLink reviewer API unavailable/);
  assert.equal(rpcCount,0);
  const wrong=new TradeLinkDomainClient({auth,api:{...api,
   allowed:async()=>true,rpc:async()=>{rpcCount++;return {...row,workspace_id:foreign};}}});
