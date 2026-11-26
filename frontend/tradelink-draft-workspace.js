@@ -1842,29 +1842,30 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
       '<td class="tl-ref-workflow-status">'+renderTradeLinkWorkflowBadge(row.workflowState,row.archived)+'</td>'+
       '<td class="tl-ref-revision-column"><span class="tl-ref-revision">'+escape(row.revision)+'</span></td>'+
       (readOnly?'<td class="tl-ref-actions-cell">'+(
-       canReview&&['primary','secondary'].includes(row.assignedStage)?(()=>{
+       '<button type="button" class="tl-ref-row-action-trigger" popovertarget="tl-doc-menu-'+escape(row.documentId)+'" aria-label="Actions for '+escape(row.documentNumber)+'" title="Document actions">⋯</button>'+
+       '<div popover="auto" data-tradelink-action-menu id="tl-doc-menu-'+escape(row.documentId)+'" class="tl-ref-actions-menu">'+
+       (canReview&&['primary','secondary'].includes(row.assignedStage)?(()=>{
         const stage=row.assignedStage;
         const recordedAt=stage==='primary'?row.primaryAt:row.secondaryAt;
         const formatTime=value=>value&&Number.isFinite(Date.parse(value))?
          new Date(value).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'}):'Pending';
         const assignedLabel=stage==='primary'?'Primary reviewer':'Secondary reviewer';
         const exempt=row.approvalPolicy===GM_SALES_EXEMPT_POLICY;
-        return '<div class="tl-reviewer-row-actions" data-tl-reviewer-stage="'+escape(stage)+'">'+
+        return '<div class="tl-reviewer-menu-actions">'+
          '<button type="button" class="secondary" data-action="tradelink-review-document-open" '+
           'data-id="'+escape(row.documentId)+'"'+(view.busy?' disabled':'')+
-          '>View document</button> '+
+          '>View document</button>'+
          '<p class="tl-reviewer-stage-summary">Primary: '+escape(exempt?'Exempted':formatTime(row.primaryAt))+
-         '<br>Secondary: '+escape(formatTime(row.secondaryAt))+'</p>'+
-         (exempt&&stage==='primary'?'<span class="muted">Sales Supervisor approval exempted.</span>':recordedAt?'<span class="tl-reviewer-recorded" role="status">'+escape(assignedLabel)+
-          ' validated · '+escape(formatTime(recordedAt))+'</span>':
+          '<br>Secondary: '+escape(formatTime(row.secondaryAt))+'</p>'+
+         (exempt&&stage==='primary'?'<span class="muted">Sales Supervisor approval exempted.</span>':
+          recordedAt?'<span class="tl-reviewer-recorded" role="status">'+escape(assignedLabel)+
+           ' validated · '+escape(formatTime(recordedAt))+'</span>':
           row.workflowState==='for-approval'?'<button type="button" class="primary" '+
            'data-action="tradelink-document-review-stage" data-id="'+escape(row.documentId)+'" '+
            'data-stage="'+escape(stage)+'"'+(view.busy?' disabled':'')+
            '>Use Time Now</button>':'<span class="muted">Validation is not available for this status.</span>')+
          '</div>';
-       })():
-       '<button type="button" class="tl-ref-row-action-trigger" popovertarget="tl-doc-menu-'+escape(row.documentId)+'" aria-label="Actions for '+escape(row.documentNumber)+'" title="Document actions">⋯</button>'+
-       '<div popover="auto" data-tradelink-action-menu id="tl-doc-menu-'+escape(row.documentId)+'" class="tl-ref-actions-menu">'+
+       })():'')+
        (canEditRow&&tradeLinkDraftEditHref(row.documentId)?
         '<a class="secondary" data-tradelink-document-edit href="'+
          escape(tradeLinkDraftEditHref(row.documentId))+'">'+
