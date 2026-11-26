@@ -139,12 +139,12 @@ DECLARE
  v_activated_at timestamptz:=clock_timestamp()-INTERVAL '1 day';
 BEGIN
  FOR v_candidate IN
-  SELECT workspace_id,board_id,record_id,employee_id
-  FROM private.tt_auto_clockout_sessions
-  WHERE status IN ('MONITORING','GRACE','OVERTIME','PENDING_GPS','ERROR')
-    AND threshold_at<=v_now AND clock_in_at>=v_activated_at
-  ORDER BY last_evaluated_at NULLS FIRST,COALESCE(overtime_cutoff_at,threshold_at),record_id
-  LIMIT 100
+    SELECT workspace_id,board_id,record_id,employee_id
+    FROM private.tt_auto_clockout_sessions
+    WHERE status IN ('MONITORING','GRACE','OVERTIME','PENDING_GPS','ERROR')
+      AND threshold_at<=v_now AND clock_in_at>=v_activated_at
+    ORDER BY last_evaluated_at NULLS FIRST,COALESCE(overtime_cutoff_at,threshold_at),record_id
+    LIMIT 100
  LOOP
   SELECT * INTO v_session FROM private.tt_auto_clockout_sessions s
   WHERE s.workspace_id=v_candidate.workspace_id AND s.board_id=v_candidate.board_id
