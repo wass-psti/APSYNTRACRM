@@ -9,6 +9,7 @@ on:
       - "sql/tests/cp-tl-create-new-02-user-*"
       - "scripts/cp-tl-create-new-02-user-draft-disposable.sh"
       - "frontend/tests/tradelink-user-board-projection-create.test.mjs"
+      - "frontend/tests/tradelink-shared-document-visibility.test.mjs"
       - "supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql"
       - "supabase/migrations/20261112093727_tradelink_revision_required_edit_compat.sql"
       - "supabase/migrations/20261113065300_tradelink_retry_safe_revision_bound_updates.sql"
@@ -18,14 +19,6 @@ on:
       - "supabase/migrations/20261117045417_tradelink_approved_revision_flow.sql"
       - "supabase/migrations/20261119073346_tradelink_user_draft_creation.sql"
       - "supabase/migrations/20261119073608_tradelink_document_read_policy_consolidation.sql"
-      - "supabase/migrations/20261123080322_cp_tl_document_identity_order_01.sql"
-      - "supabase/migrations/20261123103806_cp_tl_document_bulk_actions.sql"
-      - "supabase/migrations/20261125071129_cp_tl_document_creator_identification_01.sql"
-      - "supabase/migrations/20261126093000_cp_tl_shared_document_visibility_01.sql"
-      - "sql/tests/cp-tl-shared-document-visibility-disposable.sql"
-      - "sql/tests/cp-tl-create-new-02-user-fixture.sql"
-      - "scripts/cp-tl-create-new-02-user-draft-disposable.sh"
-      - "frontend/tests/tradelink-shared-document-visibility.test.mjs"
       - "sql/cp-tl03-staged-domain.sql"
   push:
     branches: [main]
@@ -35,6 +28,7 @@ on:
       - "sql/tests/cp-tl-create-new-02-user-*"
       - "scripts/cp-tl-create-new-02-user-draft-disposable.sh"
       - "frontend/tests/tradelink-user-board-projection-create.test.mjs"
+      - "frontend/tests/tradelink-shared-document-visibility.test.mjs"
       - "supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql"
       - "supabase/migrations/20261112093727_tradelink_revision_required_edit_compat.sql"
       - "supabase/migrations/20261113065300_tradelink_retry_safe_revision_bound_updates.sql"
@@ -44,14 +38,6 @@ on:
       - "supabase/migrations/20261117045417_tradelink_approved_revision_flow.sql"
       - "supabase/migrations/20261119073346_tradelink_user_draft_creation.sql"
       - "supabase/migrations/20261119073608_tradelink_document_read_policy_consolidation.sql"
-      - "supabase/migrations/20261123080322_cp_tl_document_identity_order_01.sql"
-      - "supabase/migrations/20261123103806_cp_tl_document_bulk_actions.sql"
-      - "supabase/migrations/20261125071129_cp_tl_document_creator_identification_01.sql"
-      - "supabase/migrations/20261126093000_cp_tl_shared_document_visibility_01.sql"
-      - "sql/tests/cp-tl-shared-document-visibility-disposable.sql"
-      - "sql/tests/cp-tl-create-new-02-user-fixture.sql"
-      - "scripts/cp-tl-create-new-02-user-draft-disposable.sh"
-      - "frontend/tests/tradelink-shared-document-visibility.test.mjs"
       - "sql/cp-tl03-staged-domain.sql"
   workflow_dispatch:
 
@@ -66,7 +52,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
       - name: Disposable PostgreSQL 17 signed User acceptance
         run: bash scripts/cp-tl-create-new-02-user-draft-disposable.sh
-      - name: TradeLink User Board projection and shared document visibility contracts
+      - name: TradeLink User Board projection and shared visibility contracts
         run: node --test frontend/tests/tradelink-user-board-projection-create.test.mjs frontend/tests/tradelink-shared-document-visibility.test.mjs
       - name: Migration source manifest
         run: node scripts/verify-migration-source-manifest.mjs
