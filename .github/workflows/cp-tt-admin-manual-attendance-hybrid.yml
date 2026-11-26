@@ -105,6 +105,10 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
             -f sql/tests/cp-tt-admin-manual-attendance-hybrid-disposable-setup.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+            -f supabase/migrations/20261120111000_cp_tt_department_team_directory_read.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+            -f supabase/migrations/20261120120000_cp_tt_employee_departments_and_time_corrections.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
             -f supabase/migrations/20261120140000_cp_tt_department_catalog_management.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
             -f supabase/migrations/20261120170000_cp_tt_auto_clockout_02c_atomic_board_projection_restore.sql
