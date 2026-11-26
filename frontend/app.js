@@ -1026,9 +1026,9 @@ function stopAuthVisuals(){
  authVisualController=null;
 }
 function renderLogin(message='',{mode=authViewFromHash(),notice='',emailValue=''}={}){
- syncDda();
  stopTimeTrackerClock();
  stopTimeTrackerPixi();
+ syncDda();
  // Clear detached protected item values on every signed-out transition.
  hideModal();
  if(mode==='login'&&!emailValue)emailValue=mobileAccountEmail;
@@ -6029,7 +6029,8 @@ async function onRoute(){
  applicationRouteRead=null;state.nativeInitialRead=null;state.ttReadLoading=false;
  closeTradeLinkSavedDocumentOutput();
  syncFuelTrans({container:null});
- if(!state.context){syncDda();return;}
+ if(!state.context||!auth.isSignedIn)syncDda();
+ if(!state.context)return;
  if(state.workspaceTransitionPending){
   syncDda();
   clearOrderIntake();

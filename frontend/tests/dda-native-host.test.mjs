@@ -70,6 +70,6 @@ test('DDA CRM shell wires native host after existing workspace route guard and d
  const route=app.slice(app.indexOf('async function onRoute(){'));
  assert.ok(route.indexOf('const applicationRoute=workspaceApplicationRouteAccess')<route.indexOf('if(parts[0]===DDA_ROUTE_SECTION)'));
  assert.match(app,/if\(workspaceIdentityChanged\)\{\s*syncDda\(\)/);
- assert.match(app,/function renderLogin[^\n]+\n syncDda\(\)/);
+ assert.match(app,/function renderLogin[^\n]+\n stopTimeTrackerClock\(\);\n stopTimeTrackerPixi\(\);\n syncDda\(\)/);
  assert.match(app,/if\(!DDA_RELEASE_ENABLED\)shell/);
 });
