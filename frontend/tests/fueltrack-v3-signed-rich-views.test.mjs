@@ -80,6 +80,60 @@ test('signed analytics keeps tabs, date filters, metric filters, chart and daily
  assert.match(html,/href="#\/boards\/7af78b3f-67bf-4600-9aa1-9006d19d486e\/fueltrack\/analytics\/efficiency\/all\/both"/);
  assert.doesNotMatch(html,/271 transactions|258 processed/);
 });
+test('CP-FT-ANALYTICS-01 derives weighted cost per liter and daily frequency only from signed aggregates',()=>{
+ const records={...analytics,daily:[
+  {day:'2026-11-11',transactions:2,amount:500,liters:8.5},
+  {day:'2026-11-12',transactions:1,amount:200,liters:5}
+ ]};
+ const html=renderFuelTrackSignedAnalyticsRich(snapshot,records,{now:new Date('2026-11-12T04:00:00Z')});
+ assert.match(html,/Fuel Analytics/);
+ assert.match(html,/₱700\.00/);
+ assert.match(html,/13\.5 L/);
+ assert.match(html,/₱51\.85/);
+ assert.match(html,/Weighted effective cost per liter/);
+ assert.match(html,/not a posted station price/);
+ assert.match(html,/class="ft3-analytics-series" data-metric="amount"/);
+ assert.match(html,/class="ft3-analytics-series" data-metric="liters"/);
+ const frequency=renderFuelTrackSignedAnalyticsRich(snapshot,records,{view:'frequency',now:new Date('2026-11-12T04:00:00Z')});
+ assert.match(frequency,/Daily completed refueling count/);
+ assert.match(frequency,/class="ft3-analytics-series" data-metric="transactions"/);
+ assert.match(frequency,/3<\/td>/);
+});
+test('analytics reporting windows use the exact requested rolling day count',()=>{
+ const records={...analytics,days:365,daily:[
+  {day:'2026-11-01',transactions:1,amount:100,liters:2},
+  {day:'2026-11-06',transactions:1,amount:200,liters:4},
+  {day:'2026-11-12',transactions:1,amount:300,liters:6}
+ ]};
+ const now=new Date('2026-11-12T04:00:00Z');
+ const week=renderFuelTrackSignedAnalyticsRich(snapshot,records,{range:'week',now});
+ assert.match(week,/Last 7 days/);
+ assert.match(week,/₱500\.00/);
+ assert.doesNotMatch(week,/₱100\.00/);
+ const month=renderFuelTrackSignedAnalyticsRich(snapshot,records,{range:'month',now});
+ assert.match(month,/Last 30 days/);
+ assert.match(month,/₱600\.00/);
+ assert.match(month,/Showing last 30 days/);
+});
+test('FuelTrack analytics explains unsupported dimensions without inventing fleet metrics',()=>{
+ const records={...analytics,daily:[{day:'2026-11-11',transactions:1,amount:500,liters:8.5}]};
+ const efficiency=renderFuelTrackSignedAnalyticsRich(snapshot,records,{view:'efficiency'});
+ const requestors=renderFuelTrackSignedAnalyticsRich(snapshot,records,{view:'requestors'});
+ const odometer=renderFuelTrackSignedAnalyticsRich(snapshot,records,{view:'odometer'});
+ assert.match(efficiency,/distance travelled, vehicle mileage, or efficiency targets/);
+ assert.match(requestors,/does not expose requestor-level totals/);
+ assert.match(odometer,/Verified odometer readings/);
+ for(const html of [efficiency,requestors,odometer]){
+  assert.match(html,/Additional signed data required/);
+  assert.doesNotMatch(html,/42\.5 km\/L|Plate No\.|Jane Doe|12,500 km/);
+ }
+});
+test('CP-FT-ANALYTICS-01 provides responsive and dark-theme analytics styling',()=>{
+ const css=readFileSync(new URL('../fueltrack-v3-application.css',import.meta.url),'utf8');
+ const dark=readFileSync(new URL('../../frontend/dark-native-applications.css',import.meta.url),'utf8');
+ for(const token of ['ft3-analytics-hero','ft3-analytics-toolbar','ft3-analytics-kpi','ft3-analytics-trend-grid','ft3-analytics-table','@media(max-width:760px)','@media(max-width:540px)'])assert.ok(css.includes(token),token);
+ for(const token of ['ft3-analytics-v2','ft3-analytics-kpi','ft3-analytics-series','var(--crm-native-panel)'])assert.ok(dark.includes(token),token);
+});
 test('signed analytics tolerates absent or malformed optional period metadata without crashing',()=>{
  for(const days of [undefined,null,'invalid',0,-1,999999]){
   const html=renderFuelTrackSignedAnalyticsRich(snapshot,{...analytics,days});
