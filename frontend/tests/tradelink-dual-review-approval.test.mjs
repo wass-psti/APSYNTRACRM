@@ -64,7 +64,9 @@ test('PDF printing requires a freshly verified Approved revision; no official te
  assert.match(print,/targetRevision===listed\.revision&&listed\.workflowState!=='approved'/);
  assert.match(print,/record\.workflow_state!=='approved'/);
  assert.match(ui,/status==='approved'&&validUuid\(documentId\)/);
- assert.match(ui,/row\.workflowState!=='approved'\?' disabled/);
+ assert.match(ui,/row\.workflowState==='approved'/);
+ assert.match(ui,/view\.busy\|\|!canPrint/);
+ assert.match(ui,/PDF printing is available only after approval/);
  assert.doesNotMatch(ui,/@page|jsPDF|pdf-lib|pdfmake/);
 });
 
