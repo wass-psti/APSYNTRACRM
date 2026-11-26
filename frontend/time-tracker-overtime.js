@@ -187,7 +187,6 @@ const row=(r,access,query='',expandedRequestIds=[],otContractActive=false)=>{
   (r.otPolicy==='duration-v1'?'<span><b>Attendance:</b> '+(r.attendanceRecordId?'Matched':'Awaiting matching record')+'</span>'+
    '<span><b>Actual OT:</b> '+esc(r.attendanceCredit?minutesLabel(r.attendanceCredit.actualMinutes).trim():'Not finalized')+'</span>'+
    '<span><b>Payable OT:</b> '+esc(r.attendanceCredit?minutesLabel(r.attendanceCredit.payableMinutes).trim():'Not finalized')+'</span>':'')+
-  (r.otPolicy==='manual-duration-v1'?'<span><b>Entry type:</b> Administrative duration entry</span>':'')+
   '<p><b>Reason:</b> '+esc(r.task||'Not supplied')+'</p>'+
   (r.isManual?'<p><b>Entry type:</b> '+(r.otPolicy==='manual-duration-v1'?'Manual duration OT':'Manual OT')+
    (access?.manualOtManager===true&&r.submittedByName?' · Entered by '+esc(r.submittedByName):'')+'</p>':'')+
