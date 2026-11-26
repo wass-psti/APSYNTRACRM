@@ -63,7 +63,7 @@ test('all six modules use screenshot-led document cards, accessible tabs and no 
   assert.match(html,/data-action="tradelink-draft-submit"/);
   assert.match(html,/data-action="tradelink-draft-clear"/);
   assert.match(html,/Print PDF<\/button>/);
-  assert.match(html,/title="PDF printing is available only after both reviewers approve"/);
+  assert.match(html,/title="PDF printing is available only after all required reviewers approve"/);
   assert.match(html,/data-action="tradelink-draft-submit"/);
   assert.match(html,/No PDF, approval or document is generated/);
   assert.equal(TL03_DOMAIN_READS_ENABLED,true);
