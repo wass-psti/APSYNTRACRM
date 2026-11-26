@@ -1026,14 +1026,20 @@ try {
     '#tt-attendance-admin-form select[name="durationMode"]',
   );
   assert.equal(await advancedDuration.count(), 1);
-  assert.equal(await advancedDuration.evaluate((details) => details.open), false);
+  assert.equal(
+    await advancedDuration.evaluate((details) => details.open),
+    false,
+  );
   await durationInput.waitFor({ state: "hidden" });
   await checkAccessibilityWithin(
     ".tt-admin-editor",
     "System Admin individual attendance editor (collapsed advanced duration)",
   );
   await advancedDuration.locator("summary").click();
-  assert.equal(await advancedDuration.evaluate((details) => details.open), true);
+  assert.equal(
+    await advancedDuration.evaluate((details) => details.open),
+    true,
+  );
   await durationMode.waitFor();
   await durationInput.waitFor();
   assert.equal(await durationMode.inputValue(), "auto");
