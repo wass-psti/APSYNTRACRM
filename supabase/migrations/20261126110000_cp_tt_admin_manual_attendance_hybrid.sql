@@ -7,6 +7,11 @@ BEGIN;
 SET LOCAL lock_timeout='5s';
 SET LOCAL statement_timeout='90s';
 
+-- Existing admin attendance audits predate request-level idempotency. Add a
+-- nullable UUID key without rewriting any historical audit rows.
+ALTER TABLE private.tt_attendance_admin_audit
+ ADD COLUMN IF NOT EXISTS mutation_id uuid;
+
 DO $preflight$
 BEGIN
  IF pg_catalog.to_regprocedure('private.tt_auto_clockout_mode()') IS NULL
