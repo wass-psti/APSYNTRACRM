@@ -192,7 +192,7 @@ test('Clock-In keeps AM/PM labels correct immediately around noon and midnight i
   {...records[0],id:'after-midnight',clockIn:'2026-11-04T16:00:01Z'}
  ];
  const html=render({records:rows});
- const times=[...html.matchAll(/class="tt-log-row-clock"[^>]*><strong>([^<]+)<\\/strong>/g)]
+ const times=[...html.matchAll(/class="tt-log-row-clock"[^>]*><strong>([^<]+)<\/strong>/g)]
   .map(match=>match[1]);
  assert.deepEqual(times.sort(),[
   '11:59:59 AM','12:00:01 PM','11:59:59 PM','12:00:01 AM'
