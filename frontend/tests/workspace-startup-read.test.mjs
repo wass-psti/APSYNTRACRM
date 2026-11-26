@@ -60,16 +60,22 @@ test('generic board startup remains fatal when its catalog is unavailable',async
  }),error=>error===failure);
 });
 
-test('role verifier failures remain false without failing the signed board catalog',async()=>{
- const result=await readWorkspaceStartup({listBoards:()=>Promise.resolve([{id:1}]),
-  verifyBootstrap:()=>Promise.reject(new Error('not bootstrap')),
-  verifyAdmin:()=>Promise.reject(new Error('not CRM Admin')),
-  isCurrent:()=>true});
- assert.equal(result.bootstrapVerified,false);
- assert.equal(result.adminVerified,false);
- assert.deepEqual(result.boards,[{id:1}]);
+test('failed role reads reject rather than misclassify a signed account',async()=>{
+ for(const failedRole of ['bootstrap','admin']){
+  const error=Object.assign(new Error('temporary role read failure'),{status:503,retryAttempts:1});
+  await assert.rejects(readWorkspaceStartup({
+   listBoards:async()=>[{id:1}],
+   verifyBootstrap:async()=>{if(failedRole==='bootstrap')throw error;return true;},
+   verifyAdmin:async()=>{if(failedRole==='admin')throw error;return true;},
+   isCurrent:()=>true
+  }),observed=>observed===error);
+ }
 });
-
+test('explicit negative role decisions still resolve ordinary account startup',async()=>{
+ assert.deepEqual(await readWorkspaceStartup({listBoards:async()=>[{id:1}],
+  verifyBootstrap:async()=>false,verifyAdmin:async()=>false,isCurrent:()=>true}),
+  {boards:[{id:1}],bootstrapVerified:false,adminVerified:false});
+});
 test('CRM Admin verification accepts only exact server-confirmed boolean true',async()=>{
  for(const value of ['true',1,{adminVerified:true},null,false]){
   const result=await readWorkspaceStartup({

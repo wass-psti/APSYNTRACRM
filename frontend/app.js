@@ -172,7 +172,7 @@ import {normalizeBoardPeople,renderBoardPeople,boardInviteControl,renderMentionD
 import {BoardPreferenceStore} from './board/services/preferences-idb.js';
 import {createStartupCriticalPath} from './performance-critical-path.js';
 import {summarizeEntryWaterfall} from './performance-entry-waterfall.js';
-import {readWorkspaceStartup} from './workspace-startup-read.js';
+import {readWorkspaceStartup} from './workspace-startup-read.js?v=cp-crm-account-recognition-01';
 import {startupVerifiedRead,startupFailureDescription} from './startup-recovery-policy.js';
 import {boardTable,boardColumnMenu,loadBoardLayout,saveBoardLayout,resetBoardLayout,reorderVisible,
  normalizeLayout,BOARD_REQUIRED_COLUMNS,BOARD_COLUMN_MIN,BOARD_COLUMN_MAX,columnWidth} from './board/presentation/presentation.js';
@@ -2417,6 +2417,7 @@ function render(){
   boardItemFilterScope=filterScope;
  }
  if(!state.context){applicationRouteRead=null;fm1Module?.unmountFm1Application();closeTradeLinkSavedDocumentOutput();renderLogin();return;}
+ if(initialAccountRoleReadPending){root.innerHTML=sharedApplicationLoading();return;}
  if(applicationRouteRead){shell(sharedApplicationLoading());return;}
  if(state.view!=='fm1')fm1Module?.unmountFm1Application();
  preserveTimeTrackerLogExpansion();
@@ -2901,15 +2902,15 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  }
  if(roleRecheck){
   const [verified,admin]=await Promise.all([
-   roleConfig.bootstrapVerified().catch(()=>false),
-   roleConfig.adminVerified().catch(()=>false)
+   roleConfig.bootstrapVerified().catch(()=>null),
+   roleConfig.adminVerified().catch(()=>null)
   ]);
   if(!isCurrent())return false;
-  if(admin!==state.adminVerified){state.adminVerified=admin;state.roleData=null;state.userRoleData=null;}
-  if(!admin&&view==='role-configuration'){
+  if(admin!==null&&admin!==state.adminVerified){state.adminVerified=admin;state.roleData=null;state.userRoleData=null;}
+  if(admin===false&&view==='role-configuration'){
    location.hash='#/overview';return false;
   }
-  if(verified!==state.roleVerified){
+  if(verified!==null&&verified!==state.roleVerified){
    if(!verified){
     performanceProfileAbort?.abort();performanceProfileAbort=null;
     state.performanceReport=null;state.performanceBusy=false;
@@ -2929,7 +2930,11 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
      itemCount:state.board?.items?.length||BOARD_ITEM_PAGE_SIZE
     }),
     nativeModuleId?db.allowed(boardId,'edit').catch(()=>false):db.allowed(boardId,'edit'),
-    nativeModuleId==='tradelink'?readTradeLinkManagementAccess().catch(()=>false):
+    nativeModuleId==='tradelink'?readTradeLinkManagementAccess().catch(error=>{
+     if(Number(error?.status)===0||Number(error?.status)===408||Number(error?.status)===429||
+        Number(error?.status)>=500||['NETWORK_UNAVAILABLE','REQUEST_TIMEOUT'].includes(error?.code))return null;
+     throw error;
+    }):
      nativeModuleId?db.allowed(boardId,'manage').catch(()=>false):db.allowed(boardId,'manage'),
     nativeModuleId?Promise.resolve(null):boardStructureClient.read(boardId)
    ]);
@@ -2940,7 +2945,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
     throw new ApiError('Native application context changed during background refresh.',409);
    resolvedNative=nativeResult;
    detail=nativeModuleId?resolvedNative.detail:genericDetail;
-   edit=editResult;manage=manageResult;boardUi=uiResult;
+   edit=editResult;manage=nativeModuleId==='tradelink'&&manageResult===null?state.boardManage:manageResult;boardUi=uiResult;
   }catch(error){
    if(isCurrent()&&([403,404].includes(Number(error?.status))||
       error?.code==='42501')){
@@ -3123,6 +3128,7 @@ async function refreshSignedWorkspaceRelation(){
 }
 let crmRoleReadGeneration=0;
 let crmRoleLastReadAt=0;
+let initialAccountRoleReadPending=false;
 async function refreshSignedCrmRole({force=false}={}){
  const ctx=state.context,actor=ctx?.user_id,workspace=ctx?.workspace_id;
  if(!auth.isSignedIn||!actor||!workspace||auth.userId!==actor)return;
@@ -3143,11 +3149,11 @@ async function refreshSignedCrmRole({force=false}={}){
   // Re-check the existing signed admin RPC when the authoritative CRM tier
   // changes; keep route and sidebar eligibility synchronized after reassignment.
   if(previousRole!==undefined&&previousRole!==role.effectiveRole){
-   const admin=await roleConfig.adminVerified().catch(()=>false);
+   const admin=await roleConfig.adminVerified().catch(()=>null);
    if(generation!==crmRoleReadGeneration||!auth.isSignedIn||
       auth.userId!==actor||auth.accessToken!==token||
       state.context?.user_id!==actor||state.context?.workspace_id!==workspace)return;
-   if(admin!==state.adminVerified){
+   if(admin!==null&&admin!==state.adminVerified){
     state.adminVerified=admin;state.roleData=null;state.userRoleData=null;
     if(!admin&&state.view==='role-configuration'){
      location.hash='#/overview';
@@ -3173,6 +3179,7 @@ async function refreshWorkspace(){
  // board sync or invalidate the active board cache. Rotate only after the
  // authoritative context has resolved; identity/scope resets follow below.
  boardCacheChannel.stop();db.invalidateBoardCache();
+ if(priorIdentity!==incomingContext?.user_id)initialAccountRoleReadPending=true;
  state.context=mergeProfileAvatarContext(state.context,incomingContext);
  const workspaceIdentityChanged=priorIdentity!==state.context?.user_id||
   priorWorkspace!==state.context?.workspace_id;
@@ -3251,6 +3258,7 @@ async function refreshWorkspace(){
  // Both role classifications remain fresh, signed, server-authoritative reads.
  state.roleVerified=bootstrapVerified;
  state.adminVerified=adminVerified;
+ initialAccountRoleReadPending=false;
  void refreshSignedCrmRole({force:true}).catch(()=>{});
  void refreshSignedWorkspaceRelation().catch(()=>{});
  if(!state.roleVerified){state.roleData=null;state.roleError='';state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.ttTeam=null;state.ttTeamRunId++;state.ttTeamError='';}
@@ -3688,7 +3696,7 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
     nativeModuleId?(nativeContext?Promise.resolve(nativeContext):
       db.nativeApplicationBoardContext(nativeModuleId)):readVisibleBoardSnapshot(boardId,tab),
     db.allowed(boardId,'edit').catch(()=>false),
-    nativeModuleId==='tradelink'?readTradeLinkManagementAccess().catch(()=>false):
+    nativeModuleId==='tradelink'?readTradeLinkManagementAccess():
      db.allowed(boardId,'manage').catch(()=>false),
     nativeModuleId?Promise.resolve(null):boardStructureClient.read(boardId)
    ]).then(values=>({values}),error=>({error}));
@@ -3701,8 +3709,9 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
     boardPreferences.hydrate(state.context,boardId).catch(()=>false);
    const [readResult]=await Promise.all([remainingReads,preferencesRead]);
    if(readResult.error)throw readResult.error;
-   const [resolvedNative,genericDetail,edit,manage,boardUi]=readResult.values;
-   const detail=nativeModuleId?resolvedNative?.detail:genericDetail;
+   const [boardResult,edit,manage,boardUi]=readResult.values;
+   const resolvedNative=nativeModuleId?boardResult:null;
+   const detail=nativeModuleId?resolvedNative?.detail:boardResult;
    if(nativeModuleId&&(!resolvedNative||resolvedNative.moduleId!==nativeModuleId||
       resolvedNative.userId!==state.context?.user_id||
       resolvedNative.workspaceId!==state.context?.workspace_id||
@@ -3852,8 +3861,8 @@ async function readTradeLinkManagementAccess(){
  }catch(error){
   const status=Number(error?.status);
   if(!same())return false;
-  if(!(status===0||status===408||status===429||status>=500||
-       error?.code==='REQUEST_TIMEOUT'))throw error;
+  if(Number(error?.retryAttempts)>0||!(status===0||status===408||status===429||status>=500||
+       ['NETWORK_UNAVAILABLE','REQUEST_TIMEOUT'].includes(error?.code)))throw error;
   const allowed=await db.allowed(TRADELINK_BOARD_ID,'manage');
   return same()&&allowed===true;
  }
@@ -6078,7 +6087,7 @@ async function onRoute(){
  closeTradeLinkSavedDocumentOutput();
  syncFuelTrans({container:null});
  if(!state.context||!auth.isSignedIn)syncDda();
- if(!state.context)return;
+ if(!state.context||initialAccountRoleReadPending)return;
  if(state.workspaceTransitionPending){
   syncDda();
   clearOrderIntake();
@@ -6527,6 +6536,7 @@ let startupRecoveryStage='authentication';
 function renderBootstrapFailure(error){
  syncDda();
  startupRecoveryActive=true;
+ initialAccountRoleReadPending=false;
  platformSync.stop();
  state.context=null;
  state.boards=[];
@@ -14542,7 +14552,7 @@ root.addEventListener('submit',event=>{
   if(button.disabled)return;
   const value=String(form.elements.namedItem('displayName')?.value||'')
    .normalize('NFC').trim().replace(/\s+/gu,' ');
-  if(value.length<2||value.length>80||/[\u0000-\u001f\u007f<>]/u.test(value)){
+  if(value.length<2||value.length>80||/[^@-^_\u007f<>]/u.test(value)){
    status.textContent='Enter a display name of 2–80 readable characters.';
    form.elements.namedItem('displayName')?.focus();
    return;

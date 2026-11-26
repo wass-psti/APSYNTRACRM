@@ -72,8 +72,8 @@ test('stale identity and workspace decisions cannot enable the toolbar',async()=
  assert.equal(await w.readTradeLinkManagementAccess(),false);
 });
 test('initial load, background refresh, explicit Refresh and route reuse use the signed management check',()=>{
- assert.match(source,/nativeModuleId==='tradelink'\?readTradeLinkManagementAccess\(\)\.catch\(\(\)=>false\)/);
- assert.equal((source.match(/nativeModuleId==='tradelink'\?readTradeLinkManagementAccess\(\)\.catch\(\(\)=>false\)/g)||[]).length,2);
+ assert.match(source,/nativeModuleId==='tradelink'\?readTradeLinkManagementAccess\(\):/);
+ assert.match(source,/nativeModuleId==='tradelink'\?readTradeLinkManagementAccess\(\)\.catch\(error=>/);
  const refresh=source.slice(source.indexOf("case 'tradelink-documents-refresh':"),source.indexOf("case 'tradelink-documents-export-selection':"));
  assert.match(refresh,/recheckManage:true/);
  const reuse=source.slice(source.indexOf('if(reuseTradeLinkBoard){'),source.indexOf("state.nativeInitialRead=['attendance'"));
@@ -86,4 +86,36 @@ test('initial load, background refresh, explicit Refresh and route reuse use the
 test('initial All Documents load rechecks a missing management decision for a signed General Manager',()=>{
  const initial=source.slice(source.indexOf("state.nativeInitialRead=['attendance'"),source.indexOf("if(tab==='attendance'&&moduleByBoardName(state.board.board?.name)?.key==='timetracker')"));
  assert.match(initial,/state\.tradeLinkSection==='documents'&&!state\.boardManage&&\s*state\.tradeLinkModuleRole==='General Manager'\)\s*await loadTradeLinkDrafts\(seq,\{recheckManage:true\}\)/);
+});
+
+test('initial permission fan-out preserves the four signed result slots for native and ordinary boards',async()=>{
+ const start=source.indexOf('const remainingReads=Promise.all([',source.indexOf('async function loadBoard('));
+ const end=source.indexOf('if(nativeModuleId&&(!resolvedNative',start);
+ assert.ok(start>=0&&end>start);
+ const snippet=source.slice(start,end);
+ const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;
+ const run=new AsyncFunction('nativeModuleId','nativeContext','db','boardId','tab',
+  'readVisibleBoardSnapshot','readTradeLinkManagementAccess','boardStructureClient','viewRead',
+  'seq','routeSerial','boardPreferences','state','ApiError',
+  snippet+'return {detail,edit,manage,boardUi};');
+ const detail={board:{id:'board'}};
+ for(const native of [true,false]){
+  for(const permitted of [true,false]){
+   const nativeContext={detail};
+   const ui={layout:'table'};
+   const calls=[];
+   const result=await run(native?'tradelink':null,native?nativeContext:null,
+    {allowed:async(id,kind)=>{calls.push(kind);return kind==='edit'?!permitted:permitted;}},
+    'board','items',async()=>detail,async()=>{calls.push('manage');return permitted;},
+    {read:async()=>ui},Promise.resolve(true),1,1,{hydrate:async()=>true},{context:{}},Error);
+   assert.deepEqual(result,{detail,edit:!permitted,manage:permitted,boardUi:native?null:ui});
+   assert.deepEqual(calls,['edit','manage']);
+  }
+ }
+});
+test('an already retried transport failure does not trigger another management lookup',async()=>{
+ const error=Object.assign(failure(503),{retryAttempts:1});
+ const h=harness([error,true]);
+ await assert.rejects(h.readTradeLinkManagementAccess(),observed=>observed===error);
+ assert.equal(h.calls.length,1);
 });
