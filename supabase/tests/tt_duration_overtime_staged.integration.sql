@@ -15,6 +15,8 @@ BEGIN
   RAISE EXCEPTION 'Disposable database required'; END IF;
  IF has_function_privilege('anon','public.timetracker_ot_submit_duration(uuid,date,integer,text)','EXECUTE')
   OR has_function_privilege('anon','public.timetracker_ot_decide_duration(uuid,uuid,text)','EXECUTE')
+  OR has_function_privilege('anon','public.timetracker_ot_submit_manual_duration(uuid,uuid,date,integer,text)','EXECUTE')
+  OR has_function_privilege('anon','public.timetracker_ot_decide_manual_duration(uuid,uuid,text)','EXECUTE')
   OR has_function_privilege('authenticated','private.tt_duration_ot_worker_minutes(uuid,uuid,uuid,timestamptz,timestamptz,jsonb)','EXECUTE')
   OR has_function_privilege('authenticated','public.timetracker_ot_submit(uuid,date,time,time,text)','EXECUTE')
   OR NOT has_function_privilege('authenticated','public.timetracker_ot_submit_duration(uuid,date,integer,text)','EXECUTE')
