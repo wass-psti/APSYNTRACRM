@@ -85,7 +85,7 @@ export function renderManualAttendanceEditor({editor,busy=false,error='',now=new
  '<header class="tt-admin-editor-head"><div class="tt-admin-editor-title-group"><span class="tt-admin-eyebrow">SYSTEM ADMIN · MANUAL ATTENDANCE</span><h3 id="tt-admin-editor-title">Add Attendance Log</h3><p>Correct a missed employee clock-in for today or a previous Philippine date.</p></div>'+
  '<button type="button" class="tt-admin-close" data-action="tt-log-admin-cancel" aria-label="Close editor"'+(busy?' disabled':'')+'>×</button></header>'+
  (error?'<p class="tt-admin-error" role="alert">'+esc(error)+'</p>':'')+
- (warning?'<p class="tt-admin-error" role="status">'+esc(warning)+'</p>':'')+
+ (warning?'<p class="tt-admin-error" role="status" data-tt-manual-readiness-warning>'+esc(warning)+'</p>':'')+
  '<fieldset class="tt-admin-editor-fields"'+(busy?' disabled':'')+'><div class="tt-admin-editor-body">'+
  '<section class="tt-admin-field-section"><h4>Employee and attendance</h4><label class="tt-admin-field"><span>Regular employee</span><select name="employee" required>'+
  opt('','Select employee…',employee)+(editor.roster||[]).filter(m=>m.type==='regular'&&m.active).map(m=>opt('regular:'+m.id,m.name,employee)).join('')+'</select></label>'+
