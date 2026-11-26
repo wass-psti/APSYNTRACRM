@@ -12,11 +12,11 @@ test('published entrypoint cache-busts the full FuelTrack All Requests render pa
  const application=read('../fueltrack-v3-application.js');
  const css=read('../fueltrack-v3-all-requests-redesign.css');
 
- assert.match(index,new RegExp('app\\\\.js\\\\?v='+version));
- assert.match(index,new RegExp('fueltrack-v3-all-requests-redesign\\\\.css\\\\?v='+version));
- assert.match(app,new RegExp('fueltrack-v3-ui\\\\.js\\\\?v='+version));
- assert.match(ui,new RegExp('fueltrack-v3-application\\\\.js\\\\?v='+version));
- assert.match(application,new RegExp('fueltrack-v3-signed-views\\\\.js\\\\?v='+version));
- assert.match(css,/\\.ft3-requests-hero/);
- assert.match(css,/@media\\(max-width:760px\\)/);
+ assert.ok(index.includes('app.js?v='+version));
+ assert.ok(index.includes('fueltrack-v3-all-requests-redesign.css?v='+version));
+ assert.ok(app.includes('fueltrack-v3-ui.js?v='+version));
+ assert.ok(ui.includes('fueltrack-v3-application.js?v='+version));
+ assert.ok(application.includes('fueltrack-v3-signed-views.js?v='+version));
+ assert.ok(css.includes('.ft3-requests-hero'));
+ assert.ok(css.includes('@media(max-width:760px)'));
 });
