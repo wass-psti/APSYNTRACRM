@@ -126,7 +126,7 @@ test('client denies all operations when signed auth and board APIs are unavailab
   auth:{getVerifiedUser:async()=>{calls++;throw Error('unexpected auth');}},
   api:{rpc:async()=>{calls++;throw Error('unexpected API');}}
  });
- await assert.rejects(()=>client.list(),/Signed TradeLink domain API unavailable/);
+ await assert.rejects(()=>client.list(),/Signed TradeLink reviewer API unavailable/);
  await assert.rejects(()=>client.read('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),/Signed TradeLink domain API unavailable/);
  await assert.rejects(()=>client.save({draft:{documentType:'quotation',documentNumber:'Q-001'}}),/Signed TradeLink domain API unavailable/i);
  await assert.rejects(()=>client.changeState({
@@ -881,7 +881,7 @@ test('read-only listing presents filters but never reveals rows or enables RPC u
  assert.match(html,/Search document number/);
  assert.match(html,/data-tradelink-domain-count role="status"/);
  assert.match(html,/SECRET-Q/);
- assert.match(html,/1 of 1 authorized records in this response/);
+ assert.match(html,/1 of 1 documents in this response/g);
  assert.doesNotMatch(renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
    view:seed,canManage:true}),/SECRET-Q|Authorized Draft records/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
