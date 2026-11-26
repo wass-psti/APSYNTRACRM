@@ -2079,7 +2079,7 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
   detail.board.workspace_id!==workspaceId)
   return '<section class="tl-content-panel" role="alert">Signed TradeLink document workspace unavailable.</section>';
  const creatorMode=canCreate&&!canManage;
- const rows=TL03_DOMAIN_READS_ENABLED&&(canManage||canReview||canCreate)&&
+ const rows=TL03_DOMAIN_READS_ENABLED&&(view.sharedVisibility===true||canManage||canReview||canCreate)&&
   view.status==='AUTHORIZED_READ'&&Array.isArray(view.rows)?view.rows:[];
  const selection=view.documentPreview;
  const latestRecord=selection?.latestRecord||selection?.record;
@@ -2099,7 +2099,7 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
    '<div class="tl-reference-repository-buttons">'+
    (canCreate&&TL03_DOMAIN_WRITES_ENABLED?'<a class="primary" href="'+tradeLinkApplicationHref('drafts/quotation')+'">Create New Document</a>':'')+
    '<button type="button" class="secondary" data-action="tradelink-documents-refresh"'+
-   (!TL03_DOMAIN_READS_ENABLED||(!canManage&&!canReview&&!canCreate)||view.busy?' disabled':'')+'>Refresh</button>'+
+   (!TL03_DOMAIN_READS_ENABLED||(!view.sharedVisibility&&!canManage&&!canReview&&!canCreate)||view.busy?' disabled':'')+'>Refresh</button>'+
    '</div></div>'+
   (view.error?'<p role="alert">'+escape(view.error)+'</p>':'')+
   (view.message?'<p role="status">'+escape(view.message)+'</p>':'')+
