@@ -265,3 +265,12 @@ html[data-aps-monday-theme="dark"] #app .ft3-requests-v2 .ft3-requests-detail-he
 html[data-aps-monday-theme="dark"] #app .ft3-requests-v2 .ft3-requests-empty{background:var(--crm-native-panel);border-color:var(--crm-native-border)}
 html[data-aps-monday-theme="dark"] #app .ft3-requests-v2 .ft3-requests-empty>strong{color:var(--crm-native-ink)}
 html[data-aps-monday-theme="dark"] #app .ft3-requests-v2 .ft3-requests-empty p{color:var(--crm-native-muted)}
+
+html[data-aps-monday-theme="dark"] #app .ft3-requests-v2 .ft3-request-table .ft3-requests-row{background:var(--crm-native-panel);border-color:var(--crm-native-border)}
+html[data-aps-monday-theme="dark"] #app .ft3-requests-v2 .ft3-requests-status-filters{border-color:var(--crm-native-border)}
+html[data-aps-monday-theme="dark"] #app .ft3-requests-v2 .ft3-requests-date-cell time{color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .ft3-requests-v2 .ft3-signed-status-submitted{background:#4a3b24;border-color:#745d35;color:#f0d49e}
+html[data-aps-monday-theme="dark"] #app .ft3-requests-v2 .ft3-signed-status-approved{background:#243e53;border-color:#3a607d;color:#b9dafa}
+html[data-aps-monday-theme="dark"] #app .ft3-requests-v2 .ft3-signed-status-refueling_done{background:#234744;border-color:#356c66;color:#b5e6dd}
+html[data-aps-monday-theme="dark"] #app .ft3-requests-v2 .ft3-signed-status-completed{background:#244638;border-color:#356a50;color:#b9e9c9}
+html[data-aps-monday-theme="dark"] #app .ft3-requests-v2 .ft3-signed-status-rejected{background:#4b3038;border-color:#754852;color:#f1c1ca}
