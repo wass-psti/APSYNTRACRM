@@ -34,9 +34,9 @@ export function renderFuelTrackNewRequest({enabled=false,busy=false,message='',r
  '</div>';
  const purpose=section(3,'Justification',textArea()+receipt());
  return '<section class="ft3-new-request" aria-labelledby="ft3-new-title">'+
- '<header class="ft3-new-title"><h2 id="ft3-new-title">New Fuel Request</h2>'+
- '<p>Choose a refuel type, complete the required fields, then submit a signed request for approval. Receipt photos are added after physical refueling.</p></header>'+
- '<div class="ft3-new-progress" aria-label="Request steps"><span>Vehicle / Container Details</span><span>Trip Information</span><span>Justification</span></div>'+
+ '<header class="ft3-new-title"><span class="ft3-new-eyebrow">FUEL OPERATIONS / REQUEST COMPOSER</span><h2 id="ft3-new-title">New Fuel Request</h2>'+
+ '<p>Build a clear request for review. Choose the asset type, add the required details, and submit it through the existing signed workflow.</p></header>'+
+ '<ol class="ft3-new-progress" aria-label="Request steps"><li>Request type</li><li>Asset and trip details</li><li>Justification</li></ol>'+
  (enabled?'<form id="ft3-new-request-form" class="ft3-new-composer">':'<div class="ft3-new-composer">')+
  '<div class="ft3-new-panel ft3-new-type" role="group" aria-label="Select Refuel Type"><h3>Select Refuel Type</h3>'+
  '<div class="ft3-new-options">'+mode('vehicle','Vehicle Fuel','Cars, trucks, motorcycles','⛽')+
@@ -58,6 +58,12 @@ export function renderFuelTrackNewRequest({enabled=false,busy=false,message='',r
  '<textarea id="ft3-container-purpose" name="containerPurpose" maxlength="500" rows="4" placeholder="Describe the purpose of this fuel request"></textarea></label>'+
  receipt())+
  '</div>'+
+ '<aside class="ft3-new-next-steps" aria-label="What happens after submission">'+
+ '<span class="ft3-new-aside-kicker">AFTER YOU SUBMIT</span><h3>What happens next</h3>'+
+ '<ol><li><span>01</span><div><strong>Request review</strong><p>Your signed request is saved for the approval workflow.</p></div></li>'+
+ '<li><span>02</span><div><strong>Approval decision</strong><p>An authorized reviewer records the request decision.</p></div></li>'+
+ '<li><span>03</span><div><strong>Refuel and receipt</strong><p>After refueling, the authorized Admin records the transaction and receipt in LightFuels.</p></div></li></ol>'+
+ '<p class="ft3-new-aside-note">A receipt is added after refueling, not with this initial request.</p></aside>'+
  '<button type="submit" class="ft3-new-submit"'+(!enabled||busy?' disabled':'')+' aria-describedby="ft3-new-catalog-note">'+(busy?'Submitting…':enabled?'Submit for Approval':'Submit for Approval — connect signed service first')+'</button>'+(!enabled?'<button type="button" class="ft3-new-retry" data-action="ft3-retry-backend"'+(busy?' disabled':'')+'>Retry signed FuelTrack connection</button>':'')+
  (enabled?'</form>':'</div>')+'</section>';
 }

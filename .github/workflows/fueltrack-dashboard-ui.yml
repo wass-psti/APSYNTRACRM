@@ -1,5 +1,34 @@
 name: FuelTrack Dashboard UI Acceptance
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/fueltrack-v3-signed-views.js'
+      - 'frontend/fueltrack-v3-application.css'
+      - 'frontend/fueltrack-v3-analytics.css'
+      - 'frontend/app.js'
+      - 'frontend/dark-native-applications.css'
+      - 'frontend/apsyntra-styles.bundle.css'
+      - 'frontend/tests/fueltrack-v3-signed-rich-views.test.mjs'
+      - 'scripts/fueltrack-v3-native-browser-acceptance.mjs'
+      - 'index.html'
+      - '.github/workflows/fueltrack-dashboard-ui.yml'
+      - 'frontend/fueltrack-v3-ui.js'
+      - 'frontend/fueltrack-v3-application.js'
+      - 'frontend/fueltrack-v3-all-requests-redesign.css'
+      - 'frontend/tests/fueltrack-v3-signed-views.test.mjs'
+      - 'frontend/tests/fueltrack-v3-all-requests-entrypoint.test.mjs'
+      - 'scripts/pages-smoke.mjs'
+      - 'frontend/fueltrack-v3-new-request.js'
+      - 'frontend/fueltrack-v3-new-request-redesign.css'
+      - 'frontend/tests/fueltrack-v3-new-request-ui.test.mjs'
+      - 'scripts/priority5-style-manifest.mjs'
+      - 'frontend/fueltrack-v3-approvals.js'
+      - 'frontend/fueltrack-v3-approvals-redesign.css'
+      - 'frontend/tests/fueltrack-v3-approvals.test.mjs'
+      - 'frontend/tests/fueltrack-v3-approvals-redesign.test.mjs'
+      - 'frontend/tests/fueltrack-v3-application-route.test.mjs'
+      - 'scripts/build-priority5-styles.mjs'
   pull_request:
     paths:
       - 'frontend/fueltrack-v3-signed-views.js'
@@ -12,6 +41,22 @@ on:
       - 'scripts/fueltrack-v3-native-browser-acceptance.mjs'
       - 'index.html'
       - '.github/workflows/fueltrack-dashboard-ui.yml'
+      - 'frontend/fueltrack-v3-ui.js'
+      - 'frontend/fueltrack-v3-application.js'
+      - 'frontend/fueltrack-v3-all-requests-redesign.css'
+      - 'frontend/tests/fueltrack-v3-signed-views.test.mjs'
+      - 'frontend/tests/fueltrack-v3-all-requests-entrypoint.test.mjs'
+      - 'scripts/pages-smoke.mjs'
+      - 'frontend/fueltrack-v3-new-request.js'
+      - 'frontend/fueltrack-v3-new-request-redesign.css'
+      - 'frontend/tests/fueltrack-v3-new-request-ui.test.mjs'
+      - 'scripts/priority5-style-manifest.mjs'
+      - 'frontend/fueltrack-v3-approvals.js'
+      - 'frontend/fueltrack-v3-approvals-redesign.css'
+      - 'frontend/tests/fueltrack-v3-approvals.test.mjs'
+      - 'frontend/tests/fueltrack-v3-approvals-redesign.test.mjs'
+      - 'frontend/tests/fueltrack-v3-application-route.test.mjs'
+      - 'scripts/build-priority5-styles.mjs'
 permissions:
   contents: read
 jobs:

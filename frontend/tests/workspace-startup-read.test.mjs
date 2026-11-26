@@ -60,16 +60,22 @@ test('generic board startup remains fatal when its catalog is unavailable',async
  }),error=>error===failure);
 });
 
-test('role verifier failures remain false without failing the signed board catalog',async()=>{
- const result=await readWorkspaceStartup({listBoards:()=>Promise.resolve([{id:1}]),
-  verifyBootstrap:()=>Promise.reject(new Error('not bootstrap')),
-  verifyAdmin:()=>Promise.reject(new Error('not CRM Admin')),
-  isCurrent:()=>true});
- assert.equal(result.bootstrapVerified,false);
- assert.equal(result.adminVerified,false);
- assert.deepEqual(result.boards,[{id:1}]);
+test('failed role reads reject rather than misclassify a signed account',async()=>{
+ for(const failedRole of ['bootstrap','admin']){
+  const error=Object.assign(new Error('temporary role read failure'),{status:503,retryAttempts:1});
+  await assert.rejects(readWorkspaceStartup({
+   listBoards:async()=>[{id:1}],
+   verifyBootstrap:async()=>{if(failedRole==='bootstrap')throw error;return true;},
+   verifyAdmin:async()=>{if(failedRole==='admin')throw error;return true;},
+   isCurrent:()=>true
+  }),observed=>observed===error);
+ }
 });
-
+test('explicit negative role decisions still resolve ordinary account startup',async()=>{
+ assert.deepEqual(await readWorkspaceStartup({listBoards:async()=>[{id:1}],
+  verifyBootstrap:async()=>false,verifyAdmin:async()=>false,isCurrent:()=>true}),
+  {boards:[{id:1}],bootstrapVerified:false,adminVerified:false});
+});
 test('CRM Admin verification accepts only exact server-confirmed boolean true',async()=>{
  for(const value of ['true',1,{adminVerified:true},null,false]){
   const result=await readWorkspaceStartup({
@@ -246,4 +252,32 @@ test('optional signed-browser acceptance tools do not require Playwright during 
   assert.ok(contents.indexOf('await import("playwright")')>contents.indexOf('import.meta.url'),
    'only the executable browser path may load the optional dependency');
  }
+});
+
+
+test('initial account role guard defers both shell rendering and route initialization',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const renderStart=app.indexOf('function render(){');
+ const pendingRender=app.indexOf('if(initialAccountRoleReadPending){root.innerHTML=sharedApplicationLoading();return;}',renderStart);
+ const nextShell=app.indexOf('if(applicationRouteRead){shell(',renderStart);
+ assert.ok(renderStart>=0&&pendingRender>renderStart&&nextShell>pendingRender);
+ const routeStart=app.indexOf('async function onRoute(){');
+ const noContext=app.indexOf('if(!state.context)return;',routeStart);
+ const pendingRoute=app.indexOf('if(initialAccountRoleReadPending)return;',noContext);
+ const routeDispatch=app.indexOf('if(state.workspaceTransitionPending)',routeStart);
+ assert.ok(routeStart>=0&&noContext>routeStart&&pendingRoute>noContext&&routeDispatch>pendingRoute);
+ const guard=app.slice(noContext,routeDispatch);
+ const run=new Function('state','initialAccountRoleReadPending',guard+'return "dispatch";');
+ assert.equal(run({context:null},false),undefined);
+ assert.equal(run({context:{}},true),undefined);
+ assert.equal(run({context:{}},false),'dispatch');
+ const renderGuard=app.slice(pendingRender,nextShell);
+ const render=new Function('initialAccountRoleReadPending','root','sharedApplicationLoading',renderGuard+'return "shell";');
+ const root={innerHTML:''};
+ assert.equal(render(true,root,()=>'<loading>'),undefined);
+ assert.equal(root.innerHTML,'<loading>');
+ assert.equal(render(false,root,()=>'<loading>'),'shell');
+ const startup=app.slice(app.indexOf('async function refreshWorkspace(){'),app.indexOf('async function loadUserRoleManagement(){'));
+ assert.ok(startup.indexOf('initialAccountRoleReadPending=true')<startup.indexOf('await readWorkspaceStartup('));
+ assert.ok(startup.indexOf('state.adminVerified=adminVerified;')<startup.indexOf('initialAccountRoleReadPending=false;'));
 });

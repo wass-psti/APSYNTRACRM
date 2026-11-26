@@ -32,9 +32,9 @@ export async function readWorkspaceStartup({
  // canonical application resolver; this fallback never grants board access.
  const reads=[
   boardRead,
-  Promise.resolve().then(verifyBootstrap).catch(()=>false)
+  Promise.resolve().then(verifyBootstrap)
  ];
- if(verifyAdmin)reads.push(Promise.resolve().then(verifyAdmin).catch(()=>false));
+ if(verifyAdmin)reads.push(Promise.resolve().then(verifyAdmin));
  const [boardResult,bootstrapVerified,adminVerified]=await Promise.all(reads);
  if(!isCurrent())throw Error('Signed workspace changed during initialization.');
  const result={boards:boardResult.boards,bootstrapVerified:bootstrapVerified===true};

@@ -9,6 +9,8 @@ const requestId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const detail={board:{id:FUELTRACK_V3_ID,workspace_id:workspaceId,name:'FuelTrack+ v3',status:'active',description:'[APSYNTRA:MODULE:fueltrack:v1] Native'},items:[],columns:[],values:[]};
 const row={id:requestId,kind:'vehicle',revision:4,state:'completed',requestor_name:'Browser Acceptance',details:{plate:'GAN 8289',purpose:'Controlled regression fixture'},created_at:'2026-11-10T04:00:00Z',completed_at:'2026-11-10T07:00:00Z',actual_amount:500,fuel_liters:10};
 const snapshot={status:'VERIFIED_READ',boardId:FUELTRACK_V3_ID,workspaceId,role:'Admin',rows:[row],summary:{total:1,submitted:0,approved:0,rejected:0,refuelingDone:0,completed:1,totalAmount:500,totalLiters:10,approvedToday:0,rejectedToday:0,decisionsToday:0,pendingCount:0,activeQueue:0,completedToday:0,overdueCount:0}};
+const approvalRow={...row,state:'submitted',completed_at:null,created_at:'2026-11-26T08:00:00Z'};
+const approvalSnapshot={...snapshot,rows:[approvalRow],summary:{...snapshot.summary,total:1,submitted:1,approved:0,rejected:0,refuelingDone:0,completed:0,pendingCount:1}};
 const analytics={status:'VERIFIED_READ',boardId:FUELTRACK_V3_ID,workspaceId,daily:[{day:'2026-11-10',transactions:1,amount:500,liters:10}]};
 const styles=readFileSync('frontend/apsyntra-styles.bundle.css','utf8');
 const browser=await chromium.launch({headless:true});
@@ -17,7 +19,7 @@ try {
  const page=await browser.newPage({viewport:{width:1440,height:900}});
  const errors=[];page.on('pageerror',error=>errors.push(error.message));
  for(const [section,pattern] of [['dashboard',/Request pipeline/],['analytics',/Consumption Trend/],['requests',/Request Log/],['new-request',/Select Refuel Type/],['approvals',/Approvals/],['lightfuels',/LightFuels/],['activity',/Activity/]]) {
-  const html=renderFuelTrackV3Application({detail,section,actorName:'Browser Acceptance',backend:{snapshot,analytics}});
+  const html=renderFuelTrackV3Application({detail,section,actorName:'Browser Acceptance',backend:{snapshot:section==='approvals'?approvalSnapshot:snapshot,analytics}});
   await page.setContent('<!doctype html><html><head><meta charset="utf-8"></head><body><main id="app">'+html+'</main></body></html>');
   await page.addStyleTag({content:styles});
   assert.match(await page.locator('.ft3-app-body').innerText(),pattern,section);
@@ -43,11 +45,76 @@ try {
    assert.equal(await page.locator('.ft3-dashboard-stage-label').first().evaluate(el=>getComputedStyle(el).color),darkTheme.muted);
    await page.locator('html').evaluate(el=>el.removeAttribute('data-aps-monday-theme'));
   }
+  if(section==='requests'){
+   assert.equal(await page.locator('.ft3-request-stat').count(),6);
+   assert.equal(await page.locator('.ft3-request-filter').count(),6);
+   assert.equal(await page.locator('.ft3-request-table tbody tr.ft3-request-row').count(),1);
+   assert.equal(await page.locator('.ft3-request-view').count(),1);
+   assert.match(await page.locator('.ft3-request-table').innerText(),/GAN 8289/);
+   const expanded=renderFuelTrackV3Application({
+    detail,section:'requests',actorName:'Browser Acceptance',
+    backend:{snapshot,analytics},requestsFilters:{expandedId:requestId}
+   });
+   await page.setContent('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><main id="app">'+expanded+'</main></body></html>');
+   await page.addStyleTag({content:styles});
+   assert.match(await page.locator('.ft3-request-detail').innerText(),/Controlled regression fixture/);
+   await page.setViewportSize({width:390,height:844});
+   assert.equal(await page.locator('.ft3-request-table tr.ft3-request-row').evaluate(el=>getComputedStyle(el).display),'grid');
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'No All Requests page-level overflow at 390px');
+   await page.locator('html').evaluate(el=>el.setAttribute('data-aps-monday-theme','dark'));
+   const darkSurface=await page.locator('.ft3-request-workspace').evaluate(el=>getComputedStyle(el).backgroundColor);
+   assert.notEqual(darkSurface,'rgb(255, 255, 255)','All Requests workspace uses its dark surface');
+   await page.locator('html').evaluate(el=>el.removeAttribute('data-aps-monday-theme'));
+   checks+=6;
+  }
+
+  if(section==='approvals'){
+   assert.equal(await page.locator('.ft3-approval-metric').count(),4);
+   assert.equal(await page.locator('.ft3-approval-card').count(),1);
+   assert.equal(await page.locator('[data-action="ft3-approve"]').count(),1);
+   assert.equal(await page.locator('[data-action="ft3-reject"]').count(),1);
+   assert.equal(await page.locator('.ft3-approval-reason input').getAttribute('maxlength'),'1000');
+   assert.equal(await page.locator('.ft3-approval-decision').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),2);
+   assert.match(await page.locator('.ft3-approval-card').innerText(),/GAN 8289/);
+   await page.locator('html').evaluate(el=>el.setAttribute('data-aps-monday-theme','dark'));
+   const darkMetric=await page.locator('.ft3-approval-metric').first().evaluate(el=>getComputedStyle(el).backgroundColor);
+   assert.notEqual(darkMetric,'rgb(255, 255, 255)','Approval metrics use a dark theme surface');
+   await page.locator('html').evaluate(el=>el.removeAttribute('data-aps-monday-theme'));
+   await page.setViewportSize({width:390,height:844});
+   assert.equal(await page.locator('.ft3-approval-decision').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),1);
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'No approvals page overflow at 390px');
+   await page.setViewportSize({width:360,height:844});
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'No approvals page overflow at 360px');
+   checks+=11;
+  }
   if(section==='new-request'){
    assert.equal(await page.locator('#ft3-new-request-form').count(),1);
+   assert.equal(await page.locator('.ft3-new-progress li').count(),3);
+   assert.equal(await page.locator('.ft3-new-next-steps li').count(),3);
    assert.equal(await page.locator('#ft3-mode-vehicle').isChecked(),true);
+   assert.equal(await page.locator('.ft3-new-vehicle').isVisible(),true);
+   assert.equal(await page.locator('.ft3-new-container').isVisible(),false);
+   assert.equal(await page.locator('.ft3-new-option-body').count(),2);
+   const desktopColumns=await page.locator('.ft3-new-composer').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length);
+   assert.equal(desktopColumns,2,'Desktop composer uses a details column and a next-steps column');
    await page.locator('#ft3-mode-container').check();
    assert.equal(await page.locator('#ft3-mode-container').isChecked(),true);
+   assert.equal(await page.locator('.ft3-new-container').isVisible(),true);
+   assert.equal(await page.locator('.ft3-new-vehicle').isVisible(),false);
+   await page.locator('#ft3-quantity').selectOption('custom');
+   assert.equal(await page.locator('.ft3-new-custom-count').isVisible(),true);
+   await page.locator('#ft3-custom-count').fill('12');
+   await page.locator('#ft3-responsible').selectOption({index:1});
+   await page.locator('#ft3-container-purpose').fill('Workshop equipment fuel reserve');
+   await page.locator('html').evaluate(el=>el.setAttribute('data-aps-monday-theme','dark'));
+   const darkForm=await page.locator('.ft3-new-panel').first().evaluate(el=>getComputedStyle(el).backgroundColor);
+   assert.notEqual(darkForm,'rgb(255, 255, 255)','New request panels use dark theme surfaces');
+   await page.locator('html').evaluate(el=>el.removeAttribute('data-aps-monday-theme'));
+   await page.setViewportSize({width:390,height:844});
+   const mobileColumns=await page.locator('.ft3-new-composer').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length);
+   assert.equal(mobileColumns,1,'Mobile composer stacks to one column');
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'No New Fuel Request page overflow at 390px');
+   checks+=15;
   }
   checks++;
  }

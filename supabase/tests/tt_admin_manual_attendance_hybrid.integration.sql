@@ -75,7 +75,7 @@ BEGIN
  v_now:=pg_catalog.clock_timestamp();
  v_today:=(v_now AT TIME ZONE 'Asia/Manila')::date;
  v_day_start:=v_today::timestamp AT TIME ZONE 'Asia/Manila';
- v_live_clock_in:=GREATEST(v_day_start,v_now-INTERVAL '20 minutes');
+ v_live_clock_in:=date_trunc('milliseconds',GREATEST(v_day_start,v_now-INTERVAL '20 minutes'));
 
  -- Activation is operator-only and reviews zero pre-existing open sessions.
  PERFORM private.tt_activate_isolated_auto_clockout(v_today,0);

@@ -70,7 +70,7 @@ jobs:
           for file in \
             sql/tests/cp-board-collab01-disposable-setup.sql \
             sql/tests/cp-tt-gps01-disposable-setup.sql \
-            sql/cp-tt-gps01-live-commit-baseline.sql \
+            sql/tests/cp-tt-gps01-live-commit-baseline.sql \
             sql/cp-tt-gps01-atomic-board-projection.sql \
             sql/tests/cp-tt-admin-record-management-disposable-setup.sql \
             sql/cp-tt-ot01-staged-bootstrap-approval.sql \

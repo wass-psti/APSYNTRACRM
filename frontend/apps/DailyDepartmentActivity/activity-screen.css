@@ -1,24 +1,285 @@
-/* Scoped DDA layout; inherits CRM theme colors and control styling. */
-.dda-app {display:grid;gap:1rem;min-width:0}
-.dda-app header,.dda-app .dda-entry {display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap}
-.dda-app h1,.dda-app h2,.dda-app h3,.dda-app p {margin:0 0 .4rem}
-.dda-app .dda-layout {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:1rem}
-.dda-app .dda-layout>div {display:grid;align-content:start;gap:1rem;min-width:0}
-.dda-app .dda-panel,.dda-app .dda-stats>div {border:1px solid currentColor;border-radius:.7rem;padding:1rem;min-width:0}
-.dda-app .dda-stats {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.6rem}
-.dda-app .dda-stats strong {display:block;font-size:1.5rem}
-.dda-app form,.dda-app fieldset {display:flex;flex-wrap:wrap;align-items:end;gap:.65rem;border:0;padding:0;margin:0;min-width:0}
-.dda-app label {display:grid;gap:.3rem;flex:1 1 9rem;min-width:0}
-.dda-app input,.dda-app select,.dda-app textarea {width:100%;min-width:0;box-sizing:border-box}
+/* DDA-specific presentation, using CRM semantic dark-mode tokens. */
+.dda-app {
+  --dda-surface:var(--card,#fff);--dda-ink:var(--ink,#20263b);--dda-muted:#59667c;
+  --dda-border:#dfe5ef;--dda-soft:#f4f6fb;--dda-accent:#5559b7;--dda-shadow:0 3px 14px rgba(30,41,70,.045);
+  display:grid;gap:18px;min-width:0;max-width:1500px;margin:0 auto;color:var(--dda-ink);container-type:inline-size;
+}
+html[data-aps-monday-theme="dark"] .dda-app {
+  --dda-surface:var(--crm-dark-surface,#26272b);--dda-ink:var(--crm-dark-text,#efeff1);
+  --dda-muted:var(--crm-dark-muted,#c0c1c6);--dda-border:var(--crm-dark-border,#45464d);
+  --dda-soft:var(--crm-dark-raised,#2d2e33);--dda-accent:var(--crm-dark-accent,#94b7f7);--dda-shadow:none;
+}
+.dda-app *, .dda-app *::before,.dda-app *::after {box-sizing:border-box}
+.dda-app h1,.dda-app h2,.dda-app h3,.dda-app p {margin:0}
+.dda-app .dda-heading {display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:4px 0 6px}
+.dda-app .dda-eyebrow {display:block;font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--dda-accent);margin-bottom:8px}
+.dda-app h1 {font-size:clamp(24px,3cqi,32px);font-weight:750;letter-spacing:-.035em;line-height:1.2;margin-bottom:7px}
+.dda-app h2 {font-size:17px;font-weight:700;letter-spacing:-.015em;line-height:1.35}
+.dda-app h3 {font-size:14px;font-weight:700;line-height:1.45}
+.dda-app p {font-size:13px;line-height:1.5;color:var(--dda-muted)}
+.dda-app .dda-heading p {font-size:14px}
+.dda-app svg {width:20px;height:20px;flex:none}
+.dda-app .dda-refresh {display:inline-flex;align-items:center;gap:7px}
+.dda-app .dda-refresh svg {width:16px;height:16px}
+.dda-app .dda-panel,.dda-app .dda-metric {
+  background:var(--dda-surface);border:1px solid var(--dda-border);border-radius:14px;padding:18px;min-width:0;box-shadow:var(--dda-shadow)
+}
+.dda-app .dda-stats {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.dda-app .dda-metric {display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:16px}
+.dda-app .dda-metric-copy {min-width:0;display:grid;gap:6px}
+.dda-app .dda-metric-copy>span {font-size:12px;font-weight:600;color:var(--dda-muted)}
+.dda-app .dda-metric strong {font-size:30px;line-height:1;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.dda-app .dda-metric-icon,.dda-app .dda-empty-icon {display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:#eeedff;color:#5559b7;flex:none}
+.dda-app .dda-metric-pending .dda-metric-icon {background:#fff1d9;color:#925b11}
+.dda-app .dda-metric-progress .dda-metric-icon {background:#e5efff;color:#315eae}
+.dda-app .dda-metric-completed .dda-metric-icon {background:#e0f5eb;color:#22774e}
+html[data-aps-monday-theme="dark"] .dda-app .dda-metric-icon,html[data-aps-monday-theme="dark"] .dda-app .dda-empty-icon {background:var(--dda-soft);color:var(--dda-accent)}
+html[data-aps-monday-theme="dark"] .dda-app .dda-metric-pending .dda-metric-icon {color:#f5cb82}
+html[data-aps-monday-theme="dark"] .dda-app .dda-metric-progress .dda-metric-icon {color:#a2c1ff}
+html[data-aps-monday-theme="dark"] .dda-app .dda-metric-completed .dda-metric-icon {color:#8fdbb5}
+.dda-app .dda-section-heading {display:grid;gap:4px;margin-bottom:16px}
+.dda-app .dda-layout {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:16px;align-items:start}
+.dda-app .dda-management {display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+.dda-app .dda-management-heading {grid-column:1/-1;display:grid;gap:4px;padding:8px 0 0}
+.dda-app form,.dda-app fieldset {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;gap:12px;border:0;padding:0;margin:0;min-width:0}
+.dda-app form>fieldset {grid-column:1/-1}
+.dda-app .dda-filters form {grid-template-columns:repeat(4,minmax(0,1fr))}
+.dda-app label {display:grid;gap:5px;min-width:0;font-size:12px;font-weight:600;color:var(--dda-muted)}
+.dda-app :is(input,select,textarea) {width:100%;min-width:0;max-width:100%;font-size:13px}
+.dda-app :is(input:not([type=checkbox]),select,textarea) {background:var(--dda-soft);border-color:var(--dda-border);color:var(--dda-ink);min-height:39px;border-radius:8px}
 .dda-app textarea {resize:vertical}
-.dda-app .dda-entry {border-bottom:1px solid currentColor;padding:.75rem 0;overflow-wrap:anywhere}
-.dda-app .dda-entry:last-child {border-bottom:0}
+.dda-app :is(input,textarea)::placeholder {color:var(--dda-muted);opacity:1}
+.dda-app :is(button,input,select,textarea,summary):focus-visible {outline:2px solid var(--dda-accent);outline-offset:2px}
+.dda-app button {min-height:38px;max-width:100%;white-space:normal}
+.dda-app form[data-dda-form="activity"] label:has([name=title]),.dda-app form[data-dda-form="activity"] label:has(textarea),.dda-app .dda-actions,.dda-app fieldset>p {grid-column:1/-1}
+.dda-app fieldset>button,.dda-app .dda-filters form>button {justify-self:start}
+.dda-app .dda-actions {display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.dda-app .dda-list-heading {display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.dda-app .dda-count {border:1px solid var(--dda-border);border-radius:20px;padding:5px 9px;color:var(--dda-muted);font-size:11px;font-weight:650;white-space:nowrap}
+.dda-app .dda-empty {display:grid;justify-items:center;text-align:center;gap:9px;border:1px dashed var(--dda-border);border-radius:11px;padding:32px 14px;background:var(--dda-soft)}
+.dda-app .dda-empty-icon {width:48px;height:48px;margin-bottom:4px}
+.dda-app .dda-empty-icon svg {width:25px;height:25px}
+.dda-app .dda-empty p {max-width:300px}
+.dda-app .dda-entry {display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--dda-border);padding:14px 0;overflow-wrap:anywhere}
+.dda-app .dda-entry:last-child {padding-bottom:0}
+.dda-app .dda-entry>div:first-child {min-width:0;flex:1 1 220px;display:grid;gap:5px}
 .dda-app .dda-details {white-space:pre-wrap}
-.dda-app .dda-actions {display:flex;flex-wrap:wrap;gap:.5rem}
-.dda-app [role="alert"]:empty,.dda-app [role="status"]:empty {display:none}
-@media(max-width:760px){.dda-app .dda-layout{grid-template-columns:minmax(0,1fr)}.dda-app .dda-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
-
-.dda-app .dda-report-row {display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;padding:.65rem 0;border-bottom:1px solid currentColor;overflow-wrap:anywhere}
+.dda-app .dda-record-meta {display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dda-app .dda-status {display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:650;background:var(--dda-soft);color:var(--dda-ink)}
+.dda-app .dda-status[data-status="Pending"] {background:#fff1d9;color:#925b11}
+.dda-app .dda-status[data-status="In Progress"] {background:#e5efff;color:#315eae}
+.dda-app .dda-status[data-status="Completed"] {background:#e0f5eb;color:#22774e}
+html[data-aps-monday-theme="dark"] .dda-app .dda-status[data-status] {background:var(--dda-soft);color:var(--dda-ink)}
+.dda-app .dda-report-row {display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:11px 0;border-bottom:1px solid var(--dda-border);overflow-wrap:anywhere}
 .dda-app .dda-report-row:last-child {border-bottom:0}
-.dda-app details summary {cursor:pointer;padding:.35rem 0}
-.dda-app input[type=checkbox] {width:auto;justify-self:start}
+.dda-app details {border:1px solid var(--dda-border);border-radius:9px;padding:0 12px;margin-top:8px;min-width:0}
+.dda-app details summary {cursor:pointer;padding:11px 0;font-size:13px;font-weight:650;overflow-wrap:anywhere}
+.dda-app details[open] summary {border-bottom:1px solid var(--dda-border);margin-bottom:4px}
+.dda-app details ul {padding:4px 0 8px 18px;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
+.dda-app .dda-management-note {font-size:12px;line-height:1.5;background:var(--dda-soft);border-radius:8px;padding:10px 12px;color:var(--dda-muted)}
+.dda-app .dda-subheading {margin:20px 0 10px}
+.dda-app .dda-directory>form {margin:10px 0}
+.dda-app .dda-checkbox {display:flex;align-items:center;gap:8px;grid-column:1/-1}
+.dda-app input[type=checkbox] {width:auto;flex:none;accent-color:var(--dda-accent)}
+.dda-app [role="alert"]:empty,.dda-app [role="status"]:empty {display:none}
+.dda-app [role="alert"]:not(:empty),.dda-app [role="status"]:not(:empty) {background:var(--dda-surface);border:1px solid var(--dda-border);border-left:3px solid var(--dda-accent);padding:10px 12px;border-radius:8px}
+.dda-app [role="alert"]:not(:empty) {border-left-color:#d95067}
+@container (max-width:850px) {
+  .dda-app .dda-stats {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dda-app .dda-filters form {grid-template-columns:repeat(3,minmax(0,1fr))}
+  .dda-app .dda-management {grid-template-columns:minmax(0,1fr)}
+}
+@container (max-width:640px) {
+  .dda-app .dda-layout {grid-template-columns:minmax(0,1fr)}
+  .dda-app .dda-filters form {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@container (max-width:400px) {
+  .dda-app .dda-panel {padding:13px}
+  .dda-app .dda-metric {padding:12px}
+  .dda-app .dda-metric-icon {width:30px;height:30px}
+  .dda-app .dda-metric-icon svg {width:17px;height:17px}
+  .dda-app form,.dda-app fieldset,.dda-app .dda-filters form {grid-template-columns:minmax(0,1fr)}
+}
+
+/* Dedicated DDA views: inactive content is visually and semantically hidden. */
+.dda-app [data-dda-views][hidden] {display:none!important}
+.dda-app .dda-header-actions,.dda-app .dda-view-nav {display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.dda-app .dda-header-actions {max-width:100%}
+.dda-app .dda-view-nav {gap:5px;padding:4px;background:var(--dda-soft);border:1px solid var(--dda-border);border-radius:10px}
+.dda-app .dda-view-nav .dda-view-button {min-height:34px;padding:7px 11px;border:1px solid transparent;background:transparent;color:var(--dda-muted);box-shadow:none;border-radius:7px;font-size:12px;font-weight:650}
+.dda-app .dda-view-nav .dda-view-button[aria-pressed="true"] {background:var(--dda-surface);border-color:var(--dda-border);color:var(--dda-accent);box-shadow:var(--dda-shadow)}
+.dda-app .dda-view-nav .dda-view-button:hover:not(:disabled) {color:var(--dda-accent);border-color:var(--dda-border)}
+@container (max-width:640px) {
+  .dda-app .dda-header-actions {width:100%}
+  .dda-app .dda-view-nav {flex:1 1 auto}
+  .dda-app .dda-view-nav .dda-view-button {flex:1 1 auto}
+}
+@container (max-width:400px) {
+  .dda-app .dda-view-nav {width:100%}
+  .dda-app .dda-view-nav .dda-view-button {min-height:40px}
+}
+
+/* Organization workspace: one task at a time, with a balanced directory/editor layout. */
+.dda-app .dda-org-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0 2px}
+.dda-app .dda-org-heading h2 {font-size:23px;letter-spacing:-.025em;margin-bottom:5px}
+.dda-app .dda-org-summary {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px}
+.dda-app .dda-org-metric {display:grid;gap:6px;background:var(--dda-surface);border:1px solid var(--dda-border);border-radius:12px;padding:15px 17px;box-shadow:var(--dda-shadow);min-width:0}
+.dda-app .dda-org-metric>span {color:var(--dda-muted);font-size:12px;font-weight:650}
+.dda-app .dda-org-metric>strong {font-size:29px;line-height:1;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.dda-app .dda-org-metric>small {font-size:11px;color:var(--dda-muted);line-height:1.4}
+.dda-app .dda-org-nav {display:flex;align-items:center;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--dda-border);padding:0 0 8px}
+.dda-app .dda-org-nav .dda-org-tab {min-height:40px;border:1px solid transparent;background:transparent;color:var(--dda-muted);box-shadow:none;border-radius:8px;padding:9px 18px;font-weight:650}
+.dda-app .dda-org-nav .dda-org-tab[aria-pressed="true"] {background:var(--dda-surface);border-color:var(--dda-border);color:var(--dda-accent);box-shadow:inset 0 -2px var(--dda-accent)}
+.dda-app .dda-org-nav .dda-org-tab:hover:not(:disabled) {background:var(--dda-soft);color:var(--dda-accent)}
+.dda-app [data-dda-org-panel][hidden] {display:none!important}
+.dda-app .dda-org-content,.dda-app .dda-org-split {min-width:0}
+.dda-app .dda-org-split {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:16px}
+.dda-app .dda-org-split>.dda-panel:only-child {grid-column:1/-1}
+.dda-app .dda-org-split>.dda-panel {padding:20px}
+.dda-app .dda-org-editor fieldset>button,.dda-app .dda-categories fieldset>button {grid-column:1/-1;justify-self:start}
+.dda-app .dda-org-list,.dda-app .dda-org-roster-group ul {list-style:none;padding:0;margin:0}
+.dda-app .dda-org-list-title {margin:16px 0 8px}
+.dda-app .dda-org-result-count {padding:8px 0;border-bottom:1px solid var(--dda-border)}
+.dda-app .dda-org-item,.dda-app .dda-org-person {display:flex;align-items:center;gap:10px;justify-content:space-between;min-width:0;overflow-wrap:anywhere;padding:11px 0;border-bottom:1px solid var(--dda-border)}
+.dda-app .dda-org-item:last-child,.dda-app .dda-org-person:last-child {border-bottom:0}
+.dda-app .dda-org-item>div,.dda-app .dda-org-person>div {flex:1;min-width:0}
+.dda-app .dda-org-item strong,.dda-app .dda-org-person strong {font-size:13px;font-weight:650;line-height:1.4}
+.dda-app .dda-org-item p,.dda-app .dda-org-person p {font-size:12px;margin-top:3px}
+.dda-app .dda-org-initial {width:36px;height:36px;display:grid;place-items:center;flex:none;border-radius:9px;background:var(--dda-soft);color:var(--dda-accent);font-size:12px;font-weight:700;overflow:hidden}
+.dda-app .dda-org-tag {font-size:11px;font-weight:600;color:var(--dda-muted);background:var(--dda-soft);border:1px solid var(--dda-border);padding:4px 7px;border-radius:6px;max-width:45%;text-align:center;flex:none}
+.dda-app .dda-org-blank {padding:12px 0}
+.dda-app .dda-org-roster-group summary {font-weight:650;color:var(--dda-ink)}
+.dda-app .dda-management-note {border-left:3px solid var(--dda-accent)}
+@container (max-width:780px) {
+  .dda-app .dda-org-split {grid-template-columns:minmax(0,1fr)}
+}
+@container (max-width:400px) {
+  .dda-app .dda-org-summary {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dda-app .dda-org-metric {padding:11px}
+  .dda-app .dda-org-metric>strong {font-size:24px}
+  .dda-app .dda-org-split>.dda-panel {padding:14px}
+  .dda-app .dda-org-nav .dda-org-tab {flex:1 1 auto;padding:8px 10px}
+}
+
+/* Team Insights: compact reporting dashboard using DDA theme tokens. */
+.dda-app .dda-reporting {display:grid;gap:16px;min-width:0}
+.dda-app .dda-insight-heading {display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:4px 0}
+.dda-app .dda-insight-heading h2 {font-size:23px;letter-spacing:-.025em;margin-bottom:5px}
+.dda-app .dda-insight-scope {display:grid;gap:3px;background:var(--dda-surface);border:1px solid var(--dda-border);border-radius:10px;padding:10px 15px;max-width:100%;overflow-wrap:anywhere}
+.dda-app .dda-insight-scope>span {font-size:11px;color:var(--dda-muted)}
+.dda-app .dda-insight-scope>strong {font-size:13px}
+.dda-app .dda-insight-summary {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.dda-app .dda-insight-metric {display:flex;justify-content:space-between;align-items:flex-start;gap:8px;min-width:0;padding:16px;background:var(--dda-surface);border:1px solid var(--dda-border);border-radius:12px;box-shadow:var(--dda-shadow)}
+.dda-app .dda-insight-metric>div {display:grid;gap:6px;min-width:0}
+.dda-app .dda-insight-metric>div>span {font-size:12px;font-weight:650;color:var(--dda-muted)}
+.dda-app .dda-insight-metric strong {font-size:29px;line-height:1;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.dda-app .dda-insight-metric p {font-size:11px}
+.dda-app .dda-insight-department-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.dda-app .dda-insight-department {display:grid;gap:14px;min-width:0;border:1px solid var(--dda-border);border-radius:12px;padding:15px;background:var(--dda-surface)}
+.dda-app .dda-insight-department.is-selected {border-color:var(--dda-accent);box-shadow:inset 0 0 0 1px var(--dda-accent)}
+.dda-app .dda-insight-dept-head {display:flex;align-items:center;gap:9px;min-height:46px;min-width:0}
+.dda-app .dda-insight-dept-head>div {flex:1;min-width:0;overflow-wrap:anywhere}
+.dda-app .dda-insight-dept-head p {font-size:11px;margin-top:3px}
+.dda-app .dda-insight-dept-metrics {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--dda-border);border-radius:8px;background:var(--dda-soft);padding:10px 0}
+.dda-app .dda-insight-dept-metrics>div {display:grid;gap:3px;justify-items:center;min-width:0;padding:0 3px}
+.dda-app .dda-insight-dept-metrics>div+div {border-left:1px solid var(--dda-border)}
+.dda-app .dda-insight-dept-metrics strong {font-size:19px;line-height:1.2;font-variant-numeric:tabular-nums}
+.dda-app .dda-insight-dept-metrics span {font-size:10px;color:var(--dda-muted)}
+.dda-app .dda-insight-progress {display:grid;gap:6px}
+.dda-app .dda-insight-progress>div {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px}
+.dda-app .dda-insight-progress p {font-size:11px}
+.dda-app .dda-insight-progress progress {width:100%;height:7px;appearance:none;border:0;border-radius:20px;overflow:hidden;background:var(--dda-soft);color:var(--dda-accent)}
+.dda-app .dda-insight-progress progress::-webkit-progress-bar {background:var(--dda-soft)}
+.dda-app .dda-insight-progress progress::-webkit-progress-value {background:var(--dda-accent)}
+.dda-app .dda-insight-progress progress::-moz-progress-bar {background:var(--dda-accent)}
+.dda-app .dda-insight-team {display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;color:var(--dda-accent)}
+.dda-app .dda-insight-section-head {display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.dda-app .dda-insight-table-scroll {max-height:420px;overflow:auto;border:1px solid var(--dda-border);border-radius:10px;overscroll-behavior:contain}
+.dda-app .dda-insight-table-scroll:focus-visible {outline:2px solid var(--dda-accent);outline-offset:2px}
+.dda-app .dda-insight-table {width:100%;border-collapse:separate;border-spacing:0;min-width:530px;font-size:12px;color:var(--dda-ink)}
+.dda-app .dda-insight-table thead th {position:sticky;top:0;background:var(--dda-soft);color:var(--dda-muted);font-weight:650;z-index:1}
+.dda-app .dda-insight-table :is(th,td) {padding:11px 12px;text-align:center;border-bottom:1px solid var(--dda-border);font-variant-numeric:tabular-nums}
+.dda-app .dda-insight-table th:first-child {text-align:left;width:48%}
+.dda-app .dda-insight-table tbody tr:last-child :is(th,td) {border-bottom:0}
+.dda-app .dda-insight-table tbody tr:hover {background:var(--dda-soft)}
+.dda-app .dda-insight-person-name {display:flex;align-items:center;gap:10px;min-width:0;overflow-wrap:anywhere}
+.dda-app .dda-insight-person-name>div {min-width:0}
+.dda-app .dda-insight-person-name p {font-size:11px;font-weight:400;margin-top:3px}
+@container (max-width:950px) {
+  .dda-app .dda-insight-summary {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dda-app .dda-insight-department-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@container (max-width:570px) {
+  .dda-app .dda-insight-department-grid {grid-template-columns:minmax(0,1fr)}
+}
+@container (max-width:400px) {
+  .dda-app .dda-insight-metric {padding:11px}
+  .dda-app .dda-insight-metric strong {font-size:24px}
+  .dda-app .dda-insight-metric .dda-metric-icon {display:none}
+  .dda-app .dda-insight-scope {width:100%}
+}
+
+/* Daily operations workspace: full-width register and compact recording toolbar. */
+.dda-app .dda-activity-summary-head {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:4px 0 12px}
+.dda-app .dda-activity-summary-head h2 {font-size:21px;letter-spacing:-.025em;margin-bottom:4px}
+.dda-app .dda-scope-chip {display:grid;gap:3px;padding:9px 13px;border:1px solid var(--dda-border);border-radius:10px;background:var(--dda-surface);max-width:100%;overflow-wrap:anywhere}
+.dda-app .dda-scope-chip span {font-size:11px;color:var(--dda-muted)}
+.dda-app .dda-scope-chip strong {font-size:13px}
+.dda-app .dda-stats .dda-metric {padding:18px;min-height:96px;border-top:3px solid var(--dda-accent)}
+.dda-app .dda-stats .dda-metric-pending {border-top-color:#bd852f}
+.dda-app .dda-stats .dda-metric-progress {border-top-color:#5186d9}
+.dda-app .dda-stats .dda-metric-completed {border-top-color:#29966c}
+.dda-app .dda-filters {padding:16px 18px}
+.dda-app .dda-filters .dda-section-heading {margin-bottom:12px}
+.dda-app .dda-filters form {grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 12px}
+.dda-app .dda-filter-actions {grid-column:span 2;display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.dda-app .dda-filter-actions button {flex:0 1 auto}
+.dda-app .dda-layout {grid-template-columns:minmax(0,1fr);gap:14px}
+.dda-app .dda-editor {border-left:3px solid var(--dda-accent)}
+.dda-app .dda-compose-head {display:flex;align-items:flex-start;gap:12px;min-width:0}
+.dda-app .dda-compose-head .dda-section-heading {margin-bottom:0;min-width:0}
+.dda-app .dda-compose-icon {display:grid;place-items:center;width:42px;height:42px;border-radius:11px;background:var(--dda-soft);color:var(--dda-accent);flex:none}
+.dda-app .dda-quick-record {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.75fr);align-items:center;gap:16px}
+.dda-app .dda-quick-record form {display:block}
+.dda-app .dda-quick-record fieldset {grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto;align-items:end;gap:10px}
+.dda-app .dda-new-activity {display:inline-flex;align-items:center;gap:6px;justify-content:center;white-space:nowrap}
+.dda-app .dda-new-activity span {font-size:19px;line-height:1;font-weight:400}
+.dda-app .dda-editor-open .dda-compose-head {margin-bottom:18px}
+.dda-app .dda-editor-open fieldset {grid-template-columns:repeat(2,minmax(0,1fr))}
+.dda-app .dda-editor-open textarea {min-height:110px}
+.dda-app .dda-editor-open .dda-actions {justify-content:flex-end;border-top:1px solid var(--dda-border);padding-top:14px}
+.dda-app .dda-records {padding:20px}
+.dda-app .dda-activity-empty {min-height:180px;align-content:center}
+.dda-app .dda-register-list {display:grid;gap:10px}
+.dda-app .dda-register-list .dda-entry {border:1px solid var(--dda-border);border-radius:11px;padding:14px;align-items:center;background:var(--dda-surface);gap:14px}
+.dda-app .dda-register-list .dda-entry:last-child {padding-bottom:14px}
+.dda-app .dda-entry-heading {display:flex;align-items:flex-start;gap:11px;min-width:0}
+.dda-app .dda-entry-heading>div {min-width:0;display:grid;gap:3px}
+.dda-app .dda-entry-symbol {display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:9px;background:var(--dda-soft);color:var(--dda-accent)}
+.dda-app .dda-entry-category {font-size:11px;color:var(--dda-muted)}
+.dda-app .dda-entry-content .dda-record-meta {padding-left:47px}
+.dda-app .dda-entry-content .dda-details {padding:4px 0 0 47px;overflow-wrap:anywhere}
+.dda-app .dda-entry-actions {display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dda-app .dda-entry-actions .dda-delete {color:#a63e50}
+html[data-aps-monday-theme="dark"] .dda-app .dda-entry-actions .dda-delete {color:#f0a3ae}
+.dda-app .dda-entry-actions .dda-delete:hover:not(:disabled) {border-color:currentColor}
+@container (max-width:900px) {
+  .dda-app .dda-quick-record {grid-template-columns:minmax(0,1fr)}
+}
+@container (max-width:850px) {
+  .dda-app .dda-filters form {grid-template-columns:repeat(3,minmax(0,1fr))}
+  .dda-app .dda-filter-actions {grid-column:1/-1}
+}
+@container (max-width:640px) {
+  .dda-app .dda-filters form {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dda-app .dda-quick-record fieldset {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dda-app .dda-new-activity {grid-column:1/-1;width:100%}
+  .dda-app .dda-entry-actions {width:100%;justify-content:flex-end}
+  .dda-app .dda-editor-open .dda-actions {justify-content:flex-start}
+}
+@container (max-width:400px) {
+  .dda-app .dda-stats .dda-metric,.dda-app .dda-records,.dda-app .dda-filters {padding:12px}
+  .dda-app .dda-filters form,.dda-app .dda-quick-record fieldset,.dda-app .dda-editor-open fieldset {grid-template-columns:minmax(0,1fr)}
+  .dda-app .dda-filter-actions button {flex:1 1 auto}
+  .dda-app .dda-entry-content .dda-record-meta,.dda-app .dda-entry-content .dda-details {padding-left:0}
+}

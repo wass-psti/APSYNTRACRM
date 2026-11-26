@@ -53,7 +53,7 @@ export function syncManualAttendanceForm(form,now=new Date()){
  }
  form.elements.workNote.required=form.elements.location.value==='Offsite (Home)';
  const policyText=policy.activeAllowed?
-  'Today: create an active employee session. The existing nine-credited-hour auto clock-out applies.':
+  'Today: create an active employee session. The existing nine-credited-hour auto clock-out applies, unless approved overtime extends it.':
   policy.historicalAllowed?
    'Past date: create a completed HR record. Standard calculates nine credited hours with unpaid lunch excluded; actual lets you enter the real clock-out. Historical records never enter today’s auto-clockout queue.':
    'Select today or a past Philippine date. Future dates are not permitted.';
@@ -95,7 +95,7 @@ export function renderManualAttendanceEditor({editor,busy=false,error='',now=new
  opt('completed','Completed historical record',status,!policy.historicalAllowed)+'</select></label>'+
  input('Actual clock-in time','clockInTime','time',d.clockInTime||'','required')+'</div>'+
  '<p data-tt-manual-policy>'+(policy.activeAllowed?
-  'Today: create an active employee session. The existing nine-credited-hour auto clock-out applies.':
+  'Today: create an active employee session. The existing nine-credited-hour auto clock-out applies, unless approved overtime extends it.':
   'Past date: create a completed HR record. Standard calculates nine credited hours with unpaid lunch excluded; actual lets you enter the real clock-out. Historical records never enter today’s auto-clockout queue.')+'</p>'+
  '<label class="tt-admin-field" data-tt-manual-clockout-mode'+(completed?'':' hidden style="display:none"')+'><span>Historical clock-out method</span><select name="clockOutMode">'+
  opt('standard','Standard · 9 credited hours (lunch excluded)',clockOutMode)+

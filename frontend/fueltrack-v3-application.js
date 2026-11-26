@@ -2,14 +2,14 @@
  * Read-only until a dedicated fuel operations contract is activated.
  * Never substitute the Monday.com reference screenshot's 271 transactions.
  */
-import {renderFuelTrackNewRequest} from './fueltrack-v3-new-request.js';
+import {renderFuelTrackNewRequest} from './fueltrack-v3-new-request.js?v=cp-ft-new-request-redesign-01-20261126';
 import {WORK_MANAGEMENT_BOARD_IDS} from './workspace-application-ownership.js';
 import {FUELTRACK_V3_APPLICATION_ROUTE,fuelTrackApplicationHref} from './fueltrack-v3-application-route.js';
 export {FUELTRACK_V3_APPLICATION_ROUTE} from './fueltrack-v3-application-route.js';
-import {renderFuelTrackApprovals} from './fueltrack-v3-approvals.js';
+import {renderFuelTrackApprovals} from './fueltrack-v3-approvals.js?v=cp-ft-approvals-redesign-01-20261126';
 import {renderFuelTrackLightFuels,renderFuelTrackRefuelingDialog} from './fueltrack-v3-lightfuels.js';
 import {renderFuelTrackActivity} from './fueltrack-v3-activity.js';
-import {renderFuelTrackSignedDashboardRich,renderFuelTrackSignedRequestsRich,renderFuelTrackSignedAnalyticsRich} from './fueltrack-v3-signed-views.js';
+import {renderFuelTrackSignedDashboardRich,renderFuelTrackSignedRequestsRich,renderFuelTrackSignedAnalyticsRich} from './fueltrack-v3-signed-views.js?v=cp-ft-all-requests-redesign-02-20261126';
 import {verifyFuelTrackBackendSnapshot,projectFuelTrackApprovals,projectFuelTrackLightFuels,renderFuelTrackSignedDashboard,renderFuelTrackSignedRequests,renderFuelTrackSignedAnalytics} from './fueltrack-v3-backend-projections.js';
 export const FUELTRACK_V3_ID=WORK_MANAGEMENT_BOARD_IDS.fueltrack;
 const MARKER='[APSYNTRA:MODULE:fueltrack:v1]';

@@ -25,7 +25,10 @@ test('TradeLink approval-free release uses consistent browser asset identities',
  ];
  for(const [file,specifier] of imports){
   const source=read(file);
-  assert.ok(source.includes(specifier+'?v='+tag),file+' must request the current '+specifier);
+  if(file==='index.html'){
+   const version=source.match(/frontend\/app\.js\?v=([^"]+)/)?.[1];
+   assert.ok(version?.includes(tag),file+' must request the current '+specifier);
+  }else assert.ok(source.includes(specifier+'?v='+tag),file+' must request the current '+specifier);
   assert.ok(!source.includes("'"+specifier+"'"),file+' must not request an unversioned '+specifier);
  }
 });

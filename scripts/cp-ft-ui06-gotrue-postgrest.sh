@@ -17,6 +17,27 @@ cleanup(){
 }
 trap cleanup EXIT HUP INT TERM
 
+# The official mirrors serve the identical multi-platform manifests. Pin content
+# and fall back only to the same image, never a different version or test fixture.
+pull_verified_image(){
+ primary="$1"
+ fallback="$2"
+ for image in "$primary" "$fallback"; do
+  if docker image inspect "$image" >/dev/null 2>&1 || docker pull "$image" >&2; then
+   printf '%s\n' "$image"
+   return 0
+  fi
+ done
+ echo "FAIL: both verified registries unavailable for $primary" >&2
+ return 1
+}
+GOTRUE_IMAGE=$(pull_verified_image \
+ 'docker.io/supabase/gotrue:v2.197.0@sha256:1736a63078f5922b198c4cbe50f80ab9a2d3b54fe8b7b6cfb2e9dc5dbbc12c6b' \
+ 'public.ecr.aws/supabase/gotrue:v2.197.0@sha256:1736a63078f5922b198c4cbe50f80ab9a2d3b54fe8b7b6cfb2e9dc5dbbc12c6b')
+POSTGREST_IMAGE=$(pull_verified_image \
+ 'docker.io/postgrest/postgrest:v16.4@sha256:d155c6718ed9a9f990d159a2ab7c0a3f16944dbb6d0a0344557421042acfe0df' \
+ 'public.ecr.aws/supabase/postgrest:v16.4@sha256:d155c6718ed9a9f990d159a2ab7c0a3f16944dbb6d0a0344557421042acfe0df')
+
 docker network create "$NETWORK" >/dev/null
 docker run -d --rm --network "$NETWORK" --name "$DB" \
  -e POSTGRES_PASSWORD="$DB_PASSWORD" postgres:17-alpine >/dev/null
@@ -77,7 +98,7 @@ docker run --rm --network "$NETWORK" \
  -e API_EXTERNAL_URL=http://127.0.0.1:9999 \
  -e GOTRUE_SITE_URL=http://127.0.0.1:9999 \
  -e GOTRUE_JWT_SECRET="$JWT_SECRET" \
- public.ecr.aws/supabase/gotrue:v2.197.0 auth migrate >/dev/null
+ "$GOTRUE_IMAGE" auth migrate >/dev/null
 echo 'ISOLATED_GOTRUE_SCHEMA_MIGRATED'
 
 docker run -d --network "$NETWORK" --name "$AUTH" \
@@ -98,7 +119,7 @@ docker run -d --network "$NETWORK" --name "$AUTH" \
  -e GOTRUE_EXTERNAL_EMAIL_ENABLED=true \
  -e GOTRUE_DISABLE_SIGNUP=false \
  -e GOTRUE_MAILER_AUTOCONFIRM=true \
- public.ecr.aws/supabase/gotrue:v2.197.0 >/dev/null
+ "$GOTRUE_IMAGE" >/dev/null
 
 docker run -d --network "$NETWORK" --name "$REST" \
  -p 127.0.0.1::3000 \
@@ -107,7 +128,7 @@ docker run -d --network "$NETWORK" --name "$REST" \
  -e PGRST_DB_ANON_ROLE=anon \
  -e PGRST_JWT_SECRET="$JWT_SECRET" \
  -e PGRST_OPENAPI_SERVER_PROXY_URI=http://127.0.0.1 \
- public.ecr.aws/supabase/postgrest:v16.4 >/dev/null
+ "$POSTGREST_IMAGE" >/dev/null
 
 auth_port=$(docker port "$AUTH" 9999/tcp | tail -1 | sed 's/.*://')
 rest_port=$(docker port "$REST" 3000/tcp | tail -1 | sed 's/.*://')

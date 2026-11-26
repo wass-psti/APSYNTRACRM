@@ -34,3 +34,69 @@ test('DDA reporting overview and directory filtering include historical contribu
  assert.match(html,/Former contributor/);assert.match(html,/&lt;Former&gt;/);assert.doesNotMatch(html,/<Former>/);
  assert.match(html,/1 matching personnel of 1/);assert.match(html,/Personnel activity overview \(1\)/);
 });
+
+test('DDA dashboard separates activity work from organization settings and shows semantic totals',()=>{
+ const html=renderActivityScreen(base);
+ assert.match(html,/class="dda-stats" aria-label="Activity totals"/);
+ for(const key of ['activities','pending','progress','completed'])assert.match(html,new RegExp('dda-metric-'+key));
+ assert.match(html,/class="dda-empty dda-activity-empty"/);
+ assert.ok(html.indexOf('dda-stats')<html.indexOf('dda-filters'));
+ assert.ok(html.indexOf('dda-records')<html.indexOf('dda-management'));
+ assert.match(html,/Organization &amp; Settings/);
+});
+
+test('DDA dedicated views expose only their intended sections and retain shared filters',()=>{
+ const main=renderActivityScreen(base);
+ const organization=renderActivityScreen({...base,view:'organization'});
+ const insights=renderActivityScreen({...base,view:'insights'});
+ for(const [html,active] of [[main,'activities'],[organization,'organization'],[insights,'insights']]){
+   assert.match(html,new RegExp('data-view="'+active+'" aria-pressed="true"'));
+   for(const inactive of ['activities','organization','insights'].filter(id=>id!==active)){
+     assert.match(html,new RegExp('data-view="'+inactive+'" aria-pressed="false"'));
+     assert.match(html,new RegExp('data-dda-views="'+inactive+'" hidden'));
+   }
+   assert.doesNotMatch(html,new RegExp('data-dda-views="'+active+'" hidden'));
+ }
+ assert.match(organization,/data-dda-views="activities insights" hidden/);
+ assert.doesNotMatch(insights,/data-dda-views="activities insights" hidden/);
+ assert.match(main,/aria-label="Daily Department Activity views"/);
+});
+
+test('organization workspace separates personnel, departments and category tasks',()=>{
+ const data={...snapshot,directory:{...snapshot.directory,unassigned:[{id:'x',name:'<Unassigned>'}]}};
+ for(const active of ['personnel','departments','categories']){
+   const html=renderActivityScreen({...base,snapshot:data,view:'organization',organizationView:active});
+   assert.match(html,new RegExp('data-org-view="'+active+'" aria-pressed="true"'));
+   assert.doesNotMatch(html,new RegExp('data-dda-org-panel="'+active+'" hidden'));
+   for(const inactive of ['personnel','departments','categories'].filter(x=>x!==active))assert.match(html,new RegExp('data-dda-org-panel="'+inactive+'" hidden'));
+   assert.match(html,/Organization totals/);
+   assert.match(html,/&lt;Unassigned&gt;/);
+   assert.doesNotMatch(html,/<Unassigned>/);
+ }
+});
+
+test('team insights reports real filtered counts and completion without inventing percentages',()=>{
+ const records=[{id:'a',personId:'p',departmentId:'d',date:filters.date,title:'Done',details:'',status:'Completed',categoryId:null},{id:'b',personId:'p',departmentId:'d',date:filters.date,title:'Open',details:'',status:'Pending',categoryId:null}];
+ const html=renderActivityScreen({...base,view:'insights',snapshot:{...snapshot,records},records});
+ assert.match(html,/Team reporting totals/);
+ assert.match(html,/Completion rate<\/span><strong>50%/);
+ assert.match(html,/data-insight-department="d"/);
+ assert.match(html,/Personnel activity table/);
+ assert.match(html,/<td>2<\/td><td>1<\/td><td>0<\/td><td>1<\/td>/);
+ const empty=renderActivityScreen({...base,view:'insights'});
+ assert.match(empty,/Completion rate<\/span><strong>&mdash;<\/strong>/);
+ assert.doesNotMatch(empty,/NaN|Infinity/);
+});
+
+test('activity workspace shows reporting scope, quick recording and escaped register cards',()=>{
+ const row={id:'a',title:'<Work>',details:'<Notes>',date:filters.date,personId:'p',departmentId:'d',categoryId:'c',status:'Completed'};
+ const html=renderActivityScreen({...base,records:[row],filters:{...filters,departmentId:'d'}});
+ assert.match(html,/Activity overview/);
+ assert.match(html,/class="dda-scope-chip"><span>2026-11-26<\/span><strong>Operations/);
+ assert.match(html,/data-dda-action="clear-filters"/);
+ assert.match(html,/dda-quick-record/);
+ assert.match(html,/dda-register-list/);
+ assert.match(html,/&lt;Work&gt;/);
+ assert.match(html,/&lt;Notes&gt;/);
+ assert.doesNotMatch(html,/<Work>|<Notes>/);
+});

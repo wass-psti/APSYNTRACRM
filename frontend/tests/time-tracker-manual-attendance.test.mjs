@@ -65,7 +65,7 @@ test('invalid, missing, equal, reversed and future timestamps fail closed',()=>{
  assert.throws(()=>build({date:'2026-11-23',status:'completed',clockOutMode:'actual'}),/valid Philippine/);
  assert.throws(()=>build({date:'2026-11-23',status:'completed',clockOutMode:'actual',clockOutTime:'08:00'}),/later/);
  assert.throws(()=>build({date:'2026-11-23',status:'completed',clockOutMode:'actual',clockOutTime:'07:00'}),/later/);
- assert.throws(()=>build({date:'2026-11-23',status:'completed',clockOutMode:'actual',clockOutTime:'17:00'}),/future/);
+ assert.throws(()=>build({date:'2026-11-23',status:'completed',clockOutMode:'actual',clockOutDate:'2026-11-24',clockOutTime:'17:00'}),/future/);
  assert.throws(()=>build({date:'2026-11-23',status:'completed',clockOutMode:'actual',
   clockOutDate:'2026-11-25',clockOutTime:'12:00'}),/invalid or in the future/);
 });

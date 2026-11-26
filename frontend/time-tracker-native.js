@@ -662,8 +662,8 @@ export class TimeTrackerNativeClient{
   const access=await this.access(boardId);
   if(access.moduleRole!=='System Admin'||entry?.employeeType!=='regular'||
      entry.status!=='completed'||!uuid.test(entry.employeeId||'')||
-     typeof entry.date!=='string'||!/^\\d{4}-\\d{2}-\\d{2}$/.test(entry.date)||
-     !safeTime(entry.clockInAt)||!['standard','actual'].includes(entry.clockOutMode)||
+     typeof entry.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(entry.date)||
+     !safeTime(entry.clockInAt)||new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(entry.clockInAt))!==entry.date||!['standard','actual'].includes(entry.clockOutMode)||
      (entry.clockOutMode==='standard'&&entry.clockOutAt!==null)||
      (entry.clockOutMode==='actual'&&(!safeTime(entry.clockOutAt)||
        Date.parse(entry.clockOutAt)<=Date.parse(entry.clockInAt)))||

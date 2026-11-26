@@ -1,6 +1,6 @@
 import {createActivityController} from './activity-controller.js';
 import {createActivityRepository} from './activity-repository.js';
-import {mountDailyDepartmentActivity} from './activity-screen.js';
+import {mountDailyDepartmentActivity} from './activity-screen.js?v=cp-dda-ui-05-20261126';
 
 export function mountActivityRuntime(container,{auth,api,workspaceId,userId,storage}){
   const draftStorage=storage??window.localStorage;
@@ -8,7 +8,7 @@ export function mountActivityRuntime(container,{auth,api,workspaceId,userId,stor
   const controller=createActivityController({repository,workspaceId,userId,draftStorage});
   // Load scoped styles only on the native route; no new startup request.
   const doc=container.ownerDocument;
-  const href=new URL('./activity-screen.css',import.meta.url).href;
+  const href=new URL('./activity-screen.css?v=cp-dda-ui-05-20261126',import.meta.url).href;
   if(!Array.from(doc.querySelectorAll('link[rel="stylesheet"]')).some(link=>link.href===href)){
     const link=doc.createElement('link');
     link.rel='stylesheet';link.href=href;doc.head.append(link);

@@ -37,7 +37,7 @@ test('actual clock-out override reveals date and time fields',()=>{
  const html=render({date:'2026-11-23',status:'completed',clockOutMode:'actual',
   clockOutDate:'2026-11-23',clockOutTime:'12:00'});
  assert.match(html,/value="actual" selected/);
- assert.match(html,/name="clockOutDate" type="date" value="2026-11-23" required/);
+ assert.match(html,/name="clockOutDate" type="date" value="2026-11-23" min="2026-11-23" max="2026-11-24" required/);
  assert.match(html,/name="clockOutTime" type="time" value="12:00" required/);
  assert.doesNotMatch(html,/data-tt-manual-out hidden/);
 });

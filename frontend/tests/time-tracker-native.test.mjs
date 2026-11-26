@@ -847,7 +847,7 @@ test('manual clock-in rejects the pre-gate capability contract during a staged d
 
 
 test('historical manual attendance uses its separate signed RPC and preserves clock-out method',async()=>{
- const entry={employeeId:other,employeeType:'regular',date:'2026-11-23',status:'completed',
+ const entry={employeeId:other,employeeType:'regular',date:'2026-11-02',status:'completed',
   clockInAt:stamp(8),clockOutAt:null,clockOutMode:'standard',location:TT_LOCATIONS[0],
   workNote:null,reason:'Forgot to clock in'};
  const f=setup({role:'System Admin'});
@@ -860,7 +860,7 @@ test('historical manual attendance uses its separate signed RPC and preserves cl
   if(name==='timetracker_attendance_admin_create_historical'){
    writes++;
    assert.equal(options.retryUnauthorized,false);
-   assert.equal(args.p_attendance_day,'2026-11-23');
+   assert.equal(args.p_attendance_day,'2026-11-02');
    assert.equal(args.p_clock_out_mode,'standard');
    assert.equal(args.p_clock_out_at,null);
    assert.equal(args.p_expected_revision,2);
@@ -878,7 +878,7 @@ test('historical manual attendance uses its separate signed RPC and preserves cl
 });
 
 test('historical actual clock-out override is sent explicitly and never uses live clock-in RPC',async()=>{
- const entry={employeeId:other,employeeType:'regular',date:'2026-11-23',status:'completed',
+ const entry={employeeId:other,employeeType:'regular',date:'2026-11-02',status:'completed',
   clockInAt:stamp(8),clockOutAt:stamp(12),clockOutMode:'actual',location:TT_LOCATIONS[0],
   workNote:null,reason:'Short shift approved'};
  const f=setup({role:'System Admin'});

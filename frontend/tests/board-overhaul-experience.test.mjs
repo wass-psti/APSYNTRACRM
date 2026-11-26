@@ -15,8 +15,8 @@ const catalog = readFileSync("frontend/board-catalog-experience.css", "utf8");
 const smoke = readFileSync("scripts/pages-smoke.mjs", "utf8");
 
 test("approved board overhaul is the final active CRM visual layer", () => {
-  assert.equal(STYLE_SOURCES.at(-1), "frontend/board-overhaul-experience.css");
-  assert.equal(STYLE_SOURCES.at(-2), "frontend/dark-simplified-system.css");
+  assert.equal(STYLE_SOURCES.at(-3), "frontend/board-overhaul-experience.css");
+  assert.equal(STYLE_SOURCES.at(-4), "frontend/dark-simplified-system.css");
   assert.match(
     page,
     /apsyntra-styles\.bundle\.css\?v=(?:cp-crm-ui-restore-01|cp-mobile-workspace-switch-01)/,
