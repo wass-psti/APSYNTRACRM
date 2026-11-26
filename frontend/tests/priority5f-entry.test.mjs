@@ -22,7 +22,7 @@ test('existing boot entry, initialization recovery and security policy are uncha
  const html=readFileSync('index.html','utf8');
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(html,/<script src="\.\/frontend\/startup-guard\.js" defer><\/script>/);
- assert.match(html,/<script type="module" src="\.\/frontend\/app\.js"><\/script>/);
+ assert.match(html,/<script type="module" src="\.\/frontend\/app\.js(?:\?v=[^"]+)?"><\/script>/);
  assert.match(html,/style-src-attr 'none'/);
  assert.match(app,/if\(await startupVerifiedRead\(async\(\)=>await auth\.restore\(\)\)\)/);
  assert.match(app,/await refreshWorkspace\(\)/);
