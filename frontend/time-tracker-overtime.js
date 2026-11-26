@@ -54,8 +54,8 @@ export function validateDurationOvertimeDraft({date,durationMinutes,reason}={},a
  if(!validDay(date))return {valid:false,message:'Select a valid work date.'};
  const gap=(Date.parse(date+'T00:00:00Z')-Date.parse(phtDay(at)+'T00:00:00Z'))/msDay;
  if(gap<0||gap>7)return {valid:false,message:'Choose today or one of the next 7 days.'};
- if(!Number.isInteger(durationMinutes)||durationMinutes<30||durationMinutes>360)
-  return {valid:false,message:'Choose 30 minutes to 6 hours of overtime.'};
+ if(!Number.isInteger(durationMinutes)||durationMinutes<30||durationMinutes>360||durationMinutes%30!==0)
+  return {valid:false,message:'Choose 0.5 to 6 hours in 0.5-hour increments.'};
  const reasonResult=validateReason(reason);
  if(!reasonResult.valid)return reasonResult;
  return {valid:true,date,durationMinutes,reason:reasonResult.reason};
@@ -100,7 +100,7 @@ export function validateManualDurationOvertimeDraft({
   return {valid:false,message:'Select an active TimeTracker employee.'};
  if(!validDay(date))return {valid:false,message:'Select a valid overtime date.'};
  if(date>=phtDay(at))return {valid:false,message:'Administrative duration entries must use a past date.'};
- if(!Number.isInteger(durationMinutes)||durationMinutes<30||durationMinutes>360)
+ if(!Number.isInteger(durationMinutes)||durationMinutes<30||durationMinutes>360||durationMinutes%30!==0)
   return {valid:false,message:'Choose 0.5 to 6 hours in 0.5-hour increments.'};
  const reasonResult=validateReason(reason);
  if(!reasonResult.valid)return reasonResult;
@@ -203,7 +203,7 @@ export function updateTimeTrackerOvertimePreview(form){
  const durationInput=form.querySelector('#tt-ot-duration-hours');
  const raw=durationInput?.value??'';
  const rawMinutes=Number(raw)*60;
- const minutes=raw!==''&&Number.isInteger(rawMinutes)&&rawMinutes>=30&&rawMinutes<=360?rawMinutes:null;
+ const minutes=raw!==''&&Number.isInteger(rawMinutes)&&rawMinutes>=30&&rawMinutes<=360&&rawMinutes%30===0?rawMinutes:null;
  const duration=form.querySelector('[data-tt-ot-duration-value]');
  const progress=form.querySelector('[data-tt-ot-duration-progress]');
  const message=form.querySelector('[data-tt-ot-duration-message]');
@@ -235,7 +235,7 @@ export function updateTimeTrackerOvertimePreview(form){
 }
 function requestForm({date='',reason='',durationMinutes=120}={},now=new Date(),otContractActive=false,busy=false,durationMode=false){
  const selectedDate=date||phtDay(now);
- const amount=Number.isInteger(durationMinutes)&&durationMinutes>=30&&durationMinutes<=360?durationMinutes:null;
+ const amount=Number.isInteger(durationMinutes)&&durationMinutes>=30&&durationMinutes<=360&&durationMinutes%30===0?durationMinutes:null;
  const durationHours=amount===null?'':amount/60;
  const active=TT_OT_WRITES_ACCEPTED&&otContractActive===true&&durationMode===true;
  const disabled=!active||busy;
@@ -283,7 +283,7 @@ function manualRequestForm({employeeId='',date='',durationMinutes=120,reason=''}
   access.durationOtContractActive===true&&!busy;
  const options=directory.filter(user=>user&&user.status==='active'&&typeof user.id==='string')
   .map(user=>'<option value="'+esc(user.id)+'"'+(employeeId===user.id?' selected':'')+'>'+esc(user.display_name||'Workforce member')+'</option>').join('');
- const amount=Number.isInteger(durationMinutes)&&durationMinutes>=30&&durationMinutes<=360?durationMinutes:null;
+ const amount=Number.isInteger(durationMinutes)&&durationMinutes>=30&&durationMinutes<=360&&durationMinutes%30===0?durationMinutes:null;
  const hours=amount===null?'':amount/60;
  const maxDate=shiftPhtDay(phtDay(now),-1);
  return '<div class="tt-ot-backdrop" data-tt-ot-backdrop><section class="tt-ot-modal tt-ot-manual-section" role="dialog" aria-modal="true" tabindex="-1" aria-labelledby="tt-ot-modal-title">'+
@@ -303,7 +303,7 @@ export function updateTimeTrackerManualOtPreview(form){
  if(!form||form.id!=='tt-ot-manual-form')return false;
  const raw=form.querySelector('#tt-ot-manual-duration-hours')?.value??'';
  const rawMinutes=Number(raw)*60;
- const minutes=raw!==''&&Number.isInteger(rawMinutes)&&rawMinutes>=30&&rawMinutes<=360?rawMinutes:null;
+ const minutes=raw!==''&&Number.isInteger(rawMinutes)&&rawMinutes>=30&&rawMinutes<=360&&rawMinutes%30===0?rawMinutes:null;
  const label=form.querySelector('[data-tt-ot-manual-duration]');
  if(label)label.textContent=minutes===null?'—':minutesLabel(minutes).trim();
  const input=form.querySelector('#tt-ot-manual-duration-hours');
