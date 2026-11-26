@@ -178,7 +178,7 @@ test('server-paged All Documents shows actionable search, previous and next with
  const legacy=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view:{...view,listPage:null},canManage:true});
  assert.doesNotMatch(legacy,/Next page|Search documents/);
- assert.match(legacy,/current signed, authorized response/);
+ assert.match(legacy,/current signed TradeLink workspace response/);
 });
 test('source integrates route-safe signed pagination and exact record recovery beyond list window',()=>{
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
@@ -242,5 +242,5 @@ test('All Documents distinguishes an authorized empty result from pending, faile
  assert.match(empty,/0 of 0 documents in this response/);
  const managerEmpty=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   canManage:true,view:{...base,status:'AUTHORIZED_READ',rows:[]}});
- assert.match(managerEmpty,/No documents were returned for this authorized repository page/);
+ assert.match(managerEmpty,/No documents match the current TradeLink workspace filters/);
 });
