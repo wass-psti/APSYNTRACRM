@@ -62,3 +62,15 @@ test('existing signed create contract remains employee-owned, active, and withou
   assert.match(createFunction, /'source','admin-manual-clockin'/);
   assert.doesNotMatch(createFunction, /'latitude'\s*,|'longitude'\s*,|'accuracy'\s*,/);
 });
+
+
+test('hybrid historical attendance migration is registered with exact source bytes and SHA-256', () => {
+  const hybridFile = '20261126110000_cp_tt_admin_manual_attendance_hybrid.sql';
+  const hybridBytes = readFileSync(new URL('supabase/migrations/' + hybridFile, root));
+  const hybridSql = hybridBytes.toString('utf8').replace(/\\r\\n/g, '\\n');
+  const entry = manifest.forward_migrations.find((item) => item.file === hybridFile);
+  assert.ok(entry);
+  assert.equal(entry.version, '20261126110000');
+  assert.equal(entry.bytes, Buffer.byteLength(hybridSql));
+  assert.equal(entry.sha256, createHash('sha256').update(hybridSql).digest('hex'));
+});
