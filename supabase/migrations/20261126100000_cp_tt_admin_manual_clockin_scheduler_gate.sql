@@ -70,7 +70,7 @@ BEGIN
  d:=pg_catalog.pg_get_functiondef(
   'public.timetracker_attendance_admin_create(uuid,uuid,timestamptz,text,text,text,bigint)'::pg_catalog.regprocedure);
  old:=$old$ IF NOT private.tt_admin_manual_clockin_ready()
- THEN RAISE EXCEPTION 'Manual clock-in unavailable until scheduler compatibility is verified' USING ERRCODE='55000'; END IF; $old$;
+ THEN RAISE EXCEPTION 'Manual clock-in unavailable until scheduler compatibility is verified' USING ERRCODE='55000'; END IF;$old$;
  replacement:=$new$ IF NOT pg_catalog.pg_try_advisory_xact_lock_shared(
   pg_catalog.hashtextextended('tt-auto-clockout-control',0)) THEN
   RAISE EXCEPTION 'Automatic clock-out scheduler is changing; retry manual clock-in'
@@ -79,7 +79,7 @@ BEGIN
  IF private.tt_auto_clockout_mode() IS DISTINCT FROM 'active' THEN
   RAISE EXCEPTION 'Manual clock-in requires active regular nine-hour auto-clock-out'
    USING ERRCODE='55000';
- END IF; $new$;
+ END IF;$new$;
  IF pg_catalog.cardinality(pg_catalog.string_to_array(d,old))<>2 THEN
   RAISE EXCEPTION 'Manual clock-in create-function baseline differs; refusing an unsafe patch'
    USING ERRCODE='55000';
