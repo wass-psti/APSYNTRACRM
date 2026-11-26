@@ -185,8 +185,11 @@ test('individual and bulk editors expose consistent redesigned context and guida
  const single=renderTimeTrackerAdminEditor({
   editor:{mode:'single',recordIds:[recordId],records:[completedRecord()]}
  });
- assert.match(single,/tt-admin-record-context/);
- assert.match(single,/INDIVIDUAL CORRECTION/);
+ assert.match(single,/data-tt-edit-record/);
+ assert.match(single,/Test Employee · Office-Base Duty · Nov 16, 2026/);
+ assert.match(single,/tt-edit-record-clocks/);
+ assert.match(single,/Working duration \(advanced\)/);
+ assert.doesNotMatch(single,/tt-admin-record-context|INDIVIDUAL CORRECTION/);
  assert.match(single,/data-tt-admin-dialog/);
  assert.match(single,/Changes are saved to the existing attendance record/);
  const bulk=renderTimeTrackerAdminEditor({
@@ -287,4 +290,41 @@ test('IT Administrator time-only editor cannot expose delete, GPS, employee, sta
  assert.match(active,/Active clock-in session/);
  assert.doesNotMatch(active,/name="clockOutAt"/);
  assert.doesNotMatch(active,/Delete record/);
+});
+
+test('reference editor uses separate PHT date and 12-hour time fields without changing the sparse patch',()=>{
+ const record=completedRecord();
+ record.clockIn.timestamp='2026-11-16T00:15:31.417Z';
+ record.clockOut.timestamp='2026-11-16T08:15:42.123Z';
+ const html=renderTimeTrackerAdminEditor({editor:{mode:'single',records:[record]}});
+ assert.match(html,/name="clockInDate" type="date" value="2026-11-16"/);
+ assert.match(html,/name="clockInAt" type="text" value="08:15 AM"/);
+ assert.match(html,/name="clockOutDate" type="date" value="2026-11-16"/);
+ assert.match(html,/name="clockOutAt" type="text" value="04:15 PM"/);
+ const {patch}=buildTimeTrackerAdminPatch(form({
+  department:'Engineering',clockInDate:'2026-11-16',clockInAt:'08:15 AM',
+  clockOutDate:'2026-11-16',clockOutAt:'04:15 PM',durationMode:'auto'
+ }),{mode:'single',record});
+ assert.deepEqual(patch,{department:'Engineering'});
+ const changed=buildTimeTrackerAdminPatch(form({
+  clockOutDate:'2026-11-17',clockOutAt:'12:05 AM'
+ }),{mode:'single',record});
+ assert.equal(changed.patch.clockOutAt,'2026-11-16T16:05:00.000Z');
+});
+test('reference edit preserves active sessions, manual override visibility, and separate restricted dialogs',()=>{
+ const active=activeRecord();
+ const html=renderTimeTrackerAdminEditor({editor:{mode:'single',records:[active]},busy:true,error:'Save failed'});
+ assert.match(html,/name="clockOutDate" type="date" value=""/);
+ assert.match(html,/name="clockOutAt" type="text" value=""/);
+ assert.match(html,/fieldset class="tt-admin-editor-fields" disabled/);
+ assert.match(html,/role="alert">Save failed/);
+ assert.match(html,/Saving changes/);
+ const {patch}=buildTimeTrackerAdminPatch(form({
+  department:'Engineering',clockInDate:'2026-11-16',clockInAt:'08:15 AM',
+  clockOutDate:'',clockOutAt:'',status:'Active',durationMode:'auto'
+ }),{mode:'single',record:active});
+ assert.deepEqual(patch,{department:'Engineering'});
+ assert.match(renderTimeTrackerAdminEditor({editor:{mode:'single',records:[{...completedRecord(),creditedMsOverride:3600000}]}}),/<details class="tt-edit-record-advanced" open>/);
+ assert.doesNotMatch(renderTimeTrackerAdminEditor({editor:{mode:'single',records:[active]},timeOnly:true}),/data-tt-edit-record/);
+ assert.doesNotMatch(renderTimeTrackerAdminEditor({editor:{mode:'bulk',records:[active],recordIds:[active.id]}}),/data-tt-edit-record/);
 });

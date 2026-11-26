@@ -169,15 +169,15 @@ function referenceDateFields(label,prefix,timestamp){
  inputField(label+' time',prefix+'At',formatted.slice(11),{placeholder:'08:19 AM',required:true});
 }
 
-function gpsFields(record,kind,{bulk=false}={}){
+function gpsFields(record,kind,{bulk=false,reference=false}={}){
   const geo=geoValue(record,kind)||{};
   const prefix=kind==='in'?'clockInGeo':'clockOutGeo';
   const placeholder=bulk?'Leave unchanged':'';
-  return `<fieldset class="tt-admin-gps"><legend>${kind==='in'?'Clock-In GPS':'Clock-Out GPS'}</legend><div class="tt-admin-grid tt-admin-grid-three">`+
+  return `<fieldset class="tt-admin-gps"><legend>${reference?'Location (GPS)':kind==='in'?'Clock-In GPS':'Clock-Out GPS'}</legend><div class="tt-admin-grid tt-admin-grid-three">`+
     inputField('Latitude',`${prefix}latitude`,bulk?'':geo.latitude??'',{type:'number',step:'any',min:-90,max:90,placeholder})+
     inputField('Longitude',`${prefix}longitude`,bulk?'':geo.longitude??'',{type:'number',step:'any',min:-180,max:180,placeholder})+
     inputField('Accuracy (m)',`${prefix}accuracy`,bulk?'':geo.accuracy??'',{type:'number',step:'any',min:0,max:100000,placeholder})+
-    '</div><p>Changed coordinates are stored as administrative corrections, not browser-captured GPS.</p></fieldset>';
+    '</div>'+(reference?'':'<p>Changed coordinates are stored as administrative corrections, not browser-captured GPS.</p>')+'</fieldset>';
 }
 
 export function renderTimeTrackerAdminEditor({editor,directory=[],busy=false,error='',timeOnly=false}={}){
@@ -229,6 +229,46 @@ export function renderTimeTrackerAdminEditor({editor,directory=[],busy=false,err
   const recordMeta=[record?.department||'Unassigned department',record?.clockIn?.location||'Unspecified location',
     record?.clockIn?.timestamp?timeTrackerAdminDateTimeLocal(record.clockIn.timestamp).replace('T',' '):'Time unavailable']
     .join(' · ');
+
+  if(!bulk){
+    const timestamp=record?.clockIn?.timestamp;
+    const dateLabel=Number.isFinite(Date.parse(timestamp||''))?
+      new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',month:'short',day:'numeric',year:'numeric'}).format(new Date(timestamp)):'Date unavailable';
+    const subtitle=[recordName,record?.clockIn?.location||'Unspecified location',dateLabel].join(' · ');
+    const clockPanel=(kind,label,prefix,value)=>{
+      const local=timeTrackerAdminDateTimeLocal(value);
+      return '<section class="tt-admin-field-section tt-edit-record-clock"><h4>'+label+'</h4><div class="tt-admin-grid tt-admin-grid-two">'+
+        inputField(label+' date',prefix+'Date',local.slice(0,10),{type:'date'})+
+        inputField(label+' time',prefix+'At',formatTimeTrackerAdminWallDateTime(local).slice(11),{placeholder:'hh:mm AM/PM'})+
+        '</div>'+gpsFields(record,kind,{reference:true})+'</section>';
+    };
+    return '<div class="tt-admin-editor-backdrop tt-edit-record-backdrop" data-tt-admin-backdrop>'+
+      '<form id="tt-attendance-admin-form" class="tt-admin-editor" role="dialog" aria-modal="true" aria-labelledby="tt-admin-editor-title" aria-describedby="tt-edit-record-subtitle" data-mode="single" data-tt-admin-dialog data-tt-edit-record>'+
+      '<header class="tt-admin-editor-head"><div class="tt-edit-record-heading">'+
+      '<span class="tt-edit-record-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 5 5-12 12-6 1 1-6L16 3Z"/><path d="m13 6 5 5"/></svg></span>'+
+      '<div class="tt-admin-editor-title-group"><h3 id="tt-admin-editor-title">Edit attendance record</h3><p id="tt-edit-record-subtitle">'+esc(subtitle)+'</p></div></div>'+
+      '<button type="button" class="tt-admin-close" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+' aria-label="Close editor">×</button></header>'+
+      (error?'<p class="tt-admin-error" role="alert">'+esc(error)+'</p>':'')+
+      '<fieldset class="tt-admin-editor-fields"'+(busy?' disabled':'')+'><div class="tt-admin-editor-body">'+
+      '<div class="tt-admin-grid tt-admin-grid-two tt-edit-record-identity">'+
+      '<label class="tt-admin-field"><span>Employee</span><select name="employeeId">'+employeeOptions+'</select></label>'+
+      selectField('Department','department',departmentItems,record?.clockIn?.department||'')+
+      selectField('Work location','location',locationItems,record?.clockIn?.location||'')+
+      selectField('Status','status',[{value:'Active',label:'Active'},{value:'Completed',label:'Completed'}],status)+
+      '</div><div class="tt-edit-record-clocks">'+
+      clockPanel('in','Clock in','clockIn',record?.clockIn?.timestamp)+
+      clockPanel('out','Clock out','clockOut',record?.clockOut?.timestamp)+
+      '</div><p class="tt-edit-record-gps-note">Times are Philippine Time (UTC+08:00). Changed GPS values are administrative corrections, not browser-captured evidence.</p>'+
+      '<details class="tt-edit-record-advanced"'+(durationMode==='manual'?' open':'')+'><summary>Working duration (advanced)</summary>'+
+      '<div class="tt-admin-grid tt-admin-grid-two">'+
+      selectField('Duration calculation','durationMode',[{value:'auto',label:'Calculate from corrected timestamps'},{value:'manual',label:'Set manual credited duration'}],durationMode)+
+      inputField('Working duration (HH:MM:SS)','durationHours',hours,{placeholder:'00:00:00'})+
+      '</div><p>Automatic duration applies the existing Philippine Time unpaid-break policy. Manual duration is an explicit administrative override.</p></details>'+
+      '<label class="tt-admin-field"><span>Reason for change <span class="tt-edit-record-optional">(optional)</span></span><textarea name="reason" maxlength="500" rows="2" placeholder="Why is this record being edited?"></textarea></label>'+
+      '</div></fieldset><footer class="tt-admin-editor-actions"><span class="tt-admin-editor-footnote">Changes are saved to the existing attendance record.</span><div>'+
+      '<button type="button" class="secondary" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+'>Cancel</button>'+
+      '<button type="submit" class="primary"'+(busy?' disabled':'')+'>'+(busy?'Saving changes…':'Save changes')+'</button></div></footer></form></div>';
+  }
   return '<div class="tt-admin-editor-backdrop" data-tt-admin-backdrop>'+
     '<form id="tt-attendance-admin-form" class="tt-admin-editor" role="dialog" aria-modal="true" aria-labelledby="tt-admin-editor-title" data-mode="'+(bulk?'bulk':'single')+'" data-tt-admin-dialog>'+
     '<header class="tt-admin-editor-head"><div class="tt-admin-editor-title-group"><span class="tt-admin-eyebrow">SYSTEM ADMIN · ATTENDANCE MANAGEMENT</span>'+
