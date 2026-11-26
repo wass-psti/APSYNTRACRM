@@ -111,7 +111,7 @@ test('empty ledger and filtered-empty states are distinct',()=>{
 test('request register remains read-only and supports mobile and dark themes',()=>{
  const html=renderFuelTrackSignedRequestsRich(makeSnapshot(rows));
  assert.doesNotMatch(html,/<form\b|type="submit"|data-action="approve"|data-action="reject"/i);
- const css=readFileSync(new URL('../fueltrack-v3-application.css',import.meta.url),'utf8');
+ const css=readFileSync(new URL('../fueltrack-v3-all-requests-redesign.css',import.meta.url),'utf8');
  assert.match(css,/@media\(max-width:760px\)/);
  assert.match(css,/html\[data-aps-monday-theme="dark"\] #app \.ft3-requests-hero/);
  assert.match(css,/prefers-reduced-motion:reduce/);
