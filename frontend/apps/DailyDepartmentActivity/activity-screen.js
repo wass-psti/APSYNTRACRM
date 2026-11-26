@@ -30,7 +30,19 @@ export function renderActivityScreen({snapshot,records,filters,editor,fields,bus
     '<section class="dda-panel"><h2>Record activity</h2><form data-dda-form="new"><fieldset'+disabled+'>'+select('personId','Personnel',people,filters.personId)+'<label>Date<input name="date" type="date" required value="'+esc(filters.date||manilaDate())+'"></label><button class="primary" type="submit"'+(!people.length?' disabled':'')+'>New activity</button></fieldset></form>'+(!people.length?'<p>No personnel available.</p>':'')+'</section>';
   const categoryMarkup = '<section class="dda-panel"><h2>Categories</h2><form data-dda-form="category"><fieldset'+disabled+'>'+select('id','Category to edit',any('New category',categories),'')+'<label>Category name<input name="name" required maxlength="120"></label><button type="submit" class="secondary">Save category</button></fieldset></form></section>';
   const list = '<section class="dda-panel"><h2>Recorded activities</h2>'+(records.length?records.map(row=>'<article class="dda-entry"><div><h3>'+esc(row.title)+'</h3><p>'+esc(nameOf(people,row.personId))+' · '+esc(nameOf(departments,row.departmentId))+' · '+esc(row.date)+'</p><p>'+esc(row.status)+' · '+esc(row.categoryId?nameOf(categories,row.categoryId):'Uncategorized')+'</p><p class="dda-details">'+esc(row.details)+'</p></div><div class="dda-actions"><button type="button" class="secondary" data-dda-action="edit" data-id="'+esc(row.id)+'"'+disabled+'>Edit</button><button type="button" class="secondary" data-dda-action="delete" data-id="'+esc(row.id)+'"'+disabled+'>Delete</button></div></article>').join(''):'<p>No matching activities.</p>')+'</section>';
-  const directory = '<section class="dda-panel"><h2>Department directory</h2>'+departments.map(department=>'<details><summary>'+esc(department.name)+' ('+people.filter(person=>person.departmentId===department.id).length+')</summary><ul>'+people.filter(person=>person.departmentId===department.id).map(person=>'<li>'+esc(person.name)+'</li>').join('')+'</ul></details>').join('')+'</section>';
+  const unassigned=snapshot.directory.unassigned;
+  const management=Array.isArray(unassigned)?
+    '<p>DDA reporting assignments do not change the shared CRM or AGT directory.</p>'+
+    '<form data-dda-form="department"><fieldset'+disabled+'>'+select('id','Department to edit',any('New department',departments),'')+
+    '<label>Department name<input name="name" required maxlength="120"></label>'+
+    select('parentId','Parent department',any('None (top level)',departments.filter(row=>!row.parentId)),'')+
+    '<button type="submit" class="secondary">Save department</button></fieldset></form>'+
+    '<p>'+unassigned.length+' available unassigned personnel</p>'+
+    '<form data-dda-form="person"><fieldset'+disabled+'>'+select('id','Personnel to assign',any('Choose personnel',[...people,...unassigned.map(row=>({...row,name:row.name+' (unassigned)'}))]),'')+
+    '<label>Personnel display name<input name="name" required maxlength="160"></label>'+
+    select('departmentId','Assign department',any('Choose department',departments),'')+
+    '<button type="submit" class="secondary">Save personnel</button></fieldset></form>':'';
+  const directory = '<section class="dda-panel"><h2>Department directory</h2>'+management+departments.map(department=>'<details><summary>'+esc(department.parentId?nameOf(departments,department.parentId)+' / '+department.name:department.name)+' ('+people.filter(person=>person.departmentId===department.id).length+')</summary><ul>'+people.filter(person=>person.departmentId===department.id).map(person=>'<li>'+esc(person.name)+'</li>').join('')+'</ul></details>').join('')+'</section>';
   return '<section class="dda-app">'+top+messages+filterForm+stats+'<div class="dda-layout"><div>'+editorMarkup+categoryMarkup+directory+'</div>'+list+'</div></section>';
 }
 
@@ -97,10 +109,26 @@ export function mountDailyDepartmentActivity(host,controller,{today=manilaDate()
       void run(async()=>{const result=await controller.save(input,id);snapshot=result.snapshot;editor=null;fields=emptyFields();notice=result.draftWarning||'Activity saved.';});
     }
     if(kind==='category')void run(async()=>{const result=await controller.saveCategory({name:data.name},data.id);snapshot=result.snapshot;notice='Category saved.';});
+    if(kind==='department')void run(async()=>{const result=await controller.saveDepartment(data,data.id);snapshot=result.snapshot;notice=result.draftWarning||'Department saved.';});
+    if(kind==='person')void run(async()=>{const result=await controller.savePerson(data);snapshot=result.snapshot;notice=result.draftWarning||'Personnel saved.';});
   }
   function onChange(event) {
-    const form=event.target.closest('form[data-dda-form="category"]');
-    if(form&&event.target.name==='id')form.elements.name.value=snapshot.categories.find(row=>row.id===event.target.value)?.name||'';
+    const form=event.target.closest('form[data-dda-form]');
+    if(!form||event.target.name!=='id'||!snapshot)return;
+    const id=event.target.value;
+    if(form.dataset.ddaForm==='category')form.elements.name.value=snapshot.categories.find(row=>row.id===id)?.name||'';
+    if(form.dataset.ddaForm==='department'){
+      const row=snapshot.directory.departments.find(item=>item.id===id);
+      form.elements.name.value=row?.name||'';
+      form.elements.parentId.value=row?.parentId||'';
+    }
+    if(form.dataset.ddaForm==='person'){
+      const row=snapshot.directory.people.find(item=>item.id===id);
+      const source=snapshot.directory.unassigned?.find(item=>item.id===id);
+      form.elements.name.value=row?.name||source?.name||'';
+      form.elements.name.readOnly=!!source;
+      form.elements.departmentId.value=row?.departmentId||'';
+    }
   }
   function onClick(event) {
     const button=event.target.closest('[data-dda-action]');

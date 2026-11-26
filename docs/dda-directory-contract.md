@@ -1,0 +1,7 @@
+# DDA reporting directory — CP-DDA-FE-03A
+
+DDA's operational department hierarchy and personnel assignments are workspace-scoped and seeded from reviewed AGT source identities during initial schema activation. Existing source IDs are retained. DDA does not write AGT classification history, CRM profiles, TimeTracker assignments, memberships, or roles.
+
+The snapshot exposes unassigned existing workforce identities and active CRM members with valid display names. The operator explicitly selects a reporting department; new source IDs and fabricated employee accounts are rejected. Existing DDA assignments and display labels can be edited without changing source systems. Top-level departments and one level of units are supported. Personnel transfers affect future activities; saved activities retain their original department ID. Directory commands use the existing revision, terminal receipt and event mechanism.
+
+This is an application-specific directory, not a global HR master-data editor. Source synchronization after initial activation is explicit: new eligible identities appear as candidates, and existing DDA assignments are not silently overwritten by a later source reclassification. Source deactivation, supervisor assignment and employee-number management are not implemented by this increment. The production release switch remains off. The SQL candidate has not been applied to production.

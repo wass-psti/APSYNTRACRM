@@ -1,4 +1,4 @@
-import {saveActivity, saveCategory, deleteActivity, filterActivities, statuses, validDate} from './activity-model.js';
+import {saveActivity, saveCategory, deleteActivity, filterActivities, statuses, validDate, saveDepartment, savePerson} from './activity-model.js';
 import {readActivityDraft, writeActivityDraft, clearActivityDraft} from './activity-drafts.js';
 
 function uniqueRows(rows, name) {
@@ -13,12 +13,14 @@ export function validateSnapshot(value, workspaceId) {
   const {directory, categories, records} = value;
   uniqueRows(directory?.departments, 'departments');
   uniqueRows(directory?.people, 'personnel');
+  if(directory.unassigned!==undefined)uniqueRows(directory.unassigned,'unassigned personnel');
   uniqueRows(categories, 'categories');
   uniqueRows(records, 'records');
   const departmentIds = new Set(directory.departments.map(row => row.id));
   const personIds = new Set(directory.people.map(row => row.id));
   const categoryIds = new Set(categories.map(row => row.id));
-  if (directory.departments.some(row => typeof row.name !== 'string') ||
+  if (directory.departments.some(row => typeof row.name !== 'string' || (row.parentId!=null && (!departmentIds.has(row.parentId)||row.parentId===row.id))) ||
+      (directory.unassigned||[]).some(row=>typeof row.name!=='string'||personIds.has(row.id)) ||
       directory.people.some(row => typeof row.name !== 'string' || !departmentIds.has(row.departmentId)) ||
       categories.some(row => typeof row.name !== 'string' || !row.name.trim()) ||
       records.some(row => !personIds.has(row.personId) || !departmentIds.has(row.departmentId) ||
@@ -124,8 +126,22 @@ export function createActivityController({repository, workspaceId, userId, draft
     });
   }
 
+  function changeDepartment(input,id='') {
+    return run(async()=>{
+      const record=saveDepartment(current().directory,input,id,makeId);
+      return commit('save-department',record,value=>value.directory.departments.some(row=>row.id===record.id&&row.name===record.name&&(row.parentId??null)===record.parentId));
+    });
+  }
+
+  function changePerson(input) {
+    return run(async()=>{
+      const record=savePerson(current().directory,input);
+      return commit('save-person',record,value=>value.directory.people.some(row=>row.id===record.id&&row.name===record.name&&row.departmentId===record.departmentId));
+    });
+  }
+
   return {
-    load, save, remove, saveCategory:saveActivityCategory,
+    load, save, remove, saveCategory:saveActivityCategory,saveDepartment:changeDepartment,savePerson:changePerson,
     getSnapshot:() => structuredClone(current()),
     getRecords:filters => structuredClone(filterActivities(current().records, filters)),
     get busy() { return busy; },

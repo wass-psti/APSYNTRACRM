@@ -64,7 +64,7 @@ begin
  result:=public.dda_snapshot_v1(w);
  v:=(result->>'revision')::bigint;
  data:=jsonb_build_object('id',aid,'personId','00000000-0000-4000-8000-000000000011',
-   'departmentId','eng','date','2026-11-26','title','Signed RPC activity','details','Fixture','status','Completed','categoryId',null);
+   'departmentId','ops','date','2026-11-26','title','Signed RPC activity','details','Fixture','status','Completed','categoryId',null);
  result:=public.dda_submit_v1(w,req,v,'save-activity',data);
  assert (result->>'acknowledgedRequestId')::uuid=req;
  assert result->'records' @> jsonb_build_array(data);
@@ -120,3 +120,60 @@ begin
  raise notice 'PASS: eligible CRM actors without workforce identities, authoritative subject validation and actor attribution';
  raise notice 'PASS: signed RPC read/write, cross-account readback, exact replay, actor attribution, workspace/session denial and internal privilege boundaries';
 end $audit$;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000011',false);
+select set_config('request.jwt.claim.session_id','00000000-0000-4000-8000-000000000301',false);
+do $directory$
+declare
+ w uuid:='00000000-0000-4000-8000-000000000001';
+ member_id uuid:='00000000-0000-4000-8000-000000000099';
+ person_id uuid:='00000000-0000-4000-8000-000000000011';
+ dept_id text:=gen_random_uuid()::text;
+ unit_id text:=gen_random_uuid()::text;
+ req uuid:=gen_random_uuid();
+ v bigint;
+ result jsonb;
+ data jsonb;
+begin
+ result:=public.dda_snapshot_v1(w);
+ assert result->'directory'->'unassigned' @> jsonb_build_array(jsonb_build_object('id',member_id,'name','Unassigned member'));
+ assert jsonb_array_length(result->'directory'->'unassigned')=1;
+ v:=(result->>'revision')::bigint;
+ data:=jsonb_build_object('id',dept_id,'name','Field operations','parentId',null);
+ result:=public.dda_submit_v1(w,req,v,'save-department',data);
+ assert result->'directory'->'departments' @> jsonb_build_array(data);
+ assert (public.dda_submit_v1(w,req,v,'save-department',data)->>'replayed')::boolean;
+ v:=(result->>'revision')::bigint;
+ result:=public.dda_submit_v1(w,gen_random_uuid(),v,'save-department',jsonb_build_object('id',unit_id,'name','Field unit','parentId',dept_id));
+ assert result->'directory'->'departments' @> jsonb_build_array(jsonb_build_object('id',unit_id,'parentId',dept_id));
+ v:=(result->>'revision')::bigint;
+ result:=public.dda_submit_v1(w,gen_random_uuid(),v,'save-department',jsonb_build_object('id',dept_id,'name','Renamed field','parentId',unit_id));
+ assert result ? 'rejectedRequestId' and (result->>'revision')::bigint=v;
+ result:=public.dda_submit_v1(w,gen_random_uuid(),v,'save-department',jsonb_build_object('id',dept_id,'name','Renamed field','parentId',null));
+ assert result->'directory'->'departments' @> jsonb_build_array(jsonb_build_object('id',dept_id,'name','Renamed field'));
+ v:=(result->>'revision')::bigint;
+ result:=public.dda_submit_v1(w,gen_random_uuid(),v,'save-person',jsonb_build_object('id',member_id,'name','Unassigned member','departmentId',unit_id));
+ assert result->'directory'->'people' @> jsonb_build_array(jsonb_build_object('id',member_id,'departmentId',unit_id));
+ assert jsonb_array_length(result->'directory'->'unassigned')=0;
+ v:=(result->>'revision')::bigint;
+ result:=public.dda_submit_v1(w,gen_random_uuid(),v,'save-person',jsonb_build_object('id',gen_random_uuid(),'name','Invented','departmentId',unit_id));
+ assert result ? 'rejectedRequestId' and (result->>'revision')::bigint=v;
+ result:=public.dda_submit_v1(w,gen_random_uuid(),v,'save-person',jsonb_build_object('id',person_id,'name','Fixture person','departmentId',unit_id));
+ assert result->'directory'->'people' @> jsonb_build_array(jsonb_build_object('id',person_id,'departmentId',unit_id));
+ assert result->'records' @> '[{"id":"00000000-0000-4000-8000-000000000402","departmentId":"ops"}]'::jsonb;
+ v:=(result->>'revision')::bigint;
+ result:=public.dda_submit_v1(w,gen_random_uuid(),v,'save-activity',jsonb_build_object('id',gen_random_uuid(),'personId',person_id,'departmentId',unit_id,'date','2026-11-27','title','After transfer','details','','status','Completed','categoryId',null));
+ assert result->'records' @> jsonb_build_array(jsonb_build_object('personId',person_id,'departmentId',unit_id,'title','After transfer'));
+ perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000012',false);
+ perform set_config('request.jwt.claim.session_id','00000000-0000-4000-8000-000000000302',false);
+ assert public.dda_snapshot_v1(w)->'directory'->'people' @> jsonb_build_array(jsonb_build_object('id',member_id,'departmentId',unit_id));
+end $directory$;
+reset role;
+do $source$
+begin
+ assert not exists(select 1 from agt.department where name='Renamed field');
+ assert not exists(select 1 from agt.person where user_id='00000000-0000-4000-8000-000000000099');
+ assert (select department_code from agt.person where user_id='00000000-0000-4000-8000-000000000011')='eng';
+ raise notice 'PASS: DDA directory create/rename, units, source-only personnel enrollment, transfer history, cross-account readback and untouched AGT source';
+end $source$;

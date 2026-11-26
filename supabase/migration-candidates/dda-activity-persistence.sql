@@ -8,6 +8,50 @@ create table dda.workspace_state (
   workspace_id uuid primary key references agt.workspace(id),
   revision bigint not null default 0 check (revision >= 0)
 );
+
+-- DDA owns its reporting directory, seeded from the reviewed AGT identities.
+-- No DDA command changes AGT classifications, CRM profiles or memberships.
+create table dda.department (
+  workspace_id uuid not null references agt.workspace(id),
+  id text not null check (char_length(id) between 1 and 120),
+  name text not null check (name=btrim(name) and char_length(name) between 1 and 120),
+  parent_id text,
+  primary key(workspace_id,id),
+  foreign key(workspace_id,parent_id) references dda.department(workspace_id,id),
+  check (parent_id is distinct from id)
+);
+create unique index dda_department_name_idx on dda.department(workspace_id,lower(name));
+create table dda.person (
+  workspace_id uuid not null references agt.workspace(id),
+  id uuid not null,
+  name text not null check (name=btrim(name) and char_length(name) between 1 and 160),
+  department_id text not null,
+  primary key(workspace_id,id),
+  foreign key(workspace_id,department_id) references dda.department(workspace_id,id)
+);
+insert into dda.department(workspace_id,id,name,parent_id)
+  select w.id,d.code,d.name,d.parent_code from agt.workspace w cross join agt.department d;
+insert into dda.person(workspace_id,id,name,department_id)
+  select workspace_id,user_id,display_name,department_code from agt.person;
+
+-- Only existing workforce identities and active CRM members may be assigned.
+-- Unassigned members are not automatically placed in an invented department.
+create function dda.unassigned_people(w uuid)
+returns table(id uuid,name text) language sql stable set search_path='' as $unassigned$
+  with candidates as (
+    select a.user_id id,a.display_name name,0 priority from agt.person a where a.workspace_id=w
+    union all
+    select p.id,p.display_name,1 from public.profiles p
+      join public.workspace_members m on m.user_id=p.id
+      where m.workspace_id=w and m.active is true and p.status='active'
+  )
+  select distinct on (c.id) c.id,btrim(c.name)
+    from candidates c
+    where c.name is not null and char_length(btrim(c.name)) between 1 and 160
+      and not exists(select 1 from dda.person d where d.workspace_id=w and d.id=c.id)
+    order by c.id,c.priority
+$unassigned$;
+
 create table dda.category (
   workspace_id uuid not null references dda.workspace_state(workspace_id),
   id uuid not null,
@@ -19,14 +63,15 @@ create table dda.activity (
   workspace_id uuid not null references dda.workspace_state(workspace_id),
   id uuid not null,
   person_id uuid not null,
-  department_id text not null references agt.department(code),
+  department_id text not null,
   activity_date date not null,
   title text not null check (title = btrim(title) and char_length(title) between 1 and 160),
   details text not null check (char_length(details) <= 2000),
   status text not null check (status in ('Pending','In Progress','Completed')),
   category_id uuid,
   primary key (workspace_id,id),
-  foreign key (workspace_id,person_id) references agt.person(workspace_id,user_id),
+  foreign key (workspace_id,person_id) references dda.person(workspace_id,id),
+  foreign key (workspace_id,department_id) references dda.department(workspace_id,id),
   foreign key (workspace_id,category_id) references dda.category(workspace_id,id)
 );
 create index dda_activity_date_idx on dda.activity(workspace_id,activity_date,person_id);
@@ -42,9 +87,9 @@ create table dda.command_receipt (
 create table dda.activity_event (
   workspace_id uuid not null,
   request_id uuid not null,
-  record_id uuid not null,
+  record_id text not null,
   actor_id uuid not null,
-  action text not null check (action in ('save-activity','delete-activity','save-category')),
+  action text not null check (action in ('save-activity','delete-activity','save-category','save-department','save-person')),
   before_record jsonb,
   after_record jsonb,
   recorded_at timestamptz not null default clock_timestamp(),
@@ -65,10 +110,12 @@ language sql stable set search_path='' as $$
     'workspaceId',w,
     'revision',coalesce((select revision from dda.workspace_state where workspace_id=w),0),
     'directory',jsonb_build_object(
-      'departments',coalesce((select jsonb_agg(jsonb_build_object('id',d.code,'name',d.name) order by d.name,d.code)
-        from agt.department d),'[]'::jsonb),
-      'people',coalesce((select jsonb_agg(jsonb_build_object('id',p.user_id,'name',p.display_name,'departmentId',p.department_code) order by p.display_name,p.user_id)
-        from agt.person p where p.workspace_id=w),'[]'::jsonb)),
+      'departments',coalesce((select jsonb_agg(jsonb_build_object('id',d.id,'name',d.name,'parentId',d.parent_id) order by d.name,d.id)
+        from dda.department d where d.workspace_id=w),'[]'::jsonb),
+      'people',coalesce((select jsonb_agg(jsonb_build_object('id',p.id,'name',p.name,'departmentId',p.department_id) order by p.name,p.id)
+        from dda.person p where p.workspace_id=w),'[]'::jsonb),
+      'unassigned',coalesce((select jsonb_agg(jsonb_build_object('id',u.id,'name',u.name) order by u.name,u.id)
+        from dda.unassigned_people(w) u),'[]'::jsonb)),
     'categories',coalesce((select jsonb_agg(jsonb_build_object('id',c.id,'name',c.name) order by c.name,c.id)
       from dda.category c where c.workspace_id=w),'[]'::jsonb),
     'records',coalesce((select jsonb_agg(dda.activity_json(a) order by a.activity_date desc,a.id)
@@ -89,6 +136,11 @@ declare
   updated dda.activity%rowtype;
   cat dda.category%rowtype;
   record_id uuid;
+  record_key text;
+  parent_key text;
+  dept dda.department%rowtype;
+  subject dda.person%rowtype;
+  source_name text;
   person_id uuid;
   department_id text;
   activity_date date;
@@ -111,8 +163,9 @@ begin
     return dda.snapshot(w)||jsonb_build_object('acknowledgedRequestId',request_key,'acknowledgedRevision',receipt.committed_revision,'replayed',true);
   end if;
   if rev<>expected then raise exception 'DDA revision conflict'; end if;
-  record_id:=(record->>'id')::uuid;
-  if record_id is null then raise exception 'Missing DDA record ID'; end if;
+  record_key:=nullif(btrim(record->>'id'),'');
+  if record_key is null then raise exception 'Missing DDA record ID'; end if;
+  if action<>'save-department' then record_id:=record_key::uuid; end if;
 
   if action='save-activity' then
     select * into previous from dda.activity a where a.workspace_id=w and a.id=record_id;
@@ -128,7 +181,7 @@ begin
       department_id:=previous.department_id;
       before_value:=dda.activity_json(previous);
     else
-      select p.department_code into strict department_id from agt.person p where p.workspace_id=w and p.user_id=person_id;
+      select p.department_id into strict department_id from dda.person p where p.workspace_id=w and p.id=person_id;
     end if;
     if department_id is distinct from record->>'departmentId' then raise exception 'DDA department mismatch'; end if;
     insert into dda.activity(workspace_id,id,person_id,department_id,activity_date,title,details,status,category_id)
@@ -147,6 +200,35 @@ begin
     insert into dda.category(workspace_id,id,name) values(w,record_id,btrim(record->>'name'))
       on conflict (workspace_id,id) do update set name=excluded.name returning * into cat;
     after_value:=jsonb_build_object('id',cat.id,'name',cat.name);
+  elsif action='save-department' then
+    parent_key:=nullif(record->>'parentId','');
+    select * into dept from dda.department d where d.workspace_id=w and d.id=record_key;
+    if found then
+      before_value:=jsonb_build_object('id',dept.id,'name',dept.name,'parentId',dept.parent_id);
+    else
+      -- New department IDs are generated by the client, never source codes.
+      perform record_key::uuid;
+    end if;
+    if parent_key is not null and (parent_key=record_key or
+       not exists(select 1 from dda.department d where d.workspace_id=w and d.id=parent_key and d.parent_id is null) or
+       exists(select 1 from dda.department d where d.workspace_id=w and d.parent_id=record_key)) then
+      raise exception 'Invalid DDA department hierarchy';
+    end if;
+    insert into dda.department(workspace_id,id,name,parent_id) values(w,record_key,btrim(record->>'name'),parent_key)
+      on conflict(workspace_id,id) do update set name=excluded.name,parent_id=excluded.parent_id returning * into dept;
+    after_value:=jsonb_build_object('id',dept.id,'name',dept.name,'parentId',dept.parent_id);
+  elsif action='save-person' then
+    select * into subject from dda.person d where d.workspace_id=w and d.id=record_id;
+    if found then
+      before_value:=jsonb_build_object('id',subject.id,'name',subject.name,'departmentId',subject.department_id);
+    else
+      select u.name into strict source_name from dda.unassigned_people(w) u where u.id=record_id;
+      if btrim(record->>'name') is distinct from source_name then raise exception 'DDA source name changed'; end if;
+    end if;
+    insert into dda.person(workspace_id,id,name,department_id)
+      values(w,record_id,btrim(record->>'name'),record->>'departmentId')
+      on conflict(workspace_id,id) do update set name=excluded.name,department_id=excluded.department_id returning * into subject;
+    after_value:=jsonb_build_object('id',subject.id,'name',subject.name,'departmentId',subject.department_id);
   else
     raise exception 'Unknown DDA command';
   end if;
@@ -154,7 +236,7 @@ begin
   update dda.workspace_state set revision=rev where workspace_id=w;
   insert into dda.command_receipt(workspace_id,request_id,command,committed_revision) values(w,request_key,input,rev);
   insert into dda.activity_event(workspace_id,request_id,record_id,actor_id,action,before_record,after_record)
-    values(w,request_key,record_id,actor,action,before_value,after_value);
+    values(w,request_key,record_key,actor,action,before_value,after_value);
   return dda.snapshot(w)||jsonb_build_object('acknowledgedRequestId',request_key,'acknowledgedRevision',rev,'replayed',false);
 end $$;
 
@@ -192,7 +274,7 @@ begin
       or datetime_field_overflow or invalid_datetime_format or no_data_found then reason:='Invalid activity data or reference.';
     when raise_exception then
       if sqlerrm='DDA revision conflict' then reason:='Activity data changed. Review the latest records before saving again.';
-      elsif sqlerrm in ('Missing DDA record ID','Invalid DDA activity date','DDA activity identity and date cannot change','DDA department mismatch','DDA activity not found','Unknown DDA command') then
+      elsif sqlerrm in ('Missing DDA record ID','Invalid DDA activity date','DDA activity identity and date cannot change','DDA department mismatch','DDA activity not found','Unknown DDA command','Invalid DDA department hierarchy','DDA source name changed') then
         reason:=sqlerrm;
       else raise;
       end if;

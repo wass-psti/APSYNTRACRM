@@ -25,7 +25,7 @@ try {
   await page.goto('http://127.0.0.1:'+server.address().port);
   await page.evaluate(async()=>{
     const {createDdaHostSync}=await import('/dda-native-host.js');
-    let snapshot={workspaceId:'fixture',revision:0,directory:{departments:[{id:'d',name:'Operations'}],people:[{id:'p',name:'Synthetic person',departmentId:'d'}]},categories:[],records:[]};
+    let snapshot={workspaceId:'fixture',revision:0,directory:{departments:[{id:'d',name:'Operations'}],people:[{id:'p',name:'Synthetic person',departmentId:'d'}],unassigned:[{id:'p2',name:'Unassigned fixture'}]},categories:[],records:[]};
     const receipts=new Map();
     const auth={isSignedIn:true,userId:'fixture-user'};
     const api={async rpc(name,args){
@@ -40,6 +40,8 @@ try {
         if(action==='save-activity')snapshot.records=[...snapshot.records.filter(row=>row.id!==record.id),record];
         else if(action==='delete-activity')snapshot.records=snapshot.records.filter(row=>row.id!==record.id);
         else if(action==='save-category')snapshot.categories=[...snapshot.categories.filter(row=>row.id!==record.id),record];
+        else if(action==='save-department')snapshot.directory.departments=[...snapshot.directory.departments.filter(row=>row.id!==record.id),record];
+        else if(action==='save-person'){snapshot.directory.people=[...snapshot.directory.people.filter(row=>row.id!==record.id),record];snapshot.directory.unassigned=snapshot.directory.unassigned.filter(row=>row.id!==record.id);}
         else throw Error('Unknown command');
         snapshot.revision++;
         receipt={acknowledgedRequestId:args.p_request_id,acknowledgedRevision:snapshot.revision};
@@ -94,6 +96,19 @@ try {
   await form('filters').getByLabel('Search').fill('Revised');
   await form('filters').getByRole('button',{name:'Apply filters'}).click();
   assert.equal(await page.locator('.dda-entry').count(),1);
+  await form('department').getByLabel('Department name').fill('Field operations');
+  await form('department').getByRole('button',{name:'Save department'}).click();
+  await notice('Department saved.');
+  await form('person').getByLabel('Personnel to assign').selectOption('p2');
+  assert.equal(await form('person').getByLabel('Personnel display name').inputValue(),'Unassigned fixture');
+  await form('person').getByLabel('Assign department').selectOption({label:'Field operations'});
+  await form('person').getByRole('button',{name:'Save personnel'}).click();
+  await notice('Personnel saved.');
+  await form('person').getByLabel('Personnel to assign').selectOption('p');
+  await form('person').getByLabel('Assign department').selectOption({label:'Field operations'});
+  await form('person').getByRole('button',{name:'Save personnel'}).click();
+  await notice('Personnel saved.');
+  assert.match(await page.locator('.dda-entry').innerText(),/Operations/);
   await page.setViewportSize({width:390,height:844});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   assert.equal(await page.evaluate(()=>[...document.querySelectorAll('#host input,#host select,#host textarea')].every(el=>el.labels.length>0)),true);
@@ -103,7 +118,7 @@ try {
   await page.evaluate(()=>window.fixture.dispose());
   assert.equal(await page.locator('#host').evaluate(el=>el.children.length),0);
   assert.deepEqual(errors,[]);
-  console.log('PASS: native lazy host mounting, same-scope editor preservation, category, draft remount, lost-response receipt recovery, create, edit, filter, delete, escaped text, mobile layout, labeled controls and disposal');
+  console.log('PASS: directory management and historical transfer, native lazy host mounting, same-scope editor preservation, category, draft remount, lost-response receipt recovery, create, edit, filter, delete, escaped text, mobile layout, labeled controls and disposal');
 } finally {
   try {await browser?.close();} finally {await new Promise(resolve=>server.close(resolve));}
 }

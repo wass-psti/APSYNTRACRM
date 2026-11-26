@@ -1,7 +1,7 @@
 import {validateSnapshot} from './activity-controller.js';
 import {readActivityDraft,clearActivityDraft} from './activity-drafts.js';
 
-const actions = ['save-activity','delete-activity','save-category'];
+const actions = ['save-activity','delete-activity','save-category','save-department','save-person'];
 const text = value => String(value ?? '').trim();
 
 export function matchesActivityDraft(fields,record) {

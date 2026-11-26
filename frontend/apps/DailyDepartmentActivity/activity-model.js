@@ -62,3 +62,27 @@ export function filterActivities(records, filters = {}) {
     (!term || [record.title, record.details].some(value => clean(value).toLowerCase().includes(term)))
   );
 }
+
+export function saveDepartment(directory,input,id='',makeId=()=>crypto.randomUUID()) {
+  const name=clean(input.name),parentId=input.parentId||null;
+  const {departments}=directory;
+  if(!name||name.length>120)throw Error('Enter a department name of up to 120 characters.');
+  if(id&&!departments.some(row=>row.id===id))throw Error('Department not found.');
+  if(departments.some(row=>row.id!==id&&row.name.toLowerCase()===name.toLowerCase()))throw Error('Department name already exists.');
+  const nextId=id||makeId();
+  if(!id&&departments.some(row=>row.id===nextId))throw Error('Department ID already exists.');
+  if(parentId&&(parentId===nextId||!departments.some(row=>row.id===parentId&&!row.parentId)||
+      departments.some(row=>row.parentId===nextId)))throw Error('Invalid department hierarchy.');
+  return {id:nextId,name,parentId};
+}
+
+export function savePerson(directory,input) {
+  const {people,departments,unassigned=[]}=directory;
+  const existing=people.find(row=>row.id===input.id);
+  const source=unassigned.find(row=>row.id===input.id);
+  if(!existing&&!source)throw Error('Choose an existing workforce or CRM identity.');
+  const name=existing?clean(input.name):source.name;
+  if(!name||name.length>160)throw Error('Enter a personnel name of up to 160 characters.');
+  if(!departments.some(row=>row.id===input.departmentId))throw Error('Department not found.');
+  return {id:input.id,name,departmentId:input.departmentId};
+}

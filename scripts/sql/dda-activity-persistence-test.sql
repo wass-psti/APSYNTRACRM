@@ -10,6 +10,20 @@ insert into agt.person values
 ('00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000011','ops','Fixture person','crm-user'),
 ('00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000012','eng','Fixture colleague','crm-user'),
 ('00000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000021','eng','Other workspace','crm-user');
+create table public.profiles(id uuid primary key,display_name text,status text not null);
+create table public.workspace_members(workspace_id uuid,user_id uuid,active boolean not null,primary key(workspace_id,user_id));
+insert into public.profiles values
+ ('00000000-0000-4000-8000-000000000011','Fixture person','active'),
+ ('00000000-0000-4000-8000-000000000012','Fixture colleague','active'),
+ ('00000000-0000-4000-8000-000000000021','Other workspace','active'),
+ ('00000000-0000-4000-8000-000000000099','Unassigned member','active'),
+ ('00000000-0000-4000-8000-000000000098','Inactive member','inactive');
+insert into public.workspace_members values
+ ('00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000011',true),
+ ('00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000012',true),
+ ('00000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000021',true),
+ ('00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000099',true),
+ ('00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000098',true);
 \ir ../../supabase/migration-candidates/dda-activity-persistence.sql
 do $test$
 declare
