@@ -290,8 +290,6 @@ export class TimeTrackerNativeClient{
       response.bootstrapApprover!==true&&!durationOtApprover)
     deny('Team OT access is not authorized by the signed workspace role');
    const manualOtManager=response.manualOtManager===true;
-   if(manualOtManager&&access.moduleRole!=='System Admin')
-    deny('Manual OT management role does not match the signed module role');
    const allowed=new Set(access.overviewDirectory.map(u=>'cloud:'+u.id));
    const projected=projectTimeTrackerOtRows(response.rows).filter(row=>
     row.ownerId==='cloud:'+access.userId||
@@ -767,7 +765,7 @@ export class TimeTrackerNativeClient{
   if(!TT_OT_WRITES_ACCEPTED)deny('Manual OT writes require signed backend acceptance');
   const before=await this.snapshot(boardId);
   if(before.access.otContractActive!==true||before.access.durationOtContractActive!==true||
-     before.access.manualOtManager!==true||before.access.moduleRole!=='System Admin')
+     before.access.manualOtManager!==true)
    deny('System Admin manual duration OT submission is unavailable');
   const form=validateManualDurationOvertimeDraft(draft,before.access.overviewDirectory);
   if(!form.valid)deny(form.message);
