@@ -19,6 +19,8 @@ BEGIN
   OR has_function_privilege('authenticated','public.timetracker_ot_submit(uuid,date,time,time,text)','EXECUTE')
   OR NOT has_function_privilege('authenticated','public.timetracker_ot_submit_duration(uuid,date,integer,text)','EXECUTE')
   OR NOT has_function_privilege('authenticated','public.timetracker_ot_decide_duration(uuid,uuid,text)','EXECUTE')
+  OR NOT has_function_privilege('authenticated','public.timetracker_ot_submit_manual_duration(uuid,uuid,date,integer,text)','EXECUTE')
+  OR NOT has_function_privilege('authenticated','public.timetracker_ot_decide_manual_duration(uuid,uuid,text)','EXECUTE')
  THEN RAISE EXCEPTION 'Duration OT ACL failed'; END IF;
  -- 8 AM PHT + regular paid 9 hours + unpaid lunch + 3 paid OT hours.
  v_start:='2026-11-26T00:00:00Z';
@@ -68,10 +70,10 @@ DECLARE
  rec_id constant uuid:='30000000-0000-4000-8000-000000000001';
  d date; started timestamptz; threshold timestamptz; end60 timestamptz;
  start_text text; end_text text; state jsonb; completed jsonb;
- receipt jsonb; snap jsonb; request_id uuid; self_id uuid; credit jsonb;
+ receipt jsonb; snap jsonb; row_json jsonb; request_id uuid; self_id uuid;
+ legacy_id uuid; system_admin_id uuid; manual_id uuid; credit jsonb;
 BEGIN
  d:=(clock_timestamp() AT TIME ZONE 'Asia/Manila')::date;
- -- Canonical attendance stores millisecond timestamps. Match that precision.
  started:=date_trunc('milliseconds',GREATEST(clock_timestamp()-INTERVAL '30 minutes',
   d::timestamp AT TIME ZONE 'Asia/Manila'));
  threshold:=private.tt_auto_clockout_threshold(started);
@@ -102,11 +104,34 @@ BEGIN
  EXCEPTION WHEN insufficient_privilege THEN NULL;
  END;
 
+ -- A legacy time-range request remains in storage, but approvers now receive it
+ -- in the same workspace queue and the snapshot no longer returns its clock times.
+ INSERT INTO public.timetracker_ot_requests(workspace_id,owner_id,ot_date,start_time,end_time,
+  duration_minutes,reason,submitted_by,submission_source,ot_policy)
+ VALUES(ws,emp,d,'08:00','10:00',120,'Legacy pending OT for approver visibility',
+  emp,'employee','legacy-range') RETURNING id INTO legacy_id;
+
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',hr::text,'session_id',hr_session::text)::text,true);
  snap:=public.timetracker_ot_snapshot(board);
- IF snap->>'scope'<>'AUTHORIZED_WORKSPACE_TEAM' OR snap->>'durationOtHrApprover'<>'true'
-  OR jsonb_array_length(snap->'rows')<>1 OR snap#>>'{rows,0,canReviewDuration}'<>'true'
- THEN RAISE EXCEPTION 'HR pending review snapshot invalid: %',snap; END IF;
+ IF snap->>'scope'<>'AUTHORIZED_WORKSPACE_TEAM'
+  OR snap->>'durationOtHrApprover'<>'true' OR snap->>'durationOtApprover'<>'true'
+  OR jsonb_array_length(snap->'rows')<>2 THEN
+  RAISE EXCEPTION 'HR pending review snapshot invalid: %',snap; END IF;
+ SELECT value INTO row_json FROM jsonb_array_elements(snap->'rows') value
+ WHERE value->>'id'=request_id::text;
+ IF row_json IS NULL OR row_json->>'canReviewOt'<>'true'
+  OR row_json->>'canReviewDuration'<>'true'
+  OR row_json ? 'start' OR row_json ? 'end' THEN
+  RAISE EXCEPTION 'HR duration request visibility/capability/time redaction failed: %',row_json; END IF;
+ SELECT value INTO row_json FROM jsonb_array_elements(snap->'rows') value
+ WHERE value->>'id'=legacy_id::text;
+ IF row_json IS NULL OR row_json->>'canReviewOt'<>'true'
+  OR row_json ? 'start' OR row_json ? 'end' THEN
+  RAISE EXCEPTION 'HR legacy request visibility/capability/time redaction failed: %',row_json; END IF;
+ receipt:=public.timetracker_ot_decide(board,legacy_id,'Approved');
+ IF receipt->>'status'<>'Approved' OR receipt->>'decidedBy'<>hr::text THEN
+  RAISE EXCEPTION 'HR legacy OT approval failed: %',receipt; END IF;
+
  receipt:=public.timetracker_ot_decide_duration(board,request_id,'Approved');
  IF receipt->>'status'<>'Approved' OR receipt->>'attendanceRecordId'<>rec_id::text
  THEN RAISE EXCEPTION 'HR approval failed to bind attendance: %',receipt; END IF;
@@ -126,11 +151,14 @@ BEGIN
  WHERE workspace_id=ws AND module_id='time-tracker' AND state_key='timetracker.attendance.v1'
   AND scope='shared' AND owner_key='*';
  snap:=public.timetracker_ot_snapshot(board);
- IF snap#>>'{rows,0,attendanceCredit,actualMinutes}'<>'60'
-  OR snap#>>'{rows,0,attendanceCredit,payableMinutes}'<>'60'
-  OR snap#>>'{rows,0,canReviewDuration}'<>'false'
- THEN RAISE EXCEPTION 'Signed HR history/payable credit mismatch: %',snap; END IF;
+ SELECT value INTO row_json FROM jsonb_array_elements(snap->'rows') value
+ WHERE value->>'id'=request_id::text;
+ IF row_json#>>'{attendanceCredit,actualMinutes}'<>'60'
+  OR row_json#>>'{attendanceCredit,payableMinutes}'<>'60'
+  OR row_json->>'canReviewOt'<>'false' THEN
+  RAISE EXCEPTION 'Signed HR history/payable credit mismatch: %',row_json; END IF;
 
+ -- An HR user cannot approve their own duration request.
  receipt:=public.timetracker_ot_submit_duration(board,d+1,60,'Additional planned inspection work');
  self_id:=(receipt->>'id')::uuid;
  BEGIN
@@ -138,6 +166,49 @@ BEGIN
   RAISE EXCEPTION 'HR self-approval unexpectedly succeeded';
  EXCEPTION WHEN insufficient_privilege THEN NULL;
  END;
+
+ -- A workspace System Admin (not only a bootstrap identity) may review duration OT.
+ UPDATE public.module_role_assignments SET role='System Admin'
+ WHERE user_id=hr AND module_id='time-tracker';
+ IF private.tt_role_in_workspace(hr,ws) IS DISTINCT FROM 'System Admin' THEN
+  RAISE EXCEPTION 'System Admin workspace role resolution failed'; END IF;
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',emp::text,'session_id',emp_session::text)::text,true);
+ receipt:=public.timetracker_ot_submit_duration(board,d+2,90,'Additional engineering inspection work');
+ system_admin_id:=(receipt->>'id')::uuid;
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',hr::text,'session_id',hr_session::text)::text,true);
+ snap:=public.timetracker_ot_snapshot(board);
+ IF snap->>'durationOtApprover'<>'true' OR snap->>'durationOtHrApprover'<>'false'
+  OR snap->>'scope'<>'AUTHORIZED_WORKSPACE_TEAM' THEN
+  RAISE EXCEPTION 'System Admin signed OT scope invalid: %',snap; END IF;
+ SELECT value INTO row_json FROM jsonb_array_elements(snap->'rows') value
+ WHERE value->>'id'=system_admin_id::text;
+ IF row_json IS NULL OR row_json->>'canReviewOt'<>'true' THEN
+  RAISE EXCEPTION 'System Admin cannot see/review employee pending OT: %',row_json; END IF;
+ IF NOT EXISTS(SELECT 1 FROM public.list_module_directory('time-tracker') u WHERE u.id=emp) THEN
+  RAISE EXCEPTION 'System Admin directory did not return active employee'; END IF;
+ receipt:=public.timetracker_ot_decide_duration(board,system_admin_id,'Approved');
+ IF receipt->>'status'<>'Approved' OR receipt->>'decidedBy'<>hr::text THEN
+  RAISE EXCEPTION 'System Admin duration approval failed: %',receipt; END IF;
+
+ -- Administrative historical entry also uses hours only; database clock fields stay NULL.
+ receipt:=public.timetracker_ot_submit_manual_duration(board,emp,d-1,120,
+  'Historical engineering work entered by the System Admin');
+ manual_id:=(receipt->>'id')::uuid;
+ IF receipt->>'otPolicy'<>'manual-duration-v1' OR receipt->>'durationMinutes'<>'120' THEN
+  RAISE EXCEPTION 'Manual duration receipt invalid: %',receipt; END IF;
+ snap:=public.timetracker_ot_snapshot(board);
+ SELECT value INTO row_json FROM jsonb_array_elements(snap->'rows') value
+ WHERE value->>'id'=manual_id::text;
+ IF row_json IS NULL OR row_json->>'canReviewOt'<>'true'
+  OR row_json ? 'start' OR row_json ? 'end' THEN
+  RAISE EXCEPTION 'Manual duration request snapshot invalid: %',row_json; END IF;
+ receipt:=public.timetracker_ot_decide_manual_duration(board,manual_id,'Approved');
+ IF receipt->>'status'<>'Approved' OR receipt->>'otPolicy'<>'manual-duration-v1' THEN
+  RAISE EXCEPTION 'System Admin manual duration approval failed: %',receipt; END IF;
+ IF NOT EXISTS(SELECT 1 FROM public.timetracker_ot_requests r
+  WHERE r.id=manual_id AND r.start_time IS NULL AND r.end_time IS NULL
+   AND r.duration_minutes=120 AND r.ot_policy='manual-duration-v1') THEN
+  RAISE EXCEPTION 'Manual duration entry persisted invented clock times'; END IF;
 
  UPDATE public.module_role_assignments SET role='OJT' WHERE user_id=ojt AND module_id='time-tracker';
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',ojt::text,'session_id',ojt_session::text)::text,true);
@@ -147,7 +218,7 @@ BEGIN
   RAISE EXCEPTION 'OJT duration OT unexpectedly accepted';
  EXCEPTION WHEN insufficient_privilege THEN NULL;
  END;
- RAISE NOTICE 'PASS: signed filing, HR review, no self-approval, OJT isolation, scheduler allocation and payable OT';
+ RAISE NOTICE 'PASS: employee filing, HR/System Admin review, legacy visibility, manual duration, no self-approval, OJT isolation, scheduler allocation and payable OT';
 END;
 $rpc$;
 ROLLBACK;
