@@ -2385,8 +2385,8 @@
       "version": "20261126100000",
       "name": "cp_tt_admin_manual_clockin_scheduler_gate",
       "file": "20261126100000_cp_tt_admin_manual_clockin_scheduler_gate.sql",
-      "bytes": 4421,
-      "sha256": "563400912840bc42db5e846810abb91157dab3cf5bede17296841fef9a131f3d"
+      "bytes": 5696,
+      "sha256": "9a93b74fa270210d39486af089669b61f6a97572fb58b1fe8823b8b9cb9a5e57"
     },
     {
       "version": "20261126110000",
