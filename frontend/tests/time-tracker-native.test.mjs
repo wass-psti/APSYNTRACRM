@@ -778,7 +778,7 @@ test('administrative clock-in becomes the employee active Clock session without 
  assert.equal(f.lastWrite().p_action,'clock-out');
 });
 test('manual clock-in accepts only signed System Admin capability and receipt',async()=>{
- const entry={employeeId:other,employeeType:'regular',status:'active',clockOutAt:null,
+ const entry={employeeId:other,employeeType:'regular',status:'active',clockOutAt:null,clockOutMode:null,
   clockInAt:stamp(8),location:TT_LOCATIONS[0],workNote:null,reason:'Missed clock-in'};
  const f=setup({role:'System Admin'});
  const original=f.api.rpc;
@@ -814,7 +814,7 @@ test('a stale End Session action never closes an admin-created replacement sessi
 
 
 test('manual clock-in fails closed when the regular auto-clockout scheduler is suspended',async()=>{
- const entry={employeeId:other,employeeType:'regular',status:'active',clockOutAt:null,
+ const entry={employeeId:other,employeeType:'regular',status:'active',clockOutAt:null,clockOutMode:null,
   clockInAt:stamp(8),location:TT_LOCATIONS[0],workNote:null,reason:'Missed clock-in'};
  const f=setup({role:'System Admin'});
  const original=f.api.rpc;
@@ -829,8 +829,8 @@ test('manual clock-in fails closed when the regular auto-clockout scheduler is s
   return original(name,args,options);
  };
  assert.deepEqual(await f.client.manualClockInCapability(board),{activeReady:false,historicalReady:true,schedulerMode:'suspended'});
- await assert.rejects(f.client.createManualClockIn(board,entry,2),/requires active regular nine-hour auto-clock-out/);
- assert.equal(createCalls,1);
+ await assert.rejects(f.client.createManualClockIn(board,entry,2),/Regular employee auto clock-out is not active/);
+ assert.equal(createCalls,0);
 });
 
 
