@@ -86,11 +86,18 @@ begin
  assert public.dda_snapshot_v1(w)->'records' @> jsonb_build_array(data);
  perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000099',false);
  perform set_config('request.jwt.claim.session_id','00000000-0000-4000-8000-000000000304',false);
- begin
-  perform public.dda_snapshot_v1(w);
-  raise exception 'missing workforce identity accepted';
- exception when insufficient_privilege then null;
- end;
+ -- An eligible CRM actor need not also be an AGT activity subject.
+ result:=public.dda_snapshot_v1(w);
+ assert result->'records' @> jsonb_build_array(data);
+ v:=(result->>'revision')::bigint;
+ result:=public.dda_submit_v1(w,'00000000-0000-4000-8000-000000000403',v,'save-category',jsonb_build_object('id','00000000-0000-4000-8000-000000000404','name','Unmapped actor category'));
+ assert (result->>'acknowledgedRequestId')::uuid='00000000-0000-4000-8000-000000000403'::uuid;
+ assert not (result->'directory'->'people' @> '[{"id":"00000000-0000-4000-8000-000000000099"}]'::jsonb);
+ v:=(result->>'revision')::bigint;
+ result:=public.dda_submit_v1(w,'00000000-0000-4000-8000-000000000405',v,'save-activity',data||'{"id":"00000000-0000-4000-8000-000000000406","personId":"00000000-0000-4000-8000-000000000099"}'::jsonb);
+ assert (result->>'rejectedRequestId')::uuid='00000000-0000-4000-8000-000000000405'::uuid;
+ assert (result->>'revision')::bigint=v;
+ assert not (result->'records' @> '[{"id":"00000000-0000-4000-8000-000000000406"}]'::jsonb);
  perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000011',false);
  perform set_config('request.jwt.claim.session_id','00000000-0000-4000-8000-000000000305',false);
  begin
@@ -109,5 +116,7 @@ reset role;
 do $audit$
 begin
  assert (select actor_id from dda.activity_event where request_id='00000000-0000-4000-8000-000000000401')='00000000-0000-4000-8000-000000000011'::uuid;
+ assert (select actor_id from dda.activity_event where request_id='00000000-0000-4000-8000-000000000403')='00000000-0000-4000-8000-000000000099'::uuid;
+ raise notice 'PASS: eligible CRM actors without workforce identities, authoritative subject validation and actor attribution';
  raise notice 'PASS: signed RPC read/write, cross-account readback, exact replay, actor attribution, workspace/session denial and internal privilege boundaries';
 end $audit$;
