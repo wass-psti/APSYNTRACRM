@@ -1,48 +1,90 @@
-# CP-TT — Admin Manual Clock-In: active session and scheduler contract
+# CP-TT — Admin Manual Attendance: hybrid current-day and historical corrections
 
-Status: the signed active-session creation path is already present in `main` from PR #882. This follow-up hardens its automatic-completion prerequisite; it does not add a completed-attendance creation path.
+Status: PR #914 is a replacement follow-up to closed PR #904. It preserves the signed active manual clock-in introduced in PR #882 and adds a separate, audited historical-completion path.
 
-## Required workflow
+## Purpose and authorization
 
-- Only a **System Admin** can create a missed regular-employee clock-in. IT Administrators remain limited to their existing time-correction permissions.
-- IT/Admin selects the employee and enters the actual same-day clock-in time in Philippine time. Nobody signs into, shares credentials with, or impersonates the employee.
-- The server creates a normal employee-owned attendance record: `ownerId = cloud:<employee UUID>`, `clockIn.timestamp = entered instant`, and `clockOut = null`.
-- The record is active immediately. The employee's signed TimeTracker Clock reads the same canonical attendance state and displays the active session using the recorded clock-in time. The employee ends it through the ordinary End Session flow.
-- Administrative clock-in evidence is explicit `not_captured` GPS with source `admin-manual-clockin` and the creating administrator recorded. No coordinates are fabricated. The reason and before/after record are retained in the immutable admin audit.
-- This workflow is active-only and same-day. It does not create a completed log, invent a clock-out timestamp, or add a second OJT write path. Shared-account OJT remains on its separate OJT workflow.
+The feature is an HR documentation safeguard for employees who missed a clock-in for an appropriate reason. It is not a way to impersonate employees or alter their credentials.
 
-## Automatic clock-out is a prerequisite
+- Only a workspace-scoped **System Admin** can create a manual attendance entry.
+- The target must be an active regular employee with an active TimeTracker workspace membership and verified department.
+- OJT shared-account identities and OJT intern identities are excluded. The OJT attendance and auto-clock-out paths remain independent.
+- The admin records the employee, Philippine attendance date, actual clock-in time, work location, reason, and optional work note.
+- GPS is never fabricated. Manual clock-in and clock-out evidence is explicitly `not_captured`, with the source and recording administrator retained.
+- The immutable audit records the actor, employee-owned record ID, before/after payload, reason, base/committed revision, and request UUID.
 
-The regular employee auto-clock-out processor and reconciler must be in the verified `active` mode before an admin manual clock-in can be saved.
+## Two separate write paths
 
-- The versioned readiness RPC returns false while the regular scheduler is suspended or invalid; the Add Log form keeps Save disabled and explains why. The capability contract was advanced to v2, so an old frontend or an unapplied migration cannot accidentally treat the previous readiness response as permission.
-- The signed create RPC independently rechecks active mode while holding the scheduler's shared control lock. If an operator is activating/suspending the scheduler, the request fails closed and can be retried after the mode is stable.
-- The attendance write does **not** synchronously write to the scheduler table or invoke the reconciler. The independent 30-second reconciler enrolls the committed open employee session using the current activation epoch. This separation is intentional: scheduler enrollment was removed from attendance writes to avoid the earlier foreign-key/deadlock incident.
-- The existing worker calculates the cutoff with `private.tt_auto_clockout_threshold`, which uses the attendance credited-time policy. The standard shift therefore reaches nine credited work hours with the one-hour unpaid lunch excluded; the existing approved-overtime rules and exact server cutoff remain unchanged. The processor runs on its existing 30-second cadence.
-- The OJT nine-hour job is independent and is not modified by this change.
+### A. Missed clock-in today — ACTIVE session
 
-If the regular scheduler is suspended, manual clock-in is deliberately unavailable until a trusted database operator reviews the eligible open sessions and activates the isolated scheduler through the existing private operator procedure. This PR does not activate cron jobs, change the activation cutoff, or modify production data.
+- The selected attendance date must be the current Philippine calendar date.
+- The signed existing `timetracker_attendance_admin_create` RPC creates a normal employee-owned record: `ownerId = cloud:<employee UUID>`, actual admin-entered `clockIn.timestamp`, and `clockOut = null`.
+- The employee's ordinary TimeTracker Clock reads the same canonical attendance state. The session appears active under the employee's identity; the employee can use the normal End Session action.
+- The regular scheduler must be verifiably `active`. The readiness capability is versioned and the server rechecks mode while holding the scheduler's shared control lock. If activation/suspension is in progress, or the scheduler is suspended/invalid, this live write fails closed.
+- The existing independent reconciler enrolls the committed open session on its normal 30-second sweep. The manual attendance transaction does not insert into `private.tt_auto_clockout_sessions` or call the worker synchronously.
+- The existing worker continues to use `private.tt_auto_clockout_threshold` and the established credited-time policy: nine credited work hours, with the one-hour unpaid lunch excluded. Existing approved-OT handling remains unchanged.
+- The active path rejects a second record for the same employee and Philippine date, as well as overlaps and duplicate/open sessions.
 
-## Concurrency and safety
+### B. Missed clock-in on a past date — COMPLETED historical record
 
-- The employee advisory lock and canonical attendance revision/CAS checks remain authoritative.
-- Duplicate and overlapping sessions are rejected; stale revisions fail closed.
-- The scheduler shared control lock prevents an operator activation/suspension from racing the attendance transaction. The scheduler's own enrollment remains asynchronous and isolated.
-- The server revalidates System Admin scope, active employee/workspace membership, verified department, same-day Philippine timestamp, and attendance invariants.
-- The employee's normal GPS-backed clock-out, automatic server clock-out evidence, Board projection, audit history, and Logs readback remain the existing paths.
+- Only a date strictly before today's Philippine date is accepted. Same-day entries must use the ACTIVE path; future dates are rejected.
+- The admin enters the actual clock-in time.
+- Default clock-out method is **Standard — nine credited hours**. The server calculates the completed clock-out with the same authoritative `private.tt_auto_clockout_threshold` function used by the regular worker. The unpaid lunch is excluded.
+- For a shorter or non-standard shift, the admin selects **Enter actual clock-out time** and supplies the actual Philippine date/time. The server requires it to be after clock-in, already elapsed, and within the supported 48-hour shift window.
+- The completed record stores an explicit basis:
+  - `standard_nine_credited_hours` — system-calculated standard clock-out.
+  - `admin_entered_actual` — actual clock-out supplied by the System Admin.
+- The basis is visible in the HR Attendance Log details and CSV export.
+- The record is appended to the employee-owned canonical attendance history and projected to the HR board in the same transaction.
+- The historical RPC never creates an open session, never inserts a row into `private.tt_auto_clockout_sessions`, never invokes reconciliation, and never changes the employee's current active Clock.
+- A historical correction is allowed even while the regular live scheduler is suspended, because it is completed documentation and is not a scheduler candidate.
 
-## Acceptance checks
+## Isolation, concurrency, and data integrity
 
-1. Suspended or invalid regular scheduler: capability is false, Save is disabled, and direct RPC creation is rejected without changing attendance.
-2. Active regular scheduler: System Admin can create one same-day active session for an eligible regular employee.
-3. Employee Clock signed refresh sees the same active session and elapsed time starts at the administrator-entered clock-in instant.
-4. Employee can use normal End Session; no stale or duplicate session is created.
-5. Independent reconciliation enrolls the new open session; the worker closes it at the existing nine-credited-hour cutoff, excluding unpaid lunch and preserving approved OT.
-6. Duplicate/overlapping entries, non-System-Admin creation, inactive/shared OJT identities, missing department, future timestamps, and stale revisions fail closed.
-7. Audit, Board projection, Logs, GPS provenance, and OJT isolation remain intact.
+- Current-day ACTIVE and past-day COMPLETED records use distinct signed database RPCs.
+- Both paths serialize on the employee attendance advisory lock and the canonical attendance revision/CAS boundary.
+- The historical RPC uses a request UUID as an idempotency key. A retry with the same actor, employee, date, time, method, reason, location, and work note returns the original receipt. Reusing that key for a different payload fails closed.
+- One attendance record per employee per Philippine date is enforced. Duplicate dates, overlapping intervals, malformed existing timestamps, missing departments, inactive employees, OJT identities, non-System-Admin actors, stale revisions, future timestamps, and clock-out-before-clock-in are rejected.
+- A historical correction whose interval precedes an employee's current open session is permitted. An overlapping correction is rejected.
+- The employee's current open record and scheduler enrollment are not modified by a historical append.
+- Board projection and immutable audit are committed atomically with canonical attendance state.
+- No migration activates/deactivates cron jobs or rewrites production attendance.
+
+## Scheduler contract
+
+- `private.tt_admin_manual_clockin_ready()` is true only when `private.tt_auto_clockout_mode()` is `active`.
+- The capability contract is `tt-admin-attendance-capability-3`:
+  - `activeReady` controls today's ACTIVE path.
+  - `historicalReady` controls the past-date COMPLETED path.
+  - `schedulerMode` is explicit (`active`, `suspended`, or `invalid`).
+- The live RPC independently rechecks scheduler mode under the shared scheduler-control lock. The historical RPC does not take or mutate the scheduler queue.
+- The regular processor and reconciler remain the only regular-employee automatic completion path. The separate OJT scheduler is not modified.
+
+## PostgreSQL 17 acceptance
+
+The dedicated workflow `.github/workflows/cp-tt-admin-manual-attendance-hybrid.yml` builds a disposable PostgreSQL 17 database, applies the current prerequisite migration chain, and runs `supabase/tests/tt_admin_manual_attendance_hybrid.integration.sql`.
+
+The acceptance covers:
+1. Active scheduler capability and current-day employee-owned open session creation.
+2. Asynchronous enrollment by the existing reconciler with the exact standard threshold.
+3. Same-day duplicate rejection.
+4. Standard historical calculation at nine credited hours, with lunch excluded.
+5. Admin-entered actual historical clock-out override.
+6. Historical HR board projection and immutable actor/reason audit.
+7. No GPS fabrication and no historical queue enrollment.
+8. A historical correction while the employee has a current active session leaves that session and its queue row unchanged.
+9. Idempotent request replay; duplicate employee/date, unauthorized actor, future date, same-day historical path, and clock-out-before-clock-in rejection.
+10. Scheduler suspension blocks only the current-day ACTIVE path; historical COMPLETED corrections remain available.
+11. The independent OJT cron job remains unchanged.
+
+The existing auto-clockout PostgreSQL 17 worker acceptance is also run before the new migration chain.
 
 ## Deployment
 
-Forward migration: `20261126100000_cp_tt_admin_manual_clockin_scheduler_gate.sql`. It also versions the signed capability response to `tt-admin-clockin-capability-2` with an explicit `schedulerMode` field, making deployment order fail closed.
+Forward migrations:
+- `20261126100000_cp_tt_admin_manual_clockin_scheduler_gate.sql`
+- `20261126110000_cp_tt_admin_manual_attendance_hybrid.sql`
 
-Review the migration list and manifest, run the disposable database and full CI checks, then use the normal production backup and dry-run process. The PR itself does not push migrations or activate the production scheduler.
+Both must be registered in `supabase/migration-source-manifest.json` with exact byte counts and SHA-256 checksums.
+
+The PR itself does not push migrations or alter production cron jobs. After merge, deploy the migrations through the approved Supabase backup/dry-run procedure, verify the regular processor and reconciler are active and succeeding, and test a controlled current-day manual clock-in before enabling the HR workflow broadly. The OJT job must remain unchanged.
