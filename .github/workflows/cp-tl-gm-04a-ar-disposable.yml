@@ -5,6 +5,7 @@ on:
     paths:
       - 'sql/candidates/cp-tl-gm-04a-ar-reconciliation.sql'
       - 'sql/tests/cp-tl-gm-04a-ar-disposable.sql'
+      - 'sql/candidates/cp-tl-gm-04c-ar-rollback.sql'
       - '.github/workflows/cp-tl-gm-04a-ar-disposable.yml'
   workflow_dispatch:
 permissions:

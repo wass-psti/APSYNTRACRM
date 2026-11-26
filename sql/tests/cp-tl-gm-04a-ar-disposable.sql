@@ -55,7 +55,7 @@ SELECT public.fixture_assert(60000,1,0,0);
 SELECT public.fixture_payment(3,'completed',0,20000);
 SELECT public.fixture_assert(60000,1,0,20000);
 SET ROLE authenticated;
-DO $ DECLARE r jsonb; saved_stamp text; BEGIN
+DO $$ DECLARE r jsonb; saved_stamp text; BEGIN
  r:=public.tl03_cheque_clearance_status('264ca40d-6e4a-4e4f-97e6-3bd77c97cd88','00000000-0000-4000-8000-000000000003',1);
  IF r->'clearedAt' IS DISTINCT FROM 'null'::jsonb THEN RAISE EXCEPTION 'expected pending readback'; END IF;
  r:=public.tl03_record_cheque_clearance('264ca40d-6e4a-4e4f-97e6-3bd77c97cd88','00000000-0000-4000-8000-000000000003',1);
@@ -91,3 +91,14 @@ DO $$ BEGIN
 END $$;
 RESET ROLE;
 SELECT 'CP-TL-GM-04A synthetic financial assertions passed' AS result;
+
+-- Rehearse rollback after recording clearance: evidence must survive.
+\ir ../candidates/cp-tl-gm-04c-ar-rollback.sql
+DO $rollback_check$ BEGIN
+ IF (SELECT count(*) FROM private.tradelink_cheque_clearances)<>1 THEN RAISE EXCEPTION 'rollback lost clearance evidence'; END IF;
+ IF has_function_privilege('authenticated','public.tl03_record_cheque_clearance(uuid,uuid,bigint)','EXECUTE') THEN RAISE EXCEPTION 'rollback left clearance write available'; END IF;
+END $rollback_check$;
+-- Reapply candidate to verify retained evidence and repeatable deployment.
+\ir ../candidates/cp-tl-gm-04a-ar-reconciliation.sql
+SET test.manager='yes';
+SELECT public.fixture_assert(15000,1,0,20000);
