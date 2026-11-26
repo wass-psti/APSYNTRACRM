@@ -128,5 +128,5 @@ test('Calendar style is registered and verified through Pages with strict CSP in
   index.indexOf('frontend/time-tracker-reports-command.css'));
  assert.match(smoke,/'frontend\/time-tracker-calendar-command\.css'/);
  assert.match(index,/style-src-attr 'none'/);
- assert.match(index,/script type="module" src="\.\/frontend\/app\.js"/);
+ assert.match(index,/script type="module" src="\.\/frontend\/app\.js(?:\?v=[^"]+)?"/);
 });
