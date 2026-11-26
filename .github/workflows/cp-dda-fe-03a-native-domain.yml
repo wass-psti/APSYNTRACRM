@@ -26,4 +26,5 @@ jobs:
       - run: node --check frontend/apps/DailyDepartmentActivity/activity-model.js
       - run: node --check frontend/apps/DailyDepartmentActivity/activity-drafts.js
       - run: node --check frontend/apps/DailyDepartmentActivity/activity-controller.js
+      - run: node --check frontend/apps/DailyDepartmentActivity/activity-screen.js
       - run: node --test frontend/tests/dda-native-*.test.mjs
