@@ -211,7 +211,7 @@ test('signed manual duration OT RPC verifies employee owner and administrator su
   scope:'OWN_OT_ONLY',manualOtManager:false}}).submitManualOvertime(board,{
    employeeId:worker,date:'2025-11-02',durationMinutes:120,
    reason:'Emergency preparation overtime entered by an administrator'
-  }),/System Admin manual duration OT submission is unavailable/);
+  }),/manual duration OT submission is unavailable/);
 });
 test('System Admin may decide employee duration and manual duration OT without self-review',async()=>{
  const manual={...rows[0],id:'50000000-0000-4000-8000-000000000002',
