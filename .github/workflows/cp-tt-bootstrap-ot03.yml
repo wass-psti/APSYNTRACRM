@@ -33,7 +33,7 @@ on:
       - "scripts/cp-tt-bootstrap-ot02-signed-disposable.*"
       - "scripts/cp-tt-bootstrap-ot03-browser.mjs"
   # Keep disposable SQL fixtures and the staged migration in both trigger path lists.
-  # The worker fixture mirrors the live 20261125100000 candidate-query contract.
+  # The disposable worker fixture mirrors the live 20261125100000 candidate-query contract byte-for-byte.
   workflow_dispatch:
 
 permissions:
