@@ -2,6 +2,8 @@ import {renderRecoveryChoices} from './tradelink/draft-recovery-ui.js';
 import {TradeLinkRecoveryController} from './tradelink/draft-recovery-controller.js';
 import {captureRecoveryFields} from './tradelink/draft-recovery-state.js';
 import {syncFuelTrans} from './fueltrans-lazy.js';
+import {syncDda} from './dda-native-host.js';
+import {DDA_APPLICATION,DDA_RELEASE_ENABLED,DDA_ROUTE_SECTION,DDA_HOST_MARKUP} from './dda-release.js';
 import {OrderIntakeOperationalClient as OrderIntakeRegistryClient} from './order-intake-operational-client.js';
 import {buildConfirmation} from './order-intake-confirmation.js';
 import {confirmationFields,bindConfirmationForm,readConfirmationForm} from './order-intake-confirmation-ui.js';
@@ -1024,6 +1026,7 @@ function stopAuthVisuals(){
  authVisualController=null;
 }
 function renderLogin(message='',{mode=authViewFromHash(),notice='',emailValue=''}={}){
+ syncDda();
  stopTimeTrackerClock();
  stopTimeTrackerPixi();
  // Clear detached protected item values on every signed-out transition.
@@ -1287,7 +1290,7 @@ let shellSidebarSignature=null;
 let shellRoute=null;
 function shell(body){
  stopAuthVisuals();
- const crumb=applicationRouteRead?.label||(state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.fuelTrackStandalone?'FuelTrack+':state.fuelTransStandalone?'FuelTrans Support Portal':state.view==='paseo'?'Paseo de Lomboy':state.view==='order-intake'?'Order Intake':currentSidebarNavigation()==='talkbox'?'TalkBox':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'Teams':state.view==='invitation'?'Workspace invitation':'Settings');
+ const crumb=applicationRouteRead?.label||(state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.fuelTrackStandalone?'FuelTrack+':state.fuelTransStandalone?'FuelTrans Support Portal':state.view==='paseo'?'Paseo de Lomboy':state.view==='order-intake'?'Order Intake':state.view===DDA_ROUTE_SECTION?DDA_APPLICATION.label:currentSidebarNavigation()==='talkbox'?'TalkBox':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'Teams':state.view==='invitation'?'Workspace invitation':'Settings');
  const identity=[state.context?.user_id,state.context?.workspace_id].join('|');
  const sidebarSignature=JSON.stringify([state.workspaceTransitionPending,state.roleVerified,state.adminVerified,state.boardCatalogError,name(),
   state.context?.profile?.platform_role,state.crmRoleSnapshot?.effectiveRole,
@@ -1301,6 +1304,10 @@ function shell(body){
  disposeTimeTrackerMaps();
  const existing=root.querySelector(':scope > .shell');
  const reusable=existing&&shellIdentity===identity;
+ const preserveDda=body===DDA_HOST_MARKUP&&reusable&&shellRoute===route&&
+  auth.isSignedIn&&state.context?.user_id===auth.userId&&!state.workspaceTransitionPending&&
+  !!existing.querySelector('#dda-native-host');
+ if(!preserveDda)syncDda();
  if(shellIdentity!==identity){closeWorkspacePanels();timeTrackerSubmenuOpen=true;}
  if(reusable){
   const oldSidebar=existing.querySelector('.aps-sidebar');
@@ -1325,7 +1332,7 @@ function shell(body){
   }
   existing.querySelector('.breadcrumb strong').textContent=crumb;
   existing.querySelector('.top-avatar').innerHTML='<span data-avatar-initials aria-hidden="true">'+e(initials(name()))+'</span><img data-avatar-current alt="" hidden />';
-  existing.querySelector('.main-content').innerHTML=body;
+  if(!preserveDda)existing.querySelector('.main-content').innerHTML=body;
   if(scrollPositions)restoreBoardGroupScroll(existing.querySelector('.main-content'),scrollPositions);
  }else{
   root.innerHTML=`<div class="shell">${sidebar()}<main class="main">
@@ -1354,6 +1361,7 @@ function shell(body){
  root.querySelector('.main')?.classList.toggle('aps-fueltrack-shell',state.fuelTrackStandalone===true);
  root.querySelector('.main')?.classList.toggle('aps-fueltrans-shell',state.fuelTransStandalone===true);
  root.querySelector('.main')?.classList.toggle('aps-order-intake-shell',state.view==='order-intake');
+ root.querySelector('.main')?.classList.toggle('aps-dda-shell',state.view===DDA_ROUTE_SECTION);
  root.querySelector('.main')?.classList.toggle('aps-overview-shell',state.view==='overview');
  root.querySelector('.main')?.classList.toggle('aps-fm1-shell',state.view==='fm1');
  root.querySelector('.main')?.classList.toggle('aps-talkbox-shell',state.view==='talkbox');
@@ -2440,6 +2448,14 @@ function render(){
  else if(state.view==='talkbox')shell(renderTalkBoxNativeApplication());
  else if(state.view==='time-tracker')shell(renderTimeTrackerRouteUnavailable());
  else if(state.view==='paseo')shell(renderPaseoNative());
+ else if(state.view===DDA_ROUTE_SECTION){
+  if(!DDA_RELEASE_ENABLED)shell('<section><h1>Daily Department Activity</h1><p>Production activation is pending.</p></section>');
+  else if(state.workspaceTransitionPending||state.context?.workspace_id!==WORK_MANAGEMENT_WORKSPACE_ID||state.context?.user_id!==auth.userId||!auth.isSignedIn){syncDda();shell(sharedApplicationLoading());}
+  else{
+   shell(DDA_HOST_MARKUP);
+   void syncDda({container:root.querySelector('#dda-native-host'),auth,api:db,userId:state.context.user_id,workspaceId:state.context.workspace_id});
+  }
+ }
  else if(state.view==='order-intake'&&orderIntakeRoute){
   const scope=orderIntakeScope();
   const snapshot=orderIntakeCurrent(scope)?currentOrderIntakeRead().read(scope):null;
@@ -3156,6 +3172,7 @@ async function refreshWorkspace(){
  const workspaceIdentityChanged=priorIdentity!==state.context?.user_id||
   priorWorkspace!==state.context?.workspace_id;
  if(workspaceIdentityChanged){
+  syncDda();
   clearOrderIntake();
   trashBoardSelection.clear();
   crmRoleReadGeneration++;crmRoleLastReadAt=0;state.crmRoleSnapshot=null;
@@ -6012,8 +6029,9 @@ async function onRoute(){
  applicationRouteRead=null;state.nativeInitialRead=null;state.ttReadLoading=false;
  closeTradeLinkSavedDocumentOutput();
  syncFuelTrans({container:null});
- if(!state.context)return;
+ if(!state.context){syncDda();return;}
  if(state.workspaceTransitionPending){
+  syncDda();
   clearOrderIntake();
   history.replaceState(null,'',location.pathname+location.search+routeHome);
   approvedRouteHash=routeHome;
@@ -6026,6 +6044,7 @@ async function onRoute(){
  const routePath=hash.split('?')[0];
  const routeQuery=new URLSearchParams(hash.split('?')[1]||'').get('q')||'';
  const parts=routePath.replace(/^#\/?/,'').split('/');
+ if(parts[0]!==DDA_ROUTE_SECTION||state.context?.workspace_id!==WORK_MANAGEMENT_WORKSPACE_ID||state.context?.user_id!==auth.userId)syncDda();
  if(parts[0]!=='order-intake')clearOrderIntake();
  if(parts[0]!=='user-role-management')teamsController?.unmount();
  state.ttStandalone=false;state.frtStandalone=false;state.tlStandalone=false;state.fuelTrackStandalone=false;state.fuelTransStandalone=false;
@@ -6092,6 +6111,13 @@ async function onRoute(){
   if(recordId&&recordId.length<=180)pendingNativeSearchSelection={applicationId:'fm1',recordId,boardId:null,
    userId:auth.userId,workspaceId:state.context?.workspace_id};
  }else if(parts[0]==='fm1'&&pendingNativeSearchSelection?.applicationId==='fm1')pendingNativeSearchSelection=null;
+ if(parts[0]===DDA_ROUTE_SECTION){
+  if(hash!==DDA_APPLICATION.route)history.replaceState(null,'',location.pathname+location.search+DDA_APPLICATION.route);
+  if(state.view!==DDA_ROUTE_SECTION){routeSerial++;stopTimeTrackerClock();}
+  state.view=DDA_ROUTE_SECTION;state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
+  state.boardManage=false;state.edit=false;state.error='';
+  render();return;
+ }
  if(parts[0]==='order-intake'){
   let nextRoute=parseOrderIntakeRoute(hash);
   if(!nextRoute)return;
@@ -6450,6 +6476,7 @@ let startupRecoveryActive=false;
 let startupBusy=false;
 let startupRecoveryStage='authentication';
 function renderBootstrapFailure(error){
+ syncDda();
  startupRecoveryActive=true;
  platformSync.stop();
  state.context=null;
@@ -8496,6 +8523,7 @@ async function action(name,button){
       const saved=writeWorkspacePreference(actor,receipt.workspaceId);
       if(!saved)toast('Workspace changed, but this browser could not save the preference.',true);
       clearOrderIntake();
+      syncDda();
       state.workspaceTransitionPending=true;
       state.workspaceTransitionTargetId=receipt.workspaceId;
       state.workspaceTransitionTargetName=typeof targetWorkspace?.name==='string'?
@@ -8535,6 +8563,7 @@ async function action(name,button){
       }catch(error){
        // The server selection is already committed. Keep the previous scope
        // hidden and let the existing Refresh action retry the signed context read.
+       syncDda();
        state.workspaceTransitionPending=true;
        state.workspaceTransitionTargetId=receipt.workspaceId;
        state.workspaceTransitionTargetName=typeof targetWorkspace?.name==='string'?
