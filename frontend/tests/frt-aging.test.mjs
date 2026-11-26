@@ -82,6 +82,8 @@ test('CP-FRT-UI-01 styles the component for responsive light and dark appearance
  const bundle=readFileSync(new URL('../apsyntra-styles.bundle.css',import.meta.url),'utf8');
  for(const term of ['frt-exec-aging-grid','frt-exec-aging-card','frt-exec-aging-disclosure',
   '@media(min-width:760px)','@media(max-width:380px)'])assert.ok(css.includes(term),term);
+ assert.ok(css.includes('color:#63748a'),'small labels meet AA contrast on light cards');
+ assert.ok(css.includes('color:#596b82'),'disclosure and empty-state text meet AA contrast');
  for(const term of ['frt-exec-aging-card','frt-exec-aging-disclosure','var(--crm-native-panel)'])
   assert.ok(dark.includes(term),term);
  assert.match(bundle,/CP-FRT-UI-01 — compact, responsive Liquidation Aging metric cards/);
