@@ -1,7 +1,7 @@
 name: DDA recovered frontend regression
 on:
   push:
-    branches: [main, cp-dda-fe-03a-source-recovery]
+    branches: [main, cp-dda-fe-03a-source-recovery, cp-dda-fe-03a-reference-ci]
     paths:
       - 'docs/reference/dda-fe-02/**'
       - '.github/workflows/cp-dda-fe-03a-reference.yml'
