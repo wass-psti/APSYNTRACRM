@@ -446,3 +446,25 @@ test('HR signed scope reviews duration only and rejects non-HR claims',async()=>
  assert.equal((await client.decideOvertime(board,durationRow.id,'Approved')).status,'Approved');
  await assert.rejects(()=>setup({role:'Employee',snapshot}).snapshot(board),/review role/);
 });
+
+test('OT table shows requested duration prominently and separates verified payable hours',()=>{
+ const pending={...rows[0],id:'duration-pending',otPolicy:'duration-v1',
+  durationMinutes:180,start:'',end:'',status:'Submitted'};
+ const approved={...rows[1],id:'duration-approved',otPolicy:'duration-v1',
+  durationMinutes:180,start:'',end:'',attendanceRecordId:'record-1',
+  attendanceCredit:{actualMinutes:150,payableMinutes:120}};
+ const durationHtml=renderTimeTrackerOvertime({
+  requests:[pending,approved],access:{otContractActive:true},now
+ });
+ assert.match(durationHtml,/<span>Requested OT<\/span>/);
+ assert.match(durationHtml,/3h requested/);
+ assert.match(durationHtml,/2h payable/);
+ assert.doesNotMatch(durationHtml,/Duration-based|Paid OT:/);
+
+ const legacyHtml=renderTimeTrackerOvertime({
+  requests:rows,access:{otContractActive:true},now
+ });
+ assert.match(legacyHtml,/<span>Requested OT<\/span>/);
+ assert.match(legacyHtml,/06:00 PM – 08:00 PM/);
+ assert.match(legacyHtml,/2h/);
+});
