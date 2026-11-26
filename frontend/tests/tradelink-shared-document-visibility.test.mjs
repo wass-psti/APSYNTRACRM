@@ -204,3 +204,16 @@ test('executive exemption suppresses only intermediate menu action',()=>{
   assert.equal(html.includes('data-action="tradelink-document-review-stage"'),expected,stage);
  }
 });
+
+test('TradeLink document menu correction is delivered through versioned application and renderer module URLs',()=>{
+ const index=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ const ui=readFileSync(new URL('../tradelink-ui.js',import.meta.url),'utf8');
+ const application=readFileSync(new URL('../tradelink-application.js',import.meta.url),'utf8');
+ const version='cp-tl-document-menu-02-20261126-01';
+ assert.match(index,new RegExp('app\\.js\\?v='+version));
+ assert.match(app,new RegExp('tradelink-ui\\.js\\?v='+version));
+ assert.match(app,new RegExp('tradelink-draft-workspace\\.js\\?v='+version));
+ assert.match(ui,new RegExp('tradelink-application\\.js\\?v='+version));
+ assert.match(application,new RegExp('tradelink-draft-workspace\\.js\\?v='+version));
+});
