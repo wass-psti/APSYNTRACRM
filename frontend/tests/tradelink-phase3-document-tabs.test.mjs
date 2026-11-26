@@ -38,7 +38,7 @@ test('module click uses existing normalized bounded filters and authorized page 
   ?.split("case 'tradelink-documents-search':{")[0]||'';
  assert.match(fragment,/tradeLinkAuthorizedListRoute/);
  assert.match(fragment,/TL03_DOMAIN_READS_ENABLED/);
- assert.match(fragment,/tradeLinkCanCreate\(\)/);
+ assert.match(fragment,/state\.tradeLinkDraft\?\.sharedVisibility===true/);
  assert.match(fragment,/normalizeTradeLinkDraftListFilters/);
  assert.match(fragment,/button\.dataset\.module/);
  assert.match(fragment,/await loadTradeLinkDrafts\(routeSerial/);
