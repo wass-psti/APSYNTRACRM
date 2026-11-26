@@ -181,7 +181,7 @@ test('unverified and mismatched analytics fail closed and never reconstruct data
 test('signed requests preserve original filter, sort and expandable log interactions',()=>{
  const html=renderFuelTrackSignedRequestsRich(snapshot);
  assert.match(html,/class="ft3-request-stats"/);
- assert.match(html,/class="ft3-request-filters"/);
+ assert.ok(html.includes('ft3-request-filters'));
  assert.match(html,/id="ft3-signed-request-search"/);
  assert.match(html,/data-action="ft3-signed-request-status"/);
  assert.match(html,/data-action="ft3-signed-request-sort"/);
@@ -195,6 +195,23 @@ test('signed requests preserve original filter, sort and expandable log interact
  assert.doesNotMatch(filtered,/Refill supplies/);
  assert.doesNotMatch(filtered,/<b>/);
  assert.match(renderFuelTrackSignedRequestsRich(snapshot,{search:'nonexistent'}),/No matching requests/);
+});
+test('CP-FT-ALL-REQUESTS-01 renders a complete request workspace with truthful status totals',()=>{
+ const html=renderFuelTrackSignedRequestsRich(snapshot);
+ assert.ok(html.includes('ft3-requests-v2'));
+ assert.match(html,/FUEL CONTROL \/ REQUEST MANAGEMENT/);
+ assert.match(html,/Request workspace/);
+ for(const token of ['ft3-requests-kpi-total','ft3-requests-kpi-pending','ft3-requests-kpi-progress','ft3-requests-kpi-completed'])assert.match(html,new RegExp(token));
+ for(const token of ['Total requests','Pending approval','In progress','data-status="refueling_done"','aria-label="Filter requests by status"','Search requestor, plate, purpose or reference','ft3-request-table','class="ft3-requests-avatar"','class="ft3-requests-purpose"','View details','class="ft3-requests-mobile-label"'])assert.ok(html.includes(token),token);
+ assert.match(html,/Showing 2 of 2 matching requests/);
+ assert.doesNotMatch(html,/271 transactions|258 processed|Jane Doe|42.5 km per liter/);
+ const css=readFileSync(new URL('../fueltrack-v3-application.css',import.meta.url),'utf8');
+ const dark=readFileSync(new URL('../../frontend/dark-native-applications.css',import.meta.url),'utf8');
+ const bundle=readFileSync(new URL('../apsyntra-styles.bundle.css',import.meta.url),'utf8');
+ for(const token of ['ft3-requests-hero','ft3-requests-kpi','ft3-requests-workspace','ft3-request-table','@media(max-width:700px)','@media(max-width:380px)'])assert.ok(css.includes(token),token);
+ for(const token of ['ft3-requests-v2','ft3-requests-kpi','ft3-requests-empty','var(--crm-native-panel)','.ft3-requests-row{background:var(--crm-native-panel)'])assert.ok(dark.includes(token),token);
+ assert.match(bundle,/CP-FT-ALL-REQUESTS-01 — premium request workspace/);
+ assert.match(bundle,/CP-FT-ALL-REQUESTS-01 — FuelTrack signed request workspace dark appearance/);
 });
 test('three signed application routes all use the richer renderers instead of minimal fallback',()=>{
  for(const [section,expected] of [

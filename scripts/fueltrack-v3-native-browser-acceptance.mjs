@@ -17,6 +17,7 @@ try {
  const page=await browser.newPage({viewport:{width:1440,height:900}});
  const errors=[];page.on('pageerror',error=>errors.push(error.message));
  for(const [section,pattern] of [['dashboard',/Request pipeline/],['analytics',/Consumption Trend/],['requests',/Request Log/],['new-request',/Select Refuel Type/],['approvals',/Approvals/],['lightfuels',/LightFuels/],['activity',/Activity/]]) {
+  await page.setViewportSize({width:1440,height:900});
   const html=renderFuelTrackV3Application({detail,section,actorName:'Browser Acceptance',backend:{snapshot,analytics}});
   await page.setContent('<!doctype html><html><head><meta charset="utf-8"></head><body><main id="app">'+html+'</main></body></html>');
   await page.addStyleTag({content:styles});
@@ -42,6 +43,39 @@ try {
    assert.equal(await page.locator('.ft3-dashboard-stage').first().evaluate(el=>getComputedStyle(el).backgroundColor),darkTheme.surface);
    assert.equal(await page.locator('.ft3-dashboard-stage-label').first().evaluate(el=>getComputedStyle(el).color),darkTheme.muted);
    await page.locator('html').evaluate(el=>el.removeAttribute('data-aps-monday-theme'));
+  }
+  if(section==='requests'){
+   assert.equal(await page.locator('.ft3-request-stats .ft3-requests-kpi').count(),4);
+   assert.equal(await page.locator('.ft3-request-filters .ft3-request-filter').count(),6);
+   assert.equal(await page.locator('.ft3-requests-table tbody .ft3-requests-row').count(),1);
+   assert.equal(await page.locator('.ft3-requests-search input').count(),1);
+   assert.equal(await page.locator('.ft3-requests-live').count(),1);
+   assert.equal(await page.locator('.ft3-request-stats').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),4);
+   const expanded=renderFuelTrackV3Application({detail,section:'requests',requestsFilters:{expandedId:requestId},backend:{snapshot,analytics}});
+   await page.setContent('<!doctype html><html><head><meta charset="utf-8"></head><body><main id="app">'+expanded+'</main></body></html>');
+   await page.addStyleTag({content:styles});
+   assert.equal(await page.locator('.ft3-requests-detail').count(),1);
+   assert.match(await page.locator('.ft3-requests-detail').innerText(),/Controlled regression fixture/);
+   await page.locator('html').evaluate(el=>el.setAttribute('data-aps-monday-theme','dark'));
+   const darkColors=await page.locator('html').evaluate(el=>{
+    const probe=document.createElement('div');document.body.appendChild(probe);
+    probe.style.backgroundColor='var(--crm-native-panel)';const panel=getComputedStyle(probe).backgroundColor;
+    probe.style.color='var(--crm-native-ink)';const ink=getComputedStyle(probe).color;
+    probe.remove();return {panel,ink};
+   });
+   assert.equal(await page.locator('.ft3-requests-kpi').first().evaluate(el=>getComputedStyle(el).backgroundColor),darkColors.panel);
+   assert.equal(await page.locator('.ft3-requests-kpi-copy strong').first().evaluate(el=>getComputedStyle(el).color),darkColors.ink);
+   await page.locator('html').evaluate(el=>el.removeAttribute('data-aps-monday-theme'));
+   await page.setViewportSize({width:768,height:900});
+   assert.equal(await page.locator('.ft3-request-stats').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),2);
+   await page.setViewportSize({width:390,height:844});
+   assert.equal(await page.locator('.ft3-request-stats').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),2);
+   assert.equal(await page.locator('.ft3-requests-table').evaluate(el=>getComputedStyle(el).display),'block');
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'No All Requests page-level overflow at 390px');
+   await page.setViewportSize({width:360,height:844});
+   assert.equal(await page.locator('.ft3-request-stats').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),1);
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'No All Requests page-level overflow at 360px');
+   checks+=12;
   }
   if(section==='new-request'){
    assert.equal(await page.locator('#ft3-new-request-form').count(),1);
