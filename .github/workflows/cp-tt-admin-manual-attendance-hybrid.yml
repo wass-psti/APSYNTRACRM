@@ -68,8 +68,11 @@ jobs:
       - name: Install TimeTracker base fixtures
         run: |
           set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-board-collab01-disposable-setup.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-tt-workspaces-disposable-setup.sql
           for file in \
-            sql/tests/cp-board-collab01-disposable-setup.sql \
             sql/tests/cp-tt-gps01-disposable-setup.sql \
             sql/cp-tt-gps01-live-commit-baseline.sql \
             sql/cp-tt-gps01-atomic-board-projection.sql \
@@ -97,8 +100,6 @@ jobs:
       - name: Apply department and workspace-scope prerequisites
         run: |
           set -euo pipefail
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
-            -f sql/tests/cp-tt-workspaces-disposable-setup.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
             -f supabase/migrations/20261120100000_cp_tt_employee_departments_qol.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
