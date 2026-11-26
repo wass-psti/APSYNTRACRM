@@ -10,6 +10,7 @@ on:
       - "frontend/tests/tradelink-shared-document-visibility.test.mjs"
       - "frontend/tests/tradelink-reference-ui.test.mjs"
       - "frontend/tests/tradelink-documents-page.test.mjs"
+      - "frontend/tests/tradelink-*.test.mjs"
       - ".github/workflows/cp-tl-document-menu-02.yml"
   workflow_dispatch:
 permissions:
@@ -32,13 +33,5 @@ jobs:
           node --check frontend/app.js
       - name: Verify generated stylesheet bundle
         run: node scripts/build-priority5-styles.mjs --check
-      - name: Run focused TradeLink menu and document visibility tests
-        run: |
-          node --test --test-reporter=dot \
-            frontend/tests/tradelink-shared-document-visibility.test.mjs \
-            frontend/tests/tradelink-reference-ui.test.mjs \
-            frontend/tests/tradelink-documents-page.test.mjs
-          node --test --test-reporter=dot --test-name-pattern="TradeLink User All Documents" \
-            frontend/tests/tradelink-draft-workspace.test.mjs
-          node --test --test-reporter=dot --test-name-pattern="PDF printing requires a freshly verified Approved revision" \
-            frontend/tests/tradelink-dual-review-approval.test.mjs
+      - name: Run the complete TradeLink regression suite
+        run: node --test --test-reporter=dot frontend/tests/tradelink-*.test.mjs
