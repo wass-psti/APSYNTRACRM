@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
+import {readFileSync} from 'node:fs';
 const [authPort,restPort,db] = process.argv.slice(2);
 assert.match(authPort||'',/^\d{2,5}$/);
 assert.match(restPort||'',/^\d{2,5}$/);
@@ -243,3 +244,74 @@ if(process.env.CP_TT_OT03_BROWSER==='1'){
  }),'HR approves duration OT');
  assert.equal(approved.status,'Approved');
 }
+
+
+// Replay the actual forward migration only in the disposable signed environment.
+const reviewMigration=readFileSync(new URL('../supabase/migrations/20261126181000_cp_tt_duration_only_ot_review.sql',import.meta.url),'utf8');
+const workerDefinition=sql("SELECT md5(pg_get_functiondef('private.tt_process_auto_clockouts()'::regprocedure))");
+sql(reviewMigration);
+assert.equal(sql("SELECT md5(pg_get_functiondef('private.tt_process_auto_clockouts()'::regprocedure))"),workerDefinition);
+const it=await actor('it-administrator'), supervisor=await actor('supervisor'), finance=await actor('finance');
+link(it,'IT Administrator',false,false,'IT Administrator');
+link(supervisor,'Supervisor',false,false,'Supervisor');
+link(finance,'Finance',false,false,'Finance');
+const reviewSnapshot=async(actor)=>receipt(await rpc(actor,'timetracker_ot_snapshot',{p_board_id:board}),'review-v2 snapshot');
+for(let i=0;i<40;i++){
+ const s=await rpc(hr,'timetracker_ot_snapshot',{p_board_id:board});
+ if(s.status===200&&s.data.otReviewContract==='tt-ot-review-2')break;
+ await new Promise(resolve=>setTimeout(resolve,250));
+}
+const futureDate=offset=>new Date(Date.parse(date+'T00:00:00Z')+offset*86400000).toISOString().slice(0,10);
+const legacyPending=receipt(await submit(worker,'12:00','13:00','legacy pending after v2'),'legacy pending fixture');
+for(const reviewer of [admin,it,hr]){
+ const s=await reviewSnapshot(reviewer);
+ assert.equal(s.otReviewContract,'tt-ot-review-2');
+ assert.equal(s.otApprover,true);
+ assert.equal(s.scope,'AUTHORIZED_WORKSPACE_TEAM');
+ assert.equal(s.rows.find(r=>r.id===legacyPending.id)?.canReviewOt,true);
+}
+for(const denied of [worker,supervisor,finance,ojt,bootstrap]){
+ const s=await reviewSnapshot(denied);
+ assert.equal(s.otApprover,false);
+ if(denied.id!==worker.id)assert.ok(!s.rows.some(r=>r.id===legacyPending.id));
+ expect(await rpc(denied,'timetracker_ot_decide',{p_board_id:board,p_request_id:legacyPending.id,p_decision:'Approved'}),403,'unauthorized legacy decision');
+}
+await decision(hr,legacyPending.id,'Rejected','HR reviews existing legacy pending row');
+for(const [index,reviewer] of [admin,it,hr].entries()){
+ const filed=receipt(await rpc(worker,'timetracker_ot_submit_duration',{
+  p_board_id:board,p_date:futureDate(index+1),p_duration_minutes:150,p_reason:'Duration-only work for authorized reviewer acceptance'
+ }),'employee duration request for v2 reviewer');
+ for(const candidate of [admin,it,hr]){
+  const s=await reviewSnapshot(candidate),row=s.rows.find(r=>r.id===filed.id);
+  assert.equal(row?.canReviewOt,true);
+  assert.equal(row?.durationMinutes,150);
+  assert.equal(row?.start,null);
+  assert.equal(row?.end,null);
+ }
+ for(const denied of [worker,supervisor,finance]){
+  expect(await rpc(denied,'timetracker_ot_decide_duration',{p_board_id:board,p_request_id:filed.id,p_decision:'Approved'}),403,'unauthorized duration reviewer');
+ }
+ assert.equal((await reviewSnapshot(worker)).rows.find(r=>r.id===filed.id)?.canReviewOt,false);
+ const approved=receipt(await rpc(reviewer,'timetracker_ot_decide_duration',{
+  p_board_id:board,p_request_id:filed.id,p_decision:'Approved'
+ }),'authorized reviewer approves duration request');
+ assert.equal(approved.status,'Approved');
+ assertDatabase(filed.id,'Approved',reviewer.id);
+ assert.equal((await reviewSnapshot(worker)).rows.find(r=>r.id===filed.id)?.status,'Approved');
+}
+expect(await rpc(hr,'timetracker_ot_decide_duration',{
+ p_board_id:board,p_request_id:hrOwnRequest.id,p_decision:'Approved'
+}),403,'HR self-approval remains denied');
+const manualArgs={p_board_id:board,p_owner_id:worker.id,p_date:'2025-01-03',p_duration_minutes:90,p_reason:'Historical duration only work entered by administrator'};
+for(const denied of [it,hr,worker,supervisor,finance])
+ expect(await rpc(denied,'timetracker_ot_submit_manual_duration',manualArgs),403,'non-System Admin manual filing denial');
+const manualDuration=receipt(await rpc(admin,'timetracker_ot_submit_manual_duration',manualArgs),'manual duration filing');
+assert.equal(manualDuration.otPolicy,'manual-duration-v1');
+assert.equal(manualDuration.durationMinutes,90);
+assert.equal(sql("SELECT (start_time IS NULL AND end_time IS NULL AND attendance_record_id IS NULL)::text FROM public.timetracker_ot_requests WHERE id='"+manualDuration.id+"'"),'true');
+for(const reviewer of [admin,it,hr])assert.equal((await reviewSnapshot(reviewer)).rows.find(r=>r.id===manualDuration.id)?.canReviewOt,true);
+await decision(it,manualDuration.id,'Approved','IT Administrator approves historical duration');
+assert.equal((await reviewSnapshot(worker)).rows.find(r=>r.id===manualDuration.id)?.status,'Approved');
+const duplicate=await rpc(admin,'timetracker_ot_submit_manual_duration',manualArgs);
+assert.ok(duplicate.status>=400&&duplicate.status<500,'duplicate manual duration denied');
+console.log('SIGNED_V2_REVIEW_ROLES_LEGACY_VISIBILITY_MANUAL_DURATION_AND_WORKER_INVARIANCE PASS');
