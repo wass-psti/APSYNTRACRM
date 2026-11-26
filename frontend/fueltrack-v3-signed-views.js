@@ -186,7 +186,7 @@ export function renderFuelTrackSignedRequestsRich(snapshot,filters={}){
   ).join('')+'</div>'+
   '<section class="ft3-requests-workspace" aria-label="Request workspace">'+
    '<div class="ft3-requests-workspace-head"><div><span class="ft3-requests-section-kicker">REQUEST WORKSPACE</span>'+
-    '<h3>Request log</h3><p>Browse verified requests and open a record to review its details.</p></div>'+
+    '<h3>Request Log</h3><p>Browse verified requests and open a record to review its details.</p></div>'+
     '<span class="ft3-requests-record-count">'+num.format(s.total)+' total records</span></div>'+
    '<div class="ft3-signed-controls ft3-requests-controls" role="search">'+
     '<label class="ft3-requests-visually-hidden" for="ft3-signed-request-search">Search verified requests</label>'+
@@ -198,7 +198,7 @@ export function renderFuelTrackSignedRequestsRich(snapshot,filters={}){
      '<button type="button" class="ft3-soft-action ft3-requests-clear" data-action="ft3-signed-request-clear">Clear filters</button>'+
     '</div></div>'+
    '<div class="ft3-request-filters ft3-requests-status-filters" role="group" aria-label="Filter requests by status">'+statusButtons+'</div>'+
-   '<div class="ft3-requests-log-heading"><div><strong>Request log</strong><span>'+num.format(m.count)+' matching records</span></div>'+
+   '<div class="ft3-requests-log-heading"><div><strong>Request Log</strong><span>'+num.format(m.count)+' matching records</span></div>'+
     '<span>Showing '+num.format(m.rows.length)+' of '+num.format(m.count)+'</span></div>'+
    rows+
    '<div class="ft3-requests-footer"><span>Showing '+num.format(m.rows.length)+' of '+num.format(m.count)+' matching requests</span>'+

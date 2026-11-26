@@ -16,7 +16,7 @@ let checks=0;
 try {
  const page=await browser.newPage({viewport:{width:1440,height:900}});
  const errors=[];page.on('pageerror',error=>errors.push(error.message));
- for(const [section,pattern] of [['dashboard',/Request pipeline/],['analytics',/Consumption Trend/],['requests',/Request log/],['new-request',/Select Refuel Type/],['approvals',/Approvals/],['lightfuels',/LightFuels/],['activity',/Activity/]]) {
+ for(const [section,pattern] of [['dashboard',/Request pipeline/],['analytics',/Consumption Trend/],['requests',/Request Log/],['new-request',/Select Refuel Type/],['approvals',/Approvals/],['lightfuels',/LightFuels/],['activity',/Activity/]]) {
   await page.setViewportSize({width:1440,height:900});
   const html=renderFuelTrackV3Application({detail,section,actorName:'Browser Acceptance',backend:{snapshot,analytics}});
   await page.setContent('<!doctype html><html><head><meta charset="utf-8"></head><body><main id="app">'+html+'</main></body></html>');
