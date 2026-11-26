@@ -30,7 +30,7 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
     res.end(readFileSync(file));return;
    }
    if(['/rpc/timetracker_ot_snapshot','/rpc/timetracker_ot_decide','/rpc/timetracker_ot_decide_duration','/rpc/timetracker_ot_decide_manual_duration'].includes(pathname)&&req.method==='POST'){
-    // Proxy only the two exact disposable OT RPC endpoints, never an arbitrary URL.
+    // Proxy only the exact disposable OT RPC endpoints, never an arbitrary URL.
     const chunks=[];
     for await(const chunk of req){chunks.push(chunk);if(Buffer.concat(chunks).length>4096)throw Error('Request too large');}
     const result=await fetch(restUrl+pathname,{
@@ -96,6 +96,8 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
   assert.equal(refreshed.rows.find(r=>r.id===selfPending.id).status,'Approved');
   const pendingCard=adminPage.locator(`[data-request-id="${workerPending.id}"]`);
   await pendingCard.locator('summary').click();
+  assert.doesNotMatch(await pendingCard.innerText(),/\\b\\d{1,2}:\\d{2}\\b/,
+   'legacy OT review rows show hours, never clock-time ranges');
   await pendingCard.locator('[data-action="tt-ot-reject"]').click();
   await adminPage.waitForFunction(id=>window.__otLastDecision?.result?.id===id,workerPending.id);
   assert.equal((await adminPage.evaluate(()=>window.__otLastDecision.result)).status,'Rejected');
@@ -135,6 +137,8 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
   const durationCard=hrPage.locator(`[data-request-id="${durationRequest.id}"]`);
   const ownHrCard=hrPage.locator(`[data-request-id="${hrOwnRequest.id}"]`);
   await durationCard.locator('summary').click();
+  assert.doesNotMatch(await durationCard.innerText(),/\\b\\d{1,2}:\\d{2}\\b/,
+   'duration OT review rows do not expose start or end times');
   assert.equal(await durationCard.locator('[data-action="tt-ot-approve"]').count(),1);
   await ownHrCard.locator('summary').click();
   assert.equal(await ownHrCard.locator('[data-action="tt-ot-approve"]').count(),0,
