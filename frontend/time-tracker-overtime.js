@@ -192,8 +192,9 @@ export function updateTimeTrackerOvertimePreview(form){
  if(!form||form.id!=='tt-ot-form')return false;
  const start=form.querySelector('#tt-ot-start')?.value||'';
  const end=form.querySelector('#tt-ot-end')?.value||'';
- const durationInput=form.querySelector('#tt-ot-duration-minutes');
- const rawMinutes=Number(durationInput?.value);
+ const durationInput=form.querySelector('#tt-ot-duration-hours');
+ const rawHours=Number(durationInput?.value);
+ const rawMinutes=rawHours*60;
  const minutes=durationInput?(Number.isInteger(rawMinutes)&&rawMinutes>=30&&rawMinutes<=360?rawMinutes:null):overtimeDurationMinutes(start,end);
  const duration=form.querySelector('[data-tt-ot-duration-value]');
  const progress=form.querySelector('[data-tt-ot-duration-progress]');
@@ -204,8 +205,8 @@ export function updateTimeTrackerOvertimePreview(form){
   progress.setAttribute('aria-valuetext',minutes===null?'Duration not calculated':timeTrackerOtDurationLabel(minutes)+' of 6 hours');
  }
  if(message)message.textContent=minutes===null?
-  (durationInput?'Choose 30 minutes to 6 hours.':start&&end?'Choose a same-day range from 30 minutes up to 6 hours.':'Choose a start and end time to calculate duration.'):
-  (360-minutes)+' minutes remaining within the 6-hour maximum.';
+  (durationInput?'Choose 0.5 to 6 hours in 0.5-hour increments.':start&&end?'Choose a same-day range from 30 minutes up to 6 hours.':'Choose a start and end time to calculate duration.'):
+  timeTrackerOtDurationLabel(360-minutes)+' remaining within the 6-hour maximum.';
  const endInput=form.querySelector('#tt-ot-end');
  if(endInput){
   const invalid=Boolean(start&&end&&minutes===null);
@@ -229,6 +230,7 @@ function requestForm({date,start='18:00',end='20:00',reason='',durationMinutes=1
  const selectedDate=date===undefined?phtDay(now):date;
  const startValue=timeInputValue(start),endValue=timeInputValue(end);
  const amount=durationMode?(Number.isInteger(durationMinutes)&&durationMinutes>=30&&durationMinutes<=360?durationMinutes:null):overtimeDurationMinutes(startValue,endValue);
+ const durationHours=Number.isInteger(durationMinutes)?durationMinutes/60:'';
  const active=TT_OT_WRITES_ACCEPTED&&otContractActive===true;
  const disabled=!active||busy;
  return '<div class="tt-ot-backdrop" data-tt-ot-backdrop>'+
@@ -245,8 +247,8 @@ function requestForm({date,start='18:00',end='20:00',reason='',durationMinutes=1
     '<section class="tt-ot-schedule" aria-labelledby="tt-ot-schedule-title">'+
      '<div class="tt-ot-schedule-heading"><div><h4 id="tt-ot-schedule-title">Overtime hours</h4>'+
       '<p>'+(durationMode?'Choose the number of additional working hours.':'Choose when your overtime work will begin and end.')+'</p></div><span>'+(durationMode?'Duration':'Same day')+'</span></div>'+
-     (durationMode?'<label for="tt-ot-duration-minutes"><span>Requested duration (minutes)</span>'+
-      '<input id="tt-ot-duration-minutes" name="durationMinutes" type="number" min="30" max="360" step="1" required'+(busy?' disabled':'')+' value="'+esc(durationMinutes)+'"></label>':
+     (durationMode?'<label for="tt-ot-duration-hours"><span>Requested overtime (hours)</span>'+
+      '<input id="tt-ot-duration-hours" name="durationHours" type="number" min="0.5" max="6" step="0.5" required'+(busy?' disabled':'')+' value="'+esc(durationHours)+'" aria-label="Requested overtime hours"></label>':
      '<div class="tt-ot-time-grid">'+
       '<label for="tt-ot-start"><span>Start (12-hour)</span><input id="tt-ot-start" name="start" type="time" step="60" required'+(busy?' disabled':'')+' value="'+esc(startValue)+
        '" aria-label="Overtime start time"></label>'+
@@ -259,7 +261,7 @@ function requestForm({date,start='18:00',end='20:00',reason='',durationMinutes=1
        '" aria-label="Overtime duration against the six-hour maximum" aria-valuetext="'+
        esc(amount===null?'Duration not calculated':timeTrackerOtDurationLabel(amount)+' of 6 hours')+'"></progress>'+
       '<div class="tt-ot-duration-foot"><small>30-minute minimum · 6-hour maximum</small><small data-tt-ot-duration-message aria-live="polite">'+
-       esc(amount===null?(durationMode?'Choose 30 minutes to 6 hours.':'Choose a start and end time to calculate duration.'):(360-amount)+' minutes remaining within the 6-hour maximum.')+
+       esc(amount===null?(durationMode?'Choose 0.5 to 6 hours in 0.5-hour increments.':'Choose a start and end time to calculate duration.'):(timeTrackerOtDurationLabel(360-amount)+' remaining within the 6-hour maximum.'))+
        '</small></div></div></section>'+
     '<label class="tt-ot-reason" for="tt-ot-reason"><span>Reason for overtime</span>'+
      '<textarea id="tt-ot-reason" name="reason" maxlength="500" rows="3" required'+(busy?' disabled':'')+' placeholder="Briefly explain the work that needs to be completed…" aria-describedby="tt-ot-reason-help tt-ot-reason-count">'+esc(reason)+'</textarea>'+
