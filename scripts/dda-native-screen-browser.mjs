@@ -68,7 +68,7 @@ try {
   };
   const notice=text=>page.waitForFunction(value=>document.querySelector('[data-dda-notice]')?.textContent===value,text);
   assert.equal(await page.locator('.dda-metric').count(),4);
-  assert.equal(await page.locator('.dda-empty').isVisible(),true);
+  assert.equal(await page.locator('.dda-records .dda-empty').isVisible(),true);
   const surfaces=await page.locator('.dda-panel').first().evaluate(el=>{
     const light=getComputedStyle(el).backgroundColor;
     document.documentElement.dataset.apsMondayTheme='dark';
