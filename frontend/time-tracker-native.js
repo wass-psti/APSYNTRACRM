@@ -620,9 +620,11 @@ export class TimeTrackerNativeClient{
   const access=await this.access(boardId);
   if(access.moduleRole!=='System Admin')deny('System Admin attendance management required');
   const response=await this.api.rpc('timetracker_attendance_admin_create_capability',{p_board_id:boardId});
-  if(!isRecord(response)||response.contract!=='tt-admin-clockin-capability-1'||
+  if(!isRecord(response)||response.contract!=='tt-admin-clockin-capability-2'||
      response.actorId!==access.userId||response.workspaceId!==access.workspaceId||
-     response.boardId!==boardId||typeof response.ready!=='boolean')
+     response.boardId!==boardId||typeof response.ready!=='boolean'||
+     !['active','suspended','invalid'].includes(response.schedulerMode)||
+     response.ready!==(response.schedulerMode==='active'))
    deny('Manual clock-in capability is unverified');
   await checkIdentity(this.auth,this.api,access,boardId);
   return response.ready;
