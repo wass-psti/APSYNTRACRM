@@ -2,7 +2,7 @@ import {renderRecoveryChoices} from './tradelink/draft-recovery-ui.js';
 import {TradeLinkRecoveryController} from './tradelink/draft-recovery-controller.js';
 import {captureRecoveryFields} from './tradelink/draft-recovery-state.js';
 import {syncFuelTrans} from './fueltrans-lazy.js';
-import {syncDda} from './dda-native-host.js';
+import {syncDda} from './dda-native-host.js?v=cp-dda-ui-05-20261126';
 import {DDA_APPLICATION,DDA_RELEASE_ENABLED,DDA_ROUTE_SECTION,DDA_HOST_MARKUP} from './dda-release.js';
 import {OrderIntakeOperationalClient as OrderIntakeRegistryClient} from './order-intake-operational-client.js';
 import {buildConfirmation} from './order-intake-confirmation.js';
@@ -78,7 +78,7 @@ import {boardGrid,boardGridColumns,prepareBoardGrid} from './board/presentation/
 import {boardGroupArchiveSuffix} from './board/presentation/group-counts.js';
 import {renderBoardCollapsedRollup} from './board/presentation/group-rollups.js';
 import {BoardGroupStateClient} from './board/preferences/group-state-client.js';
-import {FUELTRACK_V3_ID,findFuelTrackV3Board,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-ui.js';
+import {FUELTRACK_V3_ID,findFuelTrackV3Board,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-ui.js?v=cp-ft-all-requests-redesign-02-20261126-cp-ft-new-request-redesign-01-20261126';
 import {fuelTrackAnalyticsCsv} from './fueltrack-v3-signed-views.js';
 import {FUELTRACK_V3_APPLICATION_ROUTE,parseFuelTrackApplicationRoute} from './fueltrack-v3-application-route.js';
 import {verifyFuelTrackBackendSnapshot} from './fueltrack-v3-backend-projections.js';
@@ -87,7 +87,7 @@ import {renderFuelTrackRequests,fuelTrackRequestsModel,fuelTrackRequestsSummary,
 import {FUELTRACK_ACTIVITY_FILTER_DEFAULTS,fuelTrackActivityModel,fuelTrackActivityCsv} from './fueltrack-v3-activity.js';
 import {FuelTrackV3DomainClient,verifyFuelTrackSubmission} from './fueltrack-v3-native.js';
 import {runFuelTrackSignedPreflight} from './fueltrack-v3-signed-preflight.js';
-import {fuelTrackNewRequestPayload} from './fueltrack-v3-new-request.js';
+import {fuelTrackNewRequestPayload} from './fueltrack-v3-new-request.js?v=cp-ft-new-request-redesign-01-20261126';
 import {FuelTrackV3ReceiptStorageClient,validFuelTrackReceiptFile} from './fueltrack-v3-receipt-storage.js';
 import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns,
  isTradeLinkBoard} from './tradelink-board-items.js';
@@ -172,7 +172,7 @@ import {normalizeBoardPeople,renderBoardPeople,boardInviteControl,renderMentionD
 import {BoardPreferenceStore} from './board/services/preferences-idb.js';
 import {createStartupCriticalPath} from './performance-critical-path.js';
 import {summarizeEntryWaterfall} from './performance-entry-waterfall.js';
-import {readWorkspaceStartup} from './workspace-startup-read.js';
+import {readWorkspaceStartup} from './workspace-startup-read.js?v=cp-crm-account-recognition-01';
 import {startupVerifiedRead,startupFailureDescription} from './startup-recovery-policy.js';
 import {boardTable,boardColumnMenu,loadBoardLayout,saveBoardLayout,resetBoardLayout,reorderVisible,
  normalizeLayout,BOARD_REQUIRED_COLUMNS,BOARD_COLUMN_MIN,BOARD_COLUMN_MAX,columnWidth} from './board/presentation/presentation.js';
@@ -2417,6 +2417,7 @@ function render(){
   boardItemFilterScope=filterScope;
  }
  if(!state.context){applicationRouteRead=null;fm1Module?.unmountFm1Application();closeTradeLinkSavedDocumentOutput();renderLogin();return;}
+ if(initialAccountRoleReadPending){root.innerHTML=sharedApplicationLoading();return;}
  if(applicationRouteRead){shell(sharedApplicationLoading());return;}
  if(state.view!=='fm1')fm1Module?.unmountFm1Application();
  preserveTimeTrackerLogExpansion();
@@ -2901,15 +2902,15 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  }
  if(roleRecheck){
   const [verified,admin]=await Promise.all([
-   roleConfig.bootstrapVerified().catch(()=>false),
-   roleConfig.adminVerified().catch(()=>false)
+   roleConfig.bootstrapVerified().catch(()=>null),
+   roleConfig.adminVerified().catch(()=>null)
   ]);
   if(!isCurrent())return false;
-  if(admin!==state.adminVerified){state.adminVerified=admin;state.roleData=null;state.userRoleData=null;}
-  if(!admin&&view==='role-configuration'){
+  if(admin!==null&&admin!==state.adminVerified){state.adminVerified=admin;state.roleData=null;state.userRoleData=null;}
+  if(admin===false&&view==='role-configuration'){
    location.hash='#/overview';return false;
   }
-  if(verified!==state.roleVerified){
+  if(verified!==null&&verified!==state.roleVerified){
    if(!verified){
     performanceProfileAbort?.abort();performanceProfileAbort=null;
     state.performanceReport=null;state.performanceBusy=false;
@@ -2929,7 +2930,12 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
      itemCount:state.board?.items?.length||BOARD_ITEM_PAGE_SIZE
     }),
     nativeModuleId?db.allowed(boardId,'edit').catch(()=>false):db.allowed(boardId,'edit'),
-    nativeModuleId?db.allowed(boardId,'manage').catch(()=>false):db.allowed(boardId,'manage'),
+    nativeModuleId==='tradelink'?readTradeLinkManagementAccess().catch(error=>{
+     if(Number(error?.status)===0||Number(error?.status)===408||Number(error?.status)===429||
+        Number(error?.status)>=500||['NETWORK_UNAVAILABLE','REQUEST_TIMEOUT'].includes(error?.code))return null;
+     throw error;
+    }):
+     nativeModuleId?db.allowed(boardId,'manage').catch(()=>false):db.allowed(boardId,'manage'),
     nativeModuleId?Promise.resolve(null):boardStructureClient.read(boardId)
    ]);
    if(nativeModuleId&&(!nativeResult||nativeResult.moduleId!==nativeModuleId||
@@ -2939,7 +2945,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
     throw new ApiError('Native application context changed during background refresh.',409);
    resolvedNative=nativeResult;
    detail=nativeModuleId?resolvedNative.detail:genericDetail;
-   edit=editResult;manage=manageResult;boardUi=uiResult;
+   edit=editResult;manage=nativeModuleId==='tradelink'&&manageResult===null?state.boardManage:manageResult;boardUi=uiResult;
   }catch(error){
    if(isCurrent()&&([403,404].includes(Number(error?.status))||
       error?.code==='42501')){
@@ -3122,6 +3128,7 @@ async function refreshSignedWorkspaceRelation(){
 }
 let crmRoleReadGeneration=0;
 let crmRoleLastReadAt=0;
+let initialAccountRoleReadPending=false;
 async function refreshSignedCrmRole({force=false}={}){
  const ctx=state.context,actor=ctx?.user_id,workspace=ctx?.workspace_id;
  if(!auth.isSignedIn||!actor||!workspace||auth.userId!==actor)return;
@@ -3142,11 +3149,11 @@ async function refreshSignedCrmRole({force=false}={}){
   // Re-check the existing signed admin RPC when the authoritative CRM tier
   // changes; keep route and sidebar eligibility synchronized after reassignment.
   if(previousRole!==undefined&&previousRole!==role.effectiveRole){
-   const admin=await roleConfig.adminVerified().catch(()=>false);
+   const admin=await roleConfig.adminVerified().catch(()=>null);
    if(generation!==crmRoleReadGeneration||!auth.isSignedIn||
       auth.userId!==actor||auth.accessToken!==token||
       state.context?.user_id!==actor||state.context?.workspace_id!==workspace)return;
-   if(admin!==state.adminVerified){
+   if(admin!==null&&admin!==state.adminVerified){
     state.adminVerified=admin;state.roleData=null;state.userRoleData=null;
     if(!admin&&state.view==='role-configuration'){
      location.hash='#/overview';
@@ -3172,6 +3179,7 @@ async function refreshWorkspace(){
  // board sync or invalidate the active board cache. Rotate only after the
  // authoritative context has resolved; identity/scope resets follow below.
  boardCacheChannel.stop();db.invalidateBoardCache();
+ if(priorIdentity!==incomingContext?.user_id)initialAccountRoleReadPending=true;
  state.context=mergeProfileAvatarContext(state.context,incomingContext);
  const workspaceIdentityChanged=priorIdentity!==state.context?.user_id||
   priorWorkspace!==state.context?.workspace_id;
@@ -3250,6 +3258,7 @@ async function refreshWorkspace(){
  // Both role classifications remain fresh, signed, server-authoritative reads.
  state.roleVerified=bootstrapVerified;
  state.adminVerified=adminVerified;
+ initialAccountRoleReadPending=false;
  void refreshSignedCrmRole({force:true}).catch(()=>{});
  void refreshSignedWorkspaceRelation().catch(()=>{});
  if(!state.roleVerified){state.roleData=null;state.roleError='';state.userRoleData=null;state.systemAdminData=null;state.systemAdminError='';state.ttTeam=null;state.ttTeamRunId++;state.ttTeamError='';}
@@ -3672,8 +3681,10 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
      !state.tradeLinkAnalytics&&!state.tradeLinkAnalyticsError)
    await loadTradeLinkAnalytics(seq);
   if(['drafts','documents'].includes(state.tradeLinkSection)&&
-     TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID)
-   await loadTradeLinkDrafts(seq);
+     TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID){
+   if(state.tradeLinkSection==='documents')await loadTradeLinkDrafts(seq,{recheckManage:true});
+   else await loadTradeLinkDrafts(seq);
+  }
   return;
  }
  state.nativeInitialRead=['attendance','finance','fueltrack','talkbox'].includes(tab)?tab:null;state.ttReadLoading=false;
@@ -3685,7 +3696,8 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
     nativeModuleId?(nativeContext?Promise.resolve(nativeContext):
       db.nativeApplicationBoardContext(nativeModuleId)):readVisibleBoardSnapshot(boardId,tab),
     db.allowed(boardId,'edit').catch(()=>false),
-    db.allowed(boardId,'manage').catch(()=>false),
+    nativeModuleId==='tradelink'?readTradeLinkManagementAccess():
+     db.allowed(boardId,'manage').catch(()=>false),
     nativeModuleId?Promise.resolve(null):boardStructureClient.read(boardId)
    ]).then(values=>({values}),error=>({error}));
    // Start the other independent server reads immediately. Layout preferences
@@ -3697,8 +3709,9 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
     boardPreferences.hydrate(state.context,boardId).catch(()=>false);
    const [readResult]=await Promise.all([remainingReads,preferencesRead]);
    if(readResult.error)throw readResult.error;
-   const [resolvedNative,genericDetail,edit,manage,boardUi]=readResult.values;
-   const detail=nativeModuleId?resolvedNative?.detail:genericDetail;
+   const [boardResult,edit,manage,boardUi]=readResult.values;
+   const resolvedNative=nativeModuleId?boardResult:null;
+   const detail=nativeModuleId?resolvedNative?.detail:boardResult;
    if(nativeModuleId&&(!resolvedNative||resolvedNative.moduleId!==nativeModuleId||
       resolvedNative.userId!==state.context?.user_id||
       resolvedNative.workspaceId!==state.context?.workspace_id||
@@ -3778,8 +3791,14 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
     !state.tradeLinkAnalytics&&!state.tradeLinkAnalyticsError)
   await loadTradeLinkAnalytics(seq);
  if(tab==='tradelink'&&['drafts','documents'].includes(state.tradeLinkSection)&&
-    TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID)
-  await loadTradeLinkDrafts(seq);
+    TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID){
+  // Recheck after the signed native context and board have settled. A
+  // manager-role hint triggers only a read, never a permission grant.
+  if(state.tradeLinkSection==='documents'&&!state.boardManage&&
+     state.tradeLinkModuleRole==='General Manager')
+   await loadTradeLinkDrafts(seq,{recheckManage:true});
+  else await loadTradeLinkDrafts(seq);
+ }
  if(tab==='attendance'&&moduleByBoardName(state.board.board?.name)?.key==='timetracker'){
   if(enteringTimeTracker)state.ttView=readTimeTrackerViewPreference(timeTrackerViewStorage(),timeTrackerWorkNoteScope()||{});
   await loadTimeTracker(seq,nativeModuleId==='time-tracker'?nativeContext:null);
@@ -3828,6 +3847,26 @@ function tradeLinkCanSave(){
 function tradeLinkCanCreate(){
  return state.boardManage===true||state.tradeLinkModuleRole==='User';
 }
+// Read the existing signed Board management decision. A transient transport
+// failure is not a permanent denial; retry the read once, never a mutation.
+async function readTradeLinkManagementAccess(){
+ const actor=auth.userId,workspace=state.context?.workspace_id,seq=routeSerial;
+ const same=()=>!!actor&&!!workspace&&auth.isSignedIn&&auth.userId===actor&&
+  state.context?.user_id===actor&&state.context?.workspace_id===workspace&&
+  state.boardId===TRADELINK_BOARD_ID&&state.tab==='tradelink'&&seq===routeSerial;
+ if(!same())return false;
+ try{
+  const allowed=await db.allowed(TRADELINK_BOARD_ID,'manage');
+  return same()&&allowed===true;
+ }catch(error){
+  const status=Number(error?.status);
+  if(!same())return false;
+  if(Number(error?.retryAttempts)>0||!(status===0||status===408||status===429||status>=500||
+       ['NETWORK_UNAVAILABLE','REQUEST_TIMEOUT'].includes(error?.code)))throw error;
+  const allowed=await db.allowed(TRADELINK_BOARD_ID,'manage');
+  return same()&&allowed===true;
+ }
+}
 // Server-wide TradeLink search is optional. A missing RPC is a capability
 // fact for the current loaded application, not a reason to retry a 404 on
 // every All Documents refresh. Reload after a backend activation to recheck.
@@ -3844,7 +3883,16 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
  state.tradeLinkDraft={...state.tradeLinkDraft,
   selectedDocumentIds:[],busy:true,error:''};render();
  try{
-  let result;
+  let result,managementCheckError='';
+  // Explicit Refresh and intra-app return to All Documents must recover from
+  // a previously failed permission read, not just reload the document rows.
+  if(documents&&pageRequest?.recheckManage===true){
+   let manage=false;
+   try{manage=await readTradeLinkManagementAccess();}
+   catch{managementCheckError='Management access could not be verified. Select Refresh to retry.';}
+   if(!same())return;
+   state.boardManage=manage===true;
+  }
   if(documents&&!state.boardManage){
    result=await tradeLinkDraftWorkspace.searchPage({
     filters,cursor:pageRequest?.cursor??null});
@@ -3882,7 +3930,7 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
   if(same()){
    state.tradeLinkDraft={...state.tradeLinkDraft,...result,
     listFilters:filters,listPage:result.listPage??null,
-    assignedOnly:false,sharedVisibility:documents,
+    assignedOnly:false,sharedVisibility:documents,error:managementCheckError,
     message:documents?'Showing all TradeLink documents in this workspace.':result.message,
     selectedDocumentIds:[],documentPreview:null,busy:false};
    const target=state.tradeLinkDraft.editRequestId;
@@ -5233,15 +5281,34 @@ async function saveTimeTrackerAdminEditor(form){
   const seq=routeSerial,boardId=state.boardId;
   state.ttLogAdminBusy=true;state.ttLogAdminError='';render();
   try{
-   const receipt=await timeTracker.createManualClockIn(boardId,entry,editor.revision);
+   let receipt;
+   if(entry.status==='active'){
+    if(editor.capability?.activeReady!==true)
+     throw Error('Regular employee auto clock-out is not active. Today’s manual clock-in is unavailable.');
+    receipt=await timeTracker.createManualClockIn(boardId,entry,editor.revision);
+   }else{
+    if(editor.capability?.historicalReady!==true)
+     throw Error('Historical attendance creation is unavailable.');
+    editor.requestId=editor.requestId||globalThis.crypto?.randomUUID?.();
+    if(!editor.requestId)throw Error('Secure historical attendance request ID generation is unavailable.');
+    receipt=await timeTracker.createHistoricalAttendance(boardId,entry,editor.revision,editor.requestId);
+   }
    if(seq!==routeSerial||state.boardId!==boardId||!timeTrackerAdminLogReady())return;
    state.ttLogAdminEditor=null;state.ttLogAdminBusy=false;
    await loadTimeTracker(seq);
    if(seq!==routeSerial||state.boardId!==boardId)return;
-   if(state.ttAttendance?.status==='VERIFIED_READ'&&
-      (state.ttAttendance.log?.rows||[]).some(row=>row.id===receipt.recordId))
-    state.ttLogAdminSuccess='Manual clock-in recorded. The employee can refresh their Clock.';
-   else state.ttLogAdminError='Clock-in committed. Refresh the signed Log before another change.';
+   const visible=state.ttAttendance?.status==='VERIFIED_READ'&&
+    (state.ttAttendance.log?.rows||[]).some(row=>row.id===receipt.recordId);
+   if(entry.status==='active')
+    state.ttLogAdminSuccess=visible?
+     'Manual clock-in recorded. The employee can refresh their Clock.':
+     'Clock-in committed. Refresh the signed Log before another change.';
+   else
+    state.ttLogAdminSuccess=visible?
+     (receipt.clockOutMethod==='standard_nine_credited_hours'?
+      'Historical attendance recorded. Clock-out was system-calculated at nine credited hours. The employee’s current Clock is unchanged.':
+      'Historical attendance recorded with the admin-entered actual clock-out. The employee’s current Clock is unchanged.'):
+     'Historical attendance committed. Refresh the signed Log before another change.';
   }catch(err){
    if(seq===routeSerial&&state.boardId===boardId&&state.ttLogAdminEditor===editor){
     editor.uncertain=true;
@@ -6040,6 +6107,7 @@ async function onRoute(){
  syncFuelTrans({container:null});
  if(!state.context||!auth.isSignedIn)syncDda();
  if(!state.context)return;
+ if(initialAccountRoleReadPending)return;
  if(state.workspaceTransitionPending){
   syncDda();
   clearOrderIntake();
@@ -6488,6 +6556,7 @@ let startupRecoveryStage='authentication';
 function renderBootstrapFailure(error){
  syncDda();
  startupRecoveryActive=true;
+ initialAccountRoleReadPending=false;
  platformSync.stop();
  state.context=null;
  state.boards=[];
@@ -9399,9 +9468,9 @@ async function action(name,button){
  case 'tradelink-documents-refresh':{
   if(tradeLinkAuthorizedListRoute()&&state.tradeLinkSection==='documents'){
    const page=state.tradeLinkDraft.listPage;
-   await loadTradeLinkDrafts(routeSerial,page?.server?{
-    cursor:page.cursor,history:page.history,pageIndex:page.pageIndex,
-    filters:page.appliedFilters}:null);
+   await loadTradeLinkDrafts(routeSerial,{
+    ...(page?.server?{cursor:page.cursor,history:page.history,pageIndex:page.pageIndex,
+     filters:page.appliedFilters}:{}),recheckManage:true});
   }
   break;
  }
@@ -10975,9 +11044,11 @@ async function action(name,button){
   const seq=routeSerial,boardId=state.boardId;
   state.ttLogAdminBusy=true;render();
   try{
-   const ready=await timeTracker.manualClockInCapability(boardId);
-   if(seq===routeSerial&&state.ttLogAdminEditor===editor&&timeTrackerAdminLogReady()&&ready){
-    editor.signedCreateReady=true;editor.activeOnly=true;
+   const capability=await timeTracker.manualClockInCapability(boardId);
+   if(seq===routeSerial&&state.ttLogAdminEditor===editor&&timeTrackerAdminLogReady()&&
+      capability?.historicalReady===true){
+    editor.capability=capability;
+    editor.signedCreateReady=true;
     editor.revision=state.ttAttendance.revision;
    }
   }catch(err){
@@ -14503,7 +14574,7 @@ root.addEventListener('submit',event=>{
   if(button.disabled)return;
   const value=String(form.elements.namedItem('displayName')?.value||'')
    .normalize('NFC').trim().replace(/\s+/gu,' ');
-  if(value.length<2||value.length>80||/[\u0000-\u001f\u007f<>]/u.test(value)){
+  if(value.length<2||value.length>80||/[^@-^_\u007f<>]/u.test(value)){
    status.textContent='Enter a display name of 2–80 readable characters.';
    form.elements.namedItem('displayName')?.focus();
    return;
@@ -14755,7 +14826,23 @@ function preserveManualAttendanceDraft(event){
  const form=event.target.closest?.('#tt-attendance-admin-form[data-mode="manual"]');
  if(!form||state.ttLogAdminEditor?.mode!=='manual'||!timeTrackerAdminLogReady()||
     state.ttAttendance.access.moduleRole!=='System Admin')return false;
- state.ttLogAdminEditor.draft=syncManualAttendanceForm(form);return true;
+ const draft=syncManualAttendanceForm(form);
+ state.ttLogAdminEditor.draft=draft;
+ const capability=state.ttLogAdminEditor.capability||{};
+ const canSave=draft.status==='active'?capability.activeReady===true:capability.historicalReady===true;
+ const warning=form.querySelector('[data-tt-manual-readiness-warning]');
+ if(warning){
+  const message=state.ttLogAdminEditor.uncertain?
+   'Save confirmation uncertain. Refresh the Log before retrying.':
+   draft.status==='active'&&!capability.activeReady?
+    'Regular employee auto clock-out is not active. Today’s active manual clock-in is disabled; past-date corrections remain available.':
+   draft.status==='completed'&&!capability.historicalReady?
+    'Historical attendance service is not verified. Saving is disabled.':'';
+  warning.textContent=message;warning.hidden=!message;
+ }
+ const submit=form.querySelector('button[type="submit"]');
+ if(submit)submit.disabled=!canSave||state.ttLogAdminEditor.uncertain||state.ttLogAdminBusy;
+ return true;
 }
 function preserveManualClockOutDraft(event){
  const form=event.target.closest?.('#tt-attendance-admin-form[data-tt-manual-clockout]');
