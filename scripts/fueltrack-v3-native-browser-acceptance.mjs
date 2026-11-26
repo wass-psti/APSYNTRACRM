@@ -66,7 +66,7 @@ try {
  checks+=4;
  const analyticsHtml=renderFuelTrackV3Application({detail,section:'analytics',backend:{snapshot,analytics}});
  await page.setViewportSize({width:1440,height:900});
- await page.setContent('<!doctype html><html><head><meta charset="utf-8"></head><body><main id="app">'+analyticsHtml+'</main></body></html>');
+ await page.setContent('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><main id="app">'+analyticsHtml+'</main></body></html>');
  await page.addStyleTag({content:styles});
  assert.equal(await page.locator('.ft3-analytics-kpi').count(),4);
  assert.equal(await page.locator('.ft3-analytics-section-tab').count(),5);
