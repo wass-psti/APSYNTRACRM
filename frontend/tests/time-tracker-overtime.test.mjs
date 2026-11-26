@@ -386,19 +386,22 @@ test('duration OT validates future/current work date and exact minute amount',()
   assert.equal(validateDurationOvertimeDraft({...valid,...change},now).valid,false);
  }
 });
-test('signed duration contract renders an hours input, with HR review controls',()=>{
- const durationRow={...rows[0],otPolicy:'duration-v1',canReviewDuration:true};
- const access={moduleRole:'HR',userId:admin,durationOtContractActive:true,durationOtHrApprover:true,otContractActive:true};
+test('signed duration contract renders hours-only filing and authorized reviewer controls',()=>{
+ const durationRow={...rows[0],otPolicy:'duration-v1',canReviewOt:true,canReviewDuration:true};
+ const access={moduleRole:'HR',userId:admin,durationOtContractActive:true,
+  durationOtApprover:true,durationOtHrApprover:true,otContractActive:true};
  const html=renderTimeTrackerOvertime({requests:[durationRow],access,modalOpen:true,now});
  assert.match(html,/id="tt-ot-duration-hours"/);
  assert.match(html,/min="0\.5" max="6" step="0\.5"/);
  assert.match(html,/value="2"/);
  assert.doesNotMatch(html,/id="tt-ot-(start|end)"/);
  assert.match(html,/data-action="tt-ot-approve"/);
- assert.doesNotMatch(renderTimeTrackerOvertime({requests:[durationRow],
-  access:{...access,userId:worker,durationOtHrApprover:false},now}),/data-action="tt-ot-approve"/);
- assert.doesNotMatch(renderTimeTrackerOvertime({requests:[durationRow],
-  access:{...access,durationOtHrApprover:false,bootstrapApprover:true},now}),/data-action="tt-ot-approve"/);
+ const systemAdmin=renderTimeTrackerOvertime({requests:[durationRow],access:{
+  ...access,moduleRole:'System Admin',durationOtApprover:true,durationOtHrApprover:false},now});
+ assert.match(systemAdmin,/data-action="tt-ot-approve"/);
+ const employee=renderTimeTrackerOvertime({requests:[{...durationRow,canReviewOt:false}],
+  access:{...access,userId:worker,moduleRole:'Employee',durationOtApprover:false,durationOtHrApprover:false},now});
+ assert.doesNotMatch(employee,/data-action="tt-ot-approve"/);
 });
 test('duration form converts hour selections to exact payroll minutes',()=>{
  const control=value=>({value,textContent:'',attributes:{},
@@ -438,40 +441,58 @@ test('duration OT uses signed employee identity and never transmits start/end',a
  await client.submitOvertime(board,{date:today,durationMinutes:180,reason:'Additional planned inspection work'});
  assert.deepEqual(args,{p_board_id:board,p_date:today,p_duration_minutes:180, p_reason:'Additional planned inspection work'});
 });
-test('HR signed scope reviews duration only and rejects non-HR claims',async()=>{
+test('HR and System Admin signed scopes review employee duration requests without self-approval',async()=>{
  const durationRow={...rows[0],id:'50000000-0000-4000-8000-000000000003',
-  otPolicy:'duration-v1',canReviewDuration:true};
+  otPolicy:'duration-v1',canReviewOt:true,canReviewDuration:true};
+ const ownRow={...durationRow,id:'50000000-0000-4000-8000-000000000004',
+  ownerId:'cloud:'+admin,canReviewOt:false,canReviewDuration:false};
  const snapshot={mode:'ACTIVE',actorId:admin,workspaceId:workspace,
   scope:'AUTHORIZED_WORKSPACE_TEAM',bootstrapApprover:false,durationOtContract:'tt-duration-ot-1',
-  durationOtHrApprover:true,rows:[durationRow,rows[1]]};
+  durationOtHrApprover:true,durationOtApprover:true,rows:[durationRow,ownRow]};
  const client=setup({role:'HR',snapshot,rpcHandlers:{
   timetracker_ot_decide_duration:{id:durationRow.id,workspaceId:workspace,status:'Approved',
-   decidedBy:admin,otPolicy:'duration-v1'}}});
+   decidedBy:admin,otPolicy:'duration-v1'}
+ }});
  const read=await client.snapshot(board);
+ assert.equal(read.access.durationOtApprover,true);
  assert.equal(read.access.durationOtHrApprover,true);
- assert.equal(read.otRequests.length,1);
+ assert.equal(read.otRequests.length,2);
+ assert.equal(read.otRequests.find(row=>row.id===durationRow.id).canReviewOt,true);
  assert.equal((await client.decideOvertime(board,durationRow.id,'Approved')).status,'Approved');
- await assert.rejects(()=>setup({role:'Employee',snapshot}).snapshot(board),/review role/);
+ const systemAdmin=await setup({role:'System Admin',snapshot:{
+  ...snapshot,durationOtHrApprover:false}}).snapshot(board);
+ assert.equal(systemAdmin.access.durationOtApprover,true);
+ assert.equal(systemAdmin.otRequests.find(row=>row.id===durationRow.id).canReviewOt,true);
+ await assert.rejects(()=>setup({role:'Employee',snapshot}).snapshot(board),
+  /approver role does not match/);
 });
-
-test('OT table shows requested duration prominently and separates verified payable hours',()=>{
+test('OT table shows only requested hours and never exposes legacy clock ranges',()=>{
  const pending={...rows[0],id:'duration-pending',otPolicy:'duration-v1',
-  durationMinutes:180,start:'',end:'',status:'Submitted'};
+  durationMinutes:180,start:'',end:'',status:'Submitted',canReviewOt:true};
  const approved={...rows[1],id:'duration-approved',otPolicy:'duration-v1',
   durationMinutes:180,start:'',end:'',attendanceRecordId:'record-1',
   attendanceCredit:{actualMinutes:150,payableMinutes:120}};
  const durationHtml=renderTimeTrackerOvertime({
-  requests:[pending,approved],access:{otContractActive:true},now
+  requests:[pending,approved],access:{otContractActive:true,durationOtContractActive:true},now
  });
- assert.match(durationHtml,/<span>Requested OT<\/span>/);
- assert.match(durationHtml,/3h requested/);
- assert.match(durationHtml,/2h payable/);
- assert.doesNotMatch(durationHtml,/Duration-based|Paid OT:/);
-
+ assert.match(durationHtml,/<span>Requested Hours<\/span>/);
+ assert.match(durationHtml,/3h/);
+ assert.doesNotMatch(durationHtml,/Requested OT|06:00 PM|08:00 PM/);
  const legacyHtml=renderTimeTrackerOvertime({
-  requests:rows,access:{otContractActive:true},now
+  requests:rows,access:{otContractActive:true,durationOtContractActive:true},now
  });
- assert.match(legacyHtml,/<span>Requested OT<\/span>/);
- assert.match(legacyHtml,/06:00 PM – 08:00 PM/);
  assert.match(legacyHtml,/2h/);
+ assert.doesNotMatch(legacyHtml,/06:00 PM|08:00 PM|18:00|20:00/);
+});
+test('manual duration preview updates hours without clock-time controls',()=>{
+ const control=value=>({value,textContent:'',setCustomValidity(message){this.validationMessage=message;}});
+ const nodes={
+  '#tt-ot-manual-duration-hours':control('1.5'),
+  '[data-tt-ot-manual-duration]':control('')
+ };
+ const form={id:'tt-ot-manual-form',querySelector:selector=>nodes[selector]||null};
+ assert.equal(updateTimeTrackerManualOtPreview(form),true);
+ assert.equal(nodes['[data-tt-ot-manual-duration]'].textContent,'1h 30m');
+ assert.equal(nodes['#tt-ot-manual-duration-hours'].validationMessage,'');
+ assert.equal(updateTimeTrackerManualOtPreview({id:'other'}),false);
 });
