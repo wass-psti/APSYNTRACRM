@@ -331,9 +331,16 @@ export function fuelTrackAnalyticsCsv(analytics){
  }
  const quote=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
  const rows=[['Completion date','Completed transactions','Fuel liters','Amount PHP','Effective cost per liter PHP']];
+ const totals=analytics.daily.reduce((sum,row)=>({
+  transactions:sum.transactions+row.transactions,
+  liters:sum.liters+row.liters,
+  amount:sum.amount+row.amount
+ }),{transactions:0,liters:0,amount:0});
  for(const row of analytics.daily.slice().sort((a,b)=>a.day.localeCompare(b.day))){
   rows.push([row.day,row.transactions,row.liters,row.amount,
    row.liters>0?(row.amount/row.liters).toFixed(2):'']);
  }
+ rows.push(['TOTAL',totals.transactions,totals.liters.toFixed(2),totals.amount.toFixed(2),
+  totals.liters>0?(totals.amount/totals.liters).toFixed(2):'']);
  return '\uFEFF'+rows.map(row=>row.map(quote).join(',')).join('\r\n');
 }
