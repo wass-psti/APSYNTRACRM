@@ -26,7 +26,7 @@ export const WORK_MANAGEMENT_BOARD_IDS = Object.freeze({
 
 const NAVIGATION = Object.freeze({
   fueltrans: {
-    label: "FuelTrans Standalone",
+    label: "FuelTrans Support Portal",
     kind: "native",
     route: "#/fueltrans",
     order: 80,

@@ -299,3 +299,26 @@ test("a changed workspace clears the previous workspace catalog and app state be
     /history\.replaceState\(null,'',location\.pathname\+location\.search\+routeHome\)/,
   );
 });
+
+import { sidebarIcon } from "../sidebar-visuals.js";
+
+test("FuelTrans and Order Intake have distinct presentation icons and stable routes", () => {
+  const apps = workspaceApplicationsForNavigation(WORK_MANAGEMENT_WORKSPACE_ID, allCanonicalBoards);
+  const fuel = apps.find(app => app.id === "fueltrans");
+  const orders = apps.find(app => app.id === "orders");
+  assert.equal(fuel.label, "FuelTrans Support Portal");
+  assert.equal(fuel.name, "FuelTrans Standalone");
+  assert.equal(fuel.href, "#/fueltrans");
+  assert.equal(orders.href, "#/order-intake");
+  assert.equal(fuel.icon, "fueltrans");
+  assert.equal(orders.icon, "orders");
+  for (const app of [fuel, orders]) {
+    const svg = sidebarIcon(app.icon);
+    assert.match(svg, /width="19" height="19"/);
+    assert.match(svg, /class="icon-outline"/);
+    assert.match(svg, /class="icon-solid"/);
+    assert.notEqual(svg, sidebarIcon("boards"));
+    assert.notEqual(svg, sidebarIcon("ticket"));
+  }
+  assert.notEqual(sidebarIcon(fuel.icon), sidebarIcon(orders.icon));
+});

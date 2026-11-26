@@ -73,8 +73,9 @@ function matrix(d){
  const roleNames=(d.roles||[]).map(r=>r.roleKey).filter(Boolean);
  let rows='';
  for(const module of BOARD_MODULES){
-  rows+='<tr data-searchable="'+x(module.name.toLowerCase())+'"><td><strong>'+x(module.name)+'</strong></td>'+
-  actions.map(action=>'<td><button class="secondary" data-action="role-propose-permission" data-module-id="'+x(ROLE_MODULE_OPTIONS.find(m=>m[1]===module.name)?.[0]||module.key)+'" data-capability="'+action+'" aria-label="Stage '+x(action)+' proposal for '+x(module.name)+'; no live permission change" title="Stage a proposal; no live change">Stage</button></td>').join('')+'</tr>';
+  const displayName=module.key==='fueltrans'?'FuelTrans Support Portal':module.name;
+  rows+='<tr data-searchable="'+x(displayName.toLowerCase())+'"><td><strong>'+x(displayName)+'</strong></td>'+
+  actions.map(action=>'<td><button class="secondary" data-action="role-propose-permission" data-module-id="'+x(ROLE_MODULE_OPTIONS.find(m=>m[1]===displayName)?.[0]||module.key)+'" data-capability="'+action+'" aria-label="Stage '+x(action)+' proposal for '+x(displayName)+'; no live permission change" title="Stage a proposal; no live change">Stage</button></td>').join('')+'</tr>';
  }
  return '<div class="section-header"><strong>Module permission matrix</strong><span class="muted">12 modules × 7 capabilities</span></div>'+
  '<div class="note">All matrix entries are proposal controls, <strong>not effective grants</strong>. Module-specific roles remain mapped to the existing authorization system. Approval and activation are disabled until separately authorized.</div>'+
@@ -151,4 +152,4 @@ export const ROLE_MODULE_OPTIONS=BOARD_MODULES.map(m=>[{
  fueltrans:'fueltrans',tools:'tool-traceability',toolbox:'toolbox-issues',frt:'fund-released-tracker',
  fueltrack:'fueltrack-plus',tradelink:'tradelink',timetracker:'time-tracker',orders:'order-intake',
  evaluation:'employee-eval',charter:'charter-navigator',aims:'aps-aims',materials:'material-request-hub'
-}[m.key],m.name]);
+}[m.key],m.key==='fueltrans'?'FuelTrans Support Portal':m.name]);

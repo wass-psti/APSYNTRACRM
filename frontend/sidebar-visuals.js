@@ -1,12 +1,14 @@
 /**
  * APSYNTRA signed-workspace sidebar visual primitives.
  * SVG icons are constant, presentation-only markup. No untrusted SVG input.
- * @typedef {'overview'|'boards'|'ticket'|'clock'|'finance'|'fueltrack'|'tradelink'|'paseo'|'talkbox'|'foundation'|'security'|'roles'|'users'|'settings'|'acceptance'|'recent'|'logout'|'chevron'} SidebarIcon
+ * @typedef {'overview'|'boards'|'ticket'|'fueltrans'|'orders'|'clock'|'finance'|'fueltrack'|'tradelink'|'paseo'|'talkbox'|'foundation'|'security'|'roles'|'users'|'settings'|'acceptance'|'recent'|'logout'|'chevron'} SidebarIcon
  */
 const icons=Object.freeze({
  overview:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
  boards:'<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 10h18M9 10v10"/>',
  ticket:'<path d="M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4V7Z"/><path d="M9 7v10" stroke-dasharray="2 2"/>',
+ fueltrans:'<path d="M3 13v-1a9 9 0 0 1 18 0v5a3 3 0 0 1-3 3h-4"/><rect x="3" y="11" width="5" height="7" rx="2"/><rect x="16" y="11" width="5" height="7" rx="2"/>',
+ orders:'<rect x="4" y="4" width="16" height="18" rx="2"/><rect x="9" y="2" width="6" height="4" rx="1" fill="currentColor"/><path d="M8 10h8M8 14h8M8 18h5"/>',
  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
  finance:'<path d="M3 7h18v12H3z"/><path d="M3 10h18M7 15h3M16 15h1"/><path d="M7 4h10"/>',
  fueltrack:'<path d="M5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16"/><path d="M5 10h11M8 7h5M16 8h2l2 2v7a2 2 0 0 0 2-2v-4"/><path d="M9 21v-5h4v5"/>',
@@ -31,6 +33,8 @@ const solidIcons = Object.freeze({
     '<path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm0 6h14V5H5v4Zm0 2v8h4v-8H5Zm6 0v8h8v-8h-8Z" fill-rule="evenodd"/>',
   ticket:
     '<path d="M4 5h16a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2Zm7 2v10h2V7h-2Z" fill-rule="evenodd"/>',
+  fueltrans: '<path d="M12 2a10 10 0 0 0-10 10v3a3 3 0 0 0 3 3h3v-8H5.3a7 7 0 0 1 13.4 0H16v8h3a2 2 0 0 1-2 2h-4v2h4a5 5 0 0 0 5-5v-5A10 10 0 0 0 12 2Z"/>',
+  orders: '<path d="M9 2h6l1 2h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3Zm0 3v2h6V5ZM7 10v2h10v-2Zm0 4v2h10v-2Zm0 4v2h6v-2Z" fill-rule="evenodd"/>',
   clock:
     '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1 4h2v5.2l3.4 2-1 1.7L11 12V6Z" fill-rule="evenodd"/>',
   finance:
