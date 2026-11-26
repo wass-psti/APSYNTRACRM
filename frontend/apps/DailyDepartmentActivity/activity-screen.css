@@ -39,7 +39,7 @@ html[data-aps-monday-theme="dark"] .dda-app .dda-metric-progress .dda-metric-ico
 html[data-aps-monday-theme="dark"] .dda-app .dda-metric-completed .dda-metric-icon {color:#8fdbb5}
 .dda-app .dda-section-heading {display:grid;gap:4px;margin-bottom:16px}
 .dda-app .dda-layout {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:16px;align-items:start}
-.dda-app .dda-management {display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.5fr);gap:16px;align-items:start}
+.dda-app .dda-management {display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
 .dda-app .dda-management-heading {grid-column:1/-1;display:grid;gap:4px;padding:8px 0 0}
 .dda-app form,.dda-app fieldset {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;gap:12px;border:0;padding:0;margin:0;min-width:0}
 .dda-app form>fieldset {grid-column:1/-1}
@@ -117,4 +117,46 @@ html[data-aps-monday-theme="dark"] .dda-app .dda-status[data-status] {background
 @container (max-width:400px) {
   .dda-app .dda-view-nav {width:100%}
   .dda-app .dda-view-nav .dda-view-button {min-height:40px}
+}
+
+/* Organization workspace: one task at a time, with a balanced directory/editor layout. */
+.dda-app .dda-org-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0 2px}
+.dda-app .dda-org-heading h2 {font-size:23px;letter-spacing:-.025em;margin-bottom:5px}
+.dda-app .dda-org-summary {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px}
+.dda-app .dda-org-metric {display:grid;gap:6px;background:var(--dda-surface);border:1px solid var(--dda-border);border-radius:12px;padding:15px 17px;box-shadow:var(--dda-shadow);min-width:0}
+.dda-app .dda-org-metric>span {color:var(--dda-muted);font-size:12px;font-weight:650}
+.dda-app .dda-org-metric>strong {font-size:29px;line-height:1;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.dda-app .dda-org-metric>small {font-size:11px;color:var(--dda-muted);line-height:1.4}
+.dda-app .dda-org-nav {display:flex;align-items:center;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--dda-border);padding:0 0 8px}
+.dda-app .dda-org-nav .dda-org-tab {min-height:40px;border:1px solid transparent;background:transparent;color:var(--dda-muted);box-shadow:none;border-radius:8px;padding:9px 18px;font-weight:650}
+.dda-app .dda-org-nav .dda-org-tab[aria-pressed="true"] {background:var(--dda-surface);border-color:var(--dda-border);color:var(--dda-accent);box-shadow:inset 0 -2px var(--dda-accent)}
+.dda-app .dda-org-nav .dda-org-tab:hover:not(:disabled) {background:var(--dda-soft);color:var(--dda-accent)}
+.dda-app [data-dda-org-panel][hidden] {display:none!important}
+.dda-app .dda-org-content,.dda-app .dda-org-split {min-width:0}
+.dda-app .dda-org-split {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:16px}
+.dda-app .dda-org-split>.dda-panel:only-child {grid-column:1/-1}
+.dda-app .dda-org-split>.dda-panel {padding:20px}
+.dda-app .dda-org-editor fieldset>button,.dda-app .dda-categories fieldset>button {grid-column:1/-1;justify-self:start}
+.dda-app .dda-org-list,.dda-app .dda-org-roster-group ul {list-style:none;padding:0;margin:0}
+.dda-app .dda-org-list-title {margin:16px 0 8px}
+.dda-app .dda-org-result-count {padding:8px 0;border-bottom:1px solid var(--dda-border)}
+.dda-app .dda-org-item,.dda-app .dda-org-person {display:flex;align-items:center;gap:10px;justify-content:space-between;min-width:0;overflow-wrap:anywhere;padding:11px 0;border-bottom:1px solid var(--dda-border)}
+.dda-app .dda-org-item:last-child,.dda-app .dda-org-person:last-child {border-bottom:0}
+.dda-app .dda-org-item>div,.dda-app .dda-org-person>div {flex:1;min-width:0}
+.dda-app .dda-org-item strong,.dda-app .dda-org-person strong {font-size:13px;font-weight:650;line-height:1.4}
+.dda-app .dda-org-item p,.dda-app .dda-org-person p {font-size:12px;margin-top:3px}
+.dda-app .dda-org-initial {width:36px;height:36px;display:grid;place-items:center;flex:none;border-radius:9px;background:var(--dda-soft);color:var(--dda-accent);font-size:12px;font-weight:700;overflow:hidden}
+.dda-app .dda-org-tag {font-size:11px;font-weight:600;color:var(--dda-muted);background:var(--dda-soft);border:1px solid var(--dda-border);padding:4px 7px;border-radius:6px;max-width:45%;text-align:center;flex:none}
+.dda-app .dda-org-blank {padding:12px 0}
+.dda-app .dda-org-roster-group summary {font-weight:650;color:var(--dda-ink)}
+.dda-app .dda-management-note {border-left:3px solid var(--dda-accent)}
+@container (max-width:780px) {
+  .dda-app .dda-org-split {grid-template-columns:minmax(0,1fr)}
+}
+@container (max-width:400px) {
+  .dda-app .dda-org-summary {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dda-app .dda-org-metric {padding:11px}
+  .dda-app .dda-org-metric>strong {font-size:24px}
+  .dda-app .dda-org-split>.dda-panel {padding:14px}
+  .dda-app .dda-org-nav .dda-org-tab {flex:1 1 auto;padding:8px 10px}
 }

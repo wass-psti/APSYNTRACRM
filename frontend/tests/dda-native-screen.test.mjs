@@ -61,3 +61,16 @@ test('DDA dedicated views expose only their intended sections and retain shared 
  assert.doesNotMatch(insights,/data-dda-views="activities insights" hidden/);
  assert.match(main,/aria-label="Daily Department Activity views"/);
 });
+
+test('organization workspace separates personnel, departments and category tasks',()=>{
+ const data={...snapshot,directory:{...snapshot.directory,unassigned:[{id:'x',name:'<Unassigned>'}]}};
+ for(const active of ['personnel','departments','categories']){
+   const html=renderActivityScreen({...base,snapshot:data,view:'organization',organizationView:active});
+   assert.match(html,new RegExp('data-org-view="'+active+'" aria-pressed="true"'));
+   assert.doesNotMatch(html,new RegExp('data-dda-org-panel="'+active+'" hidden'));
+   for(const inactive of ['personnel','departments','categories'].filter(x=>x!==active))assert.match(html,new RegExp('data-dda-org-panel="'+inactive+'" hidden'));
+   assert.match(html,/Organization totals/);
+   assert.match(html,/&lt;Unassigned&gt;/);
+   assert.doesNotMatch(html,/<Unassigned>/);
+ }
+});

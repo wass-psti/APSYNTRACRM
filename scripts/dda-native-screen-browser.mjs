@@ -7,7 +7,7 @@ const root = new URL('../frontend/apps/DailyDepartmentActivity/',import.meta.url
 const files = new Set(['activity-screen.js','activity-screen.css','activity-model.js','activity-drafts.js','activity-controller.js','activity-repository.js','activity-runtime.js','dda-native-host.js']);
 const server = createServer(async (req,res)=>{
   try {
-    if(req.url==='/'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DDA test fixture</title><link rel="stylesheet" href="/activity-screen.css?v=cp-dda-ui-02-20261126"><div id="host"></div></html>');return;}
+    if(req.url==='/'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DDA test fixture</title><link rel="stylesheet" href="/activity-screen.css?v=cp-dda-ui-03-20261126"><div id="host"></div></html>');return;}
     const file=new URL(req.url,'http://127.0.0.1').pathname.slice(1);
     if(!files.has(file)){res.writeHead(404).end();return;}
     res.setHeader('Content-Type',file.endsWith('.css')?'text/css':'text/javascript');
@@ -61,6 +61,11 @@ try {
     await page.locator('[data-dda-action="view"][data-view="'+name+'"]').click();
     assert.equal(await page.locator('[data-dda-action="view"][aria-pressed="true"]').getAttribute('data-view'),name);
   };
+  const org=async(name)=>{
+    await page.locator('[data-dda-action="organization-view"][data-org-view="'+name+'"]').click();
+    assert.equal(await page.locator('[data-dda-action="organization-view"][aria-pressed="true"]').getAttribute('data-org-view'),name);
+    for(const id of ['personnel','departments','categories'])assert.equal(await page.locator('[data-dda-org-panel="'+id+'"]').isVisible(),id===name);
+  };
   const notice=text=>page.waitForFunction(value=>document.querySelector('[data-dda-notice]')?.textContent===value,text);
   assert.equal(await page.locator('.dda-metric').count(),4);
   assert.equal(await page.locator('.dda-empty').isVisible(),true);
@@ -82,6 +87,9 @@ try {
   assert.equal(await page.locator('.dda-layout').isVisible(),false);
   assert.equal(await page.locator('.dda-filters').isVisible(),false);
   assert.equal(await page.locator('.dda-management').isVisible(),true);
+  assert.equal(await page.locator('.dda-org-metric').count(),4);
+  assert.equal(await page.locator('[data-dda-org-panel="personnel"]').isVisible(),true);
+  await org('categories');
   await form('category').getByLabel('Category name').fill('Reporting');
   await view('insights');
   assert.equal(await page.locator('.dda-management').isVisible(),false);
@@ -97,6 +105,13 @@ try {
   // Repaints from applying filters retain the existing application behavior;
   // a plain navigation switch itself must preserve unsubmitted inputs.
   await form('category').getByLabel('Category name').fill('Reporting');
+  await org('departments');
+  await form('department').getByLabel('Department name').fill('Unsubmitted department');
+  await org('categories');
+  assert.equal(await form('category').getByLabel('Category name').inputValue(),'Reporting');
+  await org('departments');
+  assert.equal(await form('department').getByLabel('Department name').inputValue(),'Unsubmitted department');
+  await org('categories');
   await view('activities');
   await view('organization');
   assert.equal(await form('category').getByLabel('Category name').inputValue(),'Reporting');
@@ -146,10 +161,13 @@ try {
   await form('filters').getByRole('button',{name:'Apply filters'}).click();
   assert.equal(await page.locator('.dda-entry').count(),1);
   await view('organization');
+  await org('departments');
   await form('department').getByLabel('Department name').fill('Field operations');
   await form('department').getByLabel('Abbreviation').fill('FO');
   await form('department').getByRole('button',{name:'Save department'}).click();
   await notice('Department saved.');
+  assert.equal(await page.locator('[data-dda-org-panel="departments"]').isVisible(),true);
+  await org('personnel');
   await form('person').getByLabel('Personnel to assign').selectOption('p2');
   assert.equal(await form('person').getByLabel('Personnel display name').inputValue(),'Unassigned fixture');
   await form('person').getByLabel('Assign department').selectOption({label:'Field operations'});
@@ -178,6 +196,11 @@ try {
   assert.equal(await form('filters').getByLabel('Search').inputValue(),'Revised');
   assert.match(await page.locator('.dda-entry').innerText(),/Operations/);
   await page.setViewportSize({width:390,height:844});
+  await view('organization');
+  for(const name of ['departments','categories','personnel']){
+    await org(name);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  }
   for(const name of ['organization','insights','activities']){
     await view(name);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
