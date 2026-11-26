@@ -129,5 +129,5 @@ test('GitHub Pages registers and verifies OT CSS under strict CSP',()=>{
  assert.match(smoke,/'frontend\/time-tracker-overtime-command\.css'/);
  assert.match(smoke,/'frontend\/time-tracker-ot-reference\.css'/);
  assert.match(index,/style-src-attr 'none'/);
- assert.match(index,/script type="module" src="\.\/frontend\/app\.js"/);
+ assert.match(index,/script type="module" src="\.\/frontend\/app\.js(?:\?v=[^"]+)?"/);
 });
