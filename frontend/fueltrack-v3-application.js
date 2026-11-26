@@ -2,7 +2,7 @@
  * Read-only until a dedicated fuel operations contract is activated.
  * Never substitute the Monday.com reference screenshot's 271 transactions.
  */
-import {renderFuelTrackNewRequest} from './fueltrack-v3-new-request.js';
+import {renderFuelTrackNewRequest} from './fueltrack-v3-new-request.js?v=cp-ft-new-request-redesign-01-20261126';
 import {WORK_MANAGEMENT_BOARD_IDS} from './workspace-application-ownership.js';
 import {FUELTRACK_V3_APPLICATION_ROUTE,fuelTrackApplicationHref} from './fueltrack-v3-application-route.js';
 export {FUELTRACK_V3_APPLICATION_ROUTE} from './fueltrack-v3-application-route.js';
