@@ -5,15 +5,15 @@ import {join} from 'node:path';
 import assert from 'node:assert/strict';
 const profile=await mkdtemp(join(tmpdir(),'dda-browser-'));
 const server=spawn(process.execPath,['scripts/serve.mjs'],{env:{...process.env,PORT:'0'},stdio:['ignore','pipe','pipe']});
-const chrome=spawn(process.env.DDA_CHROMIUM_PATH || '/Applications/Chromium.app/Contents/MacOS/Chromium',['--headless','--no-first-run','--no-default-browser-check','--disable-background-networking','--disable-component-update','--disable-sync','--remote-debugging-port=0','--user-data-dir='+profile,'about:blank'],{stdio:['ignore','ignore','pipe']});
+const chrome=spawn(process.env.DDA_CHROMIUM_PATH || '/Applications/Chromium.app/Contents/MacOS/Chromium',['--headless','--no-first-run','--no-default-browser-check','--disable-background-networking','--disable-component-update','--disable-sync','--disable-dev-shm-usage','--remote-debugging-port=0','--user-data-dir='+profile,'about:blank'],{stdio:['ignore','ignore','pipe']});
 let ws,counter=0;const pending=new Map(),errors=[];
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 function startup(child,stream,pattern) {
   return new Promise((resolve,reject)=>{
-    let buffer='';const timer=setTimeout(()=>reject(new Error('Startup timeout')),15000);
+    let buffer='';const timer=setTimeout(()=>reject(new Error('Startup timeout: '+buffer.slice(-4000))),15000);
     stream.on('data',data=>{buffer+=data;const match=buffer.match(pattern);if(match){clearTimeout(timer);resolve(match[1]);}});
     child.once('error',error=>{clearTimeout(timer);reject(error);});
-    child.once('exit',code=>{clearTimeout(timer);reject(new Error('Process exited '+code));});
+    child.once('exit',(code,signal)=>{clearTimeout(timer);reject(new Error('Process exited '+code+' signal '+signal+'\n'+buffer.slice(-4000)));});
   });
 }
 try {
