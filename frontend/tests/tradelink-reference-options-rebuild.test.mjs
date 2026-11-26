@@ -37,7 +37,7 @@ test('suggestions are not enabled workflow, company, or monetary actions',()=>{
  const html=render('quotation');
  assert.doesNotMatch(html,/data-action="tradelink-company-reset-counter"/);
  assert.doesNotMatch(html,/data-action="tradelink-upload-logo"/);
- assert.match(html,/PDF printing is available only after both reviewers approve/);
+ assert.match(html,/PDF printing is available only after all required reviewers approve/);
  assert.match(html,/No PDF, approval or document is generated/);
 });
 
