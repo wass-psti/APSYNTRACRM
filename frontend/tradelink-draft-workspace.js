@@ -148,7 +148,7 @@ const quotationEmailValid=value=>/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9]
 const quotationPhoneValid=value=>new RegExp('^(?:'+QUOTATION_PHONE_PATTERN+')$').test(value);
 
 export function parseTradeLinkDraftForm(fields,{
- lineId=()=>globalThis.crypto?.randomUUID?.(),purpose='readiness'
+ lineId=()=>globalThis.crypto?.randomUUID?.(),purpose='readiness',executivePreview=false
 }={}){
  if(!fields||typeof fields.get!=='function')
   throw new ApiError('TradeLink Draft input is missing.',400);
@@ -332,7 +332,7 @@ export function parseTradeLinkDraftForm(fields,{
   }else if(type==='po'){
    for(const key of ['poNumber','targetDeliveryDate','paymentTerms',
     'verifiedBy','approvedBy'])addText(key);
-   if(!draft.paymentTerms||!draft.verifiedBy||!draft.approvedBy||
+   if(!draft.paymentTerms||(!draft.verifiedBy&&!(executivePreview&&draft.approvedBy==='asenagan@watchdogautomation.com.ph'))||!draft.approvedBy||
       !draft.targetDeliveryDate)
     throw new ApiError('Supplier PO readiness needs delivery date, payment terms, reviewer and intended approver.',400);
    const date=draft.targetDeliveryDate;
@@ -350,7 +350,7 @@ export function parseTradeLinkDraftForm(fields,{
    draft.quoteStatus=quoteStatus;
   }
  }
- return validateTradeLinkDraftEnvelope(validateTradeLinkModuleAccountAssignments(draft),
+ return validateTradeLinkDraftEnvelope(validateTradeLinkModuleAccountAssignments(draft,{executivePreview}),
   {allowUnassignedNumber:true});
 }
 /**
@@ -400,7 +400,7 @@ export function restoreTradeLinkPendingSave(pendingSave,lines){
 }
 export function prepareTradeLinkDraftCommand(view,fields,{
  documentId=()=>globalThis.crypto?.randomUUID?.(),
- lineId=()=>globalThis.crypto?.randomUUID?.()
+ lineId=()=>globalThis.crypto?.randomUUID?.(),executivePreview=false
 }={}){
  const selected=view?.mode==='edit'?view.selected:null;
  if(view?.mode==='edit'&&(!selected||!validUuid(selected.documentId)||
@@ -414,7 +414,7 @@ export function prepareTradeLinkDraftCommand(view,fields,{
  const pending=view?.pendingCreateDraft;
  const draft=parseTradeLinkDraftForm(fields,{
   lineId:index=>pending?.items?.[index]?.id||lineId(index),
-  purpose:'save'
+  purpose:'save',executivePreview:executivePreview&&!selected||selected?.record?.approval_policy===GM_SALES_EXEMPT_POLICY
  });
  if(selected){
   const existingContent=selected.record.content||{};
@@ -642,11 +642,12 @@ export const TRADELINK_MODULE_ACCOUNT_OPTIONS=Object.freeze({
   approvedBy:Object.freeze(['asenagan@watchdogautomation.com.ph','dsenagan@watchdogautomation.com.ph','amsenagan@watchdogautomation.com.ph'])
  })
 });
-export function validateTradeLinkModuleAccountAssignments(draft){
+export function validateTradeLinkModuleAccountAssignments(draft,{executivePreview=false}={}){
  const allowed=TRADELINK_MODULE_ACCOUNT_OPTIONS[draft?.documentType];
  if(!allowed)return draft;
  for(const [field,options] of Object.entries(allowed)){
   const value=String(draft[field]??'').trim().toLowerCase();
+  if(draft.documentType==='po'&&field==='verifiedBy'&&!value&&executivePreview&&draft.approvedBy==='asenagan@watchdogautomation.com.ph')continue;
   if(!options.includes(value))
    throw new ApiError('Select a listed TradeLink '+field+' account.',400);
   draft[field]=value;
@@ -751,13 +752,14 @@ function renderReferenceModuleWorkflow(type,fieldValue,data,actorName,reviewCont
   '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
   group('Reviewed By (Account Manager)',
    referencePersonField('Account Manager','verifiedBy',
-    value('verifiedBy')||'aacsenagan@watchdogautomation.com.ph',
-    TRADELINK_MODULE_ACCOUNT_OPTIONS.po.verifiedBy,'Select account manager...',{required:true})+
+    (!documentSaved&&gmPreview||reviewStages?.approvalPolicy===GM_SALES_EXEMPT_POLICY)?value('verifiedBy'):value('verifiedBy')||'aacsenagan@watchdogautomation.com.ph',
+    TRADELINK_MODULE_ACCOUNT_OPTIONS.po.verifiedBy,'Select account manager...',{required:!(!documentSaved&&gmPreview||reviewStages?.approvalPolicy===GM_SALES_EXEMPT_POLICY)})+
    '<small>Suggested default reviewer: aacsenagan@watchdogautomation.com.ph. This selection is editable.</small>'+
-   (!documentSaved&&gmPreview?'<p>Sales Supervisor approval will be exempt if that reviewer is selected. Other Account Manager reviews remain applicable.</p>':'')+
+   (!documentSaved&&gmPreview?'<p>Intermediate review is optional when you select yourself as final approver. The signed server confirms the policy.</p>':'')+
    stage('verifiedBy','primary','Account Manager review'))+
   group('Approved By (Management)',
-   person('Management approver','approvedBy','Select management member...',true,'secondary'))+
+   referencePersonField('Management approver','approvedBy',fieldValue('approvedBy',data.approvedBy||(!documentSaved&&gmPreview?'asenagan@watchdogautomation.com.ph':'')),TRADELINK_MODULE_ACCOUNT_OPTIONS.po.approvedBy,'Select management member...',{required:true})+
+   stage('approvedBy','secondary','Management approver'))+
   help+'</section>';
  return '';
 }
@@ -828,7 +830,7 @@ function renderQuotationVerification(fieldValue,data,actorName='',reviewContext=
  const {actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewStages=null,gmPreview=false}=reviewContext;
  const {primary}=QUOTATION_APPROVAL_HIERARCHY;
  const exempt=reviewStages?.approvalPolicy===GM_SALES_EXEMPT_POLICY;
- const preview=!documentSaved&&gmPreview;
+ const preview=!documentSaved&&gmPreview&&fieldValue('approvedByEmail',data.approvedByEmail||'asenagan@watchdogautomation.com.ph')==='asenagan@watchdogautomation.com.ph';
  const secondaryOptionsForDocument=quotationSecondaryOptionsForDocument(data.documentNumber);
  const selected=fieldValue('approvedByEmail',data.approvedByEmail||secondaryOptionsForDocument[0]);
  const safeSelected=secondaryOptionsForDocument.includes(selected)?selected:secondaryOptionsForDocument[0];

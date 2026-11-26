@@ -93,3 +93,11 @@ test('host handles read-only readiness through exact authorized record read, not
  assert.doesNotMatch(body,/\.submit\(|\.rpc\(|\.commit\(|\.save\(/);
  assert.match(host,/case 'tradelink-document-check-readiness':/);
 });
+
+test('persisted executive PO exemption makes intermediate reviewer optional only for PO',()=>{
+ const row=make('po');delete row.content.verifiedBy;
+ assert.equal(inspectTradeLinkSubmitReadiness(row).ready,false);
+ assert.equal(inspectTradeLinkSubmitReadiness({...row,approval_policy:'gm-sales-supervisor-exempt-v1'}).ready,true);
+ const esi=make('esi');delete esi.content.verifiedBy;
+ assert.equal(inspectTradeLinkSubmitReadiness({...esi,approval_policy:'gm-sales-supervisor-exempt-v1'}).ready,false);
+});

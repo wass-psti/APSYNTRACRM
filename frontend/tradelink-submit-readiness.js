@@ -50,7 +50,7 @@ export function inspectTradeLinkSubmitReadiness(record){
  if(type==='po'){
   need(present(c.targetDeliveryDate),'Target delivery date');
   need(present(c.paymentTerms),'Payment terms');
-  need(present(c.verifiedBy),'Verified by');
+  need(record.approval_policy==='gm-sales-supervisor-exempt-v1'||present(c.verifiedBy),'Verified by');
   need(present(c.approvedBy),'Intended approver');
  }
  if(type==='payment'){

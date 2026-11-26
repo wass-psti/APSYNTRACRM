@@ -4221,7 +4221,7 @@ async function commitTradeLinkDraft(form){
   }
   let command;
   try{
-   command=prepareTradeLinkDraftCommand(state.tradeLinkDraft,fields);
+   command=prepareTradeLinkDraftCommand(state.tradeLinkDraft,fields,{executivePreview:state.context?.profile?.email?.trim().toLowerCase()==='asenagan@watchdogautomation.com.ph'&&state.tradeLinkModuleRole==='General Manager'});
   }catch(err){
    if(same()){
     state.tradeLinkDraft={...state.tradeLinkDraft,formValues,
@@ -4346,7 +4346,7 @@ async function checkTradeLinkDocumentReadiness(documentId){
     record.document_type!==listed.documentType||
     record.board_item_id!==listed.boardItemId||record.archived_at!==null)
    throw new ApiError('The signed document changed; refresh All Documents.',409);
-  state.tradeLinkDraft.message=summarizeTradeLinkSubmitReadiness(record);
+  state.tradeLinkDraft.message=summarizeTradeLinkSubmitReadiness({...record,approval_policy:listed.approvalPolicy});
  }catch(err){
   if(same())state.tradeLinkDraft.error=
    'Submit readiness could not be verified. Refresh the signed document before trying again.';
@@ -8961,7 +8961,7 @@ async function action(name,button){
    break;
   }
   try{
-   const draft=parseTradeLinkDraftForm(new FormData(form));
+   const draft=parseTradeLinkDraftForm(new FormData(form),{executivePreview:(state.context?.profile?.email?.trim().toLowerCase()==='asenagan@watchdogautomation.com.ph'&&state.tradeLinkModuleRole==='General Manager'&&state.tradeLinkDraft.mode!=='edit')||state.tradeLinkDraft.selected?.record?.approval_policy==='gm-sales-supervisor-exempt-v1'});
    updateTradeLinkDraftLocalSummary(form,draft);
    output.dataset.validation='valid';
    output.setAttribute('role','status');

@@ -81,3 +81,11 @@ test('named GM new quotation shows prospective exemption; other accounts retain 
   assert.doesNotMatch(other,/Exemption on save/);
  }
 });
+
+test('executive PO optional intermediate reviewer is scoped to preview and own final assignment',async()=>{
+ const {validateTradeLinkModuleAccountAssignments}=await import('../tradelink-draft-workspace.js');
+ const po={documentType:'po',approvedBy:'asenagan@watchdogautomation.com.ph'};
+ assert.doesNotThrow(()=>validateTradeLinkModuleAccountAssignments({...po},{executivePreview:true}));
+ assert.throws(()=>validateTradeLinkModuleAccountAssignments({...po}));
+ assert.throws(()=>validateTradeLinkModuleAccountAssignments({...po,approvedBy:'dsenagan@watchdogautomation.com.ph'},{executivePreview:true}));
+});
