@@ -4,12 +4,12 @@ on:
     branches: [main, cp-dda-fe-03a-reference-ci]
     paths:
       - 'frontend/apps/DailyDepartmentActivity/**'
-      - 'frontend/tests/dda-native-domain.test.mjs'
+      - 'frontend/tests/dda-native-*.test.mjs'
       - '.github/workflows/cp-dda-fe-03a-native-domain.yml'
   pull_request:
     paths:
       - 'frontend/apps/DailyDepartmentActivity/**'
-      - 'frontend/tests/dda-native-domain.test.mjs'
+      - 'frontend/tests/dda-native-*.test.mjs'
       - '.github/workflows/cp-dda-fe-03a-native-domain.yml'
   workflow_dispatch:
 permissions:
@@ -25,4 +25,5 @@ jobs:
           node-version: '22'
       - run: node --check frontend/apps/DailyDepartmentActivity/activity-model.js
       - run: node --check frontend/apps/DailyDepartmentActivity/activity-drafts.js
-      - run: node --test frontend/tests/dda-native-domain.test.mjs
+      - run: node --check frontend/apps/DailyDepartmentActivity/activity-controller.js
+      - run: node --test frontend/tests/dda-native-*.test.mjs
