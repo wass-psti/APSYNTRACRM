@@ -123,7 +123,7 @@ test('Pages includes new style after Overview without requiring a new build tool
  assert.match(adminCss,/\.tt-admin-editor-backdrop/);
  assert.match(adminCss,/@media\(max-width:650px\)/);
  assert.match(smoke,/'frontend\/time-tracker-log-command\.css'/);
- assert.match(index,/script type="module" src="\.\/frontend\/app\.js"/);
+ assert.match(index,/script type="module" src="\.\/frontend\/app\.js(?:\?v=[^"]+)?"/);
 });
 
 test('Reference Log filters combine signed view, department, location, and inclusive Manila dates',()=>{
