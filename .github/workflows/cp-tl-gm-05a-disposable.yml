@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - 'sql/candidates/cp-tl-gm-05a-*.sql'
+      - 'sql/candidates/cp-tl-gm-06a-*.sql'
+      - 'sql/tests/cp-tl-gm-06a-*.sql'
       - 'sql/tests/cp-tl-gm-05a-*.sql'
       - 'supabase/migrations/20261126045855_cp_tl_gm_direct_executive_approval.sql'
       - 'scripts/cp-tl-gm-05a-disposable.sh'

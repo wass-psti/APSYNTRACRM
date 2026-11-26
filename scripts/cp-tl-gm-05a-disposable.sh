@@ -58,3 +58,10 @@ docker exec "$NAME" psql -h 127.0.0.1 -X -v ON_ERROR_STOP=1 -U postgres -d gm_re
 [[ "$(evidence gm_recovery)" == "$before" ]] || { echo "Rollback evidence mismatch" >&2; exit 1; }
 echo CP_TL_GM_05A_SELECTOR_ROLLBACK_EVIDENCE_PASS
 echo CP_TL_GM_APPROVAL_05A_DISPOSABLE_PASS
+
+# Exercise the new policy only after the historical recovery checks have passed.
+for file in sql/candidates/cp-tl-gm-06a-approval-free.sql sql/tests/cp-tl-gm-06a-approval-free-disposable.sql; do
+ echo "== $file =="
+ docker exec -i "$NAME" psql -h 127.0.0.1 -X -v ON_ERROR_STOP=1 -U postgres -d postgres -q -f "/repo/$file"
+done
+echo CP_TL_GM_06A_APPROVAL_FREE_DISPOSABLE_PASS
