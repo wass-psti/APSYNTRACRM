@@ -867,7 +867,8 @@ test('TradeLink User All Documents shows own Draft edit and assigned reviewer ac
  assert.match(html,/Q-REVIEW-001/);
  assert.match(html,/Use Time Now/);
  assert.doesNotMatch(html,/data-tl-select-document|data-tl-select-all/);
- assert.doesNotMatch(html,/data-action="tradelink-document-(status-update|approve|reject)"|data-action="tradelink-draft-(archive|restore)"/);
+ assert.match(html,/data-action="tradelink-document-status-update"[^>]*disabled/);
+ assert.doesNotMatch(html,/data-action="tradelink-document-(approve|reject)"|data-action="tradelink-draft-(archive|restore)"/);
 });
 
 test('read-only listing presents filters but never reveals rows or enables RPC under dark launch',async()=>{
