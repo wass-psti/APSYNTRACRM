@@ -32,7 +32,7 @@ BEGIN
   ASSERT denied;
   receipt:=public.tl03_record_review_stage(board,doc,2,'secondary');
   ASSERT receipt->>'state'='approved';
-  ASSERT receipt->'primaryAt'='null'::jsonb';
+  ASSERT receipt->'primaryAt'='null'::jsonb;
   ASSERT receipt->>'secondaryAt' IS NOT NULL;
   receipt:=public.tl03_record_review_stage(board,doc,2,'secondary');
   ASSERT receipt->>'idempotent'='true';
