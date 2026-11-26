@@ -84,7 +84,7 @@ test('read and write operations require a complete signed authorization client',
  await assert.rejects(()=>client.list(),/Signed TradeLink reviewer API unavailable/);
  await assert.rejects(()=>client.read(id),/Signed TradeLink reviewer API unavailable/);
  await assert.rejects(()=>client.commit({documentId:id,expectedRevision:0,
-  operation:'create',draft}),/Board manager scope required/);
+  operation:'create',draft}),/Signed TradeLink domain API unavailable/);
  assert.equal(invoked,0);
 });
 
