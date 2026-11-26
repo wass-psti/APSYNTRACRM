@@ -420,7 +420,7 @@ test('frontend entrypoint refreshes workspace-related module assets together',()
  assert.ok(app.includes(moduleUrl));
  assert.ok(lifecycle.includes(moduleUrl));
  assert.ok(index.includes('<script type="module" src="./frontend/app.js?v=cp-tl-document-menu-02-20261126-01"></script>'));
- assert.doesNotMatch(index,/frontend\/app\.js\?v=/);
+ assert.match(index,/frontend\/app\.js\?v=cp-tl-document-menu-02-20261126-01/);
 });
 test('server member list displays two eligible workspaces without fabricating global third',()=>{
  const actor='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
