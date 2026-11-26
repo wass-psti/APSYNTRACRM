@@ -7,7 +7,7 @@ const root = new URL('../frontend/apps/DailyDepartmentActivity/',import.meta.url
 const files = new Set(['activity-screen.js','activity-screen.css','activity-model.js','activity-drafts.js','activity-controller.js','activity-repository.js','activity-runtime.js','dda-native-host.js']);
 const server = createServer(async (req,res)=>{
   try {
-    if(req.url==='/'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DDA test fixture</title><link rel="stylesheet" href="/activity-screen.css?v=cp-dda-ui-04-20261126"><div id="host"></div></html>');return;}
+    if(req.url==='/'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DDA test fixture</title><link rel="stylesheet" href="/activity-screen.css?v=cp-dda-ui-05-20261126"><div id="host"></div></html>');return;}
     const file=new URL(req.url,'http://127.0.0.1').pathname.slice(1);
     if(!files.has(file)){res.writeHead(404).end();return;}
     res.setHeader('Content-Type',file.endsWith('.css')?'text/css':'text/javascript');
@@ -69,6 +69,16 @@ try {
   const notice=text=>page.waitForFunction(value=>document.querySelector('[data-dda-notice]')?.textContent===value,text);
   assert.equal(await page.locator('.dda-metric').count(),4);
   assert.equal(await page.locator('.dda-records .dda-empty').isVisible(),true);
+  assert.equal(await page.locator('.dda-quick-record').isVisible(),true);
+  const startDate=await form('filters').getByLabel('Activity date').inputValue();
+  await form('filters').getByLabel('Search').fill('no matches');
+  await form('filters').getByLabel('Department').selectOption('d');
+  await form('filters').getByRole('button',{name:'Apply filters'}).click();
+  assert.match(await page.locator('.dda-scope-chip').innerText(),/Operations/);
+  await form('filters').getByRole('button',{name:'Clear filters'}).click();
+  assert.equal(await form('filters').getByLabel('Search').inputValue(),'');
+  assert.equal(await form('filters').getByLabel('Department').inputValue(),'');
+  assert.equal(await form('filters').getByLabel('Activity date').inputValue(),startDate);
   const surfaces=await page.locator('.dda-panel').first().evaluate(el=>{
     const light=getComputedStyle(el).backgroundColor;
     document.documentElement.dataset.apsMondayTheme='dark';
@@ -125,6 +135,7 @@ try {
   assert.equal(await page.locator('.dda-management').isVisible(),true);
   await view('activities');
   await form('new').getByRole('button',{name:'New activity'}).click();
+  assert.equal(await page.locator('.dda-editor-open').isVisible(),true);
   await form('activity').getByLabel('Activity title').fill('Daily <img src=x> report');
   await form('activity').getByLabel('Details').fill('Draft notes');
   await form('activity').getByLabel('Category').selectOption({label:'Reporting'});
@@ -154,6 +165,7 @@ try {
   assert.equal(await form('activity').getByLabel('Activity title').inputValue(),'');
   await form('activity').getByRole('button',{name:'Close (keep draft)'}).click();
   assert.equal(await page.locator('.dda-entry img').count(),0);
+  assert.equal(await page.locator('.dda-register-list .dda-entry').count(),1);
   await page.locator('.dda-entry').getByRole('button',{name:'Edit'}).click();
   await form('activity').getByLabel('Activity title').fill('Revised report');
   await form('activity').getByRole('button',{name:'Save activity'}).click();

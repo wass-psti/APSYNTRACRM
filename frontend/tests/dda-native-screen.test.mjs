@@ -87,3 +87,16 @@ test('team insights reports real filtered counts and completion without inventin
  assert.match(empty,/Completion rate<\/span><strong>&mdash;<\/strong>/);
  assert.doesNotMatch(empty,/NaN|Infinity/);
 });
+
+test('activity workspace shows reporting scope, quick recording and escaped register cards',()=>{
+ const row={id:'a',title:'<Work>',details:'<Notes>',date:filters.date,personId:'p',departmentId:'d',categoryId:'c',status:'Completed'};
+ const html=renderActivityScreen({...base,records:[row],filters:{...filters,departmentId:'d'}});
+ assert.match(html,/Activity overview/);
+ assert.match(html,/class="dda-scope-chip"><span>2026-11-26<\/span><strong>Operations/);
+ assert.match(html,/data-dda-action="clear-filters"/);
+ assert.match(html,/dda-quick-record/);
+ assert.match(html,/dda-register-list/);
+ assert.match(html,/&lt;Work&gt;/);
+ assert.match(html,/&lt;Notes&gt;/);
+ assert.doesNotMatch(html,/<Work>|<Notes>/);
+});

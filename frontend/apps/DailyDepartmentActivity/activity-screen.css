@@ -218,3 +218,68 @@ html[data-aps-monday-theme="dark"] .dda-app .dda-status[data-status] {background
   .dda-app .dda-insight-metric .dda-metric-icon {display:none}
   .dda-app .dda-insight-scope {width:100%}
 }
+
+/* Daily operations workspace: full-width register and compact recording toolbar. */
+.dda-app .dda-activity-summary-head {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:4px 0 12px}
+.dda-app .dda-activity-summary-head h2 {font-size:21px;letter-spacing:-.025em;margin-bottom:4px}
+.dda-app .dda-scope-chip {display:grid;gap:3px;padding:9px 13px;border:1px solid var(--dda-border);border-radius:10px;background:var(--dda-surface);max-width:100%;overflow-wrap:anywhere}
+.dda-app .dda-scope-chip span {font-size:11px;color:var(--dda-muted)}
+.dda-app .dda-scope-chip strong {font-size:13px}
+.dda-app .dda-stats .dda-metric {padding:18px;min-height:96px;border-top:3px solid var(--dda-accent)}
+.dda-app .dda-stats .dda-metric-pending {border-top-color:#bd852f}
+.dda-app .dda-stats .dda-metric-progress {border-top-color:#5186d9}
+.dda-app .dda-stats .dda-metric-completed {border-top-color:#29966c}
+.dda-app .dda-filters {padding:16px 18px}
+.dda-app .dda-filters .dda-section-heading {margin-bottom:12px}
+.dda-app .dda-filters form {grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 12px}
+.dda-app .dda-filter-actions {grid-column:span 2;display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.dda-app .dda-filter-actions button {flex:0 1 auto}
+.dda-app .dda-layout {grid-template-columns:minmax(0,1fr);gap:14px}
+.dda-app .dda-editor {border-left:3px solid var(--dda-accent)}
+.dda-app .dda-compose-head {display:flex;align-items:flex-start;gap:12px;min-width:0}
+.dda-app .dda-compose-head .dda-section-heading {margin-bottom:0;min-width:0}
+.dda-app .dda-compose-icon {display:grid;place-items:center;width:42px;height:42px;border-radius:11px;background:var(--dda-soft);color:var(--dda-accent);flex:none}
+.dda-app .dda-quick-record {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.75fr);align-items:center;gap:16px}
+.dda-app .dda-quick-record form {display:block}
+.dda-app .dda-quick-record fieldset {grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto;align-items:end;gap:10px}
+.dda-app .dda-new-activity {display:inline-flex;align-items:center;gap:6px;justify-content:center;white-space:nowrap}
+.dda-app .dda-new-activity span {font-size:19px;line-height:1;font-weight:400}
+.dda-app .dda-editor-open .dda-compose-head {margin-bottom:18px}
+.dda-app .dda-editor-open fieldset {grid-template-columns:repeat(2,minmax(0,1fr))}
+.dda-app .dda-editor-open textarea {min-height:110px}
+.dda-app .dda-editor-open .dda-actions {justify-content:flex-end;border-top:1px solid var(--dda-border);padding-top:14px}
+.dda-app .dda-records {padding:20px}
+.dda-app .dda-activity-empty {min-height:180px;align-content:center}
+.dda-app .dda-register-list {display:grid;gap:10px}
+.dda-app .dda-register-list .dda-entry {border:1px solid var(--dda-border);border-radius:11px;padding:14px;align-items:center;background:var(--dda-surface);gap:14px}
+.dda-app .dda-register-list .dda-entry:last-child {padding-bottom:14px}
+.dda-app .dda-entry-heading {display:flex;align-items:flex-start;gap:11px;min-width:0}
+.dda-app .dda-entry-heading>div {min-width:0;display:grid;gap:3px}
+.dda-app .dda-entry-symbol {display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:9px;background:var(--dda-soft);color:var(--dda-accent)}
+.dda-app .dda-entry-category {font-size:11px;color:var(--dda-muted)}
+.dda-app .dda-entry-content .dda-record-meta {padding-left:47px}
+.dda-app .dda-entry-content .dda-details {padding:4px 0 0 47px;overflow-wrap:anywhere}
+.dda-app .dda-entry-actions {display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dda-app .dda-entry-actions .dda-delete {color:#a63e50}
+html[data-aps-monday-theme="dark"] .dda-app .dda-entry-actions .dda-delete {color:#f0a3ae}
+.dda-app .dda-entry-actions .dda-delete:hover:not(:disabled) {border-color:currentColor}
+@container (max-width:900px) {
+  .dda-app .dda-quick-record {grid-template-columns:minmax(0,1fr)}
+}
+@container (max-width:850px) {
+  .dda-app .dda-filters form {grid-template-columns:repeat(3,minmax(0,1fr))}
+  .dda-app .dda-filter-actions {grid-column:1/-1}
+}
+@container (max-width:640px) {
+  .dda-app .dda-filters form {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dda-app .dda-quick-record fieldset {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dda-app .dda-new-activity {grid-column:1/-1;width:100%}
+  .dda-app .dda-entry-actions {width:100%;justify-content:flex-end}
+  .dda-app .dda-editor-open .dda-actions {justify-content:flex-start}
+}
+@container (max-width:400px) {
+  .dda-app .dda-stats .dda-metric,.dda-app .dda-records,.dda-app .dda-filters {padding:12px}
+  .dda-app .dda-filters form,.dda-app .dda-quick-record fieldset,.dda-app .dda-editor-open fieldset {grid-template-columns:minmax(0,1fr)}
+  .dda-app .dda-filter-actions button {flex:1 1 auto}
+  .dda-app .dda-entry-content .dda-record-meta,.dda-app .dda-entry-content .dda-details {padding-left:0}
+}

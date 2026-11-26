@@ -118,6 +118,12 @@ function insightMetric(label,value,description,icon) {
 function completionRate(counts) {
   return counts.total?Math.round(counts.completed/counts.total*100):null;
 }
+function activityRegisterEntry(row,people,departments,categories,disabled) {
+  const person=nameOf(people,row.personId);
+  return '<article class="dda-entry"><div class="dda-entry-content"><div class="dda-entry-heading"><span class="dda-entry-symbol">'+glyph('activities')+'</span><div><h3>'+esc(row.title)+'</h3><p>'+esc(person)+' · '+esc(nameOf(departments,row.departmentId))+' · '+esc(row.date)+'</p></div></div>'+
+    '<div class="dda-record-meta"><span class="dda-status" data-status="'+esc(row.status)+'">'+esc(row.status)+'</span><span class="dda-entry-category">'+esc(row.categoryId?nameOf(categories,row.categoryId):'Uncategorized')+'</span></div>'+
+    (row.details?'<p class="dda-details">'+esc(row.details)+'</p>':'')+'</div><div class="dda-entry-actions"><button type="button" class="secondary" data-dda-action="edit" data-id="'+esc(row.id)+'"'+disabled+'>Edit</button><button type="button" class="secondary dda-delete" data-dda-action="delete" data-id="'+esc(row.id)+'"'+disabled+'>Delete</button></div></article>';
+}
 function reportingOverview(snapshot,records,filters,busy) {
   const {directory}=snapshot;
   const {departments,people}=directory;
@@ -159,7 +165,7 @@ function reportingOverview(snapshot,records,filters,busy) {
 
 export function renderActivityScreen({snapshot,records,filters,editor,fields,busy,notice,error,requiresReload,directoryFilters={query:'',departmentId:''},view='activities',organizationView='personnel'}) {
   const disabled = busy || requiresReload ? ' disabled' : '';
-  const top = '<header class="dda-heading"><div><span class="dda-eyebrow">WORK MANAGEMENT / ACTIVITY LOG</span><h1>Daily Department Activity</h1><p>Track daily work, monitor progress and keep your teams aligned.</p></div><div class="dda-header-actions">'+navigation(view,busy,Boolean(snapshot))+'<button type="button" class="secondary dda-refresh" data-dda-action="refresh"'+(busy?' disabled':'')+'>'+glyph('refresh')+'Refresh</button></div></header>';
+  const top = '<header class="dda-heading"><div><span class="dda-eyebrow">WORK MANAGEMENT / ACTIVITY LOG</span><h1>Daily Department Activity</h1><p>Plan, record and review your team’s daily work in one place.</p></div><div class="dda-header-actions">'+navigation(view,busy,Boolean(snapshot))+'<button type="button" class="secondary dda-refresh" data-dda-action="refresh"'+(busy?' disabled':'')+'>'+glyph('refresh')+'Refresh</button></div></header>';
   const messages = '<p role="status" data-dda-notice>'+esc(notice)+'</p><p role="alert" data-dda-error>'+esc(error)+'</p>';
   if (!snapshot) return '<section class="dda-app">'+top+messages+'<p>'+ (busy?'Loading activities…':'Activity service unavailable. Refresh to retry.')+'</p></section>';
   const {directory:{departments,people},categories} = snapshot;
@@ -168,18 +174,21 @@ export function renderActivityScreen({snapshot,records,filters,editor,fields,bus
     select('personId','Personnel',any('All personnel',people),filters.personId)+
     select('status','Status',any('All statuses',statusRows),filters.status)+
     select('categoryId','Category',any('All categories',categories),filters.categoryId)+
-    '<label>Search<input type="search" name="query" placeholder="Search activities" value="'+esc(filters.query)+'"></label><button type="submit" class="secondary"'+(busy?' disabled':'')+'>Apply filters</button></form>';
+    '<label>Search<input type="search" name="query" placeholder="Search activities" value="'+esc(filters.query)+'"></label><div class="dda-filter-actions"><button type="button" class="secondary dda-clear-filters" data-dda-action="clear-filters"'+(busy?' disabled':'')+'>Clear filters</button><button type="submit" class="primary"'+(busy?' disabled':'')+'>Apply filters</button></div></form>';
   const stats = '<div class="dda-stats" aria-label="Activity totals">'+metric('Activities',records.length,'activities')+statuses.map((status,index)=>metric(status,records.filter(row=>row.status===status).length,['pending','progress','completed'][index])).join('')+'</div>';
-  const editorMarkup = editor ? '<section class="dda-panel dda-editor">'+heading(editor.activityId?'Edit activity':'Record activity',esc(nameOf(people,editor.personId))+' · '+esc(editor.date))+
+  const scopeName=filters.departmentId?nameOf(departments,filters.departmentId):'All departments';
+  const activitySummary='<div class="dda-activity-summary-head"><div><span class="dda-eyebrow">DAILY WORKSPACE</span><h2>Activity overview</h2><p>Counts reflect the applied activity filters.</p></div><div class="dda-scope-chip"><span>'+esc(filters.date||'All dates')+'</span><strong>'+esc(scopeName)+'</strong></div></div>';
+  const editorMarkup = editor ? '<section class="dda-panel dda-editor dda-editor-open"><div class="dda-compose-head"><span class="dda-compose-icon">'+glyph('activities')+'</span>'+heading(editor.activityId?'Edit activity':'Record activity',esc(nameOf(people,editor.personId))+' · '+esc(editor.date))+'</div>'+
     '<form data-dda-form="activity"><fieldset'+disabled+'><label>Activity title<input name="title" required maxlength="160" value="'+esc(fields.title)+'"></label><label>Details<textarea name="details" maxlength="2000" rows="4">'+esc(fields.details)+'</textarea></label>'+
     select('status','Status',statusRows,fields.status)+select('categoryId','Category',any('Uncategorized',categories),fields.categoryId)+
     '<div class="dda-actions"><button class="primary" type="submit">Save activity</button><button type="button" class="secondary" data-dda-action="close-editor">Close (keep draft)</button><button type="button" class="secondary" data-dda-action="discard">Discard draft</button></div></fieldset></form></section>' :
-    '<section class="dda-panel dda-editor">'+heading('Record activity','Select a team member and reporting date to begin.')+'<form data-dda-form="new"><fieldset'+disabled+'>'+select('personId','Personnel',people,filters.personId)+'<label>Date<input name="date" type="date" required value="'+esc(filters.date||manilaDate())+'"></label><button class="primary" type="submit"'+(!people.length?' disabled':'')+'>New activity</button></fieldset></form>'+(!people.length?'<p>No personnel available.</p>':'')+'</section>';
+    '<section class="dda-panel dda-editor dda-quick-record"><div class="dda-compose-head"><span class="dda-compose-icon">'+glyph('activities')+'</span>'+heading('Record activity','Choose a person and reporting date to start a new entry.')+'</div><form data-dda-form="new"><fieldset'+disabled+'>'+select('personId','Personnel',people,filters.personId)+'<label>Date<input name="date" type="date" required value="'+esc(filters.date||manilaDate())+'"></label><button class="primary dda-new-activity" type="submit"'+(!people.length?' disabled':'')+'><span aria-hidden="true">+</span> New activity</button></fieldset></form>'+(!people.length?'<p>No personnel available.</p>':'')+'</section>';
   const categoryMarkup = '<section class="dda-panel dda-categories">'+heading('Categories','Create and maintain labels for activity reporting.')+'<form data-dda-form="category"><fieldset'+disabled+'>'+select('id','Category to edit',any('New category',categories),'')+'<label>Category name<input name="name" required maxlength="120"></label><button type="submit" class="primary">Save category</button></fieldset></form></section>';
-  const list = '<section class="dda-panel dda-records"><div class="dda-list-heading">'+heading('Recorded activities','Review and update entries for the selected filters.')+'<span class="dda-count">'+records.length+' '+(records.length===1?'entry':'entries')+'</span></div>'+(records.length?records.map(row=>'<article class="dda-entry"><div><h3>'+esc(row.title)+'</h3><p>'+esc(nameOf(people,row.personId))+' · '+esc(nameOf(departments,row.departmentId))+' · '+esc(row.date)+'</p><p class="dda-record-meta"><span class="dda-status" data-status="'+esc(row.status)+'">'+esc(row.status)+'</span><span>'+esc(row.categoryId?nameOf(categories,row.categoryId):'Uncategorized')+'</span></p><p class="dda-details">'+esc(row.details)+'</p></div><div class="dda-actions"><button type="button" class="secondary" data-dda-action="edit" data-id="'+esc(row.id)+'"'+disabled+'>Edit</button><button type="button" class="secondary" data-dda-action="delete" data-id="'+esc(row.id)+'"'+disabled+'>Delete</button></div></article>').join(''):'<div class="dda-empty"><span class="dda-empty-icon">'+glyph('activities')+'</span><h3>No matching activities.</h3><p>Try another date or filter, or use Record activity to add an entry.</p></div>')+'</section>';
+  const list = '<section class="dda-panel dda-records"><div class="dda-list-heading">'+heading('Recorded activities','Review and update entries for the selected filters.')+'<span class="dda-count">'+records.length+' '+(records.length===1?'entry':'entries')+'</span></div>'+
+    (records.length?'<div class="dda-register-list">'+records.map(row=>activityRegisterEntry(row,people,departments,categories,disabled)).join('')+'</div>':'<div class="dda-empty dda-activity-empty"><span class="dda-empty-icon">'+glyph('activities')+'</span><h3>No matching activities.</h3><p>Start a new activity using the recording form above, or clear filters to broaden your results.</p></div>')+'</section>';
   return '<section class="dda-app">'+top+messages+
-    '<div class="dda-view-region" data-dda-views="activities"'+viewVisibility(view,'activities')+'>'+stats+'</div>'+
-    '<section class="dda-panel dda-filters" data-dda-views="activities insights"'+viewVisibility(view,'activities insights')+'>'+heading('Filter activities','Choose the reporting scope for activities and team insights.')+filterForm+'</section>'+
+    '<div class="dda-view-region" data-dda-views="activities"'+viewVisibility(view,'activities')+'>'+activitySummary+stats+'</div>'+
+    '<section class="dda-panel dda-filters" data-dda-views="activities insights"'+viewVisibility(view,'activities insights')+'>'+heading('Filter activities','Set your reporting date, team and activity criteria.')+filterForm+'</section>'+
     '<div class="dda-layout" data-dda-views="activities"'+viewVisibility(view,'activities')+'>'+editorMarkup+list+'</div>'+
     '<div class="dda-view-region" data-dda-views="insights"'+viewVisibility(view,'insights')+'>'+reportingOverview(snapshot,records,filters,busy)+'</div>'+
     '<div class="dda-management" data-dda-views="organization"'+viewVisibility(view,'organization')+'>'+renderOrganization(snapshot,directoryFilters,organizationView,busy,disabled,categoryMarkup)+'</div></section>';
@@ -303,6 +312,10 @@ export function mountDailyDepartmentActivity(host,controller,{today=manilaDate()
     const record=snapshot?.records.find(row=>row.id===button.dataset.id);
     if(action==='view'){switchView(button.dataset.view);return;}
     if(action==='organization-view'){switchOrganizationView(button.dataset.orgView);return;}
+    if(action==='clear-filters'){
+      filters={...filters,departmentId:'',personId:'',status:'',categoryId:'',query:''};
+      paint();return;
+    }
     if(action==='refresh')void run(async()=>{notice='Activities refreshed.';acceptLoaded(await controller.load());});
     else if(action==='team'&&snapshot?.directory.departments.some(row=>row.id===button.dataset.id)){filters={...filters,departmentId:button.dataset.id,personId:''};paint();}
     else if(action==='edit'&&record)openEditor({personId:record.personId,date:record.date,activityId:record.id},{title:record.title,details:record.details,status:record.status,categoryId:record.categoryId||''});
