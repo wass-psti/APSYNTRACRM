@@ -130,5 +130,5 @@ test('GitHub Pages loads and verifies My Hours CSS under strict CSP',()=>{
  assert.match(smoke,/'frontend\/time-tracker-my-hours-command\.css'/);
  assert.match(smoke,/'frontend\/time-tracker-my-hours\.js'/);
  assert.match(index,/style-src-attr 'none'/);
- assert.match(index,/script type="module" src="\.\/frontend\/app\.js"/);
+ assert.match(index,/script type="module" src="\.\/frontend\/app\.js(?:\?v=[^"]+)?"/);
 });
