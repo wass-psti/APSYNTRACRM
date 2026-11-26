@@ -207,6 +207,19 @@ export function renderFuelTrackSignedRequestsRich(snapshot,filters={}){
    (snapshot.rows.length>=200?'<p class="ft3-requests-data-note">The signed service returned the latest 200 authorized records. Older records require server-side pagination.</p>':'')+
   '</section></section>';
 }
+const validDaily=r=>{
+ if(!r||typeof r.day!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(r.day))return false;
+ const date=new Date(r.day+'T00:00:00Z');
+ return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===r.day&&
+  Number.isSafeInteger(r.transactions)&&r.transactions>=0&&
+  typeof r.liters==='number'&&Number.isFinite(r.liters)&&r.liters>=0&&
+  typeof r.amount==='number'&&Number.isFinite(r.amount)&&r.amount>=0;
+};
+const analyticsViews=[['fuel-price','Fuel Price'],['efficiency','Efficiency'],['frequency','Frequency'],['requestors','Requestors'],['odometer','Odometer']];
+const analyticsRanges=[['all','Last 365 days',365],['six-months','Last 180 days',180],['month','Last 30 days',30],['week','Last 7 days',7]];
+function analyticsHref(snapshot,view,range,metric){
+ return '#/boards/'+esc(snapshot.boardId)+'/fueltrack/analytics/'+view+'/'+range+'/'+metric;
+}
 function analyticsDateKey(now){
  const current=now instanceof Date?now:new Date(now);
  const date=Number.isFinite(current.getTime())?current:new Date();
