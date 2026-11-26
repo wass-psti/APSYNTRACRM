@@ -19,6 +19,9 @@ on:
       - 'frontend/tests/fueltrack-v3-signed-views.test.mjs'
       - 'frontend/tests/fueltrack-v3-all-requests-entrypoint.test.mjs'
       - 'scripts/pages-smoke.mjs'
+      - 'frontend/fueltrack-v3-new-request.js'
+      - 'frontend/fueltrack-v3-new-request-redesign.css'
+      - 'frontend/tests/fueltrack-v3-new-request-ui.test.mjs'
   pull_request:
     paths:
       - 'frontend/fueltrack-v3-signed-views.js'
@@ -37,6 +40,9 @@ on:
       - 'frontend/tests/fueltrack-v3-signed-views.test.mjs'
       - 'frontend/tests/fueltrack-v3-all-requests-entrypoint.test.mjs'
       - 'scripts/pages-smoke.mjs'
+      - 'frontend/fueltrack-v3-new-request.js'
+      - 'frontend/fueltrack-v3-new-request-redesign.css'
+      - 'frontend/tests/fueltrack-v3-new-request-ui.test.mjs'
 permissions:
   contents: read
 jobs:
