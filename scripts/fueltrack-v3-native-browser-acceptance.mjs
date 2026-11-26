@@ -19,6 +19,8 @@ try {
  const page=await browser.newPage({viewport:{width:1440,height:900}});
  const errors=[];page.on('pageerror',error=>errors.push(error.message));
  for(const [section,pattern] of [['dashboard',/Request pipeline/],['analytics',/Consumption Trend/],['requests',/Request Log/],['new-request',/Select Refuel Type/],['approvals',/Approvals/],['lightfuels',/LightFuels/],['activity',/Activity/]]) {
+  // Every section starts at desktop width; preceding responsive checks mutate the viewport.
+  await page.setViewportSize({width:1440,height:900});
   const html=renderFuelTrackV3Application({detail,section,actorName:'Browser Acceptance',backend:{snapshot:section==='approvals'?approvalSnapshot:snapshot,analytics}});
   await page.setContent('<!doctype html><html><head><meta charset="utf-8"></head><body><main id="app">'+html+'</main></body></html>');
   await page.addStyleTag({content:styles});
@@ -119,6 +121,7 @@ try {
   checks++;
  }
  const dashboardHtml=renderFuelTrackV3Application({detail,section:'dashboard',backend:{snapshot,analytics}});
+ await page.setViewportSize({width:1440,height:900});
  await page.setContent('<!doctype html><html><head><meta charset="utf-8"></head><body><main id="app">'+dashboardHtml+'</main></body></html>');
  await page.addStyleTag({content:styles});
  assert.equal(await page.locator('.ft3-dashboard-stage-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),5);

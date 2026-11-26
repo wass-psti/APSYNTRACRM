@@ -104,16 +104,32 @@ const bootstrap=await actor('bootstrap');
 const worker=await actor('worker');
 const admin=await actor('system-admin');
 const hr=await actor('hr');
-assert.equal(new Set([bootstrap.id,worker.id,admin.id,hr.id]).size,4);
+const ojt=await actor('ojt');
+assert.equal(new Set([bootstrap.id,worker.id,admin.id,hr.id,ojt.id]).size,5);
 link(bootstrap,'Bootstrap',true);
 link(worker,'Worker');
 link(admin,'System Admin',false,true);
 link(hr,'HR',false,false,'HR');
+link(ojt,'OJT',false,false,'OJT');
+// Execute rollback-only SQL assertions after GoTrue has issued real sessions.
+// UUIDs come from verified JWT claims, not synthetic auth.sessions inserts.
+const signedFixtures={emp:worker,hr,ojt};
+const fixtureSettings=Object.entries(signedFixtures).map(([key,account])=>{
+ assert.match(account.id,uuid);assert.match(account.sessionId,uuid);
+ return `SELECT set_config('apsyntra.test_${key}','${account.id}',false),
+  set_config('apsyntra.test_${key}_session','${account.sessionId}',false);`;
+}).join('\n');
+const durationSql=execFileSync('docker',['exec','-i',db,'psql','-X','-q','-v','ON_ERROR_STOP=1','-U','postgres','-d','postgres'],{
+ input:`SET apsyntra.test_disposable='on';\n${fixtureSettings}\n\\i /repo/supabase/tests/tt_duration_overtime_staged.integration.sql\n`,
+ encoding:'utf8',timeout:30000,maxBuffer:1024*1024
+});
+console.log(durationSql.trim());
+console.log('CP_TT_DURATION_OT_STAGED_SQL_PASS');
 sql(`INSERT INTO public.module_state_entries(workspace_id,module_id,state_key,scope,owner_key,value,revision)
  VALUES ('${workspace}','time-tracker','timetracker.attendance.v1','shared','*','{"records":[]}',1)
  ON CONFLICT(workspace_id,module_id,state_key,scope,owner_key)
  DO UPDATE SET value=EXCLUDED.value,revision=public.module_state_entries.revision+1`);
-console.log('GOTRUE_FOUR_REAL_SIGNED_PROFILES_AND_CANONICAL_ATTENDANCE_STATE PASS');
+console.log('GOTRUE_FIVE_REAL_SIGNED_PROFILES_AND_CANONICAL_ATTENDANCE_STATE PASS');
 const durationRequest=receipt(await rpc(worker,'timetracker_ot_submit_duration',{
  p_board_id:board,p_date:date,p_duration_minutes:180,
  p_reason:'Additional engineering work requested for the project'

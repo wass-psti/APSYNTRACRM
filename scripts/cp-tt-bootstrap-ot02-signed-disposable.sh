@@ -50,12 +50,11 @@ docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres \
 cat > "/tmp/$ID-duration-ot-apply.sql" <<'SQL'
 SET apsyntra.test_disposable='on';
 \i /repo/sql/cp-tt-duration-overtime-staged.sql
-\i /repo/supabase/tests/tt_duration_overtime_staged.integration.sql
 SQL
 docker cp "/tmp/$ID-duration-ot-apply.sql" "$DB:/tmp/duration-ot-apply.sql"
 rm -f "/tmp/$ID-duration-ot-apply.sql"
 docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -f /tmp/duration-ot-apply.sql
-echo CP_TT_DURATION_OT_STAGED_SQL_PASS
+echo CP_TT_DURATION_OT_STAGED_DDL_PASS
 docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -c "CREATE ROLE authenticator LOGIN PASSWORD '$PASSWORD'; GRANT authenticated,anon TO authenticator; GRANT USAGE ON SCHEMA public TO authenticator,authenticated;"
 docker run -d --rm --name "$AUTH" --network "$NETWORK" -p 127.0.0.1::9999 \
  -e GOTRUE_DB_DRIVER=postgres -e GOTRUE_DB_DATABASE_URL="postgres://postgres:$PASSWORD@$DB:5432/postgres?sslmode=disable" \

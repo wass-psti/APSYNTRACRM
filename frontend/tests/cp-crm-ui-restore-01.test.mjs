@@ -20,8 +20,14 @@ test("restoration manifest is the approved baseline suffix with only additive fe
   );
   assert.equal(STYLE_SOURCES.at(-4), "frontend/dark-simplified-system.css");
   assert.equal(STYLE_SOURCES.at(-3), "frontend/board-overhaul-experience.css");
-  assert.equal(STYLE_SOURCES.at(-2), "frontend/fueltrack-v3-all-requests-redesign.css");
-  assert.equal(STYLE_SOURCES.at(-1), "frontend/fueltrack-v3-new-request-redesign.css");
+  assert.equal(
+    STYLE_SOURCES.at(-2),
+    "frontend/fueltrack-v3-all-requests-redesign.css",
+  );
+  assert.equal(
+    STYLE_SOURCES.at(-1),
+    "frontend/fueltrack-v3-new-request-redesign.css",
+  );
   assert.equal(new Set(STYLE_SOURCES).size, STYLE_SOURCES.length);
   assert.equal(bundle, generateStyleBundle());
   assert.match(

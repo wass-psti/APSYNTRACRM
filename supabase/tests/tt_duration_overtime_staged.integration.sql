@@ -59,20 +59,21 @@ DO $rpc$
 DECLARE
  ws constant uuid:='10000000-0000-4000-8000-000000000001';
  board constant uuid:='10000000-0000-4000-8000-000000000021';
- emp constant uuid:='10000000-0000-4000-8000-000000000011';
- hr constant uuid:='10000000-0000-4000-8000-000000000012';
- ojt constant uuid:='20000000-0000-4000-8000-000000000015';
- emp_session constant uuid:='10000000-0000-4000-8000-000000000031';
- hr_session constant uuid:='10000000-0000-4000-8000-000000000032';
- ojt_session constant uuid:='20000000-0000-4000-8000-000000000035';
+ emp constant uuid:=current_setting('apsyntra.test_emp')::uuid;
+ hr constant uuid:=current_setting('apsyntra.test_hr')::uuid;
+ ojt constant uuid:=current_setting('apsyntra.test_ojt')::uuid;
+ emp_session constant uuid:=current_setting('apsyntra.test_emp_session')::uuid;
+ hr_session constant uuid:=current_setting('apsyntra.test_hr_session')::uuid;
+ ojt_session constant uuid:=current_setting('apsyntra.test_ojt_session')::uuid;
  rec_id constant uuid:='30000000-0000-4000-8000-000000000001';
  d date; started timestamptz; threshold timestamptz; end60 timestamptz;
  start_text text; end_text text; state jsonb; completed jsonb;
  receipt jsonb; snap jsonb; request_id uuid; self_id uuid; credit jsonb;
 BEGIN
  d:=(clock_timestamp() AT TIME ZONE 'Asia/Manila')::date;
- started:=GREATEST(clock_timestamp()-INTERVAL '30 minutes',
-  (d::timestamp+TIME '00:00:01') AT TIME ZONE 'Asia/Manila');
+ -- Canonical attendance stores millisecond timestamps. Match that precision.
+ started:=date_trunc('milliseconds',GREATEST(clock_timestamp()-INTERVAL '30 minutes',
+  d::timestamp AT TIME ZONE 'Asia/Manila'));
  threshold:=private.tt_auto_clockout_threshold(started);
  IF clock_timestamp()>=threshold THEN RAISE EXCEPTION 'Open fixture is already past cutoff'; END IF;
  start_text:=pg_catalog.to_char(started AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
@@ -141,7 +142,7 @@ BEGIN
  UPDATE public.module_role_assignments SET role='OJT' WHERE user_id=ojt AND module_id='time-tracker';
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',ojt::text,'session_id',ojt_session::text)::text,true);
  BEGIN
-  PERFORM public.timetracker_ot_submit_duration('20000000-0000-4000-8000-000000000022',d,60,
+  PERFORM public.timetracker_ot_submit_duration(board,d,60,
    'OJT duration request should be rejected');
   RAISE EXCEPTION 'OJT duration OT unexpectedly accepted';
  EXCEPTION WHEN insufficient_privilege THEN NULL;
