@@ -1,15 +1,31 @@
--- STAGED ONLY: validate in disposable PostgreSQL before registering a migration.
--- PR #915: duration OT; no dependence on #914. Do not apply in production.
+-- CP-TT-DURATION-OVERTIME-01: signed duration filing, HR review and extended cutoff.
+-- Forward-only; no dependence on #914. Preserve the scheduler's activation mode,
+-- cron catalog, existing attendance rows and existing legacy range approvals.
 BEGIN;
 SET LOCAL lock_timeout='5s';
 SET LOCAL statement_timeout='90s';
-DO $disposable$
+-- Serialize the definition change with the existing worker/reconciler and
+-- operator control lock. Fail closed on a busy scheduler; do not suspend it.
+DO $preflight$
 BEGIN
- IF current_setting('apsyntra.test_disposable',true) IS DISTINCT FROM 'on' THEN
-  RAISE EXCEPTION 'Duration OT staged SQL requires a disposable database';
+ IF pg_catalog.to_regprocedure('private.tt_auto_clockout_mode()') IS NULL
+  OR pg_catalog.to_regprocedure('private.tt_auto_clockout_employee_eligible(uuid,uuid,uuid)') IS NULL
+  OR pg_catalog.to_regprocedure('private.tt_role_in_workspace(uuid,uuid)') IS NULL
+  OR pg_catalog.to_regprocedure('private.tt_process_auto_clockouts()') IS NULL
+  OR pg_catalog.to_regprocedure('private.tt_attendance_credited_ms(timestamptz,timestamptz)') IS NULL
+  OR pg_catalog.to_regprocedure('private.tt_auto_clockout_threshold(timestamptz)') IS NULL
+  OR pg_catalog.to_regprocedure('public.timetracker_ot_snapshot(uuid)') IS NULL
+  OR pg_catalog.to_regclass('public.timetracker_ot_requests') IS NULL THEN
+  RAISE EXCEPTION 'Duration OT prerequisites missing' USING ERRCODE='55000';
+ END IF;
+ IF NOT pg_catalog.pg_try_advisory_xact_lock(pg_catalog.hashtextextended('tt-auto-clockout-control',0)) THEN
+  RAISE EXCEPTION 'Regular scheduler is busy; retry migration after worker exits' USING ERRCODE='55P03';
+ END IF;
+ IF private.tt_auto_clockout_mode() IS NULL OR private.tt_auto_clockout_mode() NOT IN ('active','suspended') THEN
+  RAISE EXCEPTION 'Regular scheduler mode is invalid; review before migration' USING ERRCODE='55000';
  END IF;
 END;
-$disposable$;
+$preflight$;
 
 ALTER TABLE public.timetracker_ot_requests
  ADD COLUMN ot_policy text NOT NULL DEFAULT 'legacy-range',
@@ -379,7 +395,7 @@ END;
 $snapshot$;
 
 -- Disallow the retired employee time-range submission after activation of this
--- staged migration. Historical manual entries retain their separate RPC.
+-- migration. Historical manual entries retain their separate RPC.
 REVOKE EXECUTE ON FUNCTION public.timetracker_ot_submit(uuid,date,time,time,text)
  FROM PUBLIC,anon,authenticated,service_role;
 

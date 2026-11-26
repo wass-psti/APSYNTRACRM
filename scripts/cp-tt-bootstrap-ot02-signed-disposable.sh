@@ -44,7 +44,7 @@ for migration in \
  docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -f "/repo/$migration"
 done
 # Exercise the new duration-OT DDL and guarded worker/snapshot patch in this
-# same isolated PG17 database. The migration has an explicit disposable-only gate.
+# same isolated PG17 database. The test container is isolated; execute the registered forward migration verbatim.
 docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres \
  -f /repo/sql/tests/cp-tt-duration-ot-prerequisites.sql
 # Load the actual worker and replay its exact migration patches (not a mock).
@@ -76,7 +76,7 @@ print("REVOKE ALL ON FUNCTION private.tt_process_auto_clockouts() FROM PUBLIC,an
 PY
 cat > "/tmp/$ID-duration-ot-apply.sql" <<'SQL'
 SET apsyntra.test_disposable='on';
-\i /repo/sql/cp-tt-duration-overtime-staged.sql
+\i /repo/supabase/migrations/20261126120000_cp_tt_duration_overtime.sql
 SQL
 docker cp "/tmp/$ID-duration-ot-apply.sql" "$DB:/tmp/duration-ot-apply.sql"
 rm -f "/tmp/$ID-duration-ot-apply.sql"
