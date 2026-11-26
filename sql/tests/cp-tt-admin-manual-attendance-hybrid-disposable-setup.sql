@@ -4,11 +4,11 @@
 \set ON_ERROR_STOP on
 
 -- Only the isolated fixture creates missing Supabase database roles.
-DO $ BEGIN
+DO $fixture_role$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='service_role') THEN
   CREATE ROLE service_role NOLOGIN;
  END IF;
-END $;
+END $fixture_role$;
 
 -- Minimal auth.users columns used by the real employee eligibility and
 -- workspace-provisioning functions in this isolated test database.
