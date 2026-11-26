@@ -42,5 +42,22 @@ test('DDA dashboard separates activity work from organization settings and shows
  assert.match(html,/class="dda-empty"/);
  assert.ok(html.indexOf('dda-stats')<html.indexOf('dda-filters'));
  assert.ok(html.indexOf('dda-records')<html.indexOf('dda-management'));
- assert.match(html,/Organization &amp; settings/);
+ assert.match(html,/Organization &amp; Settings/);
+});
+
+test('DDA dedicated views expose only their intended sections and retain shared filters',()=>{
+ const main=renderActivityScreen(base);
+ const organization=renderActivityScreen({...base,view:'organization'});
+ const insights=renderActivityScreen({...base,view:'insights'});
+ for(const [html,active] of [[main,'activities'],[organization,'organization'],[insights,'insights']]){
+   assert.match(html,new RegExp('data-view="'+active+'" aria-pressed="true"'));
+   for(const inactive of ['activities','organization','insights'].filter(id=>id!==active)){
+     assert.match(html,new RegExp('data-view="'+inactive+'" aria-pressed="false"'));
+     assert.match(html,new RegExp('data-dda-views="'+inactive+'" hidden'));
+   }
+   assert.doesNotMatch(html,new RegExp('data-dda-views="'+active+'" hidden'));
+ }
+ assert.match(organization,/data-dda-views="activities insights" hidden/);
+ assert.doesNotMatch(insights,/data-dda-views="activities insights" hidden/);
+ assert.match(main,/aria-label="Daily Department Activity views"/);
 });

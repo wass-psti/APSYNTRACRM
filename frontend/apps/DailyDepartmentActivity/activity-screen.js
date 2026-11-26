@@ -19,6 +19,19 @@ const glyphs = {
 const glyph = name => '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+glyphs[name]+'</svg>';
 const metric = (label,value,key) => '<div class="dda-metric dda-metric-'+key+'"><div class="dda-metric-copy"><span>'+esc(label)+'</span><strong>'+value+'</strong></div><span class="dda-metric-icon">'+glyph(key)+'</span></div>';
 const heading = (title,description) => '<div class="dda-section-heading"><h2>'+title+'</h2><p>'+description+'</p></div>';
+const views = [
+  {id:'activities',label:'Activities'},
+  {id:'organization',label:'Organization & Settings'},
+  {id:'insights',label:'Team Insights'}
+];
+function navigation(view,busy,available) {
+  return '<nav class="dda-view-nav" aria-label="Daily Department Activity views">'+views.map(item=>
+    '<button type="button" class="secondary dda-view-button" data-dda-action="view" data-view="'+item.id+'" aria-pressed="'+(view===item.id)+'"'+(busy||!available?' disabled':'')+'>'+esc(item.label)+'</button>'
+  ).join('')+'</nav>';
+}
+function viewVisibility(view,scope) {
+  return scope.split(' ').includes(view)?'':' hidden';
+}
 
 function reportingOverview(snapshot,records,filters,busy) {
   const {directory}=snapshot;
@@ -35,9 +48,9 @@ function reportingOverview(snapshot,records,filters,busy) {
   return '<section class="dda-panel dda-reporting">'+heading('Team insights','Review department totals and individual contributions.')+'<details><summary>Department activity overview</summary>'+rows+'</details><details'+(filters.departmentId?' open':'')+'><summary>Personnel activity overview ('+members.length+')</summary>'+(roster||'<p>No personnel match the selected filters.</p>')+'</details></section>';
 }
 
-export function renderActivityScreen({snapshot,records,filters,editor,fields,busy,notice,error,requiresReload,directoryFilters={query:'',departmentId:''}}) {
+export function renderActivityScreen({snapshot,records,filters,editor,fields,busy,notice,error,requiresReload,directoryFilters={query:'',departmentId:''},view='activities'}) {
   const disabled = busy || requiresReload ? ' disabled' : '';
-  const top = '<header class="dda-heading"><div><span class="dda-eyebrow">WORK MANAGEMENT / ACTIVITY LOG</span><h1>Daily Department Activity</h1><p>Track daily work, monitor progress and keep your teams aligned.</p></div><button type="button" class="secondary dda-refresh" data-dda-action="refresh"'+(busy?' disabled':'')+'>'+glyph('refresh')+'Refresh</button></header>';
+  const top = '<header class="dda-heading"><div><span class="dda-eyebrow">WORK MANAGEMENT / ACTIVITY LOG</span><h1>Daily Department Activity</h1><p>Track daily work, monitor progress and keep your teams aligned.</p></div><div class="dda-header-actions">'+navigation(view,busy,Boolean(snapshot))+'<button type="button" class="secondary dda-refresh" data-dda-action="refresh"'+(busy?' disabled':'')+'>'+glyph('refresh')+'Refresh</button></div></header>';
   const messages = '<p role="status" data-dda-notice>'+esc(notice)+'</p><p role="alert" data-dda-error>'+esc(error)+'</p>';
   if (!snapshot) return '<section class="dda-app">'+top+messages+'<p>'+ (busy?'Loading activities…':'Activity service unavailable. Refresh to retry.')+'</p></section>';
   const {directory:{departments,people},categories} = snapshot;
@@ -74,7 +87,12 @@ export function renderActivityScreen({snapshot,records,filters,editor,fields,bus
     select('departmentId','Assign department',any('Choose department',departments),'')+
     '<label class="dda-checkbox"><input type="checkbox" name="isHead"> Designate department or unit supervisor</label><p>Designating a supervisor replaces the current supervisor of that scope. Unverified personnel details may be left blank.</p><button type="submit" class="secondary">Save personnel</button></fieldset></form>':'';
   const directory = '<section class="dda-panel dda-directory">'+heading('Department directory',departments.length+' departments · '+people.length+' assigned personnel')+management+'<h3 class="dda-subheading">Department roster</h3>'+departments.filter(department=>!searching||visiblePeople.some(person=>person.departmentId===department.id)).map(department=>'<details'+(searching?' open':'')+'><summary>'+esc(department.parentId?nameOf(departments,department.parentId)+' / '+department.name:department.name)+' ('+visiblePeople.filter(person=>person.departmentId===department.id).length+')</summary><ul>'+visiblePeople.filter(person=>person.departmentId===department.id).map(person=>{const head=supervisorFor(person,snapshot.directory);return '<li>'+esc(person.name)+(person.isHead?' · Supervisor':'')+(person.employeeId?' · '+esc(person.employeeId):'')+(person.position?' · '+esc(person.position):'')+(person.company?' · '+esc(person.company):'')+(head?' · Reports to '+esc(head.name):'')+'</li>';}).join('')+'</ul></details>').join('')+'</section>';
-  return '<section class="dda-app">'+top+messages+stats+'<section class="dda-panel dda-filters">'+heading('Filter activities','Choose the reporting scope for your activity list and totals.')+filterForm+'</section><div class="dda-layout">'+editorMarkup+list+'</div>'+reportingOverview(snapshot,records,filters,busy)+'<div class="dda-management"><div class="dda-management-heading"><h2>Organization &amp; settings</h2><p>Maintain reporting categories, departments and personnel.</p></div>'+categoryMarkup+directory+'</div></section>';
+  return '<section class="dda-app">'+top+messages+
+    '<div class="dda-view-region" data-dda-views="activities"'+viewVisibility(view,'activities')+'>'+stats+'</div>'+
+    '<section class="dda-panel dda-filters" data-dda-views="activities insights"'+viewVisibility(view,'activities insights')+'>'+heading('Filter activities','Choose the reporting scope for activities and team insights.')+filterForm+'</section>'+
+    '<div class="dda-layout" data-dda-views="activities"'+viewVisibility(view,'activities')+'>'+editorMarkup+list+'</div>'+
+    '<div class="dda-view-region" data-dda-views="insights"'+viewVisibility(view,'insights')+'>'+reportingOverview(snapshot,records,filters,busy)+'</div>'+
+    '<div class="dda-management" data-dda-views="organization"'+viewVisibility(view,'organization')+'><div class="dda-management-heading"><h2>Organization &amp; Settings</h2><p>Maintain reporting categories, departments and personnel.</p></div>'+categoryMarkup+directory+'</div></section>';
 }
 
 // The CRM host owns the controller and must call dispose on route exit.
@@ -82,8 +100,20 @@ export function mountDailyDepartmentActivity(host,controller,{today=manilaDate()
   let snapshot=null,editor=null,fields=emptyFields(),notice='',error='',busy=false,disposed=false;
   let filters={date:today,departmentId:'',personId:'',status:'',categoryId:'',query:''};
   let directoryFilters={query:'',departmentId:''};
+  let view='activities';
+  // Keep the mounted forms intact when changing views, including unsaved inputs.
+  function switchView(next) {
+    if(!snapshot||!views.some(item=>item.id===next))return;
+    view=next;
+    for(const region of host.querySelectorAll('[data-dda-views]')){
+      region.hidden=!region.dataset.ddaViews.split(' ').includes(view);
+    }
+    for(const button of host.querySelectorAll('[data-dda-action="view"]')){
+      button.setAttribute('aria-pressed',String(button.dataset.view===view));
+    }
+  }
   function paint() {
-    if (!disposed) host.innerHTML=renderActivityScreen({snapshot,records:snapshot?controller.getRecords(filters):[],filters,editor,fields,busy,notice,error,directoryFilters,requiresReload:controller.requiresReload});
+    if (!disposed) host.innerHTML=renderActivityScreen({snapshot,records:snapshot?controller.getRecords(filters):[],filters,editor,fields,busy,notice,error,directoryFilters,view,requiresReload:controller.requiresReload});
   }
   function messages() {
     if(disposed)return;
@@ -175,6 +205,7 @@ export function mountDailyDepartmentActivity(host,controller,{today=manilaDate()
     if(!button||!host.contains(button)||busy)return;
     const action=button.dataset.ddaAction;
     const record=snapshot?.records.find(row=>row.id===button.dataset.id);
+    if(action==='view'){switchView(button.dataset.view);return;}
     if(action==='refresh')void run(async()=>{notice='Activities refreshed.';acceptLoaded(await controller.load());});
     else if(action==='team'&&snapshot?.directory.departments.some(row=>row.id===button.dataset.id)){filters={...filters,departmentId:button.dataset.id,personId:''};paint();}
     else if(action==='edit'&&record)openEditor({personId:record.personId,date:record.date,activityId:record.id},{title:record.title,details:record.details,status:record.status,categoryId:record.categoryId||''});

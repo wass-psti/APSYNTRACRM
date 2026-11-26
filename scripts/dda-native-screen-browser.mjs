@@ -7,7 +7,7 @@ const root = new URL('../frontend/apps/DailyDepartmentActivity/',import.meta.url
 const files = new Set(['activity-screen.js','activity-screen.css','activity-model.js','activity-drafts.js','activity-controller.js','activity-repository.js','activity-runtime.js','dda-native-host.js']);
 const server = createServer(async (req,res)=>{
   try {
-    if(req.url==='/'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DDA test fixture</title><link rel="stylesheet" href="/activity-screen.css?v=cp-dda-ui-01-20261126"><div id="host"></div></html>');return;}
+    if(req.url==='/'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DDA test fixture</title><link rel="stylesheet" href="/activity-screen.css?v=cp-dda-ui-02-20261126"><div id="host"></div></html>');return;}
     const file=new URL(req.url,'http://127.0.0.1').pathname.slice(1);
     if(!files.has(file)){res.writeHead(404).end();return;}
     res.setHeader('Content-Type',file.endsWith('.css')?'text/css':'text/javascript');
@@ -57,6 +57,10 @@ try {
     await window.mountFixture();
   });
   const form=name=>page.locator('form[data-dda-form="'+name+'"]');
+  const view=async(name)=>{
+    await page.locator('[data-dda-action="view"][data-view="'+name+'"]').click();
+    assert.equal(await page.locator('[data-dda-action="view"][aria-pressed="true"]').getAttribute('data-view'),name);
+  };
   const notice=text=>page.waitForFunction(value=>document.querySelector('[data-dda-notice]')?.textContent===value,text);
   assert.equal(await page.locator('.dda-metric').count(),4);
   assert.equal(await page.locator('.dda-empty').isVisible(),true);
@@ -71,13 +75,45 @@ try {
   await page.setViewportSize({width:800,height:900});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.setViewportSize({width:1280,height:900});
+  assert.equal(await page.locator('.dda-management').isVisible(),false);
+  assert.equal(await page.locator('.dda-reporting').isVisible(),false);
+  const navReads=await page.evaluate(()=>window.ddaSnapshotReads);
+  await view('organization');
+  assert.equal(await page.locator('.dda-layout').isVisible(),false);
+  assert.equal(await page.locator('.dda-filters').isVisible(),false);
+  assert.equal(await page.locator('.dda-management').isVisible(),true);
   await form('category').getByLabel('Category name').fill('Reporting');
+  await view('insights');
+  assert.equal(await page.locator('.dda-management').isVisible(),false);
+  assert.equal(await page.locator('.dda-reporting').isVisible(),true);
+  assert.equal(await page.locator('.dda-filters').isVisible(),true);
+  await page.locator('.dda-reporting details').first().locator('summary').click();
+  await page.getByRole('button',{name:'View team'}).click();
+  assert.equal(await form('filters').getByLabel('Department').inputValue(),'d');
+  assert.equal(await page.locator('.dda-reporting').isVisible(),true);
+  await form('filters').getByLabel('Department').selectOption('');
+  await form('filters').getByRole('button',{name:'Apply filters'}).click();
+  await view('organization');
+  // Repaints from applying filters retain the existing application behavior;
+  // a plain navigation switch itself must preserve unsubmitted inputs.
+  await form('category').getByLabel('Category name').fill('Reporting');
+  await view('activities');
+  await view('organization');
+  assert.equal(await form('category').getByLabel('Category name').inputValue(),'Reporting');
+  assert.equal(await page.evaluate(()=>window.ddaSnapshotReads),navReads);
   await form('category').getByRole('button',{name:'Save category'}).click();
   await notice('Category saved.');
+  assert.equal(await page.locator('.dda-management').isVisible(),true);
+  await view('activities');
   await form('new').getByRole('button',{name:'New activity'}).click();
   await form('activity').getByLabel('Activity title').fill('Daily <img src=x> report');
   await form('activity').getByLabel('Details').fill('Draft notes');
   await form('activity').getByLabel('Category').selectOption({label:'Reporting'});
+  await view('insights');
+  await view('organization');
+  await view('activities');
+  assert.equal(await form('activity').getByLabel('Activity title').inputValue(),'Daily <img src=x> report');
+  assert.equal(await form('activity').getByLabel('Details').inputValue(),'Draft notes');
   const initialReads=await page.evaluate(()=>window.ddaSnapshotReads);
   await page.evaluate(()=>window.syncFixture());
   assert.equal(await page.evaluate(()=>window.ddaSnapshotReads),initialReads);
@@ -109,6 +145,7 @@ try {
   await form('filters').getByLabel('Search').fill('Revised');
   await form('filters').getByRole('button',{name:'Apply filters'}).click();
   assert.equal(await page.locator('.dda-entry').count(),1);
+  await view('organization');
   await form('department').getByLabel('Department name').fill('Field operations');
   await form('department').getByLabel('Abbreviation').fill('FO');
   await form('department').getByRole('button',{name:'Save department'}).click();
@@ -137,9 +174,14 @@ try {
   await notice('Personnel saved.');
   await form('person').getByLabel('Personnel to assign').selectOption('p2');
   assert.equal(await form('person').getByLabel('Designate department or unit supervisor').isChecked(),false);
+  await view('activities');
+  assert.equal(await form('filters').getByLabel('Search').inputValue(),'Revised');
   assert.match(await page.locator('.dda-entry').innerText(),/Operations/);
   await page.setViewportSize({width:390,height:844});
-  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  for(const name of ['organization','insights','activities']){
+    await view(name);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  }
   assert.equal(await page.evaluate(()=>[...document.querySelectorAll('#host input,#host select,#host textarea')].every(el=>el.labels.length>0)),true);
   await page.locator('.dda-entry').getByRole('button',{name:'Delete'}).click();
   await notice('Activity deleted.');
