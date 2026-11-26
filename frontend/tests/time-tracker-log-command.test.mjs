@@ -184,6 +184,21 @@ test('Log clock-in and clock-out use Philippine 12-hour time with seconds and pr
  assert.deepEqual(clockInTimes.sort(),['09:00:00 AM','01:30:00 PM','12:00:00 PM','12:00:00 AM'].sort());
 });
 
+test('Clock-In keeps AM/PM labels correct immediately around noon and midnight in Manila',()=>{
+ const rows=[
+  {...records[0],id:'before-noon',clockIn:'2026-11-04T03:59:59Z'},
+  {...records[0],id:'after-noon',clockIn:'2026-11-04T04:00:01Z'},
+  {...records[0],id:'before-midnight',clockIn:'2026-11-04T15:59:59Z'},
+  {...records[0],id:'after-midnight',clockIn:'2026-11-04T16:00:01Z'}
+ ];
+ const html=render({records:rows});
+ const times=[...html.matchAll(/class="tt-log-row-clock"[^>]*><strong>([^<]+)<\/strong>/g)]
+  .map(match=>match[1]);
+ assert.deepEqual(times.sort(),[
+  '11:59:59 AM','12:00:01 PM','11:59:59 PM','12:00:01 AM'
+ ].sort());
+});
+
 test('Work Duration is blank until completion and short shifts have no lunch deduction',()=>{
  const active={...records[0],clockIn:'2026-11-04T00:00:00Z'};
  assert.equal(timeTrackerLogWorkDuration(active),'');
