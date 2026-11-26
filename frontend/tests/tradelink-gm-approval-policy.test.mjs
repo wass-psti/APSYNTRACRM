@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { STANDARD_APPROVAL_POLICY, GM_SALES_EXEMPT_POLICY,
+import { STANDARD_APPROVAL_POLICY, GM_SALES_EXEMPT_POLICY, GM_CREATOR_APPROVAL_FREE_POLICY,
   requiredTradeLinkReviewStages, tradeLinkReviewEvidenceComplete } from '../tradelink/approval-policy.js';
 
 const time = '2026-11-25T01:00:00Z';
@@ -88,4 +88,12 @@ test('executive PO optional intermediate reviewer is scoped to preview and own f
  assert.doesNotThrow(()=>validateTradeLinkModuleAccountAssignments({...po},{executivePreview:true}));
  assert.throws(()=>validateTradeLinkModuleAccountAssignments({...po}));
  assert.throws(()=>validateTradeLinkModuleAccountAssignments({...po,approvedBy:'dsenagan@watchdogautomation.com.ph'},{executivePreview:true}));
+});
+
+test('explicit creator approval-free policy requires no reviewer evidence', () => {
+  assert.deepEqual(requiredTradeLinkReviewStages(GM_CREATOR_APPROVAL_FREE_POLICY), []);
+  assert.equal(tradeLinkReviewEvidenceComplete(GM_CREATOR_APPROVAL_FREE_POLICY, null, null), true);
+  assert.equal(tradeLinkReviewEvidenceComplete(GM_CREATOR_APPROVAL_FREE_POLICY, time, null), false);
+  assert.equal(tradeLinkReviewEvidenceComplete(GM_CREATOR_APPROVAL_FREE_POLICY, null, time), false);
+  assert.equal(tradeLinkReviewEvidenceComplete(GM_SALES_EXEMPT_POLICY, null, null), false);
 });
