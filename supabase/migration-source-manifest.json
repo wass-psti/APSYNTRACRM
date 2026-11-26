@@ -2401,6 +2401,13 @@
       "file": "20261126110000_cp_tt_admin_manual_attendance_hybrid.sql",
       "bytes": 19256,
       "sha256": "7e6a51f76f731551fc1d3ce802898e44511fb9119a2f642cf76583492069dbc9"
+    },
+    {
+      "version": "20261126181000",
+      "name": "cp_tt_duration_only_ot_review",
+      "file": "20261126181000_cp_tt_duration_only_ot_review.sql",
+      "bytes": 16911,
+      "sha256": "b787e8ad8ef3ddebeb063a886486c2bbba2237735f86561ff524b3998aab64b0"
     }
   ],
   "applied_only": [
