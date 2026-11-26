@@ -179,7 +179,7 @@ test('unauthorized actor, wrong workspace and invalid response cannot reveal sav
  const wrongBoard=new TradeLinkDomainClient({auth,api:{...api,
   context:async()=>({user_id:actor,workspace_id:foreign,profile:{status:'active'}}),
   allowed:async()=>true}});
- await assert.rejects(()=>wrongBoard.list(),/manager scope required/);
+ await assert.rejects(()=>wrongBoard.list(),/Signed TradeLink reviewer API unavailable/);
  const signed={...auth,userId:foreign};
  await assert.rejects(()=>new TradeLinkDomainClient({auth:signed,api}).list(),
   /identity or workspace changed/);
