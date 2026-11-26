@@ -13,6 +13,7 @@ on:
       - 'supabase/migrations/20261125130000_cp_tt_auto_clockout_reactivation.sql'
       - 'supabase/migrations/20261126090000_cp_tt_active_clockin_scheduler_correction.sql'
       - 'supabase/tests/tt_admin_manual_attendance_hybrid.integration.sql'
+      - 'sql/tests/cp-tt-workspaces-disposable-setup.sql'
       - 'sql/tests/cp-tt-admin-manual-attendance-hybrid-disposable-setup.sql'
       - 'frontend/apps/TimeTracker/time-tracker-manual-attendance*.js'
       - 'frontend/time-tracker-native.js'
@@ -96,6 +97,8 @@ jobs:
       - name: Apply department and workspace-scope prerequisites
         run: |
           set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-tt-workspaces-disposable-setup.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
             -f supabase/migrations/20261120100000_cp_tt_employee_departments_qol.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
