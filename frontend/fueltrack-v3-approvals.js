@@ -1,36 +1,47 @@
-/** FuelTrack+ Approvals. Reference-aligned, fail-closed view.
- * Fuel-event Board rows are not approval decisions. Only a future explicitly
- * authorized approval read contract may provide the verified snapshot.
+/** FuelTrack+ Approvals — verified queue presentation.
+ * The signed snapshot and decision handlers remain the only source of approval state and writes.
  */
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const metric=(value,label,icon)=>'<article class="ft3-approval-metric"><span aria-hidden="true">'+icon+'</span><div><strong>'+esc(value)+'</strong><small>'+esc(label)+'</small></div></article>';
+const metric=(value,label,icon,tone)=>'<article class="ft3-approval-metric ft3-approval-metric-'+tone+'">'+
+ '<span class="ft3-approval-metric-icon" aria-hidden="true">'+icon+'</span>'+
+ '<div><small>'+esc(label)+'</small><strong>'+esc(value)+'</strong></div></article>';
 const approvalDate=value=>new Intl.DateTimeFormat('en-PH',{
  month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',
  timeZone:'Asia/Manila',hour12:true
 }).format(new Date(value));
 const approvalCard=(r,index,actionEnabled)=>{
  const canAct=actionEnabled&&Number.isSafeInteger(r.revision)&&r.revision>0;
- return '<li class="ft3-approval-card"><article aria-label="Request awaiting approval">'+
+ const reasonId='ft3-reason-'+r.id;
+ return '<li class="ft3-approval-card"><article aria-label="Fuel request awaiting approval">'+
   '<div class="ft3-approval-card-top"><div class="ft3-approval-identity">'+
   '<span class="ft3-approval-card-index" aria-hidden="true">'+String(index+1).padStart(2,'0')+'</span>'+
-  '<div class="ft3-approval-card-title"><span class="ft3-approval-eyebrow">Fuel request · Awaiting review</span>'+
+  '<div class="ft3-approval-card-title"><span class="ft3-approval-eyebrow">FUEL REQUEST / REVIEW REQUIRED</span>'+
   '<h4>'+esc(r.title)+'</h4></div></div>'+
   '<span class="ft3-approval-status"><span aria-hidden="true">●</span> Pending approval</span></div>'+
   '<div class="ft3-approval-card-details"><div><span>Submitted</span><strong>'+
   esc(approvalDate(r.createdAt))+'</strong></div>'+
-  '<div><span>Workflow</span><strong>Approval review</strong></div></div>'+
+  '<div><span>Next step</span><strong>Approval decision</strong></div></div>'+
   (canAct?'<div class="ft3-approval-decision">'+
+   '<div class="ft3-approval-decision-copy"><span>REVIEW ACTION</span>'+
+   '<strong>Record your decision</strong><p>Approve the request or provide a reason to reject it.</p></div>'+
+   '<div class="ft3-approval-controls">'+
+   '<label class="ft3-approval-reason" for="'+esc(reasonId)+'">'+
+   '<span>Rejection reason <b>Required to reject</b></span>'+
+   '<input id="'+esc(reasonId)+'" maxlength="1000" placeholder="Enter the reason for rejection" autocomplete="off" aria-describedby="'+esc(reasonId)+'-hint">'+
+   '<small id="'+esc(reasonId)+'-hint">Up to 1,000 characters. Required before rejecting.</small></label>'+
+   '<div class="ft3-approval-buttons">'+
    '<button class="ft3-approval-accept" type="button" data-action="ft3-approve" data-id="'+esc(r.id)+'">'+
    '<span aria-hidden="true">✓</span> Approve request</button>'+
-   '<label class="ft3-approval-reason" for="ft3-reason-'+esc(r.id)+'">'+
-   '<span>Reason for rejection</span>'+
-   '<input id="ft3-reason-'+esc(r.id)+'" maxlength="1000" placeholder="Required when rejecting" autocomplete="off"></label>'+
    '<button class="ft3-approval-reject" type="button" data-action="ft3-reject" data-id="'+esc(r.id)+'">'+
-   '<span aria-hidden="true">×</span> Reject</button></div>':
-   '<p class="ft3-approval-readonly">Decision actions are unavailable for this request.</p>')+
+   '<span aria-hidden="true">×</span> Reject request</button></div></div></div>':
+   '<p class="ft3-approval-readonly" role="note">Decision actions are unavailable for this request.</p>')+
   '</article></li>';
 };
-const blocked='<p class="ft3-approval-unavailable" role="status">Approval statistics and pending requests are unavailable until the signed FuelTrack approval service is connected. No decision or delegation was attempted.</p>';
+const blocked='<div class="ft3-approval-unavailable" role="status">'+
+ '<span class="ft3-approval-unavailable-icon" aria-hidden="true">◷</span>'+
+ '<div><span class="ft3-approval-eyebrow">SIGNED DATA NOT VERIFIED</span>'+
+ '<h3>Approval queue unavailable</h3>'+
+ '<p>Approval statistics and pending requests are unavailable until the signed FuelTrack approval service is connected. No decision or delegation was attempted.</p></div></div>';
 /** Contract: opaque read receipt must be VERIFIED_READ, workspace/board scoped,
  * and counts must be server-computed integers. Never derive from Board status.
  */
@@ -55,27 +66,34 @@ export function renderFuelTrackApprovals({snapshot=null,boardId=null,workspaceId
  const model=fuelTrackApprovalModel({snapshot,boardId,workspaceId});
  const rate=model&&model.decisionsToday>0?Math.round(model.approvedToday/model.decisionsToday*100)+'%':'—';
  return '<section class="ft3-approvals" aria-labelledby="ft3-approvals-heading">'+
- '<header class="ft3-approvals-heading"><div><h2 id="ft3-approvals-heading">Approvals</h2>'+
- '<p>'+(model?esc(model.pendingCount)+' pending review':'Pending review unavailable')+'</p></div>'+
- '<div class="ft3-approvals-actions">'+
- '<button type="button" data-action="refresh-board">↻ Refresh</button></div></header>'+
+ '<header class="ft3-approvals-heading"><div class="ft3-approvals-heading-main">'+
+ '<span class="ft3-approval-eyebrow">FUEL OPERATIONS / DECISION CENTER</span>'+
+ '<div class="ft3-approvals-title-row"><h2 id="ft3-approvals-heading">Approvals</h2>'+
+ '<span class="ft3-approvals-data-state '+(model?'is-verified':'is-unavailable')+'">'+
+ (model?'<span aria-hidden="true">●</span> Verified approval data':'<span aria-hidden="true">○</span> Data unavailable')+'</span></div>'+
+ '<p>Review submitted fuel requests and record decisions through the existing approval workflow.</p>'+
+ '<span class="ft3-approvals-pending-summary">'+(model?esc(model.pendingCount)+' pending review':'Pending review unavailable')+'</span>'+
+ '</div><div class="ft3-approvals-actions">'+
+ '<button type="button" data-action="refresh-board"><span aria-hidden="true">↻</span> Refresh queue</button></div></header>'+
  '<div class="ft3-approvals-metrics" aria-label="Verified approval statistics">'+
- metric(model?model.approvedToday:'—','Approved today','✓')+
- metric(model?model.rejectedToday:'—','Rejected today','×')+
- metric(model?model.decisionsToday:'—','Decisions today','↗')+
- metric(rate,'Approval rate','◷')+'</div>'+
+ metric(model?model.approvedToday:'—','Approved today','✓','approved')+
+ metric(model?model.rejectedToday:'—','Rejected today','×','rejected')+
+ metric(model?model.decisionsToday:'—','Decisions today','↗','decisions')+
+ metric(rate,'Approval rate','◷','rate')+'</div>'+
  '<div class="ft3-approvals-sort" aria-label="Approval queue sort options">'+
- '<span>Sort by</span><button type="button" disabled>Newest</button><button type="button" disabled>Oldest</button>'+
+ '<span>Queue options</span><button type="button" disabled>Newest</button><button type="button" disabled>Oldest</button>'+
  '<button type="button" disabled>Urgency</button><button type="button" disabled>Name</button></div>'+
  (model?(model.pendingCount===0?
-  '<div class="ft3-approvals-empty"><span aria-hidden="true">▤</span><h3>All clear!</h3><p>No pending requests to review.</p></div>':
+  '<div class="ft3-approvals-empty"><span class="ft3-approvals-empty-icon" aria-hidden="true">✓</span>'+
+  '<span class="ft3-approval-eyebrow">QUEUE STATUS</span><h3>All clear!</h3>'+
+  '<p>No pending requests to review. New submissions will appear here.</p></div>':
   '<div class="ft3-approvals-queue" role="region" aria-label="Pending approval requests">'+
   '<div class="ft3-approvals-queue-heading"><div><span class="ft3-approval-queue-label">REVIEW QUEUE</span>'+
-  '<h3>Awaiting your decision</h3>'+
-  '<p>'+esc(model.pendingCount)+' request'+(model.pendingCount===1?'':'s')+' pending approval</p></div>'+
+  '<h3>Pending requests</h3>'+
+  '<p>'+esc(model.pendingCount)+' request'+(model.pendingCount===1?'':'s')+' waiting for an approval decision</p></div>'+
   '<span class="ft3-approval-queue-count">'+esc(model.pendingCount)+' pending</span></div>'+
   (actionEnabled?'':'<p class="ft3-approval-readonly">Review actions are unavailable until the signed decision contract is activated.</p>')+
   '<ul class="ft3-approval-cards">'+model.pending.map((r,i)=>approvalCard(r,i,actionEnabled)).join('')+'</ul>'+
-  (model.pendingCount>model.pending.length?'<p>Additional requests require a signed paginated response.</p>':'')+'</div>'):blocked)+
+  (model.pendingCount>model.pending.length?'<p class="ft3-approval-pagination-note">Additional requests require a signed paginated response.</p>':'')+'</div>'):blocked)+
  '</section>';
 }
