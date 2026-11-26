@@ -14680,8 +14680,11 @@ root.addEventListener('submit',event=>{
    end:root.querySelector('#tt-ot-end')?.value||'',
    reason:root.querySelector('#tt-ot-reason')?.value||''
   };
-  const durationInput=root.querySelector('#tt-ot-duration-minutes');
-  if(durationInput)draft.durationMinutes=Number(durationInput.value);
+  const durationInput=root.querySelector('#tt-ot-duration-hours');
+  if(durationInput){
+   const minutes=Number(durationInput.value)*60;
+   draft.durationMinutes=Number.isInteger(minutes)?minutes:null;
+  }
   else try{
    draft.start=parseTimeTrackerClockInput(draft.start);
    draft.end=parseTimeTrackerClockInput(draft.end);
@@ -14850,8 +14853,11 @@ root.addEventListener('input',event=>{
    end:overtimeForm.querySelector('#tt-ot-end')?.value||'',
    reason:overtimeForm.querySelector('#tt-ot-reason')?.value||''
   };
-  const durationInput=overtimeForm.querySelector('#tt-ot-duration-minutes');
-  if(durationInput)state.ttOtDraft.durationMinutes=Number(durationInput.value);
+  const durationInput=overtimeForm.querySelector('#tt-ot-duration-hours');
+  if(durationInput){
+   const minutes=Number(durationInput.value)*60;
+   state.ttOtDraft.durationMinutes=Number.isInteger(minutes)?minutes:null;
+  }
   updateTimeTrackerOvertimePreview(overtimeForm);
   return;
  }
