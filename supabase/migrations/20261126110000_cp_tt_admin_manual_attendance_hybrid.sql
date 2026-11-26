@@ -158,7 +158,7 @@ BEGIN
   OR p_clock_in_at IS NULL OR NOT pg_catalog.isfinite(p_clock_in_at)
   OR p_expected_revision IS NULL OR p_expected_revision<1
   OR p_request_id IS NULL
-  OR p_clock_out_mode NOT IN ('standard','actual')
+  OR p_clock_out_mode IS NULL OR p_clock_out_mode NOT IN ('standard','actual')
   OR pg_catalog.length(v_reason) NOT BETWEEN 1 AND 500
   OR pg_catalog.length(COALESCE(v_note,''))>500
   OR p_location IS NULL OR p_location NOT IN (
