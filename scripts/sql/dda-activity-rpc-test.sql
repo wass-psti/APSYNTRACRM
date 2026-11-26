@@ -177,3 +177,31 @@ begin
  assert (select department_code from agt.person where user_id='00000000-0000-4000-8000-000000000011')='eng';
  raise notice 'PASS: DDA directory create/rename, units, source-only personnel enrollment, transfer history, cross-account readback and untouched AGT source';
 end $source$;
+
+-- Reporting metadata and supervisor replacement are atomic and workspace-local.
+set role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000011',false);
+select set_config('request.jwt.claim.session_id','00000000-0000-4000-8000-000000000301',false);
+do $reporting$
+declare
+ w uuid:='00000000-0000-4000-8000-000000000001';
+ a uuid:='00000000-0000-4000-8000-000000000011';
+ b uuid:='00000000-0000-4000-8000-000000000099';
+ d text; v bigint; r jsonb; req uuid:=gen_random_uuid();
+begin
+ r:=public.dda_snapshot_v1(w); v:=(r->>'revision')::bigint;
+ select p->>'departmentId' into d from jsonb_array_elements(r->'directory'->'people') p where p->>'id'=a::text;
+ r:=public.dda_submit_v1(w,gen_random_uuid(),v,'save-person',jsonb_build_object('id',a,'name','Fixture person','departmentId',d,'employeeId','E-1','position','Engineer','company','PSTI','isHead',true));
+ assert r->'directory'->'people' @> jsonb_build_array(jsonb_build_object('id',a,'employeeId','E-1','position','Engineer','company','PSTI','isHead',true));
+ v:=(r->>'revision')::bigint;
+ r:=public.dda_submit_v1(w,gen_random_uuid(),v,'save-person',jsonb_build_object('id',b,'name','Unassigned member','departmentId',d,'employeeId','e-1','isHead',true));
+ assert r ? 'rejectedRequestId' and (r->>'revision')::bigint=v;
+ assert r->'directory'->'people' @> jsonb_build_array(jsonb_build_object('id',a,'isHead',true));
+ r:=public.dda_submit_v1(w,req,v,'save-person',jsonb_build_object('id',b,'name','Unassigned member','departmentId',d,'employeeId','E-2','isHead',true));
+ assert r->'directory'->'people' @> jsonb_build_array(jsonb_build_object('id',a,'isHead',false),jsonb_build_object('id',b,'isHead',true));
+ assert (public.dda_submit_v1(w,req,v,'save-person',jsonb_build_object('id',b,'name','Unassigned member','departmentId',d,'employeeId','E-2','isHead',true))->>'replayed')::boolean;
+ v:=(r->>'revision')::bigint;
+ r:=public.dda_submit_v1(w,gen_random_uuid(),v,'save-person',jsonb_build_object('id',b,'name','Unassigned member','departmentId','ops'));
+ assert r->'directory'->'people' @> jsonb_build_array(jsonb_build_object('id',b,'isHead',false,'employeeId','E-2','departmentId','ops'));
+end $reporting$;
+reset role;

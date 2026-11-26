@@ -1,4 +1,4 @@
-import {statuses} from './activity-model.js';
+import {statuses,supervisorFor} from './activity-model.js';
 import {matchesActivityDraft} from './activity-repository.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
@@ -34,15 +34,15 @@ export function renderActivityScreen({snapshot,records,filters,editor,fields,bus
   const management=Array.isArray(unassigned)?
     '<p>DDA reporting assignments do not change the shared CRM or AGT directory.</p>'+
     '<form data-dda-form="department"><fieldset'+disabled+'>'+select('id','Department to edit',any('New department',departments),'')+
-    '<label>Department name<input name="name" required maxlength="120"></label>'+
+    '<label>Department name<input name="name" required maxlength="120"></label><label>Abbreviation<input name="short" maxlength="8"></label>'+
     select('parentId','Parent department',any('None (top level)',departments.filter(row=>!row.parentId)),'')+
     '<button type="submit" class="secondary">Save department</button></fieldset></form>'+
     '<p>'+unassigned.length+' available unassigned personnel</p>'+
     '<form data-dda-form="person"><fieldset'+disabled+'>'+select('id','Personnel to assign',any('Choose personnel',[...people,...unassigned.map(row=>({...row,name:row.name+' (unassigned)'}))]),'')+
-    '<label>Personnel display name<input name="name" required maxlength="160"></label>'+
+    '<label>Personnel display name<input name="name" required maxlength="160"></label><label>Employee ID<input name="employeeId" maxlength="80"></label><label>Position<input name="position" maxlength="120"></label>'+select('company','Company',[{id:'',name:'Not specified'},...['WASS','WAO','PSTI'].map(name=>({id:name,name}))],'')+
     select('departmentId','Assign department',any('Choose department',departments),'')+
-    '<button type="submit" class="secondary">Save personnel</button></fieldset></form>':'';
-  const directory = '<section class="dda-panel"><h2>Department directory</h2>'+management+departments.map(department=>'<details><summary>'+esc(department.parentId?nameOf(departments,department.parentId)+' / '+department.name:department.name)+' ('+people.filter(person=>person.departmentId===department.id).length+')</summary><ul>'+people.filter(person=>person.departmentId===department.id).map(person=>'<li>'+esc(person.name)+'</li>').join('')+'</ul></details>').join('')+'</section>';
+    '<label><input type="checkbox" name="isHead"> Designate department or unit supervisor</label><p>Designating a supervisor replaces the current supervisor of that scope. Unverified personnel details may be left blank.</p><button type="submit" class="secondary">Save personnel</button></fieldset></form>':'';
+  const directory = '<section class="dda-panel"><h2>Department directory</h2>'+management+departments.map(department=>'<details><summary>'+esc(department.parentId?nameOf(departments,department.parentId)+' / '+department.name:department.name)+' ('+people.filter(person=>person.departmentId===department.id).length+')</summary><ul>'+people.filter(person=>person.departmentId===department.id).map(person=>{const head=supervisorFor(person,snapshot.directory);return '<li>'+esc(person.name)+(person.isHead?' · Supervisor':'')+(person.employeeId?' · '+esc(person.employeeId):'')+(person.position?' · '+esc(person.position):'')+(person.company?' · '+esc(person.company):'')+(head?' · Reports to '+esc(head.name):'')+'</li>';}).join('')+'</ul></details>').join('')+'</section>';
   return '<section class="dda-app">'+top+messages+filterForm+stats+'<div class="dda-layout"><div>'+editorMarkup+categoryMarkup+directory+'</div>'+list+'</div></section>';
 }
 
@@ -110,17 +110,20 @@ export function mountDailyDepartmentActivity(host,controller,{today=manilaDate()
     }
     if(kind==='category')void run(async()=>{const result=await controller.saveCategory({name:data.name},data.id);snapshot=result.snapshot;notice='Category saved.';});
     if(kind==='department')void run(async()=>{const result=await controller.saveDepartment(data,data.id);snapshot=result.snapshot;notice=result.draftWarning||'Department saved.';});
-    if(kind==='person')void run(async()=>{const result=await controller.savePerson(data);snapshot=result.snapshot;notice=result.draftWarning||'Personnel saved.';});
+    if(kind==='person')void run(async()=>{const result=await controller.savePerson({...data,isHead:data.isHead==='on'});snapshot=result.snapshot;notice=result.draftWarning||'Personnel saved.';});
   }
   function onChange(event) {
     const form=event.target.closest('form[data-dda-form]');
-    if(!form||event.target.name!=='id'||!snapshot)return;
+    if(!form||!snapshot)return;
+    if(form.dataset.ddaForm==='person'&&event.target.name==='departmentId'){form.elements.isHead.checked=false;return;}
+    if(event.target.name!=='id')return;
     const id=event.target.value;
     if(form.dataset.ddaForm==='category')form.elements.name.value=snapshot.categories.find(row=>row.id===id)?.name||'';
     if(form.dataset.ddaForm==='department'){
       const row=snapshot.directory.departments.find(item=>item.id===id);
       form.elements.name.value=row?.name||'';
       form.elements.parentId.value=row?.parentId||'';
+      form.elements.short.value=row?.short||'';
     }
     if(form.dataset.ddaForm==='person'){
       const row=snapshot.directory.people.find(item=>item.id===id);
@@ -128,6 +131,10 @@ export function mountDailyDepartmentActivity(host,controller,{today=manilaDate()
       form.elements.name.value=row?.name||source?.name||'';
       form.elements.name.readOnly=!!source;
       form.elements.departmentId.value=row?.departmentId||'';
+      form.elements.employeeId.value=row?.employeeId||'';
+      form.elements.position.value=row?.position||'';
+      form.elements.company.value=row?.company||'';
+      form.elements.isHead.checked=Boolean(row?.isHead);
     }
   }
   function onClick(event) {

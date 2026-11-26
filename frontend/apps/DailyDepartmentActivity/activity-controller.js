@@ -19,7 +19,7 @@ export function validateSnapshot(value, workspaceId) {
   const departmentIds = new Set(directory.departments.map(row => row.id));
   const personIds = new Set(directory.people.map(row => row.id));
   const categoryIds = new Set(categories.map(row => row.id));
-  if (directory.departments.some(row => typeof row.name !== 'string' || (row.parentId!=null && (!departmentIds.has(row.parentId)||row.parentId===row.id))) ||
+  if (directory.departments.some(row => typeof row.name !== 'string' || (row.parentId!=null && (!departmentIds.has(row.parentId)||row.parentId===row.id||directory.departments.some(parent=>parent.id===row.parentId&&parent.parentId)))) ||
       (directory.unassigned||[]).some(row=>typeof row.name!=='string'||personIds.has(row.id)) ||
       directory.people.some(row => typeof row.name !== 'string' || !departmentIds.has(row.departmentId)) ||
       categories.some(row => typeof row.name !== 'string' || !row.name.trim()) ||
@@ -129,21 +129,21 @@ export function createActivityController({repository, workspaceId, userId, draft
   function changeDepartment(input,id='') {
     return run(async()=>{
       const record=saveDepartment(current().directory,input,id,makeId);
-      return commit('save-department',record,value=>value.directory.departments.some(row=>row.id===record.id&&row.name===record.name&&(row.parentId??null)===record.parentId));
+      return commit('save-department',record,value=>value.directory.departments.some(row=>row.id===record.id&&row.name===record.name&&(row.parentId??null)===record.parentId&&(row.short??'')===record.short));
     });
   }
 
   function changePerson(input) {
     return run(async()=>{
       const record=savePerson(current().directory,input);
-      return commit('save-person',record,value=>value.directory.people.some(row=>row.id===record.id&&row.name===record.name&&row.departmentId===record.departmentId));
+      return commit('save-person',record,value=>value.directory.people.some(row=>row.id===record.id&&row.name===record.name&&row.departmentId===record.departmentId&&(row.employeeId??'')===record.employeeId&&(row.position??'')===record.position&&(row.company??'')===record.company&&Boolean(row.isHead)===record.isHead)&&(!record.isHead||value.directory.people.filter(row=>row.departmentId===record.departmentId&&row.isHead).length===1));
     });
   }
 
   return {
     load, save, remove, saveCategory:saveActivityCategory,saveDepartment:changeDepartment,savePerson:changePerson,
     getSnapshot:() => structuredClone(current()),
-    getRecords:filters => structuredClone(filterActivities(current().records, filters)),
+    getRecords:filters => structuredClone(filterActivities(current().records, filters, current().directory.departments)),
     get busy() { return busy; },
     get requiresReload() { return requiresReload; },
     recoverDraft(input) { checkActive(); return draftStorage ? readActivityDraft(draftStorage, scope(input)) : null; },

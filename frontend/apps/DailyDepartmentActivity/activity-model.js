@@ -50,12 +50,13 @@ export function deleteActivity(records, id) {
   return records.filter(record => record.id !== id);
 }
 
-export function filterActivities(records, filters = {}) {
+export function filterActivities(records, filters = {}, departments = []) {
   const {date, departmentId, personId, status, categoryId, query} = filters;
   const term = clean(query).toLowerCase();
+  const scope = new Set([departmentId, ...departments.filter(row => row.parentId === departmentId).map(row => row.id)]);
   return records.filter(record =>
     (!date || record.date === date) &&
-    (!departmentId || record.departmentId === departmentId) &&
+    (!departmentId || scope.has(record.departmentId)) &&
     (!personId || record.personId === personId) &&
     (!status || record.status === status) &&
     (!categoryId || record.categoryId === categoryId) &&
@@ -73,7 +74,9 @@ export function saveDepartment(directory,input,id='',makeId=()=>crypto.randomUUI
   if(!id&&departments.some(row=>row.id===nextId))throw Error('Department ID already exists.');
   if(parentId&&(parentId===nextId||!departments.some(row=>row.id===parentId&&!row.parentId)||
       departments.some(row=>row.parentId===nextId)))throw Error('Invalid department hierarchy.');
-  return {id:nextId,name,parentId};
+  const short = clean(input.short ?? departments.find(row => row.id === id)?.short);
+  if (short.length > 8) throw Error('Department abbreviation must be up to 8 characters.');
+  return {id:nextId,name,parentId,short};
 }
 
 export function savePerson(directory,input) {
@@ -84,5 +87,19 @@ export function savePerson(directory,input) {
   const name=existing?clean(input.name):source.name;
   if(!name||name.length>160)throw Error('Enter a personnel name of up to 160 characters.');
   if(!departments.some(row=>row.id===input.departmentId))throw Error('Department not found.');
-  return {id:input.id,name,departmentId:input.departmentId};
+  const employeeId = clean(input.employeeId ?? existing?.employeeId);
+  const position = clean(input.position ?? existing?.position);
+  const company = clean(input.company ?? existing?.company);
+  const isHead = input.isHead === undefined ? Boolean(existing?.isHead && existing.departmentId === input.departmentId) : input.isHead === true;
+  if (employeeId.length > 80 || position.length > 120 || !['','WASS','WAO','PSTI'].includes(company)) throw Error('Invalid personnel reporting details.');
+  if (employeeId && people.some(row => row.id !== input.id && clean(row.employeeId).toLowerCase() === employeeId.toLowerCase())) throw Error('Employee ID already exists.');
+  return {id:input.id,name,departmentId:input.departmentId,employeeId,position,company,isHead};
+}
+
+// A unit supervisor reports to its parent department supervisor when designated.
+export function supervisorFor(person, directory) {
+  const direct = directory.people.find(row => row.departmentId === person.departmentId && row.isHead && row.id !== person.id);
+  if (direct) return direct;
+  const parentId = directory.departments.find(row => row.id === person.departmentId)?.parentId;
+  return parentId ? directory.people.find(row => row.departmentId === parentId && row.isHead && row.id !== person.id) : undefined;
 }

@@ -1,18 +1,18 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {saveDepartment,savePerson} from '../apps/DailyDepartmentActivity/activity-model.js';
+import {saveDepartment,savePerson,filterActivities,supervisorFor} from '../apps/DailyDepartmentActivity/activity-model.js';
 import {createActivityController} from '../apps/DailyDepartmentActivity/activity-controller.js';
 const directory={departments:[{id:'d',name:'Operations',parentId:null},{id:'u',name:'Unit',parentId:'d'}],people:[{id:'p',name:'Person',departmentId:'d'}],unassigned:[{id:'q',name:'New member'}]};
 test('DDA department creation and editing preserve stable IDs and validate hierarchy',()=>{
- assert.deepEqual(saveDepartment(directory,{name:' Field ',parentId:'d'},'',()=> 'new'),{id:'new',name:'Field',parentId:'d'});
+ assert.deepEqual(saveDepartment(directory,{name:' Field ',parentId:'d'},'',()=> 'new'),{id:'new',name:'Field',parentId:'d',short:''});
  assert.equal(saveDepartment(directory,{name:'Renamed'},'d').id,'d');
  assert.throws(()=>saveDepartment(directory,{name:'operations'}),/already exists/);
  assert.throws(()=>saveDepartment(directory,{name:'Cycle',parentId:'d'},'d'),/hierarchy/);
  assert.throws(()=>saveDepartment(directory,{name:'Nested',parentId:'u'}),/hierarchy/);
 });
 test('DDA personnel assignment uses existing source identity and rejects invented people',()=>{
- assert.deepEqual(savePerson(directory,{id:'q',name:'Override',departmentId:'u'}),{id:'q',name:'New member',departmentId:'u'});
- assert.deepEqual(savePerson(directory,{id:'p',name:'Renamed',departmentId:'u'}),{id:'p',name:'Renamed',departmentId:'u'});
+ assert.deepEqual(savePerson(directory,{id:'q',name:'Override',departmentId:'u'}),{id:'q',name:'New member',departmentId:'u',employeeId:'',position:'',company:'',isHead:false});
+ assert.deepEqual(savePerson(directory,{id:'p',name:'Renamed',departmentId:'u',employeeId:'',position:'',company:'',isHead:false}),{id:'p',name:'Renamed',departmentId:'u'});
  assert.throws(()=>savePerson(directory,{id:'unknown',departmentId:'d'}),/existing workforce/);
  assert.throws(()=>savePerson(directory,{id:'q',departmentId:'unknown'}),/Department not found/);
 });
@@ -35,4 +35,16 @@ test('DDA directory mutations require authoritative readback and preserve histor
  await controller.savePerson({id:'q',departmentId:dept});
  assert.equal(controller.getSnapshot().directory.unassigned.length,0);
  assert.equal(controller.getRecords()[0].departmentId,'d');
+});
+
+test('DDA organizational reporting fields and parent rollups preserve source identity',()=>{
+ const record=savePerson(directory,{id:'q',departmentId:'u',employeeId:' E-1 ',position:'Engineer',company:'PSTI',isHead:true});
+ assert.equal(record.employeeId,'E-1'); assert.equal(record.name,'New member'); assert.equal(record.isHead,true);
+ assert.throws(()=>savePerson({...directory,people:[{...directory.people[0],employeeId:'e-1'}]},{id:'q',departmentId:'u',employeeId:'E-1'}),/already exists/);
+ const roster={...directory,people:[{...directory.people[0],isHead:true},record]};
+ assert.equal(supervisorFor(record,roster).id,'p');
+ assert.equal(savePerson(roster,{id:'q',name:record.name,departmentId:'d'}).isHead,false);
+ assert.equal(filterActivities([{departmentId:'u'},{departmentId:'d'},{departmentId:'other'}],{departmentId:'d'},directory.departments).length,2);
+ assert.equal(filterActivities([{departmentId:'u'},{departmentId:'d'}],{departmentId:'u'},directory.departments).length,1);
+ assert.throws(()=>saveDepartment(directory,{name:'Long',short:'123456789'}),/abbreviation/);
 });
