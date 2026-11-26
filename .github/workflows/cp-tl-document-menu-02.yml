@@ -1,0 +1,39 @@
+name: CP-TL-DOCUMENT-MENU-02 — TradeLink document menu acceptance
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/tradelink-draft-workspace.js"
+      - "frontend/tradelink-reference-ui.css"
+      - "frontend/apsyntra-styles.bundle.css"
+      - "frontend/app.js"
+      - "frontend/tests/tradelink-shared-document-visibility.test.mjs"
+      - "frontend/tests/tradelink-reference-ui.test.mjs"
+      - ".github/workflows/cp-tl-document-menu-02.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  document-menu:
+    name: Renderer, interaction contracts and bundled CSS
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - name: Verify shipped JavaScript syntax
+        run: |
+          node --check frontend/tradelink-draft-workspace.js
+          node --check frontend/app.js
+      - name: Verify generated stylesheet bundle
+        run: node scripts/build-priority5-styles.mjs --check
+      - name: Run TradeLink menu and document visibility regression tests
+        run: |
+          node --test \
+            frontend/tests/tradelink-shared-document-visibility.test.mjs \
+            frontend/tests/tradelink-reference-ui.test.mjs \
+            frontend/tests/tradelink-documents-page.test.mjs
