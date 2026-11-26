@@ -89,7 +89,7 @@ export function renderFuelTrackApprovals({snapshot=null,boardId=null,workspaceId
   '<p>No pending requests to review. New submissions will appear here.</p></div>':
   '<div class="ft3-approvals-queue" role="region" aria-label="Pending approval requests">'+
   '<div class="ft3-approvals-queue-heading"><div><span class="ft3-approval-queue-label">REVIEW QUEUE</span>'+
-  '<h3>Pending requests</h3>'+
+  '<h3>Awaiting your decision</h3>'+
   '<p>'+esc(model.pendingCount)+' request'+(model.pendingCount===1?'':'s')+' waiting for an approval decision</p></div>'+
   '<span class="ft3-approval-queue-count">'+esc(model.pendingCount)+' pending</span></div>'+
   (actionEnabled?'':'<p class="ft3-approval-readonly">Review actions are unavailable until the signed decision contract is activated.</p>')+
