@@ -148,67 +148,199 @@ export function renderFuelTrackSignedRequestsRich(snapshot,filters={}){
  (snapshot.rows.length>=200?'<p class="ft3-analytics-footnote">Only the latest 200 authorized records were returned. Older records need server pagination.</p>':'')+
  '</section>';
 }
-const validDaily=r=>r&&/^\d{4}-\d{2}-\d{2}$/.test(r.day)&&
- Number.isSafeInteger(Number(r.transactions))&&Number(r.transactions)>=0&&
- Number.isFinite(Number(r.liters))&&Number(r.liters)>=0&&
- Number.isFinite(Number(r.amount))&&Number(r.amount)>=0;
+const validDaily=r=>{
+ if(!r||typeof r.day!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(r.day))return false;
+ const date=new Date(r.day+'T00:00:00Z');
+ return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===r.day&&
+  Number.isSafeInteger(r.transactions)&&r.transactions>=0&&
+  typeof r.liters==='number'&&Number.isFinite(r.liters)&&r.liters>=0&&
+  typeof r.amount==='number'&&Number.isFinite(r.amount)&&r.amount>=0;
+};
 const analyticsViews=[['fuel-price','Fuel Price'],['efficiency','Efficiency'],['frequency','Frequency'],['requestors','Requestors'],['odometer','Odometer']];
+const analyticsRanges=[['all','Last 365 days',365],['six-months','Last 180 days',180],['month','Last 30 days',30],['week','Last 7 days',7]];
 function analyticsHref(snapshot,view,range,metric){
  return '#/boards/'+esc(snapshot.boardId)+'/fueltrack/analytics/'+view+'/'+range+'/'+metric;
 }
-function dailyBars(rows,metric){
- if(!rows.length)return '<div class="ft3-empty"><strong>No completed transactions in this period</strong><p>Chart data appears after signed completed refueling transactions are available.</p></div>';
- const chosen=metric==='spend'?'amount':'liters',max=Math.max(1,...rows.map(r=>Number(r[chosen])));
- return '<div class="ft3-signed-bars" role="img" aria-label="Completed daily '+(chosen==='amount'?'spending':'fuel volume')+'">'+rows.slice(-14).map(r=>
-  '<div class="ft3-signed-bar"><div class="ft3-signed-bar-track"><div class="ft3-signed-bar-fill ft3-signed-bar-height-'+Math.max(1,Math.min(20,Math.ceil(Number(r[chosen])/max*20)))+'"></div></div><small>'+esc(r.day.slice(5))+'</small><span class="ft3-signed-bar-tip">'+esc(r.day)+' · '+esc(chosen==='amount'?money(r.amount):num.format(r.liters)+' L')+'</span></div>').join('')+'</div>';
+function analyticsDateKey(now){
+ const current=now instanceof Date?now:new Date(now);
+ const date=Number.isFinite(current.getTime())?current:new Date();
+ const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{
+  timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'
+ }).formatToParts(date).filter(part=>part.type!=='literal').map(part=>[part.type,part.value]));
+ return parts.year+'-'+parts.month+'-'+parts.day;
 }
-export function renderFuelTrackSignedAnalyticsRich(snapshot,analytics,{view='fuel-price',range='all',metric='both'}={}){
+function analyticsDateFloor(days,now){
+ const [year,month,day]=analyticsDateKey(now).split('-').map(Number);
+ return new Date(Date.UTC(year,month-1,day-(days-1))).toISOString().slice(0,10);
+}
+function dailyValue(key,value){
+ if(key==='amount')return money(value);
+ if(key==='liters')return num.format(value)+' L';
+ return num.format(value);
+}
+function dailyBars(rows,metric){
+ if(!rows.length)return '<div class="ft3-empty"><strong>No completed transactions in this period</strong><p>Verified daily charts will appear after completed refueling transactions are recorded.</p></div>';
+ const keys=metric==='both'?['amount','liters']:[metric==='spend'?'amount':metric==='volume'?'liters':'transactions'];
+ const labels={amount:'Daily spending',liters:'Daily fuel volume',transactions:'Daily transactions'};
+ const series=keys.map(key=>{
+  const visible=rows.slice(-14);
+  const max=Math.max(1,...visible.map(row=>Number(row[key])));
+  const total=rows.reduce((sum,row)=>sum+Number(row[key]),0);
+  const bars=visible.map(row=>{
+   const value=Number(row[key]);
+   const height=value>0?Math.max(1,Math.min(20,Math.ceil(value/max*20))):0;
+   const formatted=dailyValue(key,value);
+   const accessible=row.day+' · '+labels[key]+': '+formatted;
+   return '<div class="ft3-signed-bar" tabindex="0" role="group" aria-label="'+esc(accessible)+'" title="'+esc(accessible)+'">'+
+    '<div class="ft3-signed-bar-track"><div class="ft3-signed-bar-fill ft3-signed-bar-height-'+height+'"></div></div>'+
+    '<small>'+esc(row.day.slice(5))+'</small><span class="ft3-signed-bar-tip">'+esc(formatted)+'</span></div>';
+  }).join('');
+  return '<section class="ft3-analytics-series" data-metric="'+key+'">'+
+   '<header class="ft3-analytics-series-head"><div><strong>'+labels[key]+'</strong>'+
+   '<small>Daily · latest 14 active days</small></div><strong class="ft3-analytics-series-total">'+
+   esc(dailyValue(key,total))+'</strong></header>'+
+   '<div class="ft3-signed-bars" role="group" aria-label="'+esc(labels[key]+' chart')+'">'+bars+'</div></section>';
+ }).join('');
+ return '<div class="ft3-analytics-trend-grid'+(keys.length===1?' is-single':'')+'">'+series+'</div>';
+}
+function analyticsDailyTable(rows,mode='summary'){
+ if(!rows.length)return '<div class="ft3-empty"><strong>No daily records available</strong><p>Completed transaction records will appear here when available.</p></div>';
+ const price=mode==='price';
+ const frequency=mode==='frequency';
+ const headers=price?['Completion date','Spent','Liters','Effective cost / L']:
+  frequency?['Completion date','Completed transactions']:
+  ['Completion date','Transactions','Fuel volume','Total spent','Effective cost / L'];
+ const body=rows.slice().reverse().map(row=>{
+  const date=dayFormat.format(new Date(row.day+'T00:00:00Z'));
+  if(price)return '<tr><td>'+esc(date)+'</td><td>'+esc(money(row.amount))+'</td><td>'+esc(num.format(row.liters))+' L</td><td>'+esc(row.liters>0?money(row.amount/row.liters):'—')+'</td></tr>';
+  if(frequency)return '<tr><td>'+esc(date)+'</td><td>'+esc(num.format(row.transactions))+'</td></tr>';
+  return '<tr><td>'+esc(date)+'</td><td>'+esc(num.format(row.transactions))+'</td><td>'+esc(num.format(row.liters))+' L</td><td>'+esc(money(row.amount))+'</td><td>'+esc(row.liters>0?money(row.amount/row.liters):'—')+'</td></tr>';
+ }).join('');
+ return '<div class="ft3-analytics-table-scroll"><table class="ft3-analytics-table"><thead><tr>'+
+  headers.map(label=>'<th scope="col">'+label+'</th>').join('')+
+  '</tr></thead><tbody>'+body+'</tbody></table></div>';
+}
+function analyticsStatus(snapshot){
+ const statuses=[
+  ['submitted','Pending approval',snapshot.summary.submitted],
+  ['approved','Awaiting refueling',snapshot.summary.approved],
+  ['refueling_done','Refueling done',snapshot.summary.refuelingDone],
+  ['completed','Completed',snapshot.summary.completed],
+  ['rejected','Rejected',snapshot.summary.rejected]
+ ];
+ return '<div class="ft3-analytics-status-grid" role="list">'+statuses.map(([key,label,value])=>
+  '<article class="ft3-analytics-status-item" role="listitem"><span class="ft3-dot ft3-dot-'+key+
+  '" aria-hidden="true"></span><span>'+label+'</span><strong>'+esc(num.format(Number(value||0)))+'</strong></article>'
+ ).join('')+'</div>';
+}
+function fuelPriceInsights(rows,totals){
+ const valid=rows.filter(row=>Number(row.liters)>0);
+ if(!valid.length)return '<div class="ft3-analytics-insight-empty"><strong>Effective cost per liter unavailable</strong><p>At least one completed transaction with a positive recorded fuel volume is required. A posted pump price is not present in the signed analytics contract.</p></div>';
+ return '<div class="ft3-analytics-price-highlight"><div><span>Weighted effective cost per liter</span>'+
+  '<strong>'+esc(totals.liters>0?money(totals.amount/totals.liters):'—')+'</strong>'+
+  '<small>Total recorded amount ÷ total recorded liters</small></div>'+
+  '<p>This is the realized cost across completed refueling transactions, not a posted station price.</p></div>'+
+  analyticsDailyTable(valid,'price');
+}
+function frequencyInsights(rows){
+ return '<div class="ft3-analytics-frequency-chart">'+dailyBars(rows,'transactions')+'</div>'+
+  analyticsDailyTable(rows,'frequency');
+}
+function analyticsDetail(snapshot,rows,totals,view){
+ if(view==='fuel-price')return section('Effective Fuel Cost','Daily realized cost per liter from signed completed transactions',fuelPriceInsights(rows,totals));
+ if(view==='frequency')return section('Completed Transaction Frequency','Daily completed refueling count · Manila-local dates',frequencyInsights(rows));
+ const details={
+  efficiency:['Efficiency Insights','The current signed analytics response does not include distance travelled, vehicle mileage, or efficiency targets. Vehicle-level km/L and benchmark comparisons cannot yet be calculated.'],
+  requestors:['Requestor Insights','The current signed analytics response is aggregated by completion date and does not expose requestor-level totals. A leaderboard would require a signed requestor breakdown.'],
+  odometer:['Odometer Insights','Verified odometer readings and vehicle-level mileage are not included in the current signed analytics response. No distance or km/L values are inferred.']
+ };
+ const [title,description]=details[view];
+ return section(title,'Data availability', '<div class="ft3-analytics-insight-empty"><strong>Additional signed data required</strong><p>'+esc(description)+'</p></div>');
+}
+export function renderFuelTrackSignedAnalyticsRich(snapshot,analytics,{view='fuel-price',range='all',metric='both',now=new Date()}={}){
  if(!snapshot||!analytics||analytics.status!=='VERIFIED_READ'||analytics.boardId!==snapshot.boardId||
  analytics.workspaceId!==snapshot.workspaceId||!Array.isArray(analytics.daily)||
  analytics.daily.length>365||!analytics.daily.every(validDaily))
  return '<p class="ft3-approval-unavailable">Signed analytics unavailable.</p>';
- const chosen=analyticsViews.some(x=>x[0]===view)?view:'fuel-price';
- const selected=['all','six-months','month','week'].includes(range)?range:'all';
+ const chosen=analyticsViews.some(item=>item[0]===view)?view:'fuel-price';
+ const selected=analyticsRanges.some(item=>item[0]===range)?range:'all';
  const trendMetric=['spend','volume','both'].includes(metric)?metric:'both';
- // A signed response may omit the period metadata; default to the supported
- // 365-day maximum rather than passing NaN into Date arithmetic.
+ const requestedDays=analyticsRanges.find(item=>item[0]===selected)[2];
  const reportedDays=Number(analytics.days);
- const availableDays=Number.isSafeInteger(reportedDays)&&reportedDays>=1&&reportedDays<=365?reportedDays:365;
- const days=selected==='week'?7:selected==='month'?31:selected==='six-months'?183:availableDays;
- const cutoff=new Date();cutoff.setUTCDate(cutoff.getUTCDate()-days+1);
- const dparts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',
-  year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(cutoff)
-  .filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));
- const dateFloor=dparts.year+'-'+dparts.month+'-'+dparts.day;
- const daily=analytics.daily.filter(r=>r.day>=dateFloor).sort((a,b)=>a.day.localeCompare(b.day));
- const totals=daily.reduce((a,r)=>({count:a.count+Number(r.transactions),liters:a.liters+Number(r.liters),amount:a.amount+Number(r.amount)}),{count:0,liters:0,amount:0});
- const filters=[['all','Available Data'],['six-months','6 Months'],['month','This Month'],['week','This Week']];
- return '<section class="ft3-analytics ft3-signed-rich">'+header('Analytics','Completed refueling performance · Manila-local calendar')+
- '<div class="ft3-analytics-range" aria-label="Date filters">'+filters.map(([key,label])=>
- '<a class="ft3-analytics-chip'+(key===selected?' is-active':'')+'" href="'+analyticsHref(snapshot,chosen,key,trendMetric)+'"'+(key===selected?' aria-current="true"':'')+'>'+label+'</a>').join('')+'</div>'+
- '<div class="ft3-metric-grid ft3-analytics-summary">'+
- [['Total Spent',money(totals.amount),'Verified completed transactions','teal'],
- ['Fuel Volume',num.format(totals.liters)+' L','Verified dispensed liters','coral'],
- ['Transactions',num.format(totals.count),'Completed in selected period','blue'],
- ['Average / Transaction',totals.count?money(totals.amount/totals.count):'—','Cost per completed transaction','gold']]
- .map(([title,value,note,tone])=>card(title,value,note,tone)).join('')+'</div>'+
- '<div class="ft3-analytics-metric-filter" aria-label="Trend metric">'+[['spend','Spend'],['volume','Volume'],['both','Both']].map(([key,label])=>
- '<a class="ft3-analytics-chip'+(key===trendMetric?' is-active':'')+'" href="'+analyticsHref(snapshot,chosen,selected,key)+'">'+label+'</a>').join('')+'</div>'+
- section('Consumption Trend','Last 14 days with completed transactions · '+(trendMetric==='spend'?'spending':'fuel volume'),
- dailyBars(daily,trendMetric))+
- '<div class="ft3-analytics-grid">'+
- section('Daily Summary','Completed transaction totals',
- daily.length?'<div class="ft3-recent-scroll"><table class="ft3-recent-table"><thead><tr><th>Date</th><th>Transactions</th><th>Liters</th><th>Amount</th></tr></thead><tbody>'+
- daily.slice().reverse().map(r=>'<tr><td>'+esc(dayFormat.format(new Date(r.day+'T00:00:00Z')))+'</td><td>'+esc(r.transactions)+'</td><td>'+esc(num.format(r.liters))+' L</td><td>'+esc(money(r.amount))+'</td></tr>').join('')+'</tbody></table></div>':
- '<div class="ft3-empty"><strong>No completed records</strong></div>')+
- section('Status Overview','All authorized requests',
- '<div class="ft3-status-list">'+[['Pending',snapshot.summary.submitted],['Approved',snapshot.summary.approved],['Completed',snapshot.summary.completed]].map(([k,v])=>
- '<div class="ft3-status-row"><span class="ft3-dot"></span><span>'+k+'</span><strong>'+esc(v)+'</strong></div>').join('')+'</div>')+'</div>'+
- '<nav class="ft3-analytics-section-nav" aria-label="Analytics categories">'+analyticsViews.map(([key,label])=>
- '<a class="ft3-analytics-section-tab'+(chosen===key?' is-active':'')+'" href="'+analyticsHref(snapshot,key,selected,trendMetric)+'"'+(chosen===key?' aria-current="page"':'')+'>'+label+'</a>').join('')+'</nav>'+
- section(analyticsViews.find(x=>x[0]===chosen)[1]+' Insights','Verified FuelTrack data only',
- chosen==='fuel-price'?
- '<div class="ft3-empty"><strong>Verified expenditure and volume shown above</strong><p>Unit-price history requires recorded per-liter pricing; total spending does not establish a unit price.</p></div>':
- '<div class="ft3-empty"><strong>Additional '+esc(chosen)+' metrics unavailable</strong><p>Vehicle, odometer, route and benchmark analytics require corresponding signed domain records. No values are inferred.</p></div>')+
- '<p class="ft3-analytics-footnote">Available analytics window: last '+esc(analytics.days)+' days. Older trends require a signed backend query for a longer period.</p></section>';
+ const responseDays=Number.isSafeInteger(reportedDays)&&reportedDays>=1&&reportedDays<=365?reportedDays:365;
+ const days=Math.min(requestedDays,responseDays);
+ const dateFloor=analyticsDateFloor(days,now);
+ const dateCeiling=analyticsDateKey(now);
+ const daily=analytics.daily.filter(row=>row.day>=dateFloor&&row.day<=dateCeiling).sort((a,b)=>a.day.localeCompare(b.day));
+ const totals=daily.reduce((result,row)=>({
+  count:result.count+Number(row.transactions),
+  liters:result.liters+Number(row.liters),
+  amount:result.amount+Number(row.amount)
+ }),{count:0,liters:0,amount:0});
+ const filters=analyticsRanges.map(([key,label])=>
+  '<a class="ft3-analytics-chip'+(key===selected?' is-active':'')+'" href="'+
+  analyticsHref(snapshot,chosen,key,trendMetric)+'"'+
+  (key===selected?' aria-current="true"':'')+'>'+label+'</a>').join('');
+ const metrics=[['spend','Spend'],['volume','Volume'],['both','Both']].map(([key,label])=>
+  '<a class="ft3-analytics-chip'+(key===trendMetric?' is-active':'')+'" href="'+
+  analyticsHref(snapshot,chosen,selected,key)+'"'+
+  (key===trendMetric?' aria-current="true"':'')+'>'+label+'</a>').join('');
+ const tabs=analyticsViews.map(([key,label])=>
+  '<a class="ft3-analytics-section-tab'+(key===chosen?' is-active':'')+'" href="'+
+  analyticsHref(snapshot,key,selected,trendMetric)+'"'+
+  (key===chosen?' aria-current="page"':'')+'>'+label+'</a>').join('');
+ const effectiveCost=totals.liters>0?money(totals.amount/totals.liters):'—';
+ const avgTransaction=totals.count>0?money(totals.amount/totals.count):'—';
+ return '<section class="ft3-analytics ft3-signed-rich ft3-analytics-v2">'+
+  '<header class="ft3-analytics-hero"><div class="ft3-analytics-hero-copy">'+
+   '<span class="ft3-analytics-kicker">FUEL INTELLIGENCE / ANALYTICS</span>'+
+   '<h2>Fuel Analytics</h2><p>Completed refueling performance · Manila-local calendar</p>'+
+  '</div><div class="ft3-analytics-hero-actions"><span class="ft3-analytics-live"><span aria-hidden="true"></span>Verified signed data</span>'+
+   '<button type="button" class="ft3-soft-action ft3-analytics-export" data-action="ft3-analytics-export" aria-label="Export verified analytics as CSV"'+(!daily.length?' disabled':'')+'>↓ Export CSV</button>'+
+   '<button type="button" class="ft3-soft-action" data-action="refresh-board">↻ Refresh</button></div></header>'+
+  '<div class="ft3-analytics-toolbar"><div class="ft3-analytics-control-group">'+
+   '<span class="ft3-analytics-control-label">Reporting window</span><div class="ft3-analytics-range" aria-label="Date filters">'+filters+'</div></div>'+
+   '<div class="ft3-analytics-control-group ft3-analytics-metric-group">'+
+   '<span class="ft3-analytics-control-label">Trend metric</span><div class="ft3-analytics-metric-filter" aria-label="Trend metric">'+metrics+'</div></div></div>'+
+  '<div class="ft3-metric-grid ft3-analytics-summary">'+
+   '<article class="ft3-analytics-kpi ft3-analytics-kpi-spend"><div class="ft3-analytics-kpi-top"><span>Total spent</span><span aria-hidden="true">₱</span></div><strong>'+esc(money(totals.amount))+'</strong><small>Completed transactions in period</small></article>'+
+   '<article class="ft3-analytics-kpi ft3-analytics-kpi-volume"><div class="ft3-analytics-kpi-top"><span>Fuel volume</span><span aria-hidden="true">◈</span></div><strong>'+esc(num.format(totals.liters))+' L</strong><small>Verified dispensed liters</small></article>'+
+   '<article class="ft3-analytics-kpi ft3-analytics-kpi-count"><div class="ft3-analytics-kpi-top"><span>Transactions</span><span aria-hidden="true">↗</span></div><strong>'+esc(num.format(totals.count))+'</strong><small>Completed refueling events</small></article>'+
+   '<article class="ft3-analytics-kpi ft3-analytics-kpi-rate"><div class="ft3-analytics-kpi-top"><span>Effective cost / L</span><span aria-hidden="true">≈</span></div><strong>'+esc(effectiveCost)+'</strong><small>Weighted amount ÷ liters · avg / transaction '+esc(avgTransaction)+'</small></article>'+
+  '</div>'+
+  '<p class="ft3-analytics-data-note"><strong>Verified data only.</strong> Figures include completed refueling transactions returned by the signed FuelTrack analytics service. Showing last '+esc(days)+' days ('+esc(dateFloor)+' to '+esc(dateCeiling)+') · dates use Asia/Manila.</p>'+
+  section('Consumption Trend','Daily spending and dispensed volume · latest 14 active days',dailyBars(daily,trendMetric))+
+  '<div class="ft3-analytics-grid">'+
+   section('Daily Summary','Completed transaction totals for the selected period',analyticsDailyTable(daily))+
+   section('Request Status','Current signed workflow totals',analyticsStatus(snapshot))+
+  '</div>'+
+  '<nav class="ft3-analytics-section-nav" aria-label="Analytics categories">'+tabs+'</nav>'+
+  '<div class="ft3-analytics-detail">'+analyticsDetail(snapshot,daily,totals,chosen)+'</div>'+
+  '<p class="ft3-analytics-footnote">Effective cost per liter is a weighted calculation from recorded amount and dispensed volume. It is not a station-listed pump price. Older trends require a signed backend query beyond the available 365-day window.</p>'+
+ '</section>';
+}
+
+
+export function fuelTrackAnalyticsCsv(analytics){
+ if(!analytics||analytics.status!=='VERIFIED_READ'||!Array.isArray(analytics.daily)||
+  analytics.daily.length>365||!analytics.daily.every(validDaily))return null;
+ const seen=new Set();
+ for(const row of analytics.daily){
+  if(seen.has(row.day))return null;
+  seen.add(row.day);
+ }
+ const quote=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
+ const rows=[['Completion date','Completed transactions','Fuel liters','Amount PHP','Effective cost per liter PHP']];
+ const totals=analytics.daily.reduce((sum,row)=>({
+  transactions:sum.transactions+row.transactions,
+  liters:sum.liters+row.liters,
+  amount:sum.amount+row.amount
+ }),{transactions:0,liters:0,amount:0});
+ for(const row of analytics.daily.slice().sort((a,b)=>a.day.localeCompare(b.day))){
+  rows.push([row.day,row.transactions,row.liters,row.amount,
+   row.liters>0?(row.amount/row.liters).toFixed(2):'']);
+ }
+ rows.push(['TOTAL',totals.transactions,totals.liters.toFixed(2),totals.amount.toFixed(2),
+  totals.liters>0?(totals.amount/totals.liters).toFixed(2):'']);
+ return '\uFEFF'+rows.map(row=>row.map(quote).join(',')).join('\r\n');
 }

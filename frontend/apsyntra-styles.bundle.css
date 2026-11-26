@@ -18079,6 +18079,98 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-overtime
 @media(max-width:380px){#app .ft3-dashboard-stage-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){#app .ft3-dashboard-view *{scroll-behavior:auto;transition:none}}
 
+/* frontend/fueltrack-v3-analytics.css */
+/* CP-FT-ANALYTICS-01 — executive FuelTrack analytics presentation. */
+#app .ft3-analytics-v2{display:grid;gap:17px;min-width:0}
+#app .ft3-analytics-v2 .ft3-analytics-hero{position:relative;display:flex;align-items:center;justify-content:space-between;gap:20px;overflow:hidden;padding:25px 28px;border:1px solid #1d5062;border-radius:20px;background:linear-gradient(118deg,#142c45 0%,#17485f 62%,#087b78 100%);color:#f7fbff;box-shadow:0 13px 30px rgba(18,49,67,.13)}
+#app .ft3-analytics-v2 .ft3-analytics-hero::after{content:"";position:absolute;right:-92px;top:-160px;width:300px;height:300px;border:1px solid rgba(255,255,255,.12);border-radius:50%;box-shadow:0 0 0 30px rgba(255,255,255,.035),0 0 0 66px rgba(255,255,255,.025);pointer-events:none}
+#app .ft3-analytics-hero-copy,#app .ft3-analytics-hero-actions{position:relative;z-index:1}
+#app .ft3-analytics-kicker{display:block;color:#a6d9d7;font-size:9px;font-weight:850;letter-spacing:.16em}
+#app .ft3-analytics-hero h2{margin:8px 0 5px;color:#fff;font-size:29px;font-weight:820;letter-spacing:-.045em;line-height:1.15}
+#app .ft3-analytics-hero p{margin:0;color:rgba(237,248,250,.75);font-size:12px}
+#app .ft3-analytics-hero-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+#app .ft3-analytics-live{display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border:1px solid rgba(201,239,235,.27);border-radius:999px;background:rgba(255,255,255,.09);color:#e5fbf5;font-size:10px;font-weight:750;white-space:nowrap}
+#app .ft3-analytics-live>span{width:7px;height:7px;border-radius:50%;background:#5fe0b0;box-shadow:0 0 0 4px rgba(95,224,176,.13)}
+#app .ft3-analytics-hero .ft3-soft-action{min-height:35px;border:1px solid rgba(225,247,249,.25);background:rgba(255,255,255,.1);color:#fff}
+#app .ft3-analytics-hero .ft3-soft-action:hover{background:rgba(255,255,255,.18)}
+#app .ft3-analytics-hero .ft3-soft-action:disabled{opacity:.48;cursor:not-allowed}
+#app .ft3-analytics-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:14px 16px;border:1px solid #e0e9ed;border-radius:15px;background:#fff;box-shadow:0 5px 15px rgba(31,66,78,.035)}
+#app .ft3-analytics-control-group{display:flex;flex-direction:column;gap:8px;min-width:0}
+#app .ft3-analytics-control-label{color:#738894;font-size:9px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+#app .ft3-analytics-range,#app .ft3-analytics-metric-filter{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#app .ft3-analytics-metric-group{align-items:flex-end}
+#app .ft3-analytics-chip{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:7px 12px;border:1px solid #e0e9ed;border-radius:9px;background:#f6f9fa;color:#607781;text-decoration:none;font-size:10px;font-weight:750;white-space:nowrap;transition:background .16s ease,border-color .16s ease,color .16s ease}
+#app .ft3-analytics-chip:hover{border-color:#a8d3d0;background:#eef8f6;color:#176f70}
+#app .ft3-analytics-chip.is-active{border-color:#168c87;background:#e7f5f3;color:#116d6a;box-shadow:inset 0 0 0 1px rgba(22,140,135,.08)}
+#app .ft3-analytics-chip:focus-visible,#app .ft3-analytics-section-tab:focus-visible{outline:2px solid #159e9b;outline-offset:3px}
+#app .ft3-analytics-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0}
+#app .ft3-analytics-kpi{display:flex;flex-direction:column;gap:10px;min-width:0;min-height:132px;padding:17px 18px;border:1px solid #e0e9ed;border-radius:16px;background:#fff;box-shadow:0 6px 18px rgba(31,66,78,.04)}
+#app .ft3-analytics-kpi-top{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#71858e;font-size:10px;font-weight:750}
+#app .ft3-analytics-kpi-top>span:last-child{display:grid;place-items:center;width:31px;height:31px;border-radius:10px;background:#e9f4f4;color:#168b86;font-size:16px;font-weight:850}
+#app .ft3-analytics-kpi>strong{color:#1c3441;font-size:25px;font-weight:850;letter-spacing:-.035em;line-height:1.1;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+#app .ft3-analytics-kpi>small{margin-top:auto;color:#8799a0;font-size:9px;line-height:1.45}
+#app .ft3-analytics-kpi-spend .ft3-analytics-kpi-top>span:last-child{background:#eaf2fb;color:#467fb5}
+#app .ft3-analytics-kpi-volume .ft3-analytics-kpi-top>span:last-child{background:#e5f5f1;color:#218d78}
+#app .ft3-analytics-kpi-count .ft3-analytics-kpi-top>span:last-child{background:#edf0fb;color:#6477b2}
+#app .ft3-analytics-kpi-rate .ft3-analytics-kpi-top>span:last-child{background:#fff3e6;color:#b47a32}
+#app .ft3-analytics-data-note{margin:0;padding:11px 14px;border:1px solid #dce9ed;border-radius:11px;background:#f5fafb;color:#667e87;font-size:10px;line-height:1.55}
+#app .ft3-analytics-data-note strong{color:#245767}
+#app .ft3-analytics-v2>.ft3-panel{min-width:0;overflow:hidden;border:1px solid #e1e9ed;border-radius:17px;background:#fff;box-shadow:0 7px 20px rgba(30,66,78,.045)}
+#app .ft3-analytics-v2>.ft3-panel>.ft3-panel-head{padding:17px 19px;border-bottom:1px solid #edf1f3;background:#fff}
+#app .ft3-analytics-v2>.ft3-panel>.ft3-panel-head h3{color:#213b49;font-size:13px;font-weight:820}
+#app .ft3-analytics-v2>.ft3-panel>.ft3-panel-head p{color:#82949c;font-size:10px}
+#app .ft3-analytics-trend-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:15px}
+#app .ft3-analytics-trend-grid.is-single{grid-template-columns:minmax(0,1fr)}
+#app .ft3-analytics-series{min-width:0;padding:13px 13px 8px;border:1px solid #e7eef1;border-radius:13px;background:#fbfdfe}
+#app .ft3-analytics-series-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
+#app .ft3-analytics-series-head>div{display:flex;flex-direction:column;gap:4px}
+#app .ft3-analytics-series-head>div strong{color:#2a4653;font-size:11px;font-weight:800}
+#app .ft3-analytics-series-head>div small{color:#8799a0;font-size:9px}
+#app .ft3-analytics-series-total{color:#1e7d79;font-size:12px;font-weight:850;font-variant-numeric:tabular-nums}
+#app .ft3-analytics-v2 .ft3-signed-bars{min-height:195px;gap:7px;padding:14px 4px 10px;align-items:flex-end}
+#app .ft3-analytics-v2 .ft3-signed-bar{min-width:15px;max-width:48px;gap:8px}
+#app .ft3-analytics-v2 .ft3-signed-bar-track{height:137px;border-radius:7px 7px 3px 3px;background:#edf3f5}
+#app .ft3-analytics-v2 .ft3-signed-bar-fill{background:linear-gradient(180deg,#55c9bd 0%,#168d89 100%);transition:height .2s ease}
+#app .ft3-analytics-v2 .ft3-analytics-series[data-metric="amount"] .ft3-signed-bar-fill{background:linear-gradient(180deg,#79aee0 0%,#397cb9 100%)}
+#app .ft3-analytics-v2 .ft3-signed-bar small{color:#84979e;font-size:8px}
+#app .ft3-analytics-v2 .ft3-signed-bar-tip{top:-21px;padding:4px 6px;border:1px solid #dce8ec;border-radius:6px;background:#fff;color:#375664;font-size:9px;opacity:0;z-index:2}
+#app .ft3-analytics-v2 .ft3-signed-bar:hover .ft3-signed-bar-tip,#app .ft3-analytics-v2 .ft3-signed-bar:focus-visible .ft3-signed-bar-tip{opacity:1}
+#app .ft3-analytics-v2 .ft3-signed-bar:focus-visible{outline:2px solid #159e9b;outline-offset:3px;border-radius:7px}
+#app .ft3-analytics-v2 .ft3-analytics-grid{grid-template-columns:minmax(0,1.5fr) minmax(270px,1fr);gap:13px;margin:0}
+#app .ft3-analytics-status-grid{display:grid;gap:0;padding:5px 17px 10px}
+#app .ft3-analytics-status-item{display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;gap:9px;padding:12px 2px;border-bottom:1px solid #edf1f3;color:#70838c;font-size:10px}
+#app .ft3-analytics-status-item:last-child{border-bottom:0}
+#app .ft3-analytics-status-item strong{color:#263f4b;font-size:13px;font-weight:850;font-variant-numeric:tabular-nums}
+#app .ft3-analytics-section-nav{display:flex;align-items:center;gap:5px;overflow-x:auto;padding:6px;border-bottom:1px solid #e2eaed;scrollbar-width:thin}
+#app .ft3-analytics-section-tab{display:inline-flex;align-items:center;justify-content:center;min-height:39px;padding:9px 15px;border-bottom:2px solid transparent;border-radius:9px 9px 0 0;color:#71858e;text-decoration:none;font-size:10px;font-weight:800;white-space:nowrap}
+#app .ft3-analytics-section-tab:hover{background:#f1f7f8;color:#247d7b}
+#app .ft3-analytics-section-tab.is-active{border-bottom-color:#168c87;background:#edf7f6;color:#146e6b}
+#app .ft3-analytics-detail .ft3-panel{min-height:0}
+#app .ft3-analytics-table-scroll{max-width:100%;overflow:auto}
+#app .ft3-analytics-table{width:100%;border-collapse:collapse;font-size:10px}
+#app .ft3-analytics-table th{padding:12px 15px;background:#f4f8fa;color:#718690;text-align:left;text-transform:uppercase;letter-spacing:.07em;font-size:9px;font-weight:850;white-space:nowrap}
+#app .ft3-analytics-table td{padding:12px 15px;border-top:1px solid #edf1f3;color:#526b76;white-space:nowrap;font-variant-numeric:tabular-nums}
+#app .ft3-analytics-table tbody tr:hover td{background:#f7fbfc}
+#app .ft3-analytics-price-highlight{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:19px 20px;border-bottom:1px solid #edf1f3;background:#f7fbfc}
+#app .ft3-analytics-price-highlight>div{display:flex;flex-direction:column;gap:6px}
+#app .ft3-analytics-price-highlight span{color:#748891;font-size:10px;font-weight:800}
+#app .ft3-analytics-price-highlight strong{color:#1c706e;font-size:27px;font-weight:850;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+#app .ft3-analytics-price-highlight small{color:#8799a0;font-size:9px}
+#app .ft3-analytics-price-highlight>p{max-width:340px;margin:0;color:#7c9098;font-size:10px;line-height:1.55}
+#app .ft3-analytics-insight-empty{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:24px 22px;min-height:150px;justify-content:center}
+#app .ft3-analytics-insight-empty strong{color:#38515d;font-size:12px}
+#app .ft3-analytics-insight-empty p{max-width:680px;margin:0;color:#7d9098;font-size:11px;line-height:1.65}
+#app .ft3-analytics-frequency-chart{padding:3px 10px 0}
+#app .ft3-analytics-footnote{margin:0;padding:0 3px 6px;color:#83969d;font-size:9px;line-height:1.55}
+
+/* Breakpoints: keep the charts readable before stacking the executive cards. */
+@media(max-width:1050px){#app .ft3-analytics-summary{grid-template-columns:repeat(2,minmax(0,1fr))}#app .ft3-analytics-v2 .ft3-analytics-grid{grid-template-columns:1fr}}
+@media(max-width:800px){#app .ft3-analytics-trend-grid{grid-template-columns:1fr}}
+@media(max-width:760px){#app .ft3-analytics-v2 .ft3-analytics-hero{align-items:flex-start;flex-direction:column;padding:21px 20px}#app .ft3-analytics-toolbar{align-items:flex-start;flex-direction:column}#app .ft3-analytics-metric-group{align-items:flex-start}#app .ft3-analytics-hero h2{font-size:25px}}
+@media(max-width:540px){#app .ft3-analytics-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#app .ft3-analytics-kpi{min-height:119px;padding:13px}#app .ft3-analytics-kpi>strong{font-size:19px}#app .ft3-analytics-kpi-top{font-size:9px}#app .ft3-analytics-toolbar{padding:12px}#app .ft3-analytics-range{gap:5px}#app .ft3-analytics-chip{min-height:32px;padding:6px 8px;font-size:9px}#app .ft3-analytics-v2 .ft3-signed-bars{gap:4px;padding-right:0;padding-left:0}#app .ft3-analytics-v2 .ft3-signed-bar{min-width:13px}#app .ft3-analytics-price-highlight{align-items:flex-start;flex-direction:column;gap:10px;padding:16px}#app .ft3-analytics-price-highlight strong{font-size:24px}#app .ft3-analytics-table th,#app .ft3-analytics-table td{padding:10px 11px}}
+@media(max-width:360px){#app .ft3-analytics-v2 .ft3-analytics-summary{grid-template-columns:1fr}#app .ft3-analytics-hero-actions{align-items:flex-start;flex-direction:column}}
+@media(prefers-reduced-motion:reduce){#app .ft3-analytics-v2 .ft3-signed-bar-fill,#app .ft3-analytics-v2 .ft3-analytics-chip{transition:none}}
+
 /* frontend/tradelink-application.css */
 /* TradeLink source-aligned application shell. Scoped to avoid board/TimeTracker regressions. */
 .aps-tradelink-app{--tl-ink:var(--ink,#20263b);--tl-line:var(--line,#e8ebf2);--tl-accent:var(--purple,#5d61e8);color:var(--tl-ink);display:grid;gap:19px;min-width:0}
@@ -36138,6 +36230,44 @@ html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recen
 html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recent .ft3-recent-table tbody tr:hover td{background:var(--crm-native-elevated)}
 html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recent .ft3-empty strong{color:var(--crm-native-ink)}
 html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recent .ft3-empty p{color:var(--crm-native-muted)}
+
+/* CP-FT-ANALYTICS-01 — FuelTrack analytics dark appearance. */
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-toolbar,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-kpi,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-series,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2>.ft3-panel{background:var(--crm-native-panel);border-color:var(--crm-native-border);color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-toolbar{box-shadow:none}
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-control-label,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-kpi-top,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-kpi>small,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-series-head>div small,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-signed-bar small,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-footnote{color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-kpi>strong,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-series-head>div strong,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-status-item strong,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-insight-empty strong,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2>.ft3-panel>.ft3-panel-head h3{color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-series{background:var(--crm-native-elevated)}
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-chip{background:var(--crm-native-elevated);border-color:var(--crm-native-border);color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-chip.is-active{background:#174e50;border-color:#287d7a;color:#d6f5ee}
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-section-nav{border-bottom-color:var(--crm-native-border)}
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-section-tab{color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-section-tab.is-active{background:var(--crm-native-elevated);border-bottom-color:#41b9ac;color:#a8e9df}
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-data-note,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-price-highlight,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-table th{background:var(--crm-native-elevated);border-color:var(--crm-native-border);color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-data-note strong,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-price-highlight strong{color:#8fe0d5}
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-table td,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-status-item{border-color:var(--crm-native-border);color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-table tbody tr:hover td{background:var(--crm-native-elevated)}
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-signed-bar-track{background:var(--crm-native-border)}
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-signed-bar-tip{background:var(--crm-native-panel);border-color:var(--crm-native-border);color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-insight-empty p,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2 .ft3-analytics-price-highlight>p,
+html[data-aps-monday-theme="dark"] #app .ft3-analytics-v2>.ft3-panel>.ft3-panel-head p{color:var(--crm-native-muted)}
+
 
 /* frontend/dark-enterprise-monday.css */
 /* CP-CRM-DARK-03: compact enterprise dark mode, based on supplied visual reference.
