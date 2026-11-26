@@ -2392,8 +2392,8 @@
       "version": "20261126110000",
       "name": "cp_tt_admin_manual_attendance_hybrid",
       "file": "20261126110000_cp_tt_admin_manual_attendance_hybrid.sql",
-      "bytes": 19256,
-      "sha256": "7e6a51f76f731551fc1d3ce802898e44511fb9119a2f642cf76583492069dbc9"
+      "bytes": 19490,
+      "sha256": "d8b9ba58ecc49d516c64b0545300a25bf635d79a83a49befa02999ea59d26a17"
     }
   ],
   "applied_only": [
