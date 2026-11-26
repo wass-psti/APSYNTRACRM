@@ -235,6 +235,15 @@ test('SQL server contract is staged and enforces bootstrap decision gate and aud
  assert.doesNotMatch(migration,/UPDATE public\.timetracker_ot_requests\s+SET\s+submitted_by/);
  assert.doesNotMatch(migration,/submitted_by SET NOT NULL/);
  assert.match(migration,/v_source='manual_admin'/);
+ const approverMigration=readFileSync('supabase/migrations/20261127100000_cp_tt_ot_duration_approver_scope_and_manual_duration.sql','utf8');
+ assert.match(approverMigration,/manual-duration-v1/);
+ assert.match(approverMigration,/timetracker_ot_submit_manual_duration/);
+ assert.match(approverMigration,/timetracker_ot_decide_manual_duration/);
+ assert.match(approverMigration,/private\.tt_role_in_workspace\(v_actor,v_ws\) IN \('HR','System Admin'\)/);
+ assert.match(approverMigration,/durationOtApprover/);
+ assert.match(approverMigration,/canReviewOt/);
+ assert.match(approverMigration,/caller_role:=CASE WHEN p_module_id='time-tracker'/);
+ assert.match(approverMigration,/''start',to_char/);
  const historyMigration=readFileSync('supabase/migrations/20261123170000_cp_tt_hr_ot_all_user_log_01.sql','utf8');
  assert.match(historyMigration,/LEFT JOIN public\.workspace_members wm/);
  assert.match(historyMigration,/r\.submission_source='manual_admin'/);
@@ -250,6 +259,7 @@ test('SQL server contract is staged and enforces bootstrap decision gate and aud
  assert.match(app,/TT_OT_WRITES_ACCEPTED/);
  assert.match(app,/case 'tt-ot-manual-more'/);
  assert.match(app,/ttOtManualVisibleCount/);
+ assert.doesNotMatch(app,/tt-ot-start|tt-ot-end|tt-ot-manual-start|tt-ot-manual-end/);
 });
 
 test('overtime search retains same-status request nodes for immediate query broadening',()=>{
