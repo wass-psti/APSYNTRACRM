@@ -285,12 +285,12 @@ test('bootstrap self review forward migration preserves System Admin scope and a
 });
 
 test('Bootstrap owns pending OT review actions while System Admin retains self-review denial',()=>{
- const selfRow={...rows[0],id:'50000000-0000-4000-8000-000000000041',ownerId:'cloud:'+admin};
+ const selfRow={...rows[0],id:'50000000-0000-4000-8000-000000000041',ownerId:'cloud:'+admin,canReviewOt:true};
  const bootstrap=renderTimeTrackerOvertime({requests:[selfRow],
   access:{userId:admin,bootstrapApprover:true,otContractActive:true},now});
  assert.match(bootstrap,/data-action="tt-ot-approve"/);
  assert.match(bootstrap,/data-action="tt-ot-reject"/);
- const manual={...selfRow,submissionSource:'manual_admin'};
+ const manual={...selfRow,submissionSource:'manual_admin',canReviewOt:false};
  const systemAdmin=renderTimeTrackerOvertime({requests:[manual],
   access:{userId:admin,moduleRole:'System Admin',manualOtManager:true,bootstrapApprover:false,otContractActive:true},now});
  assert.doesNotMatch(systemAdmin,/data-action="tt-ot-approve"/);
@@ -298,9 +298,9 @@ test('Bootstrap owns pending OT review actions while System Admin retains self-r
 });
 
 test('signed bootstrap client decides self-submitted OT and reads former members',async()=>{
- const self={...rows[0],id:'50000000-0000-4000-8000-000000000042',ownerId:'cloud:'+admin};
+ const self={...rows[0],id:'50000000-0000-4000-8000-000000000042',ownerId:'cloud:'+admin,canReviewOt:true};
  const former={...rows[0],id:'50000000-0000-4000-8000-000000000043',
-  ownerId:'cloud:50000000-0000-4000-8000-000000000099'};
+  ownerId:'cloud:50000000-0000-4000-8000-000000000099',canReviewOt:true};
  const snapshot={mode:'ACTIVE',actorId:admin,workspaceId:workspace,
   scope:'AUTHORIZED_WORKSPACE_TEAM',bootstrapApprover:true,manualOtManager:false,rows:[self,former]};
  let decideArgs;
