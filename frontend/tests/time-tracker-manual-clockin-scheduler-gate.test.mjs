@@ -25,6 +25,12 @@ test('forward migration is registered with exact source bytes and SHA-256', () =
   assert.equal(entry.sha256, createHash('sha256').update(sql).digest('hex'));
 });
 
+test('manual clock-in readiness and versioned capability require an active scheduler', () => {
+  assert.match(sql, /contract','tt-admin-clockin-capability-2'/);
+  assert.match(sql, /'schedulerMode',v_mode/);
+  assert.match(sql, /'ready',v_mode IS NOT DISTINCT FROM 'active'/);
+});
+ 
 test('manual clock-in readiness requires the regular scheduler to be active', () => {
   assert.match(
     sql,
