@@ -186,3 +186,12 @@ body>.modal-backdrop .aps-field-feedback.aps-field-feedback-compact{
   outline:2px solid Mark!important;
  }
 }
+
+/* CRM-wide placeholder guidance also covers search fields and dynamically
+ * rendered controls outside the validation-enhancement selector. */
+#app :is(input,textarea).aps-placeholder-enhanced::placeholder{
+ color:#64748b;opacity:1;
+}
+html[data-aps-monday-theme="dark"] #app :is(input,textarea).aps-placeholder-enhanced::placeholder{
+ color:var(--crm-native-muted,#c0cadb);opacity:1;
+}

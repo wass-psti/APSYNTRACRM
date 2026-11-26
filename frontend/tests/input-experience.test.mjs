@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
- FORM_FIELD_SELECTOR,FORM_FIELD_TYPES,isFormField,describeFieldValidity,
+ FORM_FIELD_SELECTOR,FORM_FIELD_TYPES,PLACEHOLDER_FIELD_SELECTOR,describePlaceholder,isFormField,describeFieldValidity,
  appendDescriptionId,removeDescriptionId,startInputExperience
 } from '../input-experience.js';
 import {createLucideActionIcon,lucideIconNodes} from '../action-menu-experience.js';
@@ -36,6 +36,32 @@ test('field eligibility covers forms across the app without replacing select/sea
  assert.equal(isFormField({...field(),classList:{contains:name=>name==='search-input'}}),false);
  assert.match(FORM_FIELD_SELECTOR,/textarea$/);
  assert.doesNotMatch(FORM_FIELD_SELECTOR,/select|checkbox":/);
+});
+test('placeholder guidance derives from accessible field context and preserves native picker semantics',()=>{
+ const make=(type,name,label,extra={})=>({
+  tagName:type==='textarea'?'TEXTAREA':'INPUT',type:type==='textarea'?'':type,
+  name,id:name,disabled:false,readOnly:!!extra.readOnly,
+  getAttribute(key){return key==='aria-label'?extra.ariaLabel||null:
+   key==='title'?extra.title||null:key==='placeholder'?extra.placeholder??null:
+   key==='inputmode'?extra.inputmode||null:null;},
+  hasAttribute:key=>key==='placeholder'&&!!extra.placeholder,
+  labels:label?[{textContent:label}]:[],
+  classList:{contains:key=>key==='search-input'&&!!extra.search}
+ });
+ assert.equal(describePlaceholder(make('text','clientName','Client Name')),'Enter client name');
+ assert.equal(describePlaceholder(make('email','email','Email address')),'Enter email address');
+ assert.equal(describePlaceholder(make('number','quantity','Quantity')),'Enter quantity');
+ assert.equal(describePlaceholder(make('textarea','remarks','Additional remarks')),'Enter additional remarks');
+ assert.equal(describePlaceholder(make('search','tt-log-search','Search')),'Search attendance logs...');
+ assert.equal(describePlaceholder(make('search','custom-search','Search invoices')),'Search invoices...');
+ assert.equal(describePlaceholder(make('text','filter-invoices','Filter invoices')),'Filter invoices...');
+ assert.equal(describePlaceholder(make('date','startDate','Start date')),'');
+ assert.equal(describePlaceholder(make('file','receipt','Receipt')),'');
+ assert.equal(describePlaceholder(make('text','readonly','Reference',{placeholder:'Existing guidance',readOnly:true})),'');
+ assert.match(PLACEHOLDER_FIELD_SELECTOR,/textarea/);
+ assert.match(PLACEHOLDER_FIELD_SELECTOR,/not\(\[type="hidden"\]\)/);
+ assert.match(PLACEHOLDER_FIELD_SELECTOR,/not\(\[type="checkbox"\]\)/);
+ assert.match(PLACEHOLDER_FIELD_SELECTOR,/not\(\[type="file"\]\)/);
 });
 test('native Constraint Validation API projects bounded and safe required/format errors',()=>{
  const required=field('text',{validity:{valid:false,valueMissing:true}});
@@ -116,6 +142,8 @@ test('input enhancement preserves HTML form ownership, signed actions, native va
  assert.match(source,/control\?\.validity/);
  assert.match(source,/new AbortController\(\)/);
  assert.match(source,/new MutationObserver\(/);
+ assert.match(source,/PLACEHOLDER_FIELD_SELECTOR/);
+ assert.match(source,/enhancePlaceholder/);
  assert.match(source,/observer\.disconnect\(\)/);
  assert.match(source,/doc\.addEventListener\('reset',reset,true\)/);
  assert.doesNotMatch(source,/event\.preventDefault\(\)|setCustomValidity\(|\.checkValidity\(|\.reportValidity\(/);
@@ -194,7 +222,7 @@ class FakeNode{
   return false;
  }
  matches(selector){
-  return selector===FORM_FIELD_SELECTOR&&['INPUT','TEXTAREA'].includes(this.tagName);
+  return (selector===FORM_FIELD_SELECTOR||selector===PLACEHOLDER_FIELD_SELECTOR)&&['INPUT','TEXTAREA'].includes(this.tagName);
  }
  querySelectorAll(selector){
   const result=[];
@@ -267,9 +295,33 @@ test('DOM integration: blur/invalid update ARIA without blocking native submit, 
   assert.equal(feedback.hidden,true);
   assert.equal(input.hasAttribute('aria-invalid'),false);
   assert.equal(input.getAttribute('aria-describedby'),'original-help');
+  const dynamic=doc.createElement('input');
+  dynamic.tagName='INPUT';dynamic.type='text';dynamic.name='clientName';
+  dynamic.id='client-name';dynamic.disabled=false;dynamic.readOnly=false;
+  dynamic.labels=[{textContent:'Client Name'}];
+  dynamic.getAttribute=key=>key==='aria-label'||key==='title'||key==='inputmode'?null:
+   key==='placeholder'?dynamic.attributes.get('placeholder')??null:null;
+  dynamic.hasAttribute=key=>dynamic.attributes.has(key);
+  dynamic.closest=()=>null;
+  dynamic.classList.add('unused-placeholder-test');
+  form.append(dynamic);
+  observed.fn([{type:'childList',addedNodes:[dynamic]}]);
+  assert.equal(dynamic.getAttribute('placeholder'),'Enter client name');
+  assert.equal(dynamic.classList.contains('aps-placeholder-enhanced'),true);
+  const search=doc.createElement('input');
+  search.tagName='INPUT';search.type='search';search.id='tt-log-search';
+  search.name='tt-log-search';search.disabled=false;search.readOnly=false;
+  search.labels=[{textContent:'Search'}];
+  search.getAttribute=key=>key==='aria-label'||key==='title'||key==='inputmode'?null:
+   key==='placeholder'?search.attributes.get('placeholder')??null:null;
+  search.hasAttribute=key=>search.attributes.has(key);
+  search.closest=()=>null;
+  form.append(search);
+  observed.fn([{type:'childList',addedNodes:[search]}]);
+  assert.equal(search.getAttribute('placeholder'),'Search attendance logs...');
   stop();
   assert.equal(input.classList.contains('aps-field-control'),false);
-  assert.equal(form.children.length,1);
+  assert.equal(form.children.length,3);
   assert.equal(doc.listeners.get('reset').length,0);
   assert.ok(observed);
  }finally{
