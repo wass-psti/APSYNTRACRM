@@ -170,7 +170,7 @@ test('server-paged All Documents shows actionable search, previous and next with
  assert.match(html,/Next page/);
  assert.match(html,/Previous page/);
  assert.match(html,/Page 2/);
- assert.match(html,/server search and filters cover all authorized documents/);
+ assert.match(html,/Search and filters cover all TradeLink documents in this workspace/);
  assert.match(html,/Q-0001/);
  const denied=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view,canManage:false});
@@ -238,8 +238,8 @@ test('All Documents distinguishes an authorized empty result from pending, faile
  assert.match(failed,/Signed list unavailable/);
  assert.match(failed,/could not be loaded\. Refresh to retry/);
  const empty=renderState({...base,status:'AUTHORIZED_READ',rows:[]});
- assert.match(empty,/No documents are currently assigned to this signed account/);
- assert.match(empty,/0 of 0 assigned documents/);
+ assert.match(empty,/No documents match the current TradeLink workspace filters/);
+ assert.match(empty,/0 of 0 documents in this response/);
  const managerEmpty=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   canManage:true,view:{...base,status:'AUTHORIZED_READ',rows:[]}});
  assert.match(managerEmpty,/No documents were returned for this authorized repository page/);
