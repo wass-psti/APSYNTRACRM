@@ -49,8 +49,8 @@ docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres \
  -f /repo/sql/tests/cp-tt-duration-ot-prerequisites.sql
 cat > "/tmp/$ID-duration-ot-apply.sql" <<'SQL'
 SET apsyntra.test_disposable='on';
-\\i /repo/sql/cp-tt-duration-overtime-staged.sql
-\\i /repo/supabase/tests/tt_duration_overtime_staged.integration.sql
+\i /repo/sql/cp-tt-duration-overtime-staged.sql
+\i /repo/supabase/tests/tt_duration_overtime_staged.integration.sql
 SQL
 docker cp "/tmp/$ID-duration-ot-apply.sql" "$DB:/tmp/duration-ot-apply.sql"
 rm -f "/tmp/$ID-duration-ot-apply.sql"
