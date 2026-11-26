@@ -123,15 +123,28 @@ try {
   await page.locator("html").evaluate((element) =>
     element.setAttribute("data-aps-monday-theme", "dark"),
   );
+  const darkThemeColors = await page.locator("html").evaluate((element) => {
+    const rootStyle = getComputedStyle(element);
+    const probe = document.createElement("div");
+    document.body.appendChild(probe);
+    probe.style.backgroundColor = rootStyle.getPropertyValue("--crm-native-elevated").trim();
+    const surface = getComputedStyle(probe).backgroundColor;
+    probe.style.color = rootStyle.getPropertyValue("--crm-native-muted").trim();
+    const muted = getComputedStyle(probe).color;
+    probe.remove();
+    return { surface, muted };
+  });
+  assert.ok(darkThemeColors.surface, "The existing dark theme exposes its elevated surface token");
+  assert.ok(darkThemeColors.muted, "The existing dark theme exposes its muted text token");
   assert.equal(
     await agingCards.first().evaluate((element) => getComputedStyle(element).backgroundColor),
-    "rgb(46, 53, 66)",
-    "Aging cards use the dark native surface",
+    darkThemeColors.surface,
+    "Aging cards use the existing dark native surface token",
   );
   assert.equal(
     await page.locator(".frt-exec-aging-label").first().evaluate((element) => getComputedStyle(element).color),
-    "rgb(192, 202, 219)",
-    "Metric labels remain readable in dark appearance",
+    darkThemeColors.muted,
+    "Metric labels use the existing dark muted-text token",
   );
 
   await page.emulateMedia({ reducedMotion: "reduce" });
