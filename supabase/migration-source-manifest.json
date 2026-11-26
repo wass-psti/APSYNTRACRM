@@ -2367,5 +2367,15 @@
       "bytes": 17097,
       "sha256": "bd3786d469ddf5637b711c666e5d70fa5c6ba59f905b268198a1bf0a6f5ac133"
     }
+  ],
+  "applied_only": [
+    {
+      "version": "20261126044952",
+      "name": "retire_apsyntra_timetracker_qa_account",
+      "file": "20261126044952_retire_apsyntra_timetracker_qa_account.sql",
+      "bytes": 5658,
+      "sha256": "26f2050fdbb2c74147545ec9c35c525b20647d6cd7ea69b7a73f0b9c2160939c",
+      "reason": "Production-specific QA fixture retirement; archive only, never replay against a fresh database."
+    }
   ]
 }

@@ -169,6 +169,13 @@
       "status": "candidate_not_in_production_ledger",
       "preserved_at": "supabase/migration-candidates/20261113194500_cp_db_perf06_board_list_sql.sql",
       "canonical_filename": null
+    },
+    {
+      "original_filename": "20261126044952_retire_apsyntra_timetracker_qa_account.sql",
+      "status": "applied_only_production_maintenance",
+      "canonical_filename": "applied-only/20261126044952_retire_apsyntra_timetracker_qa_account.sql",
+      "comparison": "exact_registered_production_statement",
+      "replay": false
     }
   ]
 }

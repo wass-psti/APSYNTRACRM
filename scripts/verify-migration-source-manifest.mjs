@@ -19,10 +19,14 @@ assert.equal(manifest.files.length, 222);
 
 const diskFiles = readdirSync(migrationDir).filter((name) => name.endsWith('.sql')).sort();
 const forwardMigrations = manifest.forward_migrations || [];
-const allEntries = [...manifest.files, ...forwardMigrations];
-const manifestFiles = allEntries.map((entry) => entry.file).sort();
+const appliedOnly = manifest.applied_only || [];
+const archiveDir = resolve(root, 'supabase/applied-only');
+const replayable = [...manifest.files, ...forwardMigrations];
+const allEntries = [...replayable, ...appliedOnly];
+const manifestFiles = replayable.map((entry) => entry.file).sort();
+assert.deepEqual(readdirSync(archiveDir).filter(name => name.endsWith('.sql')).sort(), appliedOnly.map(entry => entry.file).sort(), 'Applied-only archive must match its manifest');
 assert.deepEqual(diskFiles, manifestFiles, 'Applied migration directory must match the recovered baseline plus tracked forward migrations');
-for (const entry of forwardMigrations) assert.ok(entry.version > manifest.remote_ledger.last_version, 'Forward migration must follow recovered production baseline');
+for (const entry of [...forwardMigrations, ...appliedOnly]) assert.ok(entry.version > manifest.remote_ledger.last_version, 'Forward migration must follow recovered production baseline');
 
 const versions = new Set();
 for (const entry of allEntries) {
@@ -31,8 +35,9 @@ for (const entry of allEntries) {
   assert.equal(versions.has(entry.version), false, 'Duplicate migration version: ' + entry.version);
   versions.add(entry.version);
 
-  const path = resolve(migrationDir, entry.file);
-  assert.equal(path.startsWith(migrationDir + sep), true, 'Migration path must remain inside supabase/migrations');
+  const sourceDir = appliedOnly.includes(entry) ? archiveDir : migrationDir;
+  const path = resolve(sourceDir, entry.file);
+  assert.equal(path.startsWith(sourceDir + sep), true, 'Migration path must remain inside its registered directory');
   const raw = readFileSync(path);
 
   const matchesManifest = (data) =>
@@ -55,3 +60,5 @@ for (const entry of allEntries) {
 assert.equal(manifest.files[0].version, '20260917142647');
 assert.equal(manifest.files.at(-1).version, '20261115132051');
 console.log('PASS: ' + manifest.files.length + ' recovered baseline and ' + forwardMigrations.length + ' forward migration files match their SHA-256 manifests.');
+
+console.log('PASS: ' + appliedOnly.length + ' applied-only production maintenance files match their SHA-256 manifests; excluded from replay directory.');

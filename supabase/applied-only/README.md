@@ -1,0 +1,5 @@
+## Applied-only production maintenance
+
+This directory preserves the exact production ledger SQL for data-specific maintenance that is not safe to replay on a fresh database. Do not execute these files again or move them to the automatic migration directory. The manifest verifier validates their checksums and disallows duplicate versions across the two classifications.
+
+For production ledger reconciliation, compare the union of `files`, `forward_migrations`, and `applied_only` with the remote ledger. Native Supabase CLI migration list/push compares only the migrations directory and will still report archived versions as remote-only. Before a production push, use a separately reviewed deployment procedure that accounts for these already-applied versions; do not repair, delete, or reapply their production ledger entries just to suppress the difference. Fresh reconstruction excludes this QA retirement because the production-only fixture is absent. For restoration of a production backup, retain the actual ledger and data together.
