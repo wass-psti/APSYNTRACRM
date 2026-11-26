@@ -181,7 +181,10 @@ test('unauthorized actor, wrong workspace and invalid response cannot reveal sav
   allowed:async()=>true}});
  await assert.rejects(()=>wrongBoard.list(),/Signed TradeLink reviewer API unavailable/);
  const signed={...auth,userId:foreign};
- await assert.rejects(()=>new TradeLinkDomainClient({auth:signed,api}).list(),
+ const signedApi={...api,nativeApplicationBoardContext:async moduleId=>({
+  moduleId,userId:actor,workspaceId:ws,role:'Viewer',board
+ })};
+ await assert.rejects(()=>new TradeLinkDomainClient({auth:signed,api:signedApi}).list(),
   /identity or workspace changed/);
  assert.equal(rpcCount,1);
 });
