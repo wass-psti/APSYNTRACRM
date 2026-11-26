@@ -10,7 +10,7 @@ const detail={board:{id:FUELTRACK_V3_ID,workspace_id:workspaceId,name:'FuelTrack
 const row={id:requestId,kind:'vehicle',revision:4,state:'completed',requestor_name:'Browser Acceptance',details:{plate:'GAN 8289',purpose:'Controlled regression fixture'},created_at:'2026-11-10T04:00:00Z',completed_at:'2026-11-10T07:00:00Z',actual_amount:500,fuel_liters:10};
 const snapshot={status:'VERIFIED_READ',boardId:FUELTRACK_V3_ID,workspaceId,role:'Admin',rows:[row],summary:{total:1,submitted:0,approved:0,rejected:0,refuelingDone:0,completed:1,totalAmount:500,totalLiters:10,approvedToday:0,rejectedToday:0,decisionsToday:0,pendingCount:0,activeQueue:0,completedToday:0,overdueCount:0}};
 const analytics={status:'VERIFIED_READ',boardId:FUELTRACK_V3_ID,workspaceId,daily:[{day:'2026-11-10',transactions:1,amount:500,liters:10}]};
-const styles=readFileSync('frontend/apsyntra-styles.bundle.css','utf8')+'\n'+readFileSync('frontend/fueltrack-v3-application.css','utf8');
+const styles=readFileSync('frontend/apsyntra-styles.bundle.css','utf8');
 const browser=await chromium.launch({headless:true});
 let checks=0;
 try {
