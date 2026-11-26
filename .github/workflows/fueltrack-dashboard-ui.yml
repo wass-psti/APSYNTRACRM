@@ -1,5 +1,24 @@
 name: FuelTrack Dashboard UI Acceptance
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/fueltrack-v3-signed-views.js'
+      - 'frontend/fueltrack-v3-application.css'
+      - 'frontend/fueltrack-v3-analytics.css'
+      - 'frontend/app.js'
+      - 'frontend/dark-native-applications.css'
+      - 'frontend/apsyntra-styles.bundle.css'
+      - 'frontend/tests/fueltrack-v3-signed-rich-views.test.mjs'
+      - 'scripts/fueltrack-v3-native-browser-acceptance.mjs'
+      - 'index.html'
+      - '.github/workflows/fueltrack-dashboard-ui.yml'
+      - 'frontend/fueltrack-v3-ui.js'
+      - 'frontend/fueltrack-v3-application.js'
+      - 'frontend/fueltrack-v3-all-requests-redesign.css'
+      - 'frontend/tests/fueltrack-v3-signed-views.test.mjs'
+      - 'frontend/tests/fueltrack-v3-all-requests-entrypoint.test.mjs'
+      - 'scripts/pages-smoke.mjs'
   pull_request:
     paths:
       - 'frontend/fueltrack-v3-signed-views.js'
@@ -12,6 +31,12 @@ on:
       - 'scripts/fueltrack-v3-native-browser-acceptance.mjs'
       - 'index.html'
       - '.github/workflows/fueltrack-dashboard-ui.yml'
+      - 'frontend/fueltrack-v3-ui.js'
+      - 'frontend/fueltrack-v3-application.js'
+      - 'frontend/fueltrack-v3-all-requests-redesign.css'
+      - 'frontend/tests/fueltrack-v3-signed-views.test.mjs'
+      - 'frontend/tests/fueltrack-v3-all-requests-entrypoint.test.mjs'
+      - 'scripts/pages-smoke.mjs'
 permissions:
   contents: read
 jobs:
