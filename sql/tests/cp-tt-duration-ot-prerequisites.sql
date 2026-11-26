@@ -136,14 +136,15 @@ DECLARE
  v_reason text;
  v_state jsonb;
  v_now timestamptz:=clock_timestamp();
+ v_activated_at timestamptz:=clock_timestamp()-INTERVAL '1 day';
 BEGIN
  FOR v_candidate IN
-  SELECT s.workspace_id,s.board_id,s.record_id,s.employee_id
-  FROM private.tt_auto_clockout_sessions s
-  LEFT JOIN LATERAL (SELECT s.clock_in_at) a ON true
-  WHERE s.status IN ('MONITORING','GRACE','OVERTIME','PENDING_GPS','ERROR')
-   AND (s.threshold_at<=v_now OR a.clock_in_at IS DISTINCT FROM s.clock_in_at)
-  ORDER BY s.last_evaluated_at NULLS FIRST,COALESCE(s.overtime_cutoff_at,s.threshold_at),s.record_id
+  SELECT workspace_id,board_id,record_id,employee_id
+  FROM private.tt_auto_clockout_sessions
+  WHERE status IN ('MONITORING','GRACE','OVERTIME','PENDING_GPS','ERROR')
+    AND threshold_at<=v_now AND clock_in_at>=v_activated_at
+  ORDER BY last_evaluated_at NULLS FIRST,COALESCE(overtime_cutoff_at,threshold_at),record_id
+  LIMIT 100
  LOOP
   SELECT * INTO v_session FROM private.tt_auto_clockout_sessions s
   WHERE s.workspace_id=v_candidate.workspace_id AND s.board_id=v_candidate.board_id
