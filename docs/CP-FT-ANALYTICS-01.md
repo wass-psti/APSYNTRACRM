@@ -14,7 +14,7 @@ Replace the signed FuelTrack+ Analytics placeholder presentation with a responsi
 - Fuel Price and Frequency views derived from daily signed aggregates.
 - Efficiency, Requestors, and Odometer views explicitly explain which source fields are absent; no synthetic vehicle metrics or rankings are shown.
 - CSV export of the currently loaded, verified daily aggregate response.
-- Dedicated responsive stylesheet with desktop, tablet, mobile, and dark-appearance rules.
+- Dedicated responsive analytics stylesheet in the existing single CSS bundle, with dark overrides in the native dark layer for desktop, tablet, and mobile.
 
 ## Data contract and calculations
 
