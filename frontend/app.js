@@ -3975,8 +3975,15 @@ async function openTradeLinkDocument(documentId,revision=null){
   if(revision===null&&canReadOwnedHistory&&TL03_WORKFLOW_REVIEW_ENABLED&&
     (!Array.isArray(events)||events[0]?.revision!==listed.revision))
    throw new ApiError('Signed document history does not match the saved revision.',409);
+  let chequeClearance=null;
+  if(state.boardManage&&target===listed.revision&&record.document_type==='payment'&&
+     ['closed','completed'].includes(record.workflow_state)&&Number(record.content?.chequeAmount)>0){
+   try{chequeClearance=await tradeLinkDraftWorkspace.chequeClearance({documentId,expectedRevision:record.revision});}
+   catch{ /* Older backend or unavailable status: keep document preview usable. */ }
+  }
+  if(!same())return;
   state.tradeLinkDraft.documentPreview={
-   documentId,record,
+   documentId,record,chequeClearance,
    latestRecord:previous?.documentId===documentId?previous.latestRecord:{
     board_item_id:listed.boardItemId,document_number:listed.documentNumber,revision:listed.revision
    },
@@ -9099,6 +9106,39 @@ async function action(name,button){
      state.tradeLinkDraft.status==='AUTHORIZED_READ'){
    state.tradeLinkDraft.documentPreview=null;render();
   }
+  break;
+ }
+ case 'tradelink-cheque-clearance':{
+  if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
+     !state.boardManage||state.tradeLinkDraft.busy)break;
+  const documentId=button.dataset.id,selection=state.tradeLinkDraft.documentPreview;
+  const listed=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
+  if(!listed||selection?.documentId!==documentId||selection.record?.revision!==listed.revision||
+     selection.record.document_type!=='payment'||!['closed','completed'].includes(listed.workflowState)||
+     !selection.chequeClearance||selection.chequeClearance.clearedAt!==null)break;
+  if(!window.confirm('Confirm that the bank has actually cleared this cheque?'))break;
+  const seq=routeSerial,actor=auth.userId,workspace=state.context?.workspace_id;
+  const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&state.tradeLinkSection==='documents'&&
+   state.boardManage&&auth.isSignedIn&&auth.userId===actor&&state.context?.workspace_id===workspace;
+  state.tradeLinkDraft.busy=true;state.tradeLinkDraft.error='';render();
+  try{
+   const input={documentId,expectedRevision:listed.revision};
+   const receipt=await tradeLinkDraftWorkspace.chequeClearance({...input,record:true});
+   if(!same())break;
+   state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';
+   state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;
+   const persisted=await tradeLinkDraftWorkspace.chequeClearance(input);
+   if(!same())break;
+   if(!persisted.clearedAt||Date.parse(persisted.clearedAt)!==Date.parse(receipt.clearedAt))
+    throw new ApiError('Clearance readback unavailable. Refresh before retrying.',409);
+   state.tradeLinkDraft.documentPreview={...selection,chequeClearance:persisted};
+   state.tradeLinkDraft.message='Bank clearance recorded and verified. Analytics will reload on opening.';
+  }catch(error){
+   if(same()){
+    state.tradeLinkDraft.documentPreview={...selection,chequeClearance:null};
+    state.tradeLinkDraft.error=errorMessage(error);
+   }
+  }finally{if(same()){state.tradeLinkDraft.busy=false;render();}}
   break;
  }
  case 'tradelink-document-status-update':{

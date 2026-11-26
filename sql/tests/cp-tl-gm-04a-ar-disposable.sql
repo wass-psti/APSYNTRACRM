@@ -55,9 +55,14 @@ SELECT public.fixture_assert(60000,1,0,0);
 SELECT public.fixture_payment(3,'completed',0,20000);
 SELECT public.fixture_assert(60000,1,0,20000);
 SET ROLE authenticated;
-DO $$ DECLARE r jsonb; BEGIN
+DO $ DECLARE r jsonb; saved_stamp text; BEGIN
+ r:=public.tl03_cheque_clearance_status('264ca40d-6e4a-4e4f-97e6-3bd77c97cd88','00000000-0000-4000-8000-000000000003',1);
+ IF r->'clearedAt' IS DISTINCT FROM 'null'::jsonb THEN RAISE EXCEPTION 'expected pending readback'; END IF;
  r:=public.tl03_record_cheque_clearance('264ca40d-6e4a-4e4f-97e6-3bd77c97cd88','00000000-0000-4000-8000-000000000003',1);
  IF r->>'idempotent'<>'false' THEN RAISE EXCEPTION 'first clearance'; END IF;
+ saved_stamp:=r->>'clearedAt';
+ r:=public.tl03_cheque_clearance_status('264ca40d-6e4a-4e4f-97e6-3bd77c97cd88','00000000-0000-4000-8000-000000000003',1);
+ IF r->>'clearedAt' IS DISTINCT FROM saved_stamp OR saved_stamp IS NULL THEN RAISE EXCEPTION 'persistent clearance readback'; END IF;
  r:=public.tl03_record_cheque_clearance('264ca40d-6e4a-4e4f-97e6-3bd77c97cd88','00000000-0000-4000-8000-000000000003',1);
  IF r->>'idempotent'<>'true' THEN RAISE EXCEPTION 'duplicate clearance'; END IF;
  BEGIN PERFORM public.tl03_record_cheque_clearance('264ca40d-6e4a-4e4f-97e6-3bd77c97cd88','00000000-0000-4000-8000-000000000003',2);

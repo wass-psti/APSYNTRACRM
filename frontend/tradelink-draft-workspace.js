@@ -542,6 +542,9 @@ export class TradeLinkDraftWorkspace{
   if(!TL03_DUAL_REVIEW_ENABLED)disabled();
   return this.client.recordReviewStage(input);
  }
+ async chequeClearance(input={}){
+  return this.client.chequeClearance(input);
+ }
  async updateStatus(input={}){
   if(!TL03_DOMAIN_WRITES_ENABLED)disabled();
   return this.client.updateStatus(input);
@@ -2073,6 +2076,16 @@ function renderTradeLinkRevisionHistory(revisions,{
     '</div>'+warning+'</li>';
   }).join('')+'</ol></section>';
 }
+export function renderTradeLinkChequeClearance(record,status,busy=false){
+ if(record?.document_type!=='payment'||!['closed','completed'].includes(record.workflow_state)||
+    !(Number(record.content?.chequeAmount)>0))return '';
+ if(!status||status.documentId!==record.id||status.revision!==record.revision)
+  return '<section class="tl-content-panel"><h3>Bank clearance</h3><p>Clearance status unavailable. Refresh the document to retry.</p></section>';
+ return '<section class="tl-content-panel"><h3>Bank clearance</h3>'+
+  (status.clearedAt?'<p>Cleared · '+escape(new Date(status.clearedAt).toLocaleString('en-PH'))+'</p>':
+   '<p>Pending bank clearance. Confirm actual bank clearance before recording.</p>'+
+   '<button type="button" class="primary" data-action="tradelink-cheque-clearance" data-id="'+escape(record.id)+'"'+(busy?' disabled':'')+'>Record Bank Clearance</button>')+'</section>';
+}
 export function renderTradeLinkDocumentRepository({detail,workspaceId,
  view=initialTradeLinkDraftView(),canManage=false,canReview=false,canCreate=canManage,actorId='',actorEmail=''}={}){
  if(!isTradeLinkBoard(detail?.board)||detail.board.id!==TRADELINK_BOARD_ID||
@@ -2118,6 +2131,8 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
       documentId:selection.documentId,selectedRevision:selectedRecord.revision,
       canManage:canManage||(creatorMode&&linked?.createdByActor===true),busy:view.busy
      })+selectedPreview+
+     (linked&&canManage&&selectedRecord.revision===linked.revision?
+      renderTradeLinkChequeClearance(selectedRecord,selection.chequeClearance,view.busy):'')+
      (linked&&canManage&&selectedRecord.revision===linked.revision&&TL03_ATTACHMENTS_ENABLED?
       renderTradeLinkDocumentAttachments(selection?.attachments,{
        documentId:linked.documentId,workspaceId,

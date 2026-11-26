@@ -579,6 +579,18 @@ export class TradeLinkDomainClient{
    deny('Invalid signed TradeLink review-stage response.',409);
   return result;
  }
+ async chequeClearance({documentId,expectedRevision,record=false}={}){
+  if(!validUuid(documentId)||!Number.isSafeInteger(expectedRevision)||expectedRevision<1)
+   deny('Invalid TradeLink cheque clearance request.',400);
+  await this.session({verifyBoard:false});
+  const result=await this.api.rpc(record?'tl03_record_cheque_clearance':'tl03_cheque_clearance_status',{
+   p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,p_expected_revision:expectedRevision});
+  if(!result||result.documentId!==documentId||result.revision!==expectedRevision||
+   !(result.clearedAt===null||typeof result.clearedAt==='string'&&Number.isFinite(Date.parse(result.clearedAt)))||
+   (record&&(result.clearedAt===null||typeof result.idempotent!=='boolean')))
+   deny('Invalid signed cheque clearance response.',409);
+  return result;
+ }
  async updateStatus({documentId,expectedRevision,targetState}={}){
   const allowed=new Set(['submitted','under-negotiation','expired','on-hold',
    'won','lost','cancelled','delivered','closed']);
