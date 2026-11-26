@@ -3,7 +3,7 @@
  */
 const PRIMARY_ROUTES=new Set([
  'overview','boards','fm1','time-tracker','fund-tracker','fueltrack','tradelink','talkbox',
- 'paseo','order-intake','foundation','security','role-configuration','user-role-management','settings','acceptance'
+ 'paseo','order-intake','daily-department-activity','foundation','security','role-configuration','user-role-management','settings','acceptance'
 ]);
 export function sidebarActiveRoute(hash,{
  tradelinkBoardId='',fundTrackerBoardId='',fueltrackBoardId='',

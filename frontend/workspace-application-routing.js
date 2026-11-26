@@ -2,6 +2,7 @@
  * This is presentation/routing metadata only. It does not grant or deny server
  * permissions; existing signed APIs remain authoritative for application data.
  */
+import {DDA_APPLICATION} from "./dda-release.js";
 import {
   WORK_MANAGEMENT_APPLICATIONS,
   WORK_MANAGEMENT_BOARD_IDS,
@@ -22,6 +23,7 @@ const APPLICATION_ICONS = Object.freeze({
   tradelink: "tradelink",
   "paseo-de-lomboy": "paseo",
   talkbox: "talkbox",
+  "daily-department-activity": "orders",
 });
 
 function routeParts(hash) {
@@ -59,7 +61,7 @@ export function applicationForWorkspaceRoute(hash) {
   return (
     WORK_MANAGEMENT_APPLICATIONS.find((application) =>
       applicationMatchesRoute(application, parts),
-    ) || null
+    ) || (applicationMatchesRoute(DDA_APPLICATION, parts) ? DDA_APPLICATION : null)
   );
 }
 

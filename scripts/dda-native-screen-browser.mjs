@@ -4,14 +4,14 @@ import {readFile} from 'node:fs/promises';
 import {chromium} from 'playwright';
 
 const root = new URL('../frontend/apps/DailyDepartmentActivity/',import.meta.url);
-const files = new Set(['activity-screen.js','activity-screen.css','activity-model.js','activity-drafts.js','activity-controller.js','activity-repository.js']);
+const files = new Set(['activity-screen.js','activity-screen.css','activity-model.js','activity-drafts.js','activity-controller.js','activity-repository.js','activity-runtime.js','dda-native-host.js']);
 const server = createServer(async (req,res)=>{
   try {
     if(req.url==='/'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DDA test fixture</title><link rel="stylesheet" href="/activity-screen.css"><div id="host"></div></html>');return;}
     const file=req.url.slice(1);
     if(!files.has(file)){res.writeHead(404).end();return;}
     res.setHeader('Content-Type',file.endsWith('.css')?'text/css':'text/javascript');
-    res.end(await readFile(new URL(file,root)));
+    res.end(await readFile(file==='dda-native-host.js'?new URL('../frontend/dda-native-host.js',import.meta.url):new URL(file,root)));
   } catch {res.writeHead(500).end();}
 });
 await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
@@ -21,16 +21,15 @@ try {
   const page=await browser.newPage({viewport:{width:1280,height:900}});
   const errors=[];
   page.on('pageerror',error=>errors.push(error.message));
+  page.on('dialog',dialog=>dialog.accept());
   await page.goto('http://127.0.0.1:'+server.address().port);
   await page.evaluate(async()=>{
-    const {createActivityController}=await import('/activity-controller.js');
-    const {mountDailyDepartmentActivity}=await import('/activity-screen.js');
-    const {createActivityRepository}=await import('/activity-repository.js');
+    const {createDdaHostSync}=await import('/dda-native-host.js');
     let snapshot={workspaceId:'fixture',revision:0,directory:{departments:[{id:'d',name:'Operations'}],people:[{id:'p',name:'Synthetic person',departmentId:'d'}]},categories:[],records:[]};
     const receipts=new Map();
     const auth={isSignedIn:true,userId:'fixture-user'};
     const api={async rpc(name,args){
-      if(name==='dda_snapshot_v1')return structuredClone(snapshot);
+      if(name==='dda_snapshot_v1'){window.ddaSnapshotReads=(window.ddaSnapshotReads||0)+1;return structuredClone(snapshot);}
       if(name!=='dda_submit_v1')throw Error('Unknown RPC');
       let receipt=receipts.get(args.p_request_id);
       if(receipt)return structuredClone({...snapshot,...receipt,replayed:true});
@@ -49,13 +48,10 @@ try {
       if(window.interruptNextSave){window.interruptNextSave=false;throw Error('Connection interrupted');}
       return structuredClone({...snapshot,...receipt});
     }};
-    window.mountFixture=async()=>{
-      window.fixture?.dispose();
-      const repository=createActivityRepository({auth,api,workspaceId:'fixture',storage:localStorage});
-      const controller=createActivityController({repository,workspaceId:'fixture',userId:'fixture-user',draftStorage:localStorage});
-      window.fixture=mountDailyDepartmentActivity(document.querySelector('#host'),controller,{today:'2026-11-26',confirmDelete:()=>true});
-      await window.fixture.ready;
-    };
+    const sync=createDdaHostSync({load:()=>import('/activity-runtime.js')});
+    window.syncFixture=()=>sync({container:document.querySelector('#host'),auth,api,workspaceId:'fixture',userId:'fixture-user',storage:localStorage});
+    window.fixture={dispose:()=>sync()};
+    window.mountFixture=async()=>{await sync();await window.syncFixture();};
     await window.mountFixture();
   });
   const form=name=>page.locator('form[data-dda-form="'+name+'"]');
@@ -67,6 +63,10 @@ try {
   await form('activity').getByLabel('Activity title').fill('Daily <img src=x> report');
   await form('activity').getByLabel('Details').fill('Draft notes');
   await form('activity').getByLabel('Category').selectOption({label:'Reporting'});
+  const initialReads=await page.evaluate(()=>window.ddaSnapshotReads);
+  await page.evaluate(()=>window.syncFixture());
+  assert.equal(await page.evaluate(()=>window.ddaSnapshotReads),initialReads);
+  assert.equal(await form('activity').getByLabel('Activity title').inputValue(),'Daily <img src=x> report');
   await form('activity').getByRole('button',{name:'Close (keep draft)'}).click();
   await page.evaluate(()=>window.mountFixture());
   await form('new').getByRole('button',{name:'New activity'}).click();
@@ -103,7 +103,7 @@ try {
   await page.evaluate(()=>window.fixture.dispose());
   assert.equal(await page.locator('#host').evaluate(el=>el.children.length),0);
   assert.deepEqual(errors,[]);
-  console.log('PASS: native screen category, draft remount, lost-response receipt recovery, create, edit, filter, delete, escaped text, mobile layout, labeled controls and disposal');
+  console.log('PASS: native lazy host mounting, same-scope editor preservation, category, draft remount, lost-response receipt recovery, create, edit, filter, delete, escaped text, mobile layout, labeled controls and disposal');
 } finally {
   try {await browser?.close();} finally {await new Promise(resolve=>server.close(resolve));}
 }

@@ -3,6 +3,7 @@
  * applications belong to the original Work Management workspace. This is
  * ownership metadata, not an authorization or role system.
  */
+import {DDA_APPLICATION,DDA_RELEASE_ENABLED} from "./dda-release.js";
 import { BOARD_MODULES } from "./board/services/manifest.js";
 import {
   isWorkspaceId,
@@ -123,6 +124,7 @@ export const WORK_MANAGEMENT_BOARD_APPLICATIONS = Object.freeze(
 );
 
 export const WORK_MANAGEMENT_AUXILIARY_APPLICATIONS = Object.freeze([
+  ...(DDA_RELEASE_ENABLED ? [DDA_APPLICATION] : []),
   Object.freeze({
     id: "fm1-ticketing",
     moduleKey: null,
@@ -208,7 +210,7 @@ export function validateWorkspaceApplicationOwnership() {
   );
   return (
     WORK_MANAGEMENT_BOARD_APPLICATIONS.length === 12 &&
-    WORK_MANAGEMENT_AUXILIARY_APPLICATIONS.length === 3 &&
+    WORK_MANAGEMENT_AUXILIARY_APPLICATIONS.length === 3 + Number(DDA_RELEASE_ENABLED) &&
     new Set(moduleKeys).size === 12 &&
     new Set(applicationIds).size === WORK_MANAGEMENT_APPLICATIONS.length &&
     new Set(boardIds).size === 12 &&
