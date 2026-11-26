@@ -4,6 +4,8 @@ on:
     paths:
       - 'frontend/fueltrack-v3-signed-views.js'
       - 'frontend/fueltrack-v3-application.css'
+      - 'frontend/fueltrack-v3-analytics.css'
+      - 'frontend/app.js'
       - 'frontend/dark-native-applications.css'
       - 'frontend/apsyntra-styles.bundle.css'
       - 'frontend/tests/fueltrack-v3-signed-rich-views.test.mjs'
