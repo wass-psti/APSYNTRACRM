@@ -385,7 +385,7 @@ test('existing TradeLink User role can create all six document types with the ex
  assert.deepEqual(created,Object.keys(prefixes));
 });
 
-test('non-User TradeLink module roles cannot use the Create New client capability',async()=>{
+test('ordinary TradeLink module roles can read shared documents but cannot use Create New',async()=>{
  const board={id:TRADELINK_BOARD_ID,workspace_id:workspace,name:'TradeLink',
   status:'active',description:'[APSYNTRA:MODULE:tradelink:v1] canonical board'};
  const auth={userId:id,getVerifiedUser:async()=>({id})};
@@ -396,11 +396,16 @@ test('non-User TradeLink module roles cannot use the Create New client capabilit
   nativeApplicationBoardContext:async moduleId=>({
    moduleId,userId:id,workspaceId:workspace,role:'Viewer',board
   }),
-  rpc:async()=>{rpcCalls++;return [];}
+  rpc:async(name)=>{rpcCalls++;assert.equal(name,'tl03_documents_list');return [];}
  };
- await assert.rejects(()=>new TradeLinkDomainClient({auth,api}).list(),
-  /Board manager scope required/);
- assert.equal(rpcCalls,0);
+ const client=new TradeLinkDomainClient({auth,api});
+ assert.deepEqual(await client.list(),[]);
+ assert.equal(rpcCalls,1,'ordinary viewer receives the shared read-only document list');
+ await assert.rejects(()=>client.commit({
+  documentId:id,expectedRevision:0,operation:'create',
+  initialState:'draft',draft:{...draft,documentNumber:''}
+ }),/Board manager scope required/);
+ assert.equal(rpcCalls,1,'ordinary viewer cannot reach the Create New write RPC');
 });
 
 test('assigned TradeLink reviewers resolve the native app and one document projection without generic board view',async()=>{
