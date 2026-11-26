@@ -298,6 +298,34 @@ BEGIN
 END;
 $worker$;
 REVOKE ALL ON FUNCTION private.tt_process_auto_clockouts() FROM PUBLIC,anon,authenticated,service_role;
+-- Actual worked and payable OT are distinct. Read only a completed, exact
+-- immutable association from the already scoped canonical attendance state.
+CREATE FUNCTION private.tt_duration_ot_completed_credit(p_state jsonb,p_owner uuid,p_day date,
+ p_id uuid,p_start timestamptz,p_approved integer,p_decided timestamptz)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY INVOKER SET search_path=''
+AS $f$
+DECLARE v_row jsonb; v_count integer; v_out timestamptz; v_actual bigint;
+BEGIN
+ IF p_id IS NULL OR p_start IS NULL OR p_decided IS NULL OR p_approved IS NULL
+  OR p_decided>=private.tt_auto_clockout_threshold(p_start) THEN RETURN NULL; END IF;
+ SELECT count(*) INTO v_count FROM private.tt_duration_ot_matching_records(p_state,p_owner,p_day) r
+ WHERE r->>'id'=p_id::text;
+ IF v_count<>1 THEN RETURN NULL; END IF;
+ SELECT r INTO v_row FROM private.tt_duration_ot_matching_records(p_state,p_owner,p_day) r
+ WHERE r->>'id'=p_id::text;
+ IF (v_row#>>'{clockIn,timestamp}')::timestamptz IS DISTINCT FROM p_start
+  OR NOT COALESCE(pg_catalog.pg_input_is_valid(v_row#>>'{clockOut,timestamp}','timestamp with time zone'),false)
+ THEN RETURN NULL; END IF;
+ v_out:=(v_row#>>'{clockOut,timestamp}')::timestamptz;
+ IF NOT pg_catalog.isfinite(v_out) OR v_out<p_start OR v_out<p_decided THEN RETURN NULL; END IF;
+ v_actual:=GREATEST(0,(private.tt_attendance_credited_ms(p_start,v_out)-32400000)/60000);
+ RETURN pg_catalog.jsonb_build_object('actualMinutes',v_actual,
+  'payableMinutes',LEAST(p_approved::bigint,v_actual));
+END;
+$f$;
+REVOKE ALL ON FUNCTION private.tt_duration_ot_completed_credit(jsonb,uuid,date,uuid,timestamptz,integer,timestamptz)
+ FROM PUBLIC,anon,authenticated,service_role;
+
 -- Extend the existing signed snapshot without widening legacy OT visibility.
 -- A verified HR actor may review duration requests only in the same workspace.
 DO $snapshot$
@@ -305,10 +333,13 @@ DECLARE d text; old text; replacement text;
 BEGIN
  d:=pg_catalog.pg_get_functiondef('public.timetracker_ot_snapshot(uuid)'::regprocedure);
  FOR old,replacement IN VALUES
- ('v_manual_admin boolean;', 'v_manual_admin boolean; v_hr boolean;'),
+ ('v_manual_admin boolean;', 'v_manual_admin boolean; v_hr boolean; v_attendance_state jsonb;'),
  ($old$v_manual_admin:=public.module_role_for('time-tracker',v_user)='System Admin';$old$,
   $new$v_manual_admin:=public.module_role_for('time-tracker',v_user)='System Admin';
- v_hr:=COALESCE(private.tt_role_in_workspace(v_user,v_ws)='HR',false);$new$),
+ v_hr:=COALESCE(private.tt_role_in_workspace(v_user,v_ws)='HR',false);
+ SELECT e.value::jsonb INTO v_attendance_state FROM public.module_state_entries e
+ WHERE e.workspace_id=v_ws AND e.module_id='time-tracker'
+ AND e.state_key='timetracker.attendance.v1' AND e.scope='shared' AND e.owner_key='*';$new$),
  ($old
 COMMIT;
 durationMinutes',r.duration_minutes,$old$,
@@ -317,6 +348,9 @@ COMMIT;
 durationMinutes',r.duration_minutes,'otPolicy',r.ot_policy,
   'attendanceRecordId',r.attendance_record_id,
   'attendanceClockInAt',r.attendance_clock_in_at,
+  'attendanceCredit',CASE WHEN r.ot_policy='duration-v1' AND r.status='Approved' THEN
+   private.tt_duration_ot_completed_credit(v_attendance_state,r.owner_id,r.ot_date,r.attendance_record_id,
+    r.attendance_clock_in_at,r.duration_minutes,r.decided_at) END,
   'canReviewDuration',(v_hr AND r.ot_policy='duration-v1' AND r.status='Submitted'
     AND r.owner_id<>v_user AND wm.user_id IS NOT NULL),$new$),
  ($old$v_bootstrap OR r.submission_source='manual_admin'$old$,
