@@ -30,7 +30,7 @@ jobs:
       - name: Install Chromium for responsive browser acceptance
         run: npx playwright install --with-deps chromium
       - name: Run signed dashboard renderer and workflow regressions
-        run: node --test frontend/tests/fueltrack-v3-signed-rich-views.test.mjs frontend/tests/fueltrack-v3-application.test.mjs
+        run: node --test frontend/tests/*.test.mjs
       - name: Verify deterministic production CSS bundle
         run: node scripts/build-priority5-styles.mjs --check
       - name: Run FuelTrack native Chromium acceptance
