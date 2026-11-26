@@ -22,17 +22,51 @@ const snapshot={status:'VERIFIED_READ',role:'Admin',boardId,workspaceId,summary,
 const analytics={status:'VERIFIED_READ',boardId,workspaceId,days:365,
  daily:[{day:'2026-11-11',transactions:1,amount:500,liters:8.5}]};
 
-test('signed dashboard uses original multi-card overview with genuine values',()=>{
+test('signed dashboard uses a premium overview with genuine signed values',()=>{
  const html=renderFuelTrackSignedDashboardRich(snapshot);
  assert.match(html,/FUEL CONTROL \/ VERIFIED OPERATIONS/);
- assert.match(html,/class="ft3-metric-grid"/);
- assert.match(html,/class="ft3-dashboard-grid"/);
- assert.match(html,/Request Status/);
+ assert.match(html,/class="ft3-dashboard-hero"/);
+ assert.match(html,/Fuel operations at a glance/);
+ assert.match(html,/ft3-dashboard-pipeline/);
+ assert.match(html,/Request pipeline/);
  assert.match(html,/Recent Fuel Requests/);
  assert.match(html,/₱500\.00/);
  assert.match(html,/8\.5 L/);
+ assert.match(html,/stroke-dasharray="125\.6 251\.2"/);
  assert.match(html,/&lt;b&gt;/);
- assert.doesNotMatch(html,/<b>|271 transactions|258 processed/);
+ assert.match(html,/View all requests/);
+ assert.doesNotMatch(html,/<b>|271 transactions|258 processed|Top Vehicles/);
+});
+test('CP-FUELTRACK-DASHBOARD-UI-01 preserves all five statuses and calculates completion from signed counts',()=>{
+ const complete={...snapshot,summary:{...summary,total:5,submitted:1,approved:1,refuelingDone:1,completed:1,rejected:1}};
+ const html=renderFuelTrackSignedDashboardRich(complete);
+ assert.match(html,/stroke-dasharray="50\.2 251\.2"/);
+ assert.match(html,/aria-label="Completion rate 20 percent"/);
+ assert.match(html,/1 of 5 requests completed/);
+ assert.equal((html.match(/class="ft3-dashboard-stage ft3-dashboard-stage-/g)||[]).length,5);
+ for(const key of ['submitted','approved','refueling_done','completed','rejected'])assert.match(html,new RegExp('ft3-dashboard-stage-'+key));
+ for(const label of ['Pending Approval','Awaiting Refueling','Refueling Done','Completed','Rejected'])assert.ok(html.includes(label),label);
+ assert.match(html,/Request status distribution:/i);
+ assert.match(html,/data-status="rejected"/);
+});
+test('CP-FUELTRACK-DASHBOARD-UI-01 handles an empty signed workspace without NaN or fabricated totals',()=>{
+ const empty={...snapshot,rows:[],summary:{...summary,total:0,submitted:0,approved:0,refuelingDone:0,completed:0,rejected:0,totalAmount:null,totalLiters:null}};
+ const html=renderFuelTrackSignedDashboardRich(empty);
+ assert.match(html,/stroke-dasharray="0\.0 251\.2"/);
+ assert.match(html,/Completion rate 0 percent/);
+ assert.match(html,/0 of 0 requests completed/);
+ assert.match(html,/—/);
+ assert.match(html,/No fuel requests in this signed response/);
+ assert.doesNotMatch(html,/NaN|Infinity/);
+});
+test('CP-FUELTRACK-DASHBOARD-UI-01 styles desktop, tablet, mobile and dark dashboard surfaces',()=>{
+ const css=readFileSync(new URL('../fueltrack-v3-application.css',import.meta.url),'utf8');
+ const dark=readFileSync(new URL('../../frontend/dark-native-applications.css',import.meta.url),'utf8');
+ const bundle=readFileSync(new URL('../apsyntra-styles.bundle.css',import.meta.url),'utf8');
+ for(const token of ['ft3-dashboard-hero','ft3-dashboard-stage-grid','ft3-dashboard-progress','@media(max-width:1120px)','@media(max-width:760px)','@media(max-width:380px)'])assert.ok(css.includes(token),token);
+ for(const token of ['ft3-dashboard-stage','ft3-dashboard-recent','var(--crm-native-elevated)'])assert.ok(dark.includes(token),token);
+ assert.match(bundle,/CP-FUELTRACK-DASHBOARD-UI-01 — premium signed operations dashboard/);
+ assert.match(bundle,/CP-FUELTRACK-DASHBOARD-UI-01 — FuelTrack dashboard dark appearance/);
 });
 test('signed analytics keeps tabs, date filters, metric filters, chart and daily records',()=>{
  const html=renderFuelTrackSignedAnalyticsRich(snapshot,analytics);
@@ -79,7 +113,7 @@ test('signed requests preserve original filter, sort and expandable log interact
 });
 test('three signed application routes all use the richer renderers instead of minimal fallback',()=>{
  for(const [section,expected] of [
-  ['dashboard','Workflow Overview'],['analytics','Consumption Trend'],['requests','Request Log']
+  ['dashboard','Request pipeline'],['analytics','Consumption Trend'],['requests','Request Log']
  ]){
   const html=renderFuelTrackV3Application({detail,section,backend:{snapshot,analytics}});
   assert.match(html,new RegExp(expected));
