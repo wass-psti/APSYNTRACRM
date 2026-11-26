@@ -205,7 +205,7 @@ export function renderFuelTrackSignedRequestsRich(snapshot,filters={}){
     '</button></td></tr>'+
    (expanded?'<tr class="ft3-request-detail-row"><td colspan="5">'+
     '<section class="ft3-request-detail"><header class="ft3-request-detail-heading">'+
-     '<div><span>VERIFIED RECORD</span><h4>Request details</h4></div>'+
+     '<div><span>VERIFIED RECORD</span><h4>Verified request details</h4></div>'+
      '<span class="ft3-request-detail-reference">'+esc(reference)+'</span></header>'+
      '<div class="ft3-request-detail-grid">'+detailMarkup+'</div></section>'+
     '</td></tr>':'');
