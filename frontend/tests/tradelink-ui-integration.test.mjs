@@ -36,7 +36,8 @@ test('reviewer presentation remains an assigned-document view and does not grant
  const html=renderTradeLinkApplication({detail,workspaceId:workspace,
   section:'documents',canManage:false,canReview:true});
  assert.match(html,/data-tl-tab="create"[^>]*aria-disabled="true"/);
- assert.match(html,/My Assigned Documents/);
+ assert.match(html,/All Documents/);
+ assert.doesNotMatch(html,/My Assigned Documents/);
  assert.doesNotMatch(html,/data-tradelink-draft-form/);
 });
 
