@@ -164,3 +164,25 @@ test('native signed snapshot wires sanitized all-date Log without weakening pers
  assert.match(app,/timeTrackerLogCsv/);
  assert.match(app,/ttAttendance\.log\?\.rows/);
 });
+
+
+test('historical clock-out method is visible in the authorized HR Log and CSV',()=>{
+ const standard={...record('historical-standard',staff,'2026-10-30T00:00:00Z','2026-10-30T10:00:00Z'),
+  clockOut:{timestamp:'2026-10-30T10:00:00Z',automatic:false,reason:'admin_manual_clock_out',
+   manualMethod:'standard_nine_credited_hours'}};
+ const actual={...record('historical-actual',colleague,'2026-10-29T00:00:00Z','2026-10-29T04:00:00Z'),
+  clockOut:{timestamp:'2026-10-29T04:00:00Z',automatic:false,reason:'admin_manual_clock_out',
+   manualMethod:'admin_entered_actual'}};
+ const projected=projectTimeTrackerLog({value:{version:1,records:[...state.records,standard,actual]},
+  directory,userId:manager,moduleRole:'HR'});
+ const byId=new Map(projected.rows.map(row=>[row.id,row]));
+ assert.equal(byId.get('historical-standard').clockOutBasis,'System-calculated standard (9 credited hours)');
+ assert.equal(byId.get('historical-actual').clockOutBasis,'Admin-entered actual clock-out');
+ const html=renderTimeTrackerLog({records:projected.rows,scope:projected.scope,now,
+  expandedRecordIds:['historical-standard']});
+ assert.match(html,/Clock-out basis/);
+ assert.match(html,/System-calculated standard \(9 credited hours\)/);
+ const csv=timeTrackerLogCsv(projected.rows);
+ assert.match(csv,/Clock-out Basis/);
+ assert.match(csv,/Admin-entered actual clock-out/);
+});
