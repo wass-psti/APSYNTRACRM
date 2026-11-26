@@ -14,17 +14,78 @@ const fmtDate=v=>Number.isFinite(Date.parse(v))?when.format(new Date(v)):'—';
 const card=(title,value,note,tone)=>'<article class="ft3-metric ft3-tone-'+tone+'"><div class="ft3-metric-label"><span>'+esc(title)+'</span></div><strong>'+esc(value)+'</strong><p>'+esc(note)+'</p></article>';
 const section=(title,note,body,extra='')=>'<section class="ft3-panel"><header class="ft3-panel-head"><div><h3>'+esc(title)+'</h3><p>'+esc(note)+'</p></div>'+extra+'</header>'+body+'</section>';
 const header=(title,subtitle)=>'<header class="ft3-dashboard-head"><div><span class="ft3-eyebrow">FUEL CONTROL / VERIFIED OPERATIONS</span><h2>'+esc(title)+'</h2><p>'+esc(subtitle)+'</p></div><div class="ft3-dashboard-actions"><button type="button" class="ft3-soft-action" data-action="refresh-board">↻ Refresh</button></div></header>';
+function dashboardHero(s){
+ const total=Number(s.total||0),completed=Number(s.completed||0);
+ const active=Number(s.submitted||0)+Number(s.approved||0)+Number(s.refuelingDone||0);
+ const rejected=Number(s.rejected||0);
+ const completion=total?Math.min(100,Math.round(completed/total*100)):0;
+ const dash=(251.2*completion/100).toFixed(1);
+ const volume=s.totalLiters!=null&&Number.isFinite(Number(s.totalLiters))?
+  num.format(s.totalLiters)+' L':'—';
+ return '<section class="ft3-dashboard-hero" aria-label="Fuel operations summary">'+
+  '<div class="ft3-dashboard-hero-top"><div>'+
+   '<span class="ft3-dashboard-kicker">FUEL CONTROL / VERIFIED OPERATIONS</span>'+
+   '<h2>Fuel operations at a glance</h2>'+
+   '<p>Signed workspace fuel requests and operational performance</p></div>'+
+   '<span class="ft3-dashboard-live"><span aria-hidden="true"></span>Verified signed data</span></div>'+
+  '<div class="ft3-dashboard-hero-main"><div class="ft3-dashboard-financials">'+
+   '<article class="ft3-dashboard-financial-card"><span class="ft3-dashboard-financial-label">Total spent</span>'+
+    '<strong class="ft3-dashboard-financial-value">'+esc(money(s.totalAmount))+'</strong>'+
+    '<small class="ft3-dashboard-financial-note">Completed fuel transactions</small></article>'+
+   '<article class="ft3-dashboard-financial-card"><span class="ft3-dashboard-financial-label">Fuel volume</span>'+
+    '<strong class="ft3-dashboard-financial-value">'+esc(volume)+'</strong>'+
+    '<small class="ft3-dashboard-financial-note">Completed refueling volume</small></article>'+
+  '</div><aside class="ft3-dashboard-completion" aria-label="Request completion">'+
+   '<div class="ft3-dashboard-progress-wrap"><svg class="ft3-dashboard-progress" viewBox="0 0 96 96" role="img" aria-label="Completion rate '+completion+' percent">'+
+    '<circle class="ft3-dashboard-progress-track" cx="48" cy="48" r="40"></circle>'+
+    '<circle class="ft3-dashboard-progress-value" cx="48" cy="48" r="40" stroke-dasharray="'+dash+' 251.2" transform="rotate(-90 48 48)"></circle>'+
+   '</svg><div class="ft3-dashboard-progress-copy"><strong>'+completion+'%</strong><span>Completed</span></div></div>'+
+   '<p>'+num.format(completed)+' of '+num.format(total)+' requests completed</p>'+
+  '</aside></div><div class="ft3-dashboard-hero-footer">'+
+   '<div><span>Total requests</span><strong>'+num.format(total)+'</strong></div>'+
+   '<div><span>In workflow</span><strong>'+num.format(active)+'</strong></div>'+
+   '<div><span>Rejected</span><strong>'+num.format(rejected)+'</strong></div>'+
+  '</div></section>';
+}
 function statusPanel(s){
- const parts=order.map(key=>({key,count:Number(s[key==='refueling_done'?'refuelingDone':key]||0)}));
- const total=parts.reduce((n,p)=>n+p.count,0);
+ const parts=order.map(key=>({
+  key,label:labels[key],count:Number(s[key==='refueling_done'?'refuelingDone':key]||0)
+ }));
+ const total=parts.reduce((sum,part)=>sum+part.count,0);
  let offset=0;
- const segments=parts.map(p=>{
-  const width=total?1000*p.count/total:0,x=offset;offset+=width;
-  return '<rect class="ft3-status-segment ft3-status-'+esc(p.key)+'" x="'+x.toFixed(3)+'" y="0" width="'+width.toFixed(3)+'" height="12"><title>'+esc(labels[p.key])+': '+p.count+'</title></rect>';
+ const segments=parts.map(part=>{
+  const width=total?1000*part.count/total:0,x=offset;offset+=width;
+  return '<rect class="ft3-dashboard-status-segment ft3-dashboard-status-'+part.key+
+   '" x="'+x.toFixed(3)+'" y="0" width="'+width.toFixed(3)+'" height="14">'+
+   '<title>'+esc(part.label)+': '+part.count+'</title></rect>';
  }).join('');
- return section('Request Status','Authoritative workflow distribution',
-  '<svg class="ft3-status-track" role="img" aria-label="Fuel request status distribution" viewBox="0 0 1000 12" preserveAspectRatio="none"><rect x="0" y="0" width="1000" height="12" rx="6" fill="#e1ecee"/>'+segments+'</svg>'+
-  '<div class="ft3-status-list">'+parts.map(p=>'<div class="ft3-status-row"><span class="ft3-dot ft3-dot-'+esc(p.key)+'"></span><span>'+esc(labels[p.key])+'</span><strong>'+p.count+'</strong><small>'+(total?Math.round(100*p.count/total):0)+'%</small></div>').join('')+'</div>');
+ const accessible=parts.map(part=>part.label+': '+part.count).join(', ');
+ const stages=parts.map(part=>{
+  const percent=total?Math.round(part.count*100/total):0;
+  return '<article class="ft3-dashboard-stage ft3-dashboard-stage-'+part.key+
+   '" role="listitem" data-status="'+part.key+'">'+
+   '<span class="ft3-dashboard-stage-dot" aria-hidden="true"></span>'+
+   '<div class="ft3-dashboard-stage-copy"><span class="ft3-dashboard-stage-label">'+
+   esc(part.label)+'</span><strong class="ft3-dashboard-stage-count">'+
+   num.format(part.count)+'</strong></div>'+
+   '<small class="ft3-dashboard-stage-percent">'+percent+'%</small></article>';
+ }).join('');
+ return '<section class="ft3-panel ft3-dashboard-pipeline"><header class="ft3-panel-head"><div>'+
+  '<h3>Request pipeline</h3><p>Every request across its current signed workflow status</p>'+
+  '</div><span class="ft3-dashboard-pipeline-total">'+num.format(total)+' classified</span></header>'+
+  '<div class="ft3-dashboard-pipeline-body">'+
+   '<svg class="ft3-dashboard-status-track" role="img" aria-label="Request status distribution: '+esc(accessible)+
+   '" viewBox="0 0 1000 14" preserveAspectRatio="none">'+
+   '<rect class="ft3-dashboard-status-track-base" x="0" y="0" width="1000" height="14" rx="7"></rect>'+
+   segments+'</svg>'+
+   '<div class="ft3-dashboard-stage-grid" role="list">'+stages+'</div>'+
+  '</div></section>';
+}
+function dashboardRecent(snapshot){
+ return '<section class="ft3-panel ft3-dashboard-recent"><header class="ft3-panel-head"><div>'+
+  '<h3>Recent Fuel Requests</h3><p>Latest verified requests · up to 8 shown</p></div>'+
+  '<a class="ft3-text-link" href="#/boards/'+esc(snapshot.boardId)+'/fueltrack/requests">View all requests</a>'+
+  '</header>'+historyTable(snapshot.rows,true)+'</section>';
 }
 function historyTable(rows,compact=false){
  return rows.length?'<div class="ft3-recent-scroll"><table class="ft3-recent-table ft3-signed-table"><thead><tr><th scope="col">Requestor</th><th scope="col">Reference</th><th scope="col">Status</th><th scope="col">Submitted</th></tr></thead><tbody>'+
@@ -34,20 +95,8 @@ function historyTable(rows,compact=false){
 export function renderFuelTrackSignedDashboardRich(snapshot){
  if(!snapshot)return '<p class="ft3-approval-unavailable">Signed FuelTrack data unavailable.</p>';
  const s=snapshot.summary;
- return '<div class="ft3-dashboard ft3-signed-rich">'+header('Dashboard','Signed workspace fuel requests and operational performance')+
- '<div class="ft3-metric-grid">'+
- card('Total Spent',money(s.totalAmount),'Completed fuel transactions','teal')+
- card('Fuel Volume',s.totalLiters!=null&&Number.isFinite(Number(s.totalLiters))?num.format(s.totalLiters)+' L':'—','Completed volume','coral')+
- card('Total Requests',num.format(s.total),'Signed authorized requests','blue')+
- card('Completed',num.format(s.completed),'Finalized refueling records','gold')+'</div>'+
- '<div class="ft3-dashboard-grid">'+
- section('Workflow Overview','Current signed request lifecycle',
-  '<div class="ft3-signed-workflow">'+
-  [['Pending approval',s.submitted],['Approved',s.approved],['Refueling done',s.refuelingDone],['Completed',s.completed]].map(([k,v])=>'<div><span>'+esc(k)+'</span><strong>'+num.format(v)+'</strong></div>').join('')+'</div>')+
- statusPanel(s)+'</div>'+
- section('Recent Fuel Requests','Latest verified requests · up to 8 shown',
-  historyTable(snapshot.rows,true),'<a class="ft3-text-link" href="#/boards/'+esc(snapshot.boardId)+'/fueltrack/requests">All requests</a>')+
- '</div>';
+ return '<div class="ft3-dashboard ft3-signed-rich ft3-dashboard-view">'+
+  dashboardHero(s)+statusPanel(s)+dashboardRecent(snapshot)+'</div>';
 }
 const statuses=[['all','All'],['submitted','Pending'],['approved','Approved'],['refueling_done','Refueling Done'],['completed','Completed'],['rejected','Rejected']];
 function safeFilter(f={}){

@@ -16,7 +16,7 @@ let checks=0;
 try {
  const page=await browser.newPage({viewport:{width:1440,height:900}});
  const errors=[];page.on('pageerror',error=>errors.push(error.message));
- for(const [section,pattern] of [['dashboard',/Workflow Overview/],['analytics',/Consumption Trend/],['requests',/Request Log/],['new-request',/Select Refuel Type/],['approvals',/Approvals/],['lightfuels',/LightFuels/],['activity',/Activity/]]) {
+ for(const [section,pattern] of [['dashboard',/Request pipeline/],['analytics',/Consumption Trend/],['requests',/Request Log/],['new-request',/Select Refuel Type/],['approvals',/Approvals/],['lightfuels',/LightFuels/],['activity',/Activity/]]) {
   const html=renderFuelTrackV3Application({detail,section,actorName:'Browser Acceptance',backend:{snapshot,analytics}});
   await page.setContent('<!doctype html><html><head><meta charset="utf-8"></head><body><main id="app">'+html+'</main></body></html>');
   await page.addStyleTag({content:styles});
@@ -24,7 +24,25 @@ try {
   assert.equal(await page.locator('.ft3-app-tabs a').count(),7,section);
   assert.equal(await page.locator('.ft3-app-tabs a[aria-current="page"]').count(),1,section);
   assert.equal(await page.locator('.ft3-app-tabs a[aria-current="page"]').getAttribute('href'),fuelTrackHref(section),section);
-  if(section==='dashboard')assert.match(await page.locator('.ft3-app-body').innerText(),/500|₱500/);
+  if(section==='dashboard'){
+   assert.match(await page.locator('.ft3-app-body').innerText(),/500|₱500/);
+   assert.equal(await page.locator('.ft3-dashboard-financial-card').count(),2);
+   assert.equal(await page.locator('.ft3-dashboard-stage').count(),5);
+   assert.equal(await page.locator('.ft3-dashboard-progress').count(),1);
+   assert.equal(await page.locator('.ft3-dashboard-recent tbody tr').count(),1);
+   assert.equal(await page.locator('.ft3-dashboard-stage-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),5);
+   await page.locator('html').evaluate(el=>el.setAttribute('data-aps-monday-theme','dark'));
+   const darkTheme=await page.locator('html').evaluate(el=>{
+    const style=getComputedStyle(el),probe=document.createElement('div');document.body.appendChild(probe);
+    probe.style.backgroundColor=style.getPropertyValue('--crm-native-elevated').trim();
+    const surface=getComputedStyle(probe).backgroundColor;
+    probe.style.color=style.getPropertyValue('--crm-native-muted').trim();
+    const muted=getComputedStyle(probe).color;probe.remove();return {surface,muted};
+   });
+   assert.equal(await page.locator('.ft3-dashboard-stage').first().evaluate(el=>getComputedStyle(el).backgroundColor),darkTheme.surface);
+   assert.equal(await page.locator('.ft3-dashboard-stage-label').first().evaluate(el=>getComputedStyle(el).color),darkTheme.muted);
+   await page.locator('html').evaluate(el=>el.removeAttribute('data-aps-monday-theme'));
+  }
   if(section==='new-request'){
    assert.equal(await page.locator('#ft3-new-request-form').count(),1);
    assert.equal(await page.locator('#ft3-mode-vehicle').isChecked(),true);
@@ -33,6 +51,19 @@ try {
   }
   checks++;
  }
+ const dashboardHtml=renderFuelTrackV3Application({detail,section:'dashboard',backend:{snapshot,analytics}});
+ await page.setContent('<!doctype html><html><head><meta charset="utf-8"></head><body><main id="app">'+dashboardHtml+'</main></body></html>');
+ await page.addStyleTag({content:styles});
+ assert.equal(await page.locator('.ft3-dashboard-stage-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),5);
+ await page.setViewportSize({width:768,height:900});
+ assert.equal(await page.locator('.ft3-dashboard-stage-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),3);
+ await page.setViewportSize({width:390,height:844});
+ assert.equal(await page.locator('.ft3-dashboard-stage-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),2);
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'No page-level overflow at 390px');
+ await page.setViewportSize({width:360,height:844});
+ assert.equal(await page.locator('.ft3-dashboard-stage-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),1);
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'No page-level overflow at 360px');
+ checks+=4;
  await page.setViewportSize({width:390,height:844});
  const mobile=renderFuelTrackV3Application({detail,section:'new-request',backend:{snapshot,analytics}});
  await page.setContent('<main id="app">'+mobile+'</main>');await page.addStyleTag({content:styles});

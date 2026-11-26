@@ -172,3 +172,20 @@ html[data-aps-monday-theme="dark"] #app .frt-ref .frt-exec-aging-empty{
 html[data-aps-monday-theme="dark"] #app .frt-ref .frt-exec-aging-disclosure strong{
  color:var(--crm-native-ink);
 }
+
+/* CP-FUELTRACK-DASHBOARD-UI-01 — FuelTrack dashboard dark appearance. */
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-pipeline,
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recent{background:var(--crm-native-panel);border-color:var(--crm-native-border);color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-stage{background:var(--crm-native-elevated);border-color:var(--crm-native-border)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-stage-label,
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-stage-percent{color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-stage-count,
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-request-title{color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-pipeline-total{background:var(--crm-native-elevated);border-color:var(--crm-native-border);color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-status-track-base{fill:var(--crm-native-border)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recent .ft3-panel-head,
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recent .ft3-recent-table th{background:var(--crm-native-elevated);color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recent .ft3-recent-table td{background:var(--crm-native-panel);border-color:var(--crm-native-border);color:var(--crm-native-muted)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recent .ft3-recent-table tbody tr:hover td{background:var(--crm-native-elevated)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recent .ft3-empty strong{color:var(--crm-native-ink)}
+html[data-aps-monday-theme="dark"] #app .ft3-dashboard-view .ft3-dashboard-recent .ft3-empty p{color:var(--crm-native-muted)}
