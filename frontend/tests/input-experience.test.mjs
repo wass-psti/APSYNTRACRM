@@ -175,7 +175,7 @@ test('production shell and Pages smoke register shared input assets after search
   index.indexOf('frontend/search-experience.css'));
  assert.match(smoke,/'frontend\/input-experience\.js'/);
  assert.match(smoke,/'frontend\/input-experience\.css'/);
- assert.match(index,/script type="module" src="\.\/frontend\/app\.js"/);
+ assert.match(index,/script type="module" src="\.\/frontend\/app\.js(?:\?v=[^"]+)?"/);
  const stop=startInputExperience(null);
  assert.equal(typeof stop,'function');
  assert.doesNotThrow(stop);
