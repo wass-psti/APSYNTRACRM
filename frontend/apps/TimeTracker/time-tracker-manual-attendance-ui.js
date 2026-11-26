@@ -32,6 +32,8 @@ export function syncManualAttendanceForm(form,now=new Date()){
  const outDate=form.elements.clockOutDate,outTime=form.elements.clockOutTime;
  const modeField=form.querySelector('[data-tt-manual-clockout-mode]');
  const outFields=form.querySelector('[data-tt-manual-out]');
+ const history=form.querySelector('[data-tt-manual-history]');
+ if(history){history.hidden=!completed;history.style.display=completed?'':'none';}
  if(completed){
   if(!mode.value)mode.value='standard';
   mode.disabled=false;
@@ -51,11 +53,16 @@ export function syncManualAttendanceForm(form,now=new Date()){
   modeField.hidden=true;modeField.style.display='none';
   outFields.hidden=true;outFields.style.display='none';
  }
- form.elements.workNote.required=form.elements.location.value==='Offsite (Home)';
+ const offsite=form.elements.location.value==='Offsite (Home)';
+ const noteField=form.querySelector('[data-tt-manual-work-note]');
+ const requiredBadge=form.querySelector('[data-tt-manual-note-required]');
+ form.elements.workNote.required=offsite;
+ if(noteField){noteField.hidden=!offsite;noteField.style.display=offsite?'':'none';}
+ if(requiredBadge)requiredBadge.hidden=!offsite;
  const policyText=policy.activeAllowed?
-  'Today: create an active employee session. The existing nine-credited-hour auto clock-out applies, unless approved overtime extends it.':
+  'Times are in Philippine Time. Ongoing sessions can only be added for today.':
   policy.historicalAllowed?
-   'Past date: create a completed HR record. Standard calculates nine credited hours with unpaid lunch excluded; actual lets you enter the real clock-out. Historical records never enter today’s auto-clockout queue.':
+   'Times are in Philippine Time. Past dates create completed historical records. Historical records never enter today’s auto-clockout queue.':
    'Select today or a past Philippine date. Future dates are not permitted.';
  form.querySelector('[data-tt-manual-policy]').textContent=policyText;
  return readManualAttendanceDraft(form);
@@ -67,6 +74,8 @@ export function renderManualAttendanceEditor({editor,busy=false,error='',now=new
  const status=policy.allowed?policy.defaultStatus:'active';
  const completed=status==='completed';
  const clockOutMode=completed?(d.clockOutMode||'standard'):'standard';
+ const location=d.location||TT_MANUAL_LOCATIONS[0];
+ const offsite=location==='Offsite (Home)';
  const capability=editor.capability||{};
  const activeReady=capability.activeReady===true;
  const historicalReady=capability.historicalReady===true;
@@ -80,38 +89,44 @@ export function renderManualAttendanceEditor({editor,busy=false,error='',now=new
     'Regular employee auto clock-out is not active or could not be verified. Today’s active manual clock-in is disabled; past-date corrections remain available.':'';
  const input=(label,name,type,value,attrs='')=>'<label class="tt-admin-field"><span>'+esc(label)+'</span><input name="'+name+'" type="'+type+'" value="'+esc(value)+'" '+attrs+'></label>';
  const employee=d.employeeType&&d.employeeId?d.employeeType+':'+d.employeeId:'';
- return '<div class="tt-admin-editor-backdrop" data-tt-admin-backdrop>'+
- '<form id="tt-attendance-admin-form" class="tt-admin-editor" role="dialog" aria-modal="true" aria-labelledby="tt-admin-editor-title" data-tt-admin-dialog data-mode="manual">'+
- '<header class="tt-admin-editor-head"><div class="tt-admin-editor-title-group"><span class="tt-admin-eyebrow">SYSTEM ADMIN · MANUAL ATTENDANCE</span><h3 id="tt-admin-editor-title">Add Attendance Log</h3><p>Correct a missed employee clock-in for today or a previous Philippine date.</p></div>'+
+ const policyText=policy.activeAllowed?
+  'Times are in Philippine Time. Ongoing sessions can only be added for today.':
+  policy.historicalAllowed?
+   'Times are in Philippine Time. Past dates create completed historical records. Historical records never enter today’s auto-clockout queue.':
+   'Select today or a past Philippine date. Future dates are not permitted.';
+ return '<div class="tt-admin-editor-backdrop tt-manual-attendance-backdrop" data-tt-admin-backdrop>'+
+ '<form id="tt-attendance-admin-form" class="tt-admin-editor" role="dialog" aria-modal="true" aria-labelledby="tt-admin-editor-title" aria-describedby="tt-manual-policy" data-tt-admin-dialog data-mode="manual" data-tt-manual-attendance>'+
+ '<header class="tt-admin-editor-head"><div class="tt-manual-attendance-heading">'+
+ '<span class="tt-manual-add-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>'+
+ '<div class="tt-admin-editor-title-group"><h3 id="tt-admin-editor-title">Add Attendance Log</h3><p>Record a missed clock-in for an employee.</p></div></div>'+
  '<button type="button" class="tt-admin-close" data-action="tt-log-admin-cancel" aria-label="Close editor"'+(busy?' disabled':'')+'>×</button></header>'+
  (error?'<p class="tt-admin-error" role="alert">'+esc(error)+'</p>':'')+
  (warning?'<p class="tt-admin-error" role="status" data-tt-manual-readiness-warning>'+esc(warning)+'</p>':'')+
  '<fieldset class="tt-admin-editor-fields"'+(busy?' disabled':'')+'><div class="tt-admin-editor-body">'+
- '<section class="tt-admin-field-section"><h4>Employee and attendance</h4><label class="tt-admin-field"><span>Regular employee</span><select name="employee" required>'+
+ '<label class="tt-admin-field tt-manual-employee-field"><span>Employee</span><select name="employee" required>'+
  opt('','Select employee…',employee)+(editor.roster||[]).filter(m=>m.type==='regular'&&m.active).map(m=>opt('regular:'+m.id,m.name,employee)).join('')+'</select></label>'+
- '<div class="tt-admin-grid tt-admin-grid-two">'+input('Attendance date','date','date',date,'required max="'+today+'" data-previous-date="'+esc(date)+'"')+
+ '<div class="tt-admin-grid tt-admin-grid-two tt-manual-form-grid">'+
+ input('Attendance date','date','date',date,'required max="'+today+'" data-previous-date="'+esc(date)+'"')+
+ input('Clock-in time','clockInTime','time',d.clockInTime||'','required')+
  '<label class="tt-admin-field"><span>Session status</span><select name="status" required>'+
  opt('active','Active / Ongoing',status,!policy.activeAllowed)+
- opt('completed','Completed historical record',status,!policy.historicalAllowed)+'</select></label>'+
- input('Actual clock-in time','clockInTime','time',d.clockInTime||'','required')+'</div>'+
- '<p data-tt-manual-policy>'+(policy.activeAllowed?
-  'Today: create an active employee session. The existing nine-credited-hour auto clock-out applies, unless approved overtime extends it.':
-  'Past date: create a completed HR record. Standard calculates nine credited hours with unpaid lunch excluded; actual lets you enter the real clock-out. Historical records never enter today’s auto-clockout queue.')+'</p>'+
+ opt('completed','Completed',status,!policy.historicalAllowed)+'</select></label>'+
+ '<label class="tt-admin-field"><span>Work location</span><select name="location" required>'+
+ TT_MANUAL_LOCATIONS.map(v=>opt(v,v==='Offsite (Home)'?'Offsite – Home':v,location)).join('')+'</select></label></div>'+
+ '<div class="tt-manual-history" data-tt-manual-history'+(completed?'':' hidden style="display:none"')+'>'+
  '<label class="tt-admin-field" data-tt-manual-clockout-mode'+(completed?'':' hidden style="display:none"')+'><span>Historical clock-out method</span><select name="clockOutMode">'+
  opt('standard','Standard · 9 credited hours (lunch excluded)',clockOutMode)+
  opt('actual','Enter actual clock-out time',clockOutMode)+'</select></label>'+
  '<div class="tt-admin-grid tt-admin-grid-two" data-tt-manual-out'+(completed&&clockOutMode==='actual'?'':' hidden style="display:none"')+'>'+
  input('Actual clock-out date','clockOutDate','date',completed&&clockOutMode==='actual'?(d.clockOutDate||date):'','min="'+esc(date)+'" max="'+today+'" '+(completed&&clockOutMode==='actual'?'required':'disabled'))+
- input('Actual clock-out time','clockOutTime','time',completed&&clockOutMode==='actual'?(d.clockOutTime||''):'',completed&&clockOutMode==='actual'?'required':'disabled')+'</div></section>'+
- '<section class="tt-admin-field-section"><h4>Manual entry details</h4><label class="tt-admin-field"><span>Work location</span><select name="location" required>'+
- TT_MANUAL_LOCATIONS.map(v=>opt(v,v,d.location||TT_MANUAL_LOCATIONS[0])).join('')+'</select></label>'+
- '<label class="tt-admin-field"><span>Work note (required for offsite home)</span><textarea name="workNote" maxlength="500"'+(d.location==='Offsite (Home)'?' required':'')+'>'+esc(d.workNote)+'</textarea></label>'+
- '<label class="tt-admin-field"><span>Reason for manual entry</span><textarea name="reason" maxlength="500" required>'+esc(d.reason)+'</textarea></label>'+
- '<p>No GPS coordinates will be fabricated. Every manual entry records the creating System Admin and reason in the immutable audit trail.</p></section>'+
+ input('Actual clock-out time','clockOutTime','time',completed&&clockOutMode==='actual'?(d.clockOutTime||''):'',completed&&clockOutMode==='actual'?'required':'disabled')+'</div></div>'+
+ '<label class="tt-admin-field tt-manual-work-note" data-tt-manual-work-note'+(offsite?'':' hidden style="display:none"')+'><span>Work note <span class="tt-manual-required" data-tt-manual-note-required'+(offsite?'':' hidden')+'>Required</span></span><textarea name="workNote" maxlength="500"'+(offsite?' required':'')+'>'+esc(d.workNote)+'</textarea></label>'+
+ '<label class="tt-admin-field tt-manual-reason-field"><span>Reason for manual entry</span><textarea name="reason" maxlength="500" rows="2" required>'+esc(d.reason)+'</textarea></label>'+
+ '<p class="tt-manual-policy" id="tt-manual-policy" data-tt-manual-policy>'+policyText+'</p>'+
  '</div></fieldset><footer class="tt-admin-editor-actions"><span class="tt-admin-editor-footnote">'+
  (completed?'Historical corrections create completed HR records and never change the employee’s current Clock.':
-  'The employee sees this active session in their own Clock and can end it normally.')+
- '</span><div><button type="button" class="secondary" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+'>Cancel</button><button type="submit"'+(!ready||busy?' disabled':'')+'>Save Attendance Log</button></div></footer></form></div>';
+  'The employee can clock out from their own Clock screen.')+
+ '</span><div><button type="button" class="secondary" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+'>Cancel</button><button type="submit" class="primary"'+(!ready||busy?' disabled':'')+'>'+(busy?'Saving Attendance Log…':'Save Attendance Log')+'</button></div></footer></form></div>';
 }
 export function validateManualAttendanceForm(form,editor,now=new Date()){
  if(editor?.signedCreateReady!==true||editor.uncertain)

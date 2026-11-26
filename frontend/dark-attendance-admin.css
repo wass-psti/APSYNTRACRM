@@ -108,3 +108,50 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native :is(
  ) :is(button,input,select,textarea) {animation:none;transition:none;transform:none}
 }
 }
+
+/* Add Attendance Log uses the same neutral dark surface as the redesigned Edit record dialog. */
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance]{
+ --tt-manual-bg:#252631;--tt-manual-footer:#1d1e28;--tt-manual-ink:#f2f2f7;
+ --tt-manual-muted:#b9bdca;--tt-manual-line:#454754;--tt-manual-control:#646779;
+ --tt-manual-tint:#393052;--tt-manual-accent:#6a53d8;
+ background:var(--tt-manual-bg);color:var(--tt-manual-ink);
+ border-color:var(--tt-manual-line);color-scheme:dark;
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-head,
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-body{
+ background:var(--tt-manual-bg);color:var(--tt-manual-ink);
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions{
+ background:var(--tt-manual-footer);border-color:var(--tt-manual-line);
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] :is(
+ .tt-admin-editor-head h3,.tt-admin-field
+){color:var(--tt-manual-ink)}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] :is(
+ .tt-admin-editor-head p,.tt-admin-editor-footnote,.tt-manual-policy
+){color:var(--tt-manual-muted)}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-field :is(input,select,textarea){
+ background:#20212b;color:var(--tt-manual-ink);border-color:var(--tt-manual-control);
+ caret-color:var(--tt-manual-ink);color-scheme:dark;
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-field :is(input,select,textarea):hover:not(:disabled){
+ background:#292a35;border-color:#898da0;
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-manual-history{
+ background:var(--tt-manual-footer);border-color:var(--tt-manual-line);
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-manual-add-icon,
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-manual-required{
+ background:var(--tt-manual-tint);color:#c6baff;
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-close,
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions button:not(.primary){
+ background:#292a35;color:var(--tt-manual-muted);border-color:var(--tt-manual-line);
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions button.primary,
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] .tt-admin-editor-actions button.primary:hover:not(:disabled){
+ background:#6048d3;border-color:#6048d3;color:#fff;
+}
+html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-admin-editor[data-tt-manual-attendance] :is(input,select,textarea,button):focus-visible{
+ outline:2px solid #c6baff;outline-offset:2px;
+}
