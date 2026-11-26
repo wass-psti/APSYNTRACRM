@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {ApiError} from '../session.js';
-import {initialTradeLinkDraftView,tradeLinkDraftSaveFailureMessage,reconcileTradeLinkSavedListing,tradeLinkSaveDefinitelyRejected} from '../tradelink-draft-workspace.js';
+import {renderTradeLinkDraftLineItem,initialTradeLinkDraftView,tradeLinkDraftSaveFailureMessage,reconcileTradeLinkSavedListing,tradeLinkSaveDefinitelyRejected} from '../tradelink-draft-workspace.js';
 import {tradeLinkSavedDraftMatches} from '../tradelink-domain-client.js';
 
 import {TradeLinkRecoveryController} from '../tradelink/draft-recovery-controller.js';
-import {captureRecoveryFields} from '../tradelink/draft-recovery-state.js';
+import {captureRecoveryFields,createRecoverySnapshot} from '../tradelink/draft-recovery-state.js';
 const source=readFileSync('frontend/app.js','utf8');
 const id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const item='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -93,4 +93,21 @@ test('approval-free receipt with mismatched revision policy retains receipt and 
  h.failures.policy=null;await h.run();
  assert.equal(h.calls.save.length,1);assert.equal(h.calls.revision,2);
  assert.equal(h.location.hash,'#/tradelink/documents');assert.equal(h.stored.size,0);
+});
+
+
+test('new and added item rows have stable identities before the durable save checkpoint',()=>{
+ const scope={userId:id,workspaceId:ws,instanceId:item,documentType:'quotation'};
+ const fresh=renderTradeLinkDraftLineItem({id:'',description:'QA only'},'quotation');
+ const lineId=fresh.match(/name="lineId" value="([^"]*)"/)?.[1];
+ assert.match(lineId,/^[0-9a-f-]{36}$/i);
+ const added=renderTradeLinkDraftLineItem({},'quotation');
+ assert.notEqual(added.match(/name="lineId" value="([^"]*)"/)?.[1],lineId);
+ assert.match(renderTradeLinkDraftLineItem({id:lineId},'quotation'),new RegExp('name="lineId" value="'+lineId+'"'));
+ const lines=[{id:lineId,kind:'item',description:'QA only',quantity:'1',unitPrice:'1',unit:'',serialNumber:''}];
+ const fields={documentType:'quotation',documentStatus:'draft'};
+ const pendingSave={command:{documentId:id,expectedRevision:0,draft:{...draft,items:[{id:lineId,kind:'item',description:'QA only',quantity:1,unitPrice:1}]},initialState:'draft',reviseApproved:false},receipt:null,uncertain:false};
+ const snapshot=createRecoverySnapshot({...scope,fields,lines,pendingSave});
+ assert.equal(snapshot.lines[0].id,lineId);
+ assert.equal(snapshot.pendingSave.itemsStoredInLines,true);
 });
