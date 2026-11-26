@@ -34,7 +34,9 @@ create table dda.command_receipt (
   workspace_id uuid not null references dda.workspace_state(workspace_id),
   request_id uuid not null,
   command jsonb not null,
-  committed_revision bigint not null,
+  committed_revision bigint,
+  rejection_reason text,
+  check ((committed_revision is null) <> (rejection_reason is null)),
   primary key (workspace_id,request_id)
 );
 create table dda.activity_event (
@@ -106,6 +108,7 @@ begin
   select * into receipt from dda.command_receipt where workspace_id=w and request_id=request_key;
   if found then
     if receipt.command<>input then raise exception 'DDA request ID reused with different input'; end if;
+    if receipt.rejection_reason is not null then raise exception 'DDA command already rejected'; end if;
     return dda.snapshot(w)||jsonb_build_object('acknowledgedRequestId',request_key,'acknowledgedRevision',receipt.committed_revision,'replayed',true);
   end if;
   if rev<>expected then raise exception 'DDA revision conflict'; end if;
@@ -150,11 +153,55 @@ begin
   end if;
   rev:=rev+1;
   update dda.workspace_state set revision=rev where workspace_id=w;
-  insert into dda.command_receipt values(w,request_key,input,rev);
+  insert into dda.command_receipt(workspace_id,request_id,command,committed_revision) values(w,request_key,input,rev);
   insert into dda.activity_event(workspace_id,request_id,record_id,actor_id,action,before_record,after_record)
     values(w,request_key,record_id,actor,action,before_value,after_value);
   return dda.snapshot(w)||jsonb_build_object('acknowledgedRequestId',request_key,'acknowledgedRevision',rev,'replayed',false);
 end $$;
+
+-- Terminal outcomes are recorded atomically for both accepted and rejected commands.
+-- The future signed host wrapper must derive actor from its existing session.
+create function dda.submit(w uuid, actor uuid, request_key uuid, expected bigint, action text, record jsonb)
+returns jsonb language plpgsql set search_path='' as $
+declare
+  input jsonb;
+  receipt dda.command_receipt%rowtype;
+  reason text;
+begin
+  if w is null or actor is null or request_key is null or expected is null or expected<0 or
+     action is null or jsonb_typeof(record) is distinct from 'object' then
+    raise exception 'Invalid DDA command';
+  end if;
+  if not exists(select 1 from agt.person p where p.workspace_id=w and p.user_id=actor and p.identity_kind='crm-user') then
+    raise exception 'Unknown DDA actor';
+  end if;
+  insert into dda.workspace_state(workspace_id) values(w) on conflict do nothing;
+  perform 1 from dda.workspace_state where workspace_id=w for update;
+  input:=jsonb_build_object('actor',actor,'expectedRevision',expected,'action',action,'record',record);
+  select * into receipt from dda.command_receipt where workspace_id=w and request_id=request_key;
+  if found then
+    if receipt.command<>input then raise exception 'DDA request ID reused with different input'; end if;
+    if receipt.rejection_reason is not null then
+      return dda.snapshot(w)||jsonb_build_object('rejectedRequestId',request_key,'rejectionReason',receipt.rejection_reason,'replayed',true);
+    end if;
+    return dda.mutate(w,actor,request_key,expected,action,record);
+  end if;
+  begin
+    return dda.mutate(w,actor,request_key,expected,action,record);
+  exception
+    when unique_violation then reason:='Duplicate record or category.';
+    when check_violation or not_null_violation or foreign_key_violation or invalid_text_representation
+      or datetime_field_overflow or invalid_datetime_format or no_data_found then reason:='Invalid activity data or reference.';
+    when raise_exception then
+      if sqlerrm='DDA revision conflict' then reason:='Activity data changed. Review the latest records before saving again.';
+      elsif sqlerrm in ('Missing DDA record ID','Invalid DDA activity date','DDA activity identity and date cannot change','DDA department mismatch','DDA activity not found','Unknown DDA command') then
+        reason:=sqlerrm;
+      else raise;
+      end if;
+  end;
+  insert into dda.command_receipt(workspace_id,request_id,command,rejection_reason) values(w,request_key,input,reason);
+  return dda.snapshot(w)||jsonb_build_object('rejectedRequestId',request_key,'rejectionReason',reason,'replayed',false);
+end $;
 
 revoke all on all tables in schema dda from public;
 revoke all on all functions in schema dda from public;

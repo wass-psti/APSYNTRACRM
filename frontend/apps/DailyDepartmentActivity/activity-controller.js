@@ -6,7 +6,7 @@ function uniqueRows(rows, name) {
       new Set(rows.map(row => row.id)).size !== rows.length) throw new Error('Invalid DDA ' + name);
 }
 
-function validateSnapshot(value, workspaceId) {
+export function validateSnapshot(value, workspaceId) {
   if (!value || value.workspaceId !== workspaceId || !Number.isSafeInteger(value.revision) || value.revision < 0) {
     throw new Error('Invalid DDA workspace snapshot');
   }
@@ -81,7 +81,7 @@ export function createActivityController({repository, workspaceId, userId, draft
     try {
       next = validateSnapshot(await repository.mutate({
         workspaceId, expectedRevision:previous.revision, requestId:makeId(), action, record
-      }), workspaceId);
+      }, {draftScope}), workspaceId);
       checkActive();
       if (next.revision <= previous.revision || !verify(next)) throw new Error('DDA change was not acknowledged');
     } catch (error) {
@@ -89,8 +89,8 @@ export function createActivityController({repository, workspaceId, userId, draft
       throw error;
     }
     snapshot = next;
-    let draftWarning = null;
-    if (draftScope && draftStorage) {
+    let draftWarning = next.draftWarning || null;
+    if (draftScope && draftStorage && !repository.managesDraftRecovery) {
       try { clearActivityDraft(draftStorage, draftScope); }
       catch { draftWarning = 'Saved on server; local draft could not be cleared.'; }
     }

@@ -29,6 +29,7 @@ jobs:
       - run: node --check frontend/apps/DailyDepartmentActivity/activity-drafts.js
       - run: node --check frontend/apps/DailyDepartmentActivity/activity-controller.js
       - run: node --check frontend/apps/DailyDepartmentActivity/activity-screen.js
+      - run: node --check frontend/apps/DailyDepartmentActivity/activity-repository.js
       - run: node --test frontend/tests/dda-native-*.test.mjs
   browser:
     runs-on: ubuntu-22.04

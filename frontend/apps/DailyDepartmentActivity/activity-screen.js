@@ -1,4 +1,5 @@
 import {statuses} from './activity-model.js';
+import {matchesActivityDraft} from './activity-repository.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 const option = (value,label,selected) => '<option value="'+esc(value)+'"'+(value===selected?' selected':'')+'>'+esc(label)+'</option>';
@@ -52,6 +53,20 @@ export function mountDailyDepartmentActivity(host,controller,{today=manilaDate()
     catch(e){error=e instanceof Error?e.message:'Activity operation failed.';}
     finally{busy=false;paint();}
   }
+  function acceptLoaded(next) {
+    snapshot=next;
+    const recovered=next.recoveries||[];
+    if(!recovered.length)return;
+    const rejected=recovered.find(item=>item.outcome==='rejected');
+    const warning=recovered.find(item=>item.warning)?.warning;
+    for(const item of recovered){
+      if(item.outcome==='committed'&&editor&&item.scope&&
+         ['personId','date','activityId'].every(key=>(editor[key]||'')===(item.scope[key]||''))&&
+         matchesActivityDraft(fields,item.record)){editor=null;fields=emptyFields();}
+    }
+    notice=warning||(rejected?'Previous request was rejected. Your draft is retained for review.':'Previous request confirmed without a duplicate save.');
+    if(rejected)error=rejected.reason;
+  }
   function openEditor(scope,initial) {
     editor=scope;fields=initial;
     try {const recovered=controller.recoverDraft(scope);if(recovered){fields=recovered;notice='Unsaved draft restored.';}}
@@ -92,7 +107,7 @@ export function mountDailyDepartmentActivity(host,controller,{today=manilaDate()
     if(!button||!host.contains(button)||busy)return;
     const action=button.dataset.ddaAction;
     const record=snapshot?.records.find(row=>row.id===button.dataset.id);
-    if(action==='refresh')void run(async()=>{snapshot=await controller.load();notice='Activities refreshed.';});
+    if(action==='refresh')void run(async()=>{notice='Activities refreshed.';acceptLoaded(await controller.load());});
     else if(action==='edit'&&record)openEditor({personId:record.personId,date:record.date,activityId:record.id},{title:record.title,details:record.details,status:record.status,categoryId:record.categoryId||''});
     else if(action==='close-editor'){editor=null;fields=emptyFields();paint();}
     else if(action==='discard'&&editor){try{controller.discardDraft(editor);editor=null;fields=emptyFields();notice='Draft discarded.';}catch{error='Draft could not be discarded.';}paint();}
@@ -102,6 +117,6 @@ export function mountDailyDepartmentActivity(host,controller,{today=manilaDate()
   host.addEventListener('change',onChange);
   host.addEventListener('submit',onSubmit);
   host.addEventListener('click',onClick);
-  const ready=run(async()=>{snapshot=await controller.load();});
+  const ready=run(async()=>{acceptLoaded(await controller.load());});
   return {ready,dispose(){disposed=true;host.removeEventListener('input',onInput);host.removeEventListener('change',onChange);host.removeEventListener('submit',onSubmit);host.removeEventListener('click',onClick);controller.dispose();host.replaceChildren();}};
 }

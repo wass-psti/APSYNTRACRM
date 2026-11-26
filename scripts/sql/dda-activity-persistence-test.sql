@@ -72,3 +72,40 @@ begin
  raise notice 'PASS: PostgreSQL DDA create, edit, category, historical attribution, duplicate request, stale revision, atomic failure, workspace isolation, deletion history and replay after later changes';
 end
 $test$;
+
+do $recovery$
+declare
+ w uuid:='00000000-0000-4000-8000-000000000001';
+ actor uuid:='00000000-0000-4000-8000-000000000011';
+ req uuid:=gen_random_uuid();
+ rejected uuid:=gen_random_uuid();
+ invalid uuid:=gen_random_uuid();
+ data jsonb:=jsonb_build_object('id',gen_random_uuid(),'name','Recovery category');
+ bad jsonb:=jsonb_build_object('id',gen_random_uuid(),'name','Reports');
+ result jsonb;
+begin
+ result:=dda.submit(w,actor,req,4,'save-category',data);
+ assert (result->>'acknowledgedRequestId')::uuid=req and (result->>'revision')::int=5;
+ result:=dda.submit(w,actor,req,4,'save-category',data);
+ assert (result->>'replayed')::boolean and (result->>'revision')::int=5;
+ result:=dda.submit(w,actor,rejected,4,'save-category',jsonb_build_object('id',gen_random_uuid(),'name','Stale category'));
+ assert (result->>'rejectedRequestId')::uuid=rejected and (result->>'revision')::int=5;
+ result:=dda.submit(w,actor,invalid,5,'save-category',bad);
+ assert (result->>'rejectedRequestId')::uuid=invalid and (result->>'revision')::int=5;
+ assert (select committed_revision is null from dda.command_receipt where workspace_id=w and request_id=invalid);
+ -- Make the rejected payload valid, then prove a delayed replay still cannot write.
+ perform dda.submit(w,actor,gen_random_uuid(),5,'save-category',jsonb_build_object('id','00000000-0000-4000-8000-000000000101','name','Renamed reports'));
+ result:=dda.submit(w,actor,invalid,5,'save-category',bad);
+ assert (result->>'replayed')::boolean and (result->>'rejectedRequestId')::uuid=invalid;
+ assert (result->>'revision')::int=6;
+ assert not exists(select 1 from dda.category where workspace_id=w and id=(bad->>'id')::uuid);
+ assert not exists(select 1 from dda.activity_event where workspace_id=w and request_id in (rejected,invalid));
+ begin
+   perform dda.submit(w,actor,invalid,5,'save-category',bad||'{"name":"Different"}');
+   raise exception 'test failed: changed rejected request accepted';
+ exception when others then
+   if sqlerrm<>'DDA request ID reused with different input' then raise; end if;
+ end;
+ raise notice 'PASS: terminal accepted/rejected receipts, stable replay, stale revision and validation rejection without delayed writes';
+end
+$recovery$;
