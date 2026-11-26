@@ -67,8 +67,24 @@ async function rpc(actor,method,args){
  return call(rest,`/rpc/${method}`,args,actor.token);
 }
 function receipt(res,label){const result=expect(res,200,label);assert.equal(typeof result,'object');return result;}
-function submit(actor,start,end,label){return rpc(actor,'timetracker_ot_submit',{
- p_board_id:board,p_date:date,p_start:start,p_end:end,p_reason:`Isolated ${label} overtime work performed for testing`});}
+function submit(actor,start,end,label){
+ // New duration policy deliberately revokes employee access to the retired
+ // time-range submit RPC. Create legacy rows only as isolated fixtures so this
+ // suite can continue protecting historical bootstrap decision/withdrawal rules.
+ const [sh,sm]=start.split(':').map(Number),[eh,em]=end.split(':').map(Number);
+ const minutes=(eh*60+em)-(sh*60+sm);
+ assert.ok(minutes>=30&&minutes<=360);
+ const reason=`Isolated ${label} overtime work performed for testing`;
+ const id=sql(`INSERT INTO public.timetracker_ot_requests
+  (workspace_id,owner_id,ot_date,start_time,end_time,duration_minutes,reason,submitted_by,submission_source)
+  VALUES ('${workspace}','${actor.id}','${date}','${start}','${end}',${minutes},
+   '${reason}','${actor.id}','employee') RETURNING id::text`);
+ assert.match(id,uuid);
+ sql(`INSERT INTO public.timetracker_ot_audit(workspace_id,request_id,actor_id,event,details)
+  VALUES ('${workspace}','${id}','${actor.id}','submitted',
+   jsonb_build_object('submissionSource','employee','fixture','legacy-range'))`);
+ return {status:200,data:{id,workspaceId:workspace,ownerId:`cloud:${actor.id}`,status:'Submitted'}};
+}
 async function decision(actor,id,status,label){
  const result=receipt(await rpc(actor,'timetracker_ot_decide',{p_board_id:board,p_request_id:id,p_decision:status}),label);
  assert.equal(result.id,id);assert.equal(result.status,status);assert.equal(result.decidedBy,actor.id);
