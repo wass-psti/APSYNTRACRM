@@ -32,7 +32,8 @@ on:
       - "supabase/tests/tt_duration_overtime_staged.integration.sql"
       - "scripts/cp-tt-bootstrap-ot02-signed-disposable.*"
       - "scripts/cp-tt-bootstrap-ot03-browser.mjs"
-  # Keep the disposable SQL fixtures and staged migration in both trigger path lists.
+  # Keep disposable SQL fixtures and the staged migration in both trigger path lists.
+  # The worker fixture mirrors the live 20261125100000 candidate-query contract.
   workflow_dispatch:
 
 permissions:
