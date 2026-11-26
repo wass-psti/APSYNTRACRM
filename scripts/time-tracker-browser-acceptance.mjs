@@ -1055,6 +1055,199 @@ try {
     "System Admin individual attendance editor",
   );
 
+  // Exercise the Add Attendance Log reference modal in the real bundled shell.
+  // The fixture uses a verified regular-employee roster and a fixed PHT clock.
+  await page.evaluate(() => window.__timeTrackerRender({ view: "log" }));
+  await page.evaluate(async () => {
+    const { renderManualAttendanceEditor } = await import(
+      "/frontend/apps/TimeTracker/time-tracker-manual-attendance-ui.js"
+    );
+    const native = document.querySelector("#time-tracker-mount .tt-native");
+    if (!native) throw new Error("TimeTracker native shell is unavailable.");
+    native.insertAdjacentHTML(
+      "beforeend",
+      renderManualAttendanceEditor({
+        editor: {
+          mode: "manual",
+          roster: [
+            {
+              id: "20000000-0000-4000-8000-000000000002",
+              type: "regular",
+              name: "Test Employee",
+              active: true,
+            },
+          ],
+          capability: {
+            activeReady: true,
+            historicalReady: true,
+            schedulerMode: "active",
+          },
+          signedCreateReady: true,
+          draft: {
+            employeeType: "regular",
+            employeeId: "20000000-0000-4000-8000-000000000002",
+            date: "2026-11-26",
+            status: "active",
+            clockInTime: "08:30",
+            location: "Office-Base Duty",
+            reason: "Forgot to clock in at the start of the shift.",
+          },
+        },
+        now: new Date("2026-11-26T04:00:00Z"),
+      }),
+    );
+  });
+  await page.getByRole("dialog", { name: "Add Attendance Log" }).waitFor();
+  for (const selector of [
+    '#tt-attendance-admin-form select[name="employee"]',
+    '#tt-attendance-admin-form input[name="date"]',
+    '#tt-attendance-admin-form input[name="clockInTime"]',
+    '#tt-attendance-admin-form select[name="status"]',
+    '#tt-attendance-admin-form select[name="location"]',
+    '#tt-attendance-admin-form textarea[name="reason"]',
+  ]) {
+    await page.locator(selector).waitFor();
+  }
+  assert.equal(
+    await page
+      .locator('#tt-attendance-admin-form select[name="status"]')
+      .inputValue(),
+    "active",
+  );
+  assert.equal(
+    await page.locator("[data-tt-manual-work-note]").isVisible(),
+    false,
+  );
+  await page
+    .locator('#tt-attendance-admin-form select[name="location"]')
+    .selectOption("Offsite (Home)");
+  await page.evaluate(async () => {
+    const { syncManualAttendanceForm } = await import(
+      "/frontend/apps/TimeTracker/time-tracker-manual-attendance-ui.js"
+    );
+    syncManualAttendanceForm(
+      document.querySelector("#tt-attendance-admin-form"),
+      new Date("2026-11-26T04:00:00Z"),
+    );
+  });
+  assert.equal(
+    await page.locator("[data-tt-manual-work-note]").isVisible(),
+    true,
+  );
+  assert.equal(
+    await page
+      .locator('#tt-attendance-admin-form textarea[name="workNote"]')
+      .evaluate((field) => field.required),
+    true,
+  );
+  await checkAccessibilityWithin(
+    ".tt-admin-editor[data-tt-manual-attendance]",
+    "System Admin Add Attendance Log (Offsite Home)",
+  );
+
+  await page
+    .locator('#tt-attendance-admin-form input[name="date"]')
+    .fill("2026-11-25");
+  await page.evaluate(async () => {
+    const { syncManualAttendanceForm } = await import(
+      "/frontend/apps/TimeTracker/time-tracker-manual-attendance-ui.js"
+    );
+    syncManualAttendanceForm(
+      document.querySelector("#tt-attendance-admin-form"),
+      new Date("2026-11-26T04:00:00Z"),
+    );
+  });
+  assert.equal(
+    await page
+      .locator('#tt-attendance-admin-form select[name="status"]')
+      .inputValue(),
+    "completed",
+  );
+  assert.equal(
+    await page.locator("[data-tt-manual-history]").isVisible(),
+    true,
+  );
+  await page
+    .locator('#tt-attendance-admin-form select[name="clockOutMode"]')
+    .selectOption("actual");
+  await page.evaluate(async () => {
+    const { syncManualAttendanceForm } = await import(
+      "/frontend/apps/TimeTracker/time-tracker-manual-attendance-ui.js"
+    );
+    syncManualAttendanceForm(
+      document.querySelector("#tt-attendance-admin-form"),
+      new Date("2026-11-26T04:00:00Z"),
+    );
+  });
+  assert.equal(
+    await page.locator("[data-tt-manual-out]").isVisible(),
+    true,
+  );
+
+  await page
+    .locator('#tt-attendance-admin-form input[name="date"]')
+    .fill("2026-11-26");
+  await page
+    .locator('#tt-attendance-admin-form select[name="location"]')
+    .selectOption("Office-Base Duty");
+  await page.evaluate(async () => {
+    const { syncManualAttendanceForm } = await import(
+      "/frontend/apps/TimeTracker/time-tracker-manual-attendance-ui.js"
+    );
+    syncManualAttendanceForm(
+      document.querySelector("#tt-attendance-admin-form"),
+      new Date("2026-11-26T04:00:00Z"),
+    );
+  });
+  assert.equal(
+    await page
+      .locator('#tt-attendance-admin-form select[name="status"]')
+      .inputValue(),
+    "active",
+  );
+  assert.equal(
+    await page.locator("[data-tt-manual-history]").isVisible(),
+    false,
+  );
+  assert.equal(
+    await page.locator("[data-tt-manual-work-note]").isVisible(),
+    false,
+  );
+
+  await page.setViewportSize({ width: 360, height: 800 });
+  const manualMobile = await page
+    .locator(".tt-admin-editor[data-tt-manual-attendance]")
+    .evaluate((dialog) => ({
+      width: dialog.getBoundingClientRect().width,
+      scrollWidth: dialog.scrollWidth,
+      clientWidth: dialog.clientWidth,
+      viewport: window.innerWidth,
+    }));
+  assert.ok(manualMobile.width <= manualMobile.viewport);
+  assert.ok(manualMobile.scrollWidth <= manualMobile.clientWidth + 1);
+  await checkAccessibilityWithin(
+    ".tt-admin-editor[data-tt-manual-attendance]",
+    "System Admin Add Attendance Log mobile",
+  );
+  await page.evaluate(() => {
+    document.documentElement.dataset.apsMondayTheme = "dark";
+  });
+  assert.equal(
+    await page
+      .locator(".tt-admin-editor[data-tt-manual-attendance]")
+      .evaluate((dialog) => getComputedStyle(dialog).backgroundColor),
+    "rgb(37, 38, 49)",
+  );
+  await page.evaluate(() => {
+    delete document.documentElement.dataset.apsMondayTheme;
+    document
+      .querySelector(
+        ".tt-admin-editor-backdrop:has(> .tt-admin-editor[data-tt-manual-attendance])",
+      )
+      ?.remove();
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+
   await page.evaluate(
     ({ result, directory, record }) =>
       window.__timeTrackerRender({
