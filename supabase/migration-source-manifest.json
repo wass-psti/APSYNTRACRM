@@ -2386,7 +2386,14 @@
       "name": "cp_tt_admin_manual_clockin_scheduler_gate",
       "file": "20261126100000_cp_tt_admin_manual_clockin_scheduler_gate.sql",
       "bytes": 4423,
-      "sha256": "39ac9f9043b1960a18eabf83ba6ca46aa37ce65640a7a53f4f65df8150195eda"
+      "sha256": "929bafdb56c2dfae2f25d0d11812d76201e2bc8fbf31ad24ab527497c583fa7d"
+    },
+    {
+      "version": "20261126110000",
+      "name": "cp_tt_admin_manual_attendance_hybrid",
+      "file": "20261126110000_cp_tt_admin_manual_attendance_hybrid.sql",
+      "bytes": 19256,
+      "sha256": "bf33210fd349861532c89074fccbc59249b436585d763490c08c22d8a5eb0673"
     }
   ],
   "applied_only": [
