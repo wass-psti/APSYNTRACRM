@@ -79,6 +79,7 @@ import {boardGroupArchiveSuffix} from './board/presentation/group-counts.js';
 import {renderBoardCollapsedRollup} from './board/presentation/group-rollups.js';
 import {BoardGroupStateClient} from './board/preferences/group-state-client.js';
 import {FUELTRACK_V3_ID,findFuelTrackV3Board,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-ui.js';
+import {fuelTrackAnalyticsCsv} from './fueltrack-v3-signed-views.js';
 import {FUELTRACK_V3_APPLICATION_ROUTE,parseFuelTrackApplicationRoute} from './fueltrack-v3-application-route.js';
 import {verifyFuelTrackBackendSnapshot} from './fueltrack-v3-backend-projections.js';
 import {renderFuelTrackAnalytics,normalizeFuelTrackAnalyticsView,normalizeFuelTrackAnalyticsRange,normalizeFuelTrackAnalyticsMetric} from './fueltrack-v3-analytics.js';
@@ -10121,6 +10122,26 @@ async function action(name,button){
    render();
   }
   root.querySelector('[data-board-tab="'+key+'"]')?.focus();break;
+ }
+ case 'ft3-analytics-export':{
+  if(state.view!=='board'||state.tab!=='fueltrack'||state.fuelTrackSection!=='analytics')break;
+  const snapshot=verifyFuelTrackBackendSnapshot(
+   state.fuelTrackBackend?.snapshot,state.boardId,state.context?.workspace_id
+  );
+  const analytics=state.fuelTrackBackend?.analytics;
+  if(!snapshot||!analytics||analytics.status!=='VERIFIED_READ'||
+    analytics.boardId!==state.boardId||analytics.workspaceId!==state.context?.workspace_id)break;
+  const csv=fuelTrackAnalyticsCsv(analytics);
+  if(!csv){toast('Verified analytics are unavailable for CSV export.');break;}
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  try{
+   const link=document.createElement('a');
+   link.href=url;link.download='fueltrack-v3-analytics-'+
+    (state.fuelTrackAnalyticsRange||'all')+'.csv';
+   link.hidden=true;document.body.append(link);link.click();link.remove();
+   toast('Verified FuelTrack analytics exported to CSV.');
+  }finally{setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  break;
  }
   case 'ft3-signed-request-status':
  case 'ft3-signed-request-sort':
