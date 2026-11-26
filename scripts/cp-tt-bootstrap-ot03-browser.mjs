@@ -10,6 +10,7 @@ const html=`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Is
 import {renderTimeTrackerOvertime,updateTimeTrackerOvertimePreview} from '/frontend/time-tracker-overtime.js';
 window.renderSignedOt=(rows,access,status='Submitted')=>{document.getElementById('ot-root').innerHTML=renderTimeTrackerOvertime({requests:rows,access,filters:{status},now:new Date()});};
 window.renderDurationForm=access=>{document.getElementById('ot-root').innerHTML=renderTimeTrackerOvertime({requests:[],access,modalOpen:true,now:new Date()});};
+window.renderManualDurationForm=access=>{document.getElementById('ot-root').innerHTML=renderTimeTrackerOvertime({requests:[],access,modalOpen:'manual',now:new Date()});};
 window.updateDurationPreview=form=>updateTimeTrackerOvertimePreview(form);
 window.__otBrowserReady=true;
 </script></body></html>`;
@@ -28,7 +29,7 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
     res.writeHead(200,{'Content-Type':'text/javascript; charset=utf-8'});
     res.end(readFileSync(file));return;
    }
-   if(['/rpc/timetracker_ot_snapshot','/rpc/timetracker_ot_decide','/rpc/timetracker_ot_decide_duration'].includes(pathname)&&req.method==='POST'){
+   if(['/rpc/timetracker_ot_snapshot','/rpc/timetracker_ot_decide','/rpc/timetracker_ot_decide_duration','/rpc/timetracker_ot_decide_manual_duration'].includes(pathname)&&req.method==='POST'){
     // Proxy only the two exact disposable OT RPC endpoints, never an arbitrary URL.
     const chunks=[];
     for await(const chunk of req){chunks.push(chunk);if(Buffer.concat(chunks).length>4096)throw Error('Request too large');}
@@ -66,11 +67,12 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
     window.renderSignedOt(snapshot.rows,{userId,
      bootstrapApprover:snapshot.bootstrapApprover,manualOtManager:snapshot.manualOtManager,
      otContractActive:true,durationOtContractActive:snapshot.durationOtContract==='tt-duration-ot-1',
-     durationOtHrApprover:snapshot.durationOtHrApprover===true,moduleRole},status);
+     durationOtHrApprover:snapshot.durationOtHrApprover===true,
+     durationOtApprover:snapshot.durationOtApprover===true,moduleRole},status);
     return snapshot;
    },{token:actor.token,board,userId:actor.id,status,moduleRole});
   }
-  const original=await load(adminPage,bootstrap);
+  const original=await load(adminPage,bootstrap,'Submitted','System Admin');
   assert.ok(original.rows.some(r=>r.id===selfPending.id));
   const selfCard=adminPage.locator(`[data-request-id="${selfPending.id}"]`);
   await selfCard.locator('summary').click();
@@ -90,7 +92,7 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
   await selfCard.locator('[data-action="tt-ot-approve"]').click();
   await adminPage.waitForFunction(()=>window.__otLastDecision?.status===200);
   assert.equal((await adminPage.evaluate(()=>window.__otLastDecision.result)).status,'Approved');
-  const refreshed=await load(adminPage,bootstrap);
+  const refreshed=await load(adminPage,bootstrap,'Submitted','System Admin');
   assert.equal(refreshed.rows.find(r=>r.id===selfPending.id).status,'Approved');
   const pendingCard=adminPage.locator(`[data-request-id="${workerPending.id}"]`);
   await pendingCard.locator('summary').click();
@@ -104,7 +106,7 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
   assert.equal(await workerPage.locator('[data-action="tt-ot-approve"]').count(),0);
   await adminPage.reload();
   await adminPage.waitForFunction(()=>window.__otBrowserReady===true);
-  const afterReload=await load(adminPage,bootstrap);
+  const afterReload=await load(adminPage,bootstrap,'Submitted','System Admin');
   assert.equal(afterReload.rows.find(r=>r.id===workerPending.id).status,'Rejected');
   // Exercise the new duration-only employee form in a real Chromium context.
   await workerPage.evaluate(({userId})=>window.renderDurationForm({
@@ -116,6 +118,13 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
   assert.equal(await workerPage.locator('#tt-ot-start,#tt-ot-end').count(),0);
   await hours.fill('3');
   await workerPage.locator('#tt-ot-reason').fill('Additional engineering inspection work');
+  await adminPage.evaluate(({workerId})=>window.renderManualDurationForm({
+   userId:'platform-admin',moduleRole:'System Admin',manualOtManager:true,
+   otContractActive:true,durationOtContractActive:true,
+   overviewDirectory:[{id:workerId,status:'active',display_name:'Worker One'}]
+  }),{workerId:worker.id});
+  assert.equal(await adminPage.locator('#tt-ot-manual-duration-hours').count(),1);
+  assert.equal(await adminPage.locator('#tt-ot-manual-start,#tt-ot-manual-end').count(),0);
   await workerPage.evaluate(()=>window.updateDurationPreview(document.querySelector('#tt-ot-form')));
   assert.equal(await workerPage.locator('[data-tt-ot-duration-value]').innerText(),'3 hr 00 min');
 
@@ -130,11 +139,11 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
   await ownHrCard.locator('summary').click();
   assert.equal(await ownHrCard.locator('[data-action="tt-ot-approve"]').count(),0,
    'HR cannot approve its own request');
-  await load(adminPage,bootstrap,'Submitted');
+  await load(adminPage,bootstrap,'Submitted','System Admin');
   const bootstrapDuration=adminPage.locator(`[data-request-id="${durationRequest.id}"]`);
   await bootstrapDuration.locator('summary').click();
-  assert.equal(await bootstrapDuration.locator('[data-action="tt-ot-approve"]').count(),0,
-   'bootstrap approval does not bypass the HR duration policy');
+  assert.equal(await bootstrapDuration.locator('[data-action="tt-ot-approve"]').count(),1,
+   'platform Admin receives the signed duration OT review control');
 
   await hrPage.evaluate(({token,board})=>{
    document.addEventListener('click',async e=>{
