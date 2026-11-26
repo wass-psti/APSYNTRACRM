@@ -58,7 +58,7 @@ export function renderManualAttendanceEditor({editor,busy=false,error='',now=new
  '<header class="tt-admin-editor-head"><div class="tt-admin-editor-title-group"><span class="tt-admin-eyebrow">SYSTEM ADMIN · MANUAL ATTENDANCE</span><h3 id="tt-admin-editor-title">Add Attendance Log</h3><p>'+ (activeOnly?'Start a missed employee clock-in in Philippine time.':'Register a missed clock-in or clock-out in Philippine time.')+'</p></div>'+
  '<button type="button" class="tt-admin-close" data-action="tt-log-admin-cancel" aria-label="Close editor"'+(busy?' disabled':'')+'>×</button></header>'+
  (error?'<p class="tt-admin-error" role="alert">'+esc(error)+'</p>':'')+
- (!ready?'<p class="tt-admin-error" role="status">'+(editor.uncertain?'Save confirmation uncertain. Refresh the Log before retrying.':'Manual entry service is not verified. Preview only; saving is disabled.')+'</p>':'')+
+ (!ready?'<p class="tt-admin-error" role="status">'+(editor.uncertain?'Save confirmation uncertain. Refresh the Log before retrying.':'Regular employee auto clock-out is not active or could not be verified. Saving is disabled to prevent an unmonitored attendance session.')+'</p>':'')+
  '<fieldset class="tt-admin-editor-fields"'+(busy?' disabled':'')+'><div class="tt-admin-editor-body">'+
  '<section class="tt-admin-field-section"><h4>Employee and attendance</h4><label class="tt-admin-field"><span>Employee or intern</span><select name="employee" required>'+
  opt('','Select employee…',employee)+(editor.roster||[]).filter(m=>!activeOnly||m.type==='regular').map(m=>opt(m.type+':'+m.id,m.name+(m.type==='ojt'?' (OJT)':''),employee)).join('')+'</select></label>'+

@@ -2380,6 +2380,13 @@
       "file": "20261126093001_cp_tl_gm_ar_reconciliation.sql",
       "bytes": 17097,
       "sha256": "bd3786d469ddf5637b711c666e5d70fa5c6ba59f905b268198a1bf0a6f5ac133"
+    },
+    {
+      "version": "20261126100000",
+      "name": "cp_tt_admin_manual_clockin_scheduler_gate",
+      "file": "20261126100000_cp_tt_admin_manual_clockin_scheduler_gate.sql",
+      "bytes": 3085,
+      "sha256": "29992a2d980c4ebeaad26c344d579ab4089bb15907b18878b297f6b197f38e33"
     }
   ],
   "applied_only": [

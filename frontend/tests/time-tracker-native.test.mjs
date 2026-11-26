@@ -811,3 +811,24 @@ test('a stale End Session action never closes an admin-created replacement sessi
   geo:{status:'captured',latitude:12.3,longitude:123.4,accuracy:10}}),/Active attendance changed/);
  assert.equal(f.commits(),0);
 });
+
+
+test('manual clock-in fails closed when the regular auto-clockout scheduler is suspended',async()=>{
+ const entry={employeeId:other,employeeType:'regular',status:'active',clockOutAt:null,
+  clockInAt:stamp(8),location:TT_LOCATIONS[0],workNote:null,reason:'Missed clock-in'};
+ const f=setup({role:'System Admin'});
+ const original=f.api.rpc;
+ let createCalls=0;
+ f.api.rpc=async(name,args,options)=>{
+  if(name==='timetracker_attendance_admin_create_capability')
+   return {contract:'tt-admin-clockin-capability-1',actorId:user,workspaceId:workspace,boardId:board,ready:false};
+  if(name==='timetracker_attendance_admin_create'){
+   createCalls++;
+   throw new Error('Manual clock-in requires active regular nine-hour auto-clock-out');
+  }
+  return original(name,args,options);
+ };
+ assert.equal(await f.client.manualClockInCapability(board),false);
+ await assert.rejects(f.client.createManualClockIn(board,entry,2),/requires active regular nine-hour auto-clock-out/);
+ assert.equal(createCalls,1);
+});

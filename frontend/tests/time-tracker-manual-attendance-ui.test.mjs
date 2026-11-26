@@ -56,3 +56,10 @@ test('verified active-only service excludes OJT and completed creation',()=>{
  assert.doesNotMatch(html,/Intern B/);
  assert.match(html,/type="submit">Save Attendance Log/);
 });
+
+
+test('manual clock-in remains disabled until regular auto clock-out is active',()=>{
+ const html=render({},{signedCreateReady:false});
+ assert.match(html,/Regular employee auto clock-out is not active or could not be verified/);
+ assert.match(html,/type="submit" disabled>Save Attendance Log/);
+});
