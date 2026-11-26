@@ -32,7 +32,7 @@ test('rendering matches the compact blue and purple clock reference without weak
  });
  assert.match(html,/data-tt-view="clock"/);
  assert.match(html,/class="tt-session-ring"/);
- assert.match(html,/id="tt-session-elapsed" data-clock-in="2026-11-19T00:00:00.000Z">06:55:00/);
+ assert.match(html,/id="tt-session-elapsed" data-clock-in="2026-11-19T00:00:00.000Z" data-goal-target-ms="32400000">06:55:00/);
  assert.match(html,/id="tt-session-progress"/);
  assert.match(html,/role="timer" aria-label="Elapsed time/);
  assert.match(html,/data-action="tt-tab" data-target="hours"/);
@@ -173,7 +173,7 @@ test('active Clock render and live ticks agree with credited total and paid-work
  const html=renderTimeTrackerNative({result:{status:'VERIFIED_READ',access,records:[record],active:record},now,view:'clock'});
  assert.match(html,/id="tt-session-elapsed"[^>]*>07:35:49/);
  assert.match(html,/<span>Total logged<\/span><strong>07:35:49/);
- assert.match(html,/data-tt-goal-remaining="[^"]+">1h 25m to goal/);
+ assert.match(html,/data-tt-goal-remaining="[^"]+" data-tt-goal-target-ms="32400000">1h 25m to goal/);
  const elapsed={dataset:{clockIn},textContent:''};
  const progress={setAttribute(key,value){this[key]=value;}};
  const goal={dataset:{ttGoalRemaining:clockIn},textContent:''};
