@@ -10,7 +10,7 @@ const detail={board:{id:FUELTRACK_V3_ID,workspace_id:workspaceId,name:'FuelTrack
 const row={id:requestId,kind:'vehicle',revision:4,state:'completed',requestor_name:'Browser Acceptance',details:{plate:'GAN 8289',purpose:'Controlled regression fixture'},created_at:'2026-11-10T04:00:00Z',completed_at:'2026-11-10T07:00:00Z',actual_amount:500,fuel_liters:10};
 const snapshot={status:'VERIFIED_READ',boardId:FUELTRACK_V3_ID,workspaceId,role:'Admin',rows:[row],summary:{total:1,submitted:0,approved:0,rejected:0,refuelingDone:0,completed:1,totalAmount:500,totalLiters:10,approvedToday:0,rejectedToday:0,decisionsToday:0,pendingCount:0,activeQueue:0,completedToday:0,overdueCount:0}};
 const analytics={status:'VERIFIED_READ',boardId:FUELTRACK_V3_ID,workspaceId,daily:[{day:'2026-11-10',transactions:1,amount:500,liters:10}]};
-const styles=readFileSync('frontend/apsyntra-styles.bundle.css','utf8');
+const styles=readFileSync('frontend/apsyntra-styles.bundle.css','utf8')+'\n'+readFileSync('frontend/fueltrack-v3-new-request-redesign.css','utf8');
 const browser=await chromium.launch({headless:true});
 let checks=0;
 try {
@@ -67,9 +67,32 @@ try {
   }
   if(section==='new-request'){
    assert.equal(await page.locator('#ft3-new-request-form').count(),1);
+   assert.equal(await page.locator('.ft3-new-progress li').count(),3);
+   assert.equal(await page.locator('.ft3-new-next-steps li').count(),3);
    assert.equal(await page.locator('#ft3-mode-vehicle').isChecked(),true);
+   assert.equal(await page.locator('.ft3-new-vehicle').isVisible(),true);
+   assert.equal(await page.locator('.ft3-new-container').isVisible(),false);
+   assert.equal(await page.locator('.ft3-new-option-body').count(),2);
+   const desktopColumns=await page.locator('.ft3-new-composer').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length);
+   assert.equal(desktopColumns,2,'Desktop composer uses a details column and a next-steps column');
    await page.locator('#ft3-mode-container').check();
    assert.equal(await page.locator('#ft3-mode-container').isChecked(),true);
+   assert.equal(await page.locator('.ft3-new-container').isVisible(),true);
+   assert.equal(await page.locator('.ft3-new-vehicle').isVisible(),false);
+   await page.locator('#ft3-quantity').selectOption('custom');
+   assert.equal(await page.locator('.ft3-new-custom-count').isVisible(),true);
+   await page.locator('#ft3-custom-count').fill('12');
+   await page.locator('#ft3-responsible').selectOption({index:1});
+   await page.locator('#ft3-container-purpose').fill('Workshop equipment fuel reserve');
+   await page.locator('html').evaluate(el=>el.setAttribute('data-aps-monday-theme','dark'));
+   const darkForm=await page.locator('.ft3-new-panel').first().evaluate(el=>getComputedStyle(el).backgroundColor);
+   assert.notEqual(darkForm,'rgb(255, 255, 255)','New request panels use dark theme surfaces');
+   await page.locator('html').evaluate(el=>el.removeAttribute('data-aps-monday-theme'));
+   await page.setViewportSize({width:390,height:844});
+   const mobileColumns=await page.locator('.ft3-new-composer').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length);
+   assert.equal(mobileColumns,1,'Mobile composer stacks to one column');
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'No New Fuel Request page overflow at 390px');
+   checks+=11;
   }
   checks++;
  }
