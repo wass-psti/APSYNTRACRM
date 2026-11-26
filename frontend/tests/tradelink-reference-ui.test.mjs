@@ -134,6 +134,14 @@ test('CSS scope, responsive rules and reduced-motion behavior are bounded to Tra
  assert.match(css,/@media\(max-width:620px\)/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  assert.match(css,/summary:focus-visible/);
+ assert.ok(css.includes('width:min(390px,calc(100vw - 24px))'));
+ assert.ok(css.includes('max-height:min(560px,78vh)'));
+ assert.ok(css.includes('padding:12px 16px!important;font-size:16px!important'));
+ assert.ok(css.includes('min-height:68px'));
+ assert.ok(draftSource.includes('Revision history &amp; details'));
+ assert.ok(draftSource.includes('Status updates require existing document management access'));
+ assert.doesNotMatch(draftSource,/tl-reviewer-menu-actions/);
+
  assert.doesNotMatch(app,/Disaster Recovery|tl-reference-unavailable/);
  const shell=readFileSync('frontend/app.js','utf8');
  assert.match(shell,/root\.querySelector\('\.tl-reference-document-tabs a\.active'\)\?\.focus/);
