@@ -37,6 +37,7 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/frt-voucher.css",
  "frontend/fund-tracker-application.css",
  "frontend/fueltrack-v3-application.css",
+ "frontend/fueltrack-v3-analytics.css",
  "frontend/tradelink-application.css",
  "frontend/order-intake-application.css",
  "frontend/tradelink-reference-ui.css",
@@ -82,6 +83,5 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/dark-workspace-account-completion.css",
  "frontend/dark-simplified-system.css",
  "frontend/board-overhaul-experience.css",
- "frontend/fueltrack-v3-analytics.css",
 ]);
 export const STYLE_BUNDLE="frontend/apsyntra-styles.bundle.css";
