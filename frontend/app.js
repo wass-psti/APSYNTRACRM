@@ -78,7 +78,7 @@ import {boardGrid,boardGridColumns,prepareBoardGrid} from './board/presentation/
 import {boardGroupArchiveSuffix} from './board/presentation/group-counts.js';
 import {renderBoardCollapsedRollup} from './board/presentation/group-rollups.js';
 import {BoardGroupStateClient} from './board/preferences/group-state-client.js';
-import {FUELTRACK_V3_ID,findFuelTrackV3Board,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-ui.js';
+import {FUELTRACK_V3_ID,findFuelTrackV3Board,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-ui.js?v=cp-ft-all-requests-redesign-01-20261126';
 import {fuelTrackAnalyticsCsv} from './fueltrack-v3-signed-views.js';
 import {FUELTRACK_V3_APPLICATION_ROUTE,parseFuelTrackApplicationRoute} from './fueltrack-v3-application-route.js';
 import {verifyFuelTrackBackendSnapshot} from './fueltrack-v3-backend-projections.js';
