@@ -334,41 +334,29 @@ BEGIN
  d:=pg_catalog.pg_get_functiondef('public.timetracker_ot_snapshot(uuid)'::regprocedure);
  FOR old,replacement IN VALUES
  ('v_manual_admin boolean;', 'v_manual_admin boolean; v_hr boolean; v_attendance_state jsonb;'),
- ($old$v_manual_admin:=public.module_role_for('time-tracker',v_user)='System Admin';$old$,
-  $new$v_manual_admin:=public.module_role_for('time-tracker',v_user)='System Admin';
- v_hr:=COALESCE(private.tt_role_in_workspace(v_user,v_ws)='HR',false);
+ ('v_manual_admin:=public.module_role_for(''time-tracker'',v_user)=''System Admin'';',
+  'v_manual_admin:=public.module_role_for(''time-tracker'',v_user)=''System Admin'';
+ v_hr:=COALESCE(private.tt_role_in_workspace(v_user,v_ws)=''HR'',false);
  SELECT e.value::jsonb INTO v_attendance_state FROM public.module_state_entries e
- WHERE e.workspace_id=v_ws AND e.module_id='time-tracker'
- AND e.state_key='timetracker.attendance.v1' AND e.scope='shared' AND e.owner_key='*';$new$),
- ($old
-COMMIT;
-durationMinutes',r.duration_minutes,$old$,
-  $new
-COMMIT;
-durationMinutes',r.duration_minutes,'otPolicy',r.ot_policy,
-  'attendanceRecordId',r.attendance_record_id,
-  'attendanceClockInAt',r.attendance_clock_in_at,
-  'attendanceCredit',CASE WHEN r.ot_policy='duration-v1' AND r.status='Approved' THEN
+ WHERE e.workspace_id=v_ws AND e.module_id=''time-tracker''
+ AND e.state_key=''timetracker.attendance.v1'' AND e.scope=''shared'' AND e.owner_key=''*'';'),
+ ('''durationMinutes'',r.duration_minutes,',
+  '''durationMinutes'',r.duration_minutes,''otPolicy'',r.ot_policy,
+  ''attendanceRecordId'',r.attendance_record_id,
+  ''attendanceClockInAt'',r.attendance_clock_in_at,
+  ''attendanceCredit'',CASE WHEN r.ot_policy=''duration-v1'' AND r.status=''Approved'' THEN
    private.tt_duration_ot_completed_credit(v_attendance_state,r.owner_id,r.ot_date,r.attendance_record_id,
     r.attendance_clock_in_at,r.duration_minutes,r.decided_at) END,
-  'canReviewDuration',(v_hr AND r.ot_policy='duration-v1' AND r.status='Submitted'
-    AND r.owner_id<>v_user AND wm.user_id IS NOT NULL),$new$),
- ($old$v_bootstrap OR r.submission_source='manual_admin'$old$,
-  $new$v_bootstrap OR r.submission_source='manual_admin'
-  OR (v_hr AND r.ot_policy='duration-v1' AND wm.user_id IS NOT NULL)$new$),
- ($old
-COMMIT;
-scope',CASE WHEN v_bootstrap THEN 'AUTHORIZED_WORKSPACE_TEAM'$old$,
-  $new
-COMMIT;
-scope',CASE WHEN v_bootstrap OR v_hr THEN 'AUTHORIZED_WORKSPACE_TEAM'$new$),
- ($old
-COMMIT;
-bootstrapApprover',v_bootstrap,$old$,
-  $new
-COMMIT;
-bootstrapApprover',v_bootstrap,'durationOtContract','tt-duration-ot-1',
-  'durationOtHrApprover',v_hr,$new$)
+  ''canReviewDuration'',(v_hr AND r.ot_policy=''duration-v1'' AND r.status=''Submitted''
+    AND r.owner_id<>v_user AND wm.user_id IS NOT NULL),'),
+ ('''scope'',CASE WHEN v_bootstrap THEN ''AUTHORIZED_WORKSPACE_TEAM''',
+  '''scope'',CASE WHEN v_bootstrap OR v_hr THEN ''AUTHORIZED_WORKSPACE_TEAM'''),
+ ('''bootstrapApprover'',v_bootstrap,',
+  '''bootstrapApprover'',v_bootstrap,''durationOtContract'',''tt-duration-ot-1'',
+  ''durationOtHrApprover'',v_hr,'),
+ ('OR (wm.user_id IS NOT NULL AND (v_bootstrap OR r.owner_id=v_user))',
+  'OR (wm.user_id IS NOT NULL AND (v_bootstrap OR r.owner_id=v_user OR
+    (v_hr AND r.ot_policy=''duration-v1'' AND r.status=''Submitted'')))')
  LOOP
   IF pg_catalog.cardinality(pg_catalog.string_to_array(d,old))<>2 THEN
    RAISE EXCEPTION 'OT snapshot baseline drift: %',old; END IF;
