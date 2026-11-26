@@ -8,4 +8,4 @@ export {
   isFuelTrackV3ApplicationBoard,
   normalizeFuelTrackSection,
   renderFuelTrackV3Application
-} from './fueltrack-v3-application.js?v=cp-ft-all-requests-redesign-01-20261126';
+} from './fueltrack-v3-application.js?v=cp-ft-all-requests-redesign-02-20261126';
