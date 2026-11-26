@@ -5,11 +5,13 @@ on:
     paths:
       - 'frontend/apps/DailyDepartmentActivity/**'
       - 'frontend/tests/dda-native-*.test.mjs'
+      - 'scripts/dda-native-screen-browser.mjs'
       - '.github/workflows/cp-dda-fe-03a-native-domain.yml'
   pull_request:
     paths:
       - 'frontend/apps/DailyDepartmentActivity/**'
       - 'frontend/tests/dda-native-*.test.mjs'
+      - 'scripts/dda-native-screen-browser.mjs'
       - '.github/workflows/cp-dda-fe-03a-native-domain.yml'
   workflow_dispatch:
 permissions:
@@ -26,4 +28,16 @@ jobs:
       - run: node --check frontend/apps/DailyDepartmentActivity/activity-model.js
       - run: node --check frontend/apps/DailyDepartmentActivity/activity-drafts.js
       - run: node --check frontend/apps/DailyDepartmentActivity/activity-controller.js
+      - run: node --check frontend/apps/DailyDepartmentActivity/activity-screen.js
       - run: node --test frontend/tests/dda-native-*.test.mjs
+  browser:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/dda-native-screen-browser.mjs

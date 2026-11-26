@@ -1,0 +1,19 @@
+/* Scoped DDA layout; inherits CRM theme colors and control styling. */
+.dda-app {display:grid;gap:1rem;min-width:0}
+.dda-app header,.dda-app .dda-entry {display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.dda-app h1,.dda-app h2,.dda-app h3,.dda-app p {margin:0 0 .4rem}
+.dda-app .dda-layout {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:1rem}
+.dda-app .dda-layout>div {display:grid;align-content:start;gap:1rem;min-width:0}
+.dda-app .dda-panel,.dda-app .dda-stats>div {border:1px solid currentColor;border-radius:.7rem;padding:1rem;min-width:0}
+.dda-app .dda-stats {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.6rem}
+.dda-app .dda-stats strong {display:block;font-size:1.5rem}
+.dda-app form,.dda-app fieldset {display:flex;flex-wrap:wrap;align-items:end;gap:.65rem;border:0;padding:0;margin:0;min-width:0}
+.dda-app label {display:grid;gap:.3rem;flex:1 1 9rem;min-width:0}
+.dda-app input,.dda-app select,.dda-app textarea {width:100%;min-width:0;box-sizing:border-box}
+.dda-app textarea {resize:vertical}
+.dda-app .dda-entry {border-bottom:1px solid currentColor;padding:.75rem 0;overflow-wrap:anywhere}
+.dda-app .dda-entry:last-child {border-bottom:0}
+.dda-app .dda-details {white-space:pre-wrap}
+.dda-app .dda-actions {display:flex;flex-wrap:wrap;gap:.5rem}
+.dda-app [role="alert"]:empty,.dda-app [role="status"]:empty {display:none}
+@media(max-width:760px){.dda-app .dda-layout{grid-template-columns:minmax(0,1fr)}.dda-app .dda-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
