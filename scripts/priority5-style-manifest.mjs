@@ -83,5 +83,6 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/dark-workspace-account-completion.css",
  "frontend/dark-simplified-system.css",
  "frontend/board-overhaul-experience.css",
+ "frontend/fueltrack-v3-all-requests-redesign.css",
 ]);
 export const STYLE_BUNDLE="frontend/apsyntra-styles.bundle.css";

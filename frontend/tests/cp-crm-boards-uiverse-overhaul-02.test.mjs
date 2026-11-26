@@ -17,7 +17,7 @@ test("superseded Uiverse board layer is retained for history but excluded from t
     STYLE_SOURCES.includes("frontend/board-uiverse-overhaul.css"),
     false,
   );
-  assert.equal(STYLE_SOURCES.at(-1), "frontend/board-overhaul-experience.css");
+  assert.equal(STYLE_SOURCES.at(-2), "frontend/board-overhaul-experience.css");
   assert.doesNotMatch(
     bundle,
     /\/\* frontend\/board-uiverse-overhaul\.css \*\//,

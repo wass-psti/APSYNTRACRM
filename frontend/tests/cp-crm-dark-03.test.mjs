@@ -5,7 +5,7 @@ import {STYLE_SOURCES,STYLE_BUNDLE} from '../../scripts/priority5-style-manifest
 import {generateStyleBundle} from '../../scripts/build-priority5-styles.mjs';
 const css=readFileSync('frontend/dark-enterprise-monday.css','utf8');
 test('reference-inspired dark layer follows the existing native dark layer',()=>{
- assert.deepEqual(STYLE_SOURCES.slice(-13, -10),[
+ assert.deepEqual(STYLE_SOURCES.slice(-14, -11),[
   'frontend/dark-theme-foundation.css','frontend/dark-native-applications.css',
   'frontend/dark-enterprise-monday.css']);
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());

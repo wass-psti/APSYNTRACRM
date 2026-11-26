@@ -6,7 +6,7 @@ import {generateStyleBundle} from '../../scripts/build-priority5-styles.mjs';
 const css=readFileSync('frontend/uiverse-native-workflows.css','utf8');
 
 test('native visual layer follows original shared tokens and retains one CSS bundle',()=>{
- assert.deepEqual(STYLE_SOURCES.slice(-15, -13),[
+ assert.deepEqual(STYLE_SOURCES.slice(-16, -14),[
   'frontend/uiverse-design-system.css','frontend/uiverse-native-workflows.css']);
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());
  const html=readFileSync('index.html','utf8');
