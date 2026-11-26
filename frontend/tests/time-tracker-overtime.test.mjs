@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate,overtimeDurationMinutes,
- validateOvertimeDraft,validateDurationOvertimeDraft,validateManualOvertimeDraft,timeTrackerOtMetrics,
- renderTimeTrackerOvertime,timeTrackerOtDurationLabel,updateTimeTrackerOvertimePreview,
+ validateOvertimeDraft,validateDurationOvertimeDraft,validateManualDurationOvertimeDraft,timeTrackerOtMetrics,
+ renderTimeTrackerOvertime,timeTrackerOtDurationLabel,updateTimeTrackerOvertimePreview,updateTimeTrackerManualOtPreview,
  TT_OT_WRITES_ACCEPTED}
  from '../time-tracker-overtime.js';
 import {TimeTrackerNativeClient} from '../time-tracker-native.js';
@@ -15,10 +15,10 @@ const workspace='00000000-0000-4000-8000-000000000001';
 const board='46bf4ee7-368a-4c35-842c-8593ea1f6ac3';
 const rows=[
  {id:'one',ownerId:'cloud:'+worker,name:'Worker One',date:'2026-11-02',
-  status:'Submitted',start:'18:00',end:'20:00',durationMinutes:120,
+  status:'Submitted',start:'18:00',end:'20:00',otPolicy:'legacy-range',canReviewOt:false,durationMinutes:120,
   task:'Emergency preparation and review'},
  {id:'two',ownerId:'cloud:'+worker,name:'Worker One',date:'2026-11-02',
-  status:'Approved',start:'18:00',end:'20:00',durationMinutes:120,
+  status:'Approved',start:'18:00',end:'20:00',otPolicy:'legacy-range',canReviewOt:false,durationMinutes:120,
   task:'Additional site inspection'}
 ];
 test('Philippine Time week boundaries and offset navigation',()=>{
@@ -39,15 +39,16 @@ test('duration and reason enforce same-day maximum six-hour contract',()=>{
  assert.equal(validateOvertimeDraft({date:'2026-11-02',start:'18:00',
   end:'20:00',reason:'too short'},now).valid,false);
 });
-test('manual OT accepts historical dates and rejects future or unelapsed work',()=>{
+test('manual OT accepts past dates and duration-only historical entries',()=>{
  const directory=[{id:worker,status:'active'}];
- const past={employeeId:worker,date:'2025-01-02',start:'18:00',end:'20:00',
+ const past={employeeId:worker,date:'2025-01-02',durationMinutes:120,
   reason:'Emergency preparation overtime entered by an administrator'};
- assert.equal(validateManualOvertimeDraft(past,directory,now).valid,true);
- assert.equal(validateManualOvertimeDraft({...past,date:'2026-11-03'},directory,now).valid,false);
- assert.equal(validateManualOvertimeDraft({...past,date:'2026-11-02',start:'14:00',end:'15:00'},directory,now).valid,true);
- assert.equal(validateManualOvertimeDraft({...past,date:'2026-11-02',start:'16:00',end:'17:00'},directory,now).valid,false);
- assert.equal(validateManualOvertimeDraft({...past,employeeId:'not-in-directory'},directory,now).valid,false);
+ assert.equal(validateManualDurationOvertimeDraft(past,directory,now).valid,true);
+ assert.equal(validateManualDurationOvertimeDraft({...past,date:'2026-11-02'},directory,now).valid,false);
+ assert.equal(validateManualDurationOvertimeDraft({...past,date:'2026-11-03'},directory,now).valid,false);
+ assert.equal(validateManualDurationOvertimeDraft({...past,durationMinutes:29},directory,now).valid,false);
+ assert.equal(validateManualDurationOvertimeDraft({...past,durationMinutes:361},directory,now).valid,false);
+ assert.equal(validateManualDurationOvertimeDraft({...past,employeeId:'not-in-directory'},directory,now).valid,false);
 });
 
 test('metrics reflect actual authorized rows and not screenshot demo numbers',()=>{
