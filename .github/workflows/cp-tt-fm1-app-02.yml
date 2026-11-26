@@ -79,7 +79,17 @@ jobs:
           node --check scripts/cp-tt-clock-a11y-01-browser.mjs
           node --check scripts/cp-tt-clock-a11y-02-browser.mjs
       - name: Run complete frontend regression suite
-        run: npm test
+        run: |
+          if npm test > "$RUNNER_TEMP/frontend-regression.log" 2>&1; then
+            tail -n 80 "$RUNNER_TEMP/frontend-regression.log"
+          else
+            result=$?
+            echo "Frontend regression suite failed. Showing failed tests and the final diagnostic context."
+            grep -n -A 24 -B 2 -E '^not ok ' "$RUNNER_TEMP/frontend-regression.log" | tail -n 1600 || true
+            grep -n -E 'ERR_[A-Z]+|Error:' "$RUNNER_TEMP/frontend-regression.log" | tail -n 80 || true
+            tail -n 160 "$RUNNER_TEMP/frontend-regression.log"
+            exit "$result"
+          fi
       - name: Verify deterministic CSS bundle and source manifest
         run: node scripts/build-priority5-styles.mjs --check
       - name: Verify formatting and changed-module lint

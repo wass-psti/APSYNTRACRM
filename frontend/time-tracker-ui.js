@@ -72,20 +72,30 @@ export function timeTrackerClockParts(at=new Date()){
 }
 
 /** Live credited work for the signed session, using the same PHT lunch policy as attendance totals. */
-export function timeTrackerSessionElapsed(clockIn,at=new Date()){
+function normalizedGoalMs(value){
+ return Number.isFinite(value)&&value>=TT_POLICY.requiredWorkMs&&value<=15*60*60*1000?
+  value:TT_POLICY.requiredWorkMs;
+}
+function timeTrackerGoalLabel(targetWorkMs){
+ const minutes=Math.round(normalizedGoalMs(targetWorkMs)/60000);
+ const hours=Math.floor(minutes/60),remainder=minutes%60;
+ return remainder?hours+'h '+remainder+'m goal':hours+'h goal';
+}
+export function timeTrackerSessionElapsed(clockIn,at=new Date(),targetWorkMs=TT_POLICY.requiredWorkMs){
  const start=Date.parse(clockIn);
  const now=new Date(at).getTime();
  if(!Number.isFinite(start)||!Number.isFinite(now))return {label:'00:00:00',progress:0};
  const elapsed=creditedAttendanceMs(clockIn,at);
  return {
   label:formatTimeTrackerDurationMs(elapsed),
-  progress:Math.min(1,elapsed/TT_POLICY.requiredWorkMs)
+  progress:Math.min(1,elapsed/normalizedGoalMs(targetWorkMs))
  };
 }
 
-function timeTrackerGoalRemaining(clockIn,at){
- const minutes=Math.ceil(Math.max(0,TT_POLICY.requiredWorkMs-creditedAttendanceMs(clockIn,at))/60000);
- return minutes?Math.floor(minutes/60)+'h '+minutes%60+'m to goal':'9h goal reached';
+function timeTrackerGoalRemaining(clockIn,at,targetWorkMs=TT_POLICY.requiredWorkMs){
+ const goal=normalizedGoalMs(targetWorkMs);
+ const minutes=Math.ceil(Math.max(0,goal-creditedAttendanceMs(clockIn,at))/60000);
+ return minutes?Math.floor(minutes/60)+'h '+minutes%60+'m to goal':timeTrackerGoalLabel(goal)+' reached';
 }
 
 /** Change a text node in place instead of replacing the element's children. */
@@ -117,7 +127,8 @@ export function syncTimeTrackerClock(root,at=new Date()){
  if(welcome)updateClockText(welcome,parts.greeting);
  const elapsed=root.querySelector('#tt-session-elapsed');
  if(elapsed?.dataset?.clockIn){
-  const session=timeTrackerSessionElapsed(elapsed.dataset.clockIn,at);
+  const target=Number(elapsed.dataset.goalTargetMs);
+  const session=timeTrackerSessionElapsed(elapsed.dataset.clockIn,at,target);
   updateClockText(elapsed,session.label);
   const progress=root.querySelector('#tt-session-progress');
   const dashOffset=String((339.292*(1-session.progress)).toFixed(3));
@@ -131,7 +142,8 @@ export function syncTimeTrackerClock(root,at=new Date()){
  }
  const goal=root.querySelector('[data-tt-goal-remaining]');
  if(goal?.dataset?.ttGoalRemaining){
-  updateClockText(goal,timeTrackerGoalRemaining(goal.dataset.ttGoalRemaining,at));
+  updateClockText(goal,timeTrackerGoalRemaining(goal.dataset.ttGoalRemaining,at,
+   Number(goal.dataset.ttGoalTargetMs)));
  }
  const countdown=root?.querySelector?.('[data-tt-auto-clockout-countdown]');
  if(countdown?.dataset?.deadline){
@@ -310,14 +322,20 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
  const showHomeNote=location==='Offsite (Home)'&&requireHomeNote;
  const showActiveHomeNote=active?.location==='Offsite (Home)'&&
   isTimeTrackerHomeNoteRequired(active.location,access?.email,access?.userId);
- const session=active?timeTrackerSessionElapsed(active.clockIn,now):null;
  const autoClockout=active&&result.autoClockout?.recordId===active.id?result.autoClockout:null;
+ const overtimeCutoff=autoClockout?.overtimeCutoffAt;
+ const cutoffWorkMs=overtimeCutoff?creditedAttendanceMs(active.clockIn,overtimeCutoff):TT_POLICY.requiredWorkMs;
+ const goalTargetMs=Number.isFinite(cutoffWorkMs)&&cutoffWorkMs>TT_POLICY.requiredWorkMs?
+  normalizedGoalMs(cutoffWorkMs):TT_POLICY.requiredWorkMs;
+ const goalLabel=timeTrackerGoalLabel(goalTargetMs);
+ const session=active?timeTrackerSessionElapsed(active.clockIn,now,goalTargetMs):null;
  const autoDeadline=autoClockout?.status==='PENDING_GPS'?null:
-  autoClockout?.nextAt||autoClockout?.cutoffAt;
+  autoClockout?.overtimeCutoffAt||autoClockout?.nextAt||autoClockout?.cutoffAt;
  const autoUnavailable=active&&result.autoClockoutUnavailable===true;
  const autoLabel=autoUnavailable?'Automatic clock-out status unavailable':
   !autoClockout?'':autoClockout.status==='MONITORING'?
-  'Automatic clock-out monitoring · nine-hour threshold at ':
+  (autoClockout.overtimeCutoffAt?'Approved overtime scheduled · automatic clock-out at ':
+   'Automatic clock-out monitoring · nine-hour threshold at '):
   autoClockout.status==='GRACE'?'Grace period active · automatic clock-out at ':
   autoClockout.status==='OVERTIME'?'Approved overtime active · automatic clock-out at ':
   autoClockout.status==='PENDING_GPS'?'Automatic clock-out pending · fresh foreground GPS required':
@@ -362,13 +380,13 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
          (339.292*(1-session.progress)).toFixed(3)+'"></circle></svg>'+
       '<div class="tt-compact-elapsed" role="timer" aria-label="Elapsed time for active attendance session">'+
        '<span>Elapsed this session</span><strong id="tt-session-elapsed" data-clock-in="'+
-        esc(active.clockIn)+'">'+session.label+'</strong>'+
-       '<span class="tt-session-goal">of 9h goal</span></div></div>'+
+        esc(active.clockIn)+'" data-goal-target-ms="'+goalTargetMs+'">'+session.label+'</strong>'+
+       '<span class="tt-session-goal">of '+goalLabel+'</span></div></div>'+
        '<p class="tt-active-copy">Started '+esc(formatTimeTrackerAutoClockoutTime(active.clockIn))+
        '<span data-tt-auto-clockout-inline'+(autoDeadline?'':' hidden')+'>'+
         ' · auto clock-out <strong data-tt-auto-clockout-inline-time>'+
          esc(autoDeadline?formatTimeTrackerAutoClockoutTime(autoDeadline):'')+'</strong></span>'+
-       ' · <span data-tt-goal-remaining="'+esc(active.clockIn)+'">'+timeTrackerGoalRemaining(active.clockIn,now)+'</span></p>'+
+       ' · <span data-tt-goal-remaining="'+esc(active.clockIn)+'" data-tt-goal-target-ms="'+goalTargetMs+'">'+timeTrackerGoalRemaining(active.clockIn,now,goalTargetMs)+'</span></p>'+
        '<span class="tt-compact-sr">Elapsed working time excludes the unpaid 12 PM to 1 PM Philippine lunch break.</span>'+
        '<p class="tt-clock-hint tt-auto-clockout-state'+
         (autoUnavailable||autoClockout?.status!=='MONITORING'?'':' tt-compact-sr')+'" role="status"'+
@@ -597,10 +615,11 @@ export function syncTimeTrackerClockView(root,{
  const autoClockout=result.autoClockout?.recordId===active.id?result.autoClockout:null;
  const autoUnavailable=result.autoClockoutUnavailable===true;
  const autoDeadline=autoClockout?.status==='PENDING_GPS'?'':
-  String(autoClockout?.nextAt||autoClockout?.cutoffAt||'');
+  String(autoClockout?.overtimeCutoffAt||autoClockout?.nextAt||autoClockout?.cutoffAt||'');
  const autoLabel=autoUnavailable?'Automatic clock-out status unavailable':
   !autoClockout?'':autoClockout.status==='MONITORING'?
-  'Automatic clock-out monitoring · nine-hour threshold at ':
+  (autoClockout.overtimeCutoffAt?'Approved overtime scheduled · automatic clock-out at ':
+   'Automatic clock-out monitoring · nine-hour threshold at '):
   autoClockout.status==='GRACE'?'Grace period active · automatic clock-out at ':
   autoClockout.status==='OVERTIME'?'Approved overtime active · automatic clock-out at ':
   autoClockout.status==='PENDING_GPS'?'Automatic clock-out pending · fresh foreground GPS required':

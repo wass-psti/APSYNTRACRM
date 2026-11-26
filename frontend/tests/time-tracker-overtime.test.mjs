@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate,overtimeDurationMinutes,
- validateOvertimeDraft,validateManualOvertimeDraft,timeTrackerOtMetrics,
+ validateOvertimeDraft,validateDurationOvertimeDraft,validateManualOvertimeDraft,timeTrackerOtMetrics,
  renderTimeTrackerOvertime,timeTrackerOtDurationLabel,updateTimeTrackerOvertimePreview,
  TT_OT_WRITES_ACCEPTED}
  from '../time-tracker-overtime.js';
@@ -334,7 +334,7 @@ test('OT duration preview updates the duration, progress, reason count and inlin
  assert.equal(nodes['[data-tt-ot-duration-value]'].textContent,'2 hr 00 min');
  assert.equal(nodes['[data-tt-ot-duration-progress]'].value,120);
  assert.equal(nodes['[data-tt-ot-duration-message]'].textContent,
-  '240 minutes remaining within the 6-hour maximum.');
+  '4 hr 00 min remaining within the 6-hour maximum.');
  assert.equal(nodes['[data-tt-ot-reason-count]'].textContent,'26 / 500');
  assert.equal(nodes['#tt-ot-end'].validationMessage,'');
  assert.equal(nodes['#tt-ot-reason'].validationMessage,'');
@@ -369,4 +369,80 @@ test('employee OT modal wiring captures edits, preserves retry drafts and manage
  assert.match(app,/if\(state\.ttOtModalOpen\)root\.querySelector\('#tt-ot-date'\)/);
  assert.match(app,/data-tt-ot-backdrop/);
  assert.match(app,/const overtimeDialog=root\.querySelector\('\.tt-ot-modal'\)/);
+});
+
+test('duration OT validates future/current work date and exact minute amount',()=>{
+ const valid={date:'2026-11-02',durationMinutes:180,reason:'Additional planned inspection work'};
+ assert.equal(validateDurationOvertimeDraft(valid,now).durationMinutes,180);
+ for(const change of [{date:'2026-11-01'},{date:'2026-11-10'},{durationMinutes:29},
+  {durationMinutes:361},{durationMinutes:30.5},{durationMinutes:'180'}]){
+  assert.equal(validateDurationOvertimeDraft({...valid,...change},now).valid,false);
+ }
+});
+test('signed duration contract renders an hours input, with HR review controls',()=>{
+ const durationRow={...rows[0],otPolicy:'duration-v1',canReviewDuration:true};
+ const access={moduleRole:'HR',userId:admin,durationOtContractActive:true,durationOtHrApprover:true,otContractActive:true};
+ const html=renderTimeTrackerOvertime({requests:[durationRow],access,modalOpen:true,now});
+ assert.match(html,/id="tt-ot-duration-hours"/);
+ assert.match(html,/min="0\.5" max="6" step="0\.5"/);
+ assert.match(html,/value="2"/);
+ assert.doesNotMatch(html,/id="tt-ot-(start|end)"/);
+ assert.match(html,/data-action="tt-ot-approve"/);
+ assert.doesNotMatch(renderTimeTrackerOvertime({requests:[durationRow],
+  access:{...access,userId:worker,durationOtHrApprover:false},now}),/data-action="tt-ot-approve"/);
+ assert.doesNotMatch(renderTimeTrackerOvertime({requests:[durationRow],
+  access:{...access,durationOtHrApprover:false,bootstrapApprover:true},now}),/data-action="tt-ot-approve"/);
+});
+test('duration form converts hour selections to exact payroll minutes',()=>{
+ const control=value=>({value,textContent:'',attributes:{},
+  setAttribute(name,next){this.attributes[name]=next;},
+  removeAttribute(name){delete this.attributes[name];},
+  setCustomValidity(message){this.validationMessage=message;}});
+ const nodes={
+  '#tt-ot-duration-hours':control('3'),
+  '#tt-ot-reason':control('Additional engineering work'),
+  '[data-tt-ot-duration-value]':control(''),
+  '[data-tt-ot-duration-progress]':control(''),
+  '[data-tt-ot-duration-message]':control(''),
+  '[data-tt-ot-reason-count]':control('')
+ };
+ const form={id:'tt-ot-form',querySelector:selector=>nodes[selector]||null};
+ assert.equal(updateTimeTrackerOvertimePreview(form),true);
+ assert.equal(nodes['[data-tt-ot-duration-value]'].textContent,'3 hr 00 min');
+ assert.equal(nodes['[data-tt-ot-duration-progress]'].value,180);
+ assert.equal(nodes['[data-tt-ot-duration-message]'].textContent,
+  '3 hr 00 min remaining within the 6-hour maximum.');
+ nodes['#tt-ot-duration-hours'].value='0.25';
+ updateTimeTrackerOvertimePreview(form);
+ assert.equal(nodes['[data-tt-ot-duration-value]'].textContent,'—');
+ assert.equal(nodes['[data-tt-ot-duration-progress]'].value,0);
+ assert.match(nodes['[data-tt-ot-duration-message]'].textContent,/0\.5 to 6 hours/);
+});
+test('duration OT uses signed employee identity and never transmits start/end',async()=>{
+ const today=new Date(Date.now()+8*3600000).toISOString().slice(0,10);
+ const snapshot={mode:'ACTIVE',actorId:admin,workspaceId:workspace,
+  scope:'OWN_OT_ONLY',bootstrapApprover:false,durationOtContract:'tt-duration-ot-1',
+  durationOtHrApprover:false,rows:[]};
+ let args;
+ const receipt={id:'50000000-0000-4000-8000-000000000001',workspaceId:workspace,
+  ownerId:'cloud:'+admin,status:'Submitted',otPolicy:'duration-v1',durationMinutes:180};
+ const client=setup({role:'Employee',snapshot,rpcHandlers:{
+  timetracker_ot_submit_duration:payload=>(args=payload,receipt)}});
+ await client.submitOvertime(board,{date:today,durationMinutes:180,reason:'Additional planned inspection work'});
+ assert.deepEqual(args,{p_board_id:board,p_date:today,p_duration_minutes:180, p_reason:'Additional planned inspection work'});
+});
+test('HR signed scope reviews duration only and rejects non-HR claims',async()=>{
+ const durationRow={...rows[0],id:'50000000-0000-4000-8000-000000000003',
+  otPolicy:'duration-v1',canReviewDuration:true};
+ const snapshot={mode:'ACTIVE',actorId:admin,workspaceId:workspace,
+  scope:'AUTHORIZED_WORKSPACE_TEAM',bootstrapApprover:false,durationOtContract:'tt-duration-ot-1',
+  durationOtHrApprover:true,rows:[durationRow,rows[1]]};
+ const client=setup({role:'HR',snapshot,rpcHandlers:{
+  timetracker_ot_decide_duration:{id:durationRow.id,workspaceId:workspace,status:'Approved',
+   decidedBy:admin,otPolicy:'duration-v1'}}});
+ const read=await client.snapshot(board);
+ assert.equal(read.access.durationOtHrApprover,true);
+ assert.equal(read.otRequests.length,1);
+ assert.equal((await client.decideOvertime(board,durationRow.id,'Approved')).status,'Approved');
+ await assert.rejects(()=>setup({role:'Employee',snapshot}).snapshot(board),/review role/);
 });

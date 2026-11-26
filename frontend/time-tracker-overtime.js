@@ -51,6 +51,16 @@ function validateReason(reason){
   return {valid:false,message:'Reason must be 10–500 characters.'};
  return {valid:true,reason:description};
 }
+export function validateDurationOvertimeDraft({date,durationMinutes,reason}={},at=new Date()){
+ if(!validDay(date))return {valid:false,message:'Select a valid work date.'};
+ const gap=(Date.parse(date+'T00:00:00Z')-Date.parse(phtDay(at)+'T00:00:00Z'))/msDay;
+ if(gap<0||gap>7)return {valid:false,message:'Choose today or one of the next 7 days.'};
+ if(!Number.isInteger(durationMinutes)||durationMinutes<30||durationMinutes>360)
+  return {valid:false,message:'Choose 30 minutes to 6 hours of overtime.'};
+ const reasonResult=validateReason(reason);
+ if(!reasonResult.valid)return reasonResult;
+ return {valid:true,date,durationMinutes,reason:reasonResult.reason};
+}
 export function validateOvertimeDraft({date,start,end,reason}={},at=new Date()){
  if(!validDay(date))return {valid:false,message:'Select a valid date.'};
  const gap=(Date.parse(date+'T00:00:00Z')-
@@ -97,6 +107,14 @@ export function projectTimeTrackerOtRows(rows=[]){
    submittedBy:typeof r.submittedBy==='string'?r.submittedBy:null,
    submittedByName:String(r.submittedByName||'').slice(0,100),
    submissionSource,isManual:submissionSource==='manual_admin',
+   otPolicy:r.otPolicy==='duration-v1'?'duration-v1':'legacy-range',
+   attendanceRecordId:typeof r.attendanceRecordId==='string'?r.attendanceRecordId:null,
+   canReviewDuration:r.otPolicy==='duration-v1'&&r.canReviewDuration===true,
+   attendanceCredit:r.otPolicy==='duration-v1'&&r.status==='Approved'&&
+    Number.isSafeInteger(r.attendanceCredit?.actualMinutes)&&r.attendanceCredit.actualMinutes>=0&&
+    Number.isSafeInteger(r.attendanceCredit?.payableMinutes)&&r.attendanceCredit.payableMinutes>=0&&
+    r.attendanceCredit.payableMinutes<=r.attendanceCredit.actualMinutes&&r.attendanceCredit.payableMinutes<=r.durationMinutes?
+    Object.freeze({actualMinutes:r.attendanceCredit.actualMinutes,payableMinutes:r.attendanceCredit.payableMinutes}):null,
    start:String(r.start||'').slice(0,5),end:String(r.end||'').slice(0,5),
    durationMinutes:Number.isInteger(r.durationMinutes)&&r.durationMinutes>=0&&
     r.durationMinutes<=360?r.durationMinutes:null,
@@ -131,8 +149,9 @@ export function timeTrackerOtMetrics(rows=[],filters={},at=new Date()){
 }
 const row=(r,access,query='',expandedRequestIds=[],otContractActive=false)=>{
  const initials=r.name.trim().split(/\s+/).slice(0,2).map(v=>v[0]||'').join('').toUpperCase();
- const canReview=r.status==='Submitted'&&(access?.bootstrapApprover===true||
-  (r.ownerId!=='cloud:'+access?.userId&&access?.manualOtManager===true&&r.isManual));
+ const canReview=r.status==='Submitted'&&(r.otPolicy==='duration-v1'?
+  access?.durationOtHrApprover===true&&r.canReviewDuration===true&&r.ownerId!=='cloud:'+access?.userId:
+  (access?.bootstrapApprover===true||(r.ownerId!=='cloud:'+access?.userId&&access?.manualOtManager===true&&r.isManual)));
  const button=(action,label,primary=false)=>'<button type="button" class="'+(primary?'tt-ot-reference-primary':'tt-ot-reference-secondary')+
   '" data-action="'+action+'" data-id="'+esc(r.id)+'"'+
   (!otContractActive?' disabled title="Signed OT contract unavailable"':'')+'>'+label+'</button>';
@@ -140,7 +159,7 @@ const row=(r,access,query='',expandedRequestIds=[],otContractActive=false)=>{
   (query&&!r.searchText.includes(query)?' hidden':'')+'>'+
   '<div class="tt-ot-reference-person"><span class="tt-ot-reference-avatar" aria-hidden="true">'+esc(initials)+'</span><strong>'+esc(r.name)+'</strong></div>'+
   '<span class="tt-ot-reference-date">'+esc(fmt(r.date))+'</span>'+
-  '<span class="tt-ot-reference-time">'+esc(formatTimeTrackerWallClock(r.start))+' – '+esc(formatTimeTrackerWallClock(r.end))+'</span>'+
+  '<span class="tt-ot-reference-time">'+(r.otPolicy==='duration-v1'?(r.attendanceCredit?'Paid OT: '+esc(minutesLabel(r.attendanceCredit.payableMinutes).trim()):'Duration-based'):esc(formatTimeTrackerWallClock(r.start))+' – '+esc(formatTimeTrackerWallClock(r.end)))+'</span>'+
   '<strong class="tt-ot-reference-hours">'+esc(minutesLabel(r.durationMinutes).trim())+'</strong>'+
   '<span class="tt-ot-reference-reason">'+esc(r.task||'Not supplied')+(r.isManual?' <em class="tt-ot-manual-badge">Manual Entry</em>':'')+'</span>'+
   '<span class="tt-ot-pill tt-ot-'+r.status.toLowerCase()+'">'+esc(r.status==='Submitted'?'Pending':r.status)+'</span>'+
@@ -148,8 +167,13 @@ const row=(r,access,query='',expandedRequestIds=[],otContractActive=false)=>{
   (canReview?'<div class="tt-ot-review-actions">'+button('tt-ot-approve','Approve',true)+button('tt-ot-reject','Reject')+'</div>':'')+
   (r.canWithdraw&&otContractActive?button('tt-ot-withdraw','Remove'):'')+
   '<details class="tt-ot-reference-details"'+(expandedRequestIds.includes(r.id)?' open':'')+'><summary>View</summary>'+
-  '<div class="tt-ot-detail"><span><b>Start:</b> '+esc(formatTimeTrackerWallClock(r.start))+'</span>'+
-  '<span><b>End:</b> '+esc(formatTimeTrackerWallClock(r.end))+'</span>'+
+  '<div class="tt-ot-detail">'+(r.otPolicy==='duration-v1'?
+  '<span><b>Requested duration:</b> '+esc(minutesLabel(r.durationMinutes).trim())+'</span>'+
+  '<span><b>Attendance:</b> '+(r.attendanceRecordId?'Matched':'Awaiting matching record')+'</span>'+
+  '<span><b>Actual OT:</b> '+esc(r.attendanceCredit?minutesLabel(r.attendanceCredit.actualMinutes).trim():'Not finalized')+'</span>'+
+  '<span><b>Payable OT:</b> '+esc(r.attendanceCredit?minutesLabel(r.attendanceCredit.payableMinutes).trim():'Not finalized')+'</span>':
+  '<span><b>Start:</b> '+esc(formatTimeTrackerWallClock(r.start))+'</span>'+
+  '<span><b>End:</b> '+esc(formatTimeTrackerWallClock(r.end))+'</span>')+
   '<p><b>Reason:</b> '+esc(r.task||'Not supplied')+'</p>'+
   (r.isManual?'<p><b>Entry type:</b> Manual OT'+(access?.manualOtManager===true&&r.submittedByName?' · Entered by '+esc(r.submittedByName):'')+'</p>':'')+
   '</div></details></div></article>';
@@ -168,7 +192,10 @@ export function updateTimeTrackerOvertimePreview(form){
  if(!form||form.id!=='tt-ot-form')return false;
  const start=form.querySelector('#tt-ot-start')?.value||'';
  const end=form.querySelector('#tt-ot-end')?.value||'';
- const minutes=overtimeDurationMinutes(start,end);
+ const durationInput=form.querySelector('#tt-ot-duration-hours');
+ const rawHours=Number(durationInput?.value);
+ const rawMinutes=rawHours*60;
+ const minutes=durationInput?(Number.isInteger(rawMinutes)&&rawMinutes>=30&&rawMinutes<=360?rawMinutes:null):overtimeDurationMinutes(start,end);
  const duration=form.querySelector('[data-tt-ot-duration-value]');
  const progress=form.querySelector('[data-tt-ot-duration-progress]');
  const message=form.querySelector('[data-tt-ot-duration-message]');
@@ -178,8 +205,8 @@ export function updateTimeTrackerOvertimePreview(form){
   progress.setAttribute('aria-valuetext',minutes===null?'Duration not calculated':timeTrackerOtDurationLabel(minutes)+' of 6 hours');
  }
  if(message)message.textContent=minutes===null?
-  (start&&end?'Choose a same-day range from 30 minutes up to 6 hours.':'Choose a start and end time to calculate duration.'):
-  (360-minutes)+' minutes remaining within the 6-hour maximum.';
+  (durationInput?'Choose 0.5 to 6 hours in 0.5-hour increments.':start&&end?'Choose a same-day range from 30 minutes up to 6 hours.':'Choose a start and end time to calculate duration.'):
+  timeTrackerOtDurationLabel(360-minutes)+' remaining within the 6-hour maximum.';
  const endInput=form.querySelector('#tt-ot-end');
  if(endInput){
   const invalid=Boolean(start&&end&&minutes===null);
@@ -199,31 +226,34 @@ export function updateTimeTrackerOvertimePreview(form){
  if(count)count.textContent=reason.length+' / 500';
  return true;
 }
-function requestForm({date,start='18:00',end='20:00',reason=''}={},now=new Date(),otContractActive=false,busy=false){
+function requestForm({date,start='18:00',end='20:00',reason='',durationMinutes=120}={},now=new Date(),otContractActive=false,busy=false,durationMode=false){
  const selectedDate=date===undefined?phtDay(now):date;
  const startValue=timeInputValue(start),endValue=timeInputValue(end);
- const amount=overtimeDurationMinutes(startValue,endValue);
+ const amount=durationMode?(Number.isInteger(durationMinutes)&&durationMinutes>=30&&durationMinutes<=360?durationMinutes:null):overtimeDurationMinutes(startValue,endValue);
+ const durationHours=Number.isInteger(durationMinutes)?durationMinutes/60:'';
  const active=TT_OT_WRITES_ACCEPTED&&otContractActive===true;
  const disabled=!active||busy;
  return '<div class="tt-ot-backdrop" data-tt-ot-backdrop>'+
   '<section class="tt-ot-modal" role="dialog" aria-modal="true" tabindex="-1"'+(busy?' aria-busy="true"':'')+' aria-labelledby="tt-ot-modal-title" aria-describedby="tt-ot-modal-description">'+
    '<header class="tt-ot-modal-header"><div><span class="tt-ot-modal-eyebrow">TIME TRACKER · OVERTIME</span>'+
     '<h3 id="tt-ot-modal-title">File Overtime</h3>'+
-    '<p id="tt-ot-modal-description">Share your overtime schedule and why the additional work is needed.</p></div>'+
+    '<p id="tt-ot-modal-description">'+(durationMode?'Request overtime duration before your regular shift ends. HR approval is required.':'Share your overtime schedule and why the additional work is needed.')+'</p></div>'+
     '<button type="button" data-action="tt-ot-close" aria-label="Close overtime request"'+(busy?' disabled':'')+'>×</button></header>'+
    '<form id="tt-ot-form"><div class="tt-ot-form-grid">'+
     '<label class="tt-ot-date-field" for="tt-ot-date"><span>Overtime date</span>'+
-     '<input id="tt-ot-date" name="date" type="date" required'+(busy?' disabled':'')+' min="'+esc(shiftPhtDay(phtDay(now),-30))+
+     '<input id="tt-ot-date" name="date" type="date" required'+(busy?' disabled':'')+' min="'+esc(shiftPhtDay(phtDay(now),durationMode?0:-30))+
      '" max="'+esc(shiftPhtDay(phtDay(now),7))+'" value="'+esc(selectedDate)+'" aria-describedby="tt-ot-date-help">'+
-     '<small id="tt-ot-date-help">Requests are accepted for the past 30 days or next 7 days. Philippine time.</small></label>'+
+     '<small id="tt-ot-date-help">'+(durationMode?'Choose the original Philippine clock-in date: today or the next 7 days.':'Requests are accepted for the past 30 days or next 7 days. Philippine time.')+'</small></label>'+
     '<section class="tt-ot-schedule" aria-labelledby="tt-ot-schedule-title">'+
      '<div class="tt-ot-schedule-heading"><div><h4 id="tt-ot-schedule-title">Overtime hours</h4>'+
-      '<p>Choose when your overtime work will begin and end.</p></div><span>Same day</span></div>'+
+      '<p>'+(durationMode?'Choose the number of additional working hours.':'Choose when your overtime work will begin and end.')+'</p></div><span>'+(durationMode?'Duration':'Same day')+'</span></div>'+
+     (durationMode?'<label for="tt-ot-duration-hours"><span>Requested overtime (hours)</span>'+
+      '<input id="tt-ot-duration-hours" name="durationHours" type="number" min="0.5" max="6" step="0.5" required'+(busy?' disabled':'')+' value="'+esc(durationHours)+'" aria-label="Requested overtime hours"></label>':
      '<div class="tt-ot-time-grid">'+
       '<label for="tt-ot-start"><span>Start (12-hour)</span><input id="tt-ot-start" name="start" type="time" step="60" required'+(busy?' disabled':'')+' value="'+esc(startValue)+
        '" aria-label="Overtime start time"></label>'+
       '<label for="tt-ot-end"><span>End (12-hour)</span><input id="tt-ot-end" name="end" type="time" step="60" required'+(busy?' disabled':'')+' value="'+esc(endValue)+
-       '" aria-label="Overtime end time"></label></div>'+
+       '" aria-label="Overtime end time"></label></div>')+
      '<div class="tt-ot-duration" aria-label="Calculated overtime duration">'+
       '<div class="tt-ot-duration-top"><span>Total overtime</span><strong data-tt-ot-duration-value>'+
        esc(amount===null?'—':timeTrackerOtDurationLabel(amount))+'</strong></div>'+
@@ -231,7 +261,7 @@ function requestForm({date,start='18:00',end='20:00',reason=''}={},now=new Date(
        '" aria-label="Overtime duration against the six-hour maximum" aria-valuetext="'+
        esc(amount===null?'Duration not calculated':timeTrackerOtDurationLabel(amount)+' of 6 hours')+'"></progress>'+
       '<div class="tt-ot-duration-foot"><small>30-minute minimum · 6-hour maximum</small><small data-tt-ot-duration-message aria-live="polite">'+
-       esc(amount===null?'Choose a start and end time to calculate duration.':(360-amount)+' minutes remaining within the 6-hour maximum.')+
+       esc(amount===null?(durationMode?'Choose 0.5 to 6 hours in 0.5-hour increments.':'Choose a start and end time to calculate duration.'):(timeTrackerOtDurationLabel(360-amount)+' remaining within the 6-hour maximum.'))+
        '</small></div></div></section>'+
     '<label class="tt-ot-reason" for="tt-ot-reason"><span>Reason for overtime</span>'+
      '<textarea id="tt-ot-reason" name="reason" maxlength="500" rows="3" required'+(busy?' disabled':'')+' placeholder="Briefly explain the work that needs to be completed…" aria-describedby="tt-ot-reason-help tt-ot-reason-count">'+esc(reason)+'</textarea>'+
@@ -302,5 +332,5 @@ export function renderTimeTrackerOvertime({
  '<div class="tt-ot-empty" data-tt-ot-empty'+(m.visible.length?' hidden':'')+'><span class="tt-ot-reference-empty-icon" aria-hidden="true">◷</span>'+
  (m.submitted+m.approved+m.rejected===0?'<strong>No overtime this week</strong><p>Overtime requests for this week will appear here.</p><button type="button" class="tt-ot-reference-primary" data-action="'+(canManage?'tt-ot-manual-open':'tt-ot-open')+'">+ File Overtime</button>':'<strong>No matching requests</strong><p>Try a different week, search or status.</p>')+'</div>'+
  '<footer class="tt-ot-reference-footer"><span>Manual entries are tagged</span><strong>'+m.visible.length+' of '+m.statusRows.length+' total</strong></footer></section>'+
- (modalOpen==='manual'?manualRequestForm(form,access,now,busy):modalOpen?requestForm(form,now,access.otContractActive===true,busy):'')+'</section>';
+ (modalOpen==='manual'?manualRequestForm(form,access,now,busy):modalOpen?requestForm(form,now,access.otContractActive===true,busy,access.durationOtContractActive===true):'')+'</section>';
 }

@@ -43,6 +43,45 @@ for migration in \
  supabase/migrations/20261124170000_cp_tt_ot_creator_withdrawal.sql; do
  docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -f "/repo/$migration"
 done
+# Exercise the new duration-OT DDL and guarded worker/snapshot patch in this
+# same isolated PG17 database. The test container is isolated; execute the registered forward migration verbatim.
+docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres \
+ -f /repo/sql/tests/cp-tt-duration-ot-prerequisites.sql
+# Load the actual worker and replay its exact migration patches (not a mock).
+python3 - "$ROOT" <<'PY' | docker exec -i "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres
+from pathlib import Path
+import re,sys
+root=Path(sys.argv[1])/'supabase/migrations'
+base=(root/'20261125100000_cp_tt_auto_clockout_isolation.sql').read_text()
+start=base.index('CREATE OR REPLACE FUNCTION private.tt_process_auto_clockouts()')
+end=base.index('REVOKE ALL ON FUNCTION private.tt_process_auto_clockouts()',start)
+worker=base[start:end]
+literal=r"(?:'(?:[^']|'')*'|\$[A-Za-z_][A-Za-z0-9_]*\$[\s\S]*?\$[A-Za-z_][A-Za-z0-9_]*\$)"
+def decode(s):
+    if s.startswith("'"): return s[1:-1].replace("''","'")
+    tag=s[:s.index('$',1)+1]
+    assert s.endswith(tag)
+    return s[len(tag):-len(tag)]
+for filename,expected in [('20261125130000_cp_tt_auto_clockout_reactivation.sql',2),
+                          ('20261126090000_cp_tt_active_clockin_scheduler_correction.sql',5)]:
+    source=(root/filename).read_text()
+    pairs=re.findall(r"\('private\.tt_process_auto_clockouts\(\)',\s*("+literal+r"),\s*("+literal+r")\)",source)
+    assert len(pairs)==expected,(filename,len(pairs))
+    for old,new in pairs:
+        old,new=decode(old),decode(new)
+        assert worker.count(old)==1,(filename,old)
+        worker=worker.replace(old,new)
+print(worker)
+print("REVOKE ALL ON FUNCTION private.tt_process_auto_clockouts() FROM PUBLIC,anon,authenticated,service_role;")
+PY
+cat > "/tmp/$ID-duration-ot-apply.sql" <<'SQL'
+SET apsyntra.test_disposable='on';
+\i /repo/supabase/migrations/20261126120000_cp_tt_duration_overtime.sql
+SQL
+docker cp "/tmp/$ID-duration-ot-apply.sql" "$DB:/tmp/duration-ot-apply.sql"
+rm -f "/tmp/$ID-duration-ot-apply.sql"
+docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -f /tmp/duration-ot-apply.sql
+echo CP_TT_DURATION_OT_STAGED_DDL_PASS
 docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres -c "CREATE ROLE authenticator LOGIN PASSWORD '$PASSWORD'; GRANT authenticated,anon TO authenticator; GRANT USAGE ON SCHEMA public TO authenticator,authenticated;"
 docker run -d --rm --name "$AUTH" --network "$NETWORK" -p 127.0.0.1::9999 \
  -e GOTRUE_DB_DRIVER=postgres -e GOTRUE_DB_DATABASE_URL="postgres://postgres:$PASSWORD@$DB:5432/postgres?sslmode=disable" \

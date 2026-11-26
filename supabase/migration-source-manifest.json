@@ -1570,6 +1570,13 @@
   ],
   "forward_migrations": [
     {
+      "version": "20261126120000",
+      "name": "cp_tt_duration_overtime",
+      "file": "20261126120000_cp_tt_duration_overtime.sql",
+      "bytes": 23735,
+      "sha256": "86b101e067dc443dec188b7607e015dd58d90ddb1d0fb0e95d5704a131dd79d9"
+    },
+    {
       "version": "20261116005252",
       "name": "cp_board_trash_permanent_delete_01",
       "file": "20261116005252_cp_board_trash_permanent_delete_01.sql",

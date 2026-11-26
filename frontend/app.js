@@ -14701,7 +14701,12 @@ root.addEventListener('submit',event=>{
    end:root.querySelector('#tt-ot-end')?.value||'',
    reason:root.querySelector('#tt-ot-reason')?.value||''
   };
-  try{
+  const durationInput=root.querySelector('#tt-ot-duration-hours');
+  if(durationInput){
+   const minutes=Number(durationInput.value)*60;
+   draft.durationMinutes=Number.isInteger(minutes)?minutes:null;
+  }
+  else try{
    draft.start=parseTimeTrackerClockInput(draft.start);
    draft.end=parseTimeTrackerClockInput(draft.end);
   }catch(error){toast(error.message,true);return;}
@@ -14710,7 +14715,7 @@ root.addEventListener('submit',event=>{
   root.querySelector('.tt-ot-modal')?.focus({preventScroll:true});
   Promise.resolve().then(()=>timeTracker.submitOvertime(state.boardId,draft))
    .then(async()=>{state.ttOtModalOpen=false;state.ttOtDraft={};
-     await loadTimeTracker();toast('OT request submitted for bootstrap review.');})
+     await loadTimeTracker();toast(durationInput?'OT request submitted for HR approval.':'OT request submitted for bootstrap review.');})
    .catch(notice).finally(()=>{
     state.ttBusy=false;render();
     if(state.ttOtModalOpen)root.querySelector('#tt-ot-date')?.focus({preventScroll:true});
@@ -14885,6 +14890,11 @@ root.addEventListener('input',event=>{
    end:overtimeForm.querySelector('#tt-ot-end')?.value||'',
    reason:overtimeForm.querySelector('#tt-ot-reason')?.value||''
   };
+  const durationInput=overtimeForm.querySelector('#tt-ot-duration-hours');
+  if(durationInput){
+   const minutes=Number(durationInput.value)*60;
+   state.ttOtDraft.durationMinutes=Number.isInteger(minutes)?minutes:null;
+  }
   updateTimeTrackerOvertimePreview(overtimeForm);
   return;
  }
