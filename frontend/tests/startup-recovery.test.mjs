@@ -173,8 +173,10 @@ test('hung fetches and hung JSON bodies obey bounded deadline and abort without 
 test('startup code preserves signed backend RBAC and provides same-page recovery path',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const index=readFileSync('index.html','utf8');
- assert.ok(index.indexOf('frontend/startup-guard.js')<
-  index.indexOf('type="module" src="./frontend/app.js?v=cp-tl-document-menu-02-20261126-01"'));
+ const appEntry=index.indexOf('type="module" src="./frontend/app.js?v=');
+ assert.ok(appEntry>0,'the versioned app entry module must exist');
+ assert.ok(index.indexOf('frontend/startup-guard.js')<appEntry,
+  'the startup guard must load before the app entry module');
  assert.match(app,/case 'retry-startup'/);
  assert.match(app,/await boot\(\);/);
  assert.match(app,/if\(startupBusy\)return;/);
