@@ -12,7 +12,7 @@ const snapshot={status:'VERIFIED_READ',boardId:FUELTRACK_V3_ID,workspaceId,role:
 const approvalRow={...row,state:'submitted',completed_at:null,created_at:'2026-11-26T08:00:00Z'};
 const approvalSnapshot={...snapshot,rows:[approvalRow],summary:{...snapshot.summary,total:1,submitted:1,approved:0,rejected:0,refuelingDone:0,completed:0,pendingCount:1}};
 const analytics={status:'VERIFIED_READ',boardId:FUELTRACK_V3_ID,workspaceId,daily:[{day:'2026-11-10',transactions:1,amount:500,liters:10}]};
-const styles=readFileSync('frontend/apsyntra-styles.bundle.css','utf8')+'\n'+readFileSync('frontend/fueltrack-v3-approvals-redesign.css','utf8');
+const styles=readFileSync('frontend/apsyntra-styles.bundle.css','utf8');
 const browser=await chromium.launch({headless:true});
 let checks=0;
 try {
