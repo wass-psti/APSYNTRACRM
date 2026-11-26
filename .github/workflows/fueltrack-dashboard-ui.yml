@@ -29,6 +29,8 @@ jobs:
           cache: npm
       - name: Install locked frontend dependencies
         run: npm ci --no-audit --no-fund
+      - name: Check FuelTrack application entry syntax
+        run: node --check frontend/app.js
       - name: Install Chromium for responsive browser acceptance
         run: npx playwright install --with-deps chromium
       - name: Run signed dashboard renderer and workflow regressions
