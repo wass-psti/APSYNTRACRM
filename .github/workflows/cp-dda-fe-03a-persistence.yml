@@ -1,0 +1,38 @@
+name: DDA disposable persistence contract
+on:
+  push:
+    branches: [main, cp-dda-fe-03a-reference-ci]
+    paths:
+      - 'supabase/migration-candidates/dda-activity-persistence.sql'
+      - 'scripts/sql/dda-activity-persistence-test.sql'
+      - '.github/workflows/cp-dda-fe-03a-persistence.yml'
+  pull_request:
+    paths:
+      - 'supabase/migration-candidates/dda-activity-persistence.sql'
+      - 'scripts/sql/dda-activity-persistence-test.sql'
+      - '.github/workflows/cp-dda-fe-03a-persistence.yml'
+permissions:
+  contents: read
+jobs:
+  postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: fixture-only
+          POSTGRES_DB: dda_fixture
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d dda_fixture"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run disposable SQL acceptance
+        env:
+          PGPASSWORD: fixture-only
+        run: psql -h localhost -U postgres -d dda_fixture -v ON_ERROR_STOP=1 -f scripts/sql/dda-activity-persistence-test.sql
