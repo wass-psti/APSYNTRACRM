@@ -151,7 +151,7 @@ test('Reports CSS is published by Pages without new dependencies or CSP changes'
  assert.ok(index.indexOf('frontend/time-tracker-reports-command.css')>
   index.indexOf('frontend/time-tracker-log-command.css'));
  assert.match(smoke,/'frontend\/time-tracker-reports-command\.css'/);
- assert.match(index,/script type="module" src="\.\/frontend\/app\.js"/);
+ assert.match(index,/script type="module" src="\.\/frontend\/app\.js(?:\?v=[^"]+)?"/);
  assert.match(index,/style-src-attr 'none'/);
  assert.doesNotMatch(index,/react-three|pixi-viewport|pixi-spine|gsap/);
 });
