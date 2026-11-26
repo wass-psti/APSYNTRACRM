@@ -24,7 +24,7 @@ test('new document save defaults to For Approval and accepts explicit Draft only
  const client=await source('frontend/tradelink-domain-client.js');
  const workspace=await source('frontend/tradelink-draft-workspace.js');
  const app=await source('frontend/app.js');
- assert.match(workspace,/async save\(\{documentId,expectedRevision=0,draft,initialState='for-approval',reviseApproved=false\}/);
+ assert.match(workspace,/async save\(\{documentId,expectedRevision=0,draft,initialState='for-approval',reviseApproved=false,approvalFreePreview=false\}/);
  assert.match(app,/fields\.get\('documentStatus'\)\|\|'for-approval'/);
  assert.match(app,/!\['draft','for-approval'\]\.includes\(initialState\)/);
  assert.match(client,/p_initial_state:initialState/);

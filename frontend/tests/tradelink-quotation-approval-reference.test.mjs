@@ -68,7 +68,7 @@ test('quotation approval inputs retain original signed Draft field names without
  assert.equal('creatorId' in payload,false);
 });
 
-test('fixed quotation hierarchy is applied to all Draft saves, including malicious overrides',()=>{
+test('fixed quotation hierarchy is applied to ordinary Draft saves, including malicious overrides',()=>{
  const unsafe={documentType:'quotation',verifiedBy:'Other',verifiedByEmail:'other@example.test',
  approvedBy:'Impostor'};
  const routed=applyQuotationApprovalHierarchy(unsafe);
@@ -88,5 +88,5 @@ test('fixed quotation hierarchy is applied to all Draft saves, including malicio
  assert.throws(()=>applyQuotationApprovalHierarchy({...temporary,documentNumber:'Q-UNRELATED-01'}),/authorized Quotation management approver/);
  assert.equal(applyQuotationApprovalHierarchy({documentType:'esi',verifiedBy:'Finance'}).verifiedBy,'Finance');
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
- assert.match(source,/validateTradeLinkDraftEnvelope\(applyQuotationApprovalHierarchy\(draft\),\s*\{allowUnassignedNumber:operation==='create'&&this\.automaticNumberingEnabled\}\)/);
+ assert.match(source,/validateTradeLinkDraftEnvelope\(applyQuotationApprovalHierarchy\(draft,\{approvalFreePreview\}\),\s*\{allowUnassignedNumber:operation==='create'&&this\.automaticNumberingEnabled\}\)/);
 });

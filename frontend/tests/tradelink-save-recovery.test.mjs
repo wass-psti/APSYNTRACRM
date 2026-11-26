@@ -14,10 +14,12 @@ const ws='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const draft={documentType:'quotation',documentNumber:'',customerName:'Disposable customer'};
 const receipt={documentId:id,boardItemId:item,revision:1,documentNumber:'Q-011130',state:'for-approval',operation:'create',idempotent:false};
 const record={id,board_item_id:item,document_type:'quotation',document_number:receipt.documentNumber,revision:1,workflow_state:'for-approval',archived_at:null,created_at:'2026-11-24T00:00:00Z',updated_at:'2026-11-24T00:00:00Z',content:{...draft,documentNumber:receipt.documentNumber}};
-function harness(enabled=false){
+function harness(enabled=false,approvalFree=false){
+ const resultReceipt=approvalFree?{...receipt,state:'approved'}:receipt;
+ const resultRecord=approvalFree?{...record,workflow_state:'approved',approval_policy:'gm-creator-approval-free-v1',approved:true,primary_reviewed_at:null,secondary_reviewed_at:null}:record;
  const state={context:{workspace_id:ws},tradeLinkDraft:initialTradeLinkDraftView()};
- const calls={save:[],read:0,list:0,board:0};
- const failures={save:null,read:null,list:null,board:null,storage:false,lost:false};
+ const calls={save:[],read:0,list:0,board:0,revision:0};
+ const failures={save:null,read:null,list:null,board:null,revision:null,policy:null,storage:false,lost:false};
  const stored=new Map(),committed=new Map();
  const instanceId='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
  const identity={userId:id,workspaceId:ws,documentType:'quotation',instanceId};
@@ -29,8 +31,9 @@ function harness(enabled=false){
    if(committed.has(command.documentId))assert.deepEqual(committed.get(command.documentId),command);
    else committed.set(command.documentId,structuredClone(command));
    if(failures.lost)throw new ApiError('lost response',0,'REQUEST_TIMEOUT');
-   return receipt;},
-  async read(){calls.read++;if(failures.read)throw failures.read;return record;},
+   return resultReceipt;},
+  async read(){calls.read++;if(failures.read)throw failures.read;return resultRecord;},
+  async revisionBundle(){calls.revision++;if(failures.revision)throw failures.revision;return {currentRevision:resultReceipt.revision,selected:{...resultRecord,...(failures.policy?{approval_policy:failures.policy}:{})}};},
   async list(){calls.list++;if(failures.list)throw failures.list;return {status:'AUTHORIZED_READ',rows:[]};},
   async boardProjection(){calls.board++;if(failures.board)throw failures.board;return {board:{workspace_id:ws},items:[{id:item,title:receipt.documentNumber}]};}
  };
@@ -73,4 +76,21 @@ test('durable receipt survives failed readback; retry performs no mutation',asyn
 test('definitive rejection preserves raw inputs and removes pending command',async()=>{
  const h=harness(true);h.failures.save=new ApiError('Two different assigned TradeLink reviewers are required',400,'22023');await h.run();
  assert.equal(h.state.tradeLinkDraft.pendingSave,null);assert.equal([...h.stored.values()][0].pendingSave,undefined);assert.equal([...h.stored.values()][0].fields.customerName,'Disposable customer');
+});
+
+test('approval-free signed completion reconciles Approved and clears recovery only after revision evidence',async()=>{
+ const h=harness(true,true);await h.run();
+ assert.equal(h.calls.save.length,1);assert.equal(h.calls.revision,1);
+ assert.equal(h.state.tradeLinkDraft.rows[0]?.workflowState,'approved');
+ assert.equal(h.state.tradeLinkDraft.rows[0]?.approvalPolicy,'gm-creator-approval-free-v1');
+ assert.equal(h.location.hash,'#/tradelink/documents');assert.equal(h.stored.size,0);
+});
+test('approval-free receipt with mismatched revision policy retains receipt and retries verification without resaving',async()=>{
+ const h=harness(true,true);h.failures.policy='standard-dual-v1';await h.run();
+ assert.match(h.state.tradeLinkDraft.error,/Document saved/);
+ assert.equal(h.location.hash,'');assert.equal(h.calls.save.length,1);
+ assert.equal([...h.stored.values()][0].pendingSave.receipt.state,'approved');
+ h.failures.policy=null;await h.run();
+ assert.equal(h.calls.save.length,1);assert.equal(h.calls.revision,2);
+ assert.equal(h.location.hash,'#/tradelink/documents');assert.equal(h.stored.size,0);
 });

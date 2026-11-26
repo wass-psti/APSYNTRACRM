@@ -2347,6 +2347,13 @@
       "sha256": "a2c489ef884efcd1859de11a137d66249976acac7d1db9806b2f7963da682ea1"
     },
     {
+      "version": "20261126060708",
+      "name": "cp_tl_gm_06e_creator_approval_free",
+      "file": "20261126060708_cp_tl_gm_06e_creator_approval_free.sql",
+      "bytes": 34165,
+      "sha256": "183c67bbba12de00684fb51e1e1625791e053120cf1027aff5152b9d8bcc570f"
+    },
+    {
       "version": "20261126090000",
       "name": "cp_tt_active_clockin_scheduler_correction",
       "file": "20261126090000_cp_tt_active_clockin_scheduler_correction.sql",

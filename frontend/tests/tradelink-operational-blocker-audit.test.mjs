@@ -53,9 +53,10 @@ test('app verifies full saved envelope and Board projection before reconciling b
  const commit=app.indexOf('const receipt=pending.receipt||await tradeLinkDraftWorkspace.save(');
  const parity=app.indexOf('!tradeLinkSavedDraftMatches(record,savedDraft)',commit);
  const board=app.indexOf('!board.items?.some(item=>item.id===receipt.boardItemId',parity);
- const reconcile=app.indexOf('const verifiedList=reconcileTradeLinkSavedListing(list,record,receipt)',board);
+ const policy=app.indexOf("approvalBundle.selected.approval_policy!=='gm-creator-approval-free-v1'",parity);
+ const reconcile=app.indexOf('const verifiedList=reconcileTradeLinkSavedListing(list,approvalBundle?',board);
  const toast=app.indexOf("toast('Document '+savedDraft.documentNumber+' saved. Board item and All Documents verified.')",reconcile);
- assert.ok(commit>=0&&parity>commit&&board>parity&&reconcile>board&&toast>reconcile);
+ assert.ok(commit>=0&&parity>commit&&policy>parity&&board>policy&&reconcile>board&&toast>reconcile);
 });
 
 test('missing optional server-search RPC is cached only on confirmed missing-function errors',()=>{
