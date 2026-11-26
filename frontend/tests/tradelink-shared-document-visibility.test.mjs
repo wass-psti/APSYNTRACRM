@@ -47,9 +47,16 @@ test('ordinary TradeLink users render the shared All Documents collection withou
  assert.match(html,/Original Creator One/);
  assert.match(html,/Original Creator Two/);
  assert.match(html,/View document/);
+ assert.match(html,/Revision history &amp; details/);
+ assert.match(html,/Print PDF/);
+ assert.match(html,/Change status/);
+ assert.match(html,/data-tradelink-status-select[^>]*disabled/);
+ assert.match(html,/data-action="tradelink-document-status-update"[^>]*disabled/);
+ assert.match(html,/Save status/);
  assert.match(html,/tl-ref-row-action-trigger/);
  assert.match(html,/popovertarget="tl-doc-menu-/);
- assert.doesNotMatch(html,/tl-reviewer-row-actions/);
+ assert.doesNotMatch(html,/tl-reviewer-menu-actions/);
+ assert.doesNotMatch(html,/tl-reviewer-stage-summary/);
  assert.doesNotMatch(html,/Delete Selected/);
  assert.doesNotMatch(html,/Hide Selected/);
  assert.doesNotMatch(html,/Unhide Selected/);
@@ -58,7 +65,7 @@ test('ordinary TradeLink users render the shared All Documents collection withou
  assert.doesNotMatch(html,/Print PDF/);
 });
 
-test('ordinary assigned reviewers use the compact action menu while retaining document and validation actions',()=>{
+test('ordinary assigned reviewers receive the standard document menu while retaining their validation action',()=>{
  const assigned={...row(firstId,'Q-REVIEW-001','Original Creator One'),
   assignedStage:'secondary',primaryAt:null,secondaryAt:null,workflowState:'for-approval'};
  const view={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',
@@ -69,10 +76,17 @@ test('ordinary assigned reviewers use the compact action menu while retaining do
   actorEmail:'reviewer@example.test'
  });
  assert.match(html,/tl-ref-row-action-trigger/);
- assert.match(html,/data-action="tradelink-review-document-open"/);
+ assert.match(html,/data-action="tradelink-document-open"/);
+ assert.match(html,/Revision history &amp; details/);
+ assert.match(html,/Print PDF/);
+ assert.match(html,/Change status/);
+ assert.match(html,/Save status/);
  assert.match(html,/data-action="tradelink-document-review-stage"/);
  assert.match(html,/Use Time Now/);
- assert.doesNotMatch(html,/tl-reviewer-row-actions/);
+ assert.match(html,/data-tradelink-status-select[^>]*disabled/);
+ assert.doesNotMatch(html,/data-action="tradelink-review-document-open"/);
+ assert.doesNotMatch(html,/tl-reviewer-menu-actions/);
+ assert.doesNotMatch(html,/tl-reviewer-stage-summary/);
 });
 
 test('ordinary TradeLink users without reviewer or creator roles can still view the shared All Documents collection',()=>{
@@ -111,6 +125,11 @@ test('General Manager retains existing bulk controls over the same shared rows',
  assert.match(html,/Delete Selected/);
  assert.match(html,/Hide Selected/);
  assert.match(html,/Unhide Selected/);
+ assert.match(html,/Preview\/Edit/);
+ assert.match(html,/Revision history &amp; details/);
+ assert.match(html,/Change status/);
+ assert.match(html,/data-action="tradelink-document-status-update"/);
+ assert.doesNotMatch(html,/data-tradelink-status-select[^>]*disabled/);
 });
 
 test('all TradeLink module roles use the signed shared-document read session for list, page, detail and revisions',async()=>{
