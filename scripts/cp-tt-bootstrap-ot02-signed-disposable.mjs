@@ -277,6 +277,17 @@ assert.ok(!ojtManualSnapshot.rows.some(row=>row.id===manualDuration.id),
  'non-approver employees do not see another employee manual OT history');
 assert.equal(sql(`SELECT (start_time IS NULL)::text||'|'||(end_time IS NULL)::text||'|'||duration_minutes::text||'|'||ot_policy FROM public.timetracker_ot_requests WHERE id='${manualDuration.id}'`),
  'true|true|150|manual-duration-v1');
+const platformManualDuration=receipt(await rpc(bootstrap,'timetracker_ot_submit_manual_duration',{
+ p_board_id:board,p_owner_id:worker.id,p_date:shiftDay(date,-2),p_duration_minutes:90,
+ p_reason:'Historical maintenance work entered by a platform Admin'
+}),'platform Admin manual duration OT entry');
+assert.equal(platformManualDuration.otPolicy,'manual-duration-v1');
+const platformManualSnapshot=receipt(await rpc(hr,'timetracker_ot_snapshot',{p_board_id:board}),'HR sees platform Admin manual OT');
+assert.equal(platformManualSnapshot.rows.find(row=>row.id===platformManualDuration.id).canReviewOt,true);
+const platformManualApproval=receipt(await rpc(hr,'timetracker_ot_decide_manual_duration',{
+ p_board_id:board,p_request_id:platformManualDuration.id,p_decision:'Approved'
+}),'HR approves platform Admin manual duration OT');
+assert.equal(platformManualApproval.status,'Approved');
 const racing=receipt(await submit(worker,'14:00','15:00','concurrent decision'),'race request');
 const outcomes=await Promise.all([
  withdraw(worker,racing.id),
