@@ -13,6 +13,9 @@ const activeCreate = readFileSync(
   new URL('supabase/migrations/20261125090000_cp_tt_admin_manual_clockin.sql', root),
   'utf8'
 );
+const createFunction = activeCreate.slice(
+  activeCreate.indexOf('CREATE FUNCTION public.timetracker_attendance_admin_create(')
+);
 
 test('forward migration is registered with exact source bytes and SHA-256', () => {
   const entry = manifest.forward_migrations.find((item) => item.file === file);
@@ -47,9 +50,9 @@ test('scheduler enrollment stays asynchronous and migration does not activate or
 });
 
 test('existing signed create contract remains employee-owned, active, and without fabricated GPS', () => {
-  assert.match(activeCreate, /'ownerId','cloud:'\|\|p_employee_id::text/);
-  assert.match(activeCreate, /'clockOut',NULL/);
-  assert.match(activeCreate, /'status','not_captured'/);
-  assert.match(activeCreate, /'source','admin-manual-clockin'/);
-  assert.doesNotMatch(activeCreate, /'latitude'\s*,|'longitude'\s*,|'accuracy'\s*,/);
+  assert.match(createFunction, /'ownerId','cloud:'\|\|p_employee_id::text/);
+  assert.match(createFunction, /'clockOut',NULL/);
+  assert.match(createFunction, /'status','not_captured'/);
+  assert.match(createFunction, /'source','admin-manual-clockin'/);
+  assert.doesNotMatch(createFunction, /'latitude'\s*,|'longitude'\s*,|'accuracy'\s*,/);
 });
