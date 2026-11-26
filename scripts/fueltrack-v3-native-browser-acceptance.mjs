@@ -92,7 +92,7 @@ try {
    const mobileColumns=await page.locator('.ft3-new-composer').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length);
    assert.equal(mobileColumns,1,'Mobile composer stacks to one column');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'No New Fuel Request page overflow at 390px');
-   checks+=11;
+   checks+=15;
   }
   checks++;
  }
