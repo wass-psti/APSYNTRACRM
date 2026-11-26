@@ -23,6 +23,9 @@ on:
       - 'frontend/fueltrack-v3-new-request-redesign.css'
       - 'frontend/tests/fueltrack-v3-new-request-ui.test.mjs'
       - 'scripts/priority5-style-manifest.mjs'
+      - 'frontend/fueltrack-v3-approvals.js'
+      - 'frontend/fueltrack-v3-approvals-redesign.css'
+      - 'frontend/tests/fueltrack-v3-approvals.test.mjs'
   pull_request:
     paths:
       - 'frontend/fueltrack-v3-signed-views.js'
@@ -45,6 +48,9 @@ on:
       - 'frontend/fueltrack-v3-new-request-redesign.css'
       - 'frontend/tests/fueltrack-v3-new-request-ui.test.mjs'
       - 'scripts/priority5-style-manifest.mjs'
+      - 'frontend/fueltrack-v3-approvals.js'
+      - 'frontend/fueltrack-v3-approvals-redesign.css'
+      - 'frontend/tests/fueltrack-v3-approvals.test.mjs'
 permissions:
   contents: read
 jobs:
