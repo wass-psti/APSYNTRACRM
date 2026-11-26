@@ -98,7 +98,7 @@ test('CP-FT-ANALYTICS-01 derives weighted cost per liter and daily frequency onl
  const frequency=renderFuelTrackSignedAnalyticsRich(snapshot,records,{view:'frequency',now:new Date('2026-11-12T04:00:00Z')});
  assert.match(frequency,/Daily completed refueling count/);
  assert.match(frequency,/class="ft3-analytics-series" data-metric="transactions"/);
- assert.match(frequency,/3<\/td>/);
+ assert.match(frequency,/class="ft3-analytics-series-total">3<\/strong>/);
 });
 test('analytics reporting windows use the exact requested rolling day count',()=>{
  const records={...analytics,days:365,daily:[
