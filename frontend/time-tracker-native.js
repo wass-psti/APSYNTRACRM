@@ -620,21 +620,29 @@ export class TimeTrackerNativeClient{
   const access=await this.access(boardId);
   if(access.moduleRole!=='System Admin')deny('System Admin attendance management required');
   const response=await this.api.rpc('timetracker_attendance_admin_create_capability',{p_board_id:boardId});
-  if(!isRecord(response)||response.contract!=='tt-admin-clockin-capability-1'||
+  if(!isRecord(response)||response.contract!=='tt-admin-attendance-capability-3'||
      response.actorId!==access.userId||response.workspaceId!==access.workspaceId||
-     response.boardId!==boardId||typeof response.ready!=='boolean')
-   deny('Manual clock-in capability is unverified');
+     response.boardId!==boardId||typeof response.activeReady!=='boolean'||
+     response.historicalReady!==true||
+     !['active','suspended','invalid'].includes(response.schedulerMode)||
+     response.activeReady!==(response.schedulerMode==='active'))
+   deny('Manual attendance capability is unverified');
   await checkIdentity(this.auth,this.api,access,boardId);
-  return response.ready;
+  return Object.freeze({activeReady:response.activeReady,
+   historicalReady:response.historicalReady,schedulerMode:response.schedulerMode});
  }
  async createManualClockIn(boardId,entry,expectedRevision){
   const access=await this.access(boardId);
   if(access.moduleRole!=='System Admin'||entry?.employeeType!=='regular'||
-     entry.status!=='active'||entry.clockOutAt!==null||!uuid.test(entry.employeeId||'')||
-     !safeTime(entry.clockInAt)||!TT_LOCATIONS.includes(entry.location)||
-     typeof entry.reason!=='string'||!entry.reason.trim()||entry.reason.length>500||
+     entry.status!=='active'||entry.clockOutAt!==null||entry.clockOutMode!==null||
+     !uuid.test(entry.employeeId||'')||!safeTime(entry.clockInAt)||
+     !TT_LOCATIONS.includes(entry.location)||typeof entry.reason!=='string'||
+     !entry.reason.trim()||entry.reason.length>500||
      !Number.isSafeInteger(expectedRevision)||expectedRevision<1)
    deny('Invalid System Admin manual clock-in request');
+  const capability=await this.manualClockInCapability(boardId);
+  if(capability.activeReady!==true)
+   deny('Regular employee auto clock-out is not active; today’s manual clock-in is unavailable');
   await checkIdentity(this.auth,this.api,access,boardId);
   const result=await this.api.rpc('timetracker_attendance_admin_create',{
    p_board_id:boardId,p_employee_id:entry.employeeId,p_clock_in_at:entry.clockInAt,
@@ -649,6 +657,45 @@ export class TimeTrackerNativeClient{
    deny('Manual clock-in receipt is unverified; refresh before retrying');
   await checkIdentity(this.auth,this.api,access,boardId);
   return Object.freeze({recordId:result.recordId,revision:Number(result.revision)});
+ }
+ async createHistoricalAttendance(boardId,entry,expectedRevision,requestId){
+  const access=await this.access(boardId);
+  if(access.moduleRole!=='System Admin'||entry?.employeeType!=='regular'||
+     entry.status!=='completed'||!uuid.test(entry.employeeId||'')||
+     typeof entry.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(entry.date)||
+     !safeTime(entry.clockInAt)||!['standard','actual'].includes(entry.clockOutMode)||
+     (entry.clockOutMode==='standard'&&entry.clockOutAt!==null)||
+     (entry.clockOutMode==='actual'&&(!safeTime(entry.clockOutAt)||
+       Date.parse(entry.clockOutAt)<=Date.parse(entry.clockInAt)))||
+     !TT_LOCATIONS.includes(entry.location)||typeof entry.reason!=='string'||
+     !entry.reason.trim()||entry.reason.length>500||!uuid.test(requestId||'')||
+     !Number.isSafeInteger(expectedRevision)||expectedRevision<1)
+   deny('Invalid System Admin historical attendance request');
+  const capability=await this.manualClockInCapability(boardId);
+  if(capability.historicalReady!==true)
+   deny('Historical attendance service is not ready');
+  await checkIdentity(this.auth,this.api,access,boardId);
+  const result=await this.api.rpc('timetracker_attendance_admin_create_historical',{
+   p_board_id:boardId,p_employee_id:entry.employeeId,p_attendance_day:entry.date,
+   p_clock_in_at:entry.clockInAt,p_clock_out_at:entry.clockOutAt,
+   p_clock_out_mode:entry.clockOutMode,p_location:entry.location,
+   p_work_note:entry.workNote,p_reason:entry.reason,
+   p_expected_revision:expectedRevision,p_request_id:requestId
+  },{retryUnauthorized:false});
+  const expectedMethod=entry.clockOutMode==='standard'?
+   'standard_nine_credited_hours':'admin_entered_actual';
+  if(!isRecord(result)||result.mode!=='COMMITTED'||
+     result.contract!=='tt-admin-historical-attendance-1'||
+     result.actorId!==access.userId||result.workspaceId!==access.workspaceId||
+     result.boardId!==boardId||result.employeeId!==entry.employeeId||
+     !uuid.test(result.recordId||'')||!Number.isSafeInteger(Number(result.revision))||
+     Number(result.revision)<=expectedRevision||!safeTime(result.clockOutAt)||
+     result.clockOutMethod!==expectedMethod||typeof result.replayed!=='boolean'||
+     !safeTime(result.committedAt))
+   deny('Historical attendance receipt is unverified; refresh before retrying');
+  await checkIdentity(this.auth,this.api,access,boardId);
+  return Object.freeze({recordId:result.recordId,revision:Number(result.revision),
+   clockOutAt:result.clockOutAt,clockOutMethod:result.clockOutMethod,replayed:result.replayed});
  }
  async mutateAttendanceRecords(boardId,{action,recordIds,patch={},reason='',expectedRevision,manualClockout=false}={}){
   const access=await this.access(boardId);
