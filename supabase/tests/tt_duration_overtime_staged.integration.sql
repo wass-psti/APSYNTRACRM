@@ -212,6 +212,9 @@ BEGIN
 
  UPDATE public.module_role_assignments SET role='OJT' WHERE user_id=ojt AND module_id='time-tracker';
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',ojt::text,'session_id',ojt_session::text)::text,true);
+ snap:=public.timetracker_ot_snapshot(board);
+ IF EXISTS(SELECT 1 FROM jsonb_array_elements(snap->'rows') value WHERE value->>'id'=manual_id::text) THEN
+  RAISE EXCEPTION 'Non-approver OJT user can see another employee manual OT history'; END IF;
  BEGIN
   PERFORM public.timetracker_ot_submit_duration(board,d,60,
    'OJT duration request should be rejected');
