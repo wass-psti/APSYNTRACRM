@@ -197,7 +197,7 @@ test('stale save is rejected by the signed RPC, denied user never calls read RPC
  assert.equal(calls,2);
  const denied=new TradeLinkDomainClient({api:{...api,
   allowed:async()=>false,rpc:async()=>{throw Error('must not call');}},auth});
- await assert.rejects(()=>denied.read(id),/manager scope required|Create New context is unavailable/);
+ await assert.rejects(()=>denied.read(id),/Signed TradeLink reviewer API unavailable/);
 });
 
 
