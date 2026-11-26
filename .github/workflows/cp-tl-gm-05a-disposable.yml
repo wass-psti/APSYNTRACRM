@@ -1,0 +1,17 @@
+name: CP-TL-GM-05A Direct Executive Approval
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sql/candidates/cp-tl-gm-05a-*.sql'
+      - 'sql/tests/cp-tl-gm-05a-*.sql'
+      - 'scripts/cp-tl-gm-05a-disposable.sh'
+      - '.github/workflows/cp-tl-gm-05a-disposable.yml'
+permissions:
+  contents: read
+jobs:
+  executive-approval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - run: bash scripts/cp-tl-gm-05a-disposable.sh
