@@ -89,6 +89,8 @@ test('ordinary TradeLink users without reviewer or creator roles can still view 
  assert.match(html,/Q-SHARED-001/);
  assert.match(html,/Q-SHARED-002/);
  assert.match(html,/View document/);
+ assert.match(html,/tl-ref-row-action-trigger/);
+ assert.match(html,/popovertarget="tl-doc-menu-/);
  assert.doesNotMatch(html,/Delete Selected/);
  assert.doesNotMatch(html,/Hide Selected/);
  assert.doesNotMatch(html,/Unhide Selected/);
