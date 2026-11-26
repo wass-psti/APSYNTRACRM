@@ -44,8 +44,8 @@ ALTER TABLE public.timetracker_ot_requests
      AND status='Approved' AND (attendance_clock_in_at AT TIME ZONE 'Asia/Manila')::date=ot_date)))
   OR (ot_policy='manual-duration-v1' AND submission_source='manual_admin'
    AND start_time IS NULL AND end_time IS NULL AND submitted_by IS NOT NULL
-   AND attendance_record_id IS NULL AND attendance_clock_in_at IS NULL)
-   AND duration_minutes BETWEEN 30 AND 360 AND duration_minutes % 30=0
+   AND attendance_record_id IS NULL AND attendance_clock_in_at IS NULL
+   AND duration_minutes BETWEEN 30 AND 360 AND duration_minutes % 30=0)
  );
 
 CREATE UNIQUE INDEX tt_ot_manual_duration_live_day
