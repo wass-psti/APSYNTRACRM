@@ -3,6 +3,13 @@
 BEGIN;
 SET LOCAL lock_timeout='5s';
 SET LOCAL statement_timeout='90s';
+DO $disposable$
+BEGIN
+ IF current_setting('apsyntra.test_disposable',true) IS DISTINCT FROM 'on' THEN
+  RAISE EXCEPTION 'Duration OT staged SQL requires a disposable database';
+ END IF;
+END;
+$disposable$;
 
 ALTER TABLE public.timetracker_ot_requests
  ADD COLUMN ot_policy text NOT NULL DEFAULT 'legacy-range',
