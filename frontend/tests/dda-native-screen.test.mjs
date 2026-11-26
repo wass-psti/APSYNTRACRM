@@ -39,7 +39,7 @@ test('DDA dashboard separates activity work from organization settings and shows
  const html=renderActivityScreen(base);
  assert.match(html,/class="dda-stats" aria-label="Activity totals"/);
  for(const key of ['activities','pending','progress','completed'])assert.match(html,new RegExp('dda-metric-'+key));
- assert.match(html,/class="dda-empty"/);
+ assert.match(html,/class="dda-empty dda-activity-empty"/);
  assert.ok(html.indexOf('dda-stats')<html.indexOf('dda-filters'));
  assert.ok(html.indexOf('dda-records')<html.indexOf('dda-management'));
  assert.match(html,/Organization &amp; Settings/);
