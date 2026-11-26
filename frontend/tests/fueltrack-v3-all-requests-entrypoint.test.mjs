@@ -18,7 +18,8 @@ test('published entrypoint cache-busts the full FuelTrack All Requests render pa
  assert.ok(stylesheet?.includes(version));
  assert.equal((index.match(/<link rel="stylesheet"/g)||[]).length,1);
  assert.ok(index.includes('frontend/fueltrack-v3-all-requests-redesign.css'));
- assert.ok(bundle.endsWith(css.trimEnd()+'\n'));
+ const newRequestCss=read('../fueltrack-v3-new-request-redesign.css');
+ assert.ok(bundle.endsWith(css+'\n/* frontend/fueltrack-v3-new-request-redesign.css */\n'+newRequestCss.trimEnd()+'\n'));
  assert.equal(bundle.split(css.trim()).length-1,1);
  assert.ok(app.includes('fueltrack-v3-ui.js?v='+version));
  assert.ok(ui.includes('fueltrack-v3-application.js?v='+version));

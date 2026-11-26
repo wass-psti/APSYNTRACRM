@@ -7,7 +7,7 @@ import {generateStyleBundle} from '../../scripts/build-priority5-styles.mjs';
 const source=readFileSync('frontend/uiverse-design-system.css','utf8');
 
 test('single shared Uiverse visual layer comes after module styles without duplicating CSS requests',()=>{
- assert.equal(STYLE_SOURCES.at(-16),'frontend/uiverse-design-system.css');
+ assert.equal(STYLE_SOURCES.at(-17),'frontend/uiverse-design-system.css');
  assert.equal(new Set(STYLE_SOURCES).size,STYLE_SOURCES.length);
  assert.equal(readFileSync(STYLE_BUNDLE,'utf8'),generateStyleBundle());
  const html=readFileSync('index.html','utf8');

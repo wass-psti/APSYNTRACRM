@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {renderFuelTrackNewRequest,fuelTrackNewRequestPayload} from '../fueltrack-v3-new-request.js';
 import {FUELTRACK_PLATE_OPTIONS,FUELTRACK_PERSON_OPTIONS} from '../fueltrack-v3-reference-options.js';
 
@@ -69,4 +70,24 @@ test('request form escapes backend messages and retains the LightFuels receipt r
  assert.match(html,/&lt;img/);
  assert.match(html,/href="#\/fueltrack\/lightfuels"/);
  assert.doesNotMatch(html,/<img src=x/);
+});
+
+test('New Request release preserves single CSS delivery and complete versioned renderer chain',()=>{
+ const read=path=>readFileSync(new URL(path,import.meta.url),'utf8');
+ const version='cp-ft-new-request-redesign-01-20261126';
+ const index=read('../../index.html');
+ const app=read('../app.js');
+ const ui=read('../fueltrack-v3-ui.js');
+ const renderer=read('../fueltrack-v3-application.js');
+ const css=read('../fueltrack-v3-new-request-redesign.css');
+ const bundle=read('../apsyntra-styles.bundle.css');
+ assert.equal((index.match(/<link rel="stylesheet"/g)||[]).length,1);
+ assert.ok(index.match(/frontend\/app\.js\?v=([^"]+)/)?.[1].includes(version));
+ assert.ok(index.match(/apsyntra-styles\.bundle\.css\?v=([^"]+)/)?.[1].includes(version));
+ assert.ok(index.includes('frontend/fueltrack-v3-new-request-redesign.css'));
+ assert.ok(app.match(/fueltrack-v3-ui\.js\?v=([^']+)/)?.[1].includes(version));
+ assert.ok(ui.match(/fueltrack-v3-application\.js\?v=([^']+)/)?.[1].includes(version));
+ assert.ok(renderer.includes('fueltrack-v3-new-request.js?v='+version));
+ assert.ok(bundle.endsWith(css.trimEnd()+'\n'));
+ assert.equal(bundle.split(css.trim()).length-1,1);
 });

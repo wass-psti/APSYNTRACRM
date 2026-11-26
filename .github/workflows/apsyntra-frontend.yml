@@ -1,6 +1,6 @@
 name: APSYNTRA CRM Frontend Validation
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}${{ github.event_name == 'workflow_dispatch' && format('-manual-{0}', github.run_id) || '' }}
   cancel-in-progress: ${{ github.ref == 'refs/heads/main' }}
 
 on:

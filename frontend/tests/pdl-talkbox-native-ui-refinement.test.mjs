@@ -76,5 +76,6 @@ test('UI CSS is scoped, responsive, dark mode and reduced-motion aware', () => {
  assert.ok(!styles.includes('/* frontend/crm-complete-design-system.css */'), 'superseded CRM design system is not delivered');
  const boardLayer='/* frontend/board-overhaul-experience.css */\n'+readFileSync('frontend/board-overhaul-experience.css','utf8');
  const fuelLayer='/* frontend/fueltrack-v3-all-requests-redesign.css */\n'+readFileSync('frontend/fueltrack-v3-all-requests-redesign.css','utf8');
- assert.ok(styles.endsWith(boardLayer+'\n'+fuelLayer.trimEnd()+'\n'), 'approved board presentation remains intact immediately before the final FuelTrack layer');
+ const newRequestLayer='/* frontend/fueltrack-v3-new-request-redesign.css */\n'+readFileSync('frontend/fueltrack-v3-new-request-redesign.css','utf8');
+ assert.ok(styles.endsWith(boardLayer+'\n'+fuelLayer+'\n'+newRequestLayer.trimEnd()+'\n'), 'approved board presentation remains intact before both final FuelTrack layers');
 });
