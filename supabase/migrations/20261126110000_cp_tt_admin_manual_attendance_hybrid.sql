@@ -133,6 +133,7 @@ DECLARE
  v_actor uuid:=auth.uid();
  v_ws uuid;
  v_name text;
+ v_employee_role text;
  v_department text;
  v_now timestamptz;
  v_id uuid:=pg_catalog.gen_random_uuid();
@@ -205,13 +206,15 @@ BEGIN
    USING ERRCODE='22023';
  END IF;
 
- SELECT COALESCE(NULLIF(pg_catalog.btrim(p.display_name),''),p.email,'Workforce member')
- INTO v_name
+ SELECT COALESCE(NULLIF(pg_catalog.btrim(p.display_name),''),p.email,'Workforce member'),
+  private.tt_role_in_workspace(p.id,v_ws)
+ INTO v_name,v_employee_role
  FROM public.profiles p
  JOIN public.workspace_members wm ON wm.user_id=p.id AND wm.workspace_id=v_ws AND wm.active
  WHERE p.id=p_employee_id AND p.status='active'
   AND private.tt_role_in_workspace(p.id,v_ws) IS NOT NULL;
- IF v_name IS NULL OR p_employee_id='d613280d-907b-418f-b872-c0f6dd53e580'::uuid
+ IF v_name IS NULL OR v_employee_role='OJT'
+  OR p_employee_id='d613280d-907b-418f-b872-c0f6dd53e580'::uuid
   OR EXISTS (
    SELECT 1 FROM private.tt_ojt_shared_accounts a
    WHERE a.workspace_id=v_ws AND a.board_id=p_board_id AND a.shared_user_id=p_employee_id
@@ -258,7 +261,9 @@ BEGIN
       v_clock_out_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
     AND r#>>'{clockOut,manualMethod}'=CASE p_clock_out_mode
       WHEN 'standard' THEN 'standard_nine_credited_hours'
-      ELSE 'admin_entered_actual' END;
+      ELSE 'admin_entered_actual' END
+    AND r#>>'{clockIn,location}'=p_location
+    AND r#>>'{clockIn,workNote}' IS NOT DISTINCT FROM v_note;
    IF v_existing_record IS NOT NULL AND EXISTS (
     SELECT 1 FROM pg_catalog.jsonb_array_elements(v_state->'records') current_record
     WHERE current_record->>'id'=v_existing_record->>'id'
