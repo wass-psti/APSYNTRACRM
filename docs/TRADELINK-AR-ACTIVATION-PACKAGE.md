@@ -1,0 +1,5 @@
+# TradeLink AR activation package
+
+The workflow `.github/workflows/cp-tl-gm-04c-ar-package.yml` generates a versioned migration with the pinned Supabase CLI, copies the certified candidate byte-for-byte, rehearses it with synthetic PostgreSQL and uploads the package. No production credentials or production deployment are used.
+
+Before authorized activation, run `sql/candidates/cp-tl-gm-04c-ar-production-preflight.sql` on the intended production database. If any check fails, stop and reassess. Apply the generated migration only through the established production migration procedure after approval. Verify both clearance RPCs and analytics, then perform signed acceptance with legitimate financial records. Roll back using the supplied rollback SQL if necessary; retain clearance evidence. The preflight is intentionally separate from the migration because synthetic fixtures do not have the production function fingerprint. The package does not enter the active migrations directory automatically.
