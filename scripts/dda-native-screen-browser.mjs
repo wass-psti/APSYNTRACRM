@@ -7,7 +7,7 @@ const root = new URL('../frontend/apps/DailyDepartmentActivity/',import.meta.url
 const files = new Set(['activity-screen.js','activity-screen.css','activity-model.js','activity-drafts.js','activity-controller.js','activity-repository.js','activity-runtime.js','dda-native-host.js']);
 const server = createServer(async (req,res)=>{
   try {
-    if(req.url==='/'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DDA test fixture</title><link rel="stylesheet" href="/activity-screen.css?v=cp-dda-ui-03-20261126"><div id="host"></div></html>');return;}
+    if(req.url==='/'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DDA test fixture</title><link rel="stylesheet" href="/activity-screen.css?v=cp-dda-ui-04-20261126"><div id="host"></div></html>');return;}
     const file=new URL(req.url,'http://127.0.0.1').pathname.slice(1);
     if(!files.has(file)){res.writeHead(404).end();return;}
     res.setHeader('Content-Type',file.endsWith('.css')?'text/css':'text/javascript');
@@ -95,9 +95,13 @@ try {
   assert.equal(await page.locator('.dda-management').isVisible(),false);
   assert.equal(await page.locator('.dda-reporting').isVisible(),true);
   assert.equal(await page.locator('.dda-filters').isVisible(),true);
-  await page.locator('.dda-reporting details').first().locator('summary').click();
+  assert.equal(await page.locator('.dda-insight-metric').count(),4);
+  assert.equal(await page.locator('.dda-insight-department').count(),1);
+  assert.equal(await page.locator('.dda-insight-person').count(),1);
+  assert.match(await page.locator('.dda-insight-summary').innerText(),/No matching activities/);
   await page.getByRole('button',{name:'View team'}).click();
   assert.equal(await form('filters').getByLabel('Department').inputValue(),'d');
+  assert.equal(await page.locator('.dda-insight-department.is-selected').count(),1);
   assert.equal(await page.locator('.dda-reporting').isVisible(),true);
   await form('filters').getByLabel('Department').selectOption('');
   await form('filters').getByRole('button',{name:'Apply filters'}).click();
@@ -160,6 +164,9 @@ try {
   await form('filters').getByLabel('Search').fill('Revised');
   await form('filters').getByRole('button',{name:'Apply filters'}).click();
   assert.equal(await page.locator('.dda-entry').count(),1);
+  await view('insights');
+  assert.match(await page.locator('.dda-insight-summary').innerText(),/100%/);
+  assert.equal(await page.locator('.dda-insight-person td').first().innerText(),'1');
   await view('organization');
   await org('departments');
   await form('department').getByLabel('Department name').fill('Field operations');

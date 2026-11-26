@@ -106,19 +106,55 @@ function renderOrganization(snapshot,directoryFilters,active,busy,disabled,categ
     organizationPanel('departments',active,departmentContent)+organizationPanel('categories',active,categoryContent);
 }
 
+// Counts use the same filtered records as the activity register.
+function insightCounts(records) {
+  return {total:records.length,pending:records.filter(row=>row.status==='Pending').length,
+    progress:records.filter(row=>row.status==='In Progress').length,
+    completed:records.filter(row=>row.status==='Completed').length};
+}
+function insightMetric(label,value,description,icon) {
+  return '<div class="dda-insight-metric"><div><span>'+label+'</span><strong>'+value+'</strong><p>'+description+'</p></div><span class="dda-metric-icon">'+glyph(icon)+'</span></div>';
+}
+function completionRate(counts) {
+  return counts.total?Math.round(counts.completed/counts.total*100):null;
+}
 function reportingOverview(snapshot,records,filters,busy) {
   const {directory}=snapshot;
   const {departments,people}=directory;
-  const rows=departments.filter(row=>!row.parentId).map(department=>{
-    const scope=departmentScope(departments,department.id);
-    const activities=records.filter(row=>scope.has(row.departmentId));
-    const count=people.filter(person=>scope.has(person.departmentId)).length;
-    const reporting=new Set(activities.map(row=>row.personId)).size;
-    return '<article class="dda-report-row"><div><strong>'+esc(department.short?department.short+' · '+department.name:department.name)+'</strong><p>'+count+' personnel · '+activities.length+' activities · '+reporting+' reporting · '+activities.filter(row=>row.status==='Completed').length+' completed</p></div><button type="button" class="secondary" data-dda-action="team" data-id="'+esc(department.id)+'"'+(busy?' disabled':'')+'>View team</button></article>';
-  }).join('');
   const members=teamMembers(directory,snapshot.records,filters);
-  const roster=members.map(person=>'<article class="dda-report-row"><div><strong>'+esc(person.name)+'</strong><p>'+esc(person.formerContributor?'Former contributor · Current: ':'')+esc(nameOf(departments,person.departmentId))+'</p></div><span>'+records.filter(row=>row.personId===person.id).length+' activities</span></article>').join('');
-  return '<section class="dda-panel dda-reporting">'+heading('Team insights','Review department totals and individual contributions.')+'<details><summary>Department activity overview</summary>'+rows+'</details><details'+(filters.departmentId?' open':'')+'><summary>Personnel activity overview ('+members.length+')</summary>'+(roster||'<p>No personnel match the selected filters.</p>')+'</details></section>';
+  const counts=insightCounts(records);
+  const contributors=new Set(records.map(row=>row.personId)).size;
+  const rate=completionRate(counts);
+  const selected=departments.find(row=>row.id===filters.departmentId);
+  const summary='<div class="dda-insight-summary" aria-label="Team reporting totals">'+
+    insightMetric('Personnel in scope',members.length,'Current and historical contributors','activities')+
+    insightMetric('Matching activities',counts.total,'Within the applied filters','progress')+
+    insightMetric('Active contributors',contributors,'People with matching activities','pending')+
+    insightMetric('Completion rate',rate===null?'&mdash;':rate+'%',rate===null?'No matching activities':counts.completed+' of '+counts.total+' completed','completed')+'</div>';
+  const cards=departments.filter(row=>!row.parentId).map(department=>{
+    const scope=departmentScope(departments,department.id);
+    const totals=insightCounts(records.filter(row=>scope.has(row.departmentId)));
+    const count=people.filter(person=>scope.has(person.departmentId)).length;
+    const reporting=new Set(records.filter(row=>scope.has(row.departmentId)).map(row=>row.personId)).size;
+    const percent=completionRate(totals);
+    const active=selected&&scope.has(selected.id);
+    return '<article class="dda-insight-department'+(active?' is-selected':'')+'" data-insight-department="'+esc(department.id)+'">'+
+      '<div class="dda-insight-dept-head"><span class="dda-org-initial">'+esc(department.short||department.name.slice(0,2).toUpperCase())+'</span><div><h3>'+esc(department.name)+'</h3><p>'+count+' assigned personnel</p></div>'+(active?'<span class="dda-org-tag">Selected</span>':'')+'</div>'+
+      '<div class="dda-insight-dept-metrics"><div><strong>'+totals.total+'</strong><span>Activities</span></div><div><strong>'+reporting+'</strong><span>Reporting</span></div><div><strong>'+totals.completed+'</strong><span>Completed</span></div></div>'+
+      '<div class="dda-insight-progress"><div><span>Completion</span><strong>'+(percent===null?'&mdash;':percent+'%')+'</strong></div><progress value="'+totals.completed+'" max="'+(totals.total||1)+'" aria-label="'+esc(department.name)+' activity completion"></progress><p>'+(selected&&!active?'Outside selected department':percent===null?'No matching activities':totals.completed+' of '+totals.total+' completed')+'</p></div>'+
+      '<button type="button" class="secondary dda-insight-team" data-dda-action="team" data-id="'+esc(department.id)+'"'+(busy?' disabled':'')+'>View team <span aria-hidden="true">→</span></button></article>';
+  }).join('');
+  const roster=members.map(person=>{
+    const totals=insightCounts(records.filter(row=>row.personId===person.id));
+    const initials=person.name.trim().split(/\s+/).slice(0,2).map(word=>word[0]||'').join('').toUpperCase();
+    return '<tr class="dda-insight-person"><th scope="row"><div class="dda-insight-person-name"><span class="dda-org-initial" aria-hidden="true">'+esc(initials)+'</span><div><strong>'+esc(person.name)+'</strong><p>'+esc(person.formerContributor?'Former contributor · Current: ':'')+esc(nameOf(departments,person.departmentId))+'</p></div></div></th>'+
+      '<td>'+totals.total+'</td><td>'+totals.pending+'</td><td>'+totals.progress+'</td><td>'+totals.completed+'</td></tr>';
+  }).join('');
+  const personnel='<section class="dda-panel dda-insight-roster"><div class="dda-insight-section-head">'+heading('Personnel activity overview ('+members.length+')','Individual activity counts reflect the same applied filters.')+'<span class="dda-count">'+contributors+' reporting</span></div>'+
+    (roster?'<div class="dda-insight-table-scroll" role="region" aria-label="Personnel activity table" tabindex="0"><table class="dda-insight-table"><thead><tr><th scope="col">Personnel</th><th scope="col">Total</th><th scope="col">Pending</th><th scope="col">In progress</th><th scope="col">Completed</th></tr></thead><tbody>'+roster+'</tbody></table></div>':'<div class="dda-empty"><h3>No personnel match the selected filters.</h3><p>Adjust the department or personnel filter to review another team.</p></div>')+'</section>';
+  return '<section class="dda-reporting"><div class="dda-insight-heading"><div><span class="dda-eyebrow">REPORTING / TEAM PERFORMANCE</span><h2>Team Insights</h2><p>Review activity volume, completion and individual contributions.</p></div><div class="dda-insight-scope"><span>Reporting scope</span><strong>'+(selected?esc(selected.name):'All departments')+'</strong><p>'+esc(filters.date||'All dates')+'</p></div></div>'+summary+
+    '<section class="dda-panel dda-insight-departments">'+heading('Department activity overview','Assigned personnel reflect current reporting scopes; activity counts follow the applied filters.')+
+    (cards?'<div class="dda-insight-department-grid">'+cards+'</div>':'<p>No departments available.</p>')+'</section>'+personnel+'</section>';
 }
 
 export function renderActivityScreen({snapshot,records,filters,editor,fields,busy,notice,error,requiresReload,directoryFilters={query:'',departmentId:''},view='activities',organizationView='personnel'}) {

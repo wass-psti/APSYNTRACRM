@@ -74,3 +74,16 @@ test('organization workspace separates personnel, departments and category tasks
    assert.doesNotMatch(html,/<Unassigned>/);
  }
 });
+
+test('team insights reports real filtered counts and completion without inventing percentages',()=>{
+ const records=[{id:'a',personId:'p',departmentId:'d',date:filters.date,title:'Done',details:'',status:'Completed',categoryId:null},{id:'b',personId:'p',departmentId:'d',date:filters.date,title:'Open',details:'',status:'Pending',categoryId:null}];
+ const html=renderActivityScreen({...base,view:'insights',snapshot:{...snapshot,records},records});
+ assert.match(html,/Team reporting totals/);
+ assert.match(html,/Completion rate<\/span><strong>50%/);
+ assert.match(html,/data-insight-department="d"/);
+ assert.match(html,/Personnel activity table/);
+ assert.match(html,/<td>2<\/td><td>1<\/td><td>0<\/td><td>1<\/td>/);
+ const empty=renderActivityScreen({...base,view:'insights'});
+ assert.match(empty,/Completion rate<\/span><strong>&mdash;<\/strong>/);
+ assert.doesNotMatch(empty,/NaN|Infinity/);
+});

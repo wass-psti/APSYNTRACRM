@@ -2,7 +2,7 @@ import {renderRecoveryChoices} from './tradelink/draft-recovery-ui.js';
 import {TradeLinkRecoveryController} from './tradelink/draft-recovery-controller.js';
 import {captureRecoveryFields} from './tradelink/draft-recovery-state.js';
 import {syncFuelTrans} from './fueltrans-lazy.js';
-import {syncDda} from './dda-native-host.js?v=cp-dda-ui-03-20261126';
+import {syncDda} from './dda-native-host.js?v=cp-dda-ui-04-20261126';
 import {DDA_APPLICATION,DDA_RELEASE_ENABLED,DDA_ROUTE_SECTION,DDA_HOST_MARKUP} from './dda-release.js';
 import {OrderIntakeOperationalClient as OrderIntakeRegistryClient} from './order-intake-operational-client.js';
 import {buildConfirmation} from './order-intake-confirmation.js';
