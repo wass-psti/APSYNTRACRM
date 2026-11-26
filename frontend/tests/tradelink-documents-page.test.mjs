@@ -180,6 +180,32 @@ test('server-paged All Documents shows actionable search, previous and next with
  assert.doesNotMatch(legacy,/Next page|Search documents/);
  assert.match(legacy,/current signed TradeLink workspace response/);
 });
+test('manager action menu takes precedence over reviewer summary while reviewer-only actions stay unchanged',()=>{
+ const assigned={...row,workflowState:'for-approval',assignedStage:'primary',
+  primaryAt:null,secondaryAt:null};
+ const view={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',rows:[assigned]};
+ const manager=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
+  view,canManage:true,canReview:true});
+ assert.match(manager,/class="tl-ref-actions-menu"/);
+ assert.match(manager,/Preview\/Edit/);
+ assert.match(manager,/Revision history &amp; details/);
+ assert.match(manager,/Print PDF/);
+ assert.match(manager,/PDF printing is available only after approval/);
+ assert.match(manager,/Change status/);
+ assert.match(manager,/data-tradelink-status-select/);
+ assert.match(manager,/Save status/);
+ assert.doesNotMatch(manager,/Sales Supervisor approval exempted|Primary: Exempted|>View document</);
+ const reviewer=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
+  view,canManage:false,canReview:true});
+ assert.match(reviewer,/View document/);
+ assert.match(reviewer,/Primary:/);
+ assert.match(reviewer,/Secondary:/);
+ assert.doesNotMatch(reviewer,/Preview\/Edit|Change status|Save status/);
+ const css=readFileSync(new URL('../tradelink-reference-ui.css',import.meta.url),'utf8');
+ assert.match(css,/position-area:bottom span-left;position-try-fallbacks:flip-block,flip-inline/);
+ assert.match(css,/width:min\(205px,calc\(100vw - 24px\)\)/);
+ assert.match(css,/\.tl-ref-actions-menu \.tl-reference-status-action>select/);
+});
 test('source integrates route-safe signed pagination and exact record recovery beyond list window',()=>{
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  for(const action of ['tradelink-documents-next','tradelink-documents-previous',

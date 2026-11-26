@@ -1847,7 +1847,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
       (readOnly?'<td class="tl-ref-actions-cell">'+(
        '<button type="button" class="tl-ref-row-action-trigger" popovertarget="tl-doc-menu-'+escape(row.documentId)+'" aria-label="Actions for '+escape(row.documentNumber)+'" title="Document actions">⋯</button>'+
        '<div popover="auto" data-tradelink-action-menu id="tl-doc-menu-'+escape(row.documentId)+'" class="tl-ref-actions-menu">'+
-       (canReview&&['primary','secondary'].includes(row.assignedStage)?(()=>{
+       (canReview&&!canManage&&['primary','secondary'].includes(row.assignedStage)?(()=>{
         const stage=row.assignedStage;
         const recordedAt=stage==='primary'?row.primaryAt:row.secondaryAt;
         const formatTime=value=>value&&Number.isFinite(Date.parse(value))?
@@ -1869,7 +1869,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
            '>Use Time Now</button>':'<span class="muted">Validation is not available for this status.</span>')+
          '</div>';
        })():'')+
-       (canReview&&['primary','secondary'].includes(row.assignedStage)?'':
+       (canReview&&!canManage&&['primary','secondary'].includes(row.assignedStage)?'':
         canEditRow&&tradeLinkDraftEditHref(row.documentId)?
          '<a class="secondary" data-tradelink-document-edit href="'+
           escape(tradeLinkDraftEditHref(row.documentId))+'">'+
