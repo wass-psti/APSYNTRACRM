@@ -194,7 +194,7 @@ test('global ESM startup and exact-deployment Pages asset manifest are registere
  assert.match(smoke,/'frontend\/metrics-experience\.js'/);
  assert.match(smoke,/'frontend\/metrics-experience\.css'/);
  assert.match(html,/style-src-attr 'none'/);
- assert.match(html,/script type="module" src="\.\/frontend\/app\.js"/);
+ assert.match(html,/script type="module" src="\.\/frontend\/app\.js(?:\?v=[^"]+)?"/);
  const noop=startMetricsExperience(null);
  assert.equal(typeof noop,'function');
  assert.doesNotThrow(noop);
