@@ -55,6 +55,25 @@ test('ordinary TradeLink users render the shared All Documents collection withou
  assert.doesNotMatch(html,/Print PDF/);
 });
 
+test('ordinary TradeLink users without reviewer or creator roles can still view the shared All Documents collection',()=>{
+ const view={
+  ...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',
+  rows:page.rows,sharedVisibility:true,assignedOnly:false,
+  message:'Showing all TradeLink documents in this workspace.'
+ };
+ const html=renderTradeLinkDocumentRepository({
+  detail:{board,groups:[],columns:[],items:[]},
+  workspaceId:workspace,view,canManage:false,canReview:false,canCreate:false,
+  actorEmail:'viewer@example.test'
+ });
+ assert.match(html,/Q-SHARED-001/);
+ assert.match(html,/Q-SHARED-002/);
+ assert.match(html,/View document/);
+ assert.doesNotMatch(html,/Delete Selected/);
+ assert.doesNotMatch(html,/Hide Selected/);
+ assert.doesNotMatch(html,/Unhide Selected/);
+});
+
 test('General Manager retains existing bulk controls over the same shared rows',()=>{
  const view={
   ...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',
