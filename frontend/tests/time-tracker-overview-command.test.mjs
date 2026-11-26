@@ -145,6 +145,6 @@ test('GitHub Pages includes Overview stylesheet without adding build dependencie
  assert.ok(html.indexOf('frontend/time-tracker-overview-command.css')>
   html.indexOf('frontend/time-tracker-clock-command.css'));
  assert.match(smoke,/'frontend\/time-tracker-overview-command\.css'/);
- assert.match(html,/script type="module" src="\.\/frontend\/app\.js"/);
+ assert.match(html,/script type="module" src="\.\/frontend\/app\.js(?:\?v=[^"]+)?"/);
  assert.doesNotMatch(html,/react-three|pixi-viewport|pixi-spine|gsap/);
 });
