@@ -220,7 +220,6 @@ import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,tim
 import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAULT_FILTERS} from './time-tracker-reports.js';
 import {timeTrackerCalendarMonth,shiftTimeTrackerCalendarMonth} from './time-tracker-calendar.js';
 import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED,TT_OT_MAX_WEEK_OFFSET,timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate,updateTimeTrackerOvertimePreview,updateTimeTrackerManualOtPreview} from './time-tracker-overtime.js';
-import {parseTimeTrackerClockInput} from './time-tracker-time-format.js';
 import {timeTrackerMyHoursWeek} from './time-tracker-my-hours.js';
 import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
 import {probeTimeTrackerMonitor} from './time-tracker-monitor.js';
@@ -14666,14 +14665,13 @@ root.addEventListener('submit',event=>{
   const draft={
    employeeId:root.querySelector('#tt-ot-manual-employee')?.value||'',
    date:root.querySelector('#tt-ot-manual-date')?.value||'',
-   start:root.querySelector('#tt-ot-manual-start')?.value||'',
-   end:root.querySelector('#tt-ot-manual-end')?.value||'',
+   durationMinutes:(()=>{
+    const value=Number(root.querySelector('#tt-ot-manual-duration-hours')?.value);
+    const minutes=value*60;
+    return Number.isInteger(minutes)?minutes:null;
+   })(),
    reason:root.querySelector('#tt-ot-manual-reason')?.value||''
   };
-  try{
-   draft.start=parseTimeTrackerClockInput(draft.start);
-   draft.end=parseTimeTrackerClockInput(draft.end);
-  }catch(error){toast(error.message,true);return;}
   let weekOffset;
   try{weekOffset=timeTrackerOtWeekOffsetForDate(draft.date);}
   catch(error){toast(error.message,true);return;}
@@ -14697,25 +14695,19 @@ root.addEventListener('submit',event=>{
      state.ttAttendance?.status!=='VERIFIED_READ'||state.ttBusy)return;
   const draft={
    date:root.querySelector('#tt-ot-date')?.value||'',
-   start:root.querySelector('#tt-ot-start')?.value||'',
-   end:root.querySelector('#tt-ot-end')?.value||'',
+   durationMinutes:(()=>{
+    const value=Number(root.querySelector('#tt-ot-duration-hours')?.value);
+    const minutes=value*60;
+    return Number.isInteger(minutes)?minutes:null;
+   })(),
    reason:root.querySelector('#tt-ot-reason')?.value||''
   };
-  const durationInput=root.querySelector('#tt-ot-duration-hours');
-  if(durationInput){
-   const minutes=Number(durationInput.value)*60;
-   draft.durationMinutes=Number.isInteger(minutes)?minutes:null;
-  }
-  else try{
-   draft.start=parseTimeTrackerClockInput(draft.start);
-   draft.end=parseTimeTrackerClockInput(draft.end);
-  }catch(error){toast(error.message,true);return;}
   state.ttOtDraft={...draft};
   state.ttBusy=true;render();
   root.querySelector('.tt-ot-modal')?.focus({preventScroll:true});
   Promise.resolve().then(()=>timeTracker.submitOvertime(state.boardId,draft))
    .then(async()=>{state.ttOtModalOpen=false;state.ttOtDraft={};
-     await loadTimeTracker();toast(durationInput?'OT request submitted for HR approval.':'OT request submitted for bootstrap review.');})
+     await loadTimeTracker();toast('OT request submitted for authorized approval.');})
    .catch(notice).finally(()=>{
     state.ttBusy=false;render();
     if(state.ttOtModalOpen)root.querySelector('#tt-ot-date')?.focus({preventScroll:true});
@@ -14875,8 +14867,11 @@ root.addEventListener('input',event=>{
   state.ttOtDraft={
    employeeId:manualOvertimeForm.querySelector('#tt-ot-manual-employee')?.value||'',
    date:manualOvertimeForm.querySelector('#tt-ot-manual-date')?.value||'',
-   start:manualOvertimeForm.querySelector('#tt-ot-manual-start')?.value||'',
-   end:manualOvertimeForm.querySelector('#tt-ot-manual-end')?.value||'',
+   durationMinutes:(()=>{
+    const value=Number(manualOvertimeForm.querySelector('#tt-ot-manual-duration-hours')?.value);
+    const minutes=value*60;
+    return Number.isInteger(minutes)?minutes:null;
+   })(),
    reason:manualOvertimeForm.querySelector('#tt-ot-manual-reason')?.value||''
   };
   updateTimeTrackerManualOtPreview(manualOvertimeForm);return;
@@ -14886,15 +14881,13 @@ root.addEventListener('input',event=>{
     state.ttView==='ot'&&state.ttOtModalOpen&&!state.ttBusy){
   state.ttOtDraft={
    date:overtimeForm.querySelector('#tt-ot-date')?.value||'',
-   start:overtimeForm.querySelector('#tt-ot-start')?.value||'',
-   end:overtimeForm.querySelector('#tt-ot-end')?.value||'',
+   durationMinutes:(()=>{
+    const value=Number(overtimeForm.querySelector('#tt-ot-duration-hours')?.value);
+    const minutes=value*60;
+    return Number.isInteger(minutes)?minutes:null;
+   })(),
    reason:overtimeForm.querySelector('#tt-ot-reason')?.value||''
   };
-  const durationInput=overtimeForm.querySelector('#tt-ot-duration-hours');
-  if(durationInput){
-   const minutes=Number(durationInput.value)*60;
-   state.ttOtDraft.durationMinutes=Number.isInteger(minutes)?minutes:null;
-  }
   updateTimeTrackerOvertimePreview(overtimeForm);
   return;
  }
