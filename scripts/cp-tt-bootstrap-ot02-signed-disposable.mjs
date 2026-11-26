@@ -54,13 +54,13 @@ async function actor(label){
  assert.equal(self.id,id);
  return {email,id,sessionId:claims.session_id,token};
 }
-function link(actor,label,bootstrap=false,systemAdmin=false){
+function link(actor,label,bootstrap=false,systemAdmin=false,moduleRole='Employee'){
  assert.match(actor.id,uuid);
  const role=bootstrap?'admin_general_manager':'employee';
  sql(`INSERT INTO public.profiles(id,display_name,status,platform_role) VALUES ('${actor.id}','Synthetic ${label}','active','${role}');
  INSERT INTO public.workspace_members VALUES ('${workspace}','${actor.id}',true);
  INSERT INTO public.work_board_members VALUES ('${board}','${actor.id}','viewer');
- INSERT INTO public.module_role_assignments VALUES ('${actor.id}','time-tracker',true,'${systemAdmin?'System Admin':'Employee'}');
+ INSERT INTO public.module_role_assignments VALUES ('${actor.id}','time-tracker',true,'${moduleRole}');
  ${bootstrap?`INSERT INTO public.apsyntra_role_bootstrap_identities VALUES ('${actor.id}');`:''}`);
 }
 async function rpc(actor,method,args){
@@ -103,11 +103,53 @@ await ready();
 const bootstrap=await actor('bootstrap');
 const worker=await actor('worker');
 const admin=await actor('system-admin');
-assert.equal(new Set([bootstrap.id,worker.id,admin.id]).size,3);
+const hr=await actor('hr');
+assert.equal(new Set([bootstrap.id,worker.id,admin.id,hr.id]).size,4);
 link(bootstrap,'Bootstrap',true);
 link(worker,'Worker');
 link(admin,'System Admin',false,true);
-console.log('GOTRUE_THREE_REAL_SIGNED_PROFILES PASS');
+link(hr,'HR',false,false,'HR');
+sql(`INSERT INTO public.module_state_entries(workspace_id,module_id,state_key,scope,owner_key,value,revision)
+ VALUES ('${workspace}','time-tracker','timetracker.attendance.v1','shared','*','{"records":[]}',1)
+ ON CONFLICT(workspace_id,module_id,state_key,scope,owner_key)
+ DO UPDATE SET value=EXCLUDED.value,revision=public.module_state_entries.revision+1`);
+console.log('GOTRUE_FOUR_REAL_SIGNED_PROFILES_AND_CANONICAL_ATTENDANCE_STATE PASS');
+const durationRequest=receipt(await rpc(worker,'timetracker_ot_submit_duration',{
+ p_board_id:board,p_date:date,p_duration_minutes:180,
+ p_reason:'Additional engineering work requested for the project'
+}),'employee duration OT submission');
+assert.equal(durationRequest.otPolicy,'duration-v1');
+assert.equal(durationRequest.durationMinutes,180);
+const hrOwnRequest=receipt(await rpc(hr,'timetracker_ot_submit_duration',{
+ p_board_id:board,p_date:date,p_duration_minutes:60,
+ p_reason:'Additional HR system reconciliation work'
+}),'HR self-filed duration OT');
+const hrPendingSnapshot=receipt(await rpc(hr,'timetracker_ot_snapshot',{p_board_id:board}),'HR duration snapshot');
+assert.equal(hrPendingSnapshot.durationOtContract,'tt-duration-ot-1');
+assert.equal(hrPendingSnapshot.durationOtHrApprover,true);
+assert.equal(hrPendingSnapshot.scope,'AUTHORIZED_WORKSPACE_TEAM');
+assert.equal(hrPendingSnapshot.rows.find(row=>row.id===durationRequest.id).canReviewDuration,true);
+assert.equal(hrPendingSnapshot.rows.find(row=>row.id===hrOwnRequest.id).canReviewDuration,false);
+const workerDurationSnapshot=receipt(await rpc(worker,'timetracker_ot_snapshot',{p_board_id:board}),'employee duration snapshot');
+assert.equal(workerDurationSnapshot.rows.find(row=>row.id===durationRequest.id).canReviewDuration,false);
+expect(await rpc(bootstrap,'timetracker_ot_decide_duration',{
+ p_board_id:board,p_request_id:durationRequest.id,p_decision:'Approved'
+}),403,'bootstrap cannot approve duration OT');
+expect(await rpc(admin,'timetracker_ot_decide_duration',{
+ p_board_id:board,p_request_id:durationRequest.id,p_decision:'Approved'
+}),403,'System Admin cannot approve duration OT');
+expect(await rpc(worker,'timetracker_ot_decide_duration',{
+ p_board_id:board,p_request_id:durationRequest.id,p_decision:'Approved'
+}),403,'employee self-approval denied');
+expect(await rpc(hr,'timetracker_ot_decide_duration',{
+ p_board_id:board,p_request_id:hrOwnRequest.id,p_decision:'Approved'
+}),403,'HR self-approval denied');
+const retiredSubmit=await rpc(worker,'timetracker_ot_submit',{
+ p_board_id:board,p_date:date,p_start:'18:00',p_end:'19:00',
+ p_reason:'Legacy time range submission must be disabled'
+});
+assert.ok(retiredSubmit.status>=400&&retiredSubmit.status<500,'legacy time-range filing remains disabled');checks++;
+console.log('SIGNED_DURATION_SUBMISSION_HR_SCOPE_SELF_APPROVAL_DENIAL_AND_LEGACY_CUTOFF PASS');
 const a=receipt(await submit(bootstrap,'18:00','19:00','bootstrap self approval'),'bootstrap submit A');
 await decision(bootstrap,a.id,'Approved','bootstrap self approval');
 assertDatabase(a.id,'Approved',bootstrap.id);
@@ -175,5 +217,12 @@ if(process.env.CP_TT_OT03_BROWSER==='1'){
  const selfPending=receipt(await submit(bootstrap,'22:00','23:00','browser self approval'),'browser self submit');
  const workerPending=receipt(await submit(worker,'17:00','18:00','browser other decline'),'browser worker submit');
  const {runSignedOtBrowserAcceptance}=await import('./cp-tt-bootstrap-ot03-browser.mjs');
- await runSignedOtBrowserAcceptance({restUrl:rest,bootstrap,worker,board,selfPending,workerPending});
+ await runSignedOtBrowserAcceptance({restUrl:rest,bootstrap,worker,hr,board,selfPending,workerPending,durationRequest,hrOwnRequest});
+ const approved=receipt(await rpc(hr,'timetracker_ot_snapshot',{p_board_id:board}),'HR duration post-browser readback');
+ assert.equal(approved.rows.find(row=>row.id===durationRequest.id).status,'Approved');
+}else{
+ const approved=receipt(await rpc(hr,'timetracker_ot_decide_duration',{
+  p_board_id:board,p_request_id:durationRequest.id,p_decision:'Approved'
+ }),'HR approves duration OT');
+ assert.equal(approved.status,'Approved');
 }
