@@ -62,7 +62,7 @@ test('ordinary TradeLink users render the shared All Documents collection withou
  assert.doesNotMatch(html,/Unhide Selected/);
  assert.doesNotMatch(html,/My Assigned Documents/);
  assert.doesNotMatch(html,/Only documents assigned to the signed account/);
- assert.doesNotMatch(html,/Print PDF/);
+ assert.match(html,/data-action="tradelink-document-print"[^>]*disabled/);
 });
 
 test('ordinary assigned reviewers receive the standard document menu while retaining their validation action',()=>{
@@ -191,4 +191,16 @@ test('application loads shared document visibility while keeping bulk actions ma
  assert.ok(bulk);
  assert.match(bulk[0],/!state\.boardManage/);
  assert.match(app,/state\.tradeLinkDraft\?\.sharedVisibility!==true/);
+});
+
+test('executive exemption suppresses only intermediate menu action',()=>{
+ for(const [stage,recorded,expected] of [['primary',false,false],['secondary',false,true],['secondary',true,false]]){
+  const assigned={...row(firstId,'Q-EXEC-001','Creator'),assignedStage:stage,
+   approvalPolicy:'gm-sales-supervisor-exempt-v1',workflowState:'for-approval',
+   secondaryAt:recorded?'2026-11-26T01:00:00Z':null};
+  const html=renderTradeLinkDocumentRepository({detail:{board,groups:[],columns:[],items:[]},
+   workspaceId:workspace,view:{...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',rows:[assigned],sharedVisibility:true},
+   canManage:false,canReview:true,canCreate:false,actorEmail:'reviewer@example.test'});
+  assert.equal(html.includes('data-action="tradelink-document-review-stage"'),expected,stage);
+ }
 });

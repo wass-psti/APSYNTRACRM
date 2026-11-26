@@ -1890,7 +1890,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
           (statusDisabled?' disabled title="Status updates require existing document management access"':'')+
           '>Save status</button>');
         }
-        if(reviewerStage&&!recordedAt&&!exempt){
+        if(reviewerStage&&!recordedAt&&!(exempt&&stage==='primary')){
          actions.push('<button type="button" class="primary" data-action="tradelink-document-review-stage" '+
           'data-id="'+escape(row.documentId)+'" data-stage="'+escape(stage)+'"'+
           (view.busy?' disabled':'')+'>Use Time Now</button>');
