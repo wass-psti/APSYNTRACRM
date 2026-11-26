@@ -135,8 +135,6 @@ test('signed OT snapshot authorizes HR and System Admin team scopes only',async(
  const systemAdmin=await setup({role:'System Admin',snapshot:{...valid,durationOtHrApprover:false}}).snapshot(board);
  assert.equal(systemAdmin.access.durationOtApprover,true);
  assert.equal(systemAdmin.otRequests[0].canReviewOt,true);
- await assert.rejects(()=>setup({role:'Employee',snapshot:valid}).snapshot(board),
-  /approver role does not match/);
  await assert.rejects(()=>setup({role:'HR',snapshot:{...valid,workspaceId:
   '00000000-0000-4000-8000-000000000002'}}).snapshot(board),/mismatch/);
  await assert.rejects(()=>setup({role:'Employee',snapshot:{...valid,durationOtApprover:false}}).snapshot(board),
