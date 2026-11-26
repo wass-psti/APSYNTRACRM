@@ -3,7 +3,7 @@
  */
 import {ApiError} from './session.js';
 import {TRADELINK_MAX_ITEMS} from './tradelink/limits.js';
-import {GM_SALES_EXEMPT_POLICY,tradeLinkGmApprovalPreview} from './tradelink/approval-policy.js';
+import {GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY,tradeLinkGmApprovalPreview} from './tradelink/approval-policy.js';
 import {validUuid} from './data.js';
 import {calculateTradeLinkAmounts,formatTradeLinkAmount,TRADELINK_CURRENCIES,TRADELINK_VAT_CODES} from './tradelink-finance.js';
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
@@ -704,7 +704,17 @@ function referenceCreator(actorName){
   '<small>Signed server identity and timestamp are captured on successful save.</small>'+
   '</div></div>';
 }
+function renderApprovalFreeWorkflow(actorName,fields,fieldValue,data){
+ return '<section id="tl-section-approval" class="tl-reference-approval" aria-label="Verification and approval workflow">'+
+  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
+  '<div class="tl-reference-approval-stage"><strong>Reviewer approval — Not Applicable</strong></div>'+
+  '<div class="tl-reference-approval-stage"><strong>Management approval — Not Applicable</strong></div>'+
+  fields.map(name=>'<input type="hidden" name="'+escape(name)+'" value="'+escape(fieldValue(name,data[name]||''))+'">').join('')+
+  '<p>No reviewer validation is required for this saved revision. The server determines the policy for each new revision.</p></section>';
+}
 function renderReferenceModuleWorkflow(type,fieldValue,data,actorName,reviewContext={}){
+ if(type==='po'&&reviewContext.documentSaved&&reviewContext.reviewStages?.approvalPolicy===GM_CREATOR_APPROVAL_FREE_POLICY)
+  return renderApprovalFreeWorkflow(actorName,['verifiedBy','approvedBy'],fieldValue,data);
  const {actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewStages=null,gmPreview=false}=reviewContext;
  const value=name=>fieldValue(name,data[name]||'');
  const stage=(field,stageName,label)=>referenceAssignedPdfStage(field,value(field),label,stageName,{
@@ -827,6 +837,8 @@ export function quotationReviewControlEligibility({
 /** Quotation has a fixed primary Sales Supervisor and an editable existing
  * management reviewer assignment. Each reviewer records an independent server event. */
 function renderQuotationVerification(fieldValue,data,actorName='',reviewContext={}){
+ if(reviewContext.documentSaved&&reviewContext.reviewStages?.approvalPolicy===GM_CREATOR_APPROVAL_FREE_POLICY)
+  return renderApprovalFreeWorkflow(actorName,['verifiedBy','verifiedByEmail','approvedBy','approvedByEmail'],fieldValue,data);
  const {actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewStages=null,gmPreview=false}=reviewContext;
  const {primary}=QUOTATION_APPROVAL_HIERARCHY;
  const exempt=reviewStages?.approvalPolicy===GM_SALES_EXEMPT_POLICY;
@@ -1327,6 +1339,8 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
  const workflowState=editing&&row.workflow_state!=='approved'?row.workflow_state:'for-approval';
  const documentId=editing?row.id:'';
  const selectedStatus=fieldValue('documentStatus',workflowState);
+ const approvalFree=editing&&row.approval_policy===GM_CREATOR_APPROVAL_FREE_POLICY;
+ if(approvalFree&&!reviewStages)reviewStages={approvalPolicy:row.approval_policy};
 
  const type=editing?data.documentType:fieldValue('documentType','quotation');
  const contactEmailError=type==='quotation'&&
@@ -1367,7 +1381,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
   '<div data-tradelink-recovery-choices></div>'+
   '<p hidden data-tradelink-recovery-status class="tl-draft-feedback" role="status" aria-live="polite"></p>'+
   '<div class="tl-reference-editor-content">'+
-   (editing&&row.workflow_state==='approved'?'<p role="status" class="tl-draft-feedback">Revise Approved: the existing approved revision remains printable. Saving creates a new For Approval revision requiring all applicable reviewers again.</p>':'')+
+   (editing&&row.workflow_state==='approved'?'<p role="status" class="tl-draft-feedback">Revise Approved: the existing approved revision remains printable. Saving creates a new revision. The server determines its applicable approval policy.</p>':'')+
    (showModuleTabs?referenceDraftTabs(type):'')+
   renderModuleGuidance(type)+referenceDraftSectionNavigation(type)+
   '<form data-tradelink-draft-form'+(type==='quotation'?' novalidate':'')+'>'+
@@ -1391,7 +1405,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
        const disabled=!selectable;
        return '<option value="'+escape(id)+'"'+(id===selectedStatus?' selected':'')+
         (disabled?' disabled':'')+'>'+escape(label)+'</option>';
-      }).join('')+'</select><small id="tl-reference-status-help">Save defaults to For Approval. Select Draft explicitly to save as Draft. Approved is assigned automatically after all required reviewers validate.</small></label>'+
+      }).join('')+'</select><small id="tl-reference-status-help">'+(approvalFree?'The saved revision requires no reviewer validation. The server determines the policy on save.':'Save defaults to For Approval. Select Draft explicitly to save as Draft. Approved is assigned automatically after all required reviewers validate.')+'</small></label>'+
      '<label class="tl-draft-field"><span>Document number</span>'+
       '<input name="documentNumber" value="'+escape(fieldValue('documentNumber',data.documentNumber||''))+'" '+
        (editing||TL03_AUTOMATIC_NUMBERING_ENABLED?'readonly ':'required maxlength="120" pattern="[A-Za-z0-9][A-Za-z0-9._ /-]*" ')+

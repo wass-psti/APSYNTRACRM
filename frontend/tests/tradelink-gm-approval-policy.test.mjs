@@ -109,3 +109,14 @@ test('approval-free revision normalizes and prints without reviewer evidence',()
  assert.doesNotMatch(markup,/Recorded validation on/);
  assert.throws(()=>normalizeTradeLinkRevisionBundle({...bundle,selected:{...free,secondary_reviewed_at:time}},workspaceId,documentId,1));
 });
+
+test('saved approval-free quotation and PO render no reviewer controls',()=>{
+ for(const type of ['quotation','po']){
+  const record={...saved,document_type:type,content:{...content,documentType:type},approval_policy:GM_CREATOR_APPROVAL_FREE_POLICY};
+  const view={...initialTradeLinkDraftView(type),mode:'edit',selected:{documentId,record},reviewStages:{approvalPolicy:GM_CREATOR_APPROVAL_FREE_POLICY,primary:null,secondary:null}};
+  const html=renderTradeLinkDraftWorkspace({detail,workspaceId,view,canManage:true});
+  assert.match(html,/Reviewer approval — Not Applicable/);
+  assert.match(html,/Management approval — Not Applicable/);
+  assert.doesNotMatch(html,/data-tl-review-stage="(?:primary|secondary)"/);
+ }
+});
