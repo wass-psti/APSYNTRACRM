@@ -1,0 +1,35 @@
+name: DDA recovered frontend regression
+on:
+  push:
+    branches: [main, cp-dda-fe-03a-source-recovery]
+    paths:
+      - 'docs/reference/dda-fe-02/**'
+      - '.github/workflows/cp-dda-fe-03a-reference.yml'
+  pull_request:
+    paths:
+      - 'docs/reference/dda-fe-02/**'
+      - '.github/workflows/cp-dda-fe-03a-reference.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Unit tests and static build
+        working-directory: docs/reference/dda-fe-02
+        run: |
+          npm test
+          npm run build
+      - name: Browser regression
+        run: |
+          export DDA_CHROMIUM_PATH="$(node --input-type=module -e "import {chromium} from 'playwright'; console.log(chromium.executablePath())")"
+          cd docs/reference/dda-fe-02
+          npm run test:browser
