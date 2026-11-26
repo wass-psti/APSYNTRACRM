@@ -9,6 +9,7 @@ on:
       - "frontend/app.js"
       - "frontend/tests/tradelink-shared-document-visibility.test.mjs"
       - "frontend/tests/tradelink-reference-ui.test.mjs"
+      - "frontend/tests/tradelink-documents-page.test.mjs"
       - ".github/workflows/cp-tl-document-menu-02.yml"
   workflow_dispatch:
 permissions:
