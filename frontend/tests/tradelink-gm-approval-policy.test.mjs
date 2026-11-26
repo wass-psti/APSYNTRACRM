@@ -71,10 +71,10 @@ test('named GM new quotation shows prospective exemption; other accounts retain 
  const render=(actorEmail,actorModuleRole)=>renderTradeLinkDraftWorkspace({detail,workspaceId,
   view:initialTradeLinkDraftView('quotation'),canManage:true,actorEmail,actorModuleRole});
  const gm=render('asenagan@watchdogautomation.com.ph','General Manager');
- assert.match(gm,/Sales Supervisor approval — Exemption on save/);
- assert.doesNotMatch(gm,/data-tl-review-stage="primary"/);
- assert.match(gm,/name="verifiedByEmail"/);
- assert.match(gm,/data-tl-review-stage="secondary"/);
+ assert.match(gm,/Reviewer approval — Not Applicable/);
+ assert.match(gm,/Management approval — Not Applicable/);
+ assert.match(gm,/Approved \(on save\)/);
+ assert.doesNotMatch(gm,/data-tl-review-stage="(?:primary|secondary)"|name="verifiedByEmail"|name="approvedByEmail"/);
  for(const [email,role] of [['other@example.test','General Manager'],['asenagan@watchdogautomation.com.ph','User']]){
   const other=render(email,role);assert.match(other,/Primary approver — Sales Supervisor/);
   assert.match(other,/data-tl-review-stage="primary"/);
@@ -114,9 +114,43 @@ test('saved approval-free quotation and PO render no reviewer controls',()=>{
  for(const type of ['quotation','po']){
   const record={...saved,document_type:type,content:{...content,documentType:type},approval_policy:GM_CREATOR_APPROVAL_FREE_POLICY};
   const view={...initialTradeLinkDraftView(type),mode:'edit',selected:{documentId,record},reviewStages:{approvalPolicy:GM_CREATOR_APPROVAL_FREE_POLICY,primary:null,secondary:null}};
-  const html=renderTradeLinkDraftWorkspace({detail,workspaceId,view,canManage:true});
+  const html=renderTradeLinkDraftWorkspace({detail,workspaceId,view,canManage:true,actorId,actorEmail:'asenagan@watchdogautomation.com.ph',actorModuleRole:'General Manager'});
   assert.match(html,/Reviewer approval — Not Applicable/);
   assert.match(html,/Management approval — Not Applicable/);
   assert.doesNotMatch(html,/data-tl-review-stage="(?:primary|secondary)"/);
+ }
+});
+
+test('new GM supplier PO has no reviewer controls and standard user remains unchanged',()=>{
+ const view=initialTradeLinkDraftView('po');
+ const gm=renderTradeLinkDraftWorkspace({detail,workspaceId,view,canManage:true,actorId,actorEmail:'asenagan@watchdogautomation.com.ph',actorModuleRole:'General Manager'});
+ assert.match(gm,/Approved \(on save\)/);
+ assert.doesNotMatch(gm,/name="verifiedBy"|name="approvedBy"|data-tl-review-stage="(?:primary|secondary)"/);
+ const ordinary=renderTradeLinkDraftWorkspace({detail,workspaceId,view,canManage:true,actorId,actorEmail:'other@example.test',actorModuleRole:'General Manager'});
+ assert.match(ordinary,/name="verifiedBy"/);assert.match(ordinary,/name="approvedBy"/);
+});
+test('approval-free form parsing and workspace save omit reviewer fields',async()=>{
+ const {parseTradeLinkDraftForm,prepareTradeLinkDraftCommand,TradeLinkDraftWorkspace}=await import('../tradelink-draft-workspace.js');
+ const fields=values=>({get:key=>values[key]??'',getAll:key=>[values[key]??'']});
+ for(const type of ['quotation','po']){
+  const values={documentType:type,documentNumber:type==='quotation'?'Q-000001':'PO-000001',customerName:'Synthetic buyer',customerPhone:'09170000001',validity:'30 days',deliveryCommitment:'14 days',paymentTerms:'Net 30',targetDeliveryDate:'2026-12-01',lineDescription:'Synthetic item',lineQuantity:'2',lineUnitPrice:'10',verifiedBy:'old reviewer',approvedBy:'old approver',verifiedByEmail:'old@example.test',approvedByEmail:'old@example.test'};
+  const draft=parseTradeLinkDraftForm(fields(values),{approvalFreePreview:true,lineId:()=> 'l1'});
+  for(const key of ['verifiedBy','approvedBy','verifiedByEmail','approvedByEmail'])assert.equal(Object.hasOwn(draft,key),false);
+  const command=prepareTradeLinkDraftCommand(initialTradeLinkDraftView(type),fields(values),{executivePreview:true,actorId,documentId:()=>documentId,lineId:()=> 'l1'});
+  assert.equal(command.approvalFreePreview,true);
+  const workspace=new TradeLinkDraftWorkspace({auth:{},api:{}});
+  let sent;workspace.client.commit=async value=>(sent=value,{});
+  await workspace.save(command);assert.deepEqual(sent.draft,command.draft);
+ }
+});
+test('approved receipt is scoped to quotation or PO completion, never Draft or unrelated module',async()=>{
+ for(const type of ['quotation','po','esi']){
+  const prefix={quotation:'Q-',po:'PO-',esi:'ESI-'}[type];
+  const response={documentId,boardItemId,revision:1,documentNumber:prefix+'000001',state:'approved',operation:'create',idempotent:false};
+  const client=new TradeLinkDomainClient({auth:{},api:{rpc:async()=>response}});
+  client.session=async()=>({actorId,workspaceId,canManage:true});
+  const command={documentId,expectedRevision:0,operation:'create',draft:{documentType:type,documentNumber:''},initialState:'for-approval'};
+  if(type==='esi')await assert.rejects(()=>client.commit(command));else assert.equal((await client.commit(command)).state,'approved');
+  await assert.rejects(()=>client.commit({...command,initialState:'draft'}));
  }
 });

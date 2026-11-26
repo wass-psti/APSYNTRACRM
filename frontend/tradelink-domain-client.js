@@ -85,13 +85,14 @@ export function validateTradeLinkDraftEnvelope(value,{allowUnassignedNumber=fals
  return value;
 }
 export function normalizeTradeLinkDomainReceipt(
- value,expectedId,operation,expectedRevision=null,expectedState='draft'
+ value,expectedId,operation,expectedRevision=null,expectedState='draft',allowApprovalFree=false
 ){
+ const approvalFree=allowApprovalFree===true&&expectedState==='for-approval'&&['create','update'].includes(operation)&&value?.state==='approved';
  if(!validUuid(expectedId)||!OPS.has(operation)||!value||typeof value!=='object'||
   value.documentId!==expectedId||!validUuid(value.boardItemId)||
   !Number.isSafeInteger(value.revision)||value.revision<1||
   (!['draft','for-approval','revision-required'].includes(expectedState))||
-  value.state!==expectedState||value.operation!==operation||
+  (value.state!==expectedState&&!approvalFree)||value.operation!==operation||
   typeof value.idempotent!=='boolean'||
   (operation==='create'&&(typeof value.documentNumber!=='string'||
    !/^(ESI-|PL-|DR-|AR-|Q-|PO-)[0-9]{6,}$/.test(value.documentNumber)))||
@@ -828,7 +829,8 @@ export class TradeLinkDomainClient{
    operation==='create'&&!this.automaticNumberingEnabled&&receipt&&typeof receipt==='object'?
     {...receipt,documentNumber:draft.documentNumber}:receipt,
    documentId,operation==='revise-approved'?'update':operation,expectedRevision,
-   ['create','update','revise-approved'].includes(operation)?initialState:expectedState);
+   ['create','update','revise-approved'].includes(operation)?initialState:expectedState,
+    ['create','update','revise-approved'].includes(operation)&&['quotation','po'].includes(draft?.documentType));
   const numberPrefix={esi:'ESI-',packing:'PL-',delivery:'DR-',
    payment:'AR-',quotation:'Q-',po:'PO-'}[draft?.documentType];
   if(operation==='create'&&this.automaticNumberingEnabled&&

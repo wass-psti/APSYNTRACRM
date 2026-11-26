@@ -100,7 +100,7 @@ import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftFor
  tradeLinkDraftHasUnsavedChanges,reconcileTradeLinkSavedListing,
  tradeLinkSaveDefinitelyRejected,
  serializeTradeLinkDocumentCsv,
- prepareTradeLinkDraftCommand,
+ prepareTradeLinkDraftCommand,tradeLinkApprovalFreeDraftPreview,
  renderTradeLinkDraftLineItem,snapshotTradeLinkDraftLineItems,restoreTradeLinkPendingSave,updateTradeLinkDraftLocalAmounts,
  updateTradeLinkLineRowTotals,updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary,
  normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI} from './tradelink-draft-workspace.js?v=cp-tl-document-menu-02-20261126-01';
@@ -4221,7 +4221,7 @@ async function commitTradeLinkDraft(form){
   }
   let command;
   try{
-   command=prepareTradeLinkDraftCommand(state.tradeLinkDraft,fields,{executivePreview:state.context?.profile?.email?.trim().toLowerCase()==='asenagan@watchdogautomation.com.ph'&&state.tradeLinkModuleRole==='General Manager'});
+   command=prepareTradeLinkDraftCommand(state.tradeLinkDraft,fields,{actorId:auth.userId,executivePreview:state.context?.profile?.email?.trim().toLowerCase()==='asenagan@watchdogautomation.com.ph'&&state.tradeLinkModuleRole==='General Manager'});
   }catch(err){
    if(same()){
     state.tradeLinkDraft={...state.tradeLinkDraft,formValues,
@@ -4238,6 +4238,7 @@ async function commitTradeLinkDraft(form){
    throw new ApiError('Choose For Approval or explicitly choose Draft. Other statuses cannot bypass dual validation.',400);
   pending={command:{documentId:command.documentId,expectedRevision:command.expectedRevision,
    draft:command.draft,initialState,
+   ...(command.approvalFreePreview?{approvalFreePreview:true}:{}),
    reviseApproved:state.tradeLinkDraft.selected?.record?.workflow_state==='approved'},
    receipt:null,uncertain:false};
   state.tradeLinkDraft={...state.tradeLinkDraft,
@@ -4248,7 +4249,6 @@ async function commitTradeLinkDraft(form){
     command.draft.items:snapshotTradeLinkDraftLineItems(form),formValues};
  }
  const {documentId,expectedRevision,draft,initialState}=pending.command;
- const workflowState=initialState;
  state.tradeLinkDraft={...state.tradeLinkDraft,busy:true,error:'',
   message:pending.receipt?'Verifying saved document…':'Saving document to the signed database…'};
  render();
@@ -4268,9 +4268,11 @@ async function commitTradeLinkDraft(form){
   if(tradeLinkRecoveryEnabled&&recoveryId)await tradeLinkRecovery.checkpointSave(recoveryId,pending);
   if(!same())return;
   state.tradeLinkDraft.pendingSave=pending;
-  const [record,list,board]=await Promise.all([
+  const workflowState=receipt.state;
+  const [record,list,board,approvalBundle]=await Promise.all([
    tradeLinkDraftWorkspace.read(documentId),tradeLinkDraftWorkspace.list(),
-   tradeLinkDraftWorkspace.boardProjection(documentId)
+   tradeLinkDraftWorkspace.boardProjection(documentId),
+   workflowState==='approved'?tradeLinkDraftWorkspace.revisionBundle(documentId,receipt.revision):null
   ]);
   if(!same())return;
   const savedDraft={...draft,documentNumber:receipt.documentNumber||draft.documentNumber};
@@ -4281,13 +4283,17 @@ async function commitTradeLinkDraft(form){
    record.content?.documentType!==draft.documentType||
    !tradeLinkSavedDraftMatches(record,savedDraft)||
    record.workflow_state!==workflowState||
+   (workflowState==='approved'&&(initialState!=='for-approval'||!['quotation','po'].includes(draft.documentType)||
+    approvalBundle?.currentRevision!==receipt.revision||approvalBundle?.selected?.board_item_id!==receipt.boardItemId||
+    approvalBundle.selected.approval_policy!=='gm-creator-approval-free-v1'||approvalBundle.selected.approved!==true||
+    !tradeLinkSavedDraftMatches(approvalBundle.selected,savedDraft)))||
    board?.board?.workspace_id!==ws||
    !board.items?.some(item=>item.id===receipt.boardItemId&&
     item.title===savedDraft.documentNumber))
    throw new ApiError('Saved document/Board projection verification incomplete.',409);
   // The original signed list is bounded to 50. Its absence is not proof
   // that an exactly read and Board-verified saved document was not committed.
-  const verifiedList=reconcileTradeLinkSavedListing(list,record,receipt);
+  const verifiedList=reconcileTradeLinkSavedListing(list,approvalBundle?{...record,approval_policy:approvalBundle.selected.approval_policy}:record,receipt);
   if(tradeLinkRecoveryEnabled&&recoveryId){
    try{if(!await tradeLinkRecovery.discard(recoveryId))toast('Saved; local recovery cleanup needs attention.',true);}catch{toast('Saved; local recovery cleanup needs attention.',true);}
    if(!same())return;
@@ -4295,7 +4301,7 @@ async function commitTradeLinkDraft(form){
   }
   state.tradeLinkDraft={...initialTradeLinkDraftView(),
    status:'AUTHORIZED_READ',rows:verifiedList.rows,
-   message:'Saved '+(workflowState==='draft'?'Draft':'For Approval document')+' revision '+receipt.revision+'; TradeLink, Board items and All Documents are synchronized.'};
+   message:'Saved '+(workflowState==='draft'?'Draft':workflowState==='approved'?'Approved document':'For Approval document')+' revision '+receipt.revision+'; TradeLink, Board items and All Documents are synchronized.'};
   toast('Document '+savedDraft.documentNumber+' saved. Board item and All Documents verified.');
   location.hash=tradeLinkApplicationHref('documents');
  }catch(err){
@@ -8961,7 +8967,9 @@ async function action(name,button){
    break;
   }
   try{
-   const draft=parseTradeLinkDraftForm(new FormData(form),{executivePreview:(state.context?.profile?.email?.trim().toLowerCase()==='asenagan@watchdogautomation.com.ph'&&state.tradeLinkModuleRole==='General Manager'&&state.tradeLinkDraft.mode!=='edit')||state.tradeLinkDraft.selected?.record?.approval_policy==='gm-sales-supervisor-exempt-v1'});
+   const gmPreview=state.context?.profile?.email?.trim().toLowerCase()==='asenagan@watchdogautomation.com.ph'&&state.tradeLinkModuleRole==='General Manager';
+    const selectedRecord=state.tradeLinkDraft.mode==='edit'?state.tradeLinkDraft.selected?.record:null;
+    const draft=parseTradeLinkDraftForm(new FormData(form),{executivePreview:gmPreview&&!selectedRecord||selectedRecord?.approval_policy==='gm-sales-supervisor-exempt-v1',approvalFreePreview:tradeLinkApprovalFreeDraftPreview({executivePreview:gmPreview,actorId:auth.userId,record:selectedRecord})});
    updateTradeLinkDraftLocalSummary(form,draft);
    output.dataset.validation='valid';
    output.setAttribute('role','status');

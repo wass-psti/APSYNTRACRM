@@ -148,12 +148,13 @@ const quotationEmailValid=value=>/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9]
 const quotationPhoneValid=value=>new RegExp('^(?:'+QUOTATION_PHONE_PATTERN+')$').test(value);
 
 export function parseTradeLinkDraftForm(fields,{
- lineId=()=>globalThis.crypto?.randomUUID?.(),purpose='readiness',executivePreview=false
+ lineId=()=>globalThis.crypto?.randomUUID?.(),purpose='readiness',executivePreview=false,approvalFreePreview=false
 }={}){
  if(!fields||typeof fields.get!=='function')
   throw new ApiError('TradeLink Draft input is missing.',400);
  const value=k=>String(fields.get(k)??'').trim();
  const type=value('documentType');
+ const approvalFree=approvalFreePreview&&['quotation','po'].includes(type);
  const companyProfileId=value('vendorId')||TRADELINK_DEFAULT_COMPANY_PROFILE_ID;
  if(!isTradeLinkCompanyProfileId(companyProfileId))
   throw new ApiError('Select a valid TradeLink company profile.',400);
@@ -178,7 +179,9 @@ export function parseTradeLinkDraftForm(fields,{
   if(text)draft[key]=text;
  };
  for(const key of ['date','dueDate','customerName','customerContact','referenceNumber','remarks',
-  'verifiedBy','verifiedByEmail','approvedBy','approvedByEmail'])addText(key);
+  'verifiedBy','verifiedByEmail','approvedBy','approvedByEmail']){
+  if(!approvalFree||!['verifiedBy','verifiedByEmail','approvedBy','approvedByEmail'].includes(key))addText(key);
+ }
  if(type==='quotation')addText('customerAddress');
  const validDocumentDate=value=>!value||/^\d{4}-\d{2}-\d{2}$/.test(value)&&
   Number.isFinite(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;
@@ -320,21 +323,23 @@ export function parseTradeLinkDraftForm(fields,{
     if(text.length>5000)throw new ApiError('Invalid TradeLink '+key+'.',400);
     if(text)draft[key]=text;
    }
-   addText('approvedBy');
+   if(!approvalFree)addText('approvedBy');
    if(!incompleteQuotationSave&&((!draft.customerEmail&&!draft.customerPhone)||
      !draft.validity||!draft.deliveryCommitment||
-     !draft.paymentTerms||!draft.approvedBy))
-    throw new ApiError('Quotation readiness needs client contact, validity, delivery, payment terms and an intended approver.',400);
+     !draft.paymentTerms||(!approvalFree&&!draft.approvedBy)))
+    throw new ApiError(approvalFree?'Quotation readiness needs client contact, validity, delivery and payment terms.':'Quotation readiness needs client contact, validity, delivery, payment terms and an intended approver.',400);
    if(draft.customerEmail&&!quotationEmailValid(draft.customerEmail))
     throw new ApiError('Invalid Quotation contact email. Enter an email address in Client email.',400);
    if(draft.customerPhone&&!quotationPhoneValid(draft.customerPhone))
     throw new ApiError('Invalid Quotation contact phone. Enter a phone number in Client phone.',400);
   }else if(type==='po'){
    for(const key of ['poNumber','targetDeliveryDate','paymentTerms',
-    'verifiedBy','approvedBy'])addText(key);
-   if(!draft.paymentTerms||(!draft.verifiedBy&&!(executivePreview&&draft.approvedBy==='asenagan@watchdogautomation.com.ph'))||!draft.approvedBy||
+    'verifiedBy','approvedBy']){
+    if(!approvalFree||!['verifiedBy','approvedBy'].includes(key))addText(key);
+   }
+   if(!draft.paymentTerms||(!approvalFree&&((!draft.verifiedBy&&!(executivePreview&&draft.approvedBy==='asenagan@watchdogautomation.com.ph'))||!draft.approvedBy))||
       !draft.targetDeliveryDate)
-    throw new ApiError('Supplier PO readiness needs delivery date, payment terms, reviewer and intended approver.',400);
+    throw new ApiError(approvalFree?'Supplier PO readiness needs delivery date and payment terms.':'Supplier PO readiness needs delivery date, payment terms, reviewer and intended approver.',400);
    const date=draft.targetDeliveryDate;
    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||
       !Number.isFinite(Date.parse(date))||
@@ -350,7 +355,7 @@ export function parseTradeLinkDraftForm(fields,{
    draft.quoteStatus=quoteStatus;
   }
  }
- return validateTradeLinkDraftEnvelope(validateTradeLinkModuleAccountAssignments(draft,{executivePreview}),
+ return validateTradeLinkDraftEnvelope(validateTradeLinkModuleAccountAssignments(draft,{executivePreview,approvalFreePreview:approvalFree}),
   {allowUnassignedNumber:true});
 }
 /**
@@ -398,9 +403,12 @@ export function restoreTradeLinkPendingSave(pendingSave,lines){
  const {itemsStoredInLines,...rest}=pendingSave;
  return {...rest,command:{...command,draft:{...draft,items}}};
 }
+export function tradeLinkApprovalFreeDraftPreview({executivePreview=false,actorId='',record=null}={}){
+ return executivePreview===true&&(!record||Boolean(actorId)&&record.created_by===actorId);
+}
 export function prepareTradeLinkDraftCommand(view,fields,{
  documentId=()=>globalThis.crypto?.randomUUID?.(),
- lineId=()=>globalThis.crypto?.randomUUID?.(),executivePreview=false
+ lineId=()=>globalThis.crypto?.randomUUID?.(),executivePreview=false,actorId=''
 }={}){
  const selected=view?.mode==='edit'?view.selected:null;
  if(view?.mode==='edit'&&(!selected||!validUuid(selected.documentId)||
@@ -412,12 +420,20 @@ export function prepareTradeLinkDraftCommand(view,fields,{
     (selected?expectedRevision<1:expectedRevision!==0))
   throw new ApiError('Invalid saved Draft revision.',409);
  const pending=view?.pendingCreateDraft;
+ const approvalFreePreview=tradeLinkApprovalFreeDraftPreview({executivePreview,actorId,record:selected?.record});
  const draft=parseTradeLinkDraftForm(fields,{
   lineId:index=>pending?.items?.[index]?.id||lineId(index),
-  purpose:'save',executivePreview:executivePreview&&!selected||selected?.record?.approval_policy===GM_SALES_EXEMPT_POLICY
+  purpose:'save',executivePreview:executivePreview&&!selected||selected?.record?.approval_policy===GM_SALES_EXEMPT_POLICY,
+  approvalFreePreview
  });
  if(selected){
   const existingContent=selected.record.content||{};
+  // The signed supersession contract preserves historical assignment metadata.
+  if(approvalFreePreview&&['quotation','po'].includes(draft.documentType)&&selected.record.workflow_state==='approved'){
+   for(const key of ['verifiedBy','verifiedByEmail','approvedBy','approvedByEmail']){
+    if(Object.hasOwn(existingContent,key))draft[key]=existingContent[key];
+   }
+  }
   const boundProfileId=existingContent.vendorId||
    tradeLinkCompanyProfileIdFromTemplateId(existingContent.templateId)||'';
   if(boundProfileId&&draft.vendorId!==boundProfileId)
@@ -432,6 +448,7 @@ export function prepareTradeLinkDraftCommand(view,fields,{
  if(!selected&&pending&&JSON.stringify(pending)!==JSON.stringify(draft))
   throw new ApiError('A previous save may have succeeded. Refresh All Documents before changing this Draft.',409);
  return {documentId:id,expectedRevision,draft,
+  ...(approvalFreePreview&&['quotation','po'].includes(draft.documentType)?{approvalFreePreview:true}:{}),
   pendingCreateDraft:selected?null:pending||draft};
 }
 /** Reconcile a saved record against the authoritative signed bounded list.
@@ -466,7 +483,8 @@ export function reconcileTradeLinkSavedListing(list,record,receipt){
     !record||record.id!==receipt?.documentId||
     record.board_item_id!==receipt?.boardItemId||
     record.revision!==receipt?.revision||
-    !['draft','for-approval','revision-required'].includes(record.workflow_state)||
+    (!['draft','for-approval','revision-required'].includes(record.workflow_state)&&
+      !(record.workflow_state==='approved'&&receipt.state==='approved'&&record.approval_policy===GM_CREATOR_APPROVAL_FREE_POLICY))||
     record.archived_at!==null||
     typeof record.document_number!=='string'||
     typeof record.created_at!=='string'||!Number.isFinite(Date.parse(record.created_at))||
@@ -477,6 +495,7 @@ export function reconcileTradeLinkSavedListing(list,record,receipt){
   documentNumber:record.document_number,clientName:record.content?.customerName??null,
   documentType:record.document_type,workflowState:record.workflow_state,
   revision:record.revision,archived:false,
+  ...(record.workflow_state==='approved'?{approvalPolicy:record.approval_policy,primaryAt:null,secondaryAt:null}:{}),
   createdAt:record.created_at,updatedAt:record.updated_at};
  const existing=list.rows.find(row=>row.documentId===record.id);
  if(existing&&(existing.boardItemId!==record.board_item_id||
@@ -571,10 +590,10 @@ export class TradeLinkDraftWorkspace{
   return this.client.operate({
    documentId,expectedRevision,documentType,action,fromState,reason});
  }
- async save({documentId,expectedRevision=0,draft,initialState='for-approval',reviseApproved=false}={}){
+ async save({documentId,expectedRevision=0,draft,initialState='for-approval',reviseApproved=false,approvalFreePreview=false}={}){
   if(!TL03_DOMAIN_WRITES_ENABLED)disabled();
   const operation=expectedRevision===0?'create':reviseApproved?'revise-approved':'update';
-  const payload=validateTradeLinkDraftEnvelope(applyQuotationApprovalHierarchy(draft),
+  const payload=validateTradeLinkDraftEnvelope(applyQuotationApprovalHierarchy(draft,{approvalFreePreview}),
    {allowUnassignedNumber:operation==='create'&&this.automaticNumberingEnabled});
   const id=documentId||globalThis.crypto?.randomUUID?.();
   return this.client.commit({documentId:id,expectedRevision,operation,
@@ -642,7 +661,8 @@ export const TRADELINK_MODULE_ACCOUNT_OPTIONS=Object.freeze({
   approvedBy:Object.freeze(['asenagan@watchdogautomation.com.ph','dsenagan@watchdogautomation.com.ph','amsenagan@watchdogautomation.com.ph'])
  })
 });
-export function validateTradeLinkModuleAccountAssignments(draft,{executivePreview=false}={}){
+export function validateTradeLinkModuleAccountAssignments(draft,{executivePreview=false,approvalFreePreview=false}={}){
+ if(approvalFreePreview&&['quotation','po'].includes(draft?.documentType))return draft;
  const allowed=TRADELINK_MODULE_ACCOUNT_OPTIONS[draft?.documentType];
  if(!allowed)return draft;
  for(const [field,options] of Object.entries(allowed)){
@@ -704,17 +724,17 @@ function referenceCreator(actorName){
   '<small>Signed server identity and timestamp are captured on successful save.</small>'+
   '</div></div>';
 }
-function renderApprovalFreeWorkflow(actorName,fields,fieldValue,data){
+function renderApprovalFreeWorkflow(actorName,documentSaved){
  return '<section id="tl-section-approval" class="tl-reference-approval" aria-label="Verification and approval workflow">'+
   '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
   '<div class="tl-reference-approval-stage"><strong>Reviewer approval — Not Applicable</strong></div>'+
   '<div class="tl-reference-approval-stage"><strong>Management approval — Not Applicable</strong></div>'+
-  fields.map(name=>'<input type="hidden" name="'+escape(name)+'" value="'+escape(fieldValue(name,data[name]||''))+'">').join('')+
-  '<p>No reviewer validation is required for this saved revision. The server determines the policy for each new revision.</p></section>';
+  '<p>'+(documentSaved?'No reviewer validation is expected for your new revision.':'No reviewer validation is expected for this document.')+
+  ' The server confirms the applicable policy on save.</p></section>';
 }
 function renderReferenceModuleWorkflow(type,fieldValue,data,actorName,reviewContext={}){
- if(type==='po'&&reviewContext.documentSaved&&reviewContext.reviewStages?.approvalPolicy===GM_CREATOR_APPROVAL_FREE_POLICY)
-  return renderApprovalFreeWorkflow(actorName,['verifiedBy','approvedBy'],fieldValue,data);
+ if(type==='po'&&reviewContext.approvalFreePreview)
+  return renderApprovalFreeWorkflow(actorName,reviewContext.documentSaved);
  const {actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewStages=null,gmPreview=false}=reviewContext;
  const value=name=>fieldValue(name,data[name]||'');
  const stage=(field,stageName,label)=>referenceAssignedPdfStage(field,value(field),label,stageName,{
@@ -798,8 +818,8 @@ export function quotationSecondaryOptionsForDocument(documentNumber=''){
 /** Canonicalize the fixed first-stage reviewer, and reject unauthorized second-stage
  * nominees at the signed Draft-save boundary. Actual review and approval
  * authorization continues to be enforced by the backend. */
-export function applyQuotationApprovalHierarchy(draft){
- if(draft?.documentType!=='quotation')return draft;
+export function applyQuotationApprovalHierarchy(draft,{approvalFreePreview=false}={}){
+ if(draft?.documentType!=='quotation'||approvalFreePreview)return draft;
  const secondaryOptions=quotationSecondaryOptionsForDocument(draft.documentNumber);
  const email=String(draft.approvedByEmail||secondaryOptions[0]).trim().toLowerCase();
  if(!secondaryOptions.includes(email))
@@ -837,8 +857,8 @@ export function quotationReviewControlEligibility({
 /** Quotation has a fixed primary Sales Supervisor and an editable existing
  * management reviewer assignment. Each reviewer records an independent server event. */
 function renderQuotationVerification(fieldValue,data,actorName='',reviewContext={}){
- if(reviewContext.documentSaved&&reviewContext.reviewStages?.approvalPolicy===GM_CREATOR_APPROVAL_FREE_POLICY)
-  return renderApprovalFreeWorkflow(actorName,['verifiedBy','verifiedByEmail','approvedBy','approvedByEmail'],fieldValue,data);
+ if(reviewContext.approvalFreePreview)
+  return renderApprovalFreeWorkflow(actorName,reviewContext.documentSaved);
  const {actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewStages=null,gmPreview=false}=reviewContext;
  const {primary}=QUOTATION_APPROVAL_HIERARCHY;
  const exempt=reviewStages?.approvalPolicy===GM_SALES_EXEMPT_POLICY;
@@ -1326,7 +1346,7 @@ export function snapshotTradeLinkDraftLineItems(form){
    unit:get('lineUnit'),serialNumber:get('lineSerialNumber')};
  });
 }
-function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error='',message='',lineDrafts=null,actorName='',actorEmail='',reviewStages=null,showModuleTabs=true,canCreate=false,canEditOwnDraft=false,actorModuleRole='',moduleNavigation=''){
+function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error='',message='',lineDrafts=null,actorName='',actorEmail='',reviewStages=null,showModuleTabs=true,canCreate=false,canEditOwnDraft=false,actorModuleRole='',moduleNavigation='',actorId=''){
  const editing=mode==='edit'&&
   ['draft','for-approval','revision-required','approved'].includes(row?.workflow_state)&&
   row.content&&typeof row.content==='object'&&
@@ -1339,10 +1359,10 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
  const workflowState=editing&&row.workflow_state!=='approved'?row.workflow_state:'for-approval';
  const documentId=editing?row.id:'';
  const selectedStatus=fieldValue('documentStatus',workflowState);
- const approvalFree=editing&&row.approval_policy===GM_CREATOR_APPROVAL_FREE_POLICY;
- if(approvalFree&&!reviewStages)reviewStages={approvalPolicy:row.approval_policy};
-
  const type=editing?data.documentType:fieldValue('documentType','quotation');
+ const approvalFree=['quotation','po'].includes(type)&&tradeLinkApprovalFreeDraftPreview({
+  executivePreview:tradeLinkGmApprovalPreview(actorEmail,actorModuleRole),actorId,record:editing?row:null});
+ if(editing&&row.approval_policy===GM_CREATOR_APPROVAL_FREE_POLICY&&!reviewStages)reviewStages={approvalPolicy:row.approval_policy};
  const contactEmailError=type==='quotation'&&
   tradeLinkDraftFieldForError(error)==='customerEmail'?error:'';
  const selectedCompanyProfileId=fieldValue('vendorId',
@@ -1404,8 +1424,8 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
         !(editing&&row.workflow_state==='approved'&&id==='draft');
        const disabled=!selectable;
        return '<option value="'+escape(id)+'"'+(id===selectedStatus?' selected':'')+
-        (disabled?' disabled':'')+'>'+escape(label)+'</option>';
-      }).join('')+'</select><small id="tl-reference-status-help">'+(approvalFree?'The saved revision requires no reviewer validation. The server determines the policy on save.':'Save defaults to For Approval. Select Draft explicitly to save as Draft. Approved is assigned automatically after all required reviewers validate.')+'</small></label>'+
+        (disabled?' disabled':'')+'>'+escape(approvalFree&&id==='for-approval'?'Approved (on save)':label)+'</option>';
+      }).join('')+'</select><small id="tl-reference-status-help">'+(approvalFree?'Save requests approval-free completion. The server confirms eligibility and the saved status. Select Draft explicitly to save as Draft.':'Save defaults to For Approval. Select Draft explicitly to save as Draft. Approved is assigned automatically after all required reviewers validate.')+'</small></label>'+
      '<label class="tl-draft-field"><span>Document number</span>'+
       '<input name="documentNumber" value="'+escape(fieldValue('documentNumber',data.documentNumber||''))+'" '+
        (editing||TL03_AUTOMATIC_NUMBERING_ENABLED?'readonly ':'required maxlength="120" pattern="[A-Za-z0-9][A-Za-z0-9._ /-]*" ')+
@@ -1507,16 +1527,15 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
      '<small>Recovered from the original TradeLink v1.42.0 template. Changes are saved with this document revision. No PDF, approval or document is generated by changing terms locally; eligible saved records remain printable through the existing workflow.</small>'+
     '</label></details>'+
    (type==='quotation'?renderQuotationVerification(fieldValue,data,actorName,{
-    actorEmail,documentSaved:editing,documentId,workflowState,reviewStages,gmPreview:tradeLinkGmApprovalPreview(actorEmail,actorModuleRole)}):
+    actorEmail,documentSaved:editing,documentId,workflowState,reviewStages,approvalFreePreview:approvalFree,gmPreview:tradeLinkGmApprovalPreview(actorEmail,actorModuleRole)}):
     renderReferenceModuleWorkflow(type,fieldValue,data,actorName,{
-     actorEmail,documentSaved:editing,documentId,workflowState,reviewStages,gmPreview:tradeLinkGmApprovalPreview(actorEmail,actorModuleRole)}))+
+     actorEmail,documentSaved:editing,documentId,workflowState,reviewStages,approvalFreePreview:approvalFree,gmPreview:tradeLinkGmApprovalPreview(actorEmail,actorModuleRole)}))+
    '<div class="tl-draft-actions">'+
     '<button type="button" class="secondary" data-action="tradelink-draft-clear">Clear form</button>'+
    '</div><p data-tradelink-draft-preview-status data-validation="pending" role="status" aria-live="polite" aria-atomic="true">'+
     (editing?'Saved revision '+escape(row?.revision??'—')+
      ' loaded. Changes remain local until Save Changes.':
-     type==='quotation'?
-      'Not saved. Save creates a For Approval document; choose Draft explicitly when needed.':
+     approvalFree?'Not saved. Save requests approval-free completion; choose Draft explicitly when needed.':
       'Not saved. Save creates a For Approval document; choose Draft explicitly when needed.')+'</p>'+
    renderTradeLinkDraftLocalSummary(type)+
   '</form></div></section>';
@@ -2182,6 +2201,6 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
    renderEditor(selected?.record,view.mode,canManage,
    view.mode==='edit'&&!selected?null:view.formValues,view.draftNotice||'',
    view.error||'',view.message||'',view.lineDrafts,actorName,actorEmail,view.reviewStages||null,showModuleTabs,
-   canCreate,view.canEditOwnDraft===true,actorModuleRole,moduleNavigation))+
+   canCreate,view.canEditOwnDraft===true,actorModuleRole,moduleNavigation,actorId))+
   '</div>';
 }
