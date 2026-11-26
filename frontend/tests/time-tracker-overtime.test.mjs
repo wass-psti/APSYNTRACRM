@@ -175,6 +175,9 @@ test('System Admin sees hours-only manual OT controls and review actions only fo
  assert.match(html,/id="tt-ot-manual-duration-hours"/);
  assert.doesNotMatch(html,/id="tt-ot-manual-(start|end)"/);
  assert.equal((html.match(/data-action="tt-ot-approve"/g)||[]).length,1);
+ const platformAdmin=renderTimeTrackerOvertime({requests:[],access:{
+  ...access,moduleRole:'Employee',manualOtManager:true},now,modalOpen:'manual'});
+ assert.match(platformAdmin,/tt-ot-manual-form/);
  const employee=renderTimeTrackerOvertime({requests:[{...manualRow,canReviewOt:false}],
   access:{userId:worker,moduleRole:'Employee',manualOtManager:false,otContractActive:true},now});
  assert.match(employee,/File Overtime/);
