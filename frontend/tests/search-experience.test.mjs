@@ -176,7 +176,7 @@ test('application startup and exact-commit GitHub Pages manifest cover shared se
   index.indexOf('frontend/action-menu-experience.css'));
  assert.match(smoke,/'frontend\/search-experience\.js'/);
  assert.match(smoke,/'frontend\/search-experience\.css'/);
- assert.match(index,/script type="module" src="\.\/frontend\/app\.js"/);
+ assert.match(index,/script type="module" src="\.\/frontend\/app\.js(?:\?v=[^"]+)?"/);
  const stop=startSearchExperience(null);
  assert.equal(typeof stop,'function');assert.doesNotThrow(stop);
 });
