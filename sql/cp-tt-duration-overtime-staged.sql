@@ -354,9 +354,15 @@ BEGIN
  ('''bootstrapApprover'',v_bootstrap,',
   '''bootstrapApprover'',v_bootstrap,''durationOtContract'',''tt-duration-ot-1'',
   ''durationOtHrApprover'',v_hr,'),
- ('OR (wm.user_id IS NOT NULL AND (v_bootstrap OR r.owner_id=v_user))',
-  'OR (wm.user_id IS NOT NULL AND (v_bootstrap OR r.owner_id=v_user OR
-    (v_hr AND r.ot_policy=''duration-v1'')))')
+ ($old$AND r.status<>'Withdrawn' AND (
+  v_bootstrap OR r.submission_source='manual_admin'
+  OR (wm.user_id IS NOT NULL AND r.owner_id=v_user)
+ )$old$,
+  $new$AND r.status<>'Withdrawn' AND (
+  v_bootstrap OR r.submission_source='manual_admin'
+  OR (wm.user_id IS NOT NULL AND (r.owner_id=v_user OR
+   (v_hr AND r.ot_policy='duration-v1')))
+ )$new$)
  LOOP
   IF pg_catalog.cardinality(pg_catalog.string_to_array(d,old))<>2 THEN
    RAISE EXCEPTION 'OT snapshot baseline drift: %',old; END IF;
