@@ -208,7 +208,7 @@ test('CP-FT-ALL-REQUESTS-01 renders a complete request workspace with truthful s
  const css=readFileSync(new URL('../fueltrack-v3-application.css',import.meta.url),'utf8');
  const dark=readFileSync(new URL('../../frontend/dark-native-applications.css',import.meta.url),'utf8');
  const bundle=readFileSync(new URL('../apsyntra-styles.bundle.css',import.meta.url),'utf8');
- for(const token of ['ft3-requests-hero','ft3-requests-kpi','ft3-requests-workspace','ft3-requests-table','@media(max-width:700px)','@media(max-width:380px)'])assert.ok(css.includes(token),token);
+ for(const token of ['ft3-requests-hero','ft3-requests-kpi','ft3-requests-workspace','ft3-request-table','@media(max-width:700px)','@media(max-width:380px)'])assert.ok(css.includes(token),token);
  for(const token of ['ft3-requests-v2','ft3-requests-kpi','ft3-requests-empty','var(--crm-native-panel)','.ft3-requests-row{background:var(--crm-native-panel)'])assert.ok(dark.includes(token),token);
  assert.match(bundle,/CP-FT-ALL-REQUESTS-01 — premium request workspace/);
  assert.match(bundle,/CP-FT-ALL-REQUESTS-01 — FuelTrack signed request workspace dark appearance/);
