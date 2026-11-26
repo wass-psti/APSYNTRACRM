@@ -123,43 +123,90 @@ export function modelFuelTrackSignedRequests(snapshot,filters={}){
 export function renderFuelTrackSignedRequestsRich(snapshot,filters={}){
  if(!snapshot)return '<p class="ft3-approval-unavailable">Signed requests unavailable.</p>';
  const m=modelFuelTrackSignedRequests(snapshot,filters),s=snapshot.summary;
- return '<section class="ft3-requests ft3-signed-rich">'+header('All Requests','Verified fuel request history · '+num.format(s.total)+' total')+
- '<div class="ft3-request-stats">'+
- [['Pending',s.submitted,'Awaiting approval','◷'],['Approved',s.approved,'Awaiting refueling','✓'],['Completed',s.completed,'Finalized transactions','◆'],['Total',s.total,'Authorized requests','▣']]
- .map(([title,value,note,icon])=>'<article class="ft3-request-stat"><span class="ft3-request-stat-icon" aria-hidden="true">'+icon+'</span><div><strong>'+num.format(value)+'</strong><small>'+esc(title)+'</small><span class="ft3-request-stat-detail">'+esc(note)+'</span></div></article>').join('')+'</div>'+
- '<div class="ft3-request-filters" aria-label="Request status filters">'+statuses.map(([key,label])=>
+ const counts={all:Number(s.total||0),submitted:Number(s.submitted||0),approved:Number(s.approved||0),
+  refueling_done:Number(s.refuelingDone||0),completed:Number(s.completed||0),rejected:Number(s.rejected||0)};
+ const inProgress=counts.approved+counts.refueling_done;
+ const stats=[
+  ['Total requests',counts.all,'All verified request records','▤','total'],
+  ['Pending approval',counts.submitted,'Waiting for review','◷','pending'],
+  ['In progress',inProgress,'Approved or awaiting refueling','↗','progress'],
+  ['Completed',counts.completed,'Finalized fuel requests','✓','completed']
+ ];
+ const statusButtons=statuses.map(([key,label])=>
   '<button type="button" class="ft3-request-filter'+(m.filters.status===key?' is-active':'')+
-  '" data-action="ft3-signed-request-status" data-status="'+key+'" aria-pressed="'+(m.filters.status===key?'true':'false')+'">'+label+'</button>').join('')+'</div>'+
- '<div class="ft3-signed-controls"><label for="ft3-signed-request-search">Search verified requests</label>'+
- '<input id="ft3-signed-request-search" type="search" maxlength="120" value="'+esc(m.filters.search)+'" placeholder="Requestor, plate, status or purpose">'+
- '<button type="button" class="ft3-soft-action" data-action="ft3-signed-request-sort">'+(m.filters.sort==='newest'?'↓ Newest first':'↑ Oldest first')+'</button>'+
- '<button type="button" class="ft3-soft-action" data-action="ft3-signed-request-clear">Clear filters</button></div>'+
- section('Request Log',m.count+' matching records · '+m.rows.length+' shown',
- m.rows.length?'<div class="ft3-request-table-scroll"><table class="ft3-request-table"><thead><tr><th scope="col">Request</th><th scope="col">Type</th><th scope="col">Status</th><th scope="col">Submitted</th><th scope="col">Details</th></tr></thead><tbody>'+
- m.rows.map(r=>{
-  const expanded=r.id===m.filters.expandedId;
-  return '<tr class="ft3-request-row"><td><strong>'+esc(r.requestor_name)+'</strong><small class="ft3-signed-subtitle">'+esc(ref(r))+'</small></td><td>'+esc(r.kind==='vehicle'?'Vehicle':'Container')+'</td><td><span class="ft3-status-pill ft3-signed-status-'+esc(r.state)+'">'+esc(labels[r.state])+'</span></td><td><time datetime="'+esc(r.created_at)+'">'+esc(fmtDate(r.created_at))+'</time></td><td><button class="ft3-request-chevron" type="button" data-action="ft3-signed-request-expand" data-id="'+esc(r.id)+'" aria-expanded="'+expanded+'" aria-label="'+(expanded?'Collapse':'Expand')+' request details">'+(expanded?'⌃':'⌄')+'</button></td></tr>'+
-  (expanded?'<tr class="ft3-request-detail-row"><td colspan="5"><section class="ft3-request-detail"><h4>Verified request details</h4><div class="ft3-request-detail-grid">'+
-  [['Requestor',r.requestor_name],['Reference',ref(r)],['Status',labels[r.state]],['Submitted',fmtDate(r.created_at)],['Purpose',r.details?.purpose||'Not specified'],['Request type',r.kind==='vehicle'?'Vehicle':'Container']]
-  .map(([k,v])=>'<div class="ft3-request-field"><small>'+esc(k)+'</small><strong>'+esc(v)+'</strong></div>').join('')+'</div></section></td></tr>':'');
- }).join('')+'</tbody></table></div>':
- '<div class="ft3-empty"><strong>No matching requests</strong><p>Change the search or status filter.</p></div>',
- m.hasMore?'<button type="button" class="ft3-soft-action" data-action="ft3-signed-request-more">Load more ('+(m.count-m.rows.length)+' remaining)</button>':'')+
- (snapshot.rows.length>=200?'<p class="ft3-analytics-footnote">Only the latest 200 authorized records were returned. Older records need server pagination.</p>':'')+
- '</section>';
-}
-const validDaily=r=>{
- if(!r||typeof r.day!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(r.day))return false;
- const date=new Date(r.day+'T00:00:00Z');
- return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===r.day&&
-  Number.isSafeInteger(r.transactions)&&r.transactions>=0&&
-  typeof r.liters==='number'&&Number.isFinite(r.liters)&&r.liters>=0&&
-  typeof r.amount==='number'&&Number.isFinite(r.amount)&&r.amount>=0;
-};
-const analyticsViews=[['fuel-price','Fuel Price'],['efficiency','Efficiency'],['frequency','Frequency'],['requestors','Requestors'],['odometer','Odometer']];
-const analyticsRanges=[['all','Last 365 days',365],['six-months','Last 180 days',180],['month','Last 30 days',30],['week','Last 7 days',7]];
-function analyticsHref(snapshot,view,range,metric){
- return '#/boards/'+esc(snapshot.boardId)+'/fueltrack/analytics/'+view+'/'+range+'/'+metric;
+  '" data-action="ft3-signed-request-status" data-status="'+key+
+  '" aria-pressed="'+(m.filters.status===key?'true':'false')+'">'+
+  '<span>'+label+'</span><strong>'+num.format(counts[key])+'</strong></button>'
+ ).join('');
+ const rows=m.rows.length?'<div class="ft3-request-table-scroll"><table class="ft3-request-table ft3-requests-table"><thead><tr>'+
+  '<th scope="col">Requestor / Reference</th><th scope="col">Request type</th>'+
+  '<th scope="col">Status</th><th scope="col">Submitted</th><th scope="col">Details</th>'+
+  '</tr></thead><tbody>'+
+  m.rows.map(r=>{
+   const expanded=r.id===m.filters.expandedId;
+   const name=String(r.requestor_name||'Unknown requestor');
+   const initials=name.trim().split(/\s+/).slice(0,2).map(part=>part.slice(0,1)).join('').toUpperCase()||'FT';
+   const requestType=r.kind==='vehicle'?'Vehicle':'Container';
+   const reference=ref(r),purpose=String(r.details?.purpose||'Purpose not provided');
+   return '<tr class="ft3-request-row ft3-requests-row">'+
+    '<td class="ft3-requests-request-cell"><div class="ft3-requests-requestor">'+
+     '<span class="ft3-requests-avatar" aria-hidden="true">'+esc(initials)+'</span>'+
+     '<span class="ft3-requests-requestor-copy"><strong>'+esc(name)+'</strong>'+
+     '<small>'+esc(reference)+'</small><span class="ft3-requests-purpose">'+esc(purpose)+'</span></span></div></td>'+
+    '<td class="ft3-requests-type-cell"><span class="ft3-requests-mobile-label">Request type</span>'+
+     '<span class="ft3-requests-type-pill"><span aria-hidden="true">'+(r.kind==='vehicle'?'▣':'⬡')+'</span>'+requestType+'</span></td>'+
+    '<td class="ft3-requests-status-cell"><span class="ft3-requests-mobile-label">Status</span>'+
+     '<span class="ft3-status-pill ft3-signed-status-'+esc(r.state)+'">'+esc(labels[r.state])+'</span></td>'+
+    '<td class="ft3-requests-date-cell"><span class="ft3-requests-mobile-label">Submitted</span>'+
+     '<time datetime="'+esc(r.created_at)+'">'+esc(fmtDate(r.created_at))+'</time></td>'+
+    '<td class="ft3-requests-detail-cell"><button type="button" class="ft3-request-chevron ft3-requests-expand"'+
+     ' data-action="ft3-signed-request-expand" data-id="'+esc(r.id)+'" aria-expanded="'+expanded+'"'+
+     ' aria-label="'+(expanded?'Collapse':'View')+' details for '+esc(name)+'">'+
+     '<span>Details</span><span aria-hidden="true">'+(expanded?'⌃':'⌄')+'</span></button></td></tr>'+
+    (expanded?'<tr class="ft3-request-detail-row ft3-requests-detail-row"><td colspan="5">'+
+     '<section class="ft3-request-detail ft3-requests-detail" aria-label="Verified request details">'+
+      '<div class="ft3-requests-detail-heading"><span>REQUEST INFORMATION</span><strong>'+esc(reference)+'</strong></div>'+
+      '<div class="ft3-request-detail-grid ft3-requests-detail-grid">'+
+       [['Requestor',name],['Reference',reference],['Status',labels[r.state]],['Submitted',fmtDate(r.created_at)],['Purpose',purpose],['Request type',requestType]]+
+       .map(([k,v])=>'<div class="ft3-request-field"><small>'+esc(k)+'</small><strong>'+esc(v)+'</strong></div>').join('')+
+      '</div></section></td></tr>':'');
+  }).join('')+'</tbody></table></div>':
+  '<div class="ft3-requests-empty"><span aria-hidden="true">⌕</span>'+
+   '<strong>'+(snapshot.rows.length?'No matching requests':'No fuel requests yet')+'</strong>'+
+   '<p>'+(snapshot.rows.length?'Try another search or status filter.':'New fuel requests will appear here after they are submitted.')+'</p>'+
+   '<button type="button" class="ft3-soft-action" data-action="ft3-signed-request-clear">Clear filters</button></div>';
+ return '<section class="ft3-requests ft3-signed-rich ft3-requests-v2" aria-label="All FuelTrack requests">'+
+  '<header class="ft3-requests-hero"><div class="ft3-requests-hero-copy">'+
+   '<span class="ft3-requests-kicker">FUEL CONTROL / REQUEST MANAGEMENT</span>'+
+   '<h2>All Requests</h2><p>Review, search and follow the status of every verified fuel request.</p></div>'+
+   '<div class="ft3-requests-hero-actions"><span class="ft3-requests-live"><span aria-hidden="true"></span>Verified signed records</span>'+
+   '<button type="button" class="ft3-requests-refresh" data-action="refresh-board">↻ Refresh</button></div></header>'+
+  '<div class="ft3-request-stats">'+stats.map(([title,value,note,icon,tone])=>
+   '<article class="ft3-requests-kpi ft3-requests-kpi-'+tone+'"><span class="ft3-requests-kpi-icon" aria-hidden="true">'+icon+'</span>'+
+    '<div class="ft3-requests-kpi-copy"><small>'+esc(title)+'</small><strong>'+num.format(value)+'</strong><span>'+esc(note)+'</span></div></article>'
+  ).join('')+'</div>'+
+  '<section class="ft3-requests-workspace" aria-label="Request workspace">'+
+   '<div class="ft3-requests-workspace-head"><div><span class="ft3-requests-section-kicker">REQUEST WORKSPACE</span>'+
+    '<h3>Request log</h3><p>Browse verified requests and open a record to review its details.</p></div>'+
+    '<span class="ft3-requests-record-count">'+num.format(s.total)+' total records</span></div>'+
+   '<div class="ft3-signed-controls ft3-requests-controls" role="search">'+
+    '<label class="ft3-requests-visually-hidden" for="ft3-signed-request-search">Search verified requests</label>'+
+    '<div class="ft3-requests-search"><span aria-hidden="true">⌕</span>'+
+     '<input id="ft3-signed-request-search" type="search" maxlength="120" autocomplete="off" value="'+esc(m.filters.search)+'" placeholder="Search requestor, plate, purpose or reference">'+
+    '</div><div class="ft3-requests-actions">'+
+     '<button type="button" class="ft3-soft-action" data-action="ft3-signed-request-sort">'+
+      (m.filters.sort==='newest'?'↓ Newest first':'↑ Oldest first')+'</button>'+
+     '<button type="button" class="ft3-soft-action ft3-requests-clear" data-action="ft3-signed-request-clear">Clear filters</button>'+
+    '</div></div>'+
+   '<div class="ft3-request-filters ft3-requests-status-filters" role="group" aria-label="Filter requests by status">'+statusButtons+'</div>'+
+   '<div class="ft3-requests-log-heading"><div><strong>Request log</strong><span>'+num.format(m.count)+' matching records</span></div>'+
+    '<span>Showing '+num.format(m.rows.length)+' of '+num.format(m.count)+'</span></div>'+
+   rows+
+   '<div class="ft3-requests-footer"><span>Showing '+num.format(m.rows.length)+' of '+num.format(m.count)+' matching requests</span>'+
+    (m.hasMore?'<button type="button" class="ft3-soft-action" data-action="ft3-signed-request-more">Load more · '+num.format(m.count-m.rows.length)+' remaining</button>':'')+
+   '</div>'+
+   (snapshot.rows.length>=200?'<p class="ft3-requests-data-note">The signed service returned the latest 200 authorized records. Older records require server-side pagination.</p>':'')+
+  '</section></section>';
 }
 function analyticsDateKey(now){
  const current=now instanceof Date?now:new Date(now);
