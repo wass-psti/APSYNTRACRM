@@ -330,11 +330,12 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
  const goalLabel=timeTrackerGoalLabel(goalTargetMs);
  const session=active?timeTrackerSessionElapsed(active.clockIn,now,goalTargetMs):null;
  const autoDeadline=autoClockout?.status==='PENDING_GPS'?null:
-  autoClockout?.nextAt||autoClockout?.cutoffAt;
+  autoClockout?.overtimeCutoffAt||autoClockout?.nextAt||autoClockout?.cutoffAt;
  const autoUnavailable=active&&result.autoClockoutUnavailable===true;
  const autoLabel=autoUnavailable?'Automatic clock-out status unavailable':
   !autoClockout?'':autoClockout.status==='MONITORING'?
-  'Automatic clock-out monitoring · nine-hour threshold at ':
+  (autoClockout.overtimeCutoffAt?'Approved overtime scheduled · automatic clock-out at ':
+   'Automatic clock-out monitoring · nine-hour threshold at '):
   autoClockout.status==='GRACE'?'Grace period active · automatic clock-out at ':
   autoClockout.status==='OVERTIME'?'Approved overtime active · automatic clock-out at ':
   autoClockout.status==='PENDING_GPS'?'Automatic clock-out pending · fresh foreground GPS required':
@@ -614,10 +615,11 @@ export function syncTimeTrackerClockView(root,{
  const autoClockout=result.autoClockout?.recordId===active.id?result.autoClockout:null;
  const autoUnavailable=result.autoClockoutUnavailable===true;
  const autoDeadline=autoClockout?.status==='PENDING_GPS'?'':
-  String(autoClockout?.nextAt||autoClockout?.cutoffAt||'');
+  String(autoClockout?.overtimeCutoffAt||autoClockout?.nextAt||autoClockout?.cutoffAt||'');
  const autoLabel=autoUnavailable?'Automatic clock-out status unavailable':
   !autoClockout?'':autoClockout.status==='MONITORING'?
-  'Automatic clock-out monitoring · nine-hour threshold at ':
+  (autoClockout.overtimeCutoffAt?'Approved overtime scheduled · automatic clock-out at ':
+   'Automatic clock-out monitoring · nine-hour threshold at '):
   autoClockout.status==='GRACE'?'Grace period active · automatic clock-out at ':
   autoClockout.status==='OVERTIME'?'Approved overtime active · automatic clock-out at ':
   autoClockout.status==='PENDING_GPS'?'Automatic clock-out pending · fresh foreground GPS required':
