@@ -16,6 +16,15 @@ const report = {
     completed: 13,
     pending_liquidation_count: 7,
   },
+  agingStatus: "PASS",
+  aging: {
+    pending_total: 4,
+    awaiting_bank_execution: 1,
+    on_track: 1,
+    due_soon: 1,
+    overdue: 1,
+    completed: 2,
+  },
   analytics: {
     companyCode: "WASS",
     requestedTotal: "1234567.89",
@@ -58,6 +67,31 @@ try {
   assert.ok(await page.locator('[data-action="frt-finance-refresh"]').count() >= 1);
   assert.ok(await page.locator('[data-frt-section="archive"]').count() >= 1);
 
+  const agingPanel = page.locator(".frt-exec-aging");
+  const agingGrid = page.locator(".frt-exec-aging-grid");
+  const agingCards = page.locator(".frt-exec-aging-card");
+  const columnCount = () => agingGrid.evaluate((element) =>
+    getComputedStyle(element).gridTemplateColumns.split(/\\s+/).length,
+  );
+  assert.equal(await agingPanel.count(), 1);
+  assert.equal(await agingCards.count(), 5);
+  assert.equal(await columnCount(), 3, "Desktop aging cards use three columns");
+  assert.equal(
+    await agingCards.first().evaluate((element) => getComputedStyle(element).marginTop),
+    "0px",
+    "Aging cards do not inherit the generic settings-detail vertical margin",
+  );
+  assert.equal(
+    await page.locator(".frt-exec-aging-label").first().evaluate((element) => getComputedStyle(element).color),
+    "rgb(99, 116, 138)",
+    "Metric labels retain readable light-mode contrast",
+  );
+  assert.equal(
+    await page.locator(".frt-exec-aging-disclosure").evaluate((element) => getComputedStyle(element).color),
+    "rgb(89, 107, 130)",
+    "The financial disclosure retains readable light-mode contrast",
+  );
+
   await page.evaluate(() => {
     document.addEventListener("click", (event) => {
       const action = event.target.closest("[data-action]");
@@ -70,7 +104,11 @@ try {
   assert.equal(await page.evaluate(() => window.__fundTrackerAction), "frt-finance-view");
   assert.equal(await page.evaluate(() => window.__fundTrackerView), "executive");
 
+  await page.setViewportSize({ width: 768, height: 900 });
+  assert.equal(await columnCount(), 3, "Tablet aging cards use three columns");
+
   await page.setViewportSize({ width: 390, height: 844 });
+  assert.equal(await columnCount(), 2, "Mobile aging cards use two columns");
   assert.equal(
     await page.locator(".frt-app-header").evaluate((element) => getComputedStyle(element).flexDirection),
     "column",
@@ -78,6 +116,22 @@ try {
   assert.equal(
     await page.locator(".frt-app-context").evaluate((element) => getComputedStyle(element).flexDirection),
     "column",
+  );
+
+  await page.setViewportSize({ width: 360, height: 844 });
+  assert.equal(await columnCount(), 1, "Narrow mobile aging cards stack in one column");
+  await page.locator("html").evaluate((element) =>
+    element.setAttribute("data-aps-monday-theme", "dark"),
+  );
+  assert.equal(
+    await agingCards.first().evaluate((element) => getComputedStyle(element).backgroundColor),
+    "rgb(46, 53, 66)",
+    "Aging cards use the dark native surface",
+  );
+  assert.equal(
+    await page.locator(".frt-exec-aging-label").first().evaluate((element) => getComputedStyle(element).color),
+    "rgb(192, 202, 219)",
+    "Metric labels remain readable in dark appearance",
   );
 
   await page.emulateMedia({ reducedMotion: "reduce" });
