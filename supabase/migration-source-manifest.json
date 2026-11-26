@@ -2354,6 +2354,13 @@
       "sha256": "183c67bbba12de00684fb51e1e1625791e053120cf1027aff5152b9d8bcc570f"
     },
     {
+      "version": "20261126075745",
+      "name": "cp_dda_fe_03a_prod_persistence_rpc",
+      "file": "20261126075745_cp_dda_fe_03a_prod_persistence_rpc.sql",
+      "bytes": 21263,
+      "sha256": "0f12ccd2384714311773a4fa1abef3e550596eabdade9a3746f5c9b215f6ebd5"
+    },
+    {
       "version": "20261126090000",
       "name": "cp_tt_active_clockin_scheduler_correction",
       "file": "20261126090000_cp_tt_active_clockin_scheduler_correction.sql",
