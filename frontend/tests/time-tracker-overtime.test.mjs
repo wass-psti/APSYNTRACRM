@@ -334,7 +334,7 @@ test('OT duration preview updates the duration, progress, reason count and inlin
  assert.equal(nodes['[data-tt-ot-duration-value]'].textContent,'2 hr 00 min');
  assert.equal(nodes['[data-tt-ot-duration-progress]'].value,120);
  assert.equal(nodes['[data-tt-ot-duration-message]'].textContent,
-  '240 minutes remaining within the 6-hour maximum.');
+  '4 hr 00 min remaining within the 6-hour maximum.');
  assert.equal(nodes['[data-tt-ot-reason-count]'].textContent,'26 / 500');
  assert.equal(nodes['#tt-ot-end'].validationMessage,'');
  assert.equal(nodes['#tt-ot-reason'].validationMessage,'');
@@ -396,7 +396,8 @@ test('signed duration contract renders an hours input, with HR review controls',
 test('duration form converts hour selections to exact payroll minutes',()=>{
  const control=value=>({value,textContent:'',attributes:{},
   setAttribute(name,next){this.attributes[name]=next;},
-  removeAttribute(name){delete this.attributes[name];}});
+  removeAttribute(name){delete this.attributes[name];},
+  setCustomValidity(message){this.validationMessage=message;}});
  const nodes={
   '#tt-ot-duration-hours':control('3'),
   '#tt-ot-reason':control('Additional engineering work'),
