@@ -50,5 +50,12 @@ apply supabase/migrations/20261119073346_tradelink_user_draft_creation.sql
 apply supabase/migrations/20261119073608_tradelink_document_read_policy_consolidation.sql
 apply supabase/migrations/20261119085430_cp_tl_create_new_02_user_board_projection_insert.sql
 apply sql/tests/cp-tl-create-new-02-user-six-module-disposable.sql
+# Upgrade the disposable fixture to the current All Documents, bulk-action,
+# and original-creator contracts before testing shared reads across roles.
+apply supabase/migrations/20261123080322_cp_tl_document_identity_order_01.sql
+apply supabase/migrations/20261123103806_cp_tl_document_bulk_actions.sql
+apply supabase/migrations/20261125071129_cp_tl_document_creator_identification_01.sql
+apply supabase/migrations/20261126093000_cp_tl_shared_document_visibility_01.sql
+apply sql/tests/cp-tl-shared-document-visibility-disposable.sql
 
-echo "CP_TL_CREATE_NEW_02_USER_SIX_MODULE_DISPOSABLE_PASS"
+echo "CP_TL_SHARED_DOCUMENT_VISIBILITY_01_DISPOSABLE_PASS"

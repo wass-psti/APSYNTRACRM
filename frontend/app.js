@@ -3826,10 +3826,8 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
      pageIndex:pageRequest?.pageIndex??0};
    }
    result={...result,
-    message:tradeLinkCanCreate()?
-     'Showing documents you created and documents assigned to your signed TradeLink account.':
-     'Showing documents assigned to your signed TradeLink account.',
-    assignedOnly:!tradeLinkCanCreate()};
+    message:'Showing all TradeLink documents in this workspace.',
+    assignedOnly:false,sharedVisibility:true};
   }else if(documents){
    if(!tradeLinkDocumentsPageRpcUnavailable){
     try{
@@ -3857,7 +3855,8 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
   if(same()){
    state.tradeLinkDraft={...state.tradeLinkDraft,...result,
     listFilters:filters,listPage:result.listPage??null,
-    assignedOnly:result.assignedOnly===true,
+    assignedOnly:false,sharedVisibility:documents,
+    message:documents?'Showing all TradeLink documents in this workspace.':result.message,
     selectedDocumentIds:[],documentPreview:null,busy:false};
    const target=state.tradeLinkDraft.editRequestId;
    if(target&&!state.tradeLinkDraft.selected&&tradeLinkDraftRoute()){
@@ -3944,11 +3943,11 @@ async function openTradeLinkDraft(documentId){
 /** Read the exact Board-linked authoritative revision, never local Draft state. */
 async function openTradeLinkDocument(documentId,revision=null){
  if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
-  !TL03_DOMAIN_READS_ENABLED||!tradeLinkCanCreate()||state.tradeLinkDraft.busy||
-  state.tradeLinkDraft.status!=='AUTHORIZED_READ')return;
+  !TL03_DOMAIN_READS_ENABLED||state.tradeLinkDraft.sharedVisibility!==true||
+  state.tradeLinkDraft.busy||state.tradeLinkDraft.status!=='AUTHORIZED_READ')return;
  const listed=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
  const previous=state.tradeLinkDraft.documentPreview;
- if(!listed||(!state.boardManage&&listed.createdByActor!==true)||
+ if(!listed||
   (revision!==null&&(!Number.isSafeInteger(revision)||revision<1||
   previous?.documentId!==documentId)))return;
  const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
@@ -3956,12 +3955,14 @@ async function openTradeLinkDocument(documentId,revision=null){
   state.tradeLinkSection==='documents'&&auth.userId===actor&&state.context.workspace_id===ws;
  state.tradeLinkDraft.busy=true;render();
  try{
+  const canReadOwnedHistory=state.boardManage===true||
+   (tradeLinkCanCreate()&&listed.createdByActor===true);
   const [bundle,events,attachments]=await Promise.all([
    tradeLinkDraftWorkspace.revisionBundle(documentId,revision),
-   revision===null&&TL03_WORKFLOW_REVIEW_ENABLED?
-    tradeLinkDraftWorkspace.history(documentId):Promise.resolve(previous?.events??null),
-   revision===null&&TL03_ATTACHMENTS_ENABLED?
-    tradeLinkAttachments.list(documentId):Promise.resolve(previous?.attachments??null)
+   revision===null&&canReadOwnedHistory&&TL03_WORKFLOW_REVIEW_ENABLED?
+    tradeLinkDraftWorkspace.history(documentId):Promise.resolve(canReadOwnedHistory?previous?.events??null:null),
+   revision===null&&canReadOwnedHistory&&TL03_ATTACHMENTS_ENABLED?
+    tradeLinkAttachments.list(documentId):Promise.resolve(canReadOwnedHistory?previous?.attachments??null:null)
   ]);
   if(!same())return;
   const record=bundle?.selected,target=revision??listed.revision;
@@ -3971,7 +3972,7 @@ async function openTradeLinkDocument(documentId,revision=null){
    (target===listed.revision&&
     (record.document_number!==listed.documentNumber||record.workflow_state!==listed.workflowState)))
    throw new ApiError('Document revision history changed; refresh the signed list.',409);
-  if(revision===null&&TL03_WORKFLOW_REVIEW_ENABLED&&
+  if(revision===null&&canReadOwnedHistory&&TL03_WORKFLOW_REVIEW_ENABLED&&
     (!Array.isArray(events)||events[0]?.revision!==listed.revision))
    throw new ApiError('Signed document history does not match the saved revision.',409);
   state.tradeLinkDraft.documentPreview={
@@ -9256,7 +9257,7 @@ async function action(name,button){
         updatedAt:refreshed.updated_at}))
      throw new ApiError('Review was recorded, but the refreshed Board/list projection could not be verified. Refresh before retrying.',409);
     state.tradeLinkDraft={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',
-     assignedOnly:!tradeLinkCanCreate(),rows:page.rows,
+     assignedOnly:false,sharedVisibility:true,rows:page.rows,
      listFilters:currentFilters,
      listPage:{...page.listPage,history:currentPage?.history??[],
       pageIndex:currentPage?.pageIndex??0},
@@ -9374,7 +9375,7 @@ async function action(name,button){
  }
  case 'tradelink-documents-module':{
   if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
-     !TL03_DOMAIN_READS_ENABLED||(!tradeLinkCanCreate()&&!state.tradeLinkDraft?.assignedOnly)||
+     !TL03_DOMAIN_READS_ENABLED||state.tradeLinkDraft?.sharedVisibility!==true||
      state.tradeLinkDraft?.status!=='AUTHORIZED_READ'||state.tradeLinkDraft.busy)break;
   const selected=normalizeTradeLinkDraftListFilters({
    ...state.tradeLinkDraft.listFilters,documentType:button.dataset.module
@@ -13778,7 +13779,7 @@ function captureTradeLinkDraftListFilters(event){
  const control=event.target?.closest?.('[data-tradelink-domain-filter]');
  const container=control?.closest?.('[data-tradelink-domain-list]');
  if(!control||!container||!tradeLinkAuthorizedListRoute()||
-  !TL03_DOMAIN_READS_ENABLED||(!state.boardManage&&!state.tradeLinkDraft?.assignedOnly)||
+  !TL03_DOMAIN_READS_ENABLED||(!state.boardManage&&state.tradeLinkDraft?.sharedVisibility!==true)||
   state.tradeLinkDraft?.status!=='AUTHORIZED_READ'||state.tradeLinkDraft.busy)return false;
  const get=name=>container.querySelector('[data-tradelink-domain-filter][name="'+name+'"]')?.value;
  const filters=normalizeTradeLinkDraftListFilters({

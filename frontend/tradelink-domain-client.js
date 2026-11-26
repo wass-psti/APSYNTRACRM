@@ -377,6 +377,13 @@ export class TradeLinkDomainClient{
    deny('TradeLink native application assignment or workspace is unavailable.');
   return {actorId:actor.id,workspaceId:context.workspace_id};
  }
+ async documentReadSession(){
+  try{return await this.session({allowCreateUser:true});}
+  catch(error){
+   if(error?.status!==403)throw error;
+   return this.reviewerSession();
+  }
+ }
  async boardProjection(documentId){
   if(!validUuid(documentId))deny('Invalid TradeLink document ID.',400);
   const {workspaceId}=await this.reviewerSession();
@@ -420,7 +427,7 @@ export class TradeLinkDomainClient{
   if(!TL03_DOMAIN_READS_ENABLED)deny('TradeLink domain reads await production activation.',503);
   if(!Number.isSafeInteger(limit)||limit<1||limit>100)
    deny('TradeLink list limit must be 1–100.',400);
-  await this.session({allowCreateUser:true});
+  await this.documentReadSession();
   const rows=await this.api.rpc('tl03_documents_list',{
    p_board_id:TRADELINK_BOARD_ID,p_limit:limit});
   if(!Array.isArray(rows)||rows.length>limit||rows.some(r=>!validUuid(r?.documentId)||
@@ -449,14 +456,7 @@ export class TradeLinkDomainClient{
       !Number.isFinite(Date.parse(cursor.createdAt))||
       !validUuid(cursor.documentId))))
    deny('Invalid TradeLink server search request.',400);
-  try{
-   await this.session({allowCreateUser:true});
-  }catch(error){
-   // Assigned reviewers use the existing reviewer session contract. The
-   // database page RPC remains authoritative for which assigned rows exist.
-   if(error?.status!==403)throw error;
-   await this.reviewerSession();
-  }
+  await this.documentReadSession();
   const response=await this.api.rpc('tl03_documents_page',{
    p_board_id:TRADELINK_BOARD_ID,p_search:query,
    p_document_type:documentType,p_workflow_state:workflowState,
@@ -747,7 +747,7 @@ export class TradeLinkDomainClient{
  async read(documentId){
   if(!TL03_DOMAIN_READS_ENABLED)deny('TradeLink domain reads await production activation.',503);
   if(!validUuid(documentId))deny('Invalid document identifier.',400);
-  const {workspaceId}=await this.session({allowCreateUser:true});
+  const {workspaceId}=await this.documentReadSession();
   const row=await this.api.rpc('tl03_document_read',{
    p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId});
   return row===null?null:normalizeTradeLinkDomainRow(row,workspaceId,documentId);
@@ -757,7 +757,7 @@ export class TradeLinkDomainClient{
   if(!validUuid(documentId)||(revision!==null&&
    (!Number.isSafeInteger(revision)||revision<1)))
    deny('Invalid TradeLink revision history request.',400);
-  const {workspaceId}=await this.session({allowCreateUser:true});
+  const {workspaceId}=await this.documentReadSession();
   let result;
   try{
    result=await this.api.rpc('tl03_document_revision_bundle',{

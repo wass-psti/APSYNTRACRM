@@ -84,6 +84,7 @@ export function initialTradeLinkDraftView(documentType=null){
  return {status:'READ_PENDING',rows:[],selected:null,documentPreview:null,busy:false,error:'',
   message:'',draftNotice:'',mode:'create',editRequestId:null,pendingCreateId:null,pendingCreateDraft:null,pendingSave:null,lineDrafts:null,unsavedChanges:false,
   listFilters:initialTradeLinkDraftListFilters(),listPage:null,selectedDocumentIds:[],
+  assignedOnly:false,sharedVisibility:false,
   formValues:selected?{documentType:selected}:null};
 }
 /**
@@ -1732,7 +1733,7 @@ export function renderTradeLinkSavedDocumentPreview(record,workspaceId,documentI
 }
 function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=false,canCreate=canManage,actorEmail=''}={}){
  const creatorMode=canCreate&&!canManage;
- const enabled=TL03_DOMAIN_READS_ENABLED&&(canManage||canReview)&&view.status==='AUTHORIZED_READ';
+ const enabled=TL03_DOMAIN_READS_ENABLED&&(canManage||canReview||canCreate)&&view.status==='AUTHORIZED_READ';
  const records=enabled?rows:[];
  const filters=normalizeTradeLinkDraftListFilters(view.listFilters);
  const selectedIds=new Set(Array.isArray(view.selectedDocumentIds)?view.selectedDocumentIds:[]);
@@ -1787,14 +1788,11 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
     '<button type="button" class="secondary" data-action="tradelink-documents-next"'+
     (!page.hasMore||view.busy?' disabled':'')+'>Next page</button></div>':'')+
   '<p id="tl-draft-search-scope" class="muted">'+
-    (canReview&&!creatorMode?'Only documents assigned to the signed account are shown. Review actions record the current account and server time.':creatorMode?'Your created documents and separately assigned reviewer documents are shown. Your own saved Drafts can be reopened; reviewer actions remain tied to their assignments.':page?'Signed server search and filters cover all authorized documents in this Board. '+
-      'Results are paged newest-first (50 per page); Sort by applies to the visible page. '+
-      'Select Search documents to apply new criteria.':
-      'Search and filters apply only to the current signed, authorized response '+
-      '(maximum 50 records). They do not query other workspaces or fetch additional pages.')+
+    (page?'Search and filters cover all TradeLink documents in this workspace. Results are paged newest-first (50 per page); Sort by applies to the visible page. Select Search documents to apply new criteria.':
+      'Search and filters apply to the current signed TradeLink workspace response. They do not query other workspaces or fetch additional pages.')+
    '</p>'+
   '<div class="tl-ref-selection-row"><p data-tradelink-domain-count role="status" aria-live="polite" aria-atomic="true">'+
-   displayed.length+' of '+records.length+(canReview&&!creatorMode?' assigned documents':creatorMode?' created or assigned documents':' authorized records')+' in this response</p>'+
+   displayed.length+' of '+records.length+' documents in this response</p>'+
    (readOnly&&!canReview?(()=>{
     const selectedRows=displayed.filter(row=>selectedIds.has(row.documentId));
     const selectedCount=selectedRows.length;
@@ -1876,10 +1874,11 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
         '<button type="button" class="secondary" '+
          'data-action="tradelink-document-open" data-id="'+escape(row.documentId)+
          '">View document</button> ')+
-       '<button type="button" class="secondary" data-action="tradelink-document-print" '+
-        'data-id="'+escape(row.documentId)+'"'+
-        (view.busy||row.workflowState!=='approved'?' disabled title="PDF printing is available only after approval"':'')+
-        '>Print PDF</button> '+
+       (canManage||(creatorMode&&row.createdByActor===true)?
+        '<button type="button" class="secondary" data-action="tradelink-document-print" '+
+         'data-id="'+escape(row.documentId)+'"'+
+         (view.busy||row.workflowState!=='approved'?' disabled title="PDF printing is available only after approval"':'')+
+         '>Print PDF</button> ':'')+
        (canManage&&!row.archived&&tradeLinkStatusUpdateTargets(row.workflowState).length?
         '<label class="tl-reference-status-action"><span>Change status</span>'+
         '<select data-tradelink-status-select data-id="'+escape(row.documentId)+'">'+
@@ -1956,8 +1955,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
    '<p data-tradelink-domain-no-match class="muted"'+(displayed.length?' hidden':'')+
     '>No matching records in this authorized response.</p>':
    '<p class="muted" role="status" aria-live="polite">'+(view.busy?'Loading the signed TradeLink document list…':
-    enabled?(canReview&&!creatorMode?'No documents are currently assigned to this signed account.':creatorMode?'No documents have been created by or assigned to this signed account.':
-     'No documents were returned for this authorized repository page.'):
+    enabled?'No documents match the current TradeLink workspace filters.':
     view.status==='READ_FAILED'?'The signed document list could not be loaded. Refresh to retry; no local or cached records are being shown.':
     'The signed document list has not been loaded. Select Refresh to retrieve the current authorized records.')+'</p>')+
   '</section>';
@@ -2079,7 +2077,7 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
   detail.board.workspace_id!==workspaceId)
   return '<section class="tl-content-panel" role="alert">Signed TradeLink document workspace unavailable.</section>';
  const creatorMode=canCreate&&!canManage;
- const rows=TL03_DOMAIN_READS_ENABLED&&(canManage||canReview)&&
+ const rows=TL03_DOMAIN_READS_ENABLED&&(canManage||canReview||canCreate)&&
   view.status==='AUTHORIZED_READ'&&Array.isArray(view.rows)?view.rows:[];
  const selection=view.documentPreview;
  const latestRecord=selection?.latestRecord||selection?.record;
@@ -2094,12 +2092,12 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
  }
  return '<section class="tl-content-panel tl-document-repository" data-tl-screen="documents" aria-labelledby="tl-domain-repository-title">'+
   '<div class="tl-panel-heading tl-reference-repository-actions">'+
-   '<h2 id="tl-domain-repository-title">'+(canReview&&!creatorMode?'My Assigned Documents':'All Documents')+' <span class="tl-ref-count-badge">'+
+   '<h2 id="tl-domain-repository-title">All Documents <span class="tl-ref-count-badge">'+
     escape(rows.length)+'</span></h2>'+
    '<div class="tl-reference-repository-buttons">'+
    (canCreate&&TL03_DOMAIN_WRITES_ENABLED?'<a class="primary" href="'+tradeLinkApplicationHref('drafts/quotation')+'">Create New Document</a>':'')+
    '<button type="button" class="secondary" data-action="tradelink-documents-refresh"'+
-   (!TL03_DOMAIN_READS_ENABLED||(!canManage&&!canReview)||view.busy?' disabled':'')+'>Refresh</button>'+
+   (!TL03_DOMAIN_READS_ENABLED||(!canManage&&!canReview&&!canCreate)||view.busy?' disabled':'')+'>Refresh</button>'+
    '</div></div>'+
   (view.error?'<p role="alert">'+escape(view.error)+'</p>':'')+
   (view.message?'<p role="status">'+escape(view.message)+'</p>':'')+

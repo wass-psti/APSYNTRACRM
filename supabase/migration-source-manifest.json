@@ -2345,6 +2345,13 @@
       "file": "20261126090000_cp_tt_active_clockin_scheduler_correction.sql",
       "bytes": 16376,
       "sha256": "224a30059b898348a61bf06f381326233673b841fa09d68d1ac5f73277cb3bc4"
+    },
+    {
+      "version": "20261126093000",
+      "name": "cp_tl_shared_document_visibility_01",
+      "file": "20261126093000_cp_tl_shared_document_visibility_01.sql",
+      "bytes": 12577,
+      "sha256": "95d5e05e4db43dcec62bf069c85362e97f3f1918d4cb67f8634c468afbec29ea"
     }
   ]
 }

@@ -15,6 +15,11 @@ CREATE TABLE public.work_board_columns(
 );
 
 -- The TradeLink User has only Board Viewer membership in this fixture.
+ALTER TABLE public.profiles ADD COLUMN display_name text;
+ALTER TABLE public.profiles ADD COLUMN email text;
+UPDATE public.profiles p SET email=u.email,
+ display_name=pg_catalog.initcap(pg_catalog.split_part(u.email,'@',1))
+FROM auth.users u WHERE u.id=p.id;
 UPDATE public.work_board_members
 SET role='viewer'
 WHERE board_id='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88'
