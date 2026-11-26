@@ -2929,7 +2929,8 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
      itemCount:state.board?.items?.length||BOARD_ITEM_PAGE_SIZE
     }),
     nativeModuleId?db.allowed(boardId,'edit').catch(()=>false):db.allowed(boardId,'edit'),
-    nativeModuleId?db.allowed(boardId,'manage').catch(()=>false):db.allowed(boardId,'manage'),
+    nativeModuleId==='tradelink'?readTradeLinkManagementAccess().catch(()=>false):
+     nativeModuleId?db.allowed(boardId,'manage').catch(()=>false):db.allowed(boardId,'manage'),
     nativeModuleId?Promise.resolve(null):boardStructureClient.read(boardId)
    ]);
    if(nativeModuleId&&(!nativeResult||nativeResult.moduleId!==nativeModuleId||
@@ -3672,8 +3673,10 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
      !state.tradeLinkAnalytics&&!state.tradeLinkAnalyticsError)
    await loadTradeLinkAnalytics(seq);
   if(['drafts','documents'].includes(state.tradeLinkSection)&&
-     TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID)
-   await loadTradeLinkDrafts(seq);
+     TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID){
+   if(state.tradeLinkSection==='documents')await loadTradeLinkDrafts(seq,{recheckManage:true});
+   else await loadTradeLinkDrafts(seq);
+  }
   return;
  }
  state.nativeInitialRead=['attendance','finance','fueltrack','talkbox'].includes(tab)?tab:null;state.ttReadLoading=false;
@@ -3685,7 +3688,8 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null,nativeConte
     nativeModuleId?(nativeContext?Promise.resolve(nativeContext):
       db.nativeApplicationBoardContext(nativeModuleId)):readVisibleBoardSnapshot(boardId,tab),
     db.allowed(boardId,'edit').catch(()=>false),
-    db.allowed(boardId,'manage').catch(()=>false),
+    nativeModuleId==='tradelink'?readTradeLinkManagementAccess().catch(()=>false):
+     db.allowed(boardId,'manage').catch(()=>false),
     nativeModuleId?Promise.resolve(null):boardStructureClient.read(boardId)
    ]).then(values=>({values}),error=>({error}));
    // Start the other independent server reads immediately. Layout preferences
@@ -3828,6 +3832,26 @@ function tradeLinkCanSave(){
 function tradeLinkCanCreate(){
  return state.boardManage===true||state.tradeLinkModuleRole==='User';
 }
+// Read the existing signed Board management decision. A transient transport
+// failure is not a permanent denial; retry the read once, never a mutation.
+async function readTradeLinkManagementAccess(){
+ const actor=auth.userId,workspace=state.context?.workspace_id,seq=routeSerial;
+ const same=()=>!!actor&&!!workspace&&auth.isSignedIn&&auth.userId===actor&&
+  state.context?.user_id===actor&&state.context?.workspace_id===workspace&&
+  state.boardId===TRADELINK_BOARD_ID&&state.tab==='tradelink'&&seq===routeSerial;
+ if(!same())return false;
+ try{
+  const allowed=await db.allowed(TRADELINK_BOARD_ID,'manage');
+  return same()&&allowed===true;
+ }catch(error){
+  const status=Number(error?.status);
+  if(!same())return false;
+  if(!(status===0||status===408||status===429||status>=500||
+       error?.code==='REQUEST_TIMEOUT'))throw error;
+  const allowed=await db.allowed(TRADELINK_BOARD_ID,'manage');
+  return same()&&allowed===true;
+ }
+}
 // Server-wide TradeLink search is optional. A missing RPC is a capability
 // fact for the current loaded application, not a reason to retry a 404 on
 // every All Documents refresh. Reload after a backend activation to recheck.
@@ -3844,7 +3868,16 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
  state.tradeLinkDraft={...state.tradeLinkDraft,
   selectedDocumentIds:[],busy:true,error:''};render();
  try{
-  let result;
+  let result,managementCheckError='';
+  // Explicit Refresh and intra-app return to All Documents must recover from
+  // a previously failed permission read, not just reload the document rows.
+  if(documents&&pageRequest?.recheckManage===true){
+   let manage=false;
+   try{manage=await readTradeLinkManagementAccess();}
+   catch{managementCheckError='Management access could not be verified. Select Refresh to retry.';}
+   if(!same())return;
+   state.boardManage=manage===true;
+  }
   if(documents&&!state.boardManage){
    result=await tradeLinkDraftWorkspace.searchPage({
     filters,cursor:pageRequest?.cursor??null});
@@ -3882,7 +3915,7 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
   if(same()){
    state.tradeLinkDraft={...state.tradeLinkDraft,...result,
     listFilters:filters,listPage:result.listPage??null,
-    assignedOnly:false,sharedVisibility:documents,
+    assignedOnly:false,sharedVisibility:documents,error:managementCheckError,
     message:documents?'Showing all TradeLink documents in this workspace.':result.message,
     selectedDocumentIds:[],documentPreview:null,busy:false};
    const target=state.tradeLinkDraft.editRequestId;
@@ -9399,9 +9432,9 @@ async function action(name,button){
  case 'tradelink-documents-refresh':{
   if(tradeLinkAuthorizedListRoute()&&state.tradeLinkSection==='documents'){
    const page=state.tradeLinkDraft.listPage;
-   await loadTradeLinkDrafts(routeSerial,page?.server?{
-    cursor:page.cursor,history:page.history,pageIndex:page.pageIndex,
-    filters:page.appliedFilters}:null);
+   await loadTradeLinkDrafts(routeSerial,{
+    ...(page?.server?{cursor:page.cursor,history:page.history,pageIndex:page.pageIndex,
+     filters:page.appliedFilters}:{}),recheckManage:true});
   }
   break;
  }
