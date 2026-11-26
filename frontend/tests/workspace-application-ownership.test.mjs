@@ -76,8 +76,8 @@ test("native application board identities are sourced from the ownership manifes
 });
 
 test("all currently registered sidebar applications belong to Work Management", () => {
-  assert.equal(WORK_MANAGEMENT_APPLICATIONS.length, 15);
-  assert.equal(WORK_MANAGEMENT_AUXILIARY_APPLICATIONS.length, 3);
+  assert.equal(WORK_MANAGEMENT_APPLICATIONS.length, 16);
+  assert.equal(WORK_MANAGEMENT_AUXILIARY_APPLICATIONS.length, 4);
   assert.deepEqual(
     WORK_MANAGEMENT_APPLICATIONS.map((application) => application.id),
     [
@@ -96,13 +96,14 @@ test("all currently registered sidebar applications belong to Work Management", 
       "charter",
       "aims",
       "materials",
+      "daily-department-activity",
     ],
   );
   assert.deepEqual(
     WORK_MANAGEMENT_AUXILIARY_APPLICATIONS.map(
       (application) => application.id,
     ).sort(),
-    ["fm1-ticketing", "paseo-de-lomboy", "talkbox"],
+    ["daily-department-activity", "fm1-ticketing", "paseo-de-lomboy", "talkbox"],
   );
   assert.equal(
     WORK_MANAGEMENT_AUXILIARY_APPLICATIONS.find(
@@ -121,7 +122,7 @@ test("all currently registered sidebar applications belong to Work Management", 
 test("application lookup returns the full catalog only for Work Management", () => {
   assert.equal(
     applicationsForWorkspace(WORK_MANAGEMENT_WORKSPACE_ID).length,
-    15,
+    16,
   );
   assert.deepEqual(applicationsForWorkspace(mainWorkspaceId), []);
   assert.deepEqual(applicationsForWorkspace("invalid"), []);
@@ -150,7 +151,7 @@ test("application and canonical board identifiers remain unique", () => {
   assert.equal(
     new Set(WORK_MANAGEMENT_APPLICATIONS.map((application) => application.id))
       .size,
-    15,
+    16,
   );
   assert.equal(
     new Set(

@@ -69,17 +69,17 @@ test('application navigation is rendered only for the owning Work Management wor
  const workManagementPrimary=workManagement.split('<nav class="nav-list" aria-label="Primary">')[1].split('</nav>')[0];
  const applicationSection=workManagementPrimary.split('Applications</div>')[1]||'';
  const applicationHrefs=workspaceApplicationsForNavigation(WORK_MANAGEMENT_WORKSPACE_ID,boards).map(application=>application.href);
- assert.equal(applicationHrefs.length,15);
+ assert.equal(applicationHrefs.length,16);
  for(const href of applicationHrefs)assert.ok(applicationSection.includes('href=\"'+href+'\"'),href);
  for(const label of ['FM1 Ticketing','TimeTracker','Fund Tracker','FuelTrack+','TradeLink',
   'Paseo de Lomboy','TalkBox','FuelTrans Support Portal','Tool Traceability','Toolbox Issues',
-  'Order Intake','Employee Evaluation','Charter Navigator','APS AIMS','Material Request Hub'])
+  'Order Intake','Employee Evaluation','Charter Navigator','APS AIMS','Material Request Hub','Daily Department Activity'])
   assert.ok(applicationSection.includes(label),label);
 
  const otherWorkspace=render({workspaceId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   boards:[{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',name:'Personal board'}]});
  const otherPrimary=otherWorkspace.split('<nav class="nav-list" aria-label="Primary">')[1].split('</nav>')[0];
- assert.doesNotMatch(otherPrimary,/Applications|FM1 Ticketing|TimeTracker|Fund Tracker|FuelTrack\+|TradeLink|Paseo de Lomboy|TalkBox|Tool Traceability|Toolbox Issues/);
+ assert.doesNotMatch(otherPrimary,/Applications|FM1 Ticketing|TimeTracker|Fund Tracker|FuelTrack\+|TradeLink|Paseo de Lomboy|TalkBox|Tool Traceability|Toolbox Issues|Daily Department Activity/);
  for(const href of ['#/overview','#/boards','#/user-role-management','#/settings'])
   assert.ok(otherPrimary.includes('href=\"'+href+'\"'),href);
  assert.match(otherWorkspace,/Personal board/);
@@ -89,6 +89,6 @@ test('the application section disappears immediately while a verified workspace 
  const boards=WORK_MANAGEMENT_BOARD_APPLICATIONS.map(application=>({id:application.boardId,name:application.name}));
  const pending=render({workspaceId:WORK_MANAGEMENT_WORKSPACE_ID,boards,workspaceTransitionPending:true});
  const primary=pending.split('<nav class="nav-list" aria-label="Primary">')[1].split('</nav>')[0];
- assert.doesNotMatch(primary,/Applications|FM1 Ticketing|TimeTracker|Fund Tracker|FuelTrack\+|TradeLink|Paseo de Lomboy|TalkBox/);
+ assert.doesNotMatch(primary,/Applications|FM1 Ticketing|TimeTracker|Fund Tracker|FuelTrack\+|TradeLink|Paseo de Lomboy|TalkBox|Daily Department Activity/);
  assert.match(primary,/#\/overview/);
 });

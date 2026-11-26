@@ -33,8 +33,8 @@ test('native application section is generated from the canonical manifest for Wo
  assert.match(sidebar,/!isStandaloneApplicationBoard\(board\)/);
  const boards=WORK_MANAGEMENT_BOARD_APPLICATIONS.map(application=>({id:application.boardId,name:application.name}));
  const navigation=workspaceApplicationsForNavigation(WORK_MANAGEMENT_WORKSPACE_ID,boards);
- assert.equal(navigation.length,15);
- for(const route of ['#/fm1','#/time-tracker','#/fund-tracker','#/fueltrack','#/tradelink','#/paseo','#/talkbox'])
+ assert.equal(navigation.length,16);
+ for(const route of ['#/fm1','#/time-tracker','#/fund-tracker','#/fueltrack','#/tradelink','#/paseo','#/talkbox','#/daily-department-activity'])
   assert.ok(navigation.some(application=>application.href===route),route);
  assert.deepEqual(workspaceApplicationsForNavigation('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',boards),[]);
 });

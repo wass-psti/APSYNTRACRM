@@ -20,19 +20,19 @@ const allCanonicalBoards = WORK_MANAGEMENT_BOARD_APPLICATIONS.map(
   }),
 );
 
-test("Work Management receives the complete ordered 15-application navigation catalog", () => {
+test("Work Management receives the complete ordered 16-application navigation catalog", () => {
   const applications = workspaceApplicationsForNavigation(
     WORK_MANAGEMENT_WORKSPACE_ID,
     allCanonicalBoards,
   );
-  assert.equal(applications.length, 15);
+  assert.equal(applications.length, 16);
   assert.deepEqual(
     applications.map((application) => application.id),
     WORK_MANAGEMENT_APPLICATIONS.map((application) => application.id),
   );
   assert.equal(
     new Set(applications.map((application) => application.href)).size,
-    15,
+    16,
   );
   assert.ok(
     applications.every(
@@ -72,6 +72,7 @@ test("board-backed applications appear only when their canonical board is in the
       "tradelink",
       "paseo-de-lomboy",
       "fueltrans",
+      "daily-department-activity",
     ],
   );
 
@@ -89,7 +90,8 @@ test("board-backed applications appear only when their canonical board is in the
   );
   assert.ok(withToolbox.some((application) => application.id === "talkbox"));
   assert.ok(withToolbox.some((application) => application.id === "toolbox"));
-  assert.equal(withToolbox.length, 9);
+  assert.equal(withToolbox.length, 10);
+  assert.ok(withToolbox.some((application) => application.id === "daily-department-activity"));
   assert.ok(withToolbox.some((application) => application.id === "fueltrans"));
 });
 
