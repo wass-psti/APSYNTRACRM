@@ -9,7 +9,7 @@ export {FUELTRACK_V3_APPLICATION_ROUTE} from './fueltrack-v3-application-route.j
 import {renderFuelTrackApprovals} from './fueltrack-v3-approvals.js';
 import {renderFuelTrackLightFuels,renderFuelTrackRefuelingDialog} from './fueltrack-v3-lightfuels.js';
 import {renderFuelTrackActivity} from './fueltrack-v3-activity.js';
-import {renderFuelTrackSignedDashboardRich,renderFuelTrackSignedRequestsRich,renderFuelTrackSignedAnalyticsRich} from './fueltrack-v3-signed-views.js';
+import {renderFuelTrackSignedDashboardRich,renderFuelTrackSignedRequestsRich,renderFuelTrackSignedAnalyticsRich} from './fueltrack-v3-signed-views.js?v=cp-ft-all-requests-redesign-01-20261126';
 import {verifyFuelTrackBackendSnapshot,projectFuelTrackApprovals,projectFuelTrackLightFuels,renderFuelTrackSignedDashboard,renderFuelTrackSignedRequests,renderFuelTrackSignedAnalytics} from './fueltrack-v3-backend-projections.js';
 export const FUELTRACK_V3_ID=WORK_MANAGEMENT_BOARD_IDS.fueltrack;
 const MARKER='[APSYNTRA:MODULE:fueltrack:v1]';
