@@ -785,7 +785,7 @@ test('manual clock-in accepts only signed System Admin capability and receipt',a
  let writes=0;
  f.api.rpc=async(name,args,options)=>{
   if(name==='timetracker_attendance_admin_create_capability')
-   return {contract:'tt-admin-clockin-capability-1',actorId:user,workspaceId:workspace,boardId:board,ready:true};
+   return {contract:'tt-admin-clockin-capability-2',actorId:user,workspaceId:workspace,boardId:board,ready:true,schedulerMode:'active'};
   if(name==='timetracker_attendance_admin_create'){
    writes++;
    assert.equal(options.retryUnauthorized,false);
@@ -821,7 +821,7 @@ test('manual clock-in fails closed when the regular auto-clockout scheduler is s
  let createCalls=0;
  f.api.rpc=async(name,args,options)=>{
   if(name==='timetracker_attendance_admin_create_capability')
-   return {contract:'tt-admin-clockin-capability-1',actorId:user,workspaceId:workspace,boardId:board,ready:false};
+   return {contract:'tt-admin-clockin-capability-2',actorId:user,workspaceId:workspace,boardId:board,ready:false,schedulerMode:'suspended'};
   if(name==='timetracker_attendance_admin_create'){
    createCalls++;
    throw new Error('Manual clock-in requires active regular nine-hour auto-clock-out');
@@ -831,4 +831,16 @@ test('manual clock-in fails closed when the regular auto-clockout scheduler is s
  assert.equal(await f.client.manualClockInCapability(board),false);
  await assert.rejects(f.client.createManualClockIn(board,entry,2),/requires active regular nine-hour auto-clock-out/);
  assert.equal(createCalls,1);
+});
+
+
+test('manual clock-in rejects the pre-gate capability contract during a staged deployment',async()=>{
+ const f=setup({role:'System Admin'});
+ const original=f.api.rpc;
+ f.api.rpc=async(name,args,options)=>{
+  if(name==='timetracker_attendance_admin_create_capability')
+   return {contract:'tt-admin-clockin-capability-1',actorId:user,workspaceId:workspace,boardId:board,ready:true};
+  return original(name,args,options);
+ };
+ await assert.rejects(f.client.manualClockInCapability(board),/Manual clock-in capability is unverified/);
 });
