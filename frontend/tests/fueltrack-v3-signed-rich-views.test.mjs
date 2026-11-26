@@ -133,7 +133,9 @@ test('FuelTrack analytics explains unsupported dimensions without inventing flee
 });
 test('CP-FT-ANALYTICS-01 provides responsive and dark-theme analytics styling',()=>{
  const css=readFileSync(new URL('../../frontend/fueltrack-v3-analytics.css',import.meta.url),'utf8');
- for(const token of ['ft3-analytics-hero','ft3-analytics-toolbar','ft3-analytics-kpi','ft3-analytics-trend-grid','ft3-analytics-table','@media(max-width:800px)','@media(max-width:540px)','var(--crm-native-panel)','data-aps-monday-theme="dark"'])assert.ok(css.includes(token),token);
+ const dark=readFileSync(new URL('../../frontend/dark-native-applications.css',import.meta.url),'utf8');
+ for(const token of ['ft3-analytics-hero','ft3-analytics-toolbar','ft3-analytics-kpi','ft3-analytics-trend-grid','ft3-analytics-table','@media(max-width:800px)','@media(max-width:540px)'])assert.ok(css.includes(token),token);
+ for(const token of ['ft3-analytics-v2','ft3-analytics-kpi','ft3-analytics-series','var(--crm-native-panel)','data-aps-monday-theme="dark"'])assert.ok(dark.includes(token),token);
 });
 
 test('CP-FT-ANALYTICS-01 exports only verified daily aggregates and rejects duplicate dates',()=>{
