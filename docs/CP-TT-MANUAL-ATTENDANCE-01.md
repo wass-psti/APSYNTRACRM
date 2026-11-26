@@ -15,7 +15,7 @@ Status: the signed active-session creation path is already present in `main` fro
 
 The regular employee auto-clock-out processor and reconciler must be in the verified `active` mode before an admin manual clock-in can be saved.
 
-- The readiness RPC returns false while the regular scheduler is suspended or invalid; the Add Log form keeps Save disabled and explains why.
+- The versioned readiness RPC returns false while the regular scheduler is suspended or invalid; the Add Log form keeps Save disabled and explains why. The capability contract was advanced to v2, so an old frontend or an unapplied migration cannot accidentally treat the previous readiness response as permission.
 - The signed create RPC independently rechecks active mode while holding the scheduler's shared control lock. If an operator is activating/suspending the scheduler, the request fails closed and can be retried after the mode is stable.
 - The attendance write does **not** synchronously write to the scheduler table or invoke the reconciler. The independent 30-second reconciler enrolls the committed open employee session using the current activation epoch. This separation is intentional: scheduler enrollment was removed from attendance writes to avoid the earlier foreign-key/deadlock incident.
 - The existing worker calculates the cutoff with `private.tt_auto_clockout_threshold`, which uses the attendance credited-time policy. The standard shift therefore reaches nine credited work hours with the one-hour unpaid lunch excluded; the existing approved-overtime rules and exact server cutoff remain unchanged. The processor runs on its existing 30-second cadence.
@@ -43,6 +43,6 @@ If the regular scheduler is suspended, manual clock-in is deliberately unavailab
 
 ## Deployment
 
-Forward migration: `20261126100000_cp_tt_admin_manual_clockin_scheduler_gate.sql`.
+Forward migration: `20261126100000_cp_tt_admin_manual_clockin_scheduler_gate.sql`. It also versions the signed capability response to `tt-admin-clockin-capability-2` with an explicit `schedulerMode` field, making deployment order fail closed.
 
 Review the migration list and manifest, run the disposable database and full CI checks, then use the normal production backup and dry-run process. The PR itself does not push migrations or activate the production scheduler.
