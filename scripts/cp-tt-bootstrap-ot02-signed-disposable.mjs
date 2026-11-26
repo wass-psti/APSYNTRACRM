@@ -54,7 +54,7 @@ async function actor(label){
  assert.equal(self.id,id);
  return {email,id,sessionId:claims.session_id,token};
 }
-function link(actor,label,bootstrap=false,systemAdmin=false,moduleRole='Employee'){
+function link(actor,label,bootstrap=false,systemAdmin=false,moduleRole=systemAdmin?'System Admin':'Employee'){
  assert.match(actor.id,uuid);
  const role=bootstrap?'admin_general_manager':'employee';
  sql(`INSERT INTO public.profiles(id,display_name,status,platform_role) VALUES ('${actor.id}','Synthetic ${label}','active','${role}');
@@ -109,6 +109,7 @@ assert.equal(new Set([bootstrap.id,worker.id,admin.id,hr.id,ojt.id]).size,5);
 link(bootstrap,'Bootstrap',true);
 link(worker,'Worker');
 link(admin,'System Admin',false,true);
+assert.equal(sql(`SELECT role FROM public.module_role_assignments WHERE user_id='${admin.id}' AND module_id='time-tracker'`),'System Admin','manual OT actor must hold the actual module role');
 link(hr,'HR',false,false,'HR');
 link(ojt,'OJT',false,false,'OJT');
 // Execute rollback-only SQL assertions after GoTrue has issued real sessions.
