@@ -85,7 +85,8 @@ jobs:
           else
             result=$?
             echo "Frontend regression suite failed. Showing failed tests and the final diagnostic context."
-            grep -n -E 'not ok|✖|AssertionError|ERR_[A-Z]+|Error:' "$RUNNER_TEMP/frontend-regression.log" | tail -n 120 || true
+            grep -n -A 24 -B 2 -E '^not ok ' "$RUNNER_TEMP/frontend-regression.log" | tail -n 1600 || true
+            grep -n -E 'ERR_[A-Z]+|Error:' "$RUNNER_TEMP/frontend-regression.log" | tail -n 80 || true
             tail -n 160 "$RUNNER_TEMP/frontend-regression.log"
             exit "$result"
           fi
