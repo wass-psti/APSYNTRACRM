@@ -62,19 +62,19 @@ test('metrics reflect actual authorized rows and not screenshot demo numbers',()
  assert.equal(timeTrackerOtMetrics(rows,{status:'Approved'},now).visible.length,1);
  assert.equal(timeTrackerOtMetrics(rows,{search:'not in OT'},now).visible.length,0);
 });
-test('staged modal is visible but submission and ordinary approvals fail closed',()=>{
+test('staged duration-only modal is visible but unsigned filing and review fail closed',()=>{
  const employee=renderTimeTrackerOvertime({
-  requests:rows,access:{bootstrapApprover:false},modalOpen:true,now});
+  requests:rows,access:{bootstrapApprover:false,otContractActive:true},modalOpen:true,now});
  for(const text of ['Overtime','Approved overtime this week','Awaiting approval','Pending',
   'Approved','Rejected','File Overtime','Total overtime'])
   assert.ok(employee.includes(text),text);
+ assert.match(employee,/id="tt-ot-duration-hours"/);
+ assert.doesNotMatch(employee,/id="tt-ot-(start|end)"/);
  assert.match(employee,/type="submit" disabled/);
  assert.doesNotMatch(employee,/tt-ot-review-actions/);
  const bootstrap=renderTimeTrackerOvertime({
-  requests:rows,access:{bootstrapApprover:true},now});
- assert.match(bootstrap,/tt-ot-review-actions/);
- assert.match(bootstrap,/Approve<\/button>/);
- assert.match(bootstrap,/data-action="tt-ot-approve"[^>]* disabled/);
+  requests:[{...rows[0],canReviewOt:true}],access:{bootstrapApprover:true,otContractActive:true},now});
+ assert.match(bootstrap,/tt-ot-reference-actions/);
  assert.equal(TT_OT_WRITES_ACCEPTED,true);
 });
 function setup({role='System Admin',snapshot=null,rpcHandlers={}}={}){
@@ -105,36 +105,42 @@ function setup({role='System Admin',snapshot=null,rpcHandlers={}}={}){
  };
  return new TimeTrackerNativeClient({auth,api});
 }
-test('production-accepted OT controls activate only with signed OT contract',()=>{
+test('duration-only OT controls activate only with the signed duration contract',()=>{
  const user=renderTimeTrackerOvertime({requests:rows,
-  access:{bootstrapApprover:false,otContractActive:true},modalOpen:true,now});
+  access:{bootstrapApprover:false,otContractActive:true,durationOtContractActive:true},
+  modalOpen:true,now});
  assert.doesNotMatch(user,/type="submit" disabled/);
+ assert.match(user,/id="tt-ot-duration-hours"/);
+ assert.doesNotMatch(user,/id="tt-ot-(start|end)"/);
  assert.doesNotMatch(user,/tt-ot-review-actions/);
- const bootstrap=renderTimeTrackerOvertime({requests:rows,
-  access:{bootstrapApprover:true,otContractActive:true},modalOpen:true,now});
- assert.match(bootstrap,/tt-ot-review-actions/);
- assert.doesNotMatch(bootstrap,/data-action="tt-ot-approve"[^>]* disabled/);
+ const bootstrap=renderTimeTrackerOvertime({requests:[{...rows[0],canReviewOt:true}],
+  access:{bootstrapApprover:true,otContractActive:true,durationOtContractActive:true},
+  modalOpen:true,now});
+ assert.match(bootstrap,/tt-ot-reference-actions/);
  assert.doesNotMatch(bootstrap,/type="submit" disabled/);
  const absent=renderTimeTrackerOvertime({requests:rows,
-  access:{bootstrapApprover:true,otContractActive:false},modalOpen:true,now});
+  access:{bootstrapApprover:true,otContractActive:true,durationOtContractActive:false},
+  modalOpen:true,now});
  assert.match(absent,/type="submit" disabled/);
- assert.match(absent,/data-action="tt-ot-approve"[^>]* disabled/);
 });
-
-test('dedicated server OT snapshot accepts only matching signed workspace and bootstrap scope',async()=>{
+test('signed OT snapshot authorizes HR and System Admin team scopes only',async()=>{
+ const reviewRows=[{...rows[0],canReviewOt:true}];
  const valid={mode:'ACTIVE',actorId:admin,workspaceId:workspace,
-  scope:'AUTHORIZED_WORKSPACE_TEAM',bootstrapApprover:true,manualOtManager:false,rows};
- const result=await setup({snapshot:valid}).snapshot(board);
- assert.equal(result.otRequests.length,2);
- assert.equal(result.access.bootstrapApprover,true);
- assert.equal(result.access.otContractActive,true);
- await assert.rejects(()=>setup({snapshot:{...valid,workspaceId:
+  scope:'AUTHORIZED_WORKSPACE_TEAM',bootstrapApprover:false,manualOtManager:false,
+  durationOtContract:'tt-duration-ot-1',durationOtHrApprover:true,durationOtApprover:true,rows:reviewRows};
+ const hr=await setup({role:'HR',snapshot:valid}).snapshot(board);
+ assert.equal(hr.otRequests.length,1);
+ assert.equal(hr.access.durationOtApprover,true);
+ assert.equal(hr.otRequests[0].canReviewOt,true);
+ const systemAdmin=await setup({role:'System Admin',snapshot:{...valid,durationOtHrApprover:false}}).snapshot(board);
+ assert.equal(systemAdmin.access.durationOtApprover,true);
+ assert.equal(systemAdmin.otRequests[0].canReviewOt,true);
+ await assert.rejects(()=>setup({role:'Employee',snapshot:valid}).snapshot(board),
+  /approver role does not match/);
+ await assert.rejects(()=>setup({role:'HR',snapshot:{...valid,workspaceId:
   '00000000-0000-4000-8000-000000000002'}}).snapshot(board),/mismatch/);
- await assert.rejects(()=>setup({snapshot:{...valid,bootstrapApprover:false}}).snapshot(board),
-  /bootstrap-authorized/);
- const missing=await setup().snapshot(board);
- assert.deepEqual(missing.otRequests,[]);
- assert.equal(missing.access.otContractActive,false);
+ await assert.rejects(()=>setup({role:'Employee',snapshot:{...valid,durationOtApprover:false}}).snapshot(board),
+  /Team OT access is not authorized/);
 });
 test('legacy signed OT snapshots remain readable before the manual-OT migration is activated',async()=>{
  const snapshot={mode:'ACTIVE',actorId:admin,workspaceId:workspace,
