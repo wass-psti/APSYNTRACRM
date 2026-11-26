@@ -3,7 +3,7 @@ import {TT_LOCATIONS,creditedAttendanceMs,creditedAttendanceRecordMs,completedLo
 export {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
 import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-overview.js';
 import {projectTimeTrackerLog} from './time-tracker-history.js';
-import {projectTimeTrackerOtRows,validateOvertimeDraft,validateDurationOvertimeDraft,validateManualOvertimeDraft,TT_OT_WRITES_ACCEPTED} from './time-tracker-overtime.js';
+import {projectTimeTrackerOtRows,validateOvertimeDraft,validateDurationOvertimeDraft,validateManualOvertimeDraft,validateManualDurationOvertimeDraft,canReviewTimeTrackerOt,TT_OT_REVIEW_ROLES,TT_OT_WRITES_ACCEPTED} from './time-tracker-overtime.js';
 import {projectTimeTrackerTeamDirectory,projectTimeTrackerTeamDepartments,TT_TEAM_DEPARTMENTS,validTimeTrackerDepartmentName} from './time-tracker-team.js';
 import {projectTimeTrackerEmployees,projectTimeTrackerEmployeeDepartments,projectTimeTrackerDepartmentCatalog,canViewTimeTrackerEmployees} from './time-tracker-application.js';
 import {validateTimeTrackerGps} from './time-tracker-gps.js';
@@ -270,7 +270,7 @@ export class TimeTrackerNativeClient{
   let otRequests=clockOnly?[]:projectOwnOvertime(otRow?.value||{version:1,requests:[]},access.userId)
    .map(row=>Object.freeze({...row,ownerId:'cloud:'+access.userId,name:access.name}));
   let otAccess=Object.freeze({scope:'OWN_OT_ONLY',
-   bootstrapApprover:false,manualOtManager:false,otContractActive:false,durationOtContractActive:false,durationOtHrApprover:false});
+   bootstrapApprover:false,manualOtManager:false,otContractActive:false,durationOtContractActive:false,durationOtHrApprover:false,otReviewContractActive:false,otApprover:false,manualDurationOtContractActive:false});
   // The signed snapshot is the source of OT scope and manual-management capability.
   try{
    if(!clockOnly){
@@ -285,9 +285,15 @@ export class TimeTrackerNativeClient{
     deny('Signed OT snapshot identity, scope or schema mismatch');
    const durationOtContractActive=response.durationOtContract==='tt-duration-ot-1';
    const durationOtHrApprover=durationOtContractActive&&response.durationOtHrApprover===true;
+   const otReviewContractActive=durationOtContractActive&&response.otReviewContract==='tt-ot-review-2';
+   const otApprover=otReviewContractActive&&response.otApprover===true;
+   const manualDurationOtContractActive=otReviewContractActive&&response.manualDurationOtContract==='tt-manual-duration-ot-1';
+   if(otReviewContractActive&&(typeof response.otApprover!=='boolean'||(otApprover&&!TT_OT_REVIEW_ROLES.includes(access.moduleRole))||
+      (response.scope==='AUTHORIZED_WORKSPACE_TEAM')!==otApprover))
+    deny('Signed OT review role or scope mismatch');
    if(durationOtHrApprover&&access.moduleRole!=='HR')
     deny('Duration OT review role does not match the signed module role');
-   if(response.scope==='AUTHORIZED_WORKSPACE_TEAM'&&response.bootstrapApprover!==true&&!durationOtHrApprover)
+   if(response.scope==='AUTHORIZED_WORKSPACE_TEAM'&&response.bootstrapApprover!==true&&!durationOtHrApprover&&!otApprover)
     deny('Team OT access is not bootstrap-authorized or HR-authorized');
    const manualOtManager=response.manualOtManager===true;
    if(manualOtManager&&access.moduleRole!=='System Admin')
@@ -295,12 +301,12 @@ export class TimeTrackerNativeClient{
    const allowed=new Set(access.overviewDirectory.map(u=>'cloud:'+u.id));
    const projected=projectTimeTrackerOtRows(response.rows).filter(row=>
     row.isManual||(response.scope==='AUTHORIZED_WORKSPACE_TEAM'&&
-      (response.bootstrapApprover===true||(durationOtHrApprover&&row.otPolicy==='duration-v1'&&allowed.has(row.ownerId))))||(allowed.has(row.ownerId)&&
+      (otApprover||response.bootstrapApprover===true||(durationOtHrApprover&&row.otPolicy==='duration-v1'&&allowed.has(row.ownerId))))||(allowed.has(row.ownerId)&&
       row.ownerId==='cloud:'+access.userId));
    otRequests=projected;
    otAccess=Object.freeze({scope:response.scope,
     bootstrapApprover:response.bootstrapApprover,
-    manualOtManager,otContractActive:true,durationOtContractActive,durationOtHrApprover});
+    manualOtManager,otContractActive:true,durationOtContractActive,durationOtHrApprover,otReviewContractActive,otApprover,manualDurationOtContractActive});
    }
   }catch(error){
    // Only missing RPC is an expected predeployment state. All other errors
@@ -746,6 +752,7 @@ export class TimeTrackerNativeClient{
   const before=await this.snapshot(boardId);
   if(before.access.otContractActive!==true)deny('Authoritative OT contract unavailable');
   const durationMode=before.access.durationOtContractActive===true;
+  if(!durationMode&&draft?.durationMinutes!==undefined)deny('Signed duration OT contract unavailable');
   const form=durationMode?validateDurationOvertimeDraft(draft):validateOvertimeDraft(draft);
   if(!form.valid)deny(form.message);
   await checkIdentity(this.auth,this.api,before.access,boardId);
@@ -769,10 +776,14 @@ export class TimeTrackerNativeClient{
   if(before.access.otContractActive!==true||before.access.manualOtManager!==true||
      before.access.moduleRole!=='System Admin')
    deny('System Admin manual OT submission is unavailable');
-  const form=validateManualOvertimeDraft(draft,before.access.overviewDirectory);
+  const durationMode=before.access.manualDurationOtContractActive===true;
+  if(!durationMode&&draft?.durationMinutes!==undefined)deny('Signed manual duration OT contract unavailable');
+  const form=durationMode?validateManualDurationOvertimeDraft(draft,before.access.overviewDirectory):validateManualOvertimeDraft(draft,before.access.overviewDirectory);
   if(!form.valid)deny(form.message);
   await checkIdentity(this.auth,this.api,before.access,boardId);
-  const receipt=await this.api.rpc('timetracker_ot_submit_manual',{
+  const receipt=durationMode?await this.api.rpc('timetracker_ot_submit_manual_duration',{
+   p_board_id:boardId,p_owner_id:form.employeeId,p_date:form.date,p_duration_minutes:form.durationMinutes,p_reason:form.reason
+  }):await this.api.rpc('timetracker_ot_submit_manual',{
    p_board_id:boardId,p_owner_id:form.employeeId,p_date:form.date,
    p_start:form.start,p_end:form.end,p_reason:form.reason
   });
@@ -780,7 +791,8 @@ export class TimeTrackerNativeClient{
      receipt.workspaceId!==before.access.workspaceId||
      receipt.ownerId!=='cloud:'+form.employeeId||
      receipt.submittedBy!==before.access.userId||
-     receipt.submissionSource!=='manual_admin'||receipt.status!=='Submitted')
+     receipt.submissionSource!=='manual_admin'||receipt.status!=='Submitted'||
+     (durationMode&&(receipt.otPolicy!=='manual-duration-v1'||receipt.durationMinutes!==form.durationMinutes)))
    deny('Manual OT submission receipt is not verified');
   await checkIdentity(this.auth,this.api,before.access,boardId);
   return Object.freeze({id:receipt.id,status:receipt.status,ownerId:receipt.ownerId});
@@ -811,9 +823,7 @@ export class TimeTrackerNativeClient{
     (before.access.bootstrapApprover===true||r.ownerId!=='cloud:'+before.access.userId));
   if(!request)deny('OT decision target unavailable or already reviewed');
   const durationMode=request.otPolicy==='duration-v1';
-  const canReview=durationMode?
-   before.access.durationOtHrApprover===true&&request.canReviewDuration===true&&request.ownerId!=='cloud:'+before.access.userId:
-   before.access.bootstrapApprover===true||(before.access.manualOtManager===true&&request.isManual===true);
+  const canReview=canReviewTimeTrackerOt(request,before.access);
   if(!canReview)deny('This OT request is outside the current review scope');
   await checkIdentity(this.auth,this.api,before.access,boardId);
   const receipt=await this.api.rpc(durationMode?'timetracker_ot_decide_duration':'timetracker_ot_decide',{
