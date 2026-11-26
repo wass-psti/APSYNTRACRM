@@ -1059,9 +1059,8 @@ try {
   // The fixture uses a verified regular-employee roster and a fixed PHT clock.
   await page.evaluate(() => window.__timeTrackerRender({ view: "log" }));
   await page.evaluate(async () => {
-    const { renderManualAttendanceEditor } = await import(
-      "/frontend/apps/TimeTracker/time-tracker-manual-attendance-ui.js"
-    );
+    const { renderManualAttendanceEditor } =
+      await import("/frontend/apps/TimeTracker/time-tracker-manual-attendance-ui.js");
     const native = document.querySelector("#time-tracker-mount .tt-native");
     if (!native) throw new Error("TimeTracker native shell is unavailable.");
     native.insertAdjacentHTML(
@@ -1122,9 +1121,8 @@ try {
     .locator('#tt-attendance-admin-form select[name="location"]')
     .selectOption("Offsite (Home)");
   await page.evaluate(async () => {
-    const { syncManualAttendanceForm } = await import(
-      "/frontend/apps/TimeTracker/time-tracker-manual-attendance-ui.js"
-    );
+    const { syncManualAttendanceForm } =
+      await import("/frontend/apps/TimeTracker/time-tracker-manual-attendance-ui.js");
     syncManualAttendanceForm(
       document.querySelector("#tt-attendance-admin-form"),
       new Date("2026-11-26T04:00:00Z"),
@@ -1149,9 +1147,8 @@ try {
     .locator('#tt-attendance-admin-form input[name="date"]')
     .fill("2026-11-25");
   await page.evaluate(async () => {
-    const { syncManualAttendanceForm } = await import(
-      "/frontend/apps/TimeTracker/time-tracker-manual-attendance-ui.js"
-    );
+    const { syncManualAttendanceForm } =
+      await import("/frontend/apps/TimeTracker/time-tracker-manual-attendance-ui.js");
     syncManualAttendanceForm(
       document.querySelector("#tt-attendance-admin-form"),
       new Date("2026-11-26T04:00:00Z"),
@@ -1163,14 +1160,16 @@ try {
       .inputValue(),
     "completed",
   );
-  assert.equal(await page.locator("[data-tt-manual-history]").isVisible(), true);
+  assert.equal(
+    await page.locator("[data-tt-manual-history]").isVisible(),
+    true,
+  );
   await page
     .locator('#tt-attendance-admin-form select[name="clockOutMode"]')
     .selectOption("actual");
   await page.evaluate(async () => {
-    const { syncManualAttendanceForm } = await import(
-      "/frontend/apps/TimeTracker/time-tracker-manual-attendance-ui.js"
-    );
+    const { syncManualAttendanceForm } =
+      await import("/frontend/apps/TimeTracker/time-tracker-manual-attendance-ui.js");
     syncManualAttendanceForm(
       document.querySelector("#tt-attendance-admin-form"),
       new Date("2026-11-26T04:00:00Z"),
@@ -1185,9 +1184,8 @@ try {
     .locator('#tt-attendance-admin-form select[name="location"]')
     .selectOption("Office-Base Duty");
   await page.evaluate(async () => {
-    const { syncManualAttendanceForm } = await import(
-      "/frontend/apps/TimeTracker/time-tracker-manual-attendance-ui.js"
-    );
+    const { syncManualAttendanceForm } =
+      await import("/frontend/apps/TimeTracker/time-tracker-manual-attendance-ui.js");
     syncManualAttendanceForm(
       document.querySelector("#tt-attendance-admin-form"),
       new Date("2026-11-26T04:00:00Z"),
@@ -1199,7 +1197,10 @@ try {
       .inputValue(),
     "active",
   );
-  assert.equal(await page.locator("[data-tt-manual-history]").isVisible(), false);
+  assert.equal(
+    await page.locator("[data-tt-manual-history]").isVisible(),
+    false,
+  );
   assert.equal(
     await page.locator("[data-tt-manual-work-note]").isVisible(),
     false,

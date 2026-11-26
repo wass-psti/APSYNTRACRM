@@ -82,10 +82,6 @@ jobs:
         run: npm test
       - name: Verify deterministic CSS bundle and source manifest
         run: node scripts/build-priority5-styles.mjs --check
-      - name: Diagnose TimeTracker browser acceptance formatting
-        run: |
-          npx prettier scripts/time-tracker-browser-acceptance.mjs > /tmp/time-tracker-browser-acceptance.formatted.mjs
-          diff -u scripts/time-tracker-browser-acceptance.mjs /tmp/time-tracker-browser-acceptance.formatted.mjs || true
       - name: Verify formatting and changed-module lint
         run: |
           npx prettier --check frontend/time-tracker-application.js frontend/time-tracker-application.css frontend/tests/time-tracker-application.test.mjs scripts/time-tracker-browser-acceptance.mjs scripts/cp-tt-clock-a11y-01-browser.mjs scripts/cp-tt-clock-a11y-02-browser.mjs docs/CP-TT-CLOCK-A11Y-02.md docs/CP-TT-FM1-APP-01.md docs/CP-TT-FM1-APP-02.md docs/CP-TT-CLOCK-A11Y-01.md package.json .github/workflows/cp-tt-fm1-app-02.yml
