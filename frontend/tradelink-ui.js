@@ -7,4 +7,4 @@
  * used by the TimeTracker native integration. Host state and all domain
  * events remain in frontend/app.js.
  */
-export * from './tradelink-application.js';
+export * from './tradelink-application.js?v=cp-tl-document-menu-02-20261126-01';
