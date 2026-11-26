@@ -231,8 +231,10 @@ BEGIN
  FOR old,replacement IN VALUES
  ('v_manual_admin boolean;',
   'v_manual_admin boolean; v_hr boolean; v_ot_approver boolean;'),
+ ('v_bootstrap:=public.apsyntra_role_is_bootstrap();',
+  'v_bootstrap:=COALESCE(public.apsyntra_role_is_bootstrap(),false);'),
  ('v_manual_admin:=public.module_role_for(''time-tracker'',v_actor)=''System Admin'';',
-  'v_manual_admin:=private.tt_role_in_workspace(v_actor,v_ws)=''System Admin'';
+  'v_manual_admin:=COALESCE(private.tt_role_in_workspace(v_actor,v_ws)=''System Admin'',false);
  v_hr:=COALESCE(private.tt_role_in_workspace(v_actor,v_ws)=''HR'',false);
  v_ot_approver:=v_bootstrap OR v_manual_admin OR v_hr OR COALESCE(public.is_platform_admin(v_actor),false);'),
  ('IF NOT v_bootstrap AND NOT v_manual_admin THEN',
@@ -274,9 +276,11 @@ BEGIN
  FOR old,replacement IN VALUES
  ('v_manual_admin boolean; v_hr boolean; v_attendance_state jsonb;',
   'v_manual_admin boolean; v_hr boolean; v_ot_approver boolean; v_attendance_state jsonb;'),
+ ('v_bootstrap:=public.apsyntra_role_is_bootstrap();',
+  'v_bootstrap:=COALESCE(public.apsyntra_role_is_bootstrap(),false);'),
  ('v_manual_admin:=public.module_role_for(''time-tracker'',v_user)=''System Admin'';
  v_hr:=COALESCE(private.tt_role_in_workspace(v_user,v_ws)=''HR'',false);',
-  'v_manual_admin:=private.tt_role_in_workspace(v_user,v_ws)=''System Admin'';
+  'v_manual_admin:=COALESCE(private.tt_role_in_workspace(v_user,v_ws)=''System Admin'',false);
  v_hr:=COALESCE(private.tt_role_in_workspace(v_user,v_ws)=''HR'',false);
  v_ot_approver:=v_bootstrap OR v_manual_admin OR v_hr OR COALESCE(public.is_platform_admin(v_user),false);'),
  ($old$'start',to_char(r.start_time,'HH24:MI'),
