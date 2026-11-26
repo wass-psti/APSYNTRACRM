@@ -46,7 +46,8 @@ test('ordinary TradeLink users render the shared All Documents collection withou
  assert.match(html,/Q-SHARED-002/);
  assert.match(html,/Original Creator One/);
  assert.match(html,/Original Creator Two/);
- assert.match(html,/View document/);
+ assert.match(html,/Preview\/Edit/);
+ assert.doesNotMatch(html,/View document/);
  assert.match(html,/Revision history &amp; details/);
  assert.match(html,/Print PDF/);
  assert.match(html,/Change status/);
@@ -102,7 +103,8 @@ test('ordinary TradeLink users without reviewer or creator roles can still view 
  });
  assert.match(html,/Q-SHARED-001/);
  assert.match(html,/Q-SHARED-002/);
- assert.match(html,/View document/);
+ assert.match(html,/Preview\/Edit/);
+ assert.doesNotMatch(html,/View document/);
  assert.match(html,/tl-ref-row-action-trigger/);
  assert.match(html,/popovertarget="tl-doc-menu-/);
  assert.doesNotMatch(html,/Delete Selected/);
@@ -210,7 +212,7 @@ test('TradeLink document menu correction is delivered through versioned applicat
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const ui=readFileSync(new URL('../tradelink-ui.js',import.meta.url),'utf8');
  const application=readFileSync(new URL('../tradelink-application.js',import.meta.url),'utf8');
- const version='cp-tl-gm-06f-20261126-01';
+ const version='cp-tl-universal-edit-01f-20261126-01';
  assert.match(index,new RegExp('app\\.js\\?v='+version));
  assert.match(app,new RegExp('tradelink-ui\\.js\\?v='+version));
  assert.match(app,new RegExp('tradelink-draft-workspace\\.js\\?v='+version));

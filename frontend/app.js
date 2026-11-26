@@ -92,7 +92,7 @@ import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns,
  isTradeLinkBoard} from './tradelink-board-items.js';
 import {TRADELINK_APPLICATION_ROUTE,tradeLinkApplicationHref,parseTradeLinkApplicationRoute} from './tradelink-application-route.js';
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows,
- searchTradeLinkBoardItems,captureTradeLinkTabMotion,mountTradeLinkTabMotion} from './tradelink-ui.js?v=cp-tl-gm-06f-20261126-01';
+ searchTradeLinkBoardItems,captureTradeLinkTabMotion,mountTradeLinkTabMotion} from './tradelink-ui.js?v=cp-tl-universal-edit-01f-20261126-01';
 import {renderTradeLinkSavedDocumentOutput,mountTradeLinkSavedDocumentOutput,
  closeTradeLinkSavedDocumentOutput} from './tradelink-saved-document-output.js?v=cp-tl-gm-06f-20261126-01';
 import {TradeLinkAttachmentClient,TL03_ATTACHMENTS_ENABLED}
@@ -105,7 +105,7 @@ import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftFor
  prepareTradeLinkDraftCommand,tradeLinkApprovalFreeDraftPreview,
  renderTradeLinkDraftLineItem,snapshotTradeLinkDraftLineItems,restoreTradeLinkPendingSave,updateTradeLinkDraftLocalAmounts,
  updateTradeLinkLineRowTotals,updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary,
- normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI} from './tradelink-draft-workspace.js?v=cp-tl-gm-06f-20261126-01';
+ normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI} from './tradelink-draft-workspace.js?v=cp-tl-universal-edit-01f-20261126-01';
 import {summarizeTradeLinkSubmitReadiness} from './tradelink-submit-readiness.js';
 import {TL03_DOMAIN_READS_ENABLED,TL03_ANALYTICS_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
@@ -3058,6 +3058,9 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
        recoveredRows.sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt)||
         b.documentId.localeCompare(a.documentId));
        state.tradeLinkDraft.rows=recoveredRows.slice(0,50);
+      if(!state.tradeLinkDraft.rows.some(row=>row.documentId===target)){
+       state.tradeLinkDraft.rows[49]=recoveredRows.find(row=>row.documentId===target);
+      }
       }catch(error){
        if(pendingSelection)pendingNativeSearchSelection=null;
        throw error;

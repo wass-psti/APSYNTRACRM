@@ -1356,7 +1356,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
  const line=Array.isArray(data.items)?data.items[0]||{}:{};
  const writeEnabled=editing||mode==='create';
  const live=TL03_DOMAIN_WRITES_ENABLED&&writeEnabled&&(canManage||(editing?canEditOwnDraft:canCreate));
- const workflowState=editing&&row.workflow_state!=='approved'?row.workflow_state:'for-approval';
+ const workflowState=editing&&row.workflow_state!=='approved'&&row.workflow_state!=='revision-required'?row.workflow_state:'for-approval';
  const documentId=editing?row.id:'';
  const selectedStatus=fieldValue('documentStatus',workflowState);
  const type=editing?data.documentType:fieldValue('documentType','quotation');
@@ -1394,7 +1394,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
   (message?'<p class="tl-draft-feedback" role="status">'+escape(message)+'</p>':'')+
   (editing?'<div class="tl-draft-editor-navigation">'+
    '<a class="secondary" href="'+tradeLinkApplicationHref('documents')+'">Back to All Documents</a> '+
-   '<button type="button" class="secondary tl-reference-new-draft" data-action="tradelink-draft-new">New Draft</button>'+
+   (canCreate?'<button type="button" class="secondary tl-reference-new-draft" data-action="tradelink-draft-new">New Draft</button>':'')+
    '</div>':'')+
   (mode==='edit'&&!editing?'<p role="alert">This record cannot be edited with the bounded Phase 1 editor.</p>':'')+
   (draftNotice?'<p class="tl-draft-feedback" role="status">'+escape(draftNotice)+'</p>':'')+
@@ -2159,13 +2159,13 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
   '<div class="tl-document-list-pane">'+renderTradeLinkDraftList(rows,view,canManage,{readOnly:true,canReview,canCreate,actorEmail})+'</div>'+
   (selectedPreview?
    '<section class="tl-document-detail-view" aria-label="Selected document details">'+
-     (linked&&(canManage||(creatorMode&&linked.createdByActor===true&&linked.workflowState==='draft'))&&
+     (linked&&(view.sharedVisibility===true||canManage||(creatorMode&&linked.createdByActor===true&&linked.workflowState==='draft'))&&
       selectedRecord.revision===linked.revision&&TL03_DOMAIN_WRITES_ENABLED&&
       ['draft','for-approval','revision-required','approved'].includes(linked.workflowState)&&!linked.archived&&
       tradeLinkDraftEditHref(linked.documentId)?
       '<p class="tl-document-edit-action"><a class="secondary" data-tradelink-document-edit href="'+
        escape(tradeLinkDraftEditHref(linked.documentId))+'">'+
-       (canManage?(linked.workflowState==='approved'?'Revise Approved':'Edit this Draft'):'Edit this Draft')+'</a></p>':'')+
+       'Preview/Edit'+'</a></p>':'')+
      '<div class="tl-document-preview-close"><button type="button" class="secondary" data-action="tradelink-document-preview-close">Close document preview</button></div>'+
      renderTradeLinkRevisionHistory(selection.revisions,{
       documentId:selection.documentId,selectedRevision:selectedRecord.revision,
