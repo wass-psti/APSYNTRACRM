@@ -126,5 +126,5 @@ test('GitHub Pages registers and hashes Team visual assets without relaxing CSP'
  assert.match(smoke,/'frontend\/time-tracker-team-command\.css'/);
  assert.match(smoke,/'frontend\/time-tracker-team\.js'/);
  assert.match(index,/style-src-attr 'none'/);
- assert.match(index,/script type="module" src="\.\/frontend\/app\.js"/);
+ assert.match(index,/script type="module" src="\.\/frontend\/app\.js(?:\?v=[^"]+)?"/);
 });
