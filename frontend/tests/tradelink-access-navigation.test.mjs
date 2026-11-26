@@ -50,7 +50,8 @@ test("All Documents and assigned review remain available without creation", () =
     canReview: true,
   });
   assert.match(html, /data-tl-tab="documents"[^>]*aria-current="page"/);
-  assert.match(html, /My Assigned Documents/);
+  assert.match(html, /All Documents/);
+  assert.doesNotMatch(html, /My Assigned Documents/);
   assert.match(html, /aria-label="TradeLink All Documents"/);
   assert.doesNotMatch(html, /data-tradelink-draft-form/);
 });
