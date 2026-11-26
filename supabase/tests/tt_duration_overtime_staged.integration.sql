@@ -96,6 +96,11 @@ BEGIN
  THEN RAISE EXCEPTION 'Signed duration submission receipt invalid: %',receipt; END IF;
  request_id:=(receipt->>'id')::uuid;
  BEGIN
+  PERFORM public.timetracker_ot_submit_duration(board,d+1,45,'Invalid 45-minute OT increment');
+  RAISE EXCEPTION 'Employee OT accepted a non-half-hour duration';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL;
+ END;
+ BEGIN
   PERFORM public.timetracker_ot_submit_duration(board,d,60,'Duplicate planned inspection work');
   RAISE EXCEPTION 'Duplicate active request unexpectedly accepted';
  EXCEPTION WHEN unique_violation THEN NULL;
@@ -196,6 +201,12 @@ BEGIN
  receipt:=public.timetracker_ot_submit_manual_duration(board,emp,d-1,120,
   'Historical engineering work entered by the System Admin');
  manual_id:=(receipt->>'id')::uuid;
+ BEGIN
+  PERFORM public.timetracker_ot_submit_manual_duration(board,emp,d-2,45,
+   'Invalid historical 45-minute manual overtime increment');
+  RAISE EXCEPTION 'Manual OT accepted a non-half-hour duration';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL;
+ END;
  IF receipt->>'otPolicy'<>'manual-duration-v1' OR receipt->>'durationMinutes'<>'120' THEN
   RAISE EXCEPTION 'Manual duration receipt invalid: %',receipt; END IF;
  snap:=public.timetracker_ot_snapshot(board);
@@ -211,6 +222,8 @@ BEGIN
   WHERE r.id=manual_id AND r.start_time IS NULL AND r.end_time IS NULL
    AND r.duration_minutes=120 AND r.ot_policy='manual-duration-v1') THEN
   RAISE EXCEPTION 'Manual duration entry persisted invented clock times'; END IF;
+ IF private.tt_duration_ot_worker_minutes(ws,emp,manual_id,started,threshold,state)<>0 THEN
+  RAISE EXCEPTION 'Historical manual-duration OT incorrectly entered the attendance cutoff worker'; END IF;
 
  UPDATE public.module_role_assignments SET role='OJT' WHERE user_id=ojt AND module_id='time-tracker';
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',ojt::text,'session_id',ojt_session::text)::text,true);
