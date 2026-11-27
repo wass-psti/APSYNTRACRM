@@ -76,6 +76,21 @@ test('confirmed Clock In and Clock Out show green in-context success without an 
  assert.doesNotMatch(inHtml,/tt-feedback tt-feedback-success/);
 });
 
+test('server-synchronized attendance closure shows clock-out confirmation in both Clock layouts',()=>{
+ const result={status:'VERIFIED_READ',records:[],active:null,access:{
+  moduleRole:'Employee',employeeDepartment:'Engineering',attendanceWritesAccepted:true
+ }};
+ for(const referenceShell of [false,true]){
+  const html=renderTimeTrackerNative({result,view:'clock',referenceShell,
+   success:'Attendance closed on the server. You can start a new session.'});
+  assert.match(html,/<strong>Successfully clocked out<\/strong>/);
+  assert.doesNotMatch(html,/<strong>Successfully clocked in<\/strong>/);
+  assert.match(html,/Attendance closed on the server\. You can start a new session\./);
+  assert.match(html,/role="status" aria-live="polite"/);
+  assert.match(html,/Start session/);
+ }
+});
+
 test('GPS banner stays hidden until Start/End is pressed, even if permission was denied before',()=>{
  const result={status:'VERIFIED_READ',records:[],active:null,access:{
   moduleRole:'Employee',employeeDepartment:'Engineering',attendanceWritesAccepted:true
