@@ -11,14 +11,14 @@ const deny=message=>{throw new Error(message);};
 const text=(value,limit)=>String(value??'').slice(0,limit);
 
 /** Project all dates, not just the current day's Overview.
- * Nonmanagement users retain self-only history, even if the API returns broader data.
+ * Nonmanagement users retain self-only history unless the signed shared-read contract is supplied.
  * Personnel absent from the authorized active directory are excluded, not guessed.
  */
-export function projectTimeTrackerLog({value,directory=[],userId,moduleRole}={}){
+export function projectTimeTrackerLog({value,directory=[],userId,moduleRole,sharedRead=false}={}){
  if(typeof userId!=='string'||!userId||!Array.isArray(directory)||
     directory.length>10000)
   deny('Signed TimeTracker Log context is invalid');
- const team=TT_TEAM_OVERVIEW_ROLES.includes(moduleRole);
+ const team=sharedRead===true||TT_TEAM_OVERVIEW_ROLES.includes(moduleRole);
  const members=new Map();
  for(const member of directory){
   if(!isObject(member)||typeof member.id!=='string'||!member.id||
