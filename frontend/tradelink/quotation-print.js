@@ -54,13 +54,11 @@ function approval(row,data,creatorName){
  const authorityStage=(title,explanation)=>'<div class="tl-quote-stage tl-quote-stage-authority"><h3>'+title+
   '</h3><strong>Not Applicable</strong><p>'+explanation+'</p></div>';
  const status=approved?'APPROVED':'NOT APPROVED';
- const statusDetails=approved?
-  ' · WORKFLOW APPROVED · PDF NOT ISSUED · Approved revision '+escape(row.revision)+'.':
-  ' · This print view does not approve the document.';
+ const statusDetails=approved?'':' · This print view does not approve the document.';
  return '<section class="tl-quote-approval'+(approvalFree?' is-creator-authority':'')+'" aria-label="Workflow assignments / recorded responsibility">'+
   '<div class="tl-quote-approval-summary">'+
    '<div class="tl-official-approval-stamp '+(approved?'is-approved':'is-not-approved')+'">'+
-    '<strong>'+status+'</strong><span>'+statusDetails+'</span></div>'+
+    '<strong>'+status+'</strong>'+(statusDetails?'<span>'+statusDetails+'</span>':'')+'</div>'+
    '<div class="tl-quote-created-by"><h3>CREATED BY:</h3><strong>'+
     display(creatorName||'Recorded creator (name unavailable)')+'</strong><p>'+
     display(stamp(row.created_at))+'</p></div>'+

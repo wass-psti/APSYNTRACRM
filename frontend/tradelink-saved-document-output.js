@@ -1,4 +1,4 @@
-import {renderTradeLinkQuotationPrint} from './tradelink/quotation-print.js?v=cp-tl-universal-edit-01k-20261126-01-cp-tl-approval-01-20261127';
+import {renderTradeLinkQuotationPrint} from './tradelink/quotation-print.js?v=cp-tl-universal-edit-01k-20261126-01-cp-tl-approval-02-20261127';
 import {GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY} from './tradelink/approval-policy.js?v=cp-tl-universal-edit-01k-20261126-01';
 /**
  * CP-TL-09B — Official TradeLink output from an authenticated, revision-matched

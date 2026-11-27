@@ -214,11 +214,19 @@ test('only signed Approved workflow state displays the APPROVED mark and exact r
  const approved={...base,workflow_state:'approved'};
  const html=renderTradeLinkSavedDocumentOutput(approved,workspace,id);
  assert.match(html,/class="tl-official-approval-stamp is-approved"/);
- assert.match(html,/>APPROVED</);
- assert.match(html,/Approved revision 5/);
+ const approvalStamp=html.match(/<div class="tl-official-approval-stamp is-approved">([\\s\\S]*?)<\\/div>/);
+ assert.ok(approvalStamp,'approved quotation contains its approval stamp');
+ assert.equal(approvalStamp[1],'<strong>APPROVED</strong>',
+  'approved stamp contains only the exact APPROVED label');
+ assert.match(html,/Revision 5/,'document revision remains in its separate workflow metadata');
+ assert.doesNotMatch(approvalStamp[1],/WORKFLOW APPROVED|PDF NOT ISSUED|Approved revision/);
  const rejected={...base,workflow_state:'rejected'};
  const rejectedHtml=renderTradeLinkSavedDocumentOutput(rejected,workspace,id);
  assert.match(rejectedHtml,/class="tl-official-approval-stamp is-not-approved"/);
+ const rejectedStamp=rejectedHtml.match(/<div class="tl-official-approval-stamp is-not-approved">([\\s\\S]*?)<\\/div>/);
+ assert.ok(rejectedStamp);
+ assert.ok(rejectedStamp[1].includes('This print view does not approve the document.'),
+  'unapproved stamp retains its explanatory text');
  assert.doesNotMatch(rejectedHtml,/class="tl-official-approval-stamp is-approved"/);
 });
 test('All Documents presents print action only to authorized manager, no storage or signed grants',()=>{

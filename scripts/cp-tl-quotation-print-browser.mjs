@@ -46,6 +46,11 @@ try{
   const page=await browser.newPage({viewport:{width:1200,height:900}});
   await page.setContent('<!doctype html><html><head><meta charset="utf-8"><style>'+css+'</style></head><body><section id="tradelink-saved-print"><div class="tl-print-shell">'+html+'</div></section></body></html>');
   await page.locator('.tl-quote-logo').evaluate(img=>img.decode());
+  const approvalStamp=page.locator('.tl-official-approval-stamp');
+  assert.equal(await approvalStamp.innerText(),'APPROVED',
+   profile+' approved stamp contains only APPROVED');
+  assert.equal(await approvalStamp.locator('span').count(),0,
+   profile+' approved stamp has no subtitle, separators or revision text');
   for(const selector of ['.tl-quote-workflow-line','.tl-quote-client',
    '.tl-quote-commercial','.tl-quote-financial-summary',
    '.tl-quote-approval-summary','.tl-quote-responsibility'])
