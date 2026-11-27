@@ -5,13 +5,12 @@ import {resolve} from 'node:path';
 import {PlatformSync} from '../frontend/platform-sync.js';
 
 const apiUrl = (process.env.API_URL || '').replace(/\/$/, '');
-const anonKey = process.env.ANON_KEY || '';
-const serviceRoleKey = process.env.SERVICE_ROLE_KEY || '';
+const apiKey = process.env.PUBLISHABLE_KEY || process.env.ANON_KEY || '';
 const boardId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const workspaceId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const topic = 'realtime:board:' + boardId;
 
-for (const [name, value] of [['API_URL', apiUrl], ['ANON_KEY', anonKey], ['SERVICE_ROLE_KEY', serviceRoleKey]]) {
+for (const [name, value] of [['API_URL', apiUrl], ['PUBLISHABLE_KEY', apiKey]]) {
   if (!value) throw new Error(name + ' is required for the disposable Realtime test');
 }
 if (typeof globalThis.WebSocket !== 'function') {
@@ -108,40 +107,41 @@ async function createLocalSignedUser() {
   const email = 'cp-crm-perf-01b-' + unique + '@example.test';
   const password = 'Perf01B-' + randomUUID() + '!aA9';
 
-  const adminResponse = await fetch(apiUrl + '/auth/v1/admin/users', {
+  const signUpResponse = await fetch(apiUrl + '/auth/v1/signup', {
     method: 'POST',
     headers: {
-      apikey: serviceRoleKey,
-      Authorization: 'Bearer ' + serviceRoleKey,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({email, password, email_confirm: true})
-  });
-  if (!adminResponse.ok) {
-    throw new Error('Local Auth admin user creation failed with HTTP ' + adminResponse.status);
-  }
-  const adminUser = await adminResponse.json();
-  const userId = adminUser.id || adminUser.user?.id;
-  if (!userId) throw new Error('Local Auth did not return the created user ID');
-
-  const tokenResponse = await fetch(apiUrl + '/auth/v1/token?grant_type=password', {
-    method: 'POST',
-    headers: {
-      apikey: anonKey,
+      apikey: apiKey,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({email, password})
   });
-  if (!tokenResponse.ok) {
-    throw new Error('Local Auth password sign-in failed with HTTP ' + tokenResponse.status);
+  if (!signUpResponse.ok) {
+    throw new Error('Local Auth sign-up failed with HTTP ' + signUpResponse.status);
   }
-  const session = await tokenResponse.json();
-  if (!session.access_token || session.user?.id !== userId) {
-    throw new Error('Local Auth did not return a matching signed session');
+
+  const signUp = await signUpResponse.json();
+  let session = signUp;
+  if (!session.access_token) {
+    const tokenResponse = await fetch(apiUrl + '/auth/v1/token?grant_type=password', {
+      method: 'POST',
+      headers: {
+        apikey: apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({email, password})
+    });
+    if (!tokenResponse.ok) {
+      throw new Error('Local Auth password sign-in failed with HTTP ' + tokenResponse.status);
+    }
+    session = await tokenResponse.json();
+  }
+
+  const userId = session.user?.id || signUp.user?.id || signUp.id;
+  if (!session.access_token || !userId) {
+    throw new Error('Local Auth did not return a signed session');
   }
   return {userId, accessToken: session.access_token};
 }
-
 function createLocalWebSocket(url) {
   if (!url.startsWith('wss://')) throw new Error('PlatformSync must request a secure WebSocket URL');
   return new globalThis.WebSocket(url.replace(/^wss:/, 'ws:'));
@@ -216,7 +216,7 @@ async function readProbe(apiUrlValue, accessToken) {
   const response = await fetch(apiUrlValue + '/rest/v1/rpc/cp_crm_perf_01b_realtime_probe_read', {
     method: 'POST',
     headers: {
-      apikey: anonKey,
+      apikey: apiKey,
       Authorization: 'Bearer ' + accessToken,
       'Content-Type': 'application/json'
     },
@@ -228,14 +228,14 @@ async function readProbe(apiUrlValue, accessToken) {
   return response.json();
 }
 
-async function setProbeRevision(revision) {
+async function setProbeRevision(revision, accessToken) {
   const response = await fetch(
     apiUrl + '/rest/v1/cp_crm_perf_01b_realtime_probe?board_id=eq.' + boardId,
     {
       method: 'PATCH',
       headers: {
-        apikey: serviceRoleKey,
-        Authorization: 'Bearer ' + serviceRoleKey,
+        apikey: apiKey,
+        Authorization: 'Bearer ' + accessToken,
         'Content-Type': 'application/json',
         Prefer: 'return=minimal'
       },
@@ -243,14 +243,12 @@ async function setProbeRevision(revision) {
     }
   );
   if (!response.ok) {
-    throw new Error('Disposable probe revision update failed with HTTP ' + response.status);
+    throw new Error('Signed disposable probe revision update failed with HTTP ' + response.status);
   }
 }
-
 let sync = null;
 let sender = null;
 let userId = null;
-let userDeleted = false;
 let report = null;
 
 try {
@@ -292,7 +290,7 @@ try {
     auth,
     api,
     url: secureUrl,
-    publishableKey: anonKey,
+    publishableKey: apiKey,
     WebSocketImpl: createLocalWebSocket,
     locks: null,
     storage: null,
@@ -312,7 +310,7 @@ try {
 
   const base = new URL(apiUrl);
   const socketUrl = 'ws://' + base.host + '/realtime/v1/websocket?apikey=' +
-    encodeURIComponent(anonKey) + '&vsn=2.0.0';
+    encodeURIComponent(apiKey) + '&vsn=2.0.0';
   sender = await connectSender(accessToken, socketUrl);
 
   const firstBroadcastStart = Date.now();
@@ -327,7 +325,7 @@ try {
   assert.deepEqual(firstBroadcast.boardIds, [boardId]);
   assert.equal(firstBroadcast.revision, 1);
 
-  await setProbeRevision(2);
+  await setProbeRevision(2, accessToken);
 
   const previousSocket = sync.socket;
   assert.ok(previousSocket);
@@ -390,24 +388,10 @@ try {
   if (sender?.socket && sender.socket.readyState < 2) {
     try { sender.socket.close(1000, 'test complete'); } catch {}
   }
-  if (userId) {
-    try {
-      const response = await fetch(apiUrl + '/auth/v1/admin/users/' + userId, {
-        method: 'DELETE',
-        headers: {
-          apikey: serviceRoleKey,
-          Authorization: 'Bearer ' + serviceRoleKey
-        }
-      });
-      userDeleted = response.ok || response.status === 404;
-    } catch {
-      userDeleted = false;
-    }
-  }
 }
 
 if (!report) throw new Error('Realtime acceptance did not produce a report');
-report.cleanup = {signedTestUserDeleted: userDeleted, socketsClosed: true};
+report.cleanup = {signedTestUserIsolatedToDisposableDatabase: true, socketsClosed: true};
 const output = resolve('artifacts/cp-crm-perf-01b-realtime.json');
 mkdirSync(resolve('artifacts'), {recursive: true});
 writeFileSync(output, JSON.stringify(report, null, 2) + '\n');

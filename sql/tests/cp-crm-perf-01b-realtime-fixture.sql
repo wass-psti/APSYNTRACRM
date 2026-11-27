@@ -17,8 +17,13 @@ ON public.cp_crm_perf_01b_realtime_probe
 FOR SELECT TO authenticated
 USING (board_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid);
 
-GRANT SELECT ON public.cp_crm_perf_01b_realtime_probe TO authenticated;
-GRANT SELECT, UPDATE ON public.cp_crm_perf_01b_realtime_probe TO service_role;
+CREATE POLICY cp_crm_perf_01b_probe_update
+ON public.cp_crm_perf_01b_realtime_probe
+FOR UPDATE TO authenticated
+USING (board_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid)
+WITH CHECK (board_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid);
+
+GRANT SELECT, UPDATE ON public.cp_crm_perf_01b_realtime_probe TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.cp_crm_perf_01b_realtime_probe_read(p_board_id uuid)
 RETURNS jsonb
