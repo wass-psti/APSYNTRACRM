@@ -19,3 +19,5 @@ Use an already signed CRM session in Work Management, open Material Request Hub 
 The signed browser connector was unavailable during CP03A. Genuine signed production acceptance and subjective visual review remain pending until an existing session is inspected. Do not create accounts, change authorization, populate production test fixtures, or claim that synthetic Chromium checks prove production signed access.
 
 The shared dashboard does not expose its list refresh action in Add Material. This retains the prior form behavior and avoids introducing a new route-level draft-discard path.
+
+Visual review of the CI images identified cramped metric labels at 320px (sidebar reduces actual content width) and insufficient inactive-tab contrast in dark mode. The route now switches to one metric column at content widths <=350px, restores dark navigation/control foregrounds, and asserts a 4.5:1 minimum measured dark navigation text contrast. Synthetic evidence includes 320px and 390px captures. This is visual review of a representative shell fixture, not the signed deployed shell.

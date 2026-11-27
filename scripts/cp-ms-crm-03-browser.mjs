@@ -108,12 +108,25 @@ try{
   const layout=await page.evaluate(()=>{const host=document.querySelector('.ms-native-sourcing'),scroller=host.querySelector('.ms-native-table-scroll');return {host:host.getBoundingClientRect().width,scroll:scroller.scrollWidth,client:scroller.clientWidth,document:document.documentElement.scrollWidth,viewport:innerWidth};});
   check(layout.host<=width&&layout.scroll>layout.client&&layout.document<=width+1,'contained horizontal scroll at '+width+'px');
  }
+ const narrowMetricColumns=await page.locator('.ms-native-metrics').evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length);
+ check(narrowMetricColumns===1,'narrow CRM content uses one readable metric column');
+ if(visualDir)await page.screenshot({path:resolve(visualDir,'native-mobile-320-light.png'),fullPage:true});
+ await page.setViewportSize({width:390,height:844});
  if(visualDir)await page.screenshot({path:resolve(visualDir,'native-mobile-light.png'),fullPage:true});
  const before=await page.locator('.ms-native-metric').first().evaluate(n=>getComputedStyle(n).backgroundColor);
  await page.evaluate(()=>document.documentElement.dataset.apsMondayTheme='dark');
  const after=await page.locator('.ms-native-metric').first().evaluate(n=>getComputedStyle(n).backgroundColor);
  check(before!==after,'CRM dark theme applied');
  check(await page.evaluate(()=>document.documentElement.dataset.apsMondayTheme)==='dark','screen does not replace CRM theme');
+ const colors=await page.locator('.ms-native-tabs [data-action="mrh-add-view"]').evaluate(n=>{
+  const color=getComputedStyle(n).color,background=getComputedStyle(n.parentElement).backgroundColor;
+  const luminance=value=>{const rgb=value.match(/\d+(?:\.\d+)?/g).slice(0,3).map(x=>Number(x)/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);return .2126*rgb[0]+.7152*rgb[1]+.0722*rgb[2];};
+  const a=luminance(color),b=luminance(background);return {ratio:(Math.max(a,b)+.05)/(Math.min(a,b)+.05),color,background};
+ });
+ check(colors.ratio>=4.5,'dark inactive navigation text contrast '+colors.ratio.toFixed(2)+':1');
+ const exportColor=await page.locator('.mrh-export-csv').evaluate(n=>getComputedStyle(n).backgroundColor);
+ check(exportColor==='rgb(28, 36, 50)','dark CSV control uses native surface');
+
  if(visualDir)await page.screenshot({path:resolve(visualDir,'native-mobile-dark.png'),fullPage:true});
  await page.setViewportSize({width:1440,height:900});
  if(visualDir)await page.screenshot({path:resolve(visualDir,'native-desktop-dark.png'),fullPage:true});

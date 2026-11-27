@@ -85,7 +85,7 @@ export function renderNativeMaterialSourcing(detail,filters={},now=new Date(),op
  '<div class="ms-native-header-actions"><span class="ms-native-tag">CRM · Signed board data</span>'+
  (adding?'':'<button type="button" class="secondary" data-action="refresh-board" aria-label="Refresh Material Sourcing">↻ Refresh</button>')+'</div></header>'+
  '<div class="ms-native-body"><details class="ms-native-metrics-panel" open><summary>Key metrics</summary><div class="ms-native-metrics">'+
- card(heading,fmt(all.length),'◇')+card('Total buying','—','₱','Calculation pending')+card('Local',fmt(local),'⌖','',metricFilter('Local'))+card('Import',fmt(imported),'◎','',metricFilter('Import'))+
+ card(heading,fmt(all.length),'◇')+card('Total buying','—','₱','Calculation pending')+card('Local',fmt(local),'L','',metricFilter('Local'))+card('Import',fmt(imported),'◎','',metricFilter('Import'))+
  card('USD rate','—','$','No current snapshot')+card('EUR rate','—','€','No current snapshot')+
  sourceDistribution(local,imported,unknown)+'</div></details>'+
  '<div class="ms-native-rates"><span>⇄ Exchange rates</span><span class="ms-native-tag">USD —</span><span class="ms-native-tag">EUR —</span><small>Stored per-item rates are available through signed reads. No current FX snapshot.</small></div>'+
@@ -93,7 +93,7 @@ export function renderNativeMaterialSourcing(detail,filters={},now=new Date(),op
  (projection.deferred.length?'<p class="mrh-data-warning" role="status">Other-group or archived records are outside the current sourcing projection; their identities remain unchanged.</p>':'')+
  (projection.missingPublicFields.length?'<p class="mrh-data-warning" role="status">Some sourcing fields are not available in this board projection.</p>':'')+
  '<nav class="ms-native-tabs mrh-tracker-viewtabs" aria-label="Material Tracker views">'+
- (adding?'<button type="button" data-action="mrh-show-items">All items</button><span class="mrh-active-view" aria-current="page">Add Material</span>':'<span class="mrh-active-view" aria-current="page">All items</span><button type="button" data-action="mrh-add-view">＋ Add Material</button>')+
+ (adding?'<button type="button" data-action="mrh-show-items">All items</button><span class="mrh-active-view" aria-current="page">Add Material</span>':'<span class="mrh-active-view" aria-current="page">All items</span><button type="button" data-action="mrh-add-view"> + Add Material</button>')+
  '<button type="button" disabled title="Requires the extended MRH transaction contract">Bulk Import</button></nav>'+
  (adding?'<div class="mrh-add-app ms-native-add"><div class="mrh-add-canvas">'+renderMaterialSourcingAddMaterial(detail,{canCreate:options.canCreate===true})+'</div></div>':
  '<div class="ms-native-surface"><div class="mrh-tracker-controls">'+

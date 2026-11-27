@@ -58,3 +58,15 @@ html[data-aps-monday-theme="dark"] .ms-native-sourcing .ms-native-add :is(.mrh-a
 html[data-aps-monday-theme="dark"] .ms-native-sourcing .ms-native-add :is(.mrh-add-field label,.mrh-add-field small,.mrh-add-head p,.mrh-add-hint){color:var(--ms-muted)}
 html[data-aps-monday-theme="dark"] .ms-native-sourcing .ms-native-add :is(input,select,textarea){background:var(--ms-bg);color:var(--ms-ink);border-color:var(--ms-line)}
 html[data-aps-monday-theme="dark"] .ms-native-sourcing .ms-native-add :is(.mrh-add-section,.mrh-add-fields){border-color:var(--ms-line)}
+
+/* Small content-width and contrast corrections from captured Chromium evidence. */
+@container (max-width:350px){
+ .ms-native-sourcing .ms-native-metrics{grid-template-columns:minmax(0,1fr)}
+ .ms-native-sourcing .ms-native-distribution{grid-column:span 1}
+ .ms-native-sourcing .ms-native-metric{min-height:70px}
+ .ms-native-sourcing .ms-native-metric>div{min-width:0}
+ .ms-native-sourcing .ms-native-metric small{overflow-wrap:normal}
+}
+html[data-aps-monday-theme="dark"] #app .ms-native-sourcing .ms-native-tabs>button:not(:disabled){color:var(--ms-ink);background:transparent;border-color:transparent}
+html[data-aps-monday-theme="dark"] #app .ms-native-sourcing .ms-native-tabs>button:disabled{color:var(--ms-muted);opacity:.8;background:transparent;border-color:transparent}
+html[data-aps-monday-theme="dark"] #app .ms-native-sourcing :is(.ms-native-header-actions button,.mrh-export-csv){background:var(--ms-surface);color:var(--ms-ink);border-color:var(--ms-line)}
