@@ -169,3 +169,27 @@ The first CRM migration remains `20260917142647_stage_g_m46_boards_backend_data_
 **Still pending:** a full disposable Supabase stack with the certified M45 baseline, synthetic records, Auth/Realtime/Storage parity; controlled full-platform signed single/dual-window sustained resource measurement; host CPU/RAM/network attribution; controlled Realtime event/reconnect acceptance; and resolution or formal non-blocking acceptance of the five group-view RPC 404s.
 
 CP-CRM-PERF-01B remains **OPEN / BLOCKED**, not complete. The next step remains inside this milestone: obtain an approved protected schema-only M45 bootstrap (or approve a billable isolated schema-only Supabase environment), replay and verify the complete runtime contracts, then run the remaining controlled acceptance. No subsequent CRM performance initiative is opened.
+
+
+## Current-main FuelTrans rerun — 2026-11-27
+
+The FuelTrans signed fixture was rerun after the subsequent application-shell, session and TimeTracker changes, using the current main checkpoint. The workflow is now also configured to rerun when relevant FuelTrans, application-shell, session, workspace-routing or native-application source paths change.
+
+- Workflow: [45996002315](https://github.com/wass-psti/APSYNTRACRM/actions/runs/45996002315) — success.
+- Commit: `6bf859627f6f72b2906f000549de7828f521a864`.
+- Retained artifact: `15195772599`.
+- Signed lifecycle checks: 75 passed.
+- Read benchmark: 60 cycles and 120 route transitions across desktop and mobile viewport.
+- Ticket integrity hash before/after read benchmark: pass.
+- Disposable GoTrue/PostgREST containers: removed on exit.
+- Test contract: 1/1 passed.
+
+| Profile | View | Ready P95 | Reads / visit | Count reads | Response bytes / visit | Max read P95 |
+|---|---|---:|---:|---:|---:|---:|
+| Desktop | Dashboard | 100.49 ms | 7 | 6 | 14,368 | 20.57 ms |
+| Desktop | Ticket queue | 100.39 ms | 1 | 0 | 49,558 | 13.66 ms |
+| Mobile viewport | Dashboard | 100.54 ms | 7 | 6 | 14,368 | 18.22 ms |
+| Mobile viewport | Ticket queue | 100.08 ms | 1 | 0 | 49,558 | 14.89 ms |
+
+This confirms the existing dashboard count fan-out remains six requests per visit, while the ticket queue uses one list request. The timings are warm fixture navigation measurements against real signed PostgREST reads with an emulated CRM host handshake; they do not certify full CRM startup, production network latency, or production host CPU/RAM. The fixture disables automatic refresh only inside its disposable browser.
+
