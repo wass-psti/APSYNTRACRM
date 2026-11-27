@@ -3,6 +3,9 @@ on:
   pull_request:
     paths:
       - 'sql/mrh-atomic-material-edit-CANDIDATE-NOT-APPLIED.sql'
+      - 'sql/mrh-material-create-receipt-CANDIDATE-NOT-APPLIED.sql'
+      - 'sql/mrh-atomic-crud-ROLLBACK-CANDIDATE.sql'
+      - 'sql/tests/mrh-material-create-receipt-disposable.sql'
       - 'sql/tests/mrh-atomic-edit-disposable.sql'
       - 'sql/tests/mrh-atomic-edit-representative.sql'
       - 'sql/tests/mrh-atomic-edit-live-dependencies.sql'
@@ -19,6 +22,9 @@ on:
     branches: [main, integration/cp-ms-crm-04a, integration/cp-ms-crm-04a2]
     paths:
       - 'sql/mrh-atomic-material-edit-CANDIDATE-NOT-APPLIED.sql'
+      - 'sql/mrh-material-create-receipt-CANDIDATE-NOT-APPLIED.sql'
+      - 'sql/mrh-atomic-crud-ROLLBACK-CANDIDATE.sql'
+      - 'sql/tests/mrh-material-create-receipt-disposable.sql'
       - 'sql/tests/mrh-atomic-edit-disposable.sql'
       - 'sql/tests/mrh-atomic-edit-representative.sql'
       - 'sql/tests/mrh-atomic-edit-live-dependencies.sql'
@@ -72,3 +78,6 @@ jobs:
           docker cp sql/mrh-atomic-material-edit-CANDIDATE-NOT-APPLIED.sql "$NAME:/tmp/mrh-edit.sql"
           docker exec -i "$NAME" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -q < sql/tests/mrh-atomic-edit-representative.sql
           bash scripts/cp-ms-crm-04a2-concurrency.sh "$NAME"
+          docker cp sql/mrh-material-create-receipt-CANDIDATE-NOT-APPLIED.sql "$NAME:/tmp/mrh-receipt.sql"
+          docker cp sql/mrh-atomic-crud-ROLLBACK-CANDIDATE.sql "$NAME:/tmp/mrh-rollback.sql"
+          docker exec -i "$NAME" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -q < sql/tests/mrh-material-create-receipt-disposable.sql
