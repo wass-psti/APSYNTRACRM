@@ -1,4 +1,6 @@
 -- CP-CRM-PERF-01B controlled Realtime fixture.
+-- Realtime protocol topics use the `realtime:` prefix on the wire, but
+-- realtime.topic() exposes the logical topic without that transport prefix.
 -- This SQL is executed only in a disposable local Supabase CI stack.
 BEGIN;
 
@@ -62,7 +64,7 @@ CREATE POLICY cp_crm_perf_01b_realtime_receive
 ON realtime.messages
 FOR SELECT TO authenticated
 USING (
-  realtime.topic() = 'realtime:board:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+  realtime.topic() = 'board:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
   AND extension = 'broadcast'
 );
 
@@ -70,7 +72,7 @@ CREATE POLICY cp_crm_perf_01b_realtime_send
 ON realtime.messages
 FOR INSERT TO authenticated
 WITH CHECK (
-  realtime.topic() = 'realtime:board:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+  realtime.topic() = 'board:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
   AND extension = 'broadcast'
 );
 
