@@ -326,6 +326,15 @@ const platformManualApproval=receipt(await rpc(hr,'timetracker_ot_decide_manual_
  p_board_id:board,p_request_id:platformManualDuration.id,p_decision:'Approved'
 }),'HR approves platform Admin manual duration OT');
 assert.equal(platformManualApproval.status,'Approved');
+const reconnectedBootstrap=expect(await call(auth,'/token?grant_type=password',{
+ email:bootstrap.email,password
+}),200,'Bootstrap reconnect after duration policy decisions');
+const reconnectedBootstrapActor={...bootstrap,token:reconnectedBootstrap.access_token};
+const reconnectedBootstrapSnapshot=receipt(await rpc(reconnectedBootstrapActor,'timetracker_ot_snapshot',{p_board_id:board}),
+ 'Bootstrap manual-duration reauthentication readback');
+const reconnectedManualRow=reconnectedBootstrapSnapshot.rows.find(row=>row.id===bootstrapManualDurationRequest.id);
+assert.equal(reconnectedManualRow?.status,'Rejected');
+assert.equal(reconnectedManualRow?.decidedBy,bootstrap.id);
 const ojtPlatformManualSnapshot=receipt(await rpc(ojt,'timetracker_ot_snapshot',{p_board_id:board}),'OJT cannot see platform Admin manual OT');
 assert.ok(!ojtPlatformManualSnapshot.rows.some(row=>row.id===platformManualDuration.id));
 const racing=receipt(await submit(worker,'14:00','15:00','concurrent decision'),'race request');
