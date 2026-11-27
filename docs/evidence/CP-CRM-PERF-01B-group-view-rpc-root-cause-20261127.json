@@ -1,6 +1,6 @@
 {
   "initiative": "CP-CRM-PERF-01B",
-  "captured_at_utc": "2026-11-27T13:40:00Z",
+  "captured_at_utc": "2026-11-27T13:45:00Z",
   "repository_commit_tested": "a1ccbed2f15d874d5764720570c9ffd097e44c26",
   "fueltrans_benchmark": {
     "workflow_run_id": 46000281137,
@@ -72,8 +72,20 @@
         "2026-11-27T13:23:49Z",
         "2026-11-27T13:26:39Z"
       ],
-      "post_fix_http_200_requests": 20,
-      "post_fix_sqlstate_42883_errors": 0
+      "post_fix_http_200_requests": 34,
+      "post_fix_sqlstate_42883_errors": 0,
+      "post_fix_edge_windows_utc": [
+        {
+          "start": "2026-11-27T13:23:49Z",
+          "end": "2026-11-27T13:26:39Z",
+          "http_200_requests": 20
+        },
+        {
+          "start": "2026-11-27T13:34:47Z",
+          "end": "2026-11-27T13:37:28Z",
+          "http_200_requests": 14
+        }
+      ]
     },
     "disposable_regression": {
       "workflow_run_id": 46007697167,
