@@ -543,6 +543,10 @@ export class TradeLinkDraftWorkspace{
   if(!TL03_DOMAIN_READS_ENABLED)disabled();
   return this.client.revisionBundle(documentId,revision);
  }
+ async renderSnapshot(documentId,revision){
+  if(!TL03_DOMAIN_READS_ENABLED)disabled();
+  return this.client.renderSnapshot(documentId,revision);
+ }
  async assignedDocuments(limit=50){
   if(!TL03_DUAL_REVIEW_ENABLED)disabled();
   return this.client.assignedDocuments(limit);

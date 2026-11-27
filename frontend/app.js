@@ -4291,8 +4291,10 @@ async function printTradeLinkDocument(documentId,revision=null){
   auth.userId===actor&&auth.isSignedIn;
  state.tradeLinkDraft.busy=true;state.tradeLinkDraft.error='';render();
  try{
-  const [bundle,board]=await Promise.all([
-   tradeLinkDraftWorkspace.revisionBundle(documentId,targetRevision),tradeLinkDraftWorkspace.boardProjection(documentId)
+  const [bundle,board,renderSnapshot]=await Promise.all([
+   tradeLinkDraftWorkspace.revisionBundle(documentId,targetRevision),
+   tradeLinkDraftWorkspace.boardProjection(documentId),
+   tradeLinkDraftWorkspace.renderSnapshot(documentId,targetRevision)
   ]);
   if(!same())return;
   const record=bundle?.selected;
@@ -4301,6 +4303,7 @@ async function printTradeLinkDocument(documentId,revision=null){
    targetRevision===listed.revision&&record?.workflow_state==='approved':
    revisionMeta?.approved===true&&record?.approved===true&&record.workflow_state==='approved';
   if(!bundle||bundle.currentRevision!==listed.revision||!record||
+   !renderSnapshot||renderSnapshot.documentId!==documentId||renderSnapshot.revision!==targetRevision||
    record.revision!==targetRevision||record.board_item_id!==listed.boardItemId||
    record.document_type!==listed.documentType||
    (targetRevision===listed.revision&&listed.workflowState!=='approved')||
@@ -4313,12 +4316,14 @@ async function printTradeLinkDocument(documentId,revision=null){
    record.created_by_name!==listed.createdByName)
    throw new ApiError('The original creator identity does not match the signed document listing.',409);
   const creatorName=record.created_by_name||'';
-  const markup=renderTradeLinkSavedDocumentOutput(record,ws,documentId,{creatorName});
+  const markup=renderTradeLinkSavedDocumentOutput(record,ws,documentId,{creatorName,renderSnapshot});
   if(!same())return;
-  mountTradeLinkSavedDocumentOutput(markup);
+  mountTradeLinkSavedDocumentOutput(markup,{
+   stylesheetAssets:renderSnapshot.snapshot.template.stylesheetAssets
+  });
  }catch{
   if(same())state.tradeLinkDraft.error=
-   'Print preview could not verify the selected Approved revision and Board. Refresh All Documents.';
+   'Print preview could not verify the selected Approved revision, immutable template snapshot and Board. Refresh All Documents.';
  }finally{if(same()){state.tradeLinkDraft.busy=false;render();}}
 }
 
