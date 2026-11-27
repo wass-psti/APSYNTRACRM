@@ -144,5 +144,12 @@
     "smoke": "success",
     "single_30_minute": "in_progress",
     "dual_30_minute": "in_progress"
+  },
+  "current_main_frontend_validation": {
+    "workflow_run_id": 46010259193,
+    "conclusion": "success",
+    "jobs_total": 8,
+    "jobs_passed": 8,
+    "jobs_failed": 0
   }
 }
