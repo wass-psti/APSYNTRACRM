@@ -70,12 +70,13 @@ terms, client acceptance lines, and existing footer. The company-specific profil
 continues to determine the logo and branding; the redesign does not assign or alter
 a company profile.
 
-Existing labels, customer fields, notes, priced rows, discount and tax values,
-creator identity, reviewer/approver identities and recorded times, remarks, terms,
+Existing labels, populated customer fields, notes, priced rows, discount and tax
+values, creator identity, reviewer/approver identities and recorded times, remarks, terms,
 acceptance wording, and the browser-copy / PDF-not-issued disclosure remain in the
 print output. A zero-value discount and its after-discount amount remain visible
 rather than disappearing from the financial summary. The existing VAT label is
-preserved. Long item descriptions and notes remain printable across pages with
+preserved. Empty optional client fields are omitted rather than printed as empty
+placeholders; every populated client value remains visible. Long item descriptions and notes remain printable across pages with
 repeated table headings.
 
 The quotation stylesheet is registered beside the TradeLink module styles, before

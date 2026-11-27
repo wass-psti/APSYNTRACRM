@@ -349,6 +349,16 @@ test('quotation PDF follows the reference hierarchy while preserving every exist
  assert.match(html,/tl-quote-approval-summary/);
  assert.match(html,/tl-quote-responsibility/);
  assert.ok(html.includes('₱0.00'));
+ const sparseContent={...content,customerAddress:'',customerContact:'',
+  customerEmail:'',customerPhone:'micfad@marcelafarms.com',customerTin:''};
+ const sparseHtml=renderTradeLinkSavedDocumentOutput(
+  {...approved,content:sparseContent},workspace,id,
+  {creatorName:'Original TradeLink Creator'});
+ assert.ok(sparseHtml.includes('Phone:</b> micfad@marcelafarms.com'));
+ assert.ok(!sparseHtml.includes('Contact Person:</b>'));
+ assert.ok(!sparseHtml.includes('Email:</b>'));
+ assert.ok(!sparseHtml.includes('TIN:</b>'));
+ assert.ok(!sparseHtml.includes('tl-quote-client-address'));
  const css=readFileSync('frontend/tradelink-quotation-redesign.css','utf8');
  const bundle=readFileSync('frontend/apsyntra-styles.bundle.css','utf8');
  const marker='/* frontend/tradelink-quotation-redesign.css */\n'+css.trimEnd()+'\n';

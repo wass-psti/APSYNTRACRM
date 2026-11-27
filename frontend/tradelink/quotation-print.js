@@ -4,6 +4,7 @@ import {GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY} from './approval
 
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const display=value=>value==null||value===''?'—':escape(value);
+const hasText=value=>value!=null&&String(value).trim()!=='';
 const money=(n,currency)=>currency==='PHP'?'₱'+formatTradeLinkAmount(n):formatTradeLinkAmount(n)+' '+escape(currency);
 const label=(name,value)=>'<p><b>'+escape(name)+':</b> '+display(value)+'</p>';
 const stamp=value=>value&&Number.isFinite(Date.parse(value))?new Intl.DateTimeFormat('en-US',{
@@ -97,11 +98,16 @@ export function renderTradeLinkQuotationPrint({row,company,template,currency,ter
   ...(d.quoteStatus?[commercialRow('Commercial status',d.quoteStatus)]:[]),
   commercialRow('Currency',currency)
  ].join('');
+ const clientFields=[
+  ['Contact Person',d.customerContact],['Email',d.customerEmail],
+  ['Phone',d.customerPhone],['TIN',d.customerTin]
+ ].filter(([,value])=>hasText(value));
  const client='<div class="tl-quote-client"><h3>CLIENT:</h3><strong>'+
-  display(d.customerName)+'</strong><p class="tl-quote-client-address">'+
-  display(d.customerAddress)+'</p><div class="tl-quote-client-contact">'+
-  label('Contact Person',d.customerContact)+label('Email',d.customerEmail)+
-  label('Phone',d.customerPhone)+(d.customerTin?label('TIN',d.customerTin):'')+
+  display(d.customerName)+'</strong>'+
+  (hasText(d.customerAddress)?'<p class="tl-quote-client-address">'+
+   display(d.customerAddress)+'</p>':'')+
+  '<div class="tl-quote-client-contact">'+
+  clientFields.map(([name,value])=>label(name,value)).join('')+
   '</div></div>';
  const commercial='<section class="tl-quote-commercial"><h3>COMMERCIAL DETAILS</h3><dl>'+
   commercialRows+'</dl></section>';
