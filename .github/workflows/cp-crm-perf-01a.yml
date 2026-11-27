@@ -1,4 +1,5 @@
 name: CP-CRM-PERF-01A Signed Runtime and Sustained Workload
+# CP01B dependency refresh: rerun signed single/dual cohorts on the current main checkpoint.
 on:
   push:
     branches: [main]
