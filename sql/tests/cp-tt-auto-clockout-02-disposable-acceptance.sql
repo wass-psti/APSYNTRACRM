@@ -3,6 +3,29 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
+-- Work Duration UI must agree with the existing authoritative backend
+-- lunch-overlap calculation; do not round a manual early departure to 9h.
+DO $duration_parity$
+DECLARE
+ v_case record;
+BEGIN
+ FOR v_case IN SELECT * FROM (VALUES
+  ('2026-11-27 08:24:12+08'::timestamptz,'2026-11-27 17:52:13+08'::timestamptz,30481000::bigint),
+  ('2026-11-27 08:00:00+08'::timestamptz,'2026-11-27 11:30:00+08'::timestamptz,12600000::bigint),
+  ('2026-11-27 08:00:00+08'::timestamptz,'2026-11-27 12:30:00+08'::timestamptz,14400000::bigint),
+  ('2026-11-27 13:00:00+08'::timestamptz,'2026-11-27 15:00:00+08'::timestamptz,7200000::bigint),
+  ('2026-11-27 08:00:00+08'::timestamptz,'2026-11-27 18:00:00+08'::timestamptz,32400000::bigint),
+  ('2026-11-27 08:00:00+08'::timestamptz,'2026-11-27 19:00:00+08'::timestamptz,36000000::bigint)
+ ) AS cases(clock_in,clock_out,expected_ms)
+ LOOP
+  IF private.tt_attendance_credited_ms(v_case.clock_in,v_case.clock_out)
+     IS DISTINCT FROM v_case.expected_ms THEN
+   RAISE EXCEPTION 'Attendance credit parity failed for % to %',v_case.clock_in,v_case.clock_out;
+  END IF;
+ END LOOP;
+END
+$duration_parity$;
+
 -- A lunch-break plateau cannot contain a nine-hour credited-work threshold.
 -- Use a transaction-local evaluation time when wall-clock CI would place the
 -- grace fixture's threshold in that plateau. The worker body and every
