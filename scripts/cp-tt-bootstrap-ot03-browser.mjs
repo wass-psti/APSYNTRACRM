@@ -16,7 +16,7 @@ window.__otBrowserReady=true;
 </script></body></html>`;
 const allowedModules=new Set(['time-tracker-overtime.js','time-tracker-duration-format.js','time-tracker-time-format.js']);
 
-export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,board,selfPending,workerPending,durationRequest,hrOwnRequest}){
+export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,board,selfPending,workerPending,durationRequest,hrOwnRequest,bootstrapDurationRequest,bootstrapManualDurationRequest}){
  let browser;
  const server=createServer(async(req,res)=>{
   try{
@@ -78,22 +78,60 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
   await selfCard.locator('summary').click();
   assert.equal(await selfCard.locator('[data-action="tt-ot-approve"]').count(),1);
   assert.equal(await selfCard.locator('[data-action="tt-ot-reject"]').count(),1);
-  await adminPage.evaluate(({token,board})=>{
+  await adminPage.evaluate(({token,board,durationId,manualDurationId})=>{
    document.addEventListener('click',async e=>{
     const button=e.target.closest('[data-action="tt-ot-approve"], [data-action="tt-ot-reject"]');
     if(!button)return;
     const decision=button.dataset.action==='tt-ot-approve'?'Approved':'Rejected';
-    const response=await fetch('/rpc/timetracker_ot_decide',{
+    const endpoint=button.dataset.id===durationId?'timetracker_ot_decide_duration':
+     button.dataset.id===manualDurationId?'timetracker_ot_decide_manual_duration':'timetracker_ot_decide';
+    const response=await fetch('/rpc/'+endpoint,{
      method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
      body:JSON.stringify({p_board_id:board,p_request_id:button.dataset.id,p_decision:decision})});
     window.__otLastDecision={status:response.status,result:await response.json()};
    });
-  },{token:bootstrap.token,board});
+  },{token:bootstrap.token,board,durationId:bootstrapDurationRequest.id,
+   manualDurationId:bootstrapManualDurationRequest.id});
   await selfCard.locator('[data-action="tt-ot-approve"]').click();
   await adminPage.waitForFunction(()=>window.__otLastDecision?.status===200);
   assert.equal((await adminPage.evaluate(()=>window.__otLastDecision.result)).status,'Approved');
   const refreshed=await load(adminPage,bootstrap,'Submitted','System Admin');
   assert.equal(refreshed.rows.find(r=>r.id===selfPending.id).status,'Approved');
+
+  const ownDurationRow=original.rows.find(r=>r.id===bootstrapDurationRequest.id);
+  assert.equal(ownDurationRow?.canReviewOt,true,'Bootstrap snapshot exposes own duration review capability');
+  assert.equal(ownDurationRow?.canReviewDuration,true,'Bootstrap snapshot exposes own duration-specific capability');
+  const ownDurationCard=adminPage.locator(`[data-request-id="${bootstrapDurationRequest.id}"]`);
+  await ownDurationCard.locator('summary').click();
+  assert.equal(await ownDurationCard.locator('[data-action="tt-ot-approve"]').count(),1);
+  assert.equal(await ownDurationCard.locator('[data-action="tt-ot-reject"]').count(),1);
+  await ownDurationCard.locator('[data-action="tt-ot-approve"]').click();
+  await adminPage.waitForFunction(id=>window.__otLastDecision?.result?.id===id,bootstrapDurationRequest.id);
+  const ownDurationDecision=await adminPage.evaluate(()=>window.__otLastDecision.result);
+  assert.equal(ownDurationDecision.status,'Approved');
+  assert.equal(ownDurationDecision.decidedBy,bootstrap.id);
+  const approvedSelfDuration=await load(adminPage,bootstrap,'Approved','System Admin');
+  assert.equal(approvedSelfDuration.rows.find(r=>r.id===bootstrapDurationRequest.id).status,'Approved');
+  assert.equal(approvedSelfDuration.rows.find(r=>r.id===bootstrapDurationRequest.id).decidedBy,bootstrap.id);
+
+  await load(adminPage,bootstrap,'Submitted','System Admin');
+  const ownManualRow=original.rows.find(r=>r.id===bootstrapManualDurationRequest.id);
+  assert.equal(ownManualRow?.canReviewOt,true,'Bootstrap snapshot exposes own manual-duration review capability');
+  assert.equal(ownManualRow?.canReviewDuration,true,'Bootstrap snapshot exposes own manual-duration capability');
+  const ownManualCard=adminPage.locator(`[data-request-id="${bootstrapManualDurationRequest.id}"]`);
+  await ownManualCard.locator('summary').click();
+  assert.equal(await ownManualCard.locator('[data-action="tt-ot-approve"]').count(),1);
+  assert.equal(await ownManualCard.locator('[data-action="tt-ot-reject"]').count(),1);
+  await ownManualCard.locator('[data-action="tt-ot-reject"]').click();
+  await adminPage.waitForFunction(id=>window.__otLastDecision?.result?.id===id,bootstrapManualDurationRequest.id);
+  const ownManualDecision=await adminPage.evaluate(()=>window.__otLastDecision.result);
+  assert.equal(ownManualDecision.status,'Rejected');
+  assert.equal(ownManualDecision.decidedBy,bootstrap.id);
+  const rejectedSelfManual=await load(adminPage,bootstrap,'Rejected','System Admin');
+  assert.equal(rejectedSelfManual.rows.find(r=>r.id===bootstrapManualDurationRequest.id).status,'Rejected');
+  assert.equal(rejectedSelfManual.rows.find(r=>r.id===bootstrapManualDurationRequest.id).decidedBy,bootstrap.id);
+
+  await load(adminPage,bootstrap,'Submitted','System Admin');
   const pendingCard=adminPage.locator(`[data-request-id="${workerPending.id}"]`);
   await pendingCard.locator('summary').click();
   assert.doesNotMatch(await pendingCard.innerText(),/\b\d{1,2}:\d{2}\b/,
