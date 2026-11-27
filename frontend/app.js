@@ -11458,11 +11458,11 @@ async function action(name,button){
      state.ttAttendance?.status!=='VERIFIED_READ')return;
   const requestId=button.dataset.id;
   const request=state.ttAttendance.otRequests?.find(row=>row.id===requestId&&row.status==='Submitted');
-  const access=state.ttAttendance.access;
-  const canReview=access?.bootstrapApprover===true||
-   (access?.manualOtManager===true&&request?.isManual===true);
-  if(!request||!canReview||(access?.bootstrapApprover!==true&&
-     request.ownerId==='cloud:'+access?.userId))return;
+  // Match the renderer and native adapter: the signed request flag is authoritative.
+  if(state.ttAttendance.access?.otContractActive!==true||request?.canReviewOt!==true){
+   toast('This overtime request is no longer available for review. Refresh overtime and try again.',true);
+   return;
+  }
   const decision=name==='tt-ot-approve'?'Approved':'Rejected';
   if(!confirm(decision+' this overtime request? The decision will be audited and cannot be reversed here.'))return;
   state.ttBusy=true;render();
