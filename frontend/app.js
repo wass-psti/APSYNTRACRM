@@ -94,7 +94,7 @@ import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns,
  isTradeLinkBoard} from './tradelink-board-items.js';
 import {TRADELINK_APPLICATION_ROUTE,tradeLinkApplicationHref,parseTradeLinkApplicationRoute} from './tradelink-application-route.js';
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows,
- searchTradeLinkBoardItems,captureTradeLinkTabMotion,mountTradeLinkTabMotion} from './tradelink-ui.js?v=cp-tl-creator-attribution-01-20261127-01';
+ searchTradeLinkBoardItems,captureTradeLinkTabMotion,mountTradeLinkTabMotion} from './tradelink-ui.js?v=cp-tl-opt-02-20261127-01';
 import {renderTradeLinkSavedDocumentOutput,mountTradeLinkSavedDocumentOutput,
  closeTradeLinkSavedDocumentOutput} from './tradelink-saved-document-output.js?v=cp-tl-universal-edit-01k-20261126-01-cp-tl-approval-02-20261127';
 import {TradeLinkAttachmentClient,TL03_ATTACHMENTS_ENABLED}
@@ -107,7 +107,7 @@ import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftFor
  prepareTradeLinkDraftCommand,tradeLinkApprovalFreeDraftPreview,
  renderTradeLinkDraftLineItem,snapshotTradeLinkDraftLineItems,restoreTradeLinkPendingSave,updateTradeLinkDraftLocalAmounts,
  updateTradeLinkLineRowTotals,updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary,
- normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI,mergeTradeLinkDocumentSelection} from './tradelink-draft-workspace.js?v=cp-tl-creator-attribution-01-20261127-01';
+ normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI,mergeTradeLinkDocumentSelection} from './tradelink-draft-workspace.js?v=cp-tl-opt-02-20261127-01';
 import {summarizeTradeLinkSubmitReadiness} from './tradelink-submit-readiness.js';
 import {TL03_DOMAIN_READS_ENABLED,TL03_ANALYTICS_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
@@ -13940,13 +13940,15 @@ function updateTradeLinkDocumentSelection(panel){
   row.querySelector('[data-tl-select-document]')?.checked).map(row=>
    row.querySelector('[data-tl-select-document]')?.dataset.documentId).filter(Boolean));
  const merged=mergeTradeLinkDocumentSelection(
-  state.tradeLinkDraft.selectedDocuments,pageRows,checkedIds,50);
+  state.tradeLinkDraft.selectedDocuments,pageRows,checkedIds,50,
+  state.tradeLinkDraft.selectedDocumentIds);
  const selectedDocuments=merged.documents;
- const selectedIds=new Set(selectedDocuments.map(row=>row.documentId));
+ const selectedIds=new Set(merged.documentIds);
  state.tradeLinkDraft={...state.tradeLinkDraft,
   selectedDocuments,selectedDocumentIds:[...selectedIds]};
- const selectedCount=selectedDocuments.length;
+ const selectedCount=merged.documentIds.length;
  const selectedHidden=selectedDocuments.filter(row=>row.hidden===true).length;
+ const selectionComplete=merged.missingDocumentIds.length===0&&!merged.overflow;
  for(const row of rows){
   const checkbox=row.querySelector('[data-tl-select-document]');
   const id=checkbox?.dataset.documentId||'';
@@ -13960,15 +13962,17 @@ function updateTradeLinkDocumentSelection(panel){
  const feedback=panel.querySelector('[data-tl-selection-feedback]');
  if(feedback)feedback.textContent=merged.overflow?
   'Maximum of 50 documents per bulk action. Deselect an item to add another.':
-  selectedCount+' selected across pages. Up to 50 documents per bulk action.';
+  merged.missingDocumentIds.length?
+   merged.missingDocumentIds.length+' selected document(s) are not loaded. Clear and reselect them before bulk actions.':
+   selectedCount+' selected across pages. Up to 50 documents per bulk action.';
  const setDisabled=(action,disabled)=>{
   const button=panel.querySelector('[data-action="'+action+'"]');
   if(button)button.disabled=disabled||state.tradeLinkDraft.busy===true;
  };
- setDisabled('tradelink-documents-export-selection',selectedCount===0);
- setDisabled('tradelink-documents-delete-selection',selectedCount===0);
- setDisabled('tradelink-documents-hide-selection',selectedCount===0||selectedHidden>0);
- setDisabled('tradelink-documents-unhide-selection',selectedCount===0||selectedHidden!==selectedCount);
+ setDisabled('tradelink-documents-export-selection',selectedCount===0||!selectionComplete);
+ setDisabled('tradelink-documents-delete-selection',selectedCount===0||!selectionComplete);
+ setDisabled('tradelink-documents-hide-selection',selectedCount===0||!selectionComplete||selectedHidden>0);
+ setDisabled('tradelink-documents-unhide-selection',selectedCount===0||!selectionComplete||selectedHidden!==selectedCount);
  setDisabled('tradelink-documents-clear-selection',selectedCount===0);
  const selectAll=panel.querySelector('[data-tl-select-all]');
  const visibleInputs=rows.filter(row=>!row.hidden)
@@ -13984,14 +13988,21 @@ function updateTradeLinkDocumentSelection(panel){
 function exportTradeLinkDocumentSelection(panel){
  if(!panel||!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
     !state.boardManage||state.tradeLinkDraft?.status!=='AUTHORIZED_READ')return false;
- const records=(Array.isArray(state.tradeLinkDraft.selectedDocuments)?
-  state.tradeLinkDraft.selectedDocuments:[]).map(row=>({
-   documentNumber:row.documentNumber,clientName:row.clientName??null,
-   documentType:row.documentType,workflowState:row.workflowState,
-   revision:row.revision,createdAt:row.createdAt,updatedAt:row.updatedAt,
-   archived:row.archived===true
-  }));
- if(!records.length||records.length>50)return false;
+ const selectedDocumentIds=Array.isArray(state.tradeLinkDraft.selectedDocumentIds)?
+  state.tradeLinkDraft.selectedDocumentIds:[];
+ const selection=mergeTradeLinkDocumentSelection(
+  state.tradeLinkDraft.selectedDocuments,state.tradeLinkDraft.rows,
+  new Set(selectedDocumentIds),50,selectedDocumentIds);
+ if(!selection.documentIds.length||selection.documentIds.length>50||
+  selection.overflow||selection.missingDocumentIds.length)return false;
+ state.tradeLinkDraft={...state.tradeLinkDraft,
+  selectedDocuments:selection.documents,selectedDocumentIds:selection.documentIds};
+ const records=selection.documents.map(row=>({
+  documentNumber:row.documentNumber,clientName:row.clientName??null,
+  documentType:row.documentType,workflowState:row.workflowState,
+  revision:row.revision,createdAt:row.createdAt,updatedAt:row.updatedAt,
+  archived:row.archived===true
+ }));
  const csv=serializeTradeLinkDocumentCsv(records);
  const url=URL.createObjectURL(new Blob(['\ufeff',csv],{type:'text/csv;charset=utf-8'}));
  const anchor=document.createElement('a');

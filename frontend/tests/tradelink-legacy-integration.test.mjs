@@ -183,14 +183,17 @@ test('All Documents wires export only to signed selected records retained across
  const selection=app.slice(app.indexOf('function updateTradeLinkDocumentSelection('),app.indexOf('function exportTradeLinkDocumentSelection('));
  assert.match(selection,/state\.tradeLinkDraft\.rows\.filter\(row=>pageIds\.has\(row\.documentId\)\)/);
  assert.match(selection,/rows\.filter\(row=>!row\.hidden&&\s*row\.querySelector\('\[data-tl-select-document\]'\)\?\.checked\)/);
- assert.match(selection,/mergeTradeLinkDocumentSelection\(\s*state\.tradeLinkDraft\.selectedDocuments,pageRows,checkedIds,50\)/);
+ assert.match(selection,/mergeTradeLinkDocumentSelection\(\s*state\.tradeLinkDraft\.selectedDocuments,pageRows,checkedIds,50,\s*state\.tradeLinkDraft\.selectedDocumentIds\)/);
  const exporter=app.slice(app.indexOf('function exportTradeLinkDocumentSelection('),app.indexOf('function captureTradeLinkDraftListFilters('));
  assert.match(exporter,/!state\.boardManage\|\|state\.tradeLinkDraft\?\.status!=='AUTHORIZED_READ'/);
- assert.match(exporter,/Array\.isArray\(state\.tradeLinkDraft\.selectedDocuments\)/);
- assert.match(exporter,/if\(!records\.length\|\|records\.length>50\)return false/);
+ assert.match(exporter,/Array\.isArray\(state\.tradeLinkDraft\.selectedDocumentIds\)/);
+ assert.match(exporter,/mergeTradeLinkDocumentSelection\(/);
+ assert.match(exporter,/selection\.missingDocumentIds\.length/);
+ assert.match(exporter,/selection\.overflow/);
+ assert.match(exporter,/if\(!selection\.documentIds\.length\|\|selection\.documentIds\.length>50\|\|\s*selection\.overflow\|\|selection\.missingDocumentIds\.length\)return false/);
  assert.match(exporter,/serializeTradeLinkDocumentCsv\(records\)/);
  const workspace=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
- assert.match(workspace,/data-action="tradelink-documents-export-selection".*selectedCount&&!busy/);
+ assert.match(workspace,/data-action="tradelink-documents-export-selection".*selectedCount&&selectionComplete&&!busy/);
 });
 
 test('analytics requests release stale busy state and retry the current route after overlapping navigation',()=>{

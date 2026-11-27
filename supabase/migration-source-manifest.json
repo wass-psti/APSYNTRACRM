@@ -1584,6 +1584,20 @@
       "sha256": "86b101e067dc443dec188b7607e015dd58d90ddb1d0fb0e95d5704a131dd79d9"
     },
     {
+      "version": "20261126082753",
+      "name": "tradelink_shared_projection_verification",
+      "file": "20261126082753_tradelink_shared_projection_verification.sql",
+      "bytes": 2289,
+      "sha256": "5bd1821bd47adb94db9ea6aeb7f9c94620dbc6265352abf65b51a1cd5c875898"
+    },
+    {
+      "version": "20261126072856",
+      "name": "tradelink_universal_edit_shared_save",
+      "file": "20261126072856_tradelink_universal_edit_shared_save.sql",
+      "bytes": 21959,
+      "sha256": "e7eaf299c7f252058fba63412e0984810b53d2832caf92c9221f54070a632ab5"
+    },
+    {
       "version": "20261116005252",
       "name": "cp_board_trash_permanent_delete_01",
       "file": "20261116005252_cp_board_trash_permanent_delete_01.sql",

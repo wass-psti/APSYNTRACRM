@@ -1676,26 +1676,45 @@ export function filterTradeLinkDraftAuthorizedRows(rows,input={}){
  return sortTradeLinkDraftRows(rows.slice(0,50).filter(row=>
   tradeLinkDraftRowMatches(row,filters)),filters);
 }
-/** Merge page selections without discarding records selected on earlier pages. */
-export function mergeTradeLinkDocumentSelection(existingDocuments,pageRows,checkedIds,limit=50){
- if(!Number.isSafeInteger(limit)||limit<1||limit>50)return {documents:[],overflow:false};
- const selected=new Map();
- for(const row of Array.isArray(existingDocuments)?existingDocuments:[]){
-  if(validUuid(row?.documentId)&&Number.isSafeInteger(row?.revision)&&row.revision>0&&
-   selected.size<limit)selected.set(row.documentId,row);
- }
+/** Reconcile selected IDs with retained snapshots and the current server page. */
+export function mergeTradeLinkDocumentSelection(
+ existingDocuments,pageRows,checkedIds,limit=50,existingDocumentIds
+){
+ if(!Number.isSafeInteger(limit)||limit<1||limit>50)
+  return {documents:[],documentIds:[],missingDocumentIds:[],overflow:false};
  const checked=checkedIds instanceof Set?checkedIds:new Set(
   Array.isArray(checkedIds)?checkedIds:[]);
+ const sourceIds=existingDocumentIds===undefined?
+  (Array.isArray(existingDocuments)?existingDocuments.map(row=>row?.documentId):[]):
+  (existingDocumentIds instanceof Set?[...existingDocumentIds]:
+   Array.isArray(existingDocumentIds)?existingDocumentIds:[]);
+ const selectedIds=new Set(sourceIds.filter(validUuid));
  let overflow=false;
  for(const row of Array.isArray(pageRows)?pageRows:[]){
   const id=row?.documentId;
   if(!validUuid(id))continue;
   if(checked.has(id)){
-   if(selected.has(id)||selected.size<limit)selected.set(id,row);
+   if(selectedIds.has(id)||selectedIds.size<limit)selectedIds.add(id);
    else overflow=true;
-  }else selected.delete(id);
+  }else selectedIds.delete(id);
  }
- return {documents:[...selected.values()],overflow};
+ if(selectedIds.size>limit)overflow=true;
+ const selected=new Map();
+ for(const row of Array.isArray(existingDocuments)?existingDocuments:[]){
+  if(selectedIds.has(row?.documentId)&&validUuid(row?.documentId)&&
+   Number.isSafeInteger(row?.revision)&&row.revision>0)
+   selected.set(row.documentId,row);
+ }
+ // Prefer the current server page when it contains a newer row snapshot.
+ for(const row of Array.isArray(pageRows)?pageRows:[]){
+  if(selectedIds.has(row?.documentId)&&validUuid(row?.documentId)&&
+   Number.isSafeInteger(row?.revision)&&row.revision>0)
+   selected.set(row.documentId,row);
+ }
+ const documentIds=[...selectedIds];
+ const documents=documentIds.map(id=>selected.get(id)).filter(Boolean);
+ const missingDocumentIds=documentIds.filter(id=>!selected.has(id));
+ return {documents,documentIds,missingDocumentIds,overflow};
 }
 /** Update native controls and visible rows of the signed listing, never its data. */
 /** Date control is strictly local to the current authenticated response.
@@ -1880,18 +1899,26 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
    (page?displayed.length+' of '+page.totalCount+' matching documents · Page '+(page.pageIndex+1):
     displayed.length+' of '+records.length+' documents in this response')+'</p>'+
    (readOnly&&!canReview?(()=>{
-    const selectedRows=Array.isArray(view.selectedDocuments)?view.selectedDocuments:
-     displayed.filter(row=>selectedIds.has(row.documentId));
-    const selectedCount=selectedRows.length;
+    const selection=mergeTradeLinkDocumentSelection(
+     view.selectedDocuments,displayed,selectedIds,50,[...selectedIds]);
+    const selectedRows=selection.documents;
+    const selectedCount=selection.documentIds.length;
     const selectedHidden=selectedRows.filter(row=>row.hidden===true).length;
+    const selectionComplete=selection.missingDocumentIds.length===0&&!selection.overflow;
+    const selectionMessage=selection.overflow?
+     'Maximum of 50 documents per bulk action. Deselect an item to add another.':
+     selection.missingDocumentIds.length?
+      selection.missingDocumentIds.length+' selected document(s) are not loaded. Clear and reselect them before bulk actions.':
+      selectedCount?selectedCount+' selected across pages. Up to 50 documents per bulk action.':
+       'Selection is retained across pages; select up to 50 documents.';
     const busy=view.busy===true;
     return '<div class="tl-ref-selection-controls"><span data-tl-selected-count role="status" aria-live="polite">'+selectedCount+' selected across pages</span>'+
-     '<button type="button" data-action="tradelink-documents-export-selection"'+(selectedCount&&!busy?'':' disabled')+'>Export selected CSV</button> '+
-     (canManage?'<button type="button" data-action="tradelink-documents-delete-selection"'+(selectedCount&&!busy?'':' disabled')+'>Delete Selected</button> '+
-      '<button type="button" data-action="tradelink-documents-hide-selection"'+(selectedCount&&!selectedHidden&&!busy?'':' disabled')+'>Hide Selected</button> '+
-      '<button type="button" data-action="tradelink-documents-unhide-selection"'+(selectedCount===0||selectedHidden!==selectedCount||busy?' disabled':'')+'>Unhide Selected</button> ':'')+
+     '<button type="button" data-action="tradelink-documents-export-selection"'+(selectedCount&&selectionComplete&&!busy?'':' disabled')+'>Export selected CSV</button> '+
+     (canManage?'<button type="button" data-action="tradelink-documents-delete-selection"'+(selectedCount&&selectionComplete&&!busy?'':' disabled')+'>Delete Selected</button> '+
+      '<button type="button" data-action="tradelink-documents-hide-selection"'+(selectedCount&&selectionComplete&&selectedHidden===0&&!busy?'':' disabled')+'>Hide Selected</button> '+
+      '<button type="button" data-action="tradelink-documents-unhide-selection"'+(selectedCount&&selectionComplete&&selectedHidden===selectedCount&&!busy?'':' disabled')+'>Unhide Selected</button> ':'')+
      '<button type="button" data-action="tradelink-documents-clear-selection"'+(selectedCount&&!busy?'':' disabled')+'>Clear selection</button>'+
-     '<span data-tl-selection-feedback role="status">'+(selectedCount?selectedCount+' selected. Up to 50 documents per bulk action.':'Selection is retained across pages; select up to 50 documents.')+'</span></div>';
+     '<span data-tl-selection-feedback role="status">'+selectionMessage+'</span></div>';
    })():'')+
    '</div>'+
   (records.length?
