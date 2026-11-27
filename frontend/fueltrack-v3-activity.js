@@ -1,144 +1,49 @@
-/** FuelTrack+ Activity: authorized module audit stream, not a Board-status reconstruction.
- * Only the signed Admin RPC list_module_activity may supply VERIFIED_READ rows.
- */
+/** FuelTrack+ Activity: signed, bounded audit history and presentation. */
 const html=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
 const dayFmt=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'});
-function localDay(input){const d=new Date(input);if(!Number.isFinite(d.getTime()))return null;
- const parts=Object.fromEntries(dayFmt.formatToParts(d).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
- return parts.year+'-'+parts.month+'-'+parts.day;
-}
-const MATCHERS=Object.freeze({
- submitted:/(^|[ _.-])(submitted|submit)(?=$|[ _.-])/i,
- approved:/(^|[ _.-])(approved|approve)(?=$|[ _.-])/i,
- rejected:/(^|[ _.-])(rejected|reject)(?=$|[ _.-])/i,
- completed:/(^|[ _.-])(completed|complete)(?=$|[ _.-])/i
-});
+function localDay(input){const d=new Date(input);if(!Number.isFinite(d.getTime()))return null;const parts=Object.fromEntries(dayFmt.formatToParts(d).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));return parts.year+'-'+parts.month+'-'+parts.day;}
+const MATCHERS=Object.freeze({submitted:/(^|[ _.-])(submitted|submit)(?=$|[ _.-])/i,approved:/(^|[ _.-])(approved|approve)(?=$|[ _.-])/i,rejected:/(^|[ _.-])(rejected|reject)(?=$|[ _.-])/i,completed:/(^|[ _.-])(completed|complete)(?=$|[ _.-])/i});
 export const FUELTRACK_ACTIVITY_MAX=250;
 export const FUELTRACK_ACTIVITY_FILTER_DEFAULTS=Object.freeze({query:'',type:'all',expandedId:null});
 const types=Object.freeze(['all','submitted','approved','rejected','completed']);
-export function fuelTrackActivityType(eventType){
- for(const [k,pattern] of Object.entries(MATCHERS))if(pattern.test(String(eventType??'')))return k;
- return 'other';
-}
+export function fuelTrackActivityType(eventType){for(const [key,pattern] of Object.entries(MATCHERS)){if(pattern.test(String(eventType??'')))return key;}return 'other';}
 export function fuelTrackActivityModel({snapshot=null,boardId=null,workspaceId=null,filters={},now=new Date()}={}){
- if(!snapshot||snapshot.status!=='VERIFIED_READ'||snapshot.boardId!==boardId||
-   snapshot.workspaceId!==workspaceId||!Array.isArray(snapshot.events)||
-   snapshot.events.length>FUELTRACK_ACTIVITY_MAX||!Number.isFinite(new Date(now).getTime()))return null;
+ if(!snapshot||snapshot.status!=='VERIFIED_READ'||snapshot.boardId!==boardId||snapshot.workspaceId!==workspaceId||!Array.isArray(snapshot.events)||snapshot.events.length>FUELTRACK_ACTIVITY_MAX||!Number.isFinite(new Date(now).getTime()))return null;
  const events=[];const seen=new Set();
  for(const row of snapshot.events){
-  if(!row||typeof row.event_id!=='string'||!row.event_id.trim()||row.event_id.length>128||
-    typeof row.event_type!=='string'||!row.event_type.trim()||row.event_type.length>140||
-    typeof row.occurred_at!=='string'||!Number.isFinite(Date.parse(row.occurred_at))||
-    (row.actor_name!=null&&typeof row.actor_name!=='string')||
-    (row.title!=null&&typeof row.title!=='string')||
-    (row.message!=null&&typeof row.message!=='string')||
-    (row.request_id!=null&&typeof row.request_id!=='string')||
-    String(row.actor_name??'').length>200||String(row.title??'').length>500||
-    String(row.message??'').length>2000||String(row.request_id??'').length>128||
-    seen.has(row.event_id))return null;
-  seen.add(row.event_id);
-  events.push(Object.freeze({id:row.event_id,type:fuelTrackActivityType(row.event_type),
-    eventType:row.event_type,actor:row.actor_name||'Actor unavailable',
-    title:row.title||row.event_type,message:row.message||'',
-    requestId:row.request_id||'',at:row.occurred_at}));
+  if(!row||typeof row.event_id!=='string'||!row.event_id.trim()||row.event_id.length>128||typeof row.event_type!=='string'||!row.event_type.trim()||row.event_type.length>140||typeof row.occurred_at!=='string'||!Number.isFinite(Date.parse(row.occurred_at))||(row.actor_name!=null&&typeof row.actor_name!=='string')||(row.title!=null&&typeof row.title!=='string')||(row.message!=null&&typeof row.message!=='string')||(row.request_id!=null&&typeof row.request_id!=='string')||String(row.actor_name??'').length>200||String(row.title??'').length>500||String(row.message??'').length>2000||String(row.request_id??'').length>128||seen.has(row.event_id))return null;
+  seen.add(row.event_id);events.push(Object.freeze({id:row.event_id,type:fuelTrackActivityType(row.event_type),eventType:row.event_type,actor:row.actor_name||'Actor unavailable',title:row.title||row.event_type,message:row.message||'',requestId:row.request_id||'',at:row.occurred_at}));
  }
- const query=typeof filters.query==='string'?filters.query.trim().toLocaleLowerCase().slice(0,120):'';
- const type=types.includes(filters.type)?filters.type:'all';
- const expandedId=typeof filters.expandedId==='string'?filters.expandedId:null;
- const visible=events.filter(e=>(type==='all'||e.type===type)&&
-  (!query||[e.actor,e.title,e.message,e.requestId,e.eventType].some(x=>x.toLocaleLowerCase().includes(query))));
- const today=localDay(now);
- const current=new Date(now);
- const weekStart=new Date(Date.UTC(Number(today.slice(0,4)),Number(today.slice(5,7))-1,Number(today.slice(8))));
- weekStart.setUTCDate(weekStart.getUTCDate()-(weekStart.getUTCDay()+6)%7);
- const weekKey=weekStart.toISOString().slice(0,10);
- const groups={today:[],week:[],earlier:[]},searchGroups={today:[],week:[],earlier:[]},daily={submitted:0,approved:0,rejected:0,completed:0};
- const counts={all:events.length,submitted:0,approved:0,rejected:0,completed:0};
- const hours=Array.from({length:24},()=>0);
- for(const e of events){
-  if(counts[e.type]!=null)counts[e.type]++;
-  const d=localDay(e.at);
-  if(d===today){if(daily[e.type]!=null)daily[e.type]++;
-   const hourParts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',hour:'2-digit',hourCycle:'h23'}).formatToParts(new Date(e.at));
-   const hour=Number(hourParts.find(x=>x.type==='hour')?.value);
-   if(Number.isInteger(hour)&&hour>=0&&hour<24)hours[hour]++;
-  }
- }
- for(const e of visible){const d=localDay(e.at);
-  groups[d===today?'today':d>=weekKey&&d<today?'week':'earlier'].push(e);
- }
- // Render the selected type's complete bounded page once. Search then toggles
- // existing rows, so clearing or broadening a query never needs a full redraw.
- for(const e of events){
-  if(type!=='all'&&e.type!==type)continue;
-  const d=localDay(e.at);
-  searchGroups[d===today?'today':d>=weekKey&&d<today?'week':'earlier'].push(e);
- }
- return {events:Object.freeze(events),visible:Object.freeze(visible),groups,searchGroups,counts,daily,hours,
-  expandedId,query,type,limit:FUELTRACK_ACTIVITY_MAX};
+ const query=typeof filters.query==='string'?filters.query.trim().toLocaleLowerCase().slice(0,120):'';const type=types.includes(filters.type)?filters.type:'all';const expandedId=typeof filters.expandedId==='string'?filters.expandedId:null;
+ const visible=events.filter(event=>(type==='all'||event.type===type)&&(!query||[event.actor,event.title,event.message,event.requestId,event.eventType].some(value=>value.toLocaleLowerCase().includes(query))));
+ const today=localDay(now);const weekStart=new Date(Date.UTC(Number(today.slice(0,4)),Number(today.slice(5,7))-1,Number(today.slice(8))));weekStart.setUTCDate(weekStart.getUTCDate()-(weekStart.getUTCDay()+6)%7);const weekKey=weekStart.toISOString().slice(0,10);
+ const groups={today:[],week:[],earlier:[]};const searchGroups={today:[],week:[],earlier:[]};const daily={submitted:0,approved:0,rejected:0,completed:0};const counts={all:events.length,submitted:0,approved:0,rejected:0,completed:0};const hours=Array.from({length:24},()=>0);
+ for(const event of events){if(counts[event.type]!=null)counts[event.type]++;const day=localDay(event.at);if(day===today){if(daily[event.type]!=null)daily[event.type]++;const hourParts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',hour:'2-digit',hourCycle:'h23'}).formatToParts(new Date(event.at));const hour=Number(hourParts.find(part=>part.type==='hour')?.value);if(Number.isInteger(hour)&&hour>=0&&hour<24)hours[hour]++;}}
+ for(const event of visible){const day=localDay(event.at);groups[day===today?'today':day>=weekKey&&day<today?'week':'earlier'].push(event);}
+ // Keep the selected event type rendered once so search can broaden without rebuilding the timeline or losing keyboard focus.
+ for(const event of events){if(type!=='all'&&event.type!==type)continue;const day=localDay(event.at);searchGroups[day===today?'today':day>=weekKey&&day<today?'week':'earlier'].push(event);}
+ return {events:Object.freeze(events),visible:Object.freeze(visible),groups,searchGroups,counts,daily,hours,expandedId,query,type,limit:FUELTRACK_ACTIVITY_MAX};
 }
-const pulse=(label,value)=>'<div class="ft3-activity-pulse-card"><span>'+label+'</span><strong>'+value+'</strong></div>';
-const link=(key,label,count,active)=>'<button type="button" data-action="ft3-activity-filter" data-type="'+key+
- '" aria-pressed="'+(active===key)+'" class="'+(active===key?'is-active':'')+'">'+label+
- ' <span>'+count+'</span></button>';
-function eventMarkup(e,expandedId,query=''){
- const expanded=expandedId===e.id;
- const searchText=[e.actor,e.title,e.message,e.requestId,e.eventType].join(' ').toLocaleLowerCase();
- const hidden=query&&!searchText.includes(query);
- return '<li class="ft3-activity-entry" data-search-text="'+html(searchText)+'"'+(hidden?' hidden':'')+'><button type="button" class="ft3-activity-event" data-action="ft3-activity-expand" data-id="'+html(e.id)+
- '" aria-expanded="'+expanded+'"><span class="ft3-activity-dot" aria-hidden="true">◉</span><span class="ft3-activity-summary"><strong>'+
- html(e.actor)+'</strong> <span class="ft3-activity-kind">'+html(e.type==='other'?e.eventType:e.type)+'</span>'+
- '<small>'+html(e.title)+'</small></span><time datetime="'+html(e.at)+'">'+html(fmt.format(new Date(e.at)))+'</time><span aria-hidden="true">'+(expanded?'⌃':'⌄')+'</span></button>'+
- (expanded?'<div class="ft3-activity-detail"><dl><div><dt>Actor</dt><dd>'+html(e.actor)+
- '</dd></div><div><dt>Event</dt><dd>'+html(e.eventType)+'</dd></div><div><dt>Detail</dt><dd>'+html(e.message||'—')+
- '</dd></div><div><dt>Request ID</dt><dd>'+html(e.requestId||'—')+'</dd></div>'+
- '<div><dt>Timestamp</dt><dd>'+html(e.at)+'</dd></div><div><dt>Event ID</dt><dd>'+html(e.id)+
- '</dd></div></dl></div>':'')+'</li>';
+function pulse(label,value,symbol){return '<div class="ft3-activity-pulse-card"><span class="ft3-activity-pulse-icon" aria-hidden="true">'+symbol+'</span><div class="ft3-activity-pulse-copy"><span>'+label+'</span><strong>'+value+'</strong><small>Today · Manila time</small></div></div>';}
+const link=(key,label,count,active)=>'<button type="button" data-action="ft3-activity-filter" data-type="'+key+'" aria-pressed="'+(active===key)+'" class="'+(active===key?'is-active':'')+'">'+label+' <span>'+count+'</span></button>';
+function actorInitials(actor){return String(actor||'Actor').trim().split(/\s+/).filter(Boolean).slice(0,2).map(part=>Array.from(part)[0]||'').join('').toUpperCase()||'A';}
+function eventSymbol(type){return ({submitted:'↗',approved:'✓',rejected:'×',completed:'●',other:'•'})[type]||'•';}
+function eventMarkup(event,expandedId,query=''){
+ const expanded=expandedId===event.id;const searchText=[event.actor,event.title,event.message,event.requestId,event.eventType].join(' ').toLocaleLowerCase();const hidden=query&&!searchText.includes(query);const kind=event.type==='other'?event.eventType:event.type;const description=event.message||(event.requestId?'Request '+event.requestId:'Open this event to review its audit details');
+ return '<li class="ft3-activity-entry" data-search-text="'+html(searchText)+'"'+(hidden?' hidden':'')+'><article class="ft3-activity-card"><button type="button" class="ft3-activity-event" data-action="ft3-activity-expand" data-id="'+html(event.id)+'" aria-expanded="'+expanded+'" aria-label="'+(expanded?'Hide':'Show')+' details for '+html(event.title)+'"><span class="ft3-activity-event-marker ft3-activity-marker-'+event.type+'" aria-hidden="true">'+eventSymbol(event.type)+'</span><span class="ft3-activity-avatar" aria-hidden="true">'+html(actorInitials(event.actor))+'</span><span class="ft3-activity-summary"><span class="ft3-activity-title-row"><strong>'+html(event.title)+'</strong><span class="ft3-activity-kind ft3-activity-kind-'+event.type+'">'+html(kind)+'</span></span><small><b>'+html(event.actor)+'</b><span aria-hidden="true"> · </span>'+html(description)+'</small></span><time datetime="'+html(event.at)+'">'+html(fmt.format(new Date(event.at)))+'</time><span class="ft3-activity-event-chevron" aria-hidden="true">'+(expanded?'⌃':'⌄')+'</span></button>'+(expanded?'<div class="ft3-activity-detail"><div class="ft3-activity-detail-heading"><span>EVENT RECORD</span><strong>Audit details</strong></div><dl><div><dt>Actor</dt><dd>'+html(event.actor)+'</dd></div><div><dt>Event type</dt><dd>'+html(event.eventType)+'</dd></div><div><dt>Details</dt><dd>'+html(event.message||'—')+'</dd></div><div><dt>Request reference</dt><dd>'+html(event.requestId||'—')+'</dd></div><div><dt>Timestamp</dt><dd>'+html(event.at)+'</dd></div><div><dt>Event ID</dt><dd><code>'+html(event.id)+'</code></dd></div></dl></div>':'')+'</article></li>';
 }
-export function renderFuelTrackActivity({snapshot=null,boardId=null,workspaceId=null,filters={},
- busy=false,error='',now=new Date()}={}){
- const model=fuelTrackActivityModel({snapshot,boardId,workspaceId,filters,now});
- const disabled=!model||busy;
- const rows=model?model.searchGroups:null;
- const label=(title,items)=>items.length?'<section class="ft3-activity-group" data-ft3-activity-group><h3>'+title+' <small>'+items.length+
- '</small></h3><ol>'+items.map(e=>eventMarkup(e,model.expandedId,model.query)).join('')+'</ol></section>':'';
- const max=model?Math.max(...model.hours,1):1;
- return '<section class="ft3-activity" aria-labelledby="ft3-activity-title"><header class="ft3-activity-head"><div>'+
- '<h2 id="ft3-activity-title">Activity</h2><p>'+(model?model.events.length+' authorized events loaded (latest '+model.limit+' maximum)':'Activity data unavailable')+
- '</p></div><div class="ft3-activity-actions"><button type="button" data-action="ft3-activity-export"'+(disabled?' disabled':'')+
- '>Audit Export</button><button type="button" data-action="ft3-activity-refresh"'+(busy?' disabled':'')+'>↻ Refresh</button></div></header>'+
- (busy?'<p role="status">Loading authorized activity…</p>':'')+
- (error?'<p class="ft3-activity-error" role="alert">'+html(error)+'</p>':'')+
- '<div class="ft3-activity-pulse"><h3>Today’s Pulse <small>Loaded event page only</small></h3><div>'+
- pulse('Submitted',model?model.daily.submitted:'—')+pulse('Approved',model?model.daily.approved:'—')+
- pulse('Rejected',model?model.daily.rejected:'—')+pulse('Completed',model?model.daily.completed:'—')+'</div></div>'+
- '<label class="ft3-activity-search-label" for="ft3-activity-search">Search activity</label>'+
- '<input id="ft3-activity-search" type="search" placeholder="Search by person, request or detail…" maxlength="120"'+
- (model?' value="'+html(model.query)+'"':' disabled')+'>'+
- '<div class="ft3-activity-filters" aria-label="Activity type filters">'+
- link('all','All',model?model.counts.all:'—',model?.type)+
- link('submitted','Submitted',model?model.counts.submitted:'—',model?.type)+
- link('approved','Approved',model?model.counts.approved:'—',model?.type)+
- link('rejected','Rejected',model?model.counts.rejected:'—',model?.type)+
- link('completed','Completed',model?model.counts.completed:'—',model?.type)+'</div>'+
- '<div class="ft3-activity-hours"><h3>Hourly Activity <small>Today · loaded page</small></h3>'+
- '<div class="ft3-activity-hour-bars" aria-label="Events per hour today">'+
- (model?model.hours.map((value,i)=>'<span title="'+i+':00 · '+value+' event(s)" class="ft3-hour-height-'+
- Math.max(0,Math.min(10,Math.round(value/max*10)))+'"></span>').join(''):'<p>—</p>')+'</div>'+
- '<p>00 <span>06</span><span>12</span><span>18</span><span>23</span></p></div>'+
- (!model?'<p class="ft3-activity-unavailable" role="status">'+
- 'A signed FuelTrack module Admin session is required to load its authoritative activity stream. No audit records or totals are inferred from Board items.</p>':
- label('TODAY',rows.today)+label('THIS WEEK',rows.week)+label('EARLIER',rows.earlier)+
- '<p class="ft3-activity-unavailable" data-ft3-activity-empty role="status"'+
-  (model.visible.length?' hidden':'')+'>No matching events in the loaded authorized history.</p>')+
- '<p class="ft3-activity-footnote">Only the latest authorized event page is shown. Older events may exist. Export contains the loaded authorized records, not a complete historical audit.</p></section>';
+function groupMarkup(title,items,model){if(!items.length)return '';return '<section class="ft3-activity-group" data-ft3-activity-group><header class="ft3-activity-group-head"><h3>'+title+'</h3><span>'+items.length+' '+(items.length===1?'event':'events')+'</span></header><ol>'+items.map(event=>eventMarkup(event,model.expandedId,model.query)).join('')+'</ol></section>';}
+function hourChart(model){const maximum=Math.max(...model.hours,1);return '<div class="ft3-activity-hour-bars" role="img" aria-label="Hourly activity for today in Manila time: '+model.hours.map((value,hour)=>hour+':00 '+value+' events').join(', ')+'">'+model.hours.map((value,hour)=>{const bucket=Math.max(0,Math.min(10,Math.round(value/maximum*10)));return '<span title="'+String(hour).padStart(2,'0')+':00 · '+value+' '+(value===1?'event':'events')+'" class="ft3-hour-height-'+bucket+'"></span>';}).join('')+'</div>';}
+export function renderFuelTrackActivity({snapshot=null,boardId=null,workspaceId=null,filters={},busy=false,error='',now=new Date()}={}){
+ const model=fuelTrackActivityModel({snapshot,boardId,workspaceId,filters,now});const disabled=!model||busy;const rows=model?.searchGroups;const total=model?model.events.length:0;
+ return '<section class="ft3-activity ft3-activity-command" aria-labelledby="ft3-activity-title"><header class="ft3-activity-hero"><div class="ft3-activity-hero-copy"><span class="ft3-activity-eyebrow">FUELTRACK+ / OPERATIONS</span><h2 id="ft3-activity-title">Activity Center</h2><p>Review operational events, decisions and transaction history in one place.</p><div class="ft3-activity-hero-meta"><span class="ft3-activity-live-dot" aria-hidden="true"></span>'+(model?total+' authorized events loaded':'Authorized audit stream')+'<span aria-hidden="true">·</span> Manila time</div></div><div class="ft3-activity-actions"><button type="button" class="ft3-activity-export" data-action="ft3-activity-export"'+(disabled?' disabled':'')+' title="Export matching events from the current authorized page"><span aria-hidden="true">⇩</span> Audit Export</button><button type="button" class="ft3-activity-refresh" data-action="ft3-activity-refresh"'+(busy?' disabled':'')+' aria-label="Refresh activity"><span aria-hidden="true">↻</span> Refresh</button></div></header>'+
+ (busy?'<p class="ft3-activity-loading" role="status"><span aria-hidden="true">◌</span>Loading authorized activity…</p>':'')+(error?'<p class="ft3-activity-error" role="alert">'+html(error)+'</p>':'')+
+ '<section class="ft3-activity-pulse" aria-labelledby="ft3-activity-pulse-title"><div class="ft3-activity-section-heading"><div><span>DAILY SNAPSHOT</span><h3 id="ft3-activity-pulse-title">Today’s Pulse</h3></div><small>Counts from the loaded authorized event page</small></div><div class="ft3-activity-pulse-grid">'+pulse('Submitted',model?model.daily.submitted:'—','↗')+pulse('Approved',model?model.daily.approved:'—','✓')+pulse('Rejected',model?model.daily.rejected:'—','×')+pulse('Completed',model?model.daily.completed:'—','●')+'</div></section>'+
+ '<div class="ft3-activity-layout"><main class="ft3-activity-feed"><section class="ft3-activity-explorer" aria-label="Search and filter audit events"><div class="ft3-activity-section-heading"><div><span>EVENT REGISTER</span><h3>Audit timeline</h3></div><small>'+(model?model.visible.length+' matching events':'Awaiting event data')+'</small></div><label class="ft3-activity-search-label" for="ft3-activity-search">Search activity</label><div class="ft3-activity-search-wrap"><span aria-hidden="true">⌕</span><input id="ft3-activity-search" type="search" placeholder="Search actor, event, vehicle or request reference…" maxlength="120"'+(model?' value="'+html(model.query)+'"':' disabled')+'></div><div class="ft3-activity-filter-heading"><span>FILTER BY EVENT</span><small>Choose a status to narrow the timeline</small></div><div class="ft3-activity-filters" aria-label="Activity type filters">'+link('all','All',model?model.counts.all:'—',model?.type)+link('submitted','Submitted',model?model.counts.submitted:'—',model?.type)+link('approved','Approved',model?model.counts.approved:'—',model?.type)+link('rejected','Rejected',model?model.counts.rejected:'—',model?.type)+link('completed','Completed',model?model.counts.completed:'—',model?.type)+'</div></section>'+
+ '<div class="ft3-activity-results">'+(model?groupMarkup('Today',rows.today,model)+groupMarkup('THIS WEEK',rows.week,model)+groupMarkup('Earlier',rows.earlier,model):'<p class="ft3-activity-unavailable" role="status">A signed FuelTrack module Admin session is required to load its authoritative activity stream. No audit records or totals are inferred from Board items.</p>')+(model?'<p class="ft3-activity-unavailable" data-ft3-activity-empty role="status"'+(model.visible.length?' hidden':'')+'>No matching events in the loaded authorized history. Try a different search term or event filter.</p>':'')+'</div></main>'+
+ '<aside class="ft3-activity-insights" aria-label="Activity insights"><section class="ft3-activity-hours"><div class="ft3-activity-section-heading"><div><span>DAILY DISTRIBUTION</span><h3>Hourly Activity</h3></div><span class="ft3-activity-today-tag">TODAY</span></div>'+(model?hourChart(model):'<div class="ft3-activity-chart-empty">No verified activity data</div>')+'<div class="ft3-activity-hour-labels"><span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>11 PM</span></div><p>Events are grouped by the hour they were recorded in Philippine time.</p></section><section class="ft3-activity-integrity"><span class="ft3-activity-integrity-icon" aria-hidden="true">◈</span><div><strong>Audit data integrity</strong><p>Events are read from the signed FuelTrack audit stream. Historical records are not reconstructed from Board items.</p></div></section></aside></div>'+
+ '<footer class="ft3-activity-footnote">This view reflects the latest authorized event page returned by the server. Older events may exist. Audit Export includes only the matching records from the currently loaded page.</footer></section>';
 }
-const cell=v=>{const s=String(v??'');const safe=/^[\s]*[=+@\-\t\r]/.test(s)?"'"+s:s;
- return '"'+safe.replaceAll('"','""')+'"';};
-export function fuelTrackActivityCsv(model){
- if(!model)return null;
- const header=['Event ID','Timestamp','Event Type','Actor','Title','Message','Request ID'];
- const lines=model.visible.map(e=>[e.id,e.at,e.eventType,e.actor,e.title,e.message,e.requestId]);
- return '\uFEFF'+[header,...lines].map(r=>r.map(cell).join(',')).join('\r\n');
-}
+const cell=value=>{const text=String(value??'');const safe=/^[\s]*[=+@\-\t\r]/.test(text)?"'"+text:text;return '"'+safe.replaceAll('"','""')+'"';};
+export function fuelTrackActivityCsv(model){if(!model)return null;const header=['Event ID','Timestamp','Event Type','Actor','Title','Message','Request ID'];const lines=model.visible.map(event=>[event.id,event.at,event.eventType,event.actor,event.title,event.message,event.requestId]);return '\uFEFF'+[header,...lines].map(row=>row.map(cell).join(',')).join('\r\n');}
