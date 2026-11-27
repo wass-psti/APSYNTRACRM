@@ -1,0 +1,33 @@
+name: CP-MS-CRM-04B.5A live pricing asset readback
+on:
+  push:
+    branches: [verification/cp-ms-crm-04b5a-live-pages]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: 116f4132e1270a4066bbed8369eee69dfe11c6b9
+          persist-credentials: false
+      - name: Compare public Pages responses with deployed source bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          root='https://wass-psti.github.io/APSYNTRACRM'
+          revision='116f4132e1270a4066bbed8369eee69dfe11c6b9'
+          test "$(git rev-parse HEAD)" = "$revision"
+          for path in index.html frontend/app.js frontend/apps/MaterialSourcing/pricing-panel.js frontend/material-sourcing-application.js frontend/material-sourcing-detail-tabs.js; do
+            curl --fail --silent --show-error --compressed --max-time 20 --retry 2 --proto '=https' "$root/$path?cp-ms-crm-04b5a=$revision" -o "$tmp/asset"
+            cmp "$path" "$tmp/asset"
+            printf 'LIVE_ASSET_MATCH %s ' "$path"
+            sha256sum "$tmp/asset" | cut -d' ' -f1
+          done
+          grep -Fq 'pricing-panel.js?v=cp-ms-crm-04b5' frontend/app.js
+          grep -Fq 'mrh_capture_latest_fx' frontend/apps/MaterialSourcing/pricing-panel.js
+          echo CP_MS_CRM_04B5A_LIVE_ASSET_READBACK_PASS
