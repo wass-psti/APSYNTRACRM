@@ -89,3 +89,16 @@ test('historical disposable task and viewer fixtures exercise the deployed migra
   assert.equal(clean(installed.slice(offset+marker.length)),clean(read(candidate)),migration+' runtime body differs');
  }
 });
+
+test('partial board pages and out-of-scope items are explicitly distinguished from a complete source',()=>{
+ const d=fixture();d.pagination={has_more:true,next_cursor:'synthetic-cursor',total_count:5};
+ const r=reconcileBoard(d,scope);
+ assert.equal(r.itemsComplete,false);assert.equal(r.records.length,1);
+ delete d.pagination;assert.equal(reconcileBoard(d,scope).itemsComplete,true);
+});
+test('wrong-type source labels are unsupported rather than copied as arbitrary objects',()=>{
+ const d=fixture();const column=d.columns.find(c=>c.name==='Source Type');
+ d.values.find(v=>v.column_id===column.id).value={unrelated:'not a source'};
+ const value=reconcileBoard(d,scope).records[0].publicValues.source;
+ assert.deepEqual({state:value.state,value:value.value},{state:'unsupported',value:null});
+});

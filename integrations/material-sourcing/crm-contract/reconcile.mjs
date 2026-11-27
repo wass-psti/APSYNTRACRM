@@ -6,6 +6,7 @@
 import {MATERIAL_SOURCING_BOARD_ID, MATERIAL_SOURCING_GROUP,
  MATERIAL_SOURCING_EXISTING, MATERIAL_SOURCING_ADDITIONS} from '../../../frontend/material-sourcing-schema-plan.js';
 import {materialAddPublicColumns} from '../../../frontend/material-sourcing-add-material.js';
+import {boardItemsComplete} from '../../../frontend/board/presentation/grid.js';
 import {normalizeProtectedSourcingRead} from '../../../frontend/material-sourcing-application.js';
 
 export const PUBLIC_FIELDS=Object.freeze({
@@ -33,11 +34,11 @@ const present=(value,extra={})=>({state:'present',value,...extra});
 const date=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&Number.isFinite(Date.parse(v+'T00:00:00Z'))&&new Date(v+'T00:00:00Z').toISOString().slice(0,10)===v;
 function unique(rows,label){
  const seen=new Set();
- for(const row of rows){assert(row&&uuid.test(row.id||'')&&!seen.has(row.id),'Invalid or duplicate '+label+' identity');seen.add(row.id);}
+ for(const row of rows){assert(row&&uuid.test(row.id||'')&&!seen.has(row.id.toLowerCase()),'Invalid or duplicate '+label+' identity');seen.add(row.id.toLowerCase());}
 }
 function readPublic(value,kind){
  if(value===null||value===undefined)return absent();
- if(kind==='source')return ['Local','Import'].includes(value)?present(value):{state:'unsupported',value};
+ if(kind==='source')return ['Local','Import'].includes(value)?present(value):{state:'unsupported',value:typeof value==='string'?value:null};
  if(kind==='number')return typeof value==='number'&&Number.isFinite(value)?present(value,{precision:'legacy-json-number'}):{state:'unsupported',value:null};
  if(kind==='date')return date(value)?present(value):{state:'unsupported',value:null};
  return typeof value==='string'?present(value):{state:'unsupported',value:null};
@@ -96,7 +97,7 @@ export function reconcileBoard(detail,{workspaceId,commercialByItem=new Map()}={
    // Explicitly distinguish unrequested related records from empty results.
    tasks:null,activity:null,starred:null});
  }
- return {scope,records,deferred,originalColumns:PRESERVED_DOMAIN_COLUMNS.map(name=>{
+ return {scope,records,deferred,itemsComplete:boardItemsComplete(detail),originalColumns:PRESERVED_DOMAIN_COLUMNS.map(name=>{
   const c=detail.columns.find(c=>c.name===name);
   const expected=MATERIAL_SOURCING_EXISTING.find(f=>f.name===name);
   return {name,id:c?.id??null,compatible:c?.data_type===expected.type};

@@ -75,3 +75,5 @@ Run the focused reconciliation tests, existing MRH frontend tests, disposable MR
 ### Disposable test harness clarification
 
 The original task and commercial-viewer fixtures intentionally use minimal synthetic tables and (for tasks) out-of-scope groups. Historical production installation guards require the original exact board metadata and are not applicable to these runtime fixtures. CI runs the existing candidate bodies only after the JavaScript parity test proves they match the activated migration bodies (ignoring only guard prefix, comments and transaction wrapper). The atomic-create fixture runs the actual migration including its installation guard. No production guard is removed or bypassed, and no migration is executed against production.
+
+The adapter also exposes the existing CRM boardItemsComplete indicator: a paginated/partial board response cannot be used as a complete dataset. Unresolved group/archive rows are listed independently. Invalid structured values in a source-type cell are not copied into the transitional projection.
