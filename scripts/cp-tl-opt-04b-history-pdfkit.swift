@@ -45,6 +45,7 @@ for record in records {
     let requiredTokens = [
         company, title, documentNumber, "Revision " + String(revision),
         marker, termsMarker, itemMarker, remarksMarker, total,
+        record["currency"] as! String,
         "APPROVED", "CP-TL-OPT-04B Historical Acceptance Creator"
     ]
     for token in requiredTokens {
