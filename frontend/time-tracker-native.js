@@ -811,6 +811,26 @@ export class TimeTrackerNativeClient{
   await checkIdentity(this.auth,this.api,before.access,boardId);
   return Object.freeze({id:receipt.id,status:receipt.status});
  }
+ async cancelOvertimeDecision(boardId,requestId,expectedStatus,reason){
+  if(!TT_OT_WRITES_ACCEPTED||!uuid.test(requestId||'')||!['Approved','Rejected'].includes(expectedStatus)||
+     typeof reason!=='string'||reason.trim().length<1||reason.trim().length>500)
+   deny('Invalid overtime cancellation');
+  const before=await this.snapshot(boardId);
+  if(before.access.otContractActive!==true||
+     !before.otRequests.some(row=>row.id===requestId&&row.status===expectedStatus&&row.canDeleteOt===true))
+   deny('OT cancellation is outside the signed review scope; refresh and try again');
+  await checkIdentity(this.auth,this.api,before.access,boardId);
+  const receipt=await this.api.rpc('timetracker_ot_cancel_decision',{
+   p_board_id:boardId,p_request_id:requestId,p_expected_status:expectedStatus,p_reason:reason.trim()
+  });
+  if(!isRecord(receipt)||receipt.id!==requestId||receipt.workspaceId!==before.access.workspaceId||
+     receipt.status!=='Withdrawn'||receipt.previousStatus!==expectedStatus||
+     receipt.cancelledBy!==before.access.userId||
+     !['request_only','other_approval_retained','active_regular_cutoff','completed_credit_capped'].includes(receipt.attendanceEffect))
+   deny('Invalid signed OT cancellation receipt');
+  await checkIdentity(this.auth,this.api,before.access,boardId);
+  return Object.freeze({id:receipt.id,status:receipt.status,attendanceEffect:receipt.attendanceEffect});
+ }
  async decideOvertime(boardId,requestId,decision){
   if(!TT_OT_WRITES_ACCEPTED)deny('Overtime decisions require signed backend acceptance');
   if(!uuid.test(requestId||'')||!['Approved','Rejected'].includes(decision))

@@ -304,3 +304,45 @@ test('100 delayed Clock-only snapshots are discarded after OT navigation',async(
   assert.equal(otSnapshot.access.durationOtContractActive,true);
  }
 });
+
+test('decided OT deletion controls require signed row-level cancellation permission',()=>{
+ const request={id:'cancel-1',ownerId:'cloud:another',name:'Employee',date:'2026-11-27',
+  durationMinutes:120,task:'Test cancellation',otPolicy:'duration-v1'};
+ for(const status of ['Approved','Rejected','Submitted']){
+  for(const canDeleteOt of [true,false]){
+   const html=renderTimeTrackerOvertime({requests:[{...request,status,canDeleteOt}],
+    access:{...access,otContractActive:true},filters:{status},now});
+   assert.equal(html.includes('data-action="tt-ot-cancel-decision"'),
+    status!=='Submitted'&&canDeleteOt);
+  }
+ }
+ assert.doesNotMatch(renderTimeTrackerOvertime({requests:[{...request,status:'Approved',canDeleteOt:true}],
+  access:{...access,otContractActive:false},filters:{status:'Approved'},now}),/data-action="tt-ot-cancel-decision"/);
+});
+
+test('actual decided OT click dispatcher confirms, records a reason and honors the signed cancellation flag',async()=>{
+ const start=decisionApp.indexOf(" case 'tt-ot-cancel-decision':");
+ const end=decisionApp.indexOf(" case 'tt-ot-approve':");
+ assert.ok(start>=0&&end>start);
+ const dispatch=new AsyncFunction('name','button','state','TT_OT_WRITES_ACCEPTED',
+  'confirm','prompt','render','timeTracker','loadTimeTracker','toast',
+  'switch(name){'+decisionApp.slice(start,end)+'}');
+ for(const status of ['Approved','Rejected']){
+  for(const permission of [true,false]){
+   const calls=[];
+   const state={view:'board',tab:'attendance',ttView:'ot',ttBusy:false,boardId:'board',
+    ttAttendance:{status:'VERIFIED_READ',access:{otContractActive:true},
+     otRequests:[{id:requestId,status,canDeleteOt:permission}]}};
+   await dispatch('tt-ot-cancel-decision',{dataset:{id:requestId}},state,true,
+    ()=>{calls.push('confirm');return true;},()=>{calls.push('reason');return 'Incorrect approval';},
+    ()=>calls.push('render'),
+    {cancelOvertimeDecision:async(...args)=>{
+     calls.push(args);return {attendanceEffect:'request_only'};
+    }},async()=>calls.push('reload'),()=>calls.push('toast'));
+   assert.deepEqual(calls.filter(Array.isArray),permission?[['board',requestId,status,'Incorrect approval']]:[]);
+   assert.equal(calls.includes('confirm'),permission);
+   assert.equal(calls.includes('reload'),permission);
+   assert.equal(state.ttBusy,false);
+  }
+ }
+});

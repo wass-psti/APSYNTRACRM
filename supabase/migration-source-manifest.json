@@ -2436,6 +2436,13 @@
       "file": "20261127024948_cp_tl_opt_01_cursor_validation_fix.sql",
       "bytes": 13152,
       "sha256": "70a1e91638ccae634ce77623096a8422582df194682f173791323310a25d9a09"
+    },
+    {
+      "version": "20261127150000",
+      "name": "cp_tt_ot_decision_cancellation",
+      "file": "20261127150000_cp_tt_ot_decision_cancellation.sql",
+      "bytes": 13260,
+      "sha256": "05aee1e07412c6bcdab591eb2e6ff32b616ee3d840fce97370f4971d45f91257"
     }
   ],
   "applied_only": [

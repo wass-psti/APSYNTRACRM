@@ -11464,6 +11464,34 @@ async function action(name,button){
   }finally{state.ttBusy=false;render();}
   break;
  }
+ case 'tt-ot-cancel-decision':{
+  if(!TT_OT_WRITES_ACCEPTED||state.ttBusy||state.view!=='board'||state.tab!=='attendance'||
+     state.ttView!=='ot'||state.ttAttendance?.status!=='VERIFIED_READ')return;
+  const requestId=button.dataset.id;
+  const request=state.ttAttendance.otRequests?.find(row=>row.id===requestId&&
+   ['Approved','Rejected'].includes(row.status)&&row.canDeleteOt===true);
+  if(!request||state.ttAttendance.access?.otContractActive!==true){
+   toast('This overtime request is not available for cancellation. Refresh and try again.',true);return;
+  }
+  const explanation=request.status==='Approved'?
+   'This revokes approved OT. A matching active session returns to its regular cutoff; completed credited hours may be capped at nine. Original timestamps and the audit trail are preserved.':
+   'This removes the rejected request without changing attendance.';
+  if(!confirm('Delete this overtime request? '+explanation))return;
+  const reason=prompt('Enter the reason for deleting this overtime decision.');
+  if(reason===null)return;
+  if(!reason.trim()||reason.trim().length>500){toast('Enter a cancellation reason (1–500 characters).',true);return;}
+  state.ttBusy=true;render();
+  try{
+   const receipt=await timeTracker.cancelOvertimeDecision(state.boardId,requestId,request.status,reason);
+   await loadTimeTracker();
+   const messages={request_only:'Overtime removed. No attendance credit changed.',
+    other_approval_retained:'Overtime removed. Another approved request remains; attendance was not reduced.',
+    active_regular_cutoff:'Overtime removed. The regular clock-out cutoff will be used by the scheduler.',
+    completed_credit_capped:'Overtime removed. Credited duration corrected to nine hours; original clock-out preserved.'};
+   toast(messages[receipt.attendanceEffect]);
+  }finally{state.ttBusy=false;render();}
+  break;
+ }
  case 'tt-ot-approve':
  case 'tt-ot-reject':{
   if(!TT_OT_WRITES_ACCEPTED||state.ttBusy||
