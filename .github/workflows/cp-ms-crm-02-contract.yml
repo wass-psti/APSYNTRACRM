@@ -1,0 +1,70 @@
+name: CP-MS-CRM-02 contract reconciliation
+on:
+  pull_request:
+    paths:
+      - 'integrations/material-sourcing/crm-contract/**'
+      - 'frontend/material-sourcing-*.js'
+      - 'supabase/migrations/*mrh*'
+      - '.github/workflows/cp-ms-crm-02-contract.yml'
+  push:
+    branches: [main, integration/cp-ms-crm-02]
+    paths:
+      - 'integrations/material-sourcing/crm-contract/**'
+      - 'frontend/material-sourcing-*.js'
+      - 'supabase/migrations/*mrh*'
+      - '.github/workflows/cp-ms-crm-02-contract.yml'
+permissions:
+  contents: read
+jobs:
+  reconcile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Field and identity mapping plus existing CRM tests
+        run: |
+          node --test integrations/material-sourcing/crm-contract/reconcile.test.mjs frontend/tests/material-sourcing-*.test.mjs
+      - name: Disposable PostgreSQL — existing MRH contracts
+        run: |
+          set -eu
+          run_contract() {
+            name="ms-crm02-$1"
+            fixture="$2"
+            candidate="$3"
+            destination="$4"
+            docker run --rm -d --name "$name" -e POSTGRES_PASSWORD=disposable_only postgres@sha256:ff87138949ad9a46f32ff23bd6852b52ce024a13dffe9b4087be98292cdd3b4f >/dev/null
+            for i in $(seq 1 60); do
+              if docker exec "$name" pg_isready -U postgres >/dev/null 2>&1; then break; fi
+              sleep 1
+            done
+            docker exec "$name" pg_isready -U postgres
+            docker cp "$candidate" "$name:$destination"
+            docker exec -i "$name" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 < "$fixture"
+            docker stop "$name" >/dev/null
+          }
+          run_contract atomic sql/tests/mrh-atomic-material-disposable.sql supabase/migrations/20261110173953_mrh_material_atomic_create_20261111.sql /tmp/mrh-atomic.sql
+          run_contract tasks sql/tests/mrh-board-item-tasks-disposable.sql supabase/migrations/20261110062757_mrh_board_item_tasks_activation_20261110.sql /tmp/mrh-task-candidate.sql
+          run_contract viewer sql/tests/mrh-sourcing-board-viewer-disposable.sql supabase/migrations/20261111041157_mrh_board_viewer_commercial_read_20261111.sql /tmp/mrh-board-viewer-candidate.sql
+      - name: Disposable PostgreSQL — exact pricing compatibility
+        run: |
+          set -eu
+          name=ms-crm02-pricing
+          docker run --rm -d --name "$name" -e POSTGRES_PASSWORD=disposable_only postgres@sha256:ff87138949ad9a46f32ff23bd6852b52ce024a13dffe9b4087be98292cdd3b4f >/dev/null
+          for i in $(seq 1 60); do
+            if docker exec "$name" pg_isready -U postgres >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          docker exec "$name" pg_isready -U postgres
+          for f in integrations/material-sourcing/supabase/migrations/*.sql integrations/material-sourcing/supabase/seed.sql integrations/material-sourcing/crm-contract/pricing-contract.sql; do
+            docker exec -i "$name" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 < "$f"
+          done
+          docker stop "$name" >/dev/null
+      - name: Clean disposable containers
+        if: always()
+        run: |
+          for suffix in atomic tasks viewer pricing; do docker rm -f "ms-crm02-$suffix" >/dev/null 2>&1 || true; done
