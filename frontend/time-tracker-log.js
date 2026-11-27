@@ -21,10 +21,9 @@ const safeRows=rows=>Array.isArray(rows)?rows.filter(r=>r&&validTime(r.clockIn))
  */
 export function timeTrackerLogRowsForSnapshot(snapshot){
  if(snapshot?.status!=='VERIFIED_READ')return [];
- const standard=snapshot.log?.rows||snapshot.records||[];
- if(!['System Admin','IT Administrator'].includes(snapshot.access?.moduleRole))
-  return standard;
- const signed=snapshot.ojtAdminAttendance?.records;
+ const standard=snapshot.sharedRead?.log?.rows||snapshot.log?.rows||snapshot.records||[];
+ const signed=['System Admin','IT Administrator'].includes(snapshot.access?.moduleRole)?
+  snapshot.ojtAdminAttendance?.records:snapshot.sharedRead?.internAttendance;
  if(!Array.isArray(signed))return standard;
  const ojtRows=signed.filter(r=>r&&typeof r.id==='string'&&
   typeof r.internId==='string'&&typeof r.name==='string'&&validTime(r.clockIn)&&

@@ -2457,6 +2457,13 @@
       "file": "20261127120000_cp_tl_opt_04_document_template_render_snapshots.sql",
       "bytes": 46172,
       "sha256": "fa7da4da057afd6af42edcde8ebba25bcbf5d467486d11f6ff7570b827f0db6f"
+    },
+    {
+      "version": "20261127160000",
+      "name": "cp_tt_shared_read_visibility",
+      "file": "20261127160000_cp_tt_shared_read_visibility.sql",
+      "bytes": 5199,
+      "sha256": "4439c4a6c4b6320a4da5e4313fa89c48ea1952b713e8497479c3bfbeed48858c"
     }
   ],
   "applied_only": [

@@ -157,6 +157,21 @@ function normalizeClockSnapshot(response,access,boardId){
   deny('Empty TimeTracker Clock snapshot contract invalid');
  return null;
 }
+/** A separate signed, read-only contract; never used for Clock or mutation authority. */
+export function projectTimeTrackerSharedRead(response,access,internId=null){
+ if(!isRecord(response)||response.contract!=='tt-shared-read-1'||
+    response.actorId!==access.userId||response.workspaceId!==access.workspaceId||
+    response.boardId!==access.boardId||response.internId!==internId||
+    !Array.isArray(response.directory)||!Array.isArray(response.internAttendance)||
+    response.internAttendance.length>25000||!Array.isArray(response.overtime))
+  deny('Signed shared TimeTracker read identity or schema mismatch');
+ const log=projectTimeTrackerLog({value:response.attendance,directory:response.directory,
+  userId:access.userId,moduleRole:access.moduleRole,sharedRead:true});
+ const overtime=projectTimeTrackerOtRows(response.overtime.map(r=>({
+  ...r,canReviewOt:false,canReviewDuration:false,canWithdraw:false
+ })));
+ return Object.freeze({log,internAttendance:response.internAttendance,overtime});
+}
 export class TimeTrackerNativeClient{
  constructor({auth,api}){this.auth=auth;this.api=api;}
  async access(boardId,{nativeContext=null,includeDirectory=true}={}){
@@ -219,6 +234,20 @@ export class TimeTrackerNativeClient{
   }catch{
    // Old or unaccepted backend, revoked role/session, and network failures are read-only.
    return false;
+  }
+ }
+ async sharedReadSnapshot(boardId,access,internId=null){
+  try{
+   const response=await this.api.rpc('timetracker_shared_read_snapshot',{
+    p_board_id:boardId,p_intern_id:internId
+   });
+   const result=projectTimeTrackerSharedRead(response,access,internId);
+   await checkIdentity(this.auth,this.api,access,boardId);
+   return result;
+  }catch(error){
+   if(/PGRST202|Could not find the function|Unexpected RPC timetracker_shared_read_snapshot/.test(String(error?.message||error)))
+    return null;
+   throw error;
   }
  }
  async snapshot(boardId,{clockOnly=false,nativeContext=null}={}){
@@ -416,8 +445,18 @@ export class TimeTrackerNativeClient{
     if(!/PGRST202|Could not find the function|Unexpected RPC timetracker_ojt_/.test(String(error?.message||error)))throw error;
    }
   }
+  let sharedRead=null;
+  if(!clockOnly&&!designatedSharedOjt&&['Employee','OJT'].includes(access.moduleRole)){
+   sharedRead=await this.sharedReadSnapshot(boardId,access);
+   if(sharedRead){
+    // Preserve existing signed own-row capabilities; peer rows are read-only.
+    const byId=new Map(sharedRead.overtime.map(r=>[r.id,r]));
+    for(const request of otRequests)byId.set(request.id,request);
+    otRequests=[...byId.values()];
+   }
+  }
   await checkIdentity(this.auth,this.api,access,boardId);
-  return {status:'VERIFIED_READ',clockOnly:clockOnly===true,
+  return {status:'VERIFIED_READ',clockOnly:clockOnly===true,sharedRead,
    access:{...access,...otAccess,
     attendanceWritesAccepted:designatedSharedOjt?false:attendanceWritesAccepted,
     employeeDepartment,employees,departmentCatalog},

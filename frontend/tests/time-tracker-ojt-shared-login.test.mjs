@@ -191,9 +191,18 @@ test('only the designated Employee in OJT department qualifies for the shared lo
 test('app wires dropdown selection, signed attendance and admin roster actions',()=>{
  assert.match(app,/root\.addEventListener\('change',async event=>/);
  assert.match(app,/tt-ojt-intern-select/);
- assert.match(app,/timeTrackerOjt\.snapshot\(scope,id\)/);
+ assert.match(app,/timeTrackerOjtSnapshotWithShared\(scope,id\)/);
  assert.match(app,/timeTrackerOjt\.commit\(scope,selected\.id/);
- assert.match(app,/timeTrackerOjt\.snapshot\(scope,selected\.id/);
+ assert.match(app,/timeTrackerOjtSnapshotWithShared\(scope,selected\.id\)/);
+ const sharedStart=app.indexOf('async function timeTrackerOjtSnapshotWithShared(');
+ const sharedEnd=app.indexOf('function timeTrackerOjtAdminScope(',sharedStart);
+ assert.ok(sharedStart>=0&&sharedEnd>sharedStart);
+ const shared=app.slice(sharedStart,sharedEnd);
+ assert.match(shared,/const personal=await timeTrackerOjt\.snapshot\(scope,internId\)/);
+ assert.match(shared,/timeTracker\.sharedReadSnapshot\(scope\.boardId,access,internId\)/);
+ assert.ok(shared.indexOf('timeTrackerOjt.snapshot(')<shared.indexOf('timeTracker.sharedReadSnapshot('));
+ assert.match(shared,/return \{\.\.\.personal,sharedRead\}/);
+ assert.doesNotMatch(shared,/captureAttendanceGeo|timeTrackerOjt\.commit/);
  assert.match(app,/timeTrackerOjt\.setIntern\(scope/);
  assert.match(app,/timeTrackerOjt\.setGroup\(scope/);
  assert.match(app,/Select your name from the list before starting/);
