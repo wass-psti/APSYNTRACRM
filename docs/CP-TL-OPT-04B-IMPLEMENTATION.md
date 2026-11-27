@@ -45,10 +45,43 @@ The automatic capture trigger is attached to `public.tradelink_documents` for in
 
 - Existing TradeLink workflow approval and revision rules remain unchanged.
 - The Print action continues to use the existing approved-revision and Board checks.
-- No new roles, permissions, or authorization grants were introduced.
+- No new roles or module permissions were introduced. The snapshot RPC is executable by the existing `authenticated` role and reuses the existing TradeLink document-view capability; anonymous execution is not granted.
 - No document is approved, issued, or persisted by the print renderer.
 - No gradient descent, backpropagation, model training, retraining, fine-tuning, or model-parameter update mechanism is introduced.
 
-## Acceptance boundary
+## Final acceptance and closeout — 2026-11-27
 
-The database foundation and frontend integration are implemented. Final closeout requires the current GitHub Actions disposable PostgreSQL and 18-case Chromium/PDFKit workflows to pass, followed by successful GitHub Pages deployment verification.
+<badge> CLOSED </badge>
+
+All CP-TL-OPT-04B acceptance gates are verified.
+
+### Production database read-only verification
+
+- Migration `20261127120000` is present in `supabase_migrations.schema_migrations`.
+- The production database contains 63 immutable document revision snapshots and 63 matching render snapshots.
+- Source classification is 47 legacy-derived and 16 legacy-defaulted.
+- Missing snapshots: 0. Orphan render snapshots: 0.
+- All 63 company/template/profile-version pairings match.
+- The automatic capture trigger and immutable update/delete and truncate guards are enabled.
+- The signed snapshot RPC is executable by `authenticated`; `anon` cannot execute it.
+- These closeout queries were read-only; no production business document was created or revised for testing.
+
+### CI and deployment evidence
+
+| Gate | Result | Evidence |
+|---|---|---|
+| Disposable PostgreSQL 17 migration and backfill | **PASS** | Run [46007800969](https://github.com/wass-psti/APSYNTRACRM/actions/runs/46007800969), main commit `6a355918` |
+| 63-row backfill, new revision capture, RPC and immutable guards | **PASS** | PostgreSQL acceptance log |
+| 18 Chromium PDFs across 3 companies × 6 modules | **PASS** | Run [46011117027](https://github.com/wass-psti/APSYNTRACRM/actions/runs/46011117027), main commit `28e386d6` |
+| PDFKit validation of all 18 PDFs | **PASS** | Same render-matrix run |
+| Historical revision 4 before/after revision 5 reproduction | **PASS** | Same render-matrix run; Chromium and PDFKit |
+| Production frontend build | **PASS** | Same render-matrix run |
+| GitHub Pages build and deployment | **PASS** | Run [46014087521](https://github.com/wass-psti/APSYNTRACRM/actions/runs/46014087521), current main commit `0e383a59` |
+
+The successful render-matrix run includes the snapshot, saved-output and print-flow tests. It generated all 18 PDFs, verified company identity, module, document number, page dimensions, terms, remarks and approval state, and confirmed that historical revision 4 rendered identically before and after revision 5. No TradeLink source files changed between the successful render-matrix commit and the current main commit.
+
+The first render-matrix attempt exposed a quotation-renderer syntax error. That defect was corrected in the subsequent renderer repair; the later full render-matrix run passed every step.
+
+### Closeout
+
+CP-TL-OPT-04B is **CLOSED**. The immutable database foundation, historical backfill, exact-revision read path, saved-document PDF integration, 18 rendering combinations, historical reproduction checks, production build and deployment verification have passed. No separate TradeLink implementation is currently required to complete this initiative.
