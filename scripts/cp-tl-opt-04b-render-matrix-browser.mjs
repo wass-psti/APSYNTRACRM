@@ -28,7 +28,7 @@ const profiles=[
   logoGitBlobSha:'ac1c97ed05b379a20caaccdbc3e3f02be8aebf89',
   quotationLogoAsset:'profiles/v1/watchdog-sales-quotation-ee2cb021cacdffd5c0240d8ede81ee58892db4b9.png',
   quotationLogoGitBlobSha:'ee2cb021cacdffd5c0240d8ede81ee58892db4b9',
-  accent:'#ef4155',tableBackground:'#fce5e7',tableText:'#1644a3',
+  accent:'#ef4155',quotationAccent:'#ff3d57',tableBackground:'#fce5e7',tableText:'#1644a3',
   ruleColor:'#2d65d5',termsMode:'new-page'
  },
  {
@@ -41,7 +41,7 @@ const profiles=[
   logoGitBlobSha:'f55506ddd9b2569658f2eecac7f081cc08ba3a19',
   quotationLogoAsset:'profiles/v1/watchdog-opc-quotation-6d43decfa6a476219c2cae149311c84bd7109c57.png',
   quotationLogoGitBlobSha:'6d43decfa6a476219c2cae149311c84bd7109c57',
-  accent:'#14b866',tableBackground:'#e3f7e9',tableText:'#244f78',
+  accent:'#14b866',quotationAccent:'#00d748',tableBackground:'#e3f7e9',tableText:'#244f78',
   ruleColor:'#2f68c4',termsMode:'flow'
  },
  {
@@ -54,7 +54,7 @@ const profiles=[
   logoGitBlobSha:'5636a6eafb8cb98994546dc2b7b55c9d0dd506e9',
   quotationLogoAsset:'profiles/v1/plc-systems-quotation-62421d422191624fa335e1b6bfaf8fecbdb2cd50.png',
   quotationLogoGitBlobSha:'62421d422191624fa335e1b6bfaf8fecbdb2cd50',
-  accent:'#0b9a9d',tableBackground:'#e3f6f5',tableText:'#2854a4',
+  accent:'#0b9a9d',quotationAccent:'#009999',tableBackground:'#e3f6f5',tableText:'#2854a4',
   ruleColor:'#4772c7',termsMode:'flow'
  }
 ];
@@ -156,7 +156,7 @@ try{
    assert.ok(markup.includes(marker+'-TERMS'));
    assert.ok(markup.includes(marker+'-REMARKS'));
    assert.ok(markup.includes(profile.name.replaceAll('&','&amp;')));
-   assert.ok(markup.includes(profile.accent));
+   assert.ok(stylesheet.includes(profile.accent));
    assert.ok(markup.includes(module.type==='quotation'?profile.quotationLogoAsset:profile.logoAsset));
    const logoMatches=[...markup.matchAll(/src="(file:[^"]+)"/g)];
    for(const match of logoMatches){
@@ -172,7 +172,8 @@ try{
     assert.equal(await article.getAttribute('data-tradelink-template-version'),'v1.42.0');
     assert.equal(await article.getAttribute('data-tradelink-profile-version'),'1');
     assert.equal(await article.getAttribute('data-tradelink-render-snapshot-source'),'captured');
-    assert.equal(await article.evaluate(node=>getComputedStyle(node).getPropertyValue('--tl-official-accent').trim()),profile.accent);
+    const expectedAccent=module.type==='quotation'?profile.quotationAccent:profile.accent;
+    assert.equal(await article.evaluate(node=>getComputedStyle(node).getPropertyValue('--tl-official-accent').trim()),expectedAccent);
     assert.equal(await article.locator('img').count(),1);
     assert.match(await article.locator('img').getAttribute('src'),/^data:image\/png;base64,/);
     assert.ok((await page.locator('body').innerText()).includes(marker+'-TERMS'));

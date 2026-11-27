@@ -1,4 +1,4 @@
-import {renderTradeLinkQuotationPrint} from './tradelink/quotation-print.js?v=cp-tl-universal-edit-01k-20261126-01-cp-tl-approval-02-20261127';
+import {renderTradeLinkQuotationPrint} from './tradelink/quotation-print.js?v=cp-tl-opt-04b-20261127-01';
 import {GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY} from './tradelink/approval-policy.js?v=cp-tl-universal-edit-01k-20261126-01';
 /**
  * CP-TL-09B — Official TradeLink output from an authenticated, revision-matched
@@ -8,7 +8,7 @@ import {GM_SALES_EXEMPT_POLICY,GM_CREATOR_APPROVAL_FREE_POLICY} from './tradelin
  */
 import {ApiError} from './session.js';
 import {TRADELINK_MAX_ITEMS} from './tradelink/limits.js';
-import {normalizeTradeLinkDomainRow,normalizeTradeLinkDocumentRenderSnapshot} from './tradelink-domain-client.js?v=cp-tl-universal-edit-01k-20261126-01';
+import {normalizeTradeLinkDomainRow,normalizeTradeLinkDocumentRenderSnapshot} from './tradelink-domain-client.js?v=cp-tl-opt-04b-20261127-01';
 import {calculateTradeLinkAmounts,formatTradeLinkAmount,TRADELINK_CURRENCIES} from './tradelink-finance.js';
 import {resolveTradeLinkOfficialTemplate,TRADELINK_DEFAULT_TERMS,
  TRADELINK_TEMPLATE_VERSION} from './tradelink-official-templates.js';
@@ -195,7 +195,7 @@ export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId
   (renderSnapshot&&((data.vendorId&&data.vendorId!==company.id)||
    (data.templateId&&data.templateId!==template.id)||
    (typeof data.terms==='string'&&data.terms!==renderSnapshot.snapshot.terms))))
-  throw new ApiError('Saved TradeLink official profile does not match the selected revision's company/template snapshot.',409);
+  throw new ApiError("Saved TradeLink official profile does not match the selected revision's company/template snapshot.",409);
  const logo=logoUrl(company.logoAsset);
  const currency=TRADELINK_CURRENCIES.includes(data.currency)?data.currency:'—';
  const terms=renderSnapshot?renderSnapshot.snapshot.terms:
@@ -266,7 +266,7 @@ export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId
   'data-tradelink-company-profile="'+safe(company.id)+'" '+
   'data-tradelink-profile-version="'+safe(renderSnapshot?.snapshot.profileVersion??'legacy')+'" '+
   'data-tradelink-render-snapshot-source="'+safe(renderSnapshot?.snapshotSource??'legacy-static')+'"'+
-  'data-tradelink-legacy-company-default="'+(legacyDefaulted?'true':'false')+'">'+
+  ' data-tradelink-legacy-company-default="'+(legacyDefaulted?'true':'false')+'">'+
   main+termsPage+'</article>';
 }
 let active=null;
@@ -295,7 +295,7 @@ export function mountTradeLinkSavedDocumentOutput(markup,{doc=document,styleshee
  const stylesheetReady=Promise.all(stylesheetLinks.map(link=>new Promise((resolve,reject)=>{
   link.addEventListener('load',resolve,{once:true});
   link.addEventListener('error',()=>reject(new ApiError('Immutable TradeLink template stylesheet could not be loaded.',503)),{once:true});
- })));
+ }))).then(()=>true).catch(()=>false);
  closeTradeLinkSavedDocumentOutput();
  const node=doc.createElement('section');node.id='tradelink-saved-print';
  node.className='tl-print-overlay';node.setAttribute('role','dialog');
@@ -325,11 +325,14 @@ export function mountTradeLinkSavedDocumentOutput(markup,{doc=document,styleshee
   if(!active||active.node!==node||typeof windowRef?.print!=='function')return;
   const status=node.querySelector('[data-tradelink-print-status]');
   try{
-   await active.stylesheetReady;
+   if(!await active.stylesheetReady){
+    if(status)status.textContent='The saved template could not be loaded. Refresh the document and retry.';
+    return;
+   }
    await Promise.allSettled([...node.querySelectorAll('img')].map(img=>img.decode?.()));
    await doc.fonts?.ready;
   }catch{
-   if(status)status.textContent='The saved template could not be loaded. Refresh the document and retry.';
+   if(status)status.textContent='The saved document resources could not be loaded. Refresh the document and retry.';
    return;
   }
   if(active?.node===node)windowRef.print();
