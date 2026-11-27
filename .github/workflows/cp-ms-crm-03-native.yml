@@ -4,6 +4,8 @@ on:
     paths:
       - 'frontend/apps/MaterialSourcing/**'
       - 'frontend/app.js'
+      - 'frontend/material-sourcing-tracker.js'
+      - 'scripts/pages-smoke.mjs'
       - 'index.html'
       - 'frontend/tests/material-sourcing-*.test.mjs'
       - 'scripts/cp-ms-crm-03-browser.mjs'
@@ -11,10 +13,12 @@ on:
       - 'integrations/material-sourcing/crm-contract/**'
       - '.github/workflows/cp-ms-crm-03-native.yml'
   push:
-    branches: [main, integration/cp-ms-crm-03]
+    branches: [main, integration/cp-ms-crm-03, integration/cp-ms-crm-03a]
     paths:
       - 'frontend/apps/MaterialSourcing/**'
       - 'frontend/app.js'
+      - 'frontend/material-sourcing-tracker.js'
+      - 'scripts/pages-smoke.mjs'
       - 'index.html'
       - 'frontend/tests/material-sourcing-*.test.mjs'
       - 'scripts/cp-ms-crm-03-browser.mjs'
@@ -50,5 +54,31 @@ jobs:
         run: |
           BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$BROWSER"
-          CHROME_BIN="$BROWSER" node scripts/cp-ms-crm-03-browser.mjs
+          MS_VISUAL_DIR="$RUNNER_TEMP/ms-visual" CHROME_BIN="$BROWSER" node scripts/cp-ms-crm-03-browser.mjs
           CHROME_BIN="$BROWSER" node scripts/priority5f-module-browser.mjs
+      - name: Capture preserved standalone reference in disposable browser
+        run: |
+          set -euo pipefail
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$BROWSER"
+          cd integrations/material-sourcing
+          npm ci --no-audit --no-fund
+          npm run build
+          npm run preview -- --port 4174 --strictPort >/tmp/ms-reference-preview.log 2>&1 &
+          PID=$!
+          trap 'kill "$PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4174/ >/dev/null; then break; fi
+            sleep 1
+          done
+          CHROMIUM_PATH="$BROWSER" APP_URL=http://127.0.0.1:4174/ node tests/browser.mjs
+          for name in desktop detail mobile; do
+            cp "tests/${name}-preview.png" "$RUNNER_TEMP/ms-visual/reference-${name}.png"
+          done
+      - name: Publish synthetic visual comparison evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cp-ms-crm-03a-visual-evidence
+          path: ${{ runner.temp }}/ms-visual/*.png
+          if-no-files-found: error
+          retention-days: 7

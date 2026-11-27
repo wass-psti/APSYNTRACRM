@@ -59,3 +59,24 @@ test('native module graph stays within the shipped frontend tree; CP02 compatibi
   assert.doesNotMatch(source,/127\.0\.0\.1|localhost|demoItems|localStorage/);
  }
 });
+
+test('reference source cards are actionable, unknown source filter is explicit, and dashboard remains in Add Material',()=>{
+ const html=render(fixture(),{source:'Local'});
+ assert.match(html,/data-action="mrh-native-source" data-source="Local" aria-pressed="true"/);
+ assert.match(html,/Record count, not cost/);
+ assert.match(html,/ms-native-ring-local/);
+ const unknown=render(fixture(),{source:'Unknown'});
+ assert.match(unknown,/SYNTHETIC-C/);assert.doesNotMatch(unknown,/SYNTHETIC-A|SYNTHETIC-B/);
+ assert.match(unknown,/1 of 3 loaded/);
+ const add=render(fixture(),{}, {view:'add'});
+ assert.match(add,/ms-native-metrics/);assert.match(add,/id="mrh-add-material-form"/);
+ assert.match(add,/data-action="mrh-show-items"/);
+ assert.doesNotMatch(add,/data-action="mrh-native-source"/);
+ assert.doesNotMatch(add,/data-action="refresh-board"/);
+ assert.doesNotMatch(add,/class="ms-native-table /);
+});
+test('live Pages hash smoke covers all three native runtime assets',()=>{
+ const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
+ for(const name of ['native-screen.js','native-screen.css','reconcile.js'])
+  assert.ok(smoke.includes('frontend/apps/MaterialSourcing/'+name));
+});
