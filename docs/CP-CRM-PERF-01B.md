@@ -26,7 +26,7 @@ Run 45976010253, commit 4edbb069eb39540299d8949bd883e9ac42cbba0c, all three jobs
 | Single | 30m | 60 | 385500 | 40 | 40/40 | 31.0ms |
 | Dual | 30m | 120 | 771120 | 80 | 80/80 | 30.7ms |
 
-Zero request failures and unchanged OT/audit content. Per-window request counts were 60 in both dual pages. Each phase had ten container samples. CI host CPU is not production CPU, and separate runners do not establish a causal CPU change. Actual Realtime transport was not tested; these are deliberately polling-eligible fixture pages.
+Zero request failures and unchanged OT/audit content. Per-window request counts were 60 in both dual pages. Each phase had ten container samples. CI host CPU is not production CPU, and separate runners do not establish a causal CPU change. These fixture pages deliberately did not exercise Realtime. A later live production observation confirms actual WebSocket and Realtime event traffic, but it is not a controlled per-session subscription or reconnect benchmark.
 
 ## Verified FuelTrans results
 
@@ -65,3 +65,107 @@ Repository at ba9da295: 349 replay-directory migration versions; production ledg
 ## Certification boundary and next action
 
 Verified: two app-specific signed performance paths (TimeTracker OT and FuelTrans dashboard/queue), 120 minutes of prior and corrected sustained OT cohorts, 16 registered routes in prior isolated shell baseline, current aggregate production request attribution. No full-host signed timing matrix, true Realtime transport benchmark or representative platform-wide sustained resource run. Prioritize the missing baseline environment, and only then certify remaining paths and select targeted optimization; existing evidence identifies shared context/directory/state reads, startup assets and FuelTrans count fan-out as candidates. No production performance changes in this checkpoint.
+
+
+## Live signed production route observation — 2026-11-27 11:40:53–11:41:29 UTC
+
+A read-only route smoke was executed in a temporary tab using an already authenticated production browser session. The test restored the original tab and closed the temporary tab. It navigated the canonical routes only; no forms or mutation controls were used. No clock-in/clock-out mutation endpoint was requested; TimeTracker issued snapshot/capability reads only.
+
+- 16 route hashes exercised; 15 distinct screen roots loaded.
+- The legacy Toolbox Issues board URL intentionally redirects to the native TalkBox route in `frontend/app.js`; it is an alias, not a separate screen.
+- 0 page errors; 0 unhandled promise rejections.
+- One browser long task, 118 ms maximum.
+- Per-page JavaScript heap observed: 14.66–17.72 MB.
+- DOM node count observed: 1,138–2,558.
+- All 15 distinct screen samples remained foreground-visible.
+- These are single-pass readiness measurements, not statistically meaningful P95s or a sustained load test.
+
+| Screen | Heading readiness | Supabase API requests | HTTP results |
+|---|---:|---:|---:|
+| FM1 Ticketing | 1,717 ms | 4 | 4 × 200 |
+| TimeTracker | 1,869 ms | 11 | 11 × 200 |
+| Fund Tracker | 2,069 ms | 11 | 11 × 200 |
+| FuelTrack+ | 1,572 ms | 8 | 8 × 200 |
+| TradeLink | 1,027 ms | 6 | 6 × 200 |
+| Paseo de Lomboy | 3,981 ms | 5 | 5 × 200 |
+| TalkBox | 2,015 ms | 8 | 8 × 200 |
+| FuelTrans | 1,867 ms | 11 | 11 × 200 |
+| Tool Traceability | 695 ms | 13 | 12 × 200, 1 × 404 |
+| Order Intake | 6,608 ms | 10 | 10 × 200 |
+| Employee Evaluation | 677 ms | 8 | 7 × 200, 1 × 404 |
+| Charter Navigator | 654 ms | 9 | 8 × 200, 1 × 404 |
+| APS AIMS | 657 ms | 8 | 7 × 200, 1 × 404 |
+| Material Request Hub | 673 ms | 8 | 7 × 200, 1 × 404 |
+| Daily Department Activity | 1,864 ms | 2 | 2 × 200 |
+
+The five 404s were all `/rest/v1/rpc/wm_board_group_view_read`. The production database contains `public.wm_board_group_view_read(uuid)`, and `authenticated` has EXECUTE privilege. The frontend client passes `p_board_id`; the matching migration is present. The exact PostgREST exposure/schema-cache cause remains unconfirmed. The app currently falls back without a page error, but the failed request remains a known functional/performance defect and must not be reported as zero HTTP failures.
+
+### Route-level bottleneck attribution
+
+**Order Intake:** the dashboard issued ten sequential reads to `order_intake_operational_registry`. `frontend/order-intake-read-state.js` uses an awaited page loop with a page size of 100 and continues until the full collection is retrieved. During this route observation, browser resource duration P95 was 784.3 ms across those ten requests; the matching edge-log origin P95 was 661.4 ms. The current `pg_stat_statements` cumulative sample showed 27 calls, 4,165.85 ms total and 154.29 ms mean database execution. The dashboard's 6.61-second heading readiness is a single observation, not a population P95.
+
+**Paseo de Lomboy:** the live route's browser resource timings included 1,404.8 ms for the admin reservations page and 816.2 ms for admin courts. Matching Edge Function logs recorded approximately 1,490 ms for admin session, 1,209 ms for reservations page and 668 ms for courts. Source inspection shows `authenticate()` sequentially calls `/auth/v1/user` and `admin_check` before the route-specific database RPC. Database function execution alone does not account for the full Edge Function duration. No authorization behavior was changed.
+
+### Production service and workload observation — 2026-11-27 10:55–11:25 UTC
+
+Read-only aggregate logs, not isolated to the benchmark account:
+
+- 2,215 edge-log records.
+- 1,857 HTTP 200 responses and 30 WebSocket 101 handshakes among non-OPTIONS requests.
+- No 4xx or 5xx responses in this selected 30-minute window.
+- 30 Realtime WebSocket handshakes; 21 `realtime_logs` `handle_event/4` info events.
+- Browser context for the active signed CRM session also showed Realtime connected. This confirms live production Realtime activity, not controlled reconnect or cross-tab event-delivery acceptance.
+
+| Shared endpoint | Requests | Origin P95 |
+|---|---:|---:|
+| `wm_auth_access_context` | 456 | 287 ms |
+| `work_board_access` | 295 | 304 ms |
+| `native_application_board_context` | 139 | 305 ms |
+| `auth/v1/user` | 115 | 321 ms |
+| `apsyntra_crm_my_effective_access` | 70 | 580 ms |
+| `wm_get_board_shell` | 59 | 305 ms |
+| `list_module_directory` | 24 | 432 ms |
+| `list_module_state` | 22 | 792 ms |
+| `realtime/v1/websocket` | 30 | 186 ms |
+
+Origin P95 is Supabase edge origin time, not browser wall-clock time, SQL time, or CPU utilization.
+
+### PostgreSQL workload delta
+
+Two read-only `pg_stat_statements` snapshots, 11m16s apart, show the following aggregate production counter deltas. These include all users and workloads during the interval, not only the browser test.
+
+| Operation | Calls added | Total execution added | Mean for interval delta |
+|---|---:|---:|---:|
+| `wm_auth_access_context` | 256 | 1,295 ms | 5.06 ms |
+| `apsyntra_crm_my_effective_access` | 33 | 947 ms | 28.68 ms |
+| `list_module_directory` | 8 | 1,189 ms | 148.60 ms |
+| `list_module_state` | 8 | 607 ms | 75.90 ms |
+| `timetracker_clock_snapshot` | 38 | 604 ms | 15.89 ms |
+| `timetracker_ot_snapshot` | 7 | 479 ms | 68.36 ms |
+| `native_application_board_context` | 75 | 429 ms | 5.73 ms |
+| `wm_get_board_shell` | 39 | 214 ms | 5.49 ms |
+| `wm_get_board_items_page` | 12 | 121 ms | 10.09 ms |
+| `wm_list_boards` | 7 | 110 ms | 15.74 ms |
+
+These deltas support shared context/module directory/state retrieval as investigation targets. They do not establish a per-user CPU attribution or justify a code change by themselves.
+
+## Current schema parity and certification blocker — 2026-11-27 11:50 UTC
+
+The current production project is healthy and has 191 application tables and 747 application routines. Existing nonproduction branches do not provide a full CRM backend: invitation staging has 14 application tables and 13 routines; the OJT branch has zero application tables and routines. Neither has verified production migration parity.
+
+The repository now contains 351 `supabase/migrations` versions; production has 349 registered versions. The two repository-only versions at this inspection are:
+
+- `20261127120000_cp_tl_opt_04_document_template_render_snapshots.sql`
+- `20261127160000_cp_tt_shared_read_visibility.sql`
+
+They are unrelated to CP-CRM-PERF-01B and were not deployed by this work.
+
+The first CRM migration remains `20260917142647_stage_g_m46_boards_backend_data_contract_recovery.sql`, which assumes a certified M45 schema. No root `supabase/config.toml` exists. The certified M45 schema-only bootstrap is not available in the current repository, searchable Project/Library files, or the checked project-download directories. No production schema export was performed; no paid Supabase branch was created.
+
+## CP-CRM-PERF-01B acceptance status
+
+**Passed:** TimeTracker foreground-controlled single/dual 30-minute cohorts; FuelTrans signed fixture with 120 transitions; 15 distinct live signed production screens plus the documented legacy alias; aggregate production edge/PostgreSQL attribution; live Realtime activity observation.
+
+**Still pending:** a full disposable Supabase stack with the certified M45 baseline, synthetic records, Auth/Realtime/Storage parity; controlled full-platform signed single/dual-window sustained resource measurement; host CPU/RAM/network attribution; controlled Realtime event/reconnect acceptance; and resolution or formal non-blocking acceptance of the five group-view RPC 404s.
+
+CP-CRM-PERF-01B remains **OPEN / BLOCKED**, not complete. The next step remains inside this milestone: obtain an approved protected schema-only M45 bootstrap (or approve a billable isolated schema-only Supabase environment), replay and verify the complete runtime contracts, then run the remaining controlled acceptance. No subsequent CRM performance initiative is opened.
