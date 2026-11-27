@@ -190,7 +190,7 @@ This confirms the existing dashboard count fan-out remains six requests per visi
 
 
 
-## Current-main verification refresh — 2026-11-27 13:40 UTC
+## Current-main verification refresh — 2026-11-27 13:50 UTC
 
 ### FuelTrans signed benchmark follow-up
 
@@ -218,7 +218,7 @@ The migration is recorded in the production ledger as `20261127130720_cp_board_g
 
 ### Remaining certification status
 
-The current-main TimeTracker rerun [46006936197](https://github.com/wass-psti/APSYNTRACRM/actions/runs/46006936197) has passed its smoke cohort. Its single and dual 30-minute cohorts were still running at this evidence capture and are not counted as passes. The latest-main CP-CRM-PERF-01B rerun [46008920566](https://github.com/wass-psti/APSYNTRACRM/actions/runs/46008920566) passed both the PostgreSQL 17 Board group-view regression and FuelTrans signed benchmark; retained FuelTrans artifact: `15202915938`.
+The earlier TimeTracker rerun [46006936197](https://github.com/wass-psti/APSYNTRACRM/actions/runs/46006936197) remains in progress on an older application checkpoint and is superseded by the newer current-main rerun [46010259411](https://github.com/wass-psti/APSYNTRACRM/actions/runs/46010259411), which passed smoke and is running the single and dual 30-minute cohorts. Neither sustained cohort is counted as a pass yet. The latest-main CP-CRM-PERF-01B rerun [46010259472](https://github.com/wass-psti/APSYNTRACRM/actions/runs/46010259472), on commit `84f4bc4095ec603c950dbe2bb426ede056025fa5`, passed both the PostgreSQL 17 Board group-view regression and FuelTrans signed benchmark; retained FuelTrans artifact: `15203416748`.
 
 CP-CRM-PERF-01B remains **OPEN / BLOCKED** until the full-host M45-baseline workload, resource attribution, and controlled Realtime event/reconnect checks are complete. The Board group-view RPC defect is resolved and verified. No subsequent CRM performance initiative is opened.
 
