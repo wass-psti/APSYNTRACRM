@@ -57,7 +57,7 @@ test('FuelTrack host mounts its native renderer and adapter through the existing
   assert.match(app, /loadBoard\(FUELTRACK_V3_ID,'fueltrack',null,null,fuelTrackContext\)/);
   assert.match(app, /if\(state\.fuelTrackStandalone&&isFuelTrackV3ApplicationBoard\(b\)\)/);
   assert.match(app, /from '\.\/fueltrack-v3-native\.js'/);
-  assert.match(app, /from '\.\/fueltrack-v3-ui\.js\?v=cp-ft-all-requests-redesign-02-20261126-cp-ft-new-request-redesign-01-20261126-cp-ft-approvals-redesign-01-20261126-cp-ft-approvals-context-02-20261127'/);
+  assert.match(app, /from '\.\/fueltrack-v3-ui\.js\?v=cp-ft-all-requests-redesign-02-20261126-cp-ft-new-request-redesign-01-20261126-cp-ft-approvals-redesign-01-20261126-cp-ft-approvals-context-02-20261127-cp-ft-activity-ui-01-20261127'/);
   assert.match(app,/workspaceApplicationsForNavigation\(state\.context\?\.workspace_id,state\.boards\)/);
   assert.equal(workspaceApplicationsForNavigation(WORK_MANAGEMENT_WORKSPACE_ID,[]).find(application=>application.id==='fueltrack')?.href,FUELTRACK_V3_APPLICATION_ROUTE);
   assert.match(app, /if\(parts\[1\]===FUELTRACK_V3_ID\)/);

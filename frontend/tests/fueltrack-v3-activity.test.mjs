@@ -1,73 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {fuelTrackActivityModel,renderFuelTrackActivity,fuelTrackActivityCsv,FUELTRACK_ACTIVITY_MAX} from '../fueltrack-v3-activity.js';
-const board='7af78b3f-67bf-4600-9aa1-9006d19d486e';
-const workspace='11111111-1111-4111-8111-111111111111';
-const now=new Date('2026-11-11T12:00:00Z');
-const a={event_id:'evt-1',event_type:'request_approved',occurred_at:'2026-11-11T10:00:00Z',
- actor_name:'Alex',title:'Approved request',message:'Vehicle GBA 8424',request_id:'r-1'};
-const b={event_id:'evt-2',event_type:'refueling_completed',occurred_at:'2026-11-09T00:00:00Z',
- actor_name:'Chris',title:'Completed refueling',message:'Another vehicle',request_id:'r-2'};
-const base={status:'VERIFIED_READ',boardId:board,workspaceId:workspace,events:[a,b]};
-const args=(snapshot,filters={})=>({snapshot,boardId:board,workspaceId:workspace,filters,now});
-test('unknown and denied event streams do not produce fabricated metrics or exports',()=>{
- for(const snapshot of [null,{...base,status:'UNVERIFIED'},{...base,boardId:'foreign'},
-  {...base,workspaceId:'foreign'},{...base,events:[a,a]},
-  {...base,events:[{...a,occurred_at:'not-date'}]},
-  {...base,events:Array.from({length:FUELTRACK_ACTIVITY_MAX+1},(_,i)=>({...a,event_id:'e'+i}))}]){
-  assert.equal(fuelTrackActivityModel(args(snapshot)),null);
-  assert.equal(fuelTrackActivityCsv(fuelTrackActivityModel(args(snapshot))),null);
- }
- const html=renderFuelTrackActivity(args(null));
- assert.match(html,/signed FuelTrack module Admin session is required/i);
- assert.match(html,/ft3-activity-export" disabled/);
- assert.doesNotMatch(html,/30 events tracked|100%|All clear!/);
-});
-test('authorized event counts, local day summaries and grouping come from loaded rows',()=>{
- const model=fuelTrackActivityModel(args(base));
- assert.equal(model.counts.all,2);
- assert.equal(model.counts.approved,1);
- assert.equal(model.counts.completed,1);
- assert.equal(model.daily.approved,1);
- assert.equal(model.daily.completed,0);
- assert.equal(model.groups.today.length,1);
- assert.equal(model.groups.week.length,1);
- const html=renderFuelTrackActivity(args(base));
- assert.match(html,/THIS WEEK/);
- assert.match(html,/TODAY/);
- assert.match(html,/data-action="ft3-activity-export"/);
- assert.doesNotMatch(html,/data-action="ft3-activity-export" disabled/);
-});
-test('search and typed filters retain original audit event IDs and source order',()=>{
- const model=fuelTrackActivityModel(args(base,{query:'gba',type:'approved',expandedId:'evt-1'}));
- assert.equal(model.visible.length,1);
- assert.equal(model.visible[0].id,'evt-1');
- assert.equal(model.expandedId,'evt-1');
- const html=renderFuelTrackActivity(args(base,{query:'gba',type:'approved',expandedId:'evt-1'}));
- assert.match(html,/Request ID/);
- assert.match(html,/evt-1/);
- assert.doesNotMatch(html,/Completed refueling/);
-});
-test('untrusted event text is HTML-escaped; CSV prevents spreadsheet formula injection',()=>{
- const row={...a,title:'<img src=x onerror=alert(1)>',actor_name:'=HYPERLINK("bad")',
-  message:'<script>bad</script>'};
- const snapshot={...base,events:[row]};
- const html=renderFuelTrackActivity(args(snapshot,{expandedId:'evt-1'}));
- assert.match(html,/&lt;img/);
- assert.match(html,/&lt;script&gt;/);
- assert.doesNotMatch(html,/<img|<script>/);
- const csv=fuelTrackActivityCsv(fuelTrackActivityModel(args(snapshot)));
- assert.match(csv,/"'=HYPERLINK\(""bad""\)"/);
- assert.match(csv,/Event ID,?"/);
-});
-
-test('activity search renders the complete selected type once and keeps hidden events available for broader queries',()=>{
- const html=renderFuelTrackActivity(args(base,{query:'gba',type:'all'}));
- assert.match(html,/data-search-text="alex approved request vehicle gba 8424 r-1 request_approved"/);
- assert.match(html,/data-search-text="chris completed refueling another vehicle r-2 refueling_completed" hidden/);
- assert.match(html,/data-ft3-activity-empty[^>]*hidden/);
- const model=fuelTrackActivityModel(args(base,{query:'gba',type:'all'}));
- assert.equal(model.searchGroups.today.length,1);
- assert.equal(model.searchGroups.week.length,1);
- assert.equal(model.visible.length,1);
-});
+const board='7af78b3f-67bf-4600-9aa1-9006d19d486e';const workspace='11111111-1111-4111-8111-111111111111';const now=new Date('2026-11-11T12:00:00Z');
+const a={event_id:'evt-1',event_type:'request_approved',occurred_at:'2026-11-11T10:00:00Z',actor_name:'Alex',title:'Approved request',message:'Vehicle GBA 8424',request_id:'r-1'};
+const b={event_id:'evt-2',event_type:'refueling_completed',occurred_at:'2026-11-09T00:00:00Z',actor_name:'Chris',title:'Completed refueling',message:'Another vehicle',request_id:'r-2'};
+const base={status:'VERIFIED_READ',boardId:board,workspaceId:workspace,events:[a,b]};const args=(snapshot,filters={})=>({snapshot,boardId:board,workspaceId:workspace,filters,now});
+test('unknown and denied event streams do not produce fabricated metrics or exports',()=>{for(const snapshot of [null,{...base,status:'UNVERIFIED'},{...base,boardId:'foreign'},{...base,workspaceId:'foreign'},{...base,events:[a,a]},{...base,events:[{...a,occurred_at:'not-date'}]},{...base,events:Array.from({length:FUELTRACK_ACTIVITY_MAX+1},(_,i)=>({...a,event_id:'e'+i}))}]){assert.equal(fuelTrackActivityModel(args(snapshot)),null);assert.equal(fuelTrackActivityCsv(fuelTrackActivityModel(args(snapshot))),null);}const html=renderFuelTrackActivity(args(null));assert.match(html,/signed FuelTrack module Admin session is required/i);assert.match(html,/ft3-activity-export" disabled/);assert.doesNotMatch(html,/30 events tracked|100%|All clear!/);});
+test('authorized event counts, Manila-local summaries and grouping come from loaded rows',()=>{const model=fuelTrackActivityModel(args(base));assert.equal(model.counts.all,2);assert.equal(model.counts.approved,1);assert.equal(model.counts.completed,1);assert.equal(model.daily.approved,1);assert.equal(model.daily.completed,0);assert.equal(model.groups.today.length,1);assert.equal(model.groups.week.length,1);const html=renderFuelTrackActivity(args(base));assert.match(html,/Today’s Pulse/);assert.match(html,/Hourly activity/);assert.match(html,/TODAY/);assert.match(html,/THIS WEEK/);assert.match(html,/data-action="ft3-activity-export"/);assert.doesNotMatch(html,/data-action="ft3-activity-export" disabled/);});
+test('search and typed filters retain original audit event IDs and source order',()=>{const model=fuelTrackActivityModel(args(base,{query:'gba',type:'approved',expandedId:'evt-1'}));assert.equal(model.visible.length,1);assert.equal(model.visible[0].id,'evt-1');assert.equal(model.expandedId,'evt-1');const html=renderFuelTrackActivity(args(base,{query:'gba',type:'approved',expandedId:'evt-1'}));assert.match(html,/Request reference/);assert.match(html,/evt-1/);assert.doesNotMatch(html,/Completed refueling/);});
+test('untrusted event text is HTML-escaped; CSV prevents spreadsheet formula injection',()=>{const row={...a,title:'<img src=x onerror=alert(1)>',actor_name:'=HYPERLINK("bad")',message:'<script>bad</script>'};const snapshot={...base,events:[row]};const html=renderFuelTrackActivity(args(snapshot,{expandedId:'evt-1'}));assert.match(html,/&lt;img/);assert.match(html,/&lt;script&gt;/);assert.doesNotMatch(html,/<img|<script>/);const csv=fuelTrackActivityCsv(fuelTrackActivityModel(args(snapshot)));assert.match(csv,/"'=HYPERLINK\(""bad""\)"/);assert.match(csv,/Event ID,?/);});
+test('activity search renders the selected event type once and keeps rows for broader queries',()=>{const html=renderFuelTrackActivity(args(base,{query:'gba',type:'all'}));assert.match(html,/data-search-text="alex approved request vehicle gba 8424 r-1 request_approved"/);assert.match(html,/data-search-text="chris completed refueling another vehicle r-2 refueling_completed" hidden/);assert.match(html,/data-ft3-activity-empty[^>]*hidden/);const model=fuelTrackActivityModel(args(base,{query:'gba',type:'all'}));assert.equal(model.searchGroups.today.length,1);assert.equal(model.searchGroups.week.length,1);assert.equal(model.visible.length,1);});
+test('Activity Center exposes accessible timeline controls and structured event detail',()=>{const html=renderFuelTrackActivity(args(base,{expandedId:'evt-1'}));for(const marker of ['ft3-activity-command','ft3-activity-hero','ft3-activity-pulse-grid','ft3-activity-layout','ft3-activity-explorer','ft3-activity-insights','ft3-activity-integrity','aria-label="Search and filter audit events"','aria-label="Hourly activity for today in Manila time','aria-expanded="true"','EVENT RECORD','Request reference','Event ID','Audit Export'])assert.ok(html.includes(marker),marker);assert.equal((html.match(/ft3-hour-height-/g)||[]).length,24);assert.match(html,/data-action="ft3-activity-filter" data-type="approved"/);assert.match(html,/data-action="ft3-activity-expand" data-id="evt-1"/);});
+test('Activity Center styles cover responsive layouts, dark mode, focus and reduced motion',()=>{const css=readFileSync(new URL('../fueltrack-v3-application.css',import.meta.url),'utf8');const manifest=readFileSync(new URL('../../scripts/priority5-style-manifest.mjs',import.meta.url),'utf8');const bundle=readFileSync(new URL('../apsyntra-styles.bundle.css',import.meta.url),'utf8');for(const selector of ['@media(max-width:1050px)','@media(max-width:820px)','@media(max-width:620px)','@media(max-width:390px)','prefers-reduced-motion:reduce','html[data-aps-monday-theme="dark"] #app .ft3-activity',':focus-visible','.ft3-activity-event-marker','.ft3-activity-detail'])assert.ok(css.includes(selector),selector);assert.match(css,/CP-FT-ACTIVITY-UI-01/);assert.match(manifest,/frontend\/fueltrack-v3-application\.css/);assert.doesNotMatch(manifest,/fueltrack-v3-activity-redesign/);assert.ok(bundle.includes('/* frontend/fueltrack-v3-application.css */\n'+css.trimEnd()));assert.ok(!bundle.includes('/* frontend/fueltrack-v3-activity-redesign.css */'));assert.ok(manifest.indexOf('frontend/dark-simplified-system.css')<manifest.indexOf('frontend/board-overhaul-experience.css')&&manifest.indexOf('frontend/board-overhaul-experience.css')<manifest.indexOf('frontend/fueltrack-v3-all-requests-redesign.css')&&manifest.indexOf('frontend/fueltrack-v3-all-requests-redesign.css')<manifest.indexOf('frontend/fueltrack-v3-new-request-redesign.css'));});

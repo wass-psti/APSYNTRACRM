@@ -8,4 +8,4 @@ export {
   isFuelTrackV3ApplicationBoard,
   normalizeFuelTrackSection,
   renderFuelTrackV3Application
-} from './fueltrack-v3-application.js?v=cp-ft-all-requests-redesign-02-20261126-cp-ft-new-request-redesign-01-20261126-cp-ft-approvals-redesign-01-20261126-cp-ft-approvals-context-02-20261127';
+} from './fueltrack-v3-application.js?v=cp-ft-all-requests-redesign-02-20261126-cp-ft-new-request-redesign-01-20261126-cp-ft-approvals-redesign-01-20261126-cp-ft-approvals-context-02-20261127-cp-ft-activity-ui-01-20261127';
