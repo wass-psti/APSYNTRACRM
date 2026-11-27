@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/cp-tl-opt-01-repository-acceptance.yml'
       - 'sql/cp-tl03-staged-domain.sql'
+      - 'sql/tradelink-documents-page-candidate.sql'
       - 'sql/tests/cp-tl03-disposable-setup.sql'
       - 'sql/tests/cp-tl-opt-01-disposable-setup.sql'
       - 'sql/tests/cp-tl-opt-01-disposable.sql'
@@ -16,6 +17,7 @@ on:
     paths:
       - '.github/workflows/cp-tl-opt-01-repository-acceptance.yml'
       - 'sql/cp-tl03-staged-domain.sql'
+      - 'sql/tradelink-documents-page-candidate.sql'
       - 'sql/tests/cp-tl03-disposable-setup.sql'
       - 'sql/tests/cp-tl-opt-01-disposable-setup.sql'
       - 'sql/tests/cp-tl-opt-01-disposable.sql'
@@ -78,6 +80,7 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 \
             -f sql/tests/cp-tl03-disposable-setup.sql \
             -f sql/cp-tl03-staged-domain.sql \
+            -f sql/tradelink-documents-page-candidate.sql \
             -f supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql
 
       - name: Seed disposable repository reviewer identities and search prerequisites
