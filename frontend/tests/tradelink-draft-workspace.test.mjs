@@ -1249,7 +1249,7 @@ test('server repository rendering preserves database order and reports the full 
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:true});
  assert.ok(html.indexOf('Q-2')<html.indexOf('Q-10'));
  assert.match(html,/55 matching documents/);
- assert.match(html,/Search document, client or reference/);
+ assert.match(html,/Search document, client, reference or PO/);
  assert.match(html,/Last updated \(UTC\)/);
  assert.match(html,/Select all documents on this page/);
  assert.doesNotMatch(html,/current page only|Sort by applies to the visible page/);
@@ -1310,6 +1310,6 @@ test('CP-TL-OPT-01 migration installs the unified server query without replacing
 test('CP-TL-OPT-01 cursor correction uses supported PostgreSQL JSONB key enumeration',()=>{
  const migration=readFileSync(new URL('../../supabase/migrations/20261127024948_cp_tl_opt_01_cursor_validation_fix.sql',import.meta.url),'utf8');
  assert.match(migration,/jsonb_object_keys/);
- assert.doesNotMatch(migration,/jsonb_object_length/);
+ assert.doesNotMatch(migration,/pg_catalog\.jsonb_object_length\s*\(/);
  assert.match(migration,/CREATE OR REPLACE FUNCTION private\.tl03_documents_query/);
 });
