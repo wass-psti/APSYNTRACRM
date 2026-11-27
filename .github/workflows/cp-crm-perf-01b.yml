@@ -18,10 +18,54 @@ on:
       - 'supabase/migrations/*fueltrans*'
       - 'supabase/migrations/*native*'
       - 'supabase/migrations/*workspace*'
+      - 'supabase/migrations/*board_group_view*'
+      - 'sql/tests/cp-crm-perf-01b-board-group-view-regression.sql'
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
+  board-group-view-regression:
+    name: Board group-view RPC regression (PostgreSQL 17)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable_ci_only
+          POSTGRES_DB: board_group_view_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d board_group_view_disposable"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGDATABASE: board_group_view_disposable
+      PGUSER: postgres
+      PGPASSWORD: disposable_ci_only
+      PGCONNECT_TIMEOUT: '5'
+      PGOPTIONS: '-c statement_timeout=30000'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL CLI (disposable runner only)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Assert isolated PostgreSQL runner identity
+        run: |
+          set -euo pipefail
+          test "$PGHOST" = 127.0.0.1
+          test "$PGDATABASE" = board_group_view_disposable
+          psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" | grep -Fx 'board_group_view_disposable|t'
+      - name: Reproduce SQLSTATE 42883 and verify corrected Board group-view RPCs
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-crm-perf-01b-board-group-view-regression.sql
   fueltrans:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
