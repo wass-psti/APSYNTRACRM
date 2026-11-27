@@ -41765,6 +41765,7 @@ html[data-aps-monday-theme="dark"] #app .ft3-new-boundary{border-color:#4b7168;b
 html[data-aps-monday-theme="dark"] #app .ft3-receipt-action,html[data-aps-monday-theme="dark"] #app .ft3-new-retry{border-color:#42665f;background:#24443e;color:#c8eee3}
 html[data-aps-monday-theme="dark"] #app .ft3-new-submit:disabled{border-color:#49635f;background:#49635f;color:#d4e3df}
 @media(prefers-reduced-motion:reduce){#app .ft3-new-request *{scroll-behavior:auto;transition:none!important}#app .ft3-new-submit:not(:disabled):hover{transform:none}}
+
 /* frontend/tradelink-quotation-redesign.css */
 /* CP-TL-QUOTATION-REDESIGN-01 — reference-led quotation composition. */
 .tl-quote-paper{
