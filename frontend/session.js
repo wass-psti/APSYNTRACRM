@@ -131,14 +131,17 @@ export class AuthClient {
   }
   async restoreProvider(){
     this.ignoreProviderSessionEvents=false;
+    const revision=this.verifiedUserRevision;
     let result;
     try{result=await this.provider.getSession();}
     catch(error){
+      if(revision!==this.verifiedUserRevision)return this.isSignedIn;
       const normalized=providerError(error,'session-read');
       const failure=this.handleAuthFailure(normalized,'session-read');
       if(failure.invalidateSession&&!this.session)return false;
       throw normalized;
     }
+    if(revision!==this.verifiedUserRevision)return this.isSignedIn;
     if(result?.error){
       const normalized=providerError(result.error,'session-read');
       const failure=this.handleAuthFailure(normalized,'session-read');
@@ -156,6 +159,7 @@ export class AuthClient {
     }else{
       this.session=session;
       this.invalidateVerifiedUser();
+      this.providerSessionReadAt=null;
     }
     let migrated=false;
     let migratedUser=null;
@@ -173,12 +177,14 @@ export class AuthClient {
           this.markLegacyMigrationComplete();
           return false;
         }
+        const importRevision=this.verifiedUserRevision;
         let imported;
         try{
           imported=await this.provider.setSession({
             access_token:legacy.access_token,refresh_token:legacy.refresh_token
           });
         }catch(error){
+          if(importRevision!==this.verifiedUserRevision)return this.isSignedIn;
           const normalized=providerError(error,'legacy-import');
           const failure=this.handleAuthFailure(normalized,'legacy-import');
           if(failure.invalidateSession){
@@ -187,6 +193,8 @@ export class AuthClient {
           }
           throw normalized;
         }
+        if(importRevision!==this.verifiedUserRevision&&
+           this.accessToken!==imported?.data?.session?.access_token)return this.isSignedIn;
         if(imported?.error){
           const normalized=providerError(imported.error,'legacy-import');
           const failure=this.handleAuthFailure(normalized,'legacy-import');
@@ -207,6 +215,7 @@ export class AuthClient {
         }
         this.session=session;
         this.invalidateVerifiedUser();
+        this.providerSessionReadAt=null;
       }
     }
     if(!session){this.session=null;return false;}
@@ -645,7 +654,7 @@ export class AuthClient {
           classifyAuthFailure(error,{operation:'session-read'});
         const latest=this.session;
         const latestExpiresAt=Number(latest?.expires_at)*1000;
-        if(failure.preserveSession&&latest?.access_token&&
+        if(failure.recoverable&&failure.preserveSession&&latest?.access_token&&
            Number.isFinite(latestExpiresAt)&&latestExpiresAt>this.clock())
           return latest.access_token;
         throw error;
@@ -667,7 +676,7 @@ export class AuthClient {
           classifyAuthFailure(error,{operation:'session-read'});
         const cached=this.session;
         const expiresAt=Number(cached?.expires_at)*1000;
-        if(failure.preserveSession&&cached?.access_token&&
+        if(failure.recoverable&&failure.preserveSession&&cached?.access_token&&
            cached.access_token!==rejectedToken&&
            Number.isFinite(expiresAt)&&expiresAt>this.clock())return cached.access_token;
         throw error;
