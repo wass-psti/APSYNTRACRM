@@ -170,7 +170,7 @@ export function projectTimeTrackerSharedRead(response,access,internId=null){
  const log=projectTimeTrackerLog({value:response.attendance,directory:response.directory,
   userId:access.userId,moduleRole:access.moduleRole,sharedRead:true});
  const overtime=projectTimeTrackerOtRows(response.overtime.map(r=>({
-  ...r,canReviewOt:false,canReviewDuration:false,canWithdraw:false
+  ...r,canReviewOt:false,canReviewDuration:false,canEditDecision:false,canWithdraw:false
  })));
  return Object.freeze({log,internAttendance:response.internAttendance,overtime});
 }
@@ -877,6 +877,31 @@ export class TimeTrackerNativeClient{
      (request.isManual&&receipt.submissionSource!=='manual_admin')||
      (receipt.submissionSource!==undefined&&receipt.submissionSource!==expectedSource))
    deny('OT decision receipt is not verified');
+  await checkIdentity(this.auth,this.api,before.access,boardId);
+  return Object.freeze({id:requestId,status:decision});
+ }
+ async editOvertimeDecision(boardId,requestId,expectedStatus,expectedDecidedAt,decision){
+  if(!TT_OT_WRITES_ACCEPTED||!uuid.test(requestId||'')||
+     !['Approved','Rejected'].includes(expectedStatus)||
+     !['Approved','Rejected'].includes(decision)||decision===expectedStatus||
+     typeof expectedDecidedAt!=='string'||!Number.isFinite(Date.parse(expectedDecidedAt)))
+   deny('Invalid OT decision correction');
+  const before=await this.snapshot(boardId);
+  const request=before.otRequests.find(r=>r.id===requestId);
+  if(before.access.otContractActive!==true||request?.canEditDecision!==true||
+     request.status!==expectedStatus||request.decidedAt!==expectedDecidedAt)
+   deny('OT decision changed or is outside the signed edit scope; refresh and try again');
+  await checkIdentity(this.auth,this.api,before.access,boardId);
+  const receipt=await this.api.rpc('timetracker_ot_edit_decision',{
+   p_board_id:boardId,p_request_id:requestId,p_expected_status:expectedStatus,
+   p_expected_decided_at:expectedDecidedAt,p_decision:decision
+  });
+  if(!isRecord(receipt)||receipt.id!==requestId||
+     receipt.workspaceId!==before.access.workspaceId||
+     receipt.previousStatus!==expectedStatus||receipt.status!==decision||
+     receipt.decidedBy!==before.access.userId||receipt.otPolicy!==request.otPolicy||
+     receipt.submissionSource!==request.submissionSource)
+   deny('OT decision correction receipt is not verified');
   await checkIdentity(this.auth,this.api,before.access,boardId);
   return Object.freeze({id:requestId,status:decision});
  }
