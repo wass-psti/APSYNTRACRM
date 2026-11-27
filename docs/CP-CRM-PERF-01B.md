@@ -221,3 +221,33 @@ The migration is recorded in the production ledger as `20261127130720_cp_board_g
 The current-main TimeTracker rerun [46006936197](https://github.com/wass-psti/APSYNTRACRM/actions/runs/46006936197) has passed its smoke cohort. Its single and dual 30-minute cohorts were still running at this evidence capture and are not counted as passes. The latest-main CP-CRM-PERF-01B rerun [46008920566](https://github.com/wass-psti/APSYNTRACRM/actions/runs/46008920566) passed both the PostgreSQL 17 Board group-view regression and FuelTrans signed benchmark; retained FuelTrans artifact: `15202915938`.
 
 CP-CRM-PERF-01B remains **OPEN / BLOCKED** until the full-host M45-baseline workload, resource attribution, and controlled Realtime event/reconnect checks are complete. The Board group-view RPC defect is resolved and verified. No subsequent CRM performance initiative is opened.
+
+
+## Next in-scope implementation — CP-CRM-PERF-01B.1
+
+**Name:** Certified M45 Baseline Recovery and Full-Host Acceptance  
+**Status:** BLOCKED pending the certified schema-only M45 bootstrap (or an explicitly approved alternative).
+
+### Technical objectives
+
+1. Recover the authoritative M45 schema-only SQL artifact from its canonical protected source. Verify provenance, checksum and compatibility with the first M46 migration. Exclude production rows, credentials and private secrets.
+2. In GitHub Actions, start an ephemeral Supabase stack using the repository-pinned Supabase CLI 2.121.0 and PostgreSQL 17, including Auth/GoTrue, PostgREST, Realtime and Storage.
+3. Apply the verified M45 baseline, replay the complete current migration set, and verify all 354 migration versions plus the expected tables, routines, policies, triggers, indexes and Storage/Realtime contracts.
+4. Seed synthetic-only boards, users and records. Exercise signed single-session and dual-session CRM startup, session restoration, sidebar navigation, representative native application routes and cross-window synchronization.
+5. Run controlled Realtime publish/subscribe, reconnect and event-delivery checks using only synthetic records.
+6. Run 30-minute full-host single-session and dual-session workloads. Attribute browser latency/errors, runner and container CPU/RAM/network, PostgreSQL query activity, PostgREST requests and Realtime activity separately.
+
+### Measurable acceptance criteria
+
+- Baseline source and checksum verified; no production rows, credentials or secrets included.
+- All Supabase services become healthy and all migrations replay without failures or unexplained skips.
+- Runtime schema contracts match the approved baseline and the current migration set; no migration version gaps, duplicates or drift.
+- Signed single- and dual-session CRM workflows complete their full 30-minute windows.
+- Zero unexpected JavaScript errors, unhandled rejections, HTTP failures or failed database operations.
+- Realtime event delivery and reconnect checks pass without unexplained lost or duplicate events.
+- CPU, memory, network, database and browser metrics are captured with P50/P95/max and request/error counts; no performance claim is made without measured evidence.
+- Synthetic record, attendance OT and audit integrity remain unchanged by read-only benchmark phases; no production writes occur.
+- No application authorization, role, RLS, session or permission changes are introduced.
+- No gradient descent, backpropagation, model training, retraining, fine-tuning, parameter updates or training dependencies are introduced.
+
+**Unblock required:** provide the certified schema-only M45 bootstrap artifact, or explicitly approve a schema-only recovery source. Do not create a billable Supabase project/branch or export production schema without the corresponding approval. This is a continuation of CP-CRM-PERF-01B, not a new CRM performance initiative.
