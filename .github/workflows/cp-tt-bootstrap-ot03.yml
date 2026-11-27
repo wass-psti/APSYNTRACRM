@@ -156,7 +156,7 @@ jobs:
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
-            -f sql/tests/cp-tt-auto-clockout-02-disposable-acceptance.sql
+            -f ../sql/tests/cp-tt-auto-clockout-02-disposable-acceptance.sql
 
       - name: Apply department and workspace-scope prerequisites
         run: |

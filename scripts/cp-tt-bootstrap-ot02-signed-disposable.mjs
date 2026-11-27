@@ -186,6 +186,13 @@ expect(await rpc(worker,'timetracker_ot_decide_duration',{
 expect(await rpc(hr,'timetracker_ot_decide_duration',{
  p_board_id:board,p_request_id:hrOwnRequest.id,p_decision:'Approved'
 }),403,'HR self-approval denied');
+const legacyBypass=await rpc(hr,'timetracker_ot_decide',{
+ p_board_id:board,p_request_id:durationRequest.id,p_decision:'Approved'
+});
+assert.ok(legacyBypass.status>=400&&legacyBypass.status<500,
+ 'legacy decision RPC cannot bypass duration-specific approval');
+checks++;
+assert.equal(sql(`SELECT status FROM public.timetracker_ot_requests WHERE id='${durationRequest.id}'`),'Submitted');
 const retiredSubmit=await rpc(worker,'timetracker_ot_submit',{
  p_board_id:board,p_date:date,p_start:'18:00',p_end:'19:00',
  p_reason:'Legacy time range submission must be disabled'

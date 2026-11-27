@@ -47,6 +47,17 @@ done
 # same isolated PG17 database. The test container is isolated; execute the registered forward migration verbatim.
 docker exec "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres \
  -f /repo/sql/tests/cp-tt-duration-ot-prerequisites.sql
+# Install the actual directory function, not an approximation of its scope.
+python3 - "$ROOT/supabase/migrations/20261125120000_cp_tt_company_provisioning_workspace_scope.sql" <<'PY' | docker exec -i "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres
+from pathlib import Path
+import sys
+source=Path(sys.argv[1]).read_text()
+start=source.index('CREATE OR REPLACE FUNCTION public.list_module_directory(p_module_id text)')
+end=source.index('$directory$;',start)+len('$directory$;')
+print(source[start:end])
+print("REVOKE ALL ON FUNCTION public.list_module_directory(text) FROM PUBLIC,anon,authenticated,service_role;")
+print("GRANT EXECUTE ON FUNCTION public.list_module_directory(text) TO authenticated;")
+PY
 # Load the actual worker and replay its exact migration patches (not a mock).
 python3 - "$ROOT" <<'PY' | docker exec -i "$DB" psql -X -q -v ON_ERROR_STOP=1 -U postgres
 from pathlib import Path

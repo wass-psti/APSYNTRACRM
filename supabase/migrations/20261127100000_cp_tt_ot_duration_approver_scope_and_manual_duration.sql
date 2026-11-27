@@ -14,6 +14,7 @@ BEGIN
   OR pg_catalog.to_regprocedure('public.timetracker_ot_decide_duration(uuid,uuid,text)') IS NULL
   OR pg_catalog.to_regprocedure('public.timetracker_ot_submit_duration(uuid,date,integer,text)') IS NULL
   OR pg_catalog.to_regprocedure('public.list_module_directory(text)') IS NULL
+  OR pg_catalog.to_regprocedure('public.is_platform_admin(uuid)') IS NULL
   OR pg_catalog.to_regclass('public.timetracker_ot_requests') IS NULL
   OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_constraint
    WHERE conrelid='public.timetracker_ot_requests'::regclass
@@ -267,6 +268,13 @@ BEGIN
    RAISE EXCEPTION 'Legacy OT decision role-gate drift: %',old; END IF;
   d:=pg_catalog.replace(d,old,replacement);
  END LOOP;
+ -- The legacy RPC must never decide a duration request: that would bypass
+ -- duration-specific attendance binding, validation and self-review denial.
+ old:='WHERE id=p_request_id AND workspace_id=v_ws AND status=''Submitted''';
+ replacement:=old||' AND ot_policy=''legacy-range''';
+ IF pg_catalog.cardinality(pg_catalog.string_to_array(d,old))<>4 THEN
+  RAISE EXCEPTION 'Legacy OT decision policy filter drift'; END IF;
+ d:=pg_catalog.replace(d,old,replacement);
  EXECUTE d;
 END;
 $legacy_decision$;
