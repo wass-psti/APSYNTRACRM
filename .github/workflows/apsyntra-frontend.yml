@@ -152,6 +152,13 @@ jobs:
           tail -n 20 /tmp/apsyntra-frontend-tests.log
 
 
+      - name: Verify CP-CRM-LOAD-01D in-place application navigation in Chromium
+        run: |
+          set -euo pipefail
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$BROWSER" || { echo 'BLOCKED: Chrome/Chromium unavailable'; exit 1; }
+          CHROME_BIN="$BROWSER" node scripts/cp-crm-load-01d-navigation-browser.mjs
+
   disposable-postgres:
     runs-on: ubuntu-latest
     permissions:

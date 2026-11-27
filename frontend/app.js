@@ -38,7 +38,8 @@ import {WorkspaceInvitationClient,WS02D_INVITE_CLIENT_ENABLED} from './workspace
 import {WorkspaceInvitationManagementClient} from './workspace-invitation-management.js';
 import {WorkspaceInvitationAcceptanceClient,captureInvitationLink,renderInvitationAcceptance} from './workspace-invitation-acceptance.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
-import {resolveApplicationLoadingState} from './application-loading.js';
+import {resolveApplicationLoadingState,isCurrentApplicationRouteRead} from './application-loading.js';
+import {updateExistingApplicationShell} from './application-shell-dom.js';
 import {renderAuthMarkup} from './auth/markup.js';
 import {validateAccessRequest} from './request-access.js';
 import {captureAuthReturn,
@@ -617,8 +618,10 @@ function beginApplicationRouteRead(label){
  return token;
 }
 function finishApplicationRouteRead(token){
- if(applicationRouteRead!==token||location.hash!==token.hash||
-    !auth.isSignedIn||auth.userId!==token.userId||state.context?.workspace_id!==token.workspaceId)return false;
+ if(!isCurrentApplicationRouteRead(token,applicationRouteRead,{
+  currentHash:location.hash,isSignedIn:auth.isSignedIn,
+  userId:auth.userId,workspaceId:state.context?.workspace_id
+ }))return false;
  applicationRouteRead=null;
  return true;
 }
@@ -1330,30 +1333,17 @@ function shell(body){
  if(!preserveDda)syncDda();
  if(shellIdentity!==identity){closeWorkspacePanels();timeTrackerSubmenuOpen=true;}
  if(reusable){
-  const oldSidebar=existing.querySelector('.aps-sidebar');
-  if(shellSidebarSignature!==sidebarSignature){
-   const scroll=oldSidebar?.querySelector('.sidebar-nav-scroll')?.scrollTop||0;
-   const template=document.createElement('template');
-   template.innerHTML=sidebar();
-   oldSidebar?.replaceWith(template.content.firstElementChild);
-   const navScroll=existing.querySelector('.sidebar-nav-scroll');
-   if(navScroll)navScroll.scrollTop=scroll;
-  }else{
-   const selected=currentSidebarNavigation();
-   const activeHref=selected.startsWith('recent:')?'#/boards/'+selected.slice(7):
-    selected?'#/'+selected:'';
-   for(const link of existing.querySelectorAll('.aps-sidebar a.nav-link')){
-    const path=link.getAttribute('href')||'';
-    const active=!!activeHref&&path===activeHref;
-    link.classList.toggle('active',active);
-    if(active)link.setAttribute('aria-current','page');
-    else link.removeAttribute('aria-current');
-   }
-  }
-  existing.querySelector('.breadcrumb strong').textContent=crumb;
-  existing.querySelector('.top-avatar').innerHTML='<span data-avatar-initials aria-hidden="true">'+e(initials(name()))+'</span><img data-avatar-current alt="" hidden />';
-  if(!preserveDda)existing.querySelector('.main-content').innerHTML=body;
-  if(scrollPositions)restoreBoardGroupScroll(existing.querySelector('.main-content'),scrollPositions);
+  updateExistingApplicationShell({
+   existing,
+   renderedSidebarSignature:shellSidebarSignature,
+   sidebarSignature,
+   renderSidebar:sidebar,
+   selectedNavigation:currentSidebarNavigation(),
+   breadcrumb:crumb,
+   avatarMarkup:'<span data-avatar-initials aria-hidden="true">'+e(initials(name()))+'</span><img data-avatar-current alt="" hidden />',
+   body,
+   preserveContent:preserveDda
+  });
  }else{
   root.innerHTML=`<div class="shell">${sidebar()}<main class="main">
  <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span>›</span><strong>${e(crumb)}</strong></div><button type="button" class="ws01-topbar-launch" data-action="ws01-open" aria-label="Browse authorized workspaces">Workspaces ▾</button>
