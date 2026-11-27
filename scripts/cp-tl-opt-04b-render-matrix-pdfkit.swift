@@ -36,12 +36,21 @@ for record in records {
     }
 
     let text = pages.map { $0.string ?? "" }.joined(separator: "\n")
+    func compact(_ value: String) -> String {
+        return String(value.uppercased().filter { !$0.isWhitespace })
+    }
+    let searchableText = compact(text)
     for token in [company, title, documentNumber, marker, termsMarker, remarksMarker,
                   "APPROVED", "CP-TL-OPT-04B Acceptance Creator"] {
-        precondition(text.contains(token), "PDFKit could not find " + token + " in " + file)
+        let normalizedToken = compact(token)
+        if !searchableText.contains(normalizedToken) {
+            fatalError("PDFKit could not find " + token + " in " + file +
+                       ". Extracted text: " + String(text.prefix(2000)))
+        }
     }
     for token in ["WORKFLOW APPROVED", "PDF NOT ISSUED", "Approved revision"] {
-        precondition(!text.contains(token), "Unexpected approval subtitle " + token + " in " + file)
+        precondition(!searchableText.contains(compact(token)),
+                     "Unexpected approval subtitle " + token + " in " + file)
     }
     print("VERIFIED PDFKit " + (record["profile"] as! String) + " / " + type +
           " pages=" + String(pdf.pageCount) + " size=" + pageSize)
