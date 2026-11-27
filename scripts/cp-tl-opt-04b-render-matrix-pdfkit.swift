@@ -20,7 +20,9 @@ for record in records {
     guard let pdf = PDFDocument(url: URL(fileURLWithPath: file)) else {
         fatalError("PDFKit could not open " + file)
     }
-    precondition(pdf.pageCount >= 1, "PDF has no pages: " + file)
+    let minimumPages = record["minPages"] as? Int ?? 1
+    precondition(pdf.pageCount >= minimumPages,
+                 "Expected at least " + String(minimumPages) + " pages: " + file)
     let pages = (0..<pdf.pageCount).compactMap { pdf.page(at: $0) }
     precondition(pages.count == pdf.pageCount, "PDF page retrieval failed: " + file)
 
@@ -40,10 +42,21 @@ for record in records {
         return String(value.uppercased().filter { !$0.isWhitespace })
     }
     let searchableText = compact(text)
+    let firstContentMarker = record["firstContentMarker"] as! String
+    let lastContentMarker = record["lastContentMarker"] as! String
     var requiredTokens = [company, title, documentNumber, marker, termsMarker, remarksMarker,
-                          "APPROVED",
+                          firstContentMarker, lastContentMarker, "APPROVED",
                           "Electronic PDF approval and issuance have NOT been verified",
                           "CP-TL-OPT-04B Acceptance Creator"]
+    if let total = record["total"] as? String {
+        requiredTokens.append(total)
+    }
+    if let cashTotal = record["cashTotal"] as? String {
+        requiredTokens.append(cashTotal)
+    }
+    if let chequeTotal = record["chequeTotal"] as? String {
+        requiredTokens.append(chequeTotal)
+    }
     if type != "quotation" {
         requiredTokens.append(contentsOf: ["WORKFLOW APPROVED", "PDF NOT ISSUED", "Approved revision"])
     }
@@ -55,6 +68,7 @@ for record in records {
         }
     }
     print("VERIFIED PDFKit " + (record["profile"] as! String) + " / " + type +
-          " pages=" + String(pdf.pageCount) + " size=" + pageSize)
+          " pages=" + String(pdf.pageCount) + " size=" + pageSize +
+          " content=" + firstContentMarker + ".." + lastContentMarker)
 }
 print("PASS: PDFKit verified all 18 immutable TradeLink company/module PDFs.")
