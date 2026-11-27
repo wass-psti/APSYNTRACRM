@@ -1,6 +1,6 @@
 # CP-DB-MIGRATION-HISTORY-01 — Production migration source recovery
 
-**Status:** Recovered and locally reconciled; Supabase Preview PR verification pending.
+**Status:** Recovered baseline and current production migration sources reconciled; Supabase Preview PR verification remains pending.
 **Project:** jtlusodorfnyzgyuewkz (existing APSYNTRACRM project only).
 **Scope:** Restore the exact applied migration versions and SQL statements to the repository so Git and the production migration ledger describe the same history.
 
@@ -20,7 +20,7 @@ All 222 local versions matched all 222 remote versions. The recovered SQL files 
 
 ## Repository reconciliation
 
-- supabase/migrations/ now contains the 222 production-applied migrations only.
+- supabase/migrations/ contains the 222 recovered baseline migrations plus separately tracked forward migrations.
 - supabase/migration-source-manifest.json records every version, filename, byte length, and SHA-256 digest.
 - supabase/migration-recovery-map.json maps the previous 28 local filenames to their production-canonical filenames.
 - The former local 20261113194500_cp_db_perf06_board_list_sql.sql was not present in the production ledger. It is preserved under supabase/migration-candidates/ and is deliberately excluded from the applied migration directory.
@@ -55,3 +55,24 @@ The production ledger remains unchanged. Future schema changes must be introduce
 ## Forward migrations after the recovered baseline
 
 The manifest `files` array permanently records the 222-migration production recovery baseline. New, separately reviewed migrations are recorded in `forward_migrations` with their SHA-256 digests; the validator checks all committed files and forbids versions preceding the recovered ledger. This avoids rewriting the historical recovery evidence for each legitimate future deployment. Forward migrations now include CP-BOARD-TRASH-PERMANENT-DELETE-01 and CP-TT-AUTO-CLOCKOUT-01, with each SQL file's byte length and SHA-256 digest recorded separately from the 222-migration recovery baseline.
+
+
+## CP-TL-OPT-02 current production ledger reconciliation — 2026-11-27
+
+A read-only Supabase migration inventory returned 345 applied production versions. Before this follow-up, the repository had 344 files in `supabase/migrations/`, plus one intentionally archived production-only migration under `supabase/applied-only/`.
+
+The comparison identified three remote versions absent from the automatic migration directory:
+
+- `20261126044952_retire_apsyntra_timetracker_qa_account` — intentionally archived as production-only QA fixture retirement. It must remain outside the replay directory.
+- `20261126072856_tradelink_universal_edit_shared_save` — already applied to production; its staged forward SQL matched the production ledger statement byte-for-byte and is restored to the canonical migration directory.
+- `20261126082753_tradelink_shared_projection_verification` — already applied to production; its staged forward SQL matched the production ledger statement byte-for-byte and is restored to the canonical migration directory.
+
+Both restored TradeLink versions are added to `forward_migrations` with byte lengths and SHA-256 digests. They are already present in the production ledger, so this source reconciliation does not require rerunning them.
+
+Two local forward migrations remain unapplied in the production ledger at the time of comparison: `20261126120000_cp_tt_duration_overtime` and `20261127100000_cp_tt_ot_duration_approver_scope_and_manual_duration`. They remain pending and are outside this TradeLink increment.
+
+After restoration, the repository migration directory contains 346 files. The 345 applied production versions are accounted for by the migration directory plus the single intentionally archived production-only version; the two local forward versions remain pending. The Supabase CLI may continue to report `20261126044952` as remote-only because the applied-only archive is deliberately excluded from automatic replay. Do not use `migration repair`, move the QA cleanup into the replay directory, or replace it with a misleading no-op migration merely to hide that intentional difference.
+
+Automatic Supabase Preview branching remains disabled. This increment does not create a preview database or incur preview compute charges. Preview-branch execution remains unverified; the source-level reconciliation and repository manifest checks are the available evidence for this increment.
+
+No `migration repair`, `db push`, `db pull`, `db reset`, production DDL, or production data mutation was performed.
