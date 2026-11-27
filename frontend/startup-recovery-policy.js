@@ -11,7 +11,8 @@ export function transientStartupFailure(error,operation='startup'){
  return failure.retryable===true;
 }
 export async function startupVerifiedRead(read,{
- canContinue=()=>true,wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),
+ operation='startup',canContinue=()=>true,
+ wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),
  retryDelayMs=350,onRetry=()=>{}
 }={}){
  if(typeof read!=='function'||typeof canContinue!=='function')
@@ -23,12 +24,14 @@ export async function startupVerifiedRead(read,{
    if(!canContinue())throw new Error('Startup session changed.');
    return result;
   }catch(error){
-   if(attempt!==0||!transientStartupFailure(error)||!canContinue())
-    throw error;
-   // A single delayed retry, only for an indeterminate read failure.
-   // Callers must not pass mutating operations.
+   const failure=classifyAuthFailure(error,{operation});
+   if(attempt!==0||!failure.retryable||!canContinue())throw error;
+   // Respect a server-supplied Retry-After value, while retaining the
+   // existing minimum delay and the single-retry ceiling.
+   const retryDelay=failure.retryAfterMs===null?retryDelayMs:
+    Math.max(retryDelayMs,failure.retryAfterMs);
    onRetry();
-   await wait(retryDelayMs);
+   await wait(retryDelay);
    if(!canContinue())throw new Error('Startup session changed.');
   }
  }
