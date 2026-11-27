@@ -3,6 +3,7 @@ import {TT_LOCATIONS,creditedAttendanceMs,creditedAttendanceRecordMs,completedLo
 export {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
 import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-overview.js';
 import {projectTimeTrackerLog} from './time-tracker-history.js';
+import {projectTimeTrackerSharedRead,mergeTimeTrackerSharedOt} from './time-tracker-shared-read.js';
 import {projectTimeTrackerOtRows,validateDurationOvertimeDraft,validateManualDurationOvertimeDraft,TT_OT_WRITES_ACCEPTED} from './time-tracker-overtime.js';
 import {projectTimeTrackerTeamDirectory,projectTimeTrackerTeamDepartments,TT_TEAM_DEPARTMENTS,validTimeTrackerDepartmentName} from './time-tracker-team.js';
 import {projectTimeTrackerEmployees,projectTimeTrackerEmployeeDepartments,projectTimeTrackerDepartmentCatalog,canViewTimeTrackerEmployees} from './time-tracker-application.js';
@@ -416,13 +417,25 @@ export class TimeTrackerNativeClient{
     if(!/PGRST202|Could not find the function|Unexpected RPC timetracker_ojt_/.test(String(error?.message||error)))throw error;
    }
   }
+  let sharedLog=null;
+  if(!clockOnly&&(!designatedSharedOjt||ojtRoster?.mode==='SHARED_LOGIN')){
+   try{
+    const response=await this.api.rpc('timetracker_shared_read_snapshot',{p_board_id:boardId});
+    const shared=projectTimeTrackerSharedRead(response,access);
+    // Keep the existing full administrator projections and write capabilities.
+    if(!canManageOjt)sharedLog=shared.log;
+    otRequests=mergeTimeTrackerSharedOt(designatedSharedOjt?[]:otRequests,shared.otRows);
+   }catch(error){
+    if(!/PGRST202|Could not find the function|Unexpected RPC timetracker_shared_read_snapshot/.test(String(error?.message||error)))throw error;
+   }
+  }
   await checkIdentity(this.auth,this.api,access,boardId);
   return {status:'VERIFIED_READ',clockOnly:clockOnly===true,
-   access:{...access,...otAccess,
+   access:{...access,...otAccess,sharedOjtReadOnly:designatedSharedOjt,
     attendanceWritesAccepted:designatedSharedOjt?false:attendanceWritesAccepted,
     employeeDepartment,employees,departmentCatalog},
    ojtRoster,ojtAdmin,ojtAdminAttendance,
-   records,otRequests,autoClockout,autoClockoutUnavailable,overview,log,
+   records,otRequests,autoClockout,autoClockoutUnavailable,overview,log,sharedLog,
    revision:row?Number(row.revision):0,active:records.find(x=>x.status==='Active')||null};
  }
  /** Signed directory-only refresh; never reads or writes attendance state. */
