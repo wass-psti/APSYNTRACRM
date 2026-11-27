@@ -1,0 +1,341 @@
+{
+  "source": "standalone Material Sourcing; CP05 source present, acceptance pending",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 5679,
+      "git": "cedb99504fe1826dfb8b46bea20cb719ead0dfa2",
+      "sha256": "9bd5872ae526164d6556e98c42ddfa5313ac989c7ca51c16fdcf68ded7e94544"
+    },
+    {
+      "path": "docs/CP-MS-BACKEND-01.md",
+      "bytes": 5430,
+      "git": "3619f117f6637a3c879e25b90307d9b7c6f4d200",
+      "sha256": "cc8e2058104f30ecc62a5f46e16de67a7a3614f23654f0078f0671c80f027135"
+    },
+    {
+      "path": "docs/CP-MS-BACKEND-02.md",
+      "bytes": 5975,
+      "git": "8033400ab391fa46c8af2d709bd672829d99909c",
+      "sha256": "181444b93ca910fca9b756a6bce54c8f3e2a29d86a7be1d5adcca416bfb88643"
+    },
+    {
+      "path": "docs/CP-MS-BACKEND-04.md",
+      "bytes": 5070,
+      "git": "74ed3a3763a1484aaeb2d249e00d1b761b3c0c84",
+      "sha256": "ef796bf69bc93ef2f775239a585f446ed725f926f2f7a7a1850b8178cc12ed87"
+    },
+    {
+      "path": "index.html",
+      "bytes": 351,
+      "git": "545bfc1fb3bb626ab671bf047615c825bdca12bc",
+      "sha256": "19447d6ebe41a2bd9c0782b046c5acaf969657c4f8c19d90743d2ec33233bcfa"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 58473,
+      "git": "a5a1734a32558da75e7e728853aa72dda65a005e",
+      "sha256": "d9db32d663ce8b2c77e7bc7c617b8f0619b9fa5c5c0aa04f5d39de223707109b"
+    },
+    {
+      "path": "package.json",
+      "bytes": 1340,
+      "git": "f3f60ce4d912d08e4db38e6b08ec0ccde10d5e63",
+      "sha256": "4a4fe285685a0ce2bbd4b265368755301d801c3d8a17ce9228932904fee49f8c"
+    },
+    {
+      "path": "scripts/test-crud.sh",
+      "bytes": 2409,
+      "git": "9ab27f2db0c906050a0e85deb030aa5fdc7142ad",
+      "sha256": "54ae5ab33509a1a9009aa81630979fe76e83db6c1b9f7f609343d50cf15e3055"
+    },
+    {
+      "path": "scripts/verify-migrations.sh",
+      "bytes": 1961,
+      "git": "460409fb8db20e119e035d7e4de1a0cb78794090",
+      "sha256": "402b53ed0f3068e8b459fab877d298202316be8e28b845ee68c74fdb7342f45e"
+    },
+    {
+      "path": "server/bulkWrites.ts",
+      "bytes": 5613,
+      "git": "9b3d29316e8e4b0c24c277c0f9e36bc744d68cf3",
+      "sha256": "bbbb36c7027103c365c430d816b922e7d5dcd55852694687b3a6174ea1bda6f5"
+    },
+    {
+      "path": "server/collaborationWrites.ts",
+      "bytes": 7745,
+      "git": "eb7049760de1e7aabaa60e4b9ce09a90d75560ca",
+      "sha256": "75aa721cb2a72bb18be728dc19ad2310e9a6b560e878d5aa5e82f407f37b4a82"
+    },
+    {
+      "path": "server/localApi.ts",
+      "bytes": 5945,
+      "git": "3f73f94201ba457936628f3ab09a3f3b09a6125d",
+      "sha256": "e659f5a2ada42e90714bc0fb5cbfefc5e9b41439dc2131f04ee3cef53b6a89e7"
+    },
+    {
+      "path": "server/materialRepository.ts",
+      "bytes": 2950,
+      "git": "0acd3f3ddd0ae396cc465aa4648967d98cd108f7",
+      "sha256": "1015fedb40edc097f8f8bed5b2c7098ea7d48981a7730debe774171fedf328f8"
+    },
+    {
+      "path": "server/materialWrites.ts",
+      "bytes": 15603,
+      "git": "5c18fb4556ada03b7c1f0a57d03b08f9f63023d3",
+      "sha256": "ff851427c60199d6b3c84272bb16afc85648ae52aad17b9e5d74ca63331ea18f"
+    },
+    {
+      "path": "src/App.tsx",
+      "bytes": 28620,
+      "git": "b34c2f57fbe99ff4913939425717ab891a77fe2f",
+      "sha256": "f3537293348a0cca058078e040adf8a19821d70bb99fc46a94dcbaf2183adc86"
+    },
+    {
+      "path": "src/api/collaboration.ts",
+      "bytes": 974,
+      "git": "5f28b591096e57631b676c8fe877f8e2ebf46c96",
+      "sha256": "be0fd5096c0d04d526c073093777895e0a544fc9980b704dbf058298a8e9cc51"
+    },
+    {
+      "path": "src/api/localDatabase.ts",
+      "bytes": 2088,
+      "git": "39f21c7b04c965806007f288f42d2f0d8a65cd63",
+      "sha256": "c5a285ba6a29ced3c54a7b42d6dde23ca21eb8072a872e39a73340f38ca5e14e"
+    },
+    {
+      "path": "src/api/materialRepository.ts",
+      "bytes": 3764,
+      "git": "9d66329864b1cdb7722f4e055843d59c3af3c62f",
+      "sha256": "8e9bc40b06c0f6a774a84700d4e7c44812b25a2e5425bcff081b3c98aa5d8faf"
+    },
+    {
+      "path": "src/api/useDatabase.ts",
+      "bytes": 1358,
+      "git": "9049b8fc3b8f79588709a8e4021035a6e4c5785b",
+      "sha256": "95a68ea0a7099e24dc9f03edbd902873480c3045607001f747c62dbdbdd604b1"
+    },
+    {
+      "path": "src/components/BulkImport.tsx",
+      "bytes": 2260,
+      "git": "748a8e80572824dd1b5e7c718ba6767b80ec74ce",
+      "sha256": "a849e62643e671d3cf29c650e430f6e23cf7542285251721007eb1402e9468be"
+    },
+    {
+      "path": "src/components/CommandPalette.tsx",
+      "bytes": 3257,
+      "git": "53d0d338b8197b8145c45f78ade985485cc7d949",
+      "sha256": "97b97e74fd88c374695a87bd097df55da6c4fb4cdf840c50aaba28db21a76898"
+    },
+    {
+      "path": "src/components/CommentsPanel.tsx",
+      "bytes": 9604,
+      "git": "17f2ab65efcc5422462ba8d8abb123c587abf92b",
+      "sha256": "4a6c75583edce94f42c44ef1655932830046fc8439f31e62dd0293039471d792"
+    },
+    {
+      "path": "src/components/Dashboard.tsx",
+      "bytes": 4264,
+      "git": "79385f03f8430463f5931b341d896fdf88062b0f",
+      "sha256": "c4460860d37e46124411c8a956f3924aa7c0c7abbc4e0065df1c49002c7a852e"
+    },
+    {
+      "path": "src/components/DetailDrawer.tsx",
+      "bytes": 13048,
+      "git": "f4c9a374d5e804f245c48769c4c49ff57da094dc",
+      "sha256": "8e324d82244cc0cca48c2d090d66d3ea0942c27b5cf5a4a31215f7fa83691b02"
+    },
+    {
+      "path": "src/components/ItemsTable.tsx",
+      "bytes": 26486,
+      "git": "7879d2e9c0136c88fb36dc86a103d069d1568416",
+      "sha256": "f1fff74f0d64f3739613346a66ff9f62e69f32806ada1a78f956f8001ce6cde8"
+    },
+    {
+      "path": "src/components/MaterialForm.tsx",
+      "bytes": 9391,
+      "git": "cce8745c30a047b7c741bcdda9ce8a5580bf3136",
+      "sha256": "6000c5728238b78412f7e8d544c7cf3ea1704ca9d4d649803f93bbdf5a274357"
+    },
+    {
+      "path": "src/data/demo.ts",
+      "bytes": 1271,
+      "git": "596d45df7a03090c457cd773929d6a2cee187774",
+      "sha256": "f69206b635481481a1e7f35ad08de0dbe85a31c26ac7d1114c5b7cde8caa65dc"
+    },
+    {
+      "path": "src/main.tsx",
+      "bytes": 238,
+      "git": "5e06d1a6d32c2bcf7b70520ec520a28c8b929a19",
+      "sha256": "464b1321432e0d058e5099aa9fed4a88d258831b5a44c35aeba7da3fe392e942"
+    },
+    {
+      "path": "src/styles/app.css",
+      "bytes": 21187,
+      "git": "23c2d4378d69be21af071e0026173f4a212cb3f0",
+      "sha256": "64ffab105248378d9327136b5ed0aeec6f22d2879b024063e3c0a70797ad56f3"
+    },
+    {
+      "path": "src/utils/bulkImport.ts",
+      "bytes": 2821,
+      "git": "9a7a59909d73d96bb00f4281539f1413d16144d0",
+      "sha256": "0b14a45aeb7ef3d3141fe13caf746216b6fe6e7a1307f314665e83cdadf58f04"
+    },
+    {
+      "path": "src/utils/collaborationDraft.ts",
+      "bytes": 1161,
+      "git": "44855191d3bababb43b13d86a4d053cecaf950a2",
+      "sha256": "35130ca07d42677af0df914b6eb1743865df3ba149b1af7ca2aeabe605ce820f"
+    },
+    {
+      "path": "src/utils/columns.ts",
+      "bytes": 4119,
+      "git": "58ec40dffa412d826828032af923b36eb5b4c4e2",
+      "sha256": "e9cd137ef39ab14d496ce5bb5049ac37c8852cf114a1dab0e53a4fd59c8eb15e"
+    },
+    {
+      "path": "src/utils/drafts.ts",
+      "bytes": 1181,
+      "git": "f0dc96b91c3f5f4adce608f4454151a84bef5876",
+      "sha256": "b9c6ed942f6fdc5feb11ee49ee1a9a06bc52b1973259378eebaf045113562b00"
+    },
+    {
+      "path": "src/utils/exportReports.ts",
+      "bytes": 5500,
+      "git": "7077f4ca854e1e74a5ca15877e976e19071eef3a",
+      "sha256": "df445e805e0a2ed2621974da35e3e8cb82e25956d6e6b6f7b2109f5d66e8dc85"
+    },
+    {
+      "path": "src/utils/material.ts",
+      "bytes": 7113,
+      "git": "0a31a792b22ddd1d5e0ccca3e20e02e1b143c7d7",
+      "sha256": "3d5ec9c51ce8518dccbd81962291743d58177e446f82f8948ac13d1916e42630"
+    },
+    {
+      "path": "src/utils/storage.ts",
+      "bytes": 650,
+      "git": "cce78865fd0fa912b604c67379241ce35af1e504",
+      "sha256": "a276e5b96288752838a1f2232f1500b9b06f8b4b029049dd1b94dcc7a52de6b2"
+    },
+    {
+      "path": "supabase/migrations/20261127005325_material_sourcing_foundation.sql",
+      "bytes": 6993,
+      "git": "4754ad7087d010066baf81a5c3a18786bd71db93",
+      "sha256": "c22d1518d4d10a2e3ebccc71dd48b1e3166ffa42080e85ee9ad7ce6647bb0839"
+    },
+    {
+      "path": "supabase/migrations/20261127005740_material_sourcing_lifecycle_integrity.sql",
+      "bytes": 1899,
+      "git": "a80f4e2253dee7ca7fa55cdd69ddd33e45405e6e",
+      "sha256": "f0473071547c6dbecacdb9b118a485aa01cf97c5a82a17cd2b2f0b841ec9ae20"
+    },
+    {
+      "path": "supabase/migrations/20261127053020_bulk_operation_receipts.sql",
+      "bytes": 437,
+      "git": "eb970c2f88c5c5affea9bdf0859eedda75e4bb45",
+      "sha256": "a7a63237e5af95728554a081d7f08315393e432911cb69a7c7477f3b7801dc33"
+    },
+    {
+      "path": "supabase/rollback/20261127005325_material_sourcing_foundation.down.sql",
+      "bytes": 586,
+      "git": "9f8ad76bde2ae3909a0a4a84d93baf2136bfc628",
+      "sha256": "12105109736643734faf4ec6496e8d0854bc4c818e966a0e75c6fa4162c59b7d"
+    },
+    {
+      "path": "supabase/rollback/20261127005740_material_sourcing_lifecycle_integrity.down.sql",
+      "bytes": 348,
+      "git": "b9b1e61ae13ad603e0da50276ac0763dcd064742",
+      "sha256": "4544310c57db4ff37b26f9d4499120561d931731b82079cbc60b55030657edbe"
+    },
+    {
+      "path": "supabase/rollback/20261127053020_bulk_operation_receipts.down.sql",
+      "bytes": 146,
+      "git": "c67d1d61952f65649314275dd8d356f4d4e2f27a",
+      "sha256": "ef3cd71b9f11333274b3d57790bc62c9c3aca5050f15d32d67c28eb152c1d013"
+    },
+    {
+      "path": "supabase/seed.sql",
+      "bytes": 1643,
+      "git": "8c877272e88317ec2c6e95b8710c79a4e6549ca3",
+      "sha256": "0cbceb6ca297878dfc8320e360efdf84b61e3001a40773e45791c970a369e24c"
+    },
+    {
+      "path": "supabase/tests/foundation.sql",
+      "bytes": 5942,
+      "git": "132d8a5c79f216578861751d2b4e53936e4b51d9",
+      "sha256": "f881f5ff4b77160db9cd5ca7f29441b805668121607829beb7a4f3634496de82"
+    },
+    {
+      "path": "supabase/tests/lifecycle.sql",
+      "bytes": 2244,
+      "git": "dc2a19a1aeb3b6a2a7f1e5dadb78f9ce9f72d02e",
+      "sha256": "fcac38960f1516a71b540e28290b8970a02bbf1d2d991d2b840ca41936c175d8"
+    },
+    {
+      "path": "tests/advanced-browser.mjs",
+      "bytes": 16747,
+      "git": "035fdbcbfe9b6414f820b9101c780d514f9e4c47",
+      "sha256": "5eebbc0c4d6c0ff02193cd2be4ea28c065899ac5df6ba9a656de68f094cba5ad"
+    },
+    {
+      "path": "tests/backend.integration.mjs",
+      "bytes": 5433,
+      "git": "06f0a94f97e2129e5bdd364f182b259157a2d135",
+      "sha256": "7d07fffa616731a862124ff3347e5ad3078baf28b4ea55d3684b71292495adb6"
+    },
+    {
+      "path": "tests/browser.mjs",
+      "bytes": 5137,
+      "git": "faf9657c3b89acb5518d9fa8334a713aaa2fb009",
+      "sha256": "90b150a80392dd0d55fefdb8297e049f47d35225ecabe81e8855278a4ba729aa"
+    },
+    {
+      "path": "tests/bulk-browser.mjs",
+      "bytes": 10288,
+      "git": "03593db67dfce679576aa27db9b6b0010ee69da8",
+      "sha256": "d6c6385476d96b170901c2487c7aa73b3ff66f6c9525d2ee5d24b2e01c190ea1"
+    },
+    {
+      "path": "tests/collaboration-browser.mjs",
+      "bytes": 12217,
+      "git": "4f0cb5427341d55bb56c184ca224f8d5aa4d6c6c",
+      "sha256": "af43b240c17bc4bc98c8a3cbdcc6a0f1608af4ce156c7fab022a69e855e3c9cd"
+    },
+    {
+      "path": "tests/crud-browser.mjs",
+      "bytes": 15590,
+      "git": "f0f6f1f4a4b962565be21b472a946db28edbd1b1",
+      "sha256": "22c2d676c29801cc9a2bafe373f12548439660d14ce18a3f95023da4f8fce5d3"
+    },
+    {
+      "path": "tests/material.test.mjs",
+      "bytes": 1814,
+      "git": "8aa9f73da06fdec79c0f01a8da561612b9eefe5c",
+      "sha256": "9f11ffefb06ad50cb3b7b8ecd1a53cb2b4eea204d2c8a8f9eef180889c2e1336"
+    },
+    {
+      "path": "tests/pricing-browser.mjs",
+      "bytes": 10839,
+      "git": "4629917c08713a67f473b443d253ac17376f3da6",
+      "sha256": "ec080a07025a2f3dce0edefb5e9c6d86dc1ed7d1b9bd12cd925117077d004053"
+    },
+    {
+      "path": "tests/table.test.mjs",
+      "bytes": 2101,
+      "git": "e43d6657459630a6184b73d6766ac8f769105d6e",
+      "sha256": "e89f1a13781ba6a202419dbb2754fe0a0f01fe57390ef18f919d8b9144616d15"
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 357,
+      "git": "e29243fd1a90a9760acea7fb26c2526784e1320c",
+      "sha256": "b531055dceb065382e6c3fd1b91cb120be98d82c5ed05db825a402c1637d4110"
+    },
+    {
+      "path": "vite.config.ts",
+      "bytes": 654,
+      "git": "1fe570408699d88cda8852806299e148298170d9",
+      "sha256": "11f7abdcfc365a3c762a680e8c24eb53597edd2a9177f47db501467786a7de28"
+    }
+  ]
+}
