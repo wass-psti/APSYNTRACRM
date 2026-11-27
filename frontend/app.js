@@ -129,7 +129,8 @@ import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board/scroll-st
 import {canRetainVisibleBoard,replaceVisibleBoardContent} from './board/services/background-update.js';
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board/presentation/loading.js';
 import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
-import {MATERIAL_TRACKER_DEFAULT_FILTERS,renderMaterialSourcingTracker,isMaterialTrackerBoard,materialTrackerRows,filterMaterialTrackerRows,materialTrackerPublicCsv} from './material-sourcing-tracker.js';
+import {MATERIAL_TRACKER_DEFAULT_FILTERS,isMaterialTrackerBoard,materialTrackerRows,filterMaterialTrackerRows,materialTrackerPublicCsv} from './material-sourcing-tracker.js';
+import {renderNativeMaterialSourcing,sortNativeMaterials,loadNativeCommercialRow} from './apps/MaterialSourcing/native-screen.js?v=cp-ms-crm-03-20261127';
 import {parseMaterialAddForm,materialAddPublicColumns} from './material-sourcing-add-material.js';
 import {createMaterialSourcingAtomic} from './material-sourcing-atomic-create.js';
 import {showEngineeringDiagnostics} from './engineering-diagnostics-visibility.js';
@@ -2106,6 +2107,14 @@ function renderTimeTrackerRouteUnavailable(){
   '<a class="fm1-quiet-button" href="#/boards">Return to My Boards</a></section></section>';
 }
 
+// Existing board route and event handlers remain authoritative.
+function renderMaterialSourcingTracker(detail,filters,now,options){
+ const workspaceId=state.context?.workspace_id;
+ if(!auth.isSignedIn||state.context?.user_id!==auth.userId||state.workspaceTransitionPending||
+    detail?.board?.workspace_id!==workspaceId)
+  return '<section class="panel" role="status">Loading Material Sourcing for the current workspace…</section>';
+ return renderNativeMaterialSourcing(detail,filters,now,{...options,workspaceId});
+}
 function boardPage(){
  const engineeringUi=showEngineeringDiagnostics(location.search,state.roleVerified===true);
  if(state.loading)return renderBoardLoading({
@@ -10062,6 +10071,22 @@ async function action(name,button){
   openBoardQuickColumnPicker(button);break;
  }
  case 'tt-board-gps':{try{await openTimeTrackerBoardProjectedGps();}catch(err){notice(err);}break;}
+ case 'mrh-native-sort':{
+  if(state.view==='board'&&state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)&&
+     auth.isSignedIn&&state.context?.user_id===auth.userId&&state.board.board.workspace_id===state.context?.workspace_id)
+   sortNativeMaterials(button);
+  break;
+ }
+ case 'mrh-native-commercial':{
+  const snapshot={boardId:state.boardId,userId:auth.userId,workspaceId:state.context?.workspace_id};
+  const isCurrent=()=>boardHistoryAuthorized(snapshot)&&state.tab==='sourcing'&&
+   state.context?.user_id===snapshot.userId&&!state.workspaceTransitionPending&&
+   isMaterialTrackerBoard(state.board)&&state.board.board.workspace_id===snapshot.workspaceId&&
+   state.board.items?.some(item=>item.id===button.dataset.id&&item.group_id===MATERIAL_SOURCING_GROUP.id&&!item.archived_at);
+  if(!isCurrent())break;
+  await loadNativeCommercialRow(button,{api:db,auth,workspaceId:snapshot.workspaceId,boardId:snapshot.boardId,isCurrent});
+  break;
+ }
  case 'mrh-export-csv':{
   if(state.view!=='board'||state.tab!=='sourcing'||
      !isMaterialTrackerBoard(state.board)||!auth.isSignedIn||

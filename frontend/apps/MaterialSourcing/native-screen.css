@@ -1,0 +1,39 @@
+/* CP-MS-CRM-03: reference-style native Material Sourcing, scoped to its list.
+   No global theme mutation, inline style or other app selector. */
+.ms-native-sourcing{--ms-surface:#fff;--ms-bg:#f5f6f8;--ms-ink:#10192b;--ms-muted:#66758d;--ms-line:#e2e7ee;--ms-soft:#eeedff;--ms-accent:#5144f4;max-width:100%;min-width:0;color:var(--ms-ink);background:var(--ms-bg);border:1px solid var(--ms-line);border-radius:16px;overflow:hidden}
+html[data-aps-monday-theme="dark"] .ms-native-sourcing{--ms-surface:#1c2432;--ms-bg:#111722;--ms-ink:#e5edf9;--ms-muted:#a6b4c9;--ms-line:#354154;--ms-soft:#312b51;--ms-accent:#a69aff;color-scheme:dark}
+.ms-native-sourcing .ms-native-header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:22px 26px;background:var(--ms-surface);border-bottom:2px solid var(--ms-accent)}
+.ms-native-sourcing .ms-native-brand,.ms-native-sourcing .ms-native-header-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ms-native-sourcing .ms-native-brand h2{font-size:25px;letter-spacing:-.7px;margin:0;color:var(--ms-ink)}
+.ms-native-sourcing .ms-native-brand p{color:var(--ms-muted);margin:4px 0 0}
+.ms-native-sourcing .ms-native-logo{display:grid;place-items:center;width:42px;height:42px;border-radius:15px;background:var(--ms-soft);color:var(--ms-accent);font-size:26px}
+.ms-native-sourcing .ms-native-tag{font-size:12px;color:var(--ms-muted);border:1px solid var(--ms-line);background:var(--ms-surface);border-radius:20px;padding:5px 10px}
+.ms-native-sourcing .ms-native-body{padding:22px;container-type:inline-size;min-width:0}
+.ms-native-sourcing .ms-native-metrics-panel{margin:0 0 18px;background:transparent;border:0;padding:0}
+.ms-native-sourcing .ms-native-metrics-panel summary{cursor:pointer;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ms-muted);margin-bottom:10px}
+.ms-native-sourcing .ms-native-metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr)) minmax(170px,1.5fr);gap:10px}
+.ms-native-sourcing .ms-native-metric{display:flex;align-items:center;gap:9px;background:var(--ms-surface);border:1px solid var(--ms-line);border-radius:17px;min-height:114px;padding:14px 11px;min-width:0;color:var(--ms-ink)}
+.ms-native-sourcing .ms-native-metric i{font-style:normal;background:var(--ms-soft);color:var(--ms-accent);width:30px;height:30px;display:grid;place-items:center;border-radius:10px;flex:none}
+.ms-native-sourcing .ms-native-metric small{font-size:11px;color:var(--ms-muted);display:block;overflow-wrap:anywhere}
+.ms-native-sourcing .ms-native-metric strong{font-size:18px;display:block;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.ms-native-sourcing .ms-native-rates{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--ms-line);border-radius:13px;margin-bottom:20px;color:var(--ms-muted)}
+.ms-native-sourcing .ms-native-tabs{margin-bottom:18px;background:var(--ms-line);border-radius:12px;padding:4px;max-width:100%;flex-wrap:wrap}
+.ms-native-sourcing .ms-native-tabs .mrh-active-view{background:var(--ms-surface);color:var(--ms-ink);border-radius:9px}
+.ms-native-sourcing .ms-native-surface{border:1px solid var(--ms-line);border-top:2px solid var(--ms-accent);border-radius:17px;overflow:hidden;background:var(--ms-surface);min-width:0}
+.ms-native-sourcing .mrh-tracker-controls{background:var(--ms-surface);color:var(--ms-ink);flex-wrap:wrap}
+.ms-native-sourcing .mrh-tracker-controls input,.ms-native-sourcing .mrh-tracker-controls select,.ms-native-sourcing .mrh-tracker-overdue{background:var(--ms-bg);color:var(--ms-ink);border-color:var(--ms-line)}
+.ms-native-sourcing .ms-native-table-scroll{overflow:auto;max-height:65vh;max-width:100%;scrollbar-gutter:stable}
+.ms-native-sourcing .ms-native-table{width:max-content;min-width:100%;border-collapse:separate;border-spacing:0;table-layout:auto}
+.ms-native-sourcing .ms-native-table :is(th,td){background:var(--ms-surface);color:var(--ms-ink);border-color:var(--ms-line);padding:12px;min-width:105px;max-width:260px;overflow-wrap:anywhere}
+.ms-native-sourcing .ms-native-table thead th{position:sticky;top:0;z-index:3;background:var(--ms-bg);font-size:11px;color:var(--ms-muted)}
+.ms-native-sourcing .ms-native-table [data-ms-col="name"]{position:sticky;left:0;z-index:2;min-width:210px;border-right:1px solid var(--ms-line)}
+.ms-native-sourcing .ms-native-table thead [data-ms-col="name"]{z-index:4}
+.ms-native-sourcing .ms-native-table .mrh-group-row th{background:var(--ms-soft);color:var(--ms-accent)}
+.ms-native-sourcing .ms-native-table th button{font:inherit;color:inherit;background:transparent;border:0;padding:2px;cursor:pointer}
+.ms-native-sourcing .ms-native-table td .mrh-part-link{color:var(--ms-ink);white-space:normal;text-align:left;font-weight:700}
+.ms-native-sourcing .ms-native-read{display:block;margin-top:5px;font-size:11px;color:var(--ms-accent);background:var(--ms-surface);border:1px solid var(--ms-line);border-radius:7px;padding:4px 7px;cursor:pointer}
+.ms-native-sourcing .ms-native-row-status{display:block;font-size:11px;color:var(--ms-muted);white-space:normal;margin-top:3px}
+.ms-native-sourcing .ms-native-note{font-size:12px;color:var(--ms-muted);line-height:1.6;margin:12px 0 0}
+@container (max-width:1150px){.ms-native-sourcing .ms-native-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}.ms-native-sourcing .ms-native-distribution{grid-column:span 2}}
+@container (max-width:680px){.ms-native-sourcing .ms-native-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.ms-native-sourcing .ms-native-distribution{grid-column:span 2}.ms-native-sourcing .ms-native-metric{min-height:94px}}
+@media(max-width:480px){.ms-native-sourcing .ms-native-body,.ms-native-sourcing .ms-native-header{padding:12px}.ms-native-sourcing .ms-native-table [data-ms-col="name"]{min-width:145px;max-width:170px}.ms-native-sourcing .ms-native-header-actions{gap:6px}}
