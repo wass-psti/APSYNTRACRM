@@ -133,8 +133,9 @@ async function renderPdf(scenario,fileName,forbiddenMarkers){
   assert.equal(await article.getAttribute('data-tradelink-template-version'),'v1.42.0');
   assert.equal(await article.getAttribute('data-tradelink-profile-version'),'1');
   assert.equal(await article.getAttribute('data-tradelink-render-snapshot-source'),'captured');
-  assert.equal(await article.getAttribute('data-tradelink-revision'),String(scenario.revision));
   const text=await page.locator('body').innerText();
+  assert.ok(text.includes('Revision '+scenario.revision),
+   'The printed output must identify the exact historical revision');
   for(const token of [scenario.marker,scenario.termsMarker,scenario.itemMarker,
    scenario.remarksMarker,scenario.total,'APPROVED']){
    assert.ok(text.includes(token),'Historical revision output must contain '+token);
