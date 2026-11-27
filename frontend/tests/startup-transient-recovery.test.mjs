@@ -38,6 +38,14 @@ test('one bounded retry restores a transient signed read without duplicate loops
   assert.deepEqual(waits,[350]);
  }
 });
+test('startup recovery does not retry after a request layer has already retried',async()=>{
+ let calls=0;
+ const retried=Object.assign(failure(503),{retryAttempts:1});
+ await assert.rejects(()=>startupVerifiedRead(async()=>{
+  calls++;throw retried;
+ },{wait:async()=>{}}),error=>error===retried);
+ assert.equal(calls,1);
+});
 test('startup retry respects a provider-supplied Retry-After delay',async()=>{
  let calls=0,waits=[];
  const limited=Object.assign(failure(429),{retryAfterMs:1800});
