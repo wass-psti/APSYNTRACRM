@@ -75,7 +75,8 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
   const original=await load(adminPage,bootstrap,'Submitted','System Admin');
   assert.ok(original.rows.some(r=>r.id===selfPending.id));
   const selfCard=adminPage.locator(`[data-request-id="${selfPending.id}"]`);
-  await selfCard.locator('summary').click();
+  assert.equal(await selfCard.locator('summary').count(),0,'OT rows no longer contain a View disclosure');
+  assert.equal(await selfCard.locator('.tt-ot-attribution').count(),1,'OT rows show attribution');
   assert.equal(await selfCard.locator('[data-action="tt-ot-approve"]').count(),1);
   assert.equal(await selfCard.locator('[data-action="tt-ot-reject"]').count(),1);
   await adminPage.evaluate(({token,board,durationId,manualDurationId,otherManualDurationId})=>{
@@ -104,7 +105,8 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
   assert.equal(ownDurationRow?.canReviewOt,true,'Bootstrap snapshot exposes own duration review capability');
   assert.equal(ownDurationRow?.canReviewDuration,true,'Bootstrap snapshot exposes own duration-specific capability');
   const ownDurationCard=adminPage.locator(`[data-request-id="${bootstrapDurationRequest.id}"]`);
-  await ownDurationCard.locator('summary').click();
+  assert.equal(await ownDurationCard.locator('summary').count(),0,'OT rows no longer contain a View disclosure');
+  assert.equal(await ownDurationCard.locator('.tt-ot-attribution').count(),1,'OT rows show attribution');
   assert.equal(await ownDurationCard.locator('[data-action="tt-ot-approve"]').count(),1);
   assert.equal(await ownDurationCard.locator('[data-action="tt-ot-reject"]').count(),1);
   await ownDurationCard.locator('[data-action="tt-ot-approve"]').click();
@@ -121,7 +123,8 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
   assert.equal(ownManualRow?.canReviewOt,true,'Bootstrap snapshot exposes own manual-duration review capability');
   assert.equal(ownManualRow?.canReviewDuration,true,'Bootstrap snapshot exposes own manual-duration capability');
   const ownManualCard=adminPage.locator(`[data-request-id="${bootstrapManualDurationRequest.id}"]`);
-  await ownManualCard.locator('summary').click();
+  assert.equal(await ownManualCard.locator('summary').count(),0,'OT rows no longer contain a View disclosure');
+  assert.equal(await ownManualCard.locator('.tt-ot-attribution').count(),1,'OT rows show attribution');
   assert.equal(await ownManualCard.locator('[data-action="tt-ot-approve"]').count(),1);
   assert.equal(await ownManualCard.locator('[data-action="tt-ot-reject"]').count(),1);
   await ownManualCard.locator('[data-action="tt-ot-reject"]').click();
@@ -140,7 +143,8 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
   assert.equal(otherManualRow.canReviewOt,true);
   assert.equal(otherManualRow.canReviewDuration,true);
   const otherManualCard=adminPage.locator(`[data-request-id="${bootstrapOtherManualDurationRequest.id}"]`);
-  await otherManualCard.locator('summary').click();
+  assert.equal(await otherManualCard.locator('summary').count(),0,'OT rows no longer contain a View disclosure');
+  assert.equal(await otherManualCard.locator('.tt-ot-attribution').count(),1,'OT rows show attribution');
   assert.equal(await otherManualCard.locator('[data-action="tt-ot-approve"]').count(),1);
   await otherManualCard.locator('[data-action="tt-ot-approve"]').click();
   await adminPage.waitForFunction(id=>window.__otLastDecision?.result?.id===id,bootstrapOtherManualDurationRequest.id);
@@ -153,7 +157,8 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
 
   await load(adminPage,bootstrap,'Submitted','System Admin');
   const pendingCard=adminPage.locator(`[data-request-id="${workerPending.id}"]`);
-  await pendingCard.locator('summary').click();
+  assert.equal(await pendingCard.locator('summary').count(),0,'OT rows no longer contain a View disclosure');
+  assert.equal(await pendingCard.locator('.tt-ot-attribution').count(),1,'OT rows show attribution');
   assert.doesNotMatch(await pendingCard.innerText(),/\b\d{1,2}:\d{2}\b/,
    'legacy OT review rows show hours, never clock-time ranges');
   await pendingCard.locator('[data-action="tt-ot-reject"]').click();
@@ -161,7 +166,8 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
   assert.equal((await adminPage.evaluate(()=>window.__otLastDecision.result)).status,'Rejected');
   await load(workerPage,worker,'Rejected');
   const ownCard=workerPage.locator(`[data-request-id="${workerPending.id}"]`);
-  await ownCard.locator('summary').click();
+  assert.equal(await ownCard.locator('summary').count(),0,'OT rows no longer contain a View disclosure');
+  assert.equal(await ownCard.locator('.tt-ot-attribution').count(),1,'OT rows show attribution');
   assert.equal(await ownCard.locator('.tt-ot-pill').innerText(),'Rejected');
   assert.equal(await workerPage.locator('[data-action="tt-ot-approve"]').count(),0);
   await adminPage.reload();
@@ -194,16 +200,19 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
   assert.equal(hrSnapshot.scope,'AUTHORIZED_WORKSPACE_TEAM');
   const durationCard=hrPage.locator(`[data-request-id="${durationRequest.id}"]`);
   const ownHrCard=hrPage.locator(`[data-request-id="${hrOwnRequest.id}"]`);
-  await durationCard.locator('summary').click();
+  assert.equal(await durationCard.locator('summary').count(),0,'OT rows no longer contain a View disclosure');
+  assert.equal(await durationCard.locator('.tt-ot-attribution').count(),1,'OT rows show attribution');
   assert.doesNotMatch(await durationCard.innerText(),/\b\d{1,2}:\d{2}\b/,
    'duration OT review rows do not expose start or end times');
   assert.equal(await durationCard.locator('[data-action="tt-ot-approve"]').count(),1);
-  await ownHrCard.locator('summary').click();
+  assert.equal(await ownHrCard.locator('summary').count(),0,'OT rows no longer contain a View disclosure');
+  assert.equal(await ownHrCard.locator('.tt-ot-attribution').count(),1,'OT rows show attribution');
   assert.equal(await ownHrCard.locator('[data-action="tt-ot-approve"]').count(),0,
    'HR cannot approve its own request');
   await load(adminPage,bootstrap,'Submitted','System Admin');
   const bootstrapDuration=adminPage.locator(`[data-request-id="${durationRequest.id}"]`);
-  await bootstrapDuration.locator('summary').click();
+  assert.equal(await bootstrapDuration.locator('summary').count(),0,'OT rows no longer contain a View disclosure');
+  assert.equal(await bootstrapDuration.locator('.tt-ot-attribution').count(),1,'OT rows show attribution');
   assert.equal(await bootstrapDuration.locator('[data-action="tt-ot-approve"]').count(),1,
    'platform Admin receives the signed duration OT review control');
 
@@ -225,7 +234,8 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
   assert.equal(hrApproved.rows.find(row=>row.id===durationRequest.id).attendanceCredit,null);
   await load(workerPage,worker,'Approved');
   const employeeApproved=workerPage.locator(`[data-request-id="${durationRequest.id}"]`);
-  await employeeApproved.locator('summary').click();
+  assert.equal(await employeeApproved.locator('summary').count(),0,'OT rows no longer contain a View disclosure');
+  assert.equal(await employeeApproved.locator('.tt-ot-attribution').count(),1,'OT rows show attribution');
   assert.equal(await employeeApproved.locator('[data-action="tt-ot-approve"]').count(),0);
   assert.equal(await employeeApproved.locator('.tt-ot-pill').innerText(),'Approved');
   assert.deepEqual(errors,[]);

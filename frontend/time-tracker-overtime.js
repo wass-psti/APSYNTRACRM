@@ -198,8 +198,8 @@ const row=(r,access,query='',expandedRequestIds=[],otContractActive=false)=>{
   (r.canEditDecision&&otContractActive?button('tt-ot-edit','Edit'):'')+
   (r.canEditDecision&&otContractActive&&access.paidOtContractActive===true?button('tt-ot-remove','Remove'):'')+
   (r.canWithdraw&&otContractActive?button('tt-ot-withdraw','Remove'):'')+
-  '<div class="tt-ot-attribution"><small><b>Filed by:</b> '+esc(r.filedByName||'—')+'</small>'+
-  '<small><b>'+(r.status==='Rejected'?'Rejected by:':'Approved by:')+'</b> '+esc(r.status==='Submitted'?'—':r.decidedByName||'—')+'</small></div></div></article>';
+  '<div class="tt-ot-detail tt-ot-attribution"><span><b>Filed by:</b> '+esc(r.filedByName||'—')+'</span>'+
+  '<span><b>'+(r.status==='Rejected'?'Rejected by:':'Approved by:')+'</b> '+esc(r.status==='Submitted'?'—':r.decidedByName||'—')+'</span></div></div></article>';
 };
 const shiftPhtDay=(day,offset)=>new Date(Date.parse(day+'T00:00:00Z')+offset*msDay).toISOString().slice(0,10);
 export function timeTrackerOtDurationLabel(minutes){
