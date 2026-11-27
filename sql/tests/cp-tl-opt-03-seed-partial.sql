@@ -1,0 +1,2 @@
+INSERT INTO public.timetracker_ot_requests (id,owner_id,submission_source,status,reason) VALUES
+('69f17f9e-80c6-4297-930d-672f8e4986b6','1b2674da-e106-40d9-ab1d-1ecfeb3d76e9','manual_admin','Submitted','partial fixture test');

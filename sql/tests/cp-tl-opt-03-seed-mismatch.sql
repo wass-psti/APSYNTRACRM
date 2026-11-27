@@ -1,0 +1,1 @@
+INSERT INTO auth.users (id,email) VALUES ('1b2674da-e106-40d9-ab1d-1ecfeb3d76e9','not-the-qa-account@example.com');

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {cpuInterval,rpcSummary,workloadMode} from '../../scripts/lib/crm-signed-performance.mjs';
+import {assertForegroundInteractionPage,cpuInterval,rpcSummary,workloadMode} from '../../scripts/lib/crm-signed-performance.mjs';
 
 test('signed performance report accounts for bytes, latency and failed requests',()=>{
  const result=rpcSummary([{status:200,ms:3,bytes:120},{status:503,ms:9,bytes:20}]);
@@ -23,4 +23,10 @@ test('matched sustained cohorts each run 30 minutes with the same phase schedule
  assert.equal(a.windows,1);assert.equal(b.windows,2);
  assert.equal(workloadMode('smoke').phaseMs,35000);
  assert.throws(()=>workloadMode('production'));
+});
+
+test('interaction samples require a foreground browser page',()=>{
+ assert.equal(assertForegroundInteractionPage('visible'),true);
+ for(const state of ['hidden','prerender','unloaded',undefined,null])
+  assert.throws(()=>assertForegroundInteractionPage(state),/foreground browser page/);
 });

@@ -2340,6 +2340,13 @@
       "sha256": "de2bfd4a8b8c5ea533a22781670609f3cb1199a930c31116828aa9ade367825e"
     },
     {
+      "version": "20261126044952",
+      "name": "retire_apsyntra_timetracker_qa_account",
+      "file": "20261126044952_retire_apsyntra_timetracker_qa_account.sql",
+      "bytes": 7717,
+      "sha256": "daf8d57a7ae874ed7d65122cbae744aef82da7c8d400a6d31ac7a0eaa452722c"
+    },
+    {
       "version": "20261126045855",
       "name": "cp_tl_gm_direct_executive_approval",
       "file": "20261126045855_cp_tl_gm_direct_executive_approval.sql",
@@ -2438,6 +2445,20 @@
       "sha256": "3ee8826ab7e6c1a226ddea81759e4a7d946ff4be9de6ae40afc4ee119eb1c607"
     },
     {
+      "version": "20261127110000",
+      "name": "cp_tt_ot_self_review_parity_02",
+      "file": "20261127110000_cp_tt_ot_self_review_parity_02.sql",
+      "bytes": 6762,
+      "sha256": "aa0b5e89102e79fa89a031ce00cfb702d7fcf5bc1a982c07aabcc08dcd62499e"
+    },
+    {
+      "version": "20261127120000",
+      "name": "cp_tl_opt_04_document_template_render_snapshots",
+      "file": "20261127120000_cp_tl_opt_04_document_template_render_snapshots.sql",
+      "bytes": 46172,
+      "sha256": "fa7da4da057afd6af42edcde8ebba25bcbf5d467486d11f6ff7570b827f0db6f"
+    },
+    {
       "version": "20261127160000",
       "name": "cp_tt_shared_read_visibility",
       "file": "20261127160000_cp_tt_shared_read_visibility.sql",
@@ -2452,7 +2473,18 @@
       "file": "20261126044952_retire_apsyntra_timetracker_qa_account.sql",
       "bytes": 5658,
       "sha256": "26f2050fdbb2c74147545ec9c35c525b20647d6cd7ea69b7a73f0b9c2160939c",
-      "reason": "Production-specific QA fixture retirement; archive only, never replay against a fresh database."
+      "reason": "Original production-specific QA fixture retirement SQL, preserved byte-for-byte as an applied-only archive. A separately registered replay-compatible source shares this version."
+    }
+  ],
+  "compatibility_pairs": [
+    {
+      "version": "20261126044952",
+      "name": "retire_apsyntra_timetracker_qa_account",
+      "replayable_file": "20261126044952_retire_apsyntra_timetracker_qa_account.sql",
+      "replayable_sha256": "daf8d57a7ae874ed7d65122cbae744aef82da7c8d400a6d31ac7a0eaa452722c",
+      "applied_only_file": "20261126044952_retire_apsyntra_timetracker_qa_account.sql",
+      "applied_only_sha256": "26f2050fdbb2c74147545ec9c35c525b20647d6cd7ea69b7a73f0b9c2160939c",
+      "reason": "The archive preserves the production-applied SQL unchanged. The replayable source skips only when the complete production QA fixture is absent and aborts on partial or mismatched fixture data."
     }
   ]
 }

@@ -306,9 +306,13 @@ assert.equal((await readTicket(l1,ticketId)).status,'Resolved');
 console.log('TWO_SESSION_L1_L2_CLAIM_ESCALATE_RESOLVE_READBACK_CAS PASS');
 
 // Opt-in real browser acceptance requires local Playwright; CI's existing API gate stays unchanged.
-if(process.env.FT_UI07_BROWSER==='1'){
+if(process.env.FT_UI07_BROWSER==='1'||process.env.CP_CRM_PERF_01B_FUELTRANS==='1'){
  const {verifyFuelTransTwoSessionBrowser}=await import('./cp-ft-ui07-real-browser.mjs');
+ const perf=process.env.CP_CRM_PERF_01B_FUELTRANS==='1';
+ const integrity=()=>sql("SELECT md5(coalesce(string_agg(to_jsonb(t)::text, ',' ORDER BY id),'')) FROM public.fueltrans_tickets t");
+ const before=perf?integrity():null;
  await verifyFuelTransTwoSessionBrowser({restPort,workspaceId,actors});
+ if(perf){assert.equal(integrity(),before,'FuelTrans tickets changed during read benchmark');console.log('CP_CRM_PERF_01B_FUELTRANS_INTEGRITY_PASS');}
 }
 
 sql("update public.fueltrans_memberships set enabled=false where workspace_id='"+workspaceId+"' and user_id='"+l2.id+"'");

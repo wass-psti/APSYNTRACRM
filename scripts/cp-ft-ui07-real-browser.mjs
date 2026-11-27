@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {join,extname} from 'node:path';
 import {chromium} from 'playwright';
+import {runFuelTransPerformance} from './cp-crm-perf-01b-fueltrans.mjs';
 
 export async function verifyFuelTransTwoSessionBrowser({restPort,workspaceId,actors}){
  if(!/^\d{2,5}$/.test(restPort)||!actors?.unioil?.token||!actors?.global_l1_support?.token||!actors?.local_l2_support?.token)
@@ -14,8 +15,8 @@ export async function verifyFuelTransTwoSessionBrowser({restPort,workspaceId,act
  const browser=await chromium.launch({headless:true});
  const contexts=[];
  const errors=[];
- async function openActor(actor,route){
-  const context=await browser.newContext({viewport:{width:1200,height:860},serviceWorkers:'block'});
+ async function openActor(actor,route,{viewport={width:1200,height:860},observe=null}={}){
+  const context=await browser.newContext({viewport,serviceWorkers:'block'});
   contexts.push(context);
   const user={id:actor.id,email:actor.email};
   const boot=`import {syncFuelTrans} from '/frontend/fueltrans-native.js';
@@ -39,6 +40,7 @@ boardId:'${boardId}',workspaceId:'${workspaceId}',userId:u.id,route:${JSON.strin
    }
    // CRM normally routes /rest/v1 through Kong; local PostgREST serves tables at /.
    if(url.pathname.startsWith('/rest/v1/')){
+    if(observe&&routeObject.request().method()!=='GET'){observe.blockedWrites++;await routeObject.abort('blockedbyclient');return;}
     await routeObject.continue({url:base+url.pathname.slice('/rest/v1'.length)+url.search});return;
    }
    if(url.pathname==='/fixture'){await routeObject.fulfill({body:html,contentType:'text/html'});return;}
@@ -56,6 +58,7 @@ boardId:'${boardId}',workspaceId:'${workspaceId}',userId:u.id,route:${JSON.strin
    await routeObject.fulfill({status:404,body:'Not available'});
   });
   const page=await context.newPage();
+  if(observe)observe.attach(page);
   page.on('pageerror',error=>errors.push(error.message));
   page.on('console',msg=>{if(msg.type()==='error')errors.push('console '+(msg.location()?.url||'?')+': '+msg.text());});
   page.on('requestfailed',request=>errors.push('failed '+new URL(request.url()).pathname+': '+request.failure()?.errorText));
@@ -74,6 +77,11 @@ boardId:'${boardId}',workspaceId:'${workspaceId}',userId:u.id,route:${JSON.strin
   return {page,pick,actor};
  }
  try{
+  if(process.env.CP_CRM_PERF_01B_FUELTRANS==='1'){
+   await runFuelTransPerformance({openActor,actor:actors.admin});
+   assert.deepEqual(errors,[],'No browser module errors during benchmark');
+   return;
+  }
   const reporter=await openActor(actors.unioil,'create-ticket');
   await reporter.pick('#ticket-form').waitFor();
   await reporter.pick('input[name=stationId]').fill('TEST07');
