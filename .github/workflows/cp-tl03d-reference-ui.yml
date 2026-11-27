@@ -8,6 +8,7 @@ on:
       - 'frontend/tradelink-application.js'
       - 'frontend/tradelink-domain-client.js'
       - 'frontend/tradelink-draft-workspace.js'
+      - 'frontend/tests/tradelink-document-creator-attribution.test.mjs'
       - 'frontend/tests/tradelink-dual-review-approval.test.mjs'
       - 'supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql'
       - 'supabase/migrations/20261112093727_tradelink_revision_required_edit_compat.sql'
@@ -28,6 +29,7 @@ on:
       - 'frontend/tradelink-application.js'
       - 'frontend/tradelink-domain-client.js'
       - 'frontend/tradelink-draft-workspace.js'
+      - 'frontend/tests/tradelink-document-creator-attribution.test.mjs'
       - 'frontend/tests/tradelink-dual-review-approval.test.mjs'
       - 'supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql'
       - 'supabase/migrations/20261112093727_tradelink_revision_required_edit_compat.sql'
@@ -67,6 +69,8 @@ jobs:
         run: |
           set -euo pipefail
           node --test frontend/tests/tradelink-reference-ui.test.mjs frontend/tests/tradelink-draft-workspace.test.mjs frontend/tests/tradelink-activity.test.mjs frontend/tests/tradelink-domain-client.test.mjs frontend/tests/tradelink-six-module-save-integrity.test.mjs
+      - name: Verify saved TradeLink creator attribution
+        run: node --test frontend/tests/tradelink-document-creator-attribution.test.mjs
       - name: Full frontend regression with no production credentials
         run: node --test frontend/tests/*.test.mjs
       - name: Render isolated browser screenshots and verify geometry

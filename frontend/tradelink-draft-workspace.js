@@ -719,24 +719,30 @@ function referenceAssignedPdfStage(field,value,label,stage,{
    'The server records the signed account and actual validation time.')+'</small>'+
   '</div>';
 }
-function referenceCreator(actorName){
+function referenceCreator(creatorName,documentSaved=false){
+ const creator=typeof creatorName==='string'?creatorName.trim():'';
+ const displayName=creator||(
+  documentSaved?'Original creator unavailable':'Current authenticated user');
  return '<div class="tl-reference-approval-creator"><span aria-hidden="true">♙</span><div>'+
-  '<strong>Created By</strong> <span class="tl-reference-approval-chip">Auto-captured on save</span>'+
-  '<p>'+(actorName?escape(actorName):'Current authenticated user')+'</p>'+
-  '<small>Signed server identity and timestamp are captured on successful save.</small>'+
+  '<strong>Created By</strong> <span class="tl-reference-approval-chip">'+
+  (documentSaved?'Original creator':'Auto-captured on save')+'</span>'+
+  '<p>'+escape(displayName)+'</p>'+
+  '<small>'+(documentSaved?
+   'Original creator identity is read from the saved document record.':
+   'Signed server identity and timestamp are captured on successful save.')+'</small>'+
   '</div></div>';
 }
-function renderApprovalFreeWorkflow(actorName,documentSaved){
+function renderApprovalFreeWorkflow(creatorName,documentSaved){
  return '<section id="tl-section-approval" class="tl-reference-approval" aria-label="Verification and approval workflow">'+
-  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
+  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(creatorName,documentSaved)+
   '<div class="tl-reference-approval-stage"><strong>Reviewer approval — Not Applicable</strong></div>'+
   '<div class="tl-reference-approval-stage"><strong>Management approval — Not Applicable</strong></div>'+
   '<p>'+(documentSaved?'No reviewer validation is expected for your new revision.':'No reviewer validation is expected for this document.')+
   ' The server confirms the applicable policy on save.</p></section>';
 }
-function renderReferenceModuleWorkflow(type,fieldValue,data,actorName,reviewContext={}){
+function renderReferenceModuleWorkflow(type,fieldValue,data,creatorName,reviewContext={}){
  if(type==='po'&&reviewContext.approvalFreePreview)
-  return renderApprovalFreeWorkflow(actorName,reviewContext.documentSaved);
+  return renderApprovalFreeWorkflow(creatorName,reviewContext.documentSaved);
  const {actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewStages=null,gmPreview=false}=reviewContext;
  const value=name=>fieldValue(name,data[name]||'');
  const stage=(field,stageName,label)=>referenceAssignedPdfStage(field,value(field),label,stageName,{
@@ -751,21 +757,21 @@ function renderReferenceModuleWorkflow(type,fieldValue,data,actorName,reviewCont
  const group=(title,content)=>'<div class="tl-reference-approval-stage">'+
   '<h5>'+title+'</h5>'+content+'</div>';
  if(type==='packing')return '<section id="tl-section-approval" class="tl-reference-approval tl-reference-module-approval" aria-label="Packing List verification and approval">'+
-  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
+  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(creatorName,documentSaved)+
   group('Primary Reviewer',field('Primary reviewer email','verifiedBy',value('verifiedBy'),
    'type="email" maxlength="254" required')+stage('verifiedBy','primary','Primary reviewer'))+
   group('Secondary Reviewer',field('Secondary reviewer email','approvedBy',value('approvedBy'),
    'type="email" maxlength="254" required')+stage('approvedBy','secondary','Secondary reviewer'))+
   help+'</section>';
  if(type==='esi')return '<section id="tl-section-approval" class="tl-reference-approval tl-reference-module-approval" aria-label="Electronic SI verification and approval">'+
-  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
+  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(creatorName,documentSaved)+
   group('Verified By (Finance Team)',
    person('Finance team member','verifiedBy','Select finance team member...',true,'primary'))+
   group('Approved By (Management)',
    person('Management approver','approvedBy','Select management member...',true,'secondary'))+
   help+'</section>';
  if(type==='delivery')return '<section id="tl-section-approval" class="tl-reference-approval tl-reference-module-approval" aria-label="Delivery tracking">'+
-  '<h4>Delivery Tracking</h4>'+referenceCreator(actorName)+
+  '<h4>Delivery Tracking</h4>'+referenceCreator(creatorName,documentSaved)+
   group('Checked By (Quality Control)',
    person('QC personnel','checkedBy','Select QC personnel...',true,'primary'))+
   group('Delivered By (Logistics)',
@@ -774,14 +780,14 @@ function renderReferenceModuleWorkflow(type,fieldValue,data,actorName,reviewCont
   '<input id="tl-ref-delivery-received" name="receivedBy" maxlength="5000" value="'+escape(value('receivedBy'))+'" placeholder="Enter recipient name"></div>'+
   help+'</section>';
  if(type==='payment')return '<section id="tl-section-approval" class="tl-reference-approval tl-reference-module-approval" aria-label="Payment acknowledgement">'+
-  '<h4>Payment Acknowledgement</h4>'+referenceCreator(actorName)+
+  '<h4>Payment Acknowledgement</h4>'+referenceCreator(creatorName,documentSaved)+
   group('Payment Received By (Finance)',
    person('Finance team member','receivedBy','Select finance team member...',true,'primary'))+
   group('Verified By (Administration)',
    person('Administrator','verifiedBy','Select admin...',true,'secondary'))+
   help+'</section>';
  if(type==='po')return '<section id="tl-section-approval" class="tl-reference-approval tl-reference-module-approval" aria-label="Supplier purchase order verification and approval">'+
-  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
+  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(creatorName,documentSaved)+
   group('Reviewed By (Account Manager)',
    referencePersonField('Account Manager','verifiedBy',
     (!documentSaved&&gmPreview||reviewStages?.approvalPolicy===GM_SALES_EXEMPT_POLICY)?value('verifiedBy'):value('verifiedBy')||'aacsenagan@watchdogautomation.com.ph',
@@ -858,9 +864,9 @@ export function quotationReviewControlEligibility({
 }
 /** Quotation has a fixed primary Sales Supervisor and an editable existing
  * management reviewer assignment. Each reviewer records an independent server event. */
-function renderQuotationVerification(fieldValue,data,actorName='',reviewContext={}){
+function renderQuotationVerification(fieldValue,data,creatorName='',reviewContext={}){
  if(reviewContext.approvalFreePreview)
-  return renderApprovalFreeWorkflow(actorName,reviewContext.documentSaved);
+  return renderApprovalFreeWorkflow(creatorName,reviewContext.documentSaved);
  const {actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewStages=null,gmPreview=false}=reviewContext;
  const {primary}=QUOTATION_APPROVAL_HIERARCHY;
  const exempt=reviewStages?.approvalPolicy===GM_SALES_EXEMPT_POLICY;
@@ -875,9 +881,13 @@ function renderQuotationVerification(fieldValue,data,actorName='',reviewContext=
  return '<section id="tl-section-approval" class="tl-reference-approval" aria-labelledby="tl-quotation-approval-heading">'+
   '<h4 id="tl-quotation-approval-heading">Verification &amp; Approval Workflow</h4>'+
   '<div class="tl-reference-approval-creator"><span aria-hidden="true">♙</span><div><strong>Created By</strong> '+
-   '<span class="tl-reference-approval-chip">Auto-captured on save</span><p>'+
-   (actorName?escape(actorName):'Current authenticated user')+
-   '</p><small>Identity and time are recorded by the signed server on successful save.</small></div></div>'+
+   '<span class="tl-reference-approval-chip">'+
+   (documentSaved?'Original creator':'Auto-captured on save')+'</span><p>'+
+   escape(creatorName||(documentSaved?'Original creator unavailable':'Current authenticated user'))+
+   '</p><small>'+(documentSaved?
+    'Original creator identity is read from the saved document record.':
+    'Identity and time are recorded by the signed server on successful save.')+
+   '</small></div></div>'+
   '<div class="tl-reference-approval-stage">'+
    (exempt||preview?'<strong>Sales Supervisor approval — '+(exempt?'Exempted':'Exemption on save')+'</strong><input type="hidden" name="verifiedByEmail" value="'+escape(primary.email)+'"><input type="hidden" name="verifiedBy" value="'+escape(primary.label)+'"><p>'+(exempt?'Not required for this General Manager revision.':'Management validation remains. Exemption is confirmed by the signed server on save.')+'</p>':
    '<label for="tl-quote-reviewer-email">Primary approver — Sales Supervisor</label>'+
@@ -1354,6 +1364,8 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
   row.content&&typeof row.content==='object'&&
   (!Array.isArray(row.content.items)||row.content.items.length<=TRADELINK_MAX_ITEMS);
  const data=editing?row.content:{};
+ // Saved records use the server-resolved original creator, never the viewer's session name.
+ const creatorName=editing?row.created_by_name:actorName;
  const fieldValue=(name,fallback='')=>formValues&&Object.hasOwn(formValues,name)?formValues[name]:fallback;
  const line=Array.isArray(data.items)?data.items[0]||{}:{};
  const writeEnabled=editing||mode==='create';
@@ -1528,9 +1540,9 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
      '<textarea name="terms" maxlength="5000" rows="12" placeholder="Enter terms and conditions">'+escape(selectedTerms)+'</textarea>'+
      '<small>Recovered from the original TradeLink v1.42.0 template. Changes are saved with this document revision. No PDF, approval or document is generated by changing terms locally; eligible saved records remain printable through the existing workflow.</small>'+
     '</label></details>'+
-   (type==='quotation'?renderQuotationVerification(fieldValue,data,actorName,{
+   (type==='quotation'?renderQuotationVerification(fieldValue,data,creatorName,{
     actorEmail,documentSaved:editing,documentId,workflowState,reviewStages,approvalFreePreview:approvalFree,gmPreview:tradeLinkGmApprovalPreview(actorEmail,actorModuleRole)}):
-    renderReferenceModuleWorkflow(type,fieldValue,data,actorName,{
+    renderReferenceModuleWorkflow(type,fieldValue,data,creatorName,{
      actorEmail,documentSaved:editing,documentId,workflowState,reviewStages,approvalFreePreview:approvalFree,gmPreview:tradeLinkGmApprovalPreview(actorEmail,actorModuleRole)}))+
    '<div class="tl-draft-actions">'+
     '<button type="button" class="secondary" data-action="tradelink-draft-clear">Clear form</button>'+
