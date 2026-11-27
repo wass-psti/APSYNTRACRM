@@ -26,9 +26,21 @@ export function projectFuelTrackApprovals(snapshot){
  const summary=snapshot.summary;
  if(!['approvedToday','rejectedToday','decisionsToday','pendingCount']
      .every(k=>validCount(summary[k])))return null;
+ const text=(value,max)=>typeof value==='string'&&value.length<=max?value:null;
+ const number=(value,max)=>typeof value==='number'&&Number.isFinite(value)&&value>=0&&value<=max?value:null;
  const pending=snapshot.rows.filter(r=>r.state==='submitted').map(r=>({
   id:r.id,title:(reference(r)+' — '+r.requestor_name).slice(0,240),
-  createdAt:r.created_at,revision:Number(r.revision)
+  createdAt:r.created_at,revision:Number(r.revision),
+  requestorName:text(r.requestor_name,200)||'Unknown requester',
+  requestType:r.kind,reference:reference(r).slice(0,120),
+  purpose:text(r.details.purpose,500),
+  vehicleOwner:r.kind==='vehicle'?text(r.details.owner,150):null,
+  origin:r.kind==='vehicle'?text(r.details.origin,240):null,
+  destination:r.kind==='vehicle'?text(r.details.destination,240):null,
+  odometer:r.kind==='vehicle'?number(r.details.odometer,1000000000):null,
+  distance:r.kind==='vehicle'?number(r.details.distance,10000000):null,
+  containerCount:r.kind==='container'&&Number.isSafeInteger(r.details.containerCount)&&r.details.containerCount>=1&&r.details.containerCount<=10000?r.details.containerCount:null,
+  responsiblePerson:r.kind==='container'?text(r.details.responsiblePerson,150):null
  }));
  return {status:'VERIFIED_READ',boardId:snapshot.boardId,workspaceId:snapshot.workspaceId,
   approvedToday:Number(summary.approvedToday),rejectedToday:Number(summary.rejectedToday),
