@@ -20,7 +20,7 @@ CREATE TABLE public.profiles(id uuid PRIMARY KEY,display_name text,status text N
 CREATE TABLE public.workspace_members(workspace_id uuid NOT NULL REFERENCES public.workspaces(id),
  user_id uuid NOT NULL REFERENCES public.profiles(id),active boolean NOT NULL,PRIMARY KEY(workspace_id,user_id));
 CREATE TABLE public.work_boards(id uuid PRIMARY KEY,workspace_id uuid NOT NULL REFERENCES public.workspaces(id),
- name text NOT NULL,status text NOT NULL,archived_at timestamptz,trashed_at timestamptz);
+ name text NOT NULL,description text,status text NOT NULL,archived_at timestamptz,trashed_at timestamptz);
 CREATE TABLE public.module_role_assignments(user_id uuid NOT NULL REFERENCES public.profiles(id),
  module_id text NOT NULL,enabled boolean NOT NULL,role text NOT NULL,PRIMARY KEY(user_id,module_id));
 CREATE TABLE public.apsyntra_role_bootstrap_identities(user_id uuid PRIMARY KEY REFERENCES public.profiles(id));
