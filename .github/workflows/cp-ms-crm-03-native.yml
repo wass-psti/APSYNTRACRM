@@ -13,7 +13,7 @@ on:
       - 'integrations/material-sourcing/crm-contract/**'
       - '.github/workflows/cp-ms-crm-03-native.yml'
   push:
-    branches: [main, integration/cp-ms-crm-03, integration/cp-ms-crm-03a]
+    branches: [main, integration/cp-ms-crm-03, integration/cp-ms-crm-03a, integration/cp-ms-crm-04b5]
     paths:
       - 'frontend/apps/MaterialSourcing/**'
       - 'frontend/app.js'
@@ -46,16 +46,16 @@ jobs:
           node --test frontend/tests/material-sourcing-*.test.mjs integrations/material-sourcing/crm-contract/reconcile.test.mjs
       - name: CRM production build
         run: npm run build
-      - name: Full existing CRM frontend regression
-        run: |
-          node --test frontend/tests/*.test.mjs > /tmp/ms-crm03-regression.log 2>&1 || { grep -E '^(not ok |# tests |# pass |# fail |  location:|  error:)' /tmp/ms-crm03-regression.log | head -n 120; exit 1; }
-          tail -n 20 /tmp/ms-crm03-regression.log
       - name: Static Pages asset graph and responsive Chromium fixture
         run: |
           BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$BROWSER"
           MS_VISUAL_DIR="$RUNNER_TEMP/ms-visual" CHROME_BIN="$BROWSER" node scripts/cp-ms-crm-03-browser.mjs
           CHROME_BIN="$BROWSER" node scripts/priority5f-module-browser.mjs
+      - name: Full existing CRM frontend regression
+        run: |
+          node --test frontend/tests/*.test.mjs > /tmp/ms-crm03-regression.log 2>&1 || { grep -E '^(not ok |# tests |# pass |# fail |  location:|  error:)' /tmp/ms-crm03-regression.log | head -n 120; exit 1; }
+          tail -n 20 /tmp/ms-crm03-regression.log
       - name: Capture preserved standalone reference in disposable browser
         run: |
           set -euo pipefail

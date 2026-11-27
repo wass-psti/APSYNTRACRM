@@ -4,6 +4,7 @@
  */
 import {authorizeMaterialSourcingViewer,authorizeMaterialSourcingItem,revalidateMaterialSourcingSession} from '../../material-sourcing-application.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export const FX_PROVIDER='Frankfurter v2 / ECB';
 const required=['quantity','buyingPrice','currency','shipping','shipCurrency','usd','eur'];
 const inputKeys=['quantity','buyingPrice','currency','shipping','shipCurrency','source'];
 const moneyLabels={php:'Buying cost (PHP/unit)',shipPhp:'Shipping (PHP/unit)',landed:'Landed cost (PHP/unit)',totalLanded:'Total landed (PHP)',selling:'Selling price (VAT-ex/unit)',vatIn:'Total selling (VAT-in)'};
@@ -84,6 +85,11 @@ function validContext(result,input,fx){
   result.inputs&&typeof result.inputs==='object'&&result.snapshots.every(s=>idPattern.test(s.snapshotId)&&
    ['legacy_unverified','provider_reported'].includes(s.provenance)&&typeof s.usd==='string'&&typeof s.eur==='string');
 }
+export function describeFxSnapshot(snapshot){
+ const dates=snapshot.provider===FX_PROVIDER&&snapshot.observedAt?
+  ' · observation date '+String(snapshot.observedAt).slice(0,10):snapshot.observedAt?' · observed '+snapshot.observedAt:'';
+ return (snapshot.provider||snapshot.provenance)+dates+' · USD '+snapshot.usd+' / EUR '+snapshot.eur+' · '+snapshot.snapshotId;
+}
 export function renderNativePricingPanel(row,cells){
  const fields={quantity:row?.quantity,source:row?.source,buyingPrice:cells?.['Buying Price']?.value,
   currency:cells?.Currency?.value,shipping:cells?.['Shipping Cost']?.value,
@@ -100,8 +106,10 @@ export function renderNativePricingPanel(row,cells){
     '<input type="text" inputmode="decimal" maxlength="21" data-pricing-field="'+key+'" value="'+esc(draftValue(fields[key]))+'">')+'</label>').join('')+'</div>'+
   '<div data-pricing-result></div><p role="status" aria-live="polite" data-pricing-preview-status></p>'+
   '<button type="button" class="secondary" data-pricing-load>Load saved pricing &amp; FX</button>'+
+  '<div data-pricing-fetch-host hidden><button type="button" class="secondary" data-pricing-fetch hidden disabled>Capture latest ECB reference rates</button></div>'+
+  '<p data-pricing-fx-note>Daily reference rates, not live market or bank transaction quotes. USD/PHP is provider-rebased.</p>'+
   '<label>FX snapshot <select data-pricing-fx disabled><option value="">Manual preview only</option></select></label>'+
-  '<button type="button" class="secondary" data-pricing-save hidden disabled>Save inputs and calculated pricing</button>'+
+  '<div data-pricing-save-host hidden><button type="button" class="secondary" data-pricing-save hidden disabled>Save inputs and calculated pricing</button></div>'+
   '<p role="status" aria-live="polite" data-pricing-status>Saved pricing has not been loaded.</p>'+
   '<details><summary>Saved pricing history (latest 20)</summary><div data-pricing-history><p>Load saved pricing to view history.</p></div></details></section>';
 }
@@ -114,6 +122,9 @@ export function mountNativePricingPanel(host,{input,row,cells,canEdit,isCurrent,
  const field=k=>host.querySelector('[data-pricing-field="'+k+'"]');
  const status=host.querySelector('[data-pricing-status]'),fxSelect=host.querySelector('[data-pricing-fx]');
  const save=host.querySelector('[data-pricing-save]'),load=host.querySelector('[data-pricing-load]');
+ const capture=host.querySelector('[data-pricing-fetch]'),fxNote=host.querySelector('[data-pricing-fx-note]');
+ // CRM button classes specify display; the unstyled container also honors hidden.
+ const showAction=(button,visible)=>{button.parentElement.hidden=!visible;button.hidden=!visible;};
  const current=()=>host.isConnected&&isCurrent()&&auth.userId===actor;
  const values=()=>Object.fromEntries([...inputKeys,'usd','eur'].map(k=>[k,field(k).value||null]));
  let context=null,busy=false,dirty=false,unconfirmed=false;
@@ -127,7 +138,7 @@ export function mountNativePricingPanel(host,{input,row,cells,canEdit,isCurrent,
   return result;
  };
  const setBusy=v=>{
-  busy=v;load.disabled=v;fxSelect.disabled=v||!context;
+  busy=v;load.disabled=v;fxSelect.disabled=v||!context;capture.disabled=v||!context||!canEdit;
   for(const key of inputKeys)field(key).disabled=v;
   for(const key of ['usd','eur'])field(key).disabled=v||!!fxSelect.value;
   preview();
@@ -143,7 +154,7 @@ export function mountNativePricingPanel(host,{input,row,cells,canEdit,isCurrent,
  function apply(result,fx,initialize){
   context=result;
   fxSelect.innerHTML='<option value="">Manual preview only</option>'+result.snapshots.map(s=>
-   '<option value="'+esc(s.snapshotId)+'">'+esc(s.provenance+' · USD '+s.usd+' / EUR '+s.eur+' · '+s.snapshotId)+'</option>').join('');
+   '<option value="'+esc(s.snapshotId)+'">'+esc(describeFxSnapshot(s))+'</option>').join('');
   fxSelect.value=fx||'';
   if(fx&&fxSelect.value!==fx)throw Error('Selected FX snapshot is unavailable.');
   if(initialize&&!dirty)for(const key of inputKeys){
@@ -153,10 +164,13 @@ export function mountNativePricingPanel(host,{input,row,cells,canEdit,isCurrent,
   if(fx){
    const snapshot=result.snapshots.find(s=>s.snapshotId===fx);
    field('usd').value=snapshot.usd;field('eur').value=snapshot.eur;
+   fxNote.textContent=describeFxSnapshot(snapshot)+(snapshot.retrievedAt?' · first retrieved '+snapshot.retrievedAt:'');
   }
+  if(!fx)fxNote.textContent='Daily reference rates, not live market or bank transaction quotes. USD/PHP is provider-rebased.';
+  showAction(capture,canEdit);
   if(result.manualSelling!==undefined)host.querySelector('[data-pricing-manual]').textContent=result.manualSelling??'—';
   host.querySelector('[data-pricing-history]').innerHTML=renderPricingHistory(result.history);
-  save.hidden=!canEdit;
+  showAction(save,canEdit);
  }
  async function reload(fx){
   if(!current()||busy)return;
@@ -168,7 +182,7 @@ export function mountNativePricingPanel(host,{input,row,cells,canEdit,isCurrent,
    status.textContent=dirty?'Latest saved state loaded. Review your retained preview inputs before saving.':'Saved pricing context loaded. Select a stored FX snapshot to save pricing.';
   }catch{
    if(!current())return;
-   context=null;fxSelect.value='';save.hidden=true;
+   context=null;fxSelect.value='';showAction(save,false);showAction(capture,false);
    status.textContent='Saved pricing unavailable for this item or not activated. Preview remains available; no pricing write was attempted.';
   }finally{if(current())setBusy(false);}
  }
@@ -177,6 +191,35 @@ export function mountNativePricingPanel(host,{input,row,cells,canEdit,isCurrent,
  });
  host.addEventListener('change',event=>{
   if(event.target.matches('[data-pricing-field]')){dirty=true;preview();}
+ });
+ capture.addEventListener('click',async()=>{
+  if(!current()||busy||!canEdit||!context||!canSave()){
+   if(current())status.textContent='Finish the current material edit before capturing FX.';
+   return;
+  }
+  setBusy(true);onBusy(true);status.textContent='Fetching both daily reference rates…';
+  let attempted=false;
+  try{
+   const who=await authorizeMaterialSourcingItem({...input,edit:true});
+   await revalidateMaterialSourcingSession(input,actor);
+   if(!current()||who!==actor)throw Error('Session changed.');
+   attempted=true;
+   const receipt=await api.rpc('mrh_capture_latest_fx',{p_item:input.itemId});
+   await revalidateMaterialSourcingSession(input,actor);
+   if(!current())return;
+   if(receipt?.workspaceId!==input.workspaceId||receipt?.itemId!==input.itemId||
+    receipt?.provider!==FX_PROVIDER||receipt?.provenance!=='provider_reported'||
+    !idPattern.test(receipt?.snapshotId||''))throw Error('FX receipt mismatch.');
+   const result=await read(receipt.snapshotId);
+   const snapshot=result.snapshots.find(s=>s.snapshotId===receipt.snapshotId);
+   if(!snapshot||!['usd','eur','provider','observationRef','observedAt','retrievedAt'].every(k=>snapshot[k]===receipt[k]))
+    throw Error('FX readback mismatch.');
+   if(!current())return;
+   apply(result,receipt.snapshotId,false);
+   status.textContent='FX snapshot captured and verified. Review the preview before saving pricing.';
+  }catch{
+   if(current())status.textContent=attempted?'FX capture not confirmed. Existing selection and draft are unchanged. Load saved pricing to reconcile before retrying.':'FX capture could not start. Existing selection and draft are unchanged.';
+  }finally{if(current()){onBusy(false);setBusy(false);}}
  });
  load.addEventListener('click',()=>void reload(fxSelect.value||null));
  fxSelect.addEventListener('change',()=>void reload(fxSelect.value||null));
@@ -224,7 +267,7 @@ export function mountNativePricingPanel(host,{input,row,cells,canEdit,isCurrent,
    usd:nextCells?.['Ex. Rate USD']?.value,eur:nextCells?.['Ex. Rate EUR']?.value};
   // Ordinary material writes invalidate a previously loaded exact baseline.
   // Preserve a modified pricing draft rather than overwriting user input.
-  context=null;fxSelect.value='';fxSelect.disabled=true;save.hidden=true;
+  context=null;fxSelect.value='';fxSelect.disabled=true;showAction(save,false);showAction(capture,false);capture.disabled=true;
   field('usd').disabled=false;field('eur').disabled=false;
   if(!dirty)for(const key of Object.keys(updated))field(key).value=draftValue(updated[key]);
   host.querySelector('[data-pricing-manual]').textContent=draftValue(nextCells?.['Selling Price (VAT-EX)']?.value)||'—';

@@ -135,6 +135,52 @@ try{
  const formColors=await page.locator('#mrh-add-material-form').evaluate(n=>({background:getComputedStyle(n).backgroundColor,color:getComputedStyle(n).color}));
  check(formColors.background==='rgb(28, 36, 50)'&&formColors.color==='rgb(229, 237, 249)','existing Add Material form follows CRM dark theme');
  if(visualDir)await page.screenshot({path:resolve(visualDir,'native-add-dark.png'),fullPage:true});
+ // Exercise B.5 with real DOM events and synthetic signed RPC receipts.
+ await page.evaluate(async({workspaceId,userId,boardId,itemId})=>{
+  const {mountNativePricingPanel,FX_PROVIDER}=await import('/frontend/apps/MaterialSourcing/pricing-panel.js');
+  const host=document.createElement('div');host.id='fx-pricing-fixture';
+  document.querySelector('.main-content').replaceChildren(host);
+  const snapshotId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa55';
+  const snapshot={snapshotId,workspaceId,itemId,provider:FX_PROVIDER,provenance:'provider_reported',
+   usd:'64.45000000',eur:'71.12345678',observationRef:'frankfurter-v2:ECB:2026-11-27:USD/PHP+EUR/PHP',
+   observedAt:'2026-11-27T00:00:00+00:00',retrievedAt:'2026-11-27T12:00:00+00:00'};
+  const inputs={quantity:'4',source:'Import',buyingPrice:'120.36',currency:'USD',shipping:'20',shipCurrency:'USD'};
+  let captured=false,fail=false,attempts=0;
+  const auth={isSignedIn:true,userId,getVerifiedUser:async()=>({id:userId})};
+  const api={context:async()=>({user_id:userId,workspace_id:workspaceId,profile:{status:'active'}}),
+   allowed:async()=>true,rpc:async(name,args)=>{
+    if(name==='material_request_hub_bootstrap')return {workspaceId,role:'ADMIN'};
+    if(args.p_item!==itemId)throw Error('wrong item');
+    if(name==='mrh_pricing_context')return {workspaceId,itemId,state:{workspaceId,itemId,fxSnapshotId:args.p_fx},
+     inputs,snapshots:captured?[snapshot]:[],history:[]};
+    if(name==='mrh_capture_latest_fx'){
+     if(Object.keys(args).length!==1)throw Error('browser-supplied rates');
+     attempts++;if(fail)throw Error('provider unavailable');captured=true;return snapshot;
+    }
+    throw Error('unexpected RPC '+name);
+   }};
+  mountNativePricingPanel(host,{input:{api,auth,workspaceId,boardId,itemId},row:{quantity:'4',source:'Import'},cells:{},
+   canEdit:true,isCurrent:()=>host.isConnected,canSave:()=>true,onBusy:()=>{},onSaved:async()=>{throw Error('capture must not save pricing');}});
+  window.mrhFxFixture={fail:()=>{fail=true;},attempts:()=>attempts,snapshotId};
+ },{workspaceId,userId,boardId,itemId:fixture().items[0].id});
+ const fxHost=page.locator('#fx-pricing-fixture'),capture=fxHost.locator('[data-pricing-fetch]');
+ check(!(await capture.isVisible()),'FX capture hidden until signed pricing context loads');
+ await fxHost.locator('[data-pricing-load]').click();
+ await capture.waitFor({state:'visible'});
+ await fxHost.locator('[data-pricing-field="quantity"]').fill('7.000001');
+ await capture.click();
+ await fxHost.getByText('FX snapshot captured and verified.',{exact:false}).waitFor();
+ check(await fxHost.locator('[data-pricing-fx]').inputValue()===await page.evaluate(()=>window.mrhFxFixture.snapshotId),'captured immutable FX is selected after readback');
+ check(await fxHost.locator('[data-pricing-field="quantity"]').inputValue()==='7.000001','FX capture preserves edited decimal draft');
+ check(await fxHost.locator('[data-pricing-field="usd"]').inputValue()==='64.45000000'&&await fxHost.locator('[data-pricing-field="eur"]').inputValue()==='71.12345678','exact provider rate strings reach pricing preview');
+ check(await fxHost.locator('[data-pricing-field="usd"]').isDisabled(),'selected immutable FX cannot be edited as manual rates');
+ check((await fxHost.locator('[data-pricing-fx-note]').textContent()).includes('observation date 2026-11-27'),'date-only observation clearly labeled');
+ await page.evaluate(()=>window.mrhFxFixture.fail());
+ await capture.click();
+ await fxHost.getByText('FX capture not confirmed.',{exact:false}).waitFor();
+ check(await fxHost.locator('[data-pricing-fx]').inputValue()===await page.evaluate(()=>window.mrhFxFixture.snapshotId)&&await fxHost.locator('[data-pricing-field="quantity"]').inputValue()==='7.000001','provider failure preserves previous snapshot and draft');
+ check(await page.evaluate(()=>window.mrhFxFixture.attempts())===2,'explicit capture only, no hidden retries or auto-save');
+ console.log('CP_MS_CRM_04B5_BROWSER_CAPTURE_SELECTION_PASS');
  assert.deepEqual(errors,[]);assert.deepEqual(foreign,[]);
  // Real browser storage and Web Locks; only the server/auth transport is synthetic.
  const profile=await mkdtemp(resolve(tmpdir(),'mrh-recovery-'));
