@@ -269,6 +269,30 @@ BEGIN
   END;
  END LOOP;
 
+ BEGIN
+  PERFORM public.tl03_documents_query(
+   board,'','all','all','active','visible',NULL,NULL,
+   'createdAt','asc',
+   pg_catalog.jsonb_build_object('sortBy','createdAt',
+    'sortValue','not-a-date',
+    'documentId','00000000-0000-4000-8000-000000000050'),5);
+  RAISE EXCEPTION 'Malformed timestamp cursor was accepted';
+ EXCEPTION WHEN SQLSTATE '22023' THEN
+  NULL;
+ END;
+
+ BEGIN
+  PERFORM public.tl03_documents_query(
+   board,'','all','all','active','visible',NULL,NULL,
+   'revision','asc',
+   pg_catalog.jsonb_build_object('sortBy','revision',
+    'sortValue','1;drop',
+    'documentId','00000000-0000-4000-8000-000000000050'),5);
+  RAISE EXCEPTION 'Malformed revision cursor was accepted';
+ EXCEPTION WHEN SQLSTATE '22023' THEN
+  NULL;
+ END;
+
  result:=public.tl03_documents_query(
   board,'','all','all','active','visible',NULL,NULL,
   'updatedAt','asc',
