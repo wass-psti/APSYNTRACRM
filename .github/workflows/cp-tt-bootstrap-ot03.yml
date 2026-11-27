@@ -12,11 +12,13 @@ on:
       - "frontend/time-tracker-duration-overtime-policy.js"
       - "supabase/migrations/20261126120000_cp_tt_duration_overtime.sql"
       - "supabase/migrations/20261127100000_cp_tt_ot_duration_approver_scope_and_manual_duration.sql"
+      - "supabase/migrations/20261127110000_cp_tt_ot_self_review_parity_02.sql"
       - "sql/tests/cp-tt-duration-ot-prerequisites.sql"
       - "supabase/tests/tt_duration_overtime_staged.integration.sql"
       - "supabase/tests/tt_manual_attendance_duration_ot_joint.integration.sql"
       - "scripts/cp-tt-bootstrap-ot02-signed-disposable.*"
       - "scripts/cp-tt-bootstrap-ot03-browser.mjs"
+      - "supabase/migration-source-manifest.json"
       - "scripts/time-tracker-browser-acceptance.mjs"
       - "supabase/migrations/20261123180000_cp_tt_bootstrap_ot_self_review_01.sql"
       - "supabase/migrations/20261124170000_cp_tt_ot_creator_withdrawal.sql"
@@ -33,12 +35,13 @@ on:
       - "frontend/time-tracker-duration-overtime-policy.js"
       - "supabase/migrations/20261126120000_cp_tt_duration_overtime.sql"
       - "supabase/migrations/20261127100000_cp_tt_ot_duration_approver_scope_and_manual_duration.sql"
+      - "supabase/migrations/20261127110000_cp_tt_ot_self_review_parity_02.sql"
       - "sql/tests/cp-tt-duration-ot-prerequisites.sql"
       - "supabase/tests/tt_duration_overtime_staged.integration.sql"
       - "supabase/tests/tt_manual_attendance_duration_ot_joint.integration.sql"
       - "scripts/cp-tt-bootstrap-ot02-signed-disposable.*"
       - "scripts/cp-tt-bootstrap-ot03-browser.mjs"
-  # Keep disposable SQL fixtures and the registered duration migration in both trigger path lists.
+  # Keep disposable SQL fixtures and the registered OT self-review migration in both trigger path lists.
   # The worker fixture replays the actual current-main migration source.
   workflow_dispatch:
 
@@ -221,7 +224,8 @@ jobs:
           overtime() {
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
               -f ../supabase/migrations/20261126120000_cp_tt_duration_overtime.sql \
-              -f ../supabase/migrations/20261127100000_cp_tt_ot_duration_approver_scope_and_manual_duration.sql
+              -f ../supabase/migrations/20261127100000_cp_tt_ot_duration_approver_scope_and_manual_duration.sql \
+              -f ../supabase/migrations/20261127110000_cp_tt_ot_self_review_parity_02.sql
           }
           if [ "$MERGE_ORDER" = manual-first ]; then manual; overtime; else overtime; manual; fi
       - name: Run hybrid and joint manual-OT acceptance
