@@ -295,7 +295,7 @@ export function mountTradeLinkSavedDocumentOutput(markup,{doc=document,styleshee
  const stylesheetReady=Promise.all(stylesheetLinks.map(link=>new Promise((resolve,reject)=>{
   link.addEventListener('load',resolve,{once:true});
   link.addEventListener('error',()=>reject(new ApiError('Immutable TradeLink template stylesheet could not be loaded.',503)),{once:true});
- })));
+ }))).then(()=>true).catch(()=>false);
  closeTradeLinkSavedDocumentOutput();
  const node=doc.createElement('section');node.id='tradelink-saved-print';
  node.className='tl-print-overlay';node.setAttribute('role','dialog');
@@ -325,11 +325,14 @@ export function mountTradeLinkSavedDocumentOutput(markup,{doc=document,styleshee
   if(!active||active.node!==node||typeof windowRef?.print!=='function')return;
   const status=node.querySelector('[data-tradelink-print-status]');
   try{
-   await active.stylesheetReady;
+   if(!await active.stylesheetReady){
+    if(status)status.textContent='The saved template could not be loaded. Refresh the document and retry.';
+    return;
+   }
    await Promise.allSettled([...node.querySelectorAll('img')].map(img=>img.decode?.()));
    await doc.fonts?.ready;
   }catch{
-   if(status)status.textContent='The saved template could not be loaded. Refresh the document and retry.';
+   if(status)status.textContent='The saved document resources could not be loaded. Refresh the document and retry.';
    return;
   }
   if(active?.node===node)windowRef.print();

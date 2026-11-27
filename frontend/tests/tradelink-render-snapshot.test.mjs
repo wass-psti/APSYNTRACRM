@@ -183,6 +183,8 @@ test('All Documents print flow fetches and mounts the exact revision snapshot an
  assert.match(flow,/stylesheetAssets:renderSnapshot\.snapshot\.template\.stylesheetAssets/);
  const output=readFileSync(new URL('../tradelink-saved-document-output.js',import.meta.url),'utf8');
  assert.match(output,/link\.rel='stylesheet'/);
- assert.match(output,/await active\.stylesheetReady/);
+ assert.ok(output.includes('stylesheetReady=Promise.all('));
+ assert.ok(output.includes('.then(()=>true).catch(()=>false)'));
+ assert.ok(output.includes('if(!await active.stylesheetReady)'));
  assert.match(output,/stylesheetLinks\.forEach\(link=>link\.remove\(\)\)/);
 });
