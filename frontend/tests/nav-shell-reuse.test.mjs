@@ -14,12 +14,15 @@ test('navigation reuses the signed shell only for the same user and workspace',(
 });
 
 test('sidebar updates current navigation without replacing unchanged structure',()=>{
- assert.match(shell,/shellSidebarSignature!==sidebarSignature/);
- assert.match(shell,/link\.classList\.toggle\('active',active\)/);
- assert.match(shell,/link\.setAttribute\('aria-current','page'\)/);
- assert.match(shell,/link\.removeAttribute\('aria-current'\)/);
- assert.match(shell,/existing\.querySelector\('\.main-content'\)\.innerHTML=body/);
-});
+ const shellDom=readFileSync('frontend/application-shell-dom.js','utf8');
+ assert.match(shell,/updateExistingApplicationShell\(\{/);
+ assert.match(shell,/renderedSidebarSignature:shellSidebarSignature/);
+ assert.match(shellDom,/renderedSidebarSignature !== sidebarSignature/);
+ assert.match(shellDom,/link\.classList\.toggle\('active', active\)/);
+ assert.match(shellDom,/link\.setAttribute\('aria-current', 'page'\)/);
+ assert.match(shellDom,/link\.removeAttribute\('aria-current'\)/);
+ assert.match(shellDom,/existing\.querySelector\('\.main-content'\)\.innerHTML = body/);
+});;
 
 test('board-tab transition uses a single short fade without whole-page bounce',()=>{
  assert.match(shell,/previousBoard\?\.\[0\]==='board'/);

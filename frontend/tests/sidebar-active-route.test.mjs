@@ -54,14 +54,16 @@ test('sidebar uses one route-selected key for primary and recent links, with mat
  assert.match(sidebar,/const selectedNav=currentSidebarNavigation\(\)/);
  assert.match(sidebar,/const active=key=>selectedNav===key/);
  assert.match(sidebar,/const active=selectedNav==='recent:'\+b\.id/);
- assert.match(app,/const active=!!activeHref&&path===activeHref/);
+ const shellDom=readFileSync('frontend/application-shell-dom.js','utf8');
+ assert.match(app,/selectedNavigation:currentSidebarNavigation\(\)/);
+ assert.match(shellDom,/const active = !!activeHref && path === activeHref/);
  assert.doesNotMatch(sidebar,/location\.hash\.startsWith\(TRADELINK_APPLICATION_ROUTE\+'\/'\)/);
  assert.match(sidebar,/active\(application\.navigationKey\)/);
  const tradeLink=workspaceApplicationsForNavigation(WORK_MANAGEMENT_WORKSPACE_ID,[]).find(application=>application.id==='tradelink');
  assert.equal(tradeLink?.navigationKey,'tradelink');
  assert.equal(tradeLink?.icon,'tradelink');
  assert.match(sidebar,/const selected=active\?' aria-current="page"':''/);
- assert.match(shell,/if\(active\)link\.setAttribute\('aria-current','page'\);\s*else link\.removeAttribute\('aria-current'\)/);
+ assert.match(shellDom,/if \(active\) link\.setAttribute\('aria-current', 'page'\);\s*else link\.removeAttribute\('aria-current'\)/);
  assert.doesNotMatch(sidebar,/sidebarNav\([^\n]*,state\.tlStandalone===true\)/);
  const routeHandler=app.slice(app.indexOf('async function onRoute()'),app.indexOf('async function submitRecoveryRequest('));
  assert.match(routeHandler,/state\.ttStandalone=false;state\.frtStandalone=false;state\.tlStandalone=false;state\.fuelTrackStandalone=false/);

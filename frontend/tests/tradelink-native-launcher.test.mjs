@@ -26,8 +26,9 @@ test('TradeLink launcher opens the canonical standalone application route',()=>{
 });
 
 test('TradeLink launcher remains selected throughout its native module routes',()=>{
- assert.ok(app.includes("const selected=currentSidebarNavigation();"));
- assert.ok(app.includes("const active=!!activeHref&&path===activeHref;"));
+ assert.ok(app.includes("selectedNavigation:currentSidebarNavigation()"));
+ const shellDom=readFileSync(new URL('../application-shell-dom.js',import.meta.url),'utf8');
+ assert.ok(shellDom.includes("const active = !!activeHref && path === activeHref;"));
  assert.ok(!app.includes("location.hash.startsWith(TRADELINK_APPLICATION_ROUTE+'/')"));
 });
 

@@ -62,7 +62,7 @@ test('central read inventory covers the previously blocking application gates', 
 });
 
 test('same-scope retention is resolved before render tears down existing board UI', () => {
- assert.match(app, /import \{resolveApplicationLoadingState\} from '\.\/application-loading\.js';/);
+ assert.match(app, /import \{resolveApplicationLoadingState,isCurrentApplicationRouteRead\} from '\.\/application-loading\.js';/);
  const renderStart = app.indexOf('function render(){');
  const retainGuard = app.indexOf("if(loadingState==='retain-shell')return;", renderStart);
  const dispose = app.indexOf('disposeBoardPagination?.()', renderStart);

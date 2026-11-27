@@ -59,5 +59,7 @@ test('route, logout, Escape and shell re-render maintain layout lifecycle',()=>{
  assert.match(app,/window\.addEventListener\('resize',syncSidebarLayout\)/);
  assert.match(app,/event\.key==='Escape'&&sidebarMobileOpen/);
  assert.match(app,/syncSidebarLayout\(\);\s*const previousRoute=shellRoute/);
- assert.match(app,/shellSidebarSignature!==sidebarSignature/);
+ const shellDom=readFileSync('frontend/application-shell-dom.js','utf8');
+ assert.match(app,/updateExistingApplicationShell\(\{/);
+ assert.match(shellDom,/renderedSidebarSignature !== sidebarSignature/);
 });

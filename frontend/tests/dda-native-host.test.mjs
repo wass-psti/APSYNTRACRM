@@ -66,7 +66,9 @@ test('DDA failed module load can be retried without remounting stale module',asy
 test('DDA CRM shell wires native host after existing workspace route guard and disposes on identity changes',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/const preserveDda=body===DDA_HOST_MARKUP/);
- assert.match(app,/if\(!preserveDda\)existing\.querySelector\('\.main-content'\)\.innerHTML=body/);
+ assert.match(app,/preserveContent:preserveDda/);
+ const shellDom=readFileSync('frontend/application-shell-dom.js','utf8');
+ assert.match(shellDom,/if \(!preserveContent\) existing\.querySelector\('\.main-content'\)\.innerHTML = body/);
  const route=app.slice(app.indexOf('async function onRoute(){'));
  assert.ok(route.indexOf('const applicationRoute=workspaceApplicationRouteAccess')<route.indexOf('if(parts[0]===DDA_ROUTE_SECTION)'));
  assert.match(app,/if\(workspaceIdentityChanged\)\{\s*syncDda\(\)/);
