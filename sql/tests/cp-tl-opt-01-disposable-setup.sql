@@ -12,6 +12,41 @@ UPDATE public.profiles
 SET display_name='QA TradeLink Manager',email='qa-manager@example.test'
 WHERE id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
+-- The existing signed save RPC requires two active, confirmed TradeLink
+-- reviewer identities. These are disposable fixture accounts only.
+UPDATE auth.users
+SET email='qa-reviewer-one@example.test',email_confirmed_at=clock_timestamp()
+WHERE id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+UPDATE auth.users
+SET email='qa-reviewer-two@example.test',email_confirmed_at=clock_timestamp()
+WHERE id='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+UPDATE public.profiles
+SET display_name='QA TradeLink Reviewer One',email='qa-reviewer-one@example.test'
+WHERE id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+UPDATE public.profiles
+SET display_name='QA TradeLink Reviewer Two',email='qa-reviewer-two@example.test'
+WHERE id='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+
+DO $reviewer_fixture$
+BEGIN
+ IF (SELECT count(*) FROM auth.users
+     WHERE id IN (
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+     ) AND email_confirmed_at IS NOT NULL)<>3
+  OR public.module_role_for('tradelink','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')
+     IS NULL
+  OR public.module_role_for('tradelink','cccccccc-cccc-4ccc-8ccc-cccccccccccc')
+     IS NULL
+  OR public.current_workspace_id('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')
+     IS DISTINCT FROM '00000000-0000-4000-8000-000000000001'::uuid
+  OR public.current_workspace_id('cccccccc-cccc-4ccc-8ccc-cccccccccccc')
+     IS DISTINCT FROM '00000000-0000-4000-8000-000000000001'::uuid
+ THEN RAISE EXCEPTION 'Disposable TradeLink manager/reviewer identities are incomplete'; END IF;
+END
+$reviewer_fixture$;
+
 CREATE SCHEMA IF NOT EXISTS extensions;
 CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA extensions;
 
