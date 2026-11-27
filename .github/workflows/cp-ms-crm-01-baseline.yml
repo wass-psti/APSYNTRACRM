@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   baseline:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
       run:
