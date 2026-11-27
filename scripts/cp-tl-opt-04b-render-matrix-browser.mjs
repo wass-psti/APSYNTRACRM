@@ -157,8 +157,7 @@ try{
    assert.ok(markup.includes(marker+'-REMARKS'));
    assert.ok(markup.includes(profile.name.replaceAll('&','&amp;')));
    assert.ok(markup.includes(profile.accent));
-   assert.ok(markup.includes(profile.logoAsset));
-   if(module.type==='quotation')assert.ok(markup.includes(profile.quotationLogoAsset));
+   assert.ok(markup.includes(module.type==='quotation'?profile.quotationLogoAsset:profile.logoAsset));
    const logoMatches=[...markup.matchAll(/src="(file:[^"]+)"/g)];
    for(const match of logoMatches){
     const bytes=await readFile(fileURLToPath(match[1]));

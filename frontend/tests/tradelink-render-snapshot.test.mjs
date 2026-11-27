@@ -38,7 +38,7 @@ function snapshotResult(overrides={}){
   profileVersion:1,accent:'#14b866',tableBackground:'#e3f7e9',
   tableText:'#244f78',ruleColor:'#2f68c4',termsMode:'flow',
   rendererVersion:'tradelink-renderer-v1',
-  stylesheetAssets,stylesheetGitBlobShas
+  stylesheetAssets:[...stylesheetAssets],stylesheetGitBlobShas:[...stylesheetGitBlobShas]
  };
  const snapshot={
   schemaVersion:1,snapshotSource:'captured',profileVersion:1,
