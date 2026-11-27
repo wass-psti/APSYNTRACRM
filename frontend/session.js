@@ -141,7 +141,11 @@ export class AuthClient {
       if(failure.invalidateSession&&!this.session)return false;
       throw normalized;
     }
-    if(revision!==this.verifiedUserRevision)return this.isSignedIn;
+    if(revision!==this.verifiedUserRevision){
+      const eventToken=this.accessToken;
+      const readToken=result?.data?.session?.access_token||null;
+      if(eventToken!==readToken)return this.isSignedIn;
+    }
     if(result?.error){
       const normalized=providerError(result.error,'session-read');
       const failure=this.handleAuthFailure(normalized,'session-read');
