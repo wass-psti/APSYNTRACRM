@@ -203,7 +203,7 @@ test("TimeTracker stays in the existing CRM module graph without a new frontend 
   );
   assert.match(
     app,
-    /function renderTimeTrackerApplication\(\)\s*\{\s*if\(state\.ttReadLoading\|\|state\.nativeInitialRead==='attendance'\)return sharedApplicationLoading\(\);\s*return renderTimeTrackerNative\(/,
+    /function renderTimeTrackerApplication\(\)\s*\{\s*\/\/ Keep the last signed attendance snapshot visible during refresh\. Route\s*\/\/ changes clear the snapshot before loading, so this only retains same-route data\.\s*if\(\(state\.ttReadLoading\|\|state\.nativeInitialRead==='attendance'\)&&!state\.ttAttendance\)\s*return sharedApplicationLoading\(\);\s*return renderTimeTrackerNative\(/,
   );
   assert.match(
     app,
