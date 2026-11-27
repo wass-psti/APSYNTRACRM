@@ -57,6 +57,9 @@ for record in records {
     if let chequeTotal = record["chequeTotal"] as? String {
         requiredTokens.append(chequeTotal)
     }
+    if let currency = record["currency"] as? String {
+        requiredTokens.append(currency)
+    }
     if type != "quotation" {
         requiredTokens.append(contentsOf: ["WORKFLOW APPROVED", "PDF NOT ISSUED", "Approved revision"])
     }
