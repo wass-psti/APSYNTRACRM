@@ -163,9 +163,9 @@ test('Truncated all-user evidence remains Not loaded until a complete employee r
 
 test('Attendance Log GPS status summary has responsive visual styling',()=>{
  const css=readFileSync('frontend/styles.css','utf8');
- assert.match(css,/\.tt-log-gps-status-summary\\{display:flex/);
- assert.match(css,/\.tt-log-gps-status-summary strong/);
- assert.match(css,/@media\\(max-width:680px\\)/);
+ assert.ok(css.includes('.tt-log-gps-status-summary{display:flex'));
+ assert.ok(css.includes('.tt-log-gps-status-summary strong{'));
+ assert.ok(css.includes('@media(max-width:680px)'));
 });
 test('Attendance Log role wiring is separate from GPS Hub and uses per-employee evidence ranges',()=>{
  const app=readFileSync('frontend/app.js','utf8');
