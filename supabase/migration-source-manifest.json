@@ -1566,6 +1566,13 @@
       "file": "20261115132051_cp_board_import_sync_01_authoritative_counts.sql",
       "bytes": 4568,
       "sha256": "4ac73bd08175d7075132f8fe0ca3bdf9990d1329b825a0453f6f8ade9c6aaf5d"
+    },
+    {
+      "version": "20261127160000",
+      "name": "cp_tt_shared_read_visibility",
+      "file": "20261127160000_cp_tt_shared_read_visibility.sql",
+      "bytes": 5199,
+      "sha256": "4439c4a6c4b6320a4da5e4313fa89c48ea1952b713e8497479c3bfbeed48858c"
     }
   ],
   "forward_migrations": [
