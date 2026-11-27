@@ -472,6 +472,11 @@ jobs:
             -f sql/cp-tt-live01-staged-atomic-attendance.sql \
             -f sql/tests/cp-tt-live01-disposable-acceptance.sql \
             -f sql/cp-tt-gps04-fix-privileged-snapshot-cte.sql \
+            -f supabase/migrations/20261127170000_cp_tt_log_location_01a_hr_admin_gps_read.sql \
+            -v gps_actor=10000000-0000-4000-8000-000000000011 \
+            -v gps_session=10000000-0000-4000-8000-000000000031 \
+            -v gps_board=10000000-0000-4000-8000-000000000021 \
+            -v gps_foreign=20000000-0000-4000-8000-000000000015 \
             -f sql/tests/cp-tt-gps04-disposable-acceptance.sql
   disposable-board-import-sync-postgres:
     name: Authoritative board counts and scoped pagination (PostgreSQL 17)
