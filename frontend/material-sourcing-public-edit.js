@@ -67,8 +67,8 @@ export function verifyMaterialSourcingPublicChanges(detail,itemId,changes){
  });
 }
 
-// Staged until explicit production migration activation and signed acceptance.
-export const MATERIAL_SOURCING_ATOMIC_EDIT_ENABLED=false;
+// Production RPC installed by migration 20261127113859; disable before rollback.
+export const MATERIAL_SOURCING_ATOMIC_EDIT_ENABLED=true;
 
 /** A single signed transaction; never fall back after an uncertain write. */
 export async function saveMaterialSourcingAtomic({api,auth,workspaceId,boardId,itemId,publicChanges=[],privateChanges=[]}){

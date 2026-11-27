@@ -82,9 +82,9 @@ test('drawer uses existing signed board CAS with one Save action and no page ref
  assert.doesNotMatch(part,/window\.location\.reload\(/);
 });
 
-test('atomic edit adapter is staged without replacing the production path',async()=>{
+test('atomic edit adapter is enabled after approved production migration',async()=>{
  const {MATERIAL_SOURCING_ATOMIC_EDIT_ENABLED}=await import('../material-sourcing-public-edit.js');
- assert.equal(MATERIAL_SOURCING_ATOMIC_EDIT_ENABLED,false);
+ assert.equal(MATERIAL_SOURCING_ATOMIC_EDIT_ENABLED,true);
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/if\(MATERIAL_SOURCING_ATOMIC_EDIT_ENABLED\)\{/);
  assert.match(app,/saveMaterialSourcingAtomic\(\{\.\.\.input,publicChanges,privateChanges:changes\}\)/);

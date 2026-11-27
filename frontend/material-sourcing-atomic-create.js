@@ -70,8 +70,8 @@ export async function createMaterialSourcingAtomic({
   created:response.created,requestId});
 }
 
-// Staged until both additive RPCs and signed runtime acceptance are approved.
-export const MATERIAL_SOURCING_DURABLE_CREATE_ENABLED=false;
+// Production receipt RPC installed by migration 20261127113859; disable before rollback.
+export const MATERIAL_SOURCING_DURABLE_CREATE_ENABLED=true;
 export function materialCreationRecoveryKey(actor,workspaceId){
  if(!UUID.test(actor||'')||!UUID.test(workspaceId||''))deny('Signed recovery scope is unavailable.',403);
  return 'apsyntra.mrh.create.v1:'+actor+':'+workspaceId;
