@@ -10,6 +10,19 @@ END;
 $roles$;
 CREATE SCHEMA IF NOT EXISTS private;
 
+-- The real directory function is installed by the shell harness below from
+-- the workspace-scope migration. Only its surrounding profile/role fixture
+-- is synthetic; the directory and OT migrations are exercised unchanged.
+ALTER TABLE public.profiles ADD COLUMN email text;
+CREATE FUNCTION public.is_platform_admin(p_user_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
+AS $admin$
+ SELECT EXISTS(SELECT 1 FROM public.profiles p
+  WHERE p.id=p_user_id AND p.status='active'
+   AND p.platform_role='admin_general_manager')
+$admin$;
+REVOKE ALL ON FUNCTION public.is_platform_admin(uuid) FROM PUBLIC,anon,authenticated,service_role;
+
 CREATE TABLE public.module_state_entries(
  workspace_id uuid NOT NULL,
  module_id text NOT NULL,
@@ -41,7 +54,7 @@ CREATE TABLE private.tt_auto_clockout_sessions(
 CREATE FUNCTION private.tt_role_in_workspace(p_user uuid,p_workspace uuid)
 RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
 AS $role$
- SELECT m.role
+ SELECT CASE WHEN public.is_platform_admin(p_user) THEN 'System Admin' ELSE m.role END
  FROM public.module_role_assignments m
  JOIN public.workspace_members wm ON wm.user_id=m.user_id
   AND wm.workspace_id=p_workspace AND wm.active

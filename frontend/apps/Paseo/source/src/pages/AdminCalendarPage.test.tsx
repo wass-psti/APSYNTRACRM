@@ -503,20 +503,38 @@ describe("Paseo saved court calendar", () => {
 
   it("rejects an invalid opening and closing range before sending an update", async () => {
     renderCalendar();
-    await screen.findByRole("list", { name: "Saved weekly schedules" });
-
-    fireEvent.change(screen.getByRole("combobox", { name: "Opening time" }), {
-      target: { value: "780" },
-    });
-    fireEvent.change(screen.getByRole("combobox", { name: "Closing time" }), {
-      target: { value: "720" },
-    });
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Closing time must be later than opening time.",
+    // Use the actual persisted Sunday schedule, after the initial readback
+    // and editor hydration have completed, rather than the default weekday.
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Edit Court 1 Sunday schedule",
+      }),
     );
-    expect(
-      screen.getByRole("button", { name: "Save weekday schedule" }),
-    ).toBeDisabled();
+    const opening = screen.getByRole("combobox", { name: "Opening time" });
+    const closing = screen.getByRole("combobox", { name: "Closing time" });
+    const update = screen.getByRole("button", { name: "Update weekday schedule" });
+    await waitFor(() => {
+      expect(screen.getByRole("combobox", { name: "Operating weekday" })).toHaveValue("0");
+      expect(opening).toHaveValue("480");
+      expect(closing).toHaveValue("1320");
+      expect(update).toBeEnabled();
+    });
+    fireEvent.change(opening, { target: { value: "780" } });
+    expect(opening).toHaveValue("780");
+    fireEvent.change(closing, { target: { value: "720" } });
+    await waitFor(() => {
+      expect(opening).toHaveValue("780");
+      expect(closing).toHaveValue("720");
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Closing time must be later than opening time.",
+      );
+      expect(update).toBeDisabled();
+    });
+    fireEvent.click(update);
+    // Also exercise the form handler directly, independently of the button.
+    const form = update.closest("form");
+    if (!form) throw new Error("Expected the weekday schedule form.");
+    fireEvent.submit(form);
     expect(
       backendAdminFetch.mock.calls.some(
         ([, options]) => options?.method === "PUT",

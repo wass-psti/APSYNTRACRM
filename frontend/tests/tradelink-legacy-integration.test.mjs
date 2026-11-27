@@ -176,13 +176,19 @@ test('selected-document CSV covers every source document type with stable metada
  assert.doesNotMatch(csv,/customerName|customerEmail|content|workspace_id|lineItems/);
 });
 
-test('All Documents wires export only to the current selected authorized rows',()=>{
+test('All Documents wires export only to signed selected records retained across pages',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/case 'tradelink-documents-export-selection'/);
  assert.match(app,/exportTradeLinkDocumentSelection\(/);
- assert.match(app,/!row\.hidden&&selected\.has\(row\.dataset\.documentId\)/);
- assert.match(app,/row\.querySelector\('\[data-tl-select-document\]'\)\?\.checked/);
- assert.match(app,/serializeTradeLinkDocumentCsv\(records\)/);
+ const selection=app.slice(app.indexOf('function updateTradeLinkDocumentSelection('),app.indexOf('function exportTradeLinkDocumentSelection('));
+ assert.match(selection,/state\.tradeLinkDraft\.rows\.filter\(row=>pageIds\.has\(row\.documentId\)\)/);
+ assert.match(selection,/rows\.filter\(row=>!row\.hidden&&\s*row\.querySelector\('\[data-tl-select-document\]'\)\?\.checked\)/);
+ assert.match(selection,/mergeTradeLinkDocumentSelection\(\s*state\.tradeLinkDraft\.selectedDocuments,pageRows,checkedIds,50\)/);
+ const exporter=app.slice(app.indexOf('function exportTradeLinkDocumentSelection('),app.indexOf('function captureTradeLinkDraftListFilters('));
+ assert.match(exporter,/!state\.boardManage\|\|state\.tradeLinkDraft\?\.status!=='AUTHORIZED_READ'/);
+ assert.match(exporter,/Array\.isArray\(state\.tradeLinkDraft\.selectedDocuments\)/);
+ assert.match(exporter,/if\(!records\.length\|\|records\.length>50\)return false/);
+ assert.match(exporter,/serializeTradeLinkDocumentCsv\(records\)/);
  const workspace=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
  assert.match(workspace,/data-action="tradelink-documents-export-selection".*selectedCount&&!busy/);
 });
@@ -226,4 +232,17 @@ test('TradeLink printable output follows the official A4 template page size',()=
  assert.doesNotMatch(css,/@page\{size:Letter/);
  const output=readFileSync('frontend/tradelink-saved-document-output.js','utf8');
  assert.match(output,/Print \/ Save as PDF/);
+});
+
+test('cross-page selection retains only signed page rows, removes deselected rows and enforces the 50-record cap',async()=>{
+ const {mergeTradeLinkDocumentSelection}=await import('../tradelink-draft-workspace.js');
+ const makeRow=n=>({documentId:'00000000-0000-4000-8000-'+String(n).padStart(12,'0'),revision:1});
+ const first=makeRow(1),second=makeRow(2),foreign=makeRow(3);
+ const result=mergeTradeLinkDocumentSelection([first],[second],new Set([second.documentId,foreign.documentId]));
+ assert.deepEqual(result.documents,[first,second]);
+ assert.deepEqual(mergeTradeLinkDocumentSelection(result.documents,[first],new Set()).documents,[second]);
+ const full=Array.from({length:50},(_,i)=>makeRow(i+1));
+ const overflow=mergeTradeLinkDocumentSelection(full,[makeRow(51)],new Set([makeRow(51).documentId]));
+ assert.equal(overflow.overflow,true);
+ assert.deepEqual(overflow.documents,full);
 });

@@ -146,7 +146,7 @@ test('all TradeLink module roles use the signed shared-document read session for
    }),
    rpc:async(name,params)=>{
     calls.push({name,params});
-    if(name==='tl03_documents_page')return {rows:[],hasMore:false,nextCursor:null};
+    if(name==='tl03_documents_query')return {rows:[],hasMore:false,totalCount:0,nextCursor:null};
     if(name==='tl03_documents_list')return [];
     return null;
    }
@@ -158,7 +158,7 @@ test('all TradeLink module roles use the signed shared-document read session for
  assert.equal(await client.read(firstId),null);
  assert.equal(await client.revisionBundle(firstId),null);
  assert.deepEqual(calls.map(call=>call.name),[
-  'tl03_documents_page','tl03_documents_list',
+  'tl03_documents_query','tl03_documents_list',
   'tl03_document_read','tl03_document_revision_bundle'
  ]);
 });

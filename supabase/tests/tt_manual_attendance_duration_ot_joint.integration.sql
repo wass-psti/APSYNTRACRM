@@ -33,7 +33,7 @@ DECLARE
  today date:=(clock_timestamp() AT TIME ZONE 'Asia/Manila')::date;
  started timestamptz; cutoff timestamptz; ended timestamptz;
  req uuid; record_id uuid; hist_id uuid; rev bigint;
- receipt jsonb; state jsonb; active_before jsonb; active_after jsonb;
+ receipt jsonb; state jsonb; active_before jsonb; active_after jsonb; snap jsonb; admin_req uuid;
  queue_before jsonb; queue_after jsonb; hist jsonb; credit jsonb;
  ojt_before jsonb; ojt_after jsonb; result jsonb;
 BEGIN
@@ -52,6 +52,34 @@ BEGIN
  PERFORM set_config('app.tt_admin_test_role','Employee',true);
  receipt:=public.timetracker_ot_submit_duration(board,today,180,'Pre-filed overtime for joint acceptance');
  req:=(receipt->>'id')::uuid;
+
+ -- Platform Admin resolves to System Admin in the signed workspace role source.
+ PERFORM set_config('request.jwt.claim.sub',admin::text,true);
+ PERFORM set_config('request.jwt.claim.session_id',admin_session::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin::text,'session_id',admin_session::text,'role','authenticated')::text,true);
+ snap:=public.timetracker_ot_snapshot(board);
+ IF snap->>'scope' IS DISTINCT FROM 'AUTHORIZED_WORKSPACE_TEAM'
+  OR snap->>'durationOtApprover' IS DISTINCT FROM 'true'
+  OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(snap->'rows') r
+    WHERE r->>'id'=req::text AND r->>'canReviewOt'='true')
+ THEN RAISE EXCEPTION 'Platform Admin cannot see/review pending employee OT: %',snap; END IF;
+ IF NOT EXISTS(SELECT 1 FROM public.list_module_directory('time-tracker') u WHERE u.id=emp) THEN
+  RAISE EXCEPTION 'Platform Admin TimeTracker directory omitted active employee'; END IF;
+
+ -- Prove the platform Admin role can make the same server-side decision, not merely
+ -- render an approval button. This request has no attendance association to bind.
+ PERFORM set_config('request.jwt.claim.sub',emp::text,true);
+ PERFORM set_config('request.jwt.claim.session_id',emp_session::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',emp::text,'session_id',emp_session::text,'role','authenticated')::text,true);
+ receipt:=public.timetracker_ot_submit_duration(board,today+1,60,'Pre-filed overtime for platform Admin approval');
+ admin_req:=(receipt->>'id')::uuid;
+ PERFORM set_config('request.jwt.claim.sub',admin::text,true);
+ PERFORM set_config('request.jwt.claim.session_id',admin_session::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin::text,'session_id',admin_session::text,'role','authenticated')::text,true);
+ receipt:=public.timetracker_ot_decide_duration(board,admin_req,'Approved');
+ IF receipt->>'status' IS DISTINCT FROM 'Approved' OR receipt->>'decidedBy' IS DISTINCT FROM admin::text
+ THEN RAISE EXCEPTION 'Platform Admin duration approval failed: %',receipt; END IF;
+
  PERFORM set_config('request.jwt.claim.sub',hr::text,true);
  PERFORM set_config('request.jwt.claim.session_id',hr_session::text,true);
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',hr::text,'session_id',hr_session::text,'role','authenticated')::text,true);

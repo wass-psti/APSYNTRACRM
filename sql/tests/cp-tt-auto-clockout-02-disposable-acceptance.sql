@@ -3,6 +3,30 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
+-- A lunch-break plateau cannot contain a nine-hour credited-work threshold.
+-- Use a transaction-local evaluation time when wall-clock CI would place the
+-- grace fixture's threshold in that plateau. The worker body and every
+-- threshold/attendance assertion stay intact; ROLLBACK restores its definition.
+DO $fixture_clock$
+DECLARE
+ v_now timestamptz:=date_trunc('milliseconds',clock_timestamp());
+ v_local timestamp:=v_now AT TIME ZONE 'Asia/Manila';
+ v_body text;
+ v_original constant text:='v_now timestamptz:=clock_timestamp();';
+BEGIN
+ IF v_local::time>=time '12:20' AND v_local::time<time '13:20' THEN
+  v_now:=(v_local::date+time '12:19') AT TIME ZONE 'Asia/Manila';
+ END IF;
+ PERFORM set_config('apsyntra.test_auto_clockout_now',v_now::text,true);
+ v_body:=pg_catalog.pg_get_functiondef('private.tt_process_auto_clockouts()'::regprocedure);
+ IF cardinality(string_to_array(v_body,v_original))<>2 THEN
+  RAISE EXCEPTION 'Disposable worker evaluation-clock injection marker changed';
+ END IF;
+ EXECUTE replace(v_body,v_original,
+  'v_now timestamptz:=current_setting(''apsyntra.test_auto_clockout_now'')::timestamptz;');
+END
+$fixture_clock$;
+
 -- Move the activation boundary back only in this disposable database so that
 -- deterministic synthetic sessions can exercise the real scheduler trigger.
 UPDATE private.tt_auto_clockout_config
@@ -18,7 +42,7 @@ CREATE TEMP TABLE tt_auto_clockout_expected(
 
 DO $seed$
 DECLARE
- v_now timestamptz:=clock_timestamp();
+ v_now timestamptz:=current_setting('apsyntra.test_auto_clockout_now')::timestamptz;
  v_target timestamptz;
  v_clock_in timestamptz;
  v_threshold timestamptz;

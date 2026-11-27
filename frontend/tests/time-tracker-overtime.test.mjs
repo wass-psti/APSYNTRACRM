@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate,overtimeDurationMinutes,
- validateOvertimeDraft,validateDurationOvertimeDraft,validateManualOvertimeDraft,timeTrackerOtMetrics,
+ validateOvertimeDraft,validateDurationOvertimeDraft,validateManualOvertimeDraft,
+ validateManualDurationOvertimeDraft,timeTrackerOtMetrics,
  renderTimeTrackerOvertime,timeTrackerOtDurationLabel,updateTimeTrackerOvertimePreview,
- TT_OT_WRITES_ACCEPTED}
+ updateTimeTrackerManualOtPreview,TT_OT_WRITES_ACCEPTED}
  from '../time-tracker-overtime.js';
 import {TimeTrackerNativeClient} from '../time-tracker-native.js';
 
@@ -15,10 +16,10 @@ const workspace='00000000-0000-4000-8000-000000000001';
 const board='46bf4ee7-368a-4c35-842c-8593ea1f6ac3';
 const rows=[
  {id:'one',ownerId:'cloud:'+worker,name:'Worker One',date:'2026-11-02',
-  status:'Submitted',start:'18:00',end:'20:00',durationMinutes:120,
+  status:'Submitted',start:'18:00',end:'20:00',otPolicy:'legacy-range',canReviewOt:false,durationMinutes:120,
   task:'Emergency preparation and review'},
  {id:'two',ownerId:'cloud:'+worker,name:'Worker One',date:'2026-11-02',
-  status:'Approved',start:'18:00',end:'20:00',durationMinutes:120,
+  status:'Approved',start:'18:00',end:'20:00',otPolicy:'legacy-range',canReviewOt:false,durationMinutes:120,
   task:'Additional site inspection'}
 ];
 test('Philippine Time week boundaries and offset navigation',()=>{
@@ -39,15 +40,17 @@ test('duration and reason enforce same-day maximum six-hour contract',()=>{
  assert.equal(validateOvertimeDraft({date:'2026-11-02',start:'18:00',
   end:'20:00',reason:'too short'},now).valid,false);
 });
-test('manual OT accepts historical dates and rejects future or unelapsed work',()=>{
+test('manual OT accepts historical dates using duration only',()=>{
  const directory=[{id:worker,status:'active'}];
- const past={employeeId:worker,date:'2025-01-02',start:'18:00',end:'20:00',
+ const past={employeeId:worker,date:'2025-01-02',durationMinutes:120,
   reason:'Emergency preparation overtime entered by an administrator'};
- assert.equal(validateManualOvertimeDraft(past,directory,now).valid,true);
- assert.equal(validateManualOvertimeDraft({...past,date:'2026-11-03'},directory,now).valid,false);
- assert.equal(validateManualOvertimeDraft({...past,date:'2026-11-02',start:'14:00',end:'15:00'},directory,now).valid,true);
- assert.equal(validateManualOvertimeDraft({...past,date:'2026-11-02',start:'16:00',end:'17:00'},directory,now).valid,false);
- assert.equal(validateManualOvertimeDraft({...past,employeeId:'not-in-directory'},directory,now).valid,false);
+ assert.equal(validateManualDurationOvertimeDraft(past,directory,now).valid,true);
+ assert.equal(validateManualDurationOvertimeDraft({...past,date:'2026-11-02'},directory,now).valid,false);
+ assert.equal(validateManualDurationOvertimeDraft({...past,date:'2026-11-03'},directory,now).valid,false);
+ assert.equal(validateManualDurationOvertimeDraft({...past,durationMinutes:29},directory,now).valid,false);
+ assert.equal(validateManualDurationOvertimeDraft({...past,durationMinutes:45},directory,now).valid,false);
+ assert.equal(validateManualDurationOvertimeDraft({...past,durationMinutes:361},directory,now).valid,false);
+ assert.equal(validateManualDurationOvertimeDraft({...past,employeeId:'not-in-directory'},directory,now).valid,false);
 });
 
 test('metrics reflect actual authorized rows and not screenshot demo numbers',()=>{
@@ -61,26 +64,27 @@ test('metrics reflect actual authorized rows and not screenshot demo numbers',()
  assert.equal(timeTrackerOtMetrics(rows,{status:'Approved'},now).visible.length,1);
  assert.equal(timeTrackerOtMetrics(rows,{search:'not in OT'},now).visible.length,0);
 });
-test('staged modal is visible but submission and ordinary approvals fail closed',()=>{
+test('staged duration-only modal remains read-only until the signed duration contract is active',()=>{
  const employee=renderTimeTrackerOvertime({
-  requests:rows,access:{bootstrapApprover:false},modalOpen:true,now});
- for(const text of ['Overtime','Approved overtime this week','Awaiting approval','Pending',
-  'Approved','Rejected','File Overtime','Total overtime'])
-  assert.ok(employee.includes(text),text);
+  requests:rows,access:{bootstrapApprover:false,otContractActive:true,durationOtContractActive:false},
+  modalOpen:true,now});
+ assert.match(employee,/id="tt-ot-duration-hours"/);
+ assert.doesNotMatch(employee,/id="tt-ot-(start|end)"/);
  assert.match(employee,/type="submit" disabled/);
  assert.doesNotMatch(employee,/tt-ot-review-actions/);
  const bootstrap=renderTimeTrackerOvertime({
-  requests:rows,access:{bootstrapApprover:true},now});
+  requests:[{...rows[0],canReviewOt:true}],
+  access:{bootstrapApprover:true,otContractActive:true,durationOtContractActive:true},modalOpen:true,now});
  assert.match(bootstrap,/tt-ot-review-actions/);
  assert.match(bootstrap,/Approve<\/button>/);
- assert.match(bootstrap,/data-action="tt-ot-approve"[^>]* disabled/);
+ assert.doesNotMatch(bootstrap,/type="submit" disabled/);
  assert.equal(TT_OT_WRITES_ACCEPTED,true);
 });
-function setup({role='System Admin',snapshot=null,rpcHandlers={}}={}){
+function setup({role='System Admin',snapshot=null,rpcHandlers={},platformRole=role==='Employee'?'employee':'admin_general_manager'}={}){
  const auth={userId:admin,getVerifiedUser:async()=>({id:admin})};
  const api={
   context:async()=>({user_id:admin,workspace_id:workspace,
-   profile:{status:'active',platform_role:'admin_general_manager'}}),
+   profile:{status:'active',platform_role:platformRole}}),
   nativeApplicationBoardContext:async moduleId=>({
    contract:'native-app-board-v1',moduleId,userId:admin,workspaceId:workspace,role,
    board:{id:board,workspace_id:workspace,name:'TimeTracker Attendance',status:'active',
@@ -104,36 +108,45 @@ function setup({role='System Admin',snapshot=null,rpcHandlers={}}={}){
  };
  return new TimeTrackerNativeClient({auth,api});
 }
-test('production-accepted OT controls activate only with signed OT contract',()=>{
+test('duration-only OT controls activate only with the signed duration contract',()=>{
  const user=renderTimeTrackerOvertime({requests:rows,
-  access:{bootstrapApprover:false,otContractActive:true},modalOpen:true,now});
+  access:{bootstrapApprover:false,otContractActive:true,durationOtContractActive:true},
+  modalOpen:true,now});
  assert.doesNotMatch(user,/type="submit" disabled/);
+ assert.match(user,/id="tt-ot-duration-hours"/);
  assert.doesNotMatch(user,/tt-ot-review-actions/);
- const bootstrap=renderTimeTrackerOvertime({requests:rows,
-  access:{bootstrapApprover:true,otContractActive:true},modalOpen:true,now});
+ const bootstrap=renderTimeTrackerOvertime({requests:[{...rows[0],canReviewOt:true}],
+  access:{bootstrapApprover:true,otContractActive:true,durationOtContractActive:true},
+  modalOpen:true,now});
  assert.match(bootstrap,/tt-ot-review-actions/);
  assert.doesNotMatch(bootstrap,/data-action="tt-ot-approve"[^>]* disabled/);
- assert.doesNotMatch(bootstrap,/type="submit" disabled/);
  const absent=renderTimeTrackerOvertime({requests:rows,
-  access:{bootstrapApprover:true,otContractActive:false},modalOpen:true,now});
+  access:{bootstrapApprover:true,otContractActive:true,durationOtContractActive:false},
+  modalOpen:true,now});
  assert.match(absent,/type="submit" disabled/);
- assert.match(absent,/data-action="tt-ot-approve"[^>]* disabled/);
 });
-
-test('dedicated server OT snapshot accepts only matching signed workspace and bootstrap scope',async()=>{
+test('signed OT snapshot accepts workspace-authorized HR, System Admin and bootstrap scopes',async()=>{
+ const reviewRows=[{...rows[0],canReviewOt:true}];
  const valid={mode:'ACTIVE',actorId:admin,workspaceId:workspace,
-  scope:'AUTHORIZED_WORKSPACE_TEAM',bootstrapApprover:true,manualOtManager:false,rows};
- const result=await setup({snapshot:valid}).snapshot(board);
- assert.equal(result.otRequests.length,2);
- assert.equal(result.access.bootstrapApprover,true);
- assert.equal(result.access.otContractActive,true);
- await assert.rejects(()=>setup({snapshot:{...valid,workspaceId:
+  scope:'AUTHORIZED_WORKSPACE_TEAM',bootstrapApprover:false,manualOtManager:false,
+  durationOtContract:'tt-duration-ot-1',durationOtHrApprover:true,durationOtApprover:true,rows:reviewRows};
+ const hr=await setup({role:'HR',snapshot:valid}).snapshot(board);
+ assert.equal(hr.otRequests.length,1);
+ assert.equal(hr.access.durationOtApprover,true);
+ assert.equal(hr.otRequests[0].canReviewOt,true);
+ const systemAdmin=await setup({role:'System Admin',snapshot:{...valid,durationOtHrApprover:false}}).snapshot(board);
+ assert.equal(systemAdmin.access.durationOtApprover,true);
+ assert.equal(systemAdmin.otRequests[0].canReviewOt,true);
+ const bootstrap=await setup({role:'System Admin',snapshot:{...valid,bootstrapApprover:true,
+  durationOtApprover:false,durationOtHrApprover:false}}).snapshot(board);
+ assert.equal(bootstrap.access.bootstrapApprover,true);
+ assert.equal(bootstrap.otRequests.length,1);
+ await assert.rejects(()=>setup({role:'Employee',snapshot:valid}).snapshot(board),
+  /approver role does not match/);
+ await assert.rejects(()=>setup({role:'HR',snapshot:{...valid,workspaceId:
   '00000000-0000-4000-8000-000000000002'}}).snapshot(board),/mismatch/);
- await assert.rejects(()=>setup({snapshot:{...valid,bootstrapApprover:false}}).snapshot(board),
-  /bootstrap-authorized/);
- const missing=await setup().snapshot(board);
- assert.deepEqual(missing.otRequests,[]);
- assert.equal(missing.access.otContractActive,false);
+ await assert.rejects(()=>setup({role:'Employee',snapshot:{...valid,durationOtApprover:false}}).snapshot(board),
+  /Team OT access is not authorized/);
 });
 test('legacy signed OT snapshots remain readable before the manual-OT migration is activated',async()=>{
  const snapshot={mode:'ACTIVE',actorId:admin,workspaceId:workspace,
@@ -144,12 +157,13 @@ test('legacy signed OT snapshots remain readable before the manual-OT migration 
  assert.deepEqual(result.otRequests,[]);
 });
 
-test('System Admin sees manual OT controls and manual-only review actions',()=>{
+test('System Admin sees hours-only manual OT controls and review actions only for signed pending requests',()=>{
  const manualRow={...rows[0],id:'manual-row',submissionSource:'manual_admin',
-  submittedBy:admin,submittedByName:'Administrator'};
- const regularRow={...rows[0],id:'regular-row',submissionSource:'employee'};
+  otPolicy:'manual-duration-v1',canReviewOt:true,submittedBy:admin,submittedByName:'Administrator'};
+ const regularRow={...rows[0],id:'regular-row',submissionSource:'employee',
+  otPolicy:'duration-v1',canReviewOt:false};
  const access={userId:admin,moduleRole:'System Admin',manualOtManager:true,
-  bootstrapApprover:false,otContractActive:true,overviewDirectory:[
+  otContractActive:true,durationOtContractActive:true,overviewDirectory:[
    {id:admin,status:'active',display_name:'Administrator'},
    {id:worker,status:'active',display_name:'Worker One'}]};
  const html=renderTimeTrackerOvertime({requests:[manualRow,regularRow],access,now,modalOpen:'manual'});
@@ -158,55 +172,70 @@ test('System Admin sees manual OT controls and manual-only review actions',()=>{
  assert.match(html,/ADMINISTRATIVE ENTRY/);
  assert.match(html,/Manual Entry/);
  assert.match(html,/Entered by Administrator/);
+ assert.match(html,/id="tt-ot-manual-duration-hours"/);
+ assert.doesNotMatch(html,/id="tt-ot-manual-(start|end)"/);
  assert.equal((html.match(/data-action="tt-ot-approve"/g)||[]).length,1);
- const employee=renderTimeTrackerOvertime({requests:[manualRow],
+ const platformAdmin=renderTimeTrackerOvertime({requests:[],access:{
+  ...access,moduleRole:'Employee',manualOtManager:true},now,modalOpen:'manual'});
+ assert.match(platformAdmin,/tt-ot-manual-form/);
+ const employee=renderTimeTrackerOvertime({requests:[{...manualRow,canReviewOt:false}],
   access:{userId:worker,moduleRole:'Employee',manualOtManager:false,otContractActive:true},now});
  assert.match(employee,/File Overtime/);
  assert.doesNotMatch(employee,/tt-ot-manual-open/);
  assert.match(employee,/Worker One/);
- assert.match(employee,/Emergency preparation/);
  assert.doesNotMatch(employee,/tt-ot-manual-form/);
  assert.doesNotMatch(employee,/tt-ot-review-actions/);
 });
-
-test('signed manual OT RPC verifies employee owner and administrator submitter',async()=>{
+test('signed manual duration OT RPC verifies employee owner and administrator submitter',async()=>{
  const snapshot={mode:'ACTIVE',actorId:admin,workspaceId:workspace,
-  scope:'OWN_OT_ONLY',bootstrapApprover:false,manualOtManager:true,rows:[]};
+  scope:'OWN_OT_ONLY',bootstrapApprover:false,manualOtManager:true,
+  durationOtContract:'tt-duration-ot-1',durationOtApprover:true,rows:[]};
  const receipt={id:'50000000-0000-4000-8000-000000000001',workspaceId:workspace,
-  ownerId:'cloud:'+worker,submittedBy:admin,submissionSource:'manual_admin',status:'Submitted'};
+  ownerId:'cloud:'+worker,submittedBy:admin,submissionSource:'manual_admin',
+  status:'Submitted',otPolicy:'manual-duration-v1',durationMinutes:120};
  let rpcArgs=null;
  const client=setup({role:'System Admin',snapshot,rpcHandlers:{
-  timetracker_ot_submit_manual:args=>(rpcArgs=args,receipt)
+  timetracker_ot_submit_manual_duration:args=>(rpcArgs=args,receipt)
  }});
  const result=await client.submitManualOvertime(board,{
-  employeeId:worker,date:'2025-11-02',start:'18:00',end:'20:00',
+  employeeId:worker,date:'2025-11-02',durationMinutes:120,
   reason:'Emergency preparation overtime entered by an administrator'
  });
  assert.equal(result.id,receipt.id);
  assert.equal(rpcArgs.p_owner_id,worker);
  assert.equal(rpcArgs.p_date,'2025-11-02');
+ assert.equal(rpcArgs.p_duration_minutes,120);
+ assert.equal('p_start' in rpcArgs,false);
+ assert.equal('p_end' in rpcArgs,false);
  await assert.rejects(()=>setup({role:'Employee',snapshot:{...snapshot,
-  scope:'OWN_OT_ONLY',manualOtManager:false}}).submitManualOvertime(board,{
-   employeeId:worker,date:'2025-11-02',start:'18:00',end:'20:00',
+  scope:'OWN_OT_ONLY',manualOtManager:false,durationOtApprover:false}}).submitManualOvertime(board,{
+   employeeId:worker,date:'2025-11-02',durationMinutes:120,
    reason:'Emergency preparation overtime entered by an administrator'
-  }),/System Admin manual OT submission is unavailable/);
+  }),/manual duration OT submission is unavailable/);
 });
-
-test('System Admin may decide manual OT but not regular employee OT',async()=>{
+test('System Admin may decide employee duration and manual duration OT without self-review',async()=>{
  const manual={...rows[0],id:'50000000-0000-4000-8000-000000000002',
-  date:'2025-11-02',submissionSource:'manual_admin'};
+  date:'2025-11-02',submissionSource:'manual_admin',otPolicy:'manual-duration-v1',
+  canReviewOt:true};
+ const duration={...rows[0],id:'50000000-0000-4000-8000-000000000003',
+  date:'2025-11-02',submissionSource:'employee',otPolicy:'duration-v1',canReviewOt:true};
  const snapshot={mode:'ACTIVE',actorId:admin,workspaceId:workspace,
-  scope:'OWN_OT_ONLY',bootstrapApprover:false,manualOtManager:true,rows:[manual]};
+  scope:'AUTHORIZED_WORKSPACE_TEAM',bootstrapApprover:false,manualOtManager:true,
+  durationOtContract:'tt-duration-ot-1',durationOtApprover:true,rows:[manual,duration]};
  const client=setup({role:'System Admin',snapshot,rpcHandlers:{
-  timetracker_ot_decide:{id:manual.id,workspaceId:workspace,status:'Approved',decidedBy:admin,submissionSource:'manual_admin'}
+  timetracker_ot_decide_manual_duration:{id:manual.id,workspaceId:workspace,status:'Approved',
+   decidedBy:admin,submissionSource:'manual_admin',otPolicy:'manual-duration-v1'},
+  timetracker_ot_decide_duration:{id:duration.id,workspaceId:workspace,status:'Approved',
+   decidedBy:admin,otPolicy:'duration-v1'}
  }});
- const receipt=await client.decideOvertime(board,manual.id,'Approved');
- assert.equal(receipt.status,'Approved');
- const regular={...manual,id:'50000000-0000-4000-8000-000000000003',submissionSource:'employee'};
- await assert.rejects(()=>setup({role:'System Admin',snapshot:{...snapshot,rows:[regular]}})
-  .decideOvertime(board,regular.id,'Approved'),/target unavailable or already reviewed/);
+ assert.equal((await client.decideOvertime(board,manual.id,'Approved')).status,'Approved');
+ assert.equal((await client.decideOvertime(board,duration.id,'Approved')).status,'Approved');
+ const own={...duration,id:'50000000-0000-4000-8000-000000000004',
+  ownerId:'cloud:'+admin,canReviewOt:false};
+ const ownClient=setup({role:'System Admin',snapshot:{...snapshot,rows:[own]}});
+ await assert.rejects(()=>ownClient.decideOvertime(board,own.id,'Approved'),
+  /target is unavailable or outside the signed review scope/);
 });
-
 test('SQL server contract is staged and enforces bootstrap decision gate and audit',()=>{
  const sql=readFileSync('sql/cp-tt-ot01-staged-bootstrap-approval.sql','utf8');
  assert.match(sql,/STAGED ONLY/);
@@ -261,12 +290,12 @@ test('bootstrap self review forward migration preserves System Admin scope and a
 });
 
 test('Bootstrap owns pending OT review actions while System Admin retains self-review denial',()=>{
- const selfRow={...rows[0],id:'50000000-0000-4000-8000-000000000041',ownerId:'cloud:'+admin};
+ const selfRow={...rows[0],id:'50000000-0000-4000-8000-000000000041',ownerId:'cloud:'+admin,canReviewOt:true};
  const bootstrap=renderTimeTrackerOvertime({requests:[selfRow],
   access:{userId:admin,bootstrapApprover:true,otContractActive:true},now});
  assert.match(bootstrap,/data-action="tt-ot-approve"/);
  assert.match(bootstrap,/data-action="tt-ot-reject"/);
- const manual={...selfRow,submissionSource:'manual_admin'};
+ const manual={...selfRow,submissionSource:'manual_admin',otPolicy:'manual-duration-v1',canReviewOt:false};
  const systemAdmin=renderTimeTrackerOvertime({requests:[manual],
   access:{userId:admin,moduleRole:'System Admin',manualOtManager:true,bootstrapApprover:false,otContractActive:true},now});
  assert.doesNotMatch(systemAdmin,/data-action="tt-ot-approve"/);
@@ -274,9 +303,9 @@ test('Bootstrap owns pending OT review actions while System Admin retains self-r
 });
 
 test('signed bootstrap client decides self-submitted OT and reads former members',async()=>{
- const self={...rows[0],id:'50000000-0000-4000-8000-000000000042',ownerId:'cloud:'+admin};
+ const self={...rows[0],id:'50000000-0000-4000-8000-000000000042',ownerId:'cloud:'+admin,canReviewOt:true};
  const former={...rows[0],id:'50000000-0000-4000-8000-000000000043',
-  ownerId:'cloud:50000000-0000-4000-8000-000000000099'};
+  ownerId:'cloud:50000000-0000-4000-8000-000000000099',canReviewOt:true};
  const snapshot={mode:'ACTIVE',actorId:admin,workspaceId:workspace,
   scope:'AUTHORIZED_WORKSPACE_TEAM',bootstrapApprover:true,manualOtManager:false,rows:[self,former]};
  let decideArgs;
@@ -295,25 +324,23 @@ test('signed bootstrap client decides self-submitted OT and reads former members
 });
 
 
-test('employee OT request markup uses native time controls and clear user guidance',()=>{
+test('employee OT filing collects date, requested hours and reason only',()=>{
  const html=renderTimeTrackerOvertime({
-  requests:rows,access:{bootstrapApprover:false,otContractActive:true},modalOpen:true,now
+  requests:rows,access:{bootstrapApprover:false,otContractActive:true,durationOtContractActive:true},
+  modalOpen:true,now
  });
- assert.match(html,/id="tt-ot-start" name="start" type="time"/);
- assert.match(html,/id="tt-ot-end" name="end" type="time"/);
- assert.match(html,/value="18:00"/);
- assert.match(html,/value="20:00"/);
- assert.match(html,/min="2026-10-03"/);
+ assert.match(html,/id="tt-ot-date"/);
+ assert.match(html,/id="tt-ot-duration-hours"/);
+ assert.match(html,/min="0\.5" max="6" step="0\.5"/);
+ assert.match(html,/min="2026-11-02"/);
  assert.match(html,/max="2026-11-09"/);
+ assert.doesNotMatch(html,/id="tt-ot-(start|end)"/);
  assert.match(html,/data-tt-ot-duration-progress/);
- assert.match(html,/Your request will be sent for approval/);
- assert.match(html,/You can check its status in OT requests/);
- assert.doesNotMatch(html,/signed OT RPC|audit workflow/i);
+ assert.match(html,/authorized OT approval queue for System Admin, Admin, or HR review/);
  assert.match(html,/maxlength="500"/);
- assert.match(html,/past 30 days or next 7 days/);
  assert.match(html,/Provide at least 10 characters/);
 });
-test('OT duration preview updates the duration, progress, reason count and inline validity',()=>{
+test('OT duration preview updates hours, progress, reason count and inline validity',()=>{
  const control=value=>({
   value,textContent:'',validationMessage:'',attributes:{},
   setAttribute(name,next){this.attributes[name]=next;},
@@ -321,8 +348,7 @@ test('OT duration preview updates the duration, progress, reason count and inlin
   setCustomValidity(message){this.validationMessage=message;}
  });
  const nodes={
-  '#tt-ot-start':control('18:00'),
-  '#tt-ot-end':control('20:00'),
+  '#tt-ot-duration-hours':control('2'),
   '#tt-ot-reason':control('Emergency maintenance work'),
   '[data-tt-ot-duration-value]':control(''),
   '[data-tt-ot-duration-progress]':control(''),
@@ -336,18 +362,14 @@ test('OT duration preview updates the duration, progress, reason count and inlin
  assert.equal(nodes['[data-tt-ot-duration-message]'].textContent,
   '4 hr 00 min remaining within the 6-hour maximum.');
  assert.equal(nodes['[data-tt-ot-reason-count]'].textContent,'26 / 500');
- assert.equal(nodes['#tt-ot-end'].validationMessage,'');
+ assert.equal(nodes['#tt-ot-duration-hours'].validationMessage,'');
  assert.equal(nodes['#tt-ot-reason'].validationMessage,'');
- nodes['#tt-ot-start'].value='20:00';
- nodes['#tt-ot-end'].value='19:00';
- nodes['#tt-ot-reason'].value='     ';
- updateTimeTrackerOvertimePreview(form);
- assert.match(nodes['#tt-ot-reason'].validationMessage,/at least 10 characters/);
+ nodes['#tt-ot-duration-hours'].value='1.25';
  nodes['#tt-ot-reason'].value='Short';
  updateTimeTrackerOvertimePreview(form);
  assert.equal(nodes['[data-tt-ot-duration-value]'].textContent,'—');
  assert.equal(nodes['[data-tt-ot-duration-progress]'].value,0);
- assert.match(nodes['#tt-ot-end'].validationMessage,/30 minutes and 6 hours/);
+ assert.match(nodes['#tt-ot-duration-hours'].validationMessage,/0.5 to 6 hours/);
  assert.match(nodes['#tt-ot-reason'].validationMessage,/at least 10 characters/);
  assert.equal(nodes['[data-tt-ot-reason-count]'].textContent,'5 / 500');
 });
@@ -371,27 +393,31 @@ test('employee OT modal wiring captures edits, preserves retry drafts and manage
  assert.match(app,/const overtimeDialog=root\.querySelector\('\.tt-ot-modal'\)/);
 });
 
-test('duration OT validates future/current work date and exact minute amount',()=>{
+test('duration OT validates current/future work date and half-hour duration increments',()=>{
  const valid={date:'2026-11-02',durationMinutes:180,reason:'Additional planned inspection work'};
  assert.equal(validateDurationOvertimeDraft(valid,now).durationMinutes,180);
+ assert.equal(validateDurationOvertimeDraft({...valid,durationMinutes:30},now).valid,true);
  for(const change of [{date:'2026-11-01'},{date:'2026-11-10'},{durationMinutes:29},
-  {durationMinutes:361},{durationMinutes:30.5},{durationMinutes:'180'}]){
+  {durationMinutes:45},{durationMinutes:361},{durationMinutes:30.5},{durationMinutes:'180'}]){
   assert.equal(validateDurationOvertimeDraft({...valid,...change},now).valid,false);
  }
 });
-test('signed duration contract renders an hours input, with HR review controls',()=>{
- const durationRow={...rows[0],otPolicy:'duration-v1',canReviewDuration:true};
- const access={moduleRole:'HR',userId:admin,durationOtContractActive:true,durationOtHrApprover:true,otContractActive:true};
+test('signed duration contract renders hours-only filing and HR/System Admin review controls',()=>{
+ const durationRow={...rows[0],otPolicy:'duration-v1',canReviewOt:true,canReviewDuration:true};
+ const access={moduleRole:'HR',userId:admin,durationOtContractActive:true,
+  durationOtApprover:true,durationOtHrApprover:true,otContractActive:true};
  const html=renderTimeTrackerOvertime({requests:[durationRow],access,modalOpen:true,now});
  assert.match(html,/id="tt-ot-duration-hours"/);
  assert.match(html,/min="0\.5" max="6" step="0\.5"/);
  assert.match(html,/value="2"/);
  assert.doesNotMatch(html,/id="tt-ot-(start|end)"/);
  assert.match(html,/data-action="tt-ot-approve"/);
- assert.doesNotMatch(renderTimeTrackerOvertime({requests:[durationRow],
-  access:{...access,userId:worker,durationOtHrApprover:false},now}),/data-action="tt-ot-approve"/);
- assert.doesNotMatch(renderTimeTrackerOvertime({requests:[durationRow],
-  access:{...access,durationOtHrApprover:false,bootstrapApprover:true},now}),/data-action="tt-ot-approve"/);
+ const systemAdmin=renderTimeTrackerOvertime({requests:[durationRow],access:{
+  ...access,moduleRole:'System Admin',durationOtApprover:true,durationOtHrApprover:false},now});
+ assert.match(systemAdmin,/data-action="tt-ot-approve"/);
+ const employee=renderTimeTrackerOvertime({requests:[{...durationRow,canReviewOt:false}],
+  access:{...access,userId:worker,moduleRole:'Employee',durationOtApprover:false,durationOtHrApprover:false},now});
+ assert.doesNotMatch(employee,/data-action="tt-ot-approve"/);
 });
 test('duration form converts hour selections to exact payroll minutes',()=>{
  const control=value=>({value,textContent:'',attributes:{},
@@ -431,40 +457,59 @@ test('duration OT uses signed employee identity and never transmits start/end',a
  await client.submitOvertime(board,{date:today,durationMinutes:180,reason:'Additional planned inspection work'});
  assert.deepEqual(args,{p_board_id:board,p_date:today,p_duration_minutes:180, p_reason:'Additional planned inspection work'});
 });
-test('HR signed scope reviews duration only and rejects non-HR claims',async()=>{
+test('HR and System Admin signed scopes see and review employee OT requests',async()=>{
  const durationRow={...rows[0],id:'50000000-0000-4000-8000-000000000003',
-  otPolicy:'duration-v1',canReviewDuration:true};
+  otPolicy:'duration-v1',canReviewOt:true,canReviewDuration:true};
+ const ownRow={...durationRow,id:'50000000-0000-4000-8000-000000000004',
+  ownerId:'cloud:'+admin,canReviewOt:false,canReviewDuration:false};
  const snapshot={mode:'ACTIVE',actorId:admin,workspaceId:workspace,
   scope:'AUTHORIZED_WORKSPACE_TEAM',bootstrapApprover:false,durationOtContract:'tt-duration-ot-1',
-  durationOtHrApprover:true,rows:[durationRow,rows[1]]};
+  durationOtHrApprover:true,durationOtApprover:true,rows:[durationRow,ownRow]};
  const client=setup({role:'HR',snapshot,rpcHandlers:{
   timetracker_ot_decide_duration:{id:durationRow.id,workspaceId:workspace,status:'Approved',
-   decidedBy:admin,otPolicy:'duration-v1'}}});
+   decidedBy:admin,otPolicy:'duration-v1'}
+ }});
  const read=await client.snapshot(board);
+ assert.equal(read.access.durationOtApprover,true);
  assert.equal(read.access.durationOtHrApprover,true);
- assert.equal(read.otRequests.length,1);
+ assert.equal(read.otRequests.length,2);
+ assert.equal(read.otRequests.find(row=>row.id===durationRow.id).canReviewOt,true);
+ assert.equal(read.otRequests.find(row=>row.id===ownRow.id).canReviewOt,false);
  assert.equal((await client.decideOvertime(board,durationRow.id,'Approved')).status,'Approved');
- await assert.rejects(()=>setup({role:'Employee',snapshot}).snapshot(board),/review role/);
+ const systemAdmin=await setup({role:'System Admin',snapshot:{
+  ...snapshot,durationOtHrApprover:false}}).snapshot(board);
+ assert.equal(systemAdmin.access.durationOtApprover,true);
+ assert.equal(systemAdmin.otRequests.find(row=>row.id===durationRow.id).canReviewOt,true);
+ await assert.rejects(()=>setup({role:'Employee',snapshot}).snapshot(board),
+  /approver role does not match/);
 });
-
-test('OT table shows requested duration prominently and separates verified payable hours',()=>{
+test('OT table displays requested hours and never exposes legacy clock ranges',()=>{
  const pending={...rows[0],id:'duration-pending',otPolicy:'duration-v1',
-  durationMinutes:180,start:'',end:'',status:'Submitted'};
+  durationMinutes:180,start:'',end:'',status:'Submitted',canReviewOt:true};
  const approved={...rows[1],id:'duration-approved',otPolicy:'duration-v1',
   durationMinutes:180,start:'',end:'',attendanceRecordId:'record-1',
   attendanceCredit:{actualMinutes:150,payableMinutes:120}};
  const durationHtml=renderTimeTrackerOvertime({
-  requests:[pending,approved],access:{otContractActive:true},now
+  requests:[pending,approved],access:{otContractActive:true,durationOtContractActive:true},now
  });
- assert.match(durationHtml,/<span>Requested OT<\/span>/);
- assert.match(durationHtml,/3h requested/);
- assert.match(durationHtml,/2h payable/);
- assert.doesNotMatch(durationHtml,/Duration-based|Paid OT:/);
-
+ assert.match(durationHtml,/<span>Requested Hours<\/span>/);
+ assert.match(durationHtml,/3h/);
+ assert.doesNotMatch(durationHtml,/Requested OT|06:00 PM|08:00 PM|payable/);
  const legacyHtml=renderTimeTrackerOvertime({
-  requests:rows,access:{otContractActive:true},now
+  requests:rows,access:{otContractActive:true,durationOtContractActive:true},now
  });
- assert.match(legacyHtml,/<span>Requested OT<\/span>/);
- assert.match(legacyHtml,/06:00 PM – 08:00 PM/);
  assert.match(legacyHtml,/2h/);
+ assert.doesNotMatch(legacyHtml,/06:00 PM|08:00 PM|18:00|20:00/);
+});
+test('manual duration preview updates hours without clock-time controls',()=>{
+ const control=value=>({value,textContent:'',setCustomValidity(message){this.validationMessage=message;}});
+ const nodes={
+  '#tt-ot-manual-duration-hours':control('1.5'),
+  '[data-tt-ot-manual-duration]':control('')
+ };
+ const form={id:'tt-ot-manual-form',querySelector:selector=>nodes[selector]||null};
+ assert.equal(updateTimeTrackerManualOtPreview(form),true);
+ assert.equal(nodes['[data-tt-ot-manual-duration]'].textContent,'1h 30m');
+ assert.equal(nodes['#tt-ot-manual-duration-hours'].validationMessage,'');
+ assert.equal(updateTimeTrackerManualOtPreview({id:'other'}),false);
 });

@@ -59,11 +59,14 @@ test('app verifies full saved envelope and Board projection before reconciling b
  assert.ok(commit>=0&&parity>commit&&policy>parity&&board>policy&&reconcile>board&&toast>reconcile);
 });
 
-test('missing optional server-search RPC is cached only on confirmed missing-function errors',()=>{
+test('missing unified repository RPC is cached only on confirmed missing-function errors and never falls back to partial results',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert.match(app,/let tradeLinkDocumentsPageRpcUnavailable=false/);
- assert.match(app,/if\(!tradeLinkDocumentsPageRpcUnavailable\)/);
+ assert.match(app,/let tradeLinkDocumentsQueryRpcUnavailable=false/);
+ assert.match(app,/if\(tradeLinkDocumentsQueryRpcUnavailable\)\s*throw new ApiError/);
  assert.match(app,/if\(err\?\.code!=='PGRST202'&&err\?\.code!=='42883'\)throw err/);
- assert.match(app,/if\(same\(\)\)tradeLinkDocumentsPageRpcUnavailable=true/);
- assert.match(app,/Showing the current signed 50-record response/);
+ assert.match(app,/if\(same\(\)\)tradeLinkDocumentsQueryRpcUnavailable=true/);
+ assert.match(app,/A partial 50-record response will not be shown as a global result set/);
+ const loader=app.slice(app.indexOf('async function loadTradeLinkDrafts('),app.indexOf('async function openTradeLinkDraft(documentId)'));
+ assert.match(loader,/status:'READ_FAILED',rows:\[\],selected:null,documentPreview:null,listPage:null/);
+ assert.match(loader,/selectedDocumentIds:\[\],selectedDocuments:\[\]/);
 });

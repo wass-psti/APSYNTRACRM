@@ -1570,6 +1570,13 @@
   ],
   "forward_migrations": [
     {
+      "version": "20261127100000",
+      "name": "cp_tt_ot_duration_approver_scope_and_manual_duration",
+      "file": "20261127100000_cp_tt_ot_duration_approver_scope_and_manual_duration.sql",
+      "bytes": 17608,
+      "sha256": "3ee8826ab7e6c1a226ddea81759e4a7d946ff4be9de6ae40afc4ee119eb1c607"
+    },
+    {
       "version": "20261126120000",
       "name": "cp_tt_duration_overtime",
       "file": "20261126120000_cp_tt_duration_overtime.sql",

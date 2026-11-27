@@ -102,8 +102,8 @@ try {
     .getByRole("heading", { name: /^Good (morning|afternoon|evening),$/ })
     .waitFor();
   await page.locator("#tt-clock-hours").waitFor();
-  // CP-TT-OT-UX-01: native time controls retain HH:mm values while the
-  // browser locale handles the visible clock format and the preview stays live.
+  // Hours-only OT retains live duration validation and redacts legacy ranges;
+  // the attendance editor still uses the existing 12-hour clock format.
   const twelveHour = await page.evaluate(async () => {
     const { formatTimeTrackerClock, formatTimeTrackerDateTime } =
       await import("/frontend/time-tracker-time-format.js");
@@ -128,13 +128,14 @@ try {
         },
       ],
     });
-    const otStart = host.querySelector("#tt-ot-start");
-    const otEnd = host.querySelector("#tt-ot-end");
+    const otHours = host.querySelector("#tt-ot-duration-hours");
     const otReason = host.querySelector("#tt-ot-reason");
     const otForm = host.querySelector("#tt-ot-form");
     const otDetails = host.querySelector(".tt-ot-detail")?.textContent;
-    otStart.value = "18:00";
-    otEnd.value = "20:00";
+    const otLegacyFields = host.querySelectorAll(
+      '#tt-ot-start, #tt-ot-end, #tt-ot-form input[type="time"]',
+    ).length;
+    otHours.value = "2.5";
     otReason.value = "Emergency maintenance work";
     updateTimeTrackerOvertimePreview(otForm);
     const otDuration = host.querySelector(
@@ -146,8 +147,19 @@ try {
     const otReasonCount = host.querySelector(
       "[data-tt-ot-reason-count]",
     )?.textContent;
-    const otStartType = otStart?.type;
-    const otStartValue = otStart?.value;
+    const otHoursType = otHours.type;
+    const otHoursValue = otHours.value;
+    const otHoursLimits = [otHours.min, otHours.max, otHours.step];
+    const otValid = otHours.checkValidity();
+    otHours.value = "2.25";
+    updateTimeTrackerOvertimePreview(otForm);
+    const otInvalid =
+      !otHours.checkValidity() &&
+      otHours.getAttribute("aria-invalid") === "true";
+    otHours.value = "2.5";
+    updateTimeTrackerOvertimePreview(otForm);
+    const otRecovered =
+      otHours.checkValidity() && !otHours.hasAttribute("aria-invalid");
     host.innerHTML = renderTimeTrackerAdminEditor({
       timeOnly: true,
       editor: {
@@ -180,8 +192,13 @@ try {
       midnight: formatTimeTrackerClock("2026-11-20T16:00:00Z"),
       noon: formatTimeTrackerClock("2026-11-20T04:00:00Z"),
       date: formatTimeTrackerDateTime("2026-11-20T10:05:00Z"),
-      otStartType,
-      otStartValue,
+      otLegacyFields,
+      otHoursType,
+      otHoursValue,
+      otHoursLimits,
+      otValid,
+      otInvalid,
+      otRecovered,
       otDetails,
       otDuration,
       otProgress,
@@ -196,11 +213,17 @@ try {
   assert.equal(twelveHour.midnight, "12:00 AM");
   assert.equal(twelveHour.noon, "12:00 PM");
   assert.equal(twelveHour.date, "Nov 20, 2026, 06:05 PM");
-  assert.equal(twelveHour.otStartType, "time");
-  assert.equal(twelveHour.otStartValue, "18:00");
-  assert.match(twelveHour.otDetails, /06:00 PM/);
-  assert.equal(twelveHour.otDuration, "2 hr 00 min");
-  assert.equal(twelveHour.otProgress, 120);
+  assert.equal(twelveHour.otLegacyFields, 0);
+  assert.equal(twelveHour.otHoursType, "number");
+  assert.equal(twelveHour.otHoursValue, "2.5");
+  assert.deepEqual(twelveHour.otHoursLimits, ["0.5", "6", "0.5"]);
+  assert.equal(twelveHour.otValid, true);
+  assert.equal(twelveHour.otInvalid, true);
+  assert.equal(twelveHour.otRecovered, true);
+  assert.match(twelveHour.otDetails, /Requested duration:\s*2h/);
+  assert.doesNotMatch(twelveHour.otDetails, /18:00|20:00|06:00 PM|08:00 PM/);
+  assert.equal(twelveHour.otDuration, "2 hr 30 min");
+  assert.equal(twelveHour.otProgress, 150);
   assert.equal(twelveHour.otReasonCount, "26 / 500");
   assert.equal(twelveHour.adminType, "text");
   assert.equal(twelveHour.adminValue, "06:05 PM");
@@ -509,6 +532,7 @@ try {
     access: {
       ...verifiedResult.access,
       otContractActive: true,
+      durationOtContractActive: true,
       bootstrapApprover: false,
     },
   };
@@ -543,6 +567,23 @@ try {
     await page.locator('#tt-ot-form button[type="submit"]').isDisabled(),
     true,
   );
+  // A legacy OT contract alone cannot enable hours-only submission.
+  await page.evaluate(
+    (result) =>
+      window.__timeTrackerRender({
+        view: "ot",
+        result,
+        otModalOpen: true,
+      }),
+    {
+      ...otFixture,
+      access: { ...otFixture.access, durationOtContractActive: false },
+    },
+  );
+  assert.equal(
+    await page.locator('#tt-ot-form button[type="submit"]').isDisabled(),
+    true,
+  );
   const submittedOt = {
     id: "50000000-0000-4000-8000-000000000006",
     ownerId: "cloud:20000000-0000-4000-8000-000000000002",
@@ -553,6 +594,8 @@ try {
     end: "20:00",
     durationMinutes: 120,
     task: "System acceptance test overtime request",
+    otPolicy: "legacy-range",
+    canReviewOt: false,
   };
   await page.evaluate(
     (result) =>
@@ -565,7 +608,7 @@ try {
     {
       ...otFixture,
       access: { ...otFixture.access, bootstrapApprover: true },
-      otRequests: [submittedOt],
+      otRequests: [{ ...submittedOt, canReviewOt: true }],
     },
   );
   assert.equal(
@@ -577,7 +620,7 @@ try {
     false,
   );
   await checkAccessibility("Bootstrap signed OT review fixture");
-  // Bootstrap self-submitted requests must expose the same review controls.
+  // Only signed bootstrap legacy self-review retains its existing exception.
   await page.evaluate(
     (result) =>
       window.__timeTrackerRender({
@@ -597,6 +640,7 @@ try {
         {
           ...submittedOt,
           ownerId: "cloud:20000000-0000-4000-8000-000000000001",
+          canReviewOt: true,
         },
       ],
     },
@@ -613,6 +657,10 @@ try {
     ...submittedOt,
     id: "50000000-0000-4000-8000-000000000007",
     submissionSource: "manual_admin",
+    otPolicy: "manual-duration-v1",
+    start: null,
+    end: null,
+    canReviewOt: true,
     submittedBy: "20000000-0000-4000-8000-000000000001",
     submittedByName: "System Admin",
   };
@@ -650,6 +698,15 @@ try {
     manualAdminFixture,
   );
   assert.equal(await page.locator("#tt-ot-manual-form").count(), 1);
+  assert.equal(
+    await page.locator('#tt-ot-manual-form input[type="time"]').count(),
+    0,
+  );
+  const manualHours = page.locator("#tt-ot-manual-duration-hours");
+  assert.deepEqual(
+    await manualHours.evaluate((el) => [el.type, el.min, el.max, el.step]),
+    ["number", "0.5", "6", "0.5"],
+  );
   assert.equal(await page.locator("#tt-ot-manual-employee option").count(), 3);
   assert.equal(
     await page.locator("#tt-ot-manual-form button[type=submit]").isDisabled(),
@@ -686,6 +743,7 @@ try {
         moduleRole: "Employee",
         manualOtManager: false,
       },
+      otRequests: [{ ...manualOt, canReviewOt: false }],
     },
   );
   assert.equal(await page.locator(".tt-ot-manual-section").count(), 0);
@@ -711,6 +769,41 @@ try {
     },
   );
   assert.equal(await page.locator(".tt-ot-review-actions").count(), 0);
+
+  // Review authority is row-scoped, not inferred from a privileged role.
+  for (const moduleRole of ["HR", "System Admin", "Admin"]) {
+    for (const canReviewOt of [true, false]) {
+      await page.evaluate(
+        (result) =>
+          window.__timeTrackerRender({
+            view: "ot",
+            result,
+            now: new Date("2026-11-17T12:00:00Z"),
+            otFilters: { status: "Submitted" },
+          }),
+        {
+          ...otFixture,
+          access: { ...otFixture.access, moduleRole, durationOtApprover: true },
+          otRequests: [
+            {
+              ...submittedOt,
+              otPolicy: "duration-v1",
+              canReviewOt,
+              canReviewDuration: canReviewOt,
+            },
+          ],
+        },
+      );
+      assert.equal(
+        await page.locator('[data-action="tt-ot-approve"]').count(),
+        canReviewOt ? 1 : 0,
+      );
+      assert.equal(
+        await page.locator('[data-action="tt-ot-reject"]').count(),
+        canReviewOt ? 1 : 0,
+      );
+    }
+  }
 
   await page.evaluate(() => window.__timeTrackerRender({ view: "log" }));
   await page

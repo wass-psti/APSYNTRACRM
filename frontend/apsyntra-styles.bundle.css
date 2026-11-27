@@ -14904,7 +14904,7 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-overtime
 #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-tabs button{border:0;border-radius:999px;padding:9px 13px;color:var(--ot-ink);background:var(--ot-soft);font-weight:600}
 #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-tabs button.is-active{background:var(--ot-ink);color:var(--ot-bg)}
 #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-workflow{color:var(--ot-muted);font-size:12px}
-#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-row{display:grid;grid-template-columns:minmax(130px,1.3fr) minmax(86px,.7fr) minmax(115px,1fr) minmax(52px,.45fr) minmax(120px,1.4fr) minmax(75px,.65fr) minmax(124px,1.1fr);align-items:center;gap:10px;padding:12px 18px;border:0;border-bottom:1px solid var(--ot-line);border-radius:0;background:var(--ot-bg);box-shadow:none;font-size:12px;overflow:visible}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-row{display:grid;grid-template-columns:minmax(130px,1.3fr) minmax(86px,.7fr) minmax(72px,.55fr) minmax(120px,1.4fr) minmax(75px,.65fr) minmax(124px,1.1fr);align-items:center;gap:10px;padding:12px 18px;border:0;border-bottom:1px solid var(--ot-line);border-radius:0;background:var(--ot-bg);box-shadow:none;font-size:12px;overflow:visible}
 #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-row[hidden]{display:none}
 #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-labels{font-weight:650;color:var(--ot-muted);background:var(--ot-soft)}
 #app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-reference-person{display:flex;gap:9px;align-items:center;min-width:0;overflow-wrap:anywhere}

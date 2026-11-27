@@ -14,6 +14,7 @@ const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const password='D1!'+randomBytes(24).toString('base64url');
 const nonce=randomBytes(8).toString('hex');
 const date=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+const shiftDay=(day,offset)=>{const d=new Date(day+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+offset);return d.toISOString().slice(0,10);};
 let checks=0;
 function sql(statement){
  return execFileSync('docker',['exec',db,'psql','-X','-qAt','-v','ON_ERROR_STOP=1','-U','postgres','-d','postgres','-c',statement],
@@ -67,7 +68,7 @@ async function rpc(actor,method,args){
  return call(rest,`/rpc/${method}`,args,actor.token);
 }
 function receipt(res,label){const result=expect(res,200,label);assert.equal(typeof result,'object');return result;}
-function submit(actor,start,end,label){
+function submit(actor,start,end,label,workDate=date){
  // New duration policy deliberately revokes employee access to the retired
  // time-range submit RPC. Create legacy rows only as isolated fixtures so this
  // suite can continue protecting historical bootstrap decision/withdrawal rules.
@@ -77,7 +78,7 @@ function submit(actor,start,end,label){
  const reason=`Isolated ${label} overtime work performed for testing`;
  const id=sql(`INSERT INTO public.timetracker_ot_requests
   (workspace_id,owner_id,ot_date,start_time,end_time,duration_minutes,reason,submitted_by,submission_source)
-  VALUES ('${workspace}','${actor.id}','${date}','${start}','${end}',${minutes},
+  VALUES ('${workspace}','${actor.id}','${workDate}','${start}','${end}',${minutes},
    '${reason}','${actor.id}','employee') RETURNING id::text`);
  assert.match(id,uuid);
  sql(`INSERT INTO public.timetracker_ot_audit(workspace_id,request_id,actor_id,event,details)
@@ -144,23 +145,54 @@ const hrOwnRequest=receipt(await rpc(hr,'timetracker_ot_submit_duration',{
 const hrPendingSnapshot=receipt(await rpc(hr,'timetracker_ot_snapshot',{p_board_id:board}),'HR duration snapshot');
 assert.equal(hrPendingSnapshot.durationOtContract,'tt-duration-ot-1');
 assert.equal(hrPendingSnapshot.durationOtHrApprover,true);
+assert.equal(hrPendingSnapshot.durationOtApprover,true);
 assert.equal(hrPendingSnapshot.scope,'AUTHORIZED_WORKSPACE_TEAM');
+assert.equal(hrPendingSnapshot.rows.find(row=>row.id===durationRequest.id).canReviewOt,true);
 assert.equal(hrPendingSnapshot.rows.find(row=>row.id===durationRequest.id).canReviewDuration,true);
-assert.equal(hrPendingSnapshot.rows.find(row=>row.id===hrOwnRequest.id).canReviewDuration,false);
+assert.equal(hrPendingSnapshot.rows.find(row=>row.id===hrOwnRequest.id).canReviewOt,false);
 const workerDurationSnapshot=receipt(await rpc(worker,'timetracker_ot_snapshot',{p_board_id:board}),'employee duration snapshot');
-assert.equal(workerDurationSnapshot.rows.find(row=>row.id===durationRequest.id).canReviewDuration,false);
-expect(await rpc(bootstrap,'timetracker_ot_decide_duration',{
- p_board_id:board,p_request_id:durationRequest.id,p_decision:'Approved'
-}),403,'bootstrap cannot approve duration OT');
-expect(await rpc(admin,'timetracker_ot_decide_duration',{
- p_board_id:board,p_request_id:durationRequest.id,p_decision:'Approved'
-}),403,'System Admin cannot approve duration OT');
+assert.equal(workerDurationSnapshot.rows.find(row=>row.id===durationRequest.id).canReviewOt,false);
+assert.ok(workerDurationSnapshot.rows.every(row=>row.ownerId===`cloud:${worker.id}`));
+const adminDirectory=receipt(await rpc(bootstrap,'list_module_directory',{p_module_id:'time-tracker'}),'platform Admin TimeTracker directory');
+assert.ok(adminDirectory.some(row=>row.id===worker.id),'platform Admin directory includes active employees');
+const adminSnapshot=receipt(await rpc(admin,'timetracker_ot_snapshot',{p_board_id:board}),'System Admin duration snapshot');
+assert.equal(adminSnapshot.durationOtApprover,true);
+assert.equal(adminSnapshot.scope,'AUTHORIZED_WORKSPACE_TEAM');
+assert.equal(adminSnapshot.rows.find(row=>row.id===durationRequest.id).canReviewOt,true);
+
+const adminDurationRequest=receipt(await rpc(worker,'timetracker_ot_submit_duration',{
+ p_board_id:board,p_date:shiftDay(date,1),p_duration_minutes:120,
+ p_reason:'Additional inspection work requested for System Admin approval'
+}),'System Admin duration approval fixture');
+const adminDurationApproval=receipt(await rpc(admin,'timetracker_ot_decide_duration',{
+ p_board_id:board,p_request_id:adminDurationRequest.id,p_decision:'Approved'
+}),'System Admin approves employee duration OT');
+assert.equal(adminDurationApproval.status,'Approved');
+assertDatabase(adminDurationRequest.id,'Approved',admin.id);
+
+const platformAdminDurationRequest=receipt(await rpc(worker,'timetracker_ot_submit_duration',{
+ p_board_id:board,p_date:shiftDay(date,2),p_duration_minutes:60,
+ p_reason:'Additional inspection work requested for platform Admin approval'
+}),'platform Admin duration approval fixture');
+const platformAdminApproval=receipt(await rpc(bootstrap,'timetracker_ot_decide_duration',{
+ p_board_id:board,p_request_id:platformAdminDurationRequest.id,p_decision:'Approved'
+}),'platform Admin approves employee duration OT');
+assert.equal(platformAdminApproval.status,'Approved');
+assertDatabase(platformAdminDurationRequest.id,'Approved',bootstrap.id);
+
 expect(await rpc(worker,'timetracker_ot_decide_duration',{
  p_board_id:board,p_request_id:durationRequest.id,p_decision:'Approved'
 }),403,'employee self-approval denied');
 expect(await rpc(hr,'timetracker_ot_decide_duration',{
  p_board_id:board,p_request_id:hrOwnRequest.id,p_decision:'Approved'
 }),403,'HR self-approval denied');
+const legacyBypass=await rpc(hr,'timetracker_ot_decide',{
+ p_board_id:board,p_request_id:durationRequest.id,p_decision:'Approved'
+});
+assert.ok(legacyBypass.status>=400&&legacyBypass.status<500,
+ 'legacy decision RPC cannot bypass duration-specific approval');
+checks++;
+assert.equal(sql(`SELECT status FROM public.timetracker_ot_requests WHERE id='${durationRequest.id}'`),'Submitted');
 const retiredSubmit=await rpc(worker,'timetracker_ot_submit',{
  p_board_id:board,p_date:date,p_start:'18:00',p_end:'19:00',
  p_reason:'Legacy time range submission must be disabled'
@@ -191,8 +223,23 @@ const fresh={...bootstrap,token:reLogin.access_token};
 const freshSnap=receipt(await rpc(fresh,'timetracker_ot_snapshot',{p_board_id:board}),'reconnected bootstrap readback');
 for(const x of [a,b,c,d])assert.ok(freshSnap.rows.find(row=>row.id===x.id));
 expect(await rpc(worker,'timetracker_ot_decide',{p_board_id:board,p_request_id:a.id,p_decision:'Rejected'}),403,'worker denial');
+const legacyHrPending=receipt(await submit(worker,'15:00','16:00',
+ 'legacy employee request visible to HR',shiftDay(date,3)),'legacy employee pending');
+const legacyHrSnapshot=receipt(await rpc(hr,'timetracker_ot_snapshot',{p_board_id:board}),'HR legacy OT snapshot');
+assert.equal(legacyHrSnapshot.rows.find(row=>row.id===legacyHrPending.id).canReviewOt,true);
+await decision(hr,legacyHrPending.id,'Approved','HR approves legacy employee OT');
+assertDatabase(legacyHrPending.id,'Approved',hr.id);
+
+const legacyAdminPending=receipt(await submit(worker,'16:00','17:00',
+ 'legacy employee request visible to System Admin',shiftDay(date,4)),'legacy System Admin pending');
+const legacyAdminSnapshot=receipt(await rpc(admin,'timetracker_ot_snapshot',{p_board_id:board}),'System Admin legacy OT snapshot');
+assert.equal(legacyAdminSnapshot.rows.find(row=>row.id===legacyAdminPending.id).canReviewOt,true);
+await decision(admin,legacyAdminPending.id,'Approved','System Admin approves legacy employee OT');
+assertDatabase(legacyAdminPending.id,'Approved',admin.id);
+
 const pending=receipt(await submit(worker,'16:00','17:00','remaining worker pending'),'worker pending');
-expect(await rpc(admin,'timetracker_ot_decide',{p_board_id:board,p_request_id:pending.id,p_decision:'Approved'}),403,'System Admin ordinary-OT denial');
+expect(await rpc(worker,'timetracker_ot_decide',{p_board_id:board,p_request_id:pending.id,p_decision:'Approved'}),
+ 403,'employee self-approval denied');
 const dup=await rpc(bootstrap,'timetracker_ot_decide',{p_board_id:board,p_request_id:a.id,p_decision:'Rejected'});
 assert.ok(dup.status>=400&&dup.status<500,'repeated status must be rejected');checks++;
 console.log('SIGNED_RECONNECT_VISIBILITY_AND_EXISTING_DENIALS PASS');
@@ -219,6 +266,37 @@ const manualRemoved=receipt(await withdraw(admin,manual.id),'manual creator with
 assert.equal(manualRemoved.withdrawnBy,admin.id);
 assert.equal(sql(`SELECT event||'|'||actor_id::text FROM public.timetracker_ot_audit WHERE request_id='${manual.id}' ORDER BY event_id`),
  `submitted|${admin.id}\nwithdrawn|${admin.id}`);
+const manualDate=shiftDay(date,-1);
+const manualDuration=receipt(await rpc(admin,'timetracker_ot_submit_manual_duration',{
+ p_board_id:board,p_owner_id:worker.id,p_date:manualDate,p_duration_minutes:150,
+ p_reason:'Historical engineering work entered as a duration-only manual request'
+}),'manual duration OT entry');
+assert.equal(manualDuration.otPolicy,'manual-duration-v1');
+assert.equal(manualDuration.durationMinutes,150);
+const hrManualSnapshot=receipt(await rpc(hr,'timetracker_ot_snapshot',{p_board_id:board}),'HR manual duration snapshot');
+assert.equal(hrManualSnapshot.rows.find(row=>row.id===manualDuration.id).canReviewOt,true);
+const manualDurationApproval=receipt(await rpc(hr,'timetracker_ot_decide_manual_duration',{
+ p_board_id:board,p_request_id:manualDuration.id,p_decision:'Approved'
+}),'HR approves manual duration OT');
+assert.equal(manualDurationApproval.status,'Approved');
+const ojtManualSnapshot=receipt(await rpc(ojt,'timetracker_ot_snapshot',{p_board_id:board}),'non-approver manual OT privacy snapshot');
+assert.ok(!ojtManualSnapshot.rows.some(row=>row.id===manualDuration.id),
+ 'non-approver employees do not see another employee manual OT history');
+assert.equal(sql(`SELECT (start_time IS NULL)::text||'|'||(end_time IS NULL)::text||'|'||duration_minutes::text||'|'||ot_policy FROM public.timetracker_ot_requests WHERE id='${manualDuration.id}'`),
+ 'true|true|150|manual-duration-v1');
+const platformManualDuration=receipt(await rpc(bootstrap,'timetracker_ot_submit_manual_duration',{
+ p_board_id:board,p_owner_id:worker.id,p_date:shiftDay(date,-2),p_duration_minutes:90,
+ p_reason:'Historical maintenance work entered by a platform Admin'
+}),'platform Admin manual duration OT entry');
+assert.equal(platformManualDuration.otPolicy,'manual-duration-v1');
+const platformManualSnapshot=receipt(await rpc(hr,'timetracker_ot_snapshot',{p_board_id:board}),'HR sees platform Admin manual OT');
+assert.equal(platformManualSnapshot.rows.find(row=>row.id===platformManualDuration.id).canReviewOt,true);
+const platformManualApproval=receipt(await rpc(hr,'timetracker_ot_decide_manual_duration',{
+ p_board_id:board,p_request_id:platformManualDuration.id,p_decision:'Approved'
+}),'HR approves platform Admin manual duration OT');
+assert.equal(platformManualApproval.status,'Approved');
+const ojtPlatformManualSnapshot=receipt(await rpc(ojt,'timetracker_ot_snapshot',{p_board_id:board}),'OJT cannot see platform Admin manual OT');
+assert.ok(!ojtPlatformManualSnapshot.rows.some(row=>row.id===platformManualDuration.id));
 const racing=receipt(await submit(worker,'14:00','15:00','concurrent decision'),'race request');
 const outcomes=await Promise.all([
  withdraw(worker,racing.id),

@@ -5,7 +5,7 @@ import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
 import {initialTradeLinkDraftView,normalizeTradeLinkDraftListFilters} from '../tradelink-draft-workspace.js';
 
 const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
-const helper=source.slice(source.indexOf('async function readTradeLinkManagementAccess()'),source.indexOf('// Server-wide TradeLink search'));
+const helper=source.slice(source.indexOf('async function readTradeLinkManagementAccess()'),source.indexOf('// All Documents requires the unified server repository.'));
 const listing=source.slice(source.indexOf('async function loadTradeLinkDrafts(seq='),source.indexOf('async function openTradeLinkDraft(documentId)'));
 function harness(outcomes,initialManage=false){
  const auth={isSignedIn:true,userId:'actor'};
@@ -22,10 +22,10 @@ function harness(outcomes,initialManage=false){
  const current=()=>auth.isSignedIn&&state.context.user_id===auth.userId;
  const deps={auth,state,db,routeSerial:1,TRADELINK_BOARD_ID,
   tradeLinkAuthorizedListRoute:current,tradeLinkCanCreate:()=>state.boardManage,
-  TL03_DOMAIN_READS_ENABLED:true,normalizeTradeLinkDraftListFilters,render:()=>{},
+  TL03_DOMAIN_READS_ENABLED:true,normalizeTradeLinkDraftListFilters,render:()=>{},ApiError:Error,
   tradeLinkDraftWorkspace:{searchPage:async()=>({status:'AUTHORIZED_READ',rows:[]})}};
  const run=new Function(...Object.keys(deps),
-  'let tradeLinkDocumentsPageRpcUnavailable=false;'+helper+listing+';return {readTradeLinkManagementAccess,loadTradeLinkDrafts};')(...Object.values(deps));
+  'let tradeLinkDocumentsQueryRpcUnavailable=false;'+helper+listing+';return {readTradeLinkManagementAccess,loadTradeLinkDrafts};')(...Object.values(deps));
  return {...run,state,auth,calls};
 }
 const failure=status=>Object.assign(new Error('read failed'),{status});
