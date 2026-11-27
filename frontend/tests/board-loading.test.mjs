@@ -42,7 +42,7 @@ test('native authorization and attendance read both use the shared splash',()=>{
  assert.ok(app.includes("if(applicationRouteRead){shell(sharedApplicationLoading());return;}"));
  assert.ok(app.includes("beginApplicationRouteRead('TimeTracker')"));
  assert.ok(app.includes("isCurrentApplicationRouteRead(token,applicationRouteRead"));
- assert.match(readFileSync('frontend/application-loading.js','utf8'),/currentHash===token.hash/);
+ assert.match(readFileSync('frontend/application-loading.js','utf8'),/currentHash\s*===\s*token\.hash/);
  assert.match(app,/if\(\(state\.ttReadLoading\|\|state\.nativeInitialRead==='attendance'\)&&!state\.ttAttendance\)/);
  assert.match(app,/if\(\(state\.frtFinanceBusy\|\|state\.nativeInitialRead==='finance'\)&&!state\.frtFinance\)/);
  assert.match(app,/if\(\(state\.fuelTrackBackendBusy\|\|state\.nativeInitialRead==='fueltrack'\)&&!hasCurrentData\)/);
