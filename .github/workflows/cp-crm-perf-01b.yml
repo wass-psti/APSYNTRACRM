@@ -22,6 +22,7 @@ on:
       - 'supabase/migration-source-manifest.json'
       - 'sql/tests/cp-crm-perf-01b-board-group-view-regression.sql'
       - 'scripts/cp-crm-perf-01b-realtime-live.mjs'
+      - 'scripts/cp-crm-perf-01b-storage-smoke.mjs'
       - 'sql/tests/cp-crm-perf-01b-realtime-fixture.sql'
       - 'frontend/tests/platform-sync.test.mjs'
   workflow_dispatch:
@@ -79,7 +80,7 @@ jobs:
           docker cp supabase/migrations/20261127130720_cp_board_group_view_coalesce_fix.sql "$postgres_container:$fixture_dir/supabase/migrations/20261127130720_cp_board_group_view_coalesce_fix.sql"
           docker exec -w "$fixture_dir" "$postgres_container" psql -X -v ON_ERROR_STOP=1 -U "$PGUSER" -d "$PGDATABASE" -f sql/tests/cp-crm-perf-01b-board-group-view-regression.sql
   realtime-transport:
-    name: Private Realtime event, signed invalidation and reconnect (local Supabase)
+    name: Private Realtime and Storage service acceptance (local Supabase)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -94,8 +95,10 @@ jobs:
       - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13
         with:
           version: '2.121.0'
-      - name: Validate live Realtime test script syntax
-        run: node --check scripts/cp-crm-perf-01b-realtime-live.mjs
+      - name: Validate local Realtime and Storage test script syntax
+        run: |
+          node --check scripts/cp-crm-perf-01b-realtime-live.mjs
+          node --check scripts/cp-crm-perf-01b-storage-smoke.mjs
       - name: Initialize an isolated local Supabase project
         shell: bash
         run: |
@@ -131,11 +134,11 @@ jobs:
           path.write_text("".join(lines))
           PY_CONFIG
           echo "SUPABASE_WORKDIR=$workdir" >> "$GITHUB_ENV"
-      - name: Start local Auth, PostgREST and Realtime services
+      - name: Start local Auth, PostgREST, Realtime and Storage services
         working-directory: ${{ env.SUPABASE_WORKDIR }}
         run: |
           set -euo pipefail
-          supabase start --exclude storage,functions,studio,mail,analytics,pooler
+          supabase start --exclude functions,studio,mail,analytics,pooler
           env_file="$RUNNER_TEMP/cp-crm-perf-01b-supabase.env"
           supabase status -o env > "$env_file"
           set -a
@@ -146,11 +149,22 @@ jobs:
           echo
           PUBLISHABLE_KEY="${PUBLISHABLE_KEY:-${ANON_KEY:-}}"
           test -n "$API_URL"
-          test -n "$PUBLISHABLE_KEY"
+          SERVICE_ROLE_KEY="${SERVICE_ROLE_KEY:-${SERVICE_ROLE_JWT:-}}"
+          test -n "$SERVICE_ROLE_KEY"
           {
             echo "API_URL=$API_URL"
             echo "PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+            echo "SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
           } >> "$GITHUB_ENV"
+      - name: Verify local Storage private-bucket object round-trip
+        run: node scripts/cp-crm-perf-01b-storage-smoke.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: cp-crm-perf-01b-storage
+          path: artifacts/cp-crm-perf-01b-storage.json
+          if-no-files-found: ignore
+          retention-days: 30
       - name: Install the private-channel and signed-read synthetic fixture
         run: |
           set -euo pipefail
