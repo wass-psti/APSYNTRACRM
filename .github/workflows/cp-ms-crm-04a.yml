@@ -72,3 +72,8 @@ jobs:
           docker cp sql/mrh-atomic-material-edit-CANDIDATE-NOT-APPLIED.sql "$NAME:/tmp/mrh-edit.sql"
           docker exec -i "$NAME" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -q < sql/tests/mrh-atomic-edit-representative.sql
           bash scripts/cp-ms-crm-04a2-concurrency.sh "$NAME"
+      - name: Generate formatting-only patch for existing baseline failures
+        run: |
+          npm ci --no-audit --no-fund
+          npx --no-install prettier --write frontend/tests/auth-provider-continuity.test.mjs scripts/cp-ws-auth-continuity-browser.mjs
+          git diff -- frontend/tests/auth-provider-continuity.test.mjs scripts/cp-ws-auth-continuity-browser.mjs
