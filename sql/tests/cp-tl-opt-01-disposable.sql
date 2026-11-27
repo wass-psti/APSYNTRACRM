@@ -326,33 +326,65 @@ BEGIN
 END $cursor_validation$;
 
 DO $compatibility$
+DECLARE
+ old_page_present boolean;
+ new_page_present boolean;
+ list_present boolean;
+ old_page_auth boolean;
+ old_page_anon boolean;
+ new_page_auth boolean;
+ new_page_anon boolean;
+ query_auth boolean;
+ query_anon boolean;
+ index_count integer;
 BEGIN
- IF to_regprocedure(
-  'public.tl03_documents_page(uuid,text,text,text,text,timestamptz,uuid,integer)'
- ) IS NULL
-  OR to_regprocedure(
+ SELECT
+  to_regprocedure(
+   'public.tl03_documents_page(uuid,text,text,text,text,timestamptz,uuid,integer)'
+  ) IS NOT NULL,
+  to_regprocedure(
    'public.tl03_documents_page(uuid,text,text,text,text,text,timestamptz,uuid,integer)'
-  ) IS NULL
-  OR to_regprocedure('public.tl03_documents_list(uuid,integer)') IS NULL
-  OR NOT has_function_privilege('authenticated',
-   'public.tl03_documents_page(uuid,text,text,text,text,timestamptz,uuid,integer)','EXECUTE')
-  OR has_function_privilege('anon',
-   'public.tl03_documents_page(uuid,text,text,text,text,timestamptz,uuid,integer)','EXECUTE')
-  OR NOT has_function_privilege('authenticated',
-   'public.tl03_documents_page(uuid,text,text,text,text,text,timestamptz,uuid,integer)','EXECUTE')
-  OR has_function_privilege('anon',
-   'public.tl03_documents_page(uuid,text,text,text,text,text,timestamptz,uuid,integer)','EXECUTE')
-  OR NOT has_function_privilege('authenticated',
+  ) IS NOT NULL,
+  to_regprocedure('public.tl03_documents_list(uuid,integer)') IS NOT NULL,
+  has_function_privilege('authenticated',
+   'public.tl03_documents_page(uuid,text,text,text,text,timestamptz,uuid,integer)','EXECUTE'),
+  has_function_privilege('anon',
+   'public.tl03_documents_page(uuid,text,text,text,text,timestamptz,uuid,integer)','EXECUTE'),
+  has_function_privilege('authenticated',
+   'public.tl03_documents_page(uuid,text,text,text,text,text,timestamptz,uuid,integer)','EXECUTE'),
+  has_function_privilege('anon',
+   'public.tl03_documents_page(uuid,text,text,text,text,text,timestamptz,uuid,integer)','EXECUTE'),
+  has_function_privilege('authenticated',
+   'public.tl03_documents_query(uuid,text,text,text,text,text,date,date,text,text,jsonb,integer)','EXECUTE'),
+  has_function_privilege('anon',
    'public.tl03_documents_query(uuid,text,text,text,text,text,date,date,text,text,jsonb,integer)','EXECUTE')
-  OR has_function_privilege('anon',
-   'public.tl03_documents_query(uuid,text,text,text,text,text,date,date,text,text,jsonb,integer)','EXECUTE')
-  OR (SELECT count(*) FROM pg_catalog.pg_indexes
-   WHERE schemaname='public' AND indexname=ANY(ARRAY[
-    'tl03_document_sort_number','tl03_document_sort_type',
-    'tl03_document_sort_revision','tl03_document_search_number_trgm',
-    'tl03_document_search_client_trgm','tl03_document_search_reference_trgm',
-    'tl03_document_search_po_reference_trgm'
-   ]))<>7 THEN
+ INTO old_page_present,new_page_present,list_present,
+  old_page_auth,old_page_anon,new_page_auth,new_page_anon,
+  query_auth,query_anon;
+
+ SELECT count(*) INTO index_count
+ FROM pg_catalog.pg_indexes
+ WHERE schemaname='public' AND indexname=ANY(ARRAY[
+  'tl03_document_sort_number','tl03_document_sort_type',
+  'tl03_document_sort_revision','tl03_document_search_number_trgm',
+  'tl03_document_search_client_trgm','tl03_document_search_reference_trgm',
+  'tl03_document_search_po_reference_trgm'
+ ]);
+
+ RAISE NOTICE 'CP-TL-OPT-01 compatibility diagnostics: %',
+  pg_catalog.jsonb_build_object(
+   'oldPage',old_page_present,'newPage',new_page_present,'list',list_present,
+   'oldPageAuthenticated',old_page_auth,'oldPageAnon',old_page_anon,
+   'newPageAuthenticated',new_page_auth,'newPageAnon',new_page_anon,
+   'queryAuthenticated',query_auth,'queryAnon',query_anon,
+   'repositoryIndexCount',index_count
+  );
+
+ IF NOT old_page_present OR NOT new_page_present OR NOT list_present
+  OR NOT old_page_auth OR old_page_anon
+  OR NOT new_page_auth OR new_page_anon
+  OR NOT query_auth OR query_anon
+  OR index_count<>7 THEN
   RAISE EXCEPTION 'CP-TL-OPT-01 compatibility, grant or index verification failed';
  END IF;
  RAISE NOTICE 'CP-TL-OPT-01 compatibility PASS: legacy page RPC retained; query indexes and grants present';
