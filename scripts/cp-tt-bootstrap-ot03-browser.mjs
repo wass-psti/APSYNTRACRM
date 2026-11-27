@@ -16,7 +16,7 @@ window.__otBrowserReady=true;
 </script></body></html>`;
 const allowedModules=new Set(['time-tracker-overtime.js','time-tracker-duration-format.js','time-tracker-time-format.js']);
 
-export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,board,selfPending,workerPending,durationRequest,hrOwnRequest}){
+export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,board,selfPending,workerPending,durationRequest,hrOwnRequest,bootstrapDurationRequest,bootstrapManualDurationRequest}){
  let browser;
  const server=createServer(async(req,res)=>{
   try{
@@ -78,17 +78,20 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
   await selfCard.locator('summary').click();
   assert.equal(await selfCard.locator('[data-action="tt-ot-approve"]').count(),1);
   assert.equal(await selfCard.locator('[data-action="tt-ot-reject"]').count(),1);
-  await adminPage.evaluate(({token,board})=>{
+  await adminPage.evaluate(({token,board,durationId,manualDurationId})=>{
    document.addEventListener('click',async e=>{
     const button=e.target.closest('[data-action="tt-ot-approve"], [data-action="tt-ot-reject"]');
     if(!button)return;
     const decision=button.dataset.action==='tt-ot-approve'?'Approved':'Rejected';
-    const response=await fetch('/rpc/timetracker_ot_decide',{
+    const endpoint=button.dataset.id===durationId?'timetracker_ot_decide_duration':
+     button.dataset.id===manualDurationId?'timetracker_ot_decide_manual_duration':'timetracker_ot_decide';
+    const response=await fetch('/rpc/'+endpoint,{
      method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
      body:JSON.stringify({p_board_id:board,p_request_id:button.dataset.id,p_decision:decision})});
     window.__otLastDecision={status:response.status,result:await response.json()};
    });
-  },{token:bootstrap.token,board});
+  },{token:bootstrap.token,board,durationId:bootstrapDurationRequest.id,
+   manualDurationId:bootstrapManualDurationRequest.id});
   await selfCard.locator('[data-action="tt-ot-approve"]').click();
   await adminPage.waitForFunction(()=>window.__otLastDecision?.status===200);
   assert.equal((await adminPage.evaluate(()=>window.__otLastDecision.result)).status,'Approved');
