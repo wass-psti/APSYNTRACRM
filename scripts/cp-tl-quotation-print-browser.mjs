@@ -62,6 +62,15 @@ try{
   assert.equal(await page.locator('tbody tr:not(.tl-official-note-row)').count(),count);
   assert.deepEqual(await page.locator('tbody tr:not(.tl-official-note-row) td:first-child').allTextContents(),Array.from({length:count},(_,i)=>String(i+1)));
   await page.emulateMedia({media:'print'});
+  const approvalPresentation=await approvalStamp.evaluate(element=>{
+   const style=getComputedStyle(element);
+   return {borderColor:style.borderTopColor,backgroundColor:style.backgroundColor,
+    color:style.color,display:style.display,textAlign:style.textAlign};
+  });
+  assert.deepEqual(approvalPresentation,{
+   borderColor:'rgb(24, 132, 81)',backgroundColor:'rgb(242, 251, 245)',
+   color:'rgb(18, 107, 66)',display:'flex',textAlign:'center'
+  },profile+' retains the green approval stamp presentation');
   const file=output+'/'+profile+'-'+count+'.pdf';
   await page.pdf({path:file,preferCSSPageSize:true,printBackground:true,displayHeaderFooter:false});
   expected.push({file,count,notes:items.filter(i=>i.kind==='note').flatMap(i=>i.description.match(/NOTETOKEN\d+/g)||[]),total:'₱'+formatTradeLinkAmount(calculateTradeLinkAmounts(content).total),profile});
