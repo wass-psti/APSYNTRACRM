@@ -132,6 +132,98 @@ function installFakeAuthRoutes(context, stats) {
   });
 }
 
+
+async function runSessionFailureBrowserAcceptance(chromium, baseUrl, fixture, browserOptions) {
+  const recoveryProfileDir = mkdtempSync(join(tmpdir(), "cp-crm-session-01a-"));
+  let recoveryContext = null;
+  try {
+    recoveryContext = await chromium.launchPersistentContext(recoveryProfileDir, browserOptions);
+    installFakeAuthRoutes(recoveryContext, { userRequests: 0, refreshRequests: 0, userTokens: [] });
+    const page = await recoveryContext.newPage();
+    await page.goto(baseUrl + fixture);
+    await page.waitForFunction(() => window.restoreState !== "pending");
+    assert.equal(await page.evaluate(() => window.restoreState), "UNAUTHENTICATED");
+    const result = await page.evaluate(async ({ userId }) => {
+      const auth = window.auth;
+      const provider = auth.provider;
+      const originalGetSession = provider.getSession.bind(provider);
+      const originalRefreshSession = provider.refreshSession.bind(provider);
+      const createSession = (access, refresh, expiresIn = 3600) => ({
+        access_token: access, refresh_token: refresh, token_type: "bearer",
+        expires_in: expiresIn,
+        expires_at: Math.floor((Date.now() + expiresIn * 1000) / 1000),
+        user: { id: userId, email: "continuity@example.invalid",
+          app_metadata: {}, user_metadata: {} },
+      });
+      let expiredCount = 0;
+      auth.onExpired = () => { expiredCount++; };
+      const transientSession = createSession("browser-transient-access",
+        "browser-transient-refresh", 60);
+      auth.receiveProviderEvent("SIGNED_IN", transientSession);
+      provider.getSession = async () => ({
+        data: { session: null },
+        error: Object.assign(new Error("Network unavailable"), {
+          name: "AuthRetryableFetchError", status: 0,
+        }),
+      });
+      const transientToken = await auth.token();
+      const transientPreserved = transientToken === transientSession.access_token &&
+        auth.isSignedIn && expiredCount === 0;
+      provider.getSession = originalGetSession;
+      auth.session = null;
+      auth.invalidateVerifiedUser();
+
+      const invalidSession = createSession("browser-invalid-refresh-access",
+        "browser-invalid-refresh");
+      auth.receiveProviderEvent("SIGNED_IN", invalidSession);
+      provider.refreshSession = async () => ({
+        data: { session: null, user: null },
+        error: Object.assign(new Error("Refresh token not found"), {
+          name: "AuthApiError", status: 400, code: "refresh_token_not_found",
+        }),
+      });
+      let refreshErrorCode = "";
+      try { await auth.refresh(); } catch (error) { refreshErrorCode = error.code; }
+      const definitiveRefreshInvalidated = !auth.isSignedIn && expiredCount === 1;
+      provider.refreshSession = originalRefreshSession;
+
+      const missingSession = createSession("browser-missing-access",
+        "browser-missing-refresh", 60);
+      auth.receiveProviderEvent("SIGNED_IN", missingSession);
+      provider.getSession = async () => ({ data: { session: null }, error: null });
+      let missingSessionError = "";
+      try { await auth.token(); } catch (error) { missingSessionError = error.code; }
+      const missingSessionInvalidated = !auth.isSignedIn && expiredCount === 2;
+
+      const lastGoodSession = createSession("browser-last-good-access",
+        "browser-last-good-refresh", 60);
+      auth.receiveProviderEvent("SIGNED_IN", lastGoodSession);
+      provider.getSession = async () => ({
+        data: { session: { access_token: "partial-session" }, error: null },
+      });
+      const lastGoodToken = await auth.token();
+      const malformedResponsePreserved = lastGoodToken === lastGoodSession.access_token &&
+        auth.isSignedIn && expiredCount === 2;
+      provider.getSession = originalGetSession;
+      provider.refreshSession = originalRefreshSession;
+      auth.session = null;
+      auth.invalidateVerifiedUser();
+      return { transientPreserved, definitiveRefreshInvalidated, refreshErrorCode,
+        missingSessionInvalidated, missingSessionError, malformedResponsePreserved, expiredCount };
+    }, { userId });
+    assert.deepEqual(result, {
+      transientPreserved: true, definitiveRefreshInvalidated: true,
+      refreshErrorCode: "refresh_token_not_found", missingSessionInvalidated: true,
+      missingSessionError: "SESSION_MISSING", malformedResponsePreserved: true,
+      expiredCount: 2,
+    });
+    console.log("PASS: isolated Chromium Auth failure classification and recovery cases.");
+  } finally {
+    if (recoveryContext) await recoveryContext.close().catch(() => {});
+    rmSync(recoveryProfileDir, { recursive: true, force: true });
+  }
+}
+
 const port = await freePort();
 const baseUrl = `http://127.0.0.1:${port}`;
 const vite = spawn(
@@ -147,7 +239,7 @@ const vite = spawn(
   { cwd: root, stdio: "ignore" },
 );
 const profileDir = mkdtempSync(join(tmpdir(), "cp-ws-auth-continuity-"));
-const executablePath = "/Applications/Chromium.app/Contents/MacOS/Chromium";
+const executablePath = process.env.CHROME_BIN || "/Applications/Chromium.app/Contents/MacOS/Chromium";
 const browserOptions = { headless: true, args: ["--no-sandbox"] };
 if (existsSync(executablePath)) browserOptions.executablePath = executablePath;
 let context = null;
@@ -298,8 +390,9 @@ try {
     ),
     workspaceId,
   );
+  await runSessionFailureBrowserAcceptance(chromium, baseUrl, fixture, browserOptions);
   console.log(
-    "PASS: cross-window sign-in/logout, workspace preference sync, cached identity reads, 1000 in-memory token reads, cross-tab token rotation, and persistent browser-profile restart. " +
+    "PASS: cross-window sign-in/logout, workspace preference sync, cached identity reads, 1000 in-memory token reads, cross-tab token rotation, persistent browser-profile restart, and CP-CRM-SESSION-01A recovery. " +
       JSON.stringify({
         userReadsBeforeRestart:
           beforePostRefreshReads - beforeIdentityReads + 1,
