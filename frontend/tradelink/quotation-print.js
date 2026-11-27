@@ -126,7 +126,7 @@ export function renderTradeLinkQuotationPrint({row,company,template,currency,ter
   escape(template.version)+'" data-tradelink-template-id="'+escape(template.id)+
   '" data-tradelink-company-profile="'+escape(company.id)+
   '" data-tradelink-legacy-company-default="'+legacyDefaulted+'"'+
-  '"'+templateStyle(template)+'>'+'
+  templateStyle(template)+'>'+'
   '<header class="tl-quote-letterhead"><img class="tl-quote-logo" src="'+escape(logo)+
    '" alt="'+escape(company.name)+' logo"><div class="tl-quote-company"><h1>'+
    escape(company.name)+'</h1><p>'+escape(company.address)+'</p><p>Tel: '+
