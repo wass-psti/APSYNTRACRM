@@ -8,6 +8,20 @@ on:
       - 'scripts/lib/crm-signed-performance.mjs'
       - 'frontend/tests/crm-signed-performance.test.mjs'
       - 'frontend/tests/fixtures/crm-signed-performance.html'
+      - 'frontend/app.js'
+      - 'frontend/data.js'
+      - 'frontend/session.js'
+      - 'frontend/platform-sync.js'
+      - 'frontend/startup-recovery-policy.js'
+      - 'frontend/workspace-application-ownership.js'
+      - 'frontend/time-tracker-*.js'
+      - 'frontend/apps/TimeTracker/**'
+      - 'frontend/auth/**'
+      - 'frontend/tests/time-tracker-*.test.mjs'
+      - 'frontend/tests/auth-provider-continuity.test.mjs'
+      - 'supabase/migrations/*timetracker*'
+      - 'supabase/migrations/*time_tracker*'
+      - 'supabase/migrations/*shared_read*'
   workflow_dispatch:
 permissions:
   contents: read
