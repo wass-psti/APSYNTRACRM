@@ -10,6 +10,8 @@ on:
       - 'frontend/tradelink/quotation-print.js'
       - 'frontend/tradelink-saved-document-output.js'
       - 'frontend/tests/tradelink-saved-document-output.test.mjs'
+      - 'frontend/tests/tradelink-gm-approval-policy.test.mjs'
+      - 'frontend/tests/tradelink-pdf-issuance-contract.test.mjs'
       - 'scripts/cp-tl-quotation-print-browser.mjs'
       - 'scripts/cp-tl-quotation-print-verify.swift'
       - '.github/workflows/tradelink-quotation-pdf-acceptance.yml'
@@ -32,8 +34,8 @@ jobs:
         run: npm ci
       - name: Install Chromium for Playwright
         run: npx playwright install chromium
-      - name: Run saved document and financial regression tests
-        run: node --test frontend/tests/tradelink-saved-document-output.test.mjs frontend/tests/tradelink-finance.test.mjs
+      - name: Run saved document, approval policy and PDF issuance regression tests
+        run: node --test frontend/tests/tradelink-saved-document-output.test.mjs frontend/tests/tradelink-finance.test.mjs frontend/tests/tradelink-gm-approval-policy.test.mjs frontend/tests/tradelink-pdf-issuance-contract.test.mjs
       - name: Render company profiles, multi-page items and long notes
         run: node scripts/cp-tl-quotation-print-browser.mjs
       - name: Verify actual PDF pages and extracted content with PDFKit
