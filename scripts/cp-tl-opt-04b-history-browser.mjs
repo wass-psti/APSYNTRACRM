@@ -106,7 +106,7 @@ function buildRevision(revision){
  return {
   revision,marker,termsMarker:marker+'-TERMS-END',
   itemMarker,remarksMarker,content,row,renderSnapshot,html,
-  total:formatTradeLinkAmount(calculateTradeLinkAmounts(content).total)+' PHP'
+  total:formatTradeLinkAmount(calculateTradeLinkAmounts(content).total)
  };
 }
 
