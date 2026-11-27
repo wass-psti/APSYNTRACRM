@@ -223,9 +223,9 @@ try{
      termsMarker:marker+'-TERMS',remarksMarker:marker+'-REMARKS',
      firstContentMarker:module.type==='payment'?'PAYMENTTOKEN001':'ITEMTOKEN001',
      lastContentMarker:module.type==='payment'?'PAYMENTTOKEN060':'ITEMTOKEN026',
-     total:module.priced?'₱'+formatTradeLinkAmount(calculateTradeLinkAmounts(content).total):null,
-     cashTotal:module.type==='payment'?'₱50.00':null,
-     chequeTotal:module.type==='payment'?'₱150.00':null,
+     total:module.priced?formatTradeLinkAmount(calculateTradeLinkAmounts(content).total)+' PHP':null,
+     cashTotal:module.type==='payment'?'50.00 PHP':null,
+     chequeTotal:module.type==='payment'?'150.00 PHP':null,
      minPages:2,pageSize:module.type==='quotation'?'letter':'a4'
     });
     console.log('PASS Chromium',profile.id,module.type,filename,pdf.length+' bytes');
