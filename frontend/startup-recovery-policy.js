@@ -25,7 +25,7 @@ export async function startupVerifiedRead(read,{
    return result;
   }catch(error){
    const failure=classifyAuthFailure(error,{operation});
-   if(attempt!==0||!failure.retryable||!canContinue())throw error;
+   if(attempt!==0||!transientStartupFailure(error,operation)||!canContinue())throw error;
    // Respect a server-supplied Retry-After value, while retaining the
    // existing minimum delay and the single-retry ceiling.
    const retryDelay=failure.retryAfterMs===null?retryDelayMs:
