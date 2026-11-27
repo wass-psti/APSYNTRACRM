@@ -444,55 +444,89 @@ export class TradeLinkDomainClient{
   return rows.map(row=>({...row,hidden:row.hidden===true}));
  }
  async searchPage({query='',documentType='all',workflowState='all',
-  archiveMode='active',visibilityMode='visible',cursor=null,limit=50}={}){
+  archiveMode='active',visibilityMode='visible',updatedFrom=null,updatedTo=null,
+  sortBy='createdAt',sortDirection='desc',cursor=null,limit=50}={}){
   if(!TL03_DOMAIN_READS_ENABLED)
    deny('TradeLink domain reads await production activation.',503);
+  const validDate=value=>value===null||value===undefined||value===''||
+   typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&
+   Number.isFinite(Date.parse(value+'T00:00:00.000Z'))&&
+   new Date(value+'T00:00:00.000Z').toISOString().slice(0,10)===value;
+  const from=updatedFrom||null,to=updatedTo||null;
+  const sortFields=['createdAt','updatedAt','documentNumber','documentType','revision'];
+  const cursorValueValid=cursor===null||(
+   cursor&&typeof cursor==='object'&&!Array.isArray(cursor)&&
+   Object.keys(cursor).length===3&&cursor.sortBy===sortBy&&
+   typeof cursor.sortValue==='string'&&cursor.sortValue.length<=2000&&
+   validUuid(cursor.documentId)&&
+   (['createdAt','updatedAt'].includes(sortBy)?
+    Number.isFinite(Date.parse(cursor.sortValue)):
+    sortBy==='revision'?/^[0-9]{1,18}$/.test(cursor.sortValue):true)
+  );
   if(typeof query!=='string'||query.length>120||
     !TYPES.has(documentType)&&documentType!=='all'||
     !STATES.has(workflowState)&&workflowState!=='all'||
     !['all','active','archived'].includes(archiveMode)||
     !['all','visible','hidden'].includes(visibilityMode)||
-    !Number.isSafeInteger(limit)||limit<1||limit>50||
-    (cursor!==null&&(!cursor||typeof cursor.createdAt!=='string'||
-      !Number.isFinite(Date.parse(cursor.createdAt))||
-      !validUuid(cursor.documentId))))
-   deny('Invalid TradeLink server search request.',400);
+    !sortFields.includes(sortBy)||!['asc','desc'].includes(sortDirection)||
+    !validDate(from)||!validDate(to)||(from&&to&&from>to)||
+    !Number.isSafeInteger(limit)||limit<1||limit>50||!cursorValueValid)
+   deny('Invalid TradeLink server repository query.',400);
   await this.documentReadSession();
-  const response=await this.api.rpc('tl03_documents_page',{
+  const response=await this.api.rpc('tl03_documents_query',{
    p_board_id:TRADELINK_BOARD_ID,p_search:query,
    p_document_type:documentType,p_workflow_state:workflowState,
    p_archive_mode:archiveMode,p_visibility_mode:visibilityMode,
-   p_before_at:cursor?.createdAt??null,
-   p_before_id:cursor?.documentId??null,p_limit:limit
+   p_updated_from:from,p_updated_to:to,
+   p_sort_by:sortBy,p_sort_direction:sortDirection,
+   p_cursor:cursor,p_limit:limit
   });
+  const validRow=r=>validUuid(r?.documentId)&&validUuid(r?.boardItemId)&&
+   TYPES.has(r?.documentType)&&STATES.has(r?.workflowState)&&
+   typeof r?.documentNumber==='string'&&typeof r?.archived==='boolean'&&
+   (r?.hidden===undefined||typeof r.hidden==='boolean')&&
+   typeof r?.createdByActor==='boolean'&&
+   (r?.createdBy===undefined||validUuid(r.createdBy))&&
+   (r?.createdByName===undefined||r.createdByName===null||typeof r.createdByName==='string')&&
+   (r?.clientName===null||r?.clientName===undefined||typeof r.clientName==='string')&&
+   (r?.referenceNumber===null||r?.referenceNumber===undefined||typeof r.referenceNumber==='string')&&
+   (r?.poNumber===null||r?.poNumber===undefined||typeof r.poNumber==='string')&&
+   ['primary','secondary',null,undefined].includes(r?.assignedStage)&&
+   knownApprovalPolicy(r?.approvalPolicy)&&
+   (r?.primaryAt==null||typeof r.primaryAt==='string'&&Number.isFinite(Date.parse(r.primaryAt)))&&
+   (r?.secondaryAt==null||typeof r.secondaryAt==='string'&&Number.isFinite(Date.parse(r.secondaryAt)))&&
+   Number.isSafeInteger(r?.revision)&&r.revision>=1&&
+   typeof r?.createdAt==='string'&&Number.isFinite(Date.parse(r.createdAt))&&
+   typeof r?.updatedAt==='string'&&Number.isFinite(Date.parse(r.updatedAt));
+  const expectedCursorValue=row=>{
+   if(sortBy==='createdAt')return row.createdAt;
+   if(sortBy==='updatedAt')return row.updatedAt;
+   if(sortBy==='documentNumber')return row.documentNumber.toLowerCase();
+   if(sortBy==='documentType')return row.documentType.toLowerCase();
+   return String(row.revision);
+  };
+  const cursorMatchesLast=response?.rows?.length>0&&
+   response.nextCursor?.documentId===response.rows.at(-1).documentId&&
+   response.nextCursor?.sortBy===sortBy&&
+   typeof response.nextCursor?.sortValue==='string'&&
+   (['createdAt','updatedAt'].includes(sortBy)?
+    Date.parse(response.nextCursor.sortValue)===Date.parse(expectedCursorValue(response.rows.at(-1))):
+    response.nextCursor.sortValue===expectedCursorValue(response.rows.at(-1)));
   if(!response||typeof response!=='object'||Array.isArray(response)||
     !Array.isArray(response.rows)||response.rows.length>limit||
     typeof response.hasMore!=='boolean'||
-    (response.hasMore!==Boolean(response.nextCursor))||
+    !Number.isSafeInteger(response.totalCount)||response.totalCount<0||
+    response.totalCount<response.rows.length||
+    response.hasMore!==Boolean(response.nextCursor)||
+    (response.hasMore&&(response.rows.length!==limit||!cursorMatchesLast||
+      response.totalCount<=response.rows.length))||
     (response.nextCursor!==null&&
-      (!validUuid(response.nextCursor?.documentId)||
-       typeof response.nextCursor?.createdAt!=='string'||
-       !Number.isFinite(Date.parse(response.nextCursor.createdAt))))||
-    response.rows.some(r=>!validUuid(r?.documentId)||!validUuid(r?.boardItemId)||
-      !TYPES.has(r?.documentType)||!STATES.has(r?.workflowState)||
-      typeof r?.documentNumber!=='string'||typeof r?.archived!=='boolean'||
-      (r?.hidden!==undefined&&typeof r.hidden!=='boolean')||
-      typeof r?.createdByActor!=='boolean'||
-      (r?.createdBy!==undefined&&!validUuid(r.createdBy))||
-      (r?.createdByName!==undefined&&r.createdByName!==null&&typeof r.createdByName!=='string')||
-      (r?.clientName!==null&&r?.clientName!==undefined&&typeof r.clientName!=='string')||
-      !['primary','secondary',null,undefined].includes(r?.assignedStage)||
-      !knownApprovalPolicy(r?.approvalPolicy)||
-      (r?.primaryAt!=null&&(typeof r.primaryAt!=='string'||!Number.isFinite(Date.parse(r.primaryAt))))||
-      (r?.secondaryAt!=null&&(typeof r.secondaryAt!=='string'||!Number.isFinite(Date.parse(r.secondaryAt))))||
-      !Number.isSafeInteger(r?.revision)||r.revision<1||
-      typeof r?.createdAt!=='string'||!Number.isFinite(Date.parse(r.createdAt))||
-      typeof r?.updatedAt!=='string'||!Number.isFinite(Date.parse(r.updatedAt)))||
-    (response.hasMore&&(!response.rows.length||
-      response.nextCursor.documentId!==response.rows.at(-1).documentId||
-      Date.parse(response.nextCursor.createdAt)!==
-        Date.parse(response.rows.at(-1).createdAt))))
-    deny('Invalid authorized TradeLink server page response.',409);
+     (!response.nextCursor||Object.keys(response.nextCursor).length!==3||
+      !validUuid(response.nextCursor?.documentId)||
+      response.nextCursor?.sortBy!==sortBy||
+      typeof response.nextCursor?.sortValue!=='string'))||
+    response.rows.some(r=>!validRow(r)))
+   deny('Invalid authorized TradeLink repository response.',409);
   return {...response,rows:response.rows.map(row=>({...row,hidden:row.hidden===true}))};
  }
  async bulkAction({action,documents}={}){

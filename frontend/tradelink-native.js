@@ -9,5 +9,5 @@
  *
  * Keep the legacy domain-client exports available for existing consumers.
  */
-export * from './tradelink-domain-client.js?v=cp-tl-universal-edit-01k-20261126-01';
-export {TradeLinkDomainClient as TradeLinkNativeClient} from './tradelink-domain-client.js?v=cp-tl-universal-edit-01k-20261126-01';
+export * from './tradelink-domain-client.js?v=cp-tl-opt-01-20261127-01';
+export {TradeLinkDomainClient as TradeLinkNativeClient} from './tradelink-domain-client.js?v=cp-tl-opt-01-20261127-01';

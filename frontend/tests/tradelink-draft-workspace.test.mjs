@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
 import {ApiError} from '../session.js';
 import {TRADELINK_SOURCE_MODULES,normalizeTradeLinkSection,renderTradeLinkApplication} from '../tradelink-application.js';
-import {TL03_DOMAIN_READS_ENABLED,TL03_DOMAIN_WRITES_ENABLED} from '../tradelink-domain-client.js';
+import {TL03_DOMAIN_READS_ENABLED,TL03_DOMAIN_WRITES_ENABLED,TradeLinkDomainClient} from '../tradelink-domain-client.js';
 import {
  TL03_DRAFT_INTERFACE_ENABLED,initialTradeLinkDraftView,resetTradeLinkDraftForm,
  tradeLinkDraftValidationMessage,parseTradeLinkDraftForm,
@@ -14,7 +14,7 @@ import {
  updateTradeLinkDraftLocalSummary,
  initialTradeLinkDraftListFilters,normalizeTradeLinkDraftListFilters,
  filterTradeLinkDraftAuthorizedRows,updateTradeLinkDraftListUI,
- mergeTradeLinkCreatedAndAssignedRows,
+ mergeTradeLinkDocumentSelection,mergeTradeLinkCreatedAndAssignedRows,
  renderTradeLinkDocumentRepository,renderTradeLinkSavedDocumentPreview,
  renderTradeLinkDraftWorkspace,
  TradeLinkDraftWorkspace,tradeLinkDraftReady
@@ -879,7 +879,7 @@ test('read-only listing presents filters but never reveals rows or enables RPC u
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view:seed,canManage:true});
  for(const input of ['query','documentType','workflowState','archiveMode'])
   assert.ok(html.includes('name="'+input+'"'),input);
- assert.match(html,/Search document number/);
+ assert.match(html,/Search document, client, reference or PO/);
  assert.match(html,/data-tradelink-domain-count role="status"/);
  assert.match(html,/SECRET-Q/);
  assert.match(html,/1 of 1 documents in this response/g);
@@ -904,7 +904,7 @@ test('source-bound local document search filters only previously authorized page
  ];
  assert.deepEqual(initialTradeLinkDraftListFilters(),{
   query:'',documentType:'all',workflowState:'all',archiveMode:'active',
-  visibilityMode:'visible',sortBy:'createdAt',sortDirection:'desc'});
+  visibilityMode:'visible',sortBy:'createdAt',sortDirection:'desc',updatedFrom:null,updatedTo:null});
  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows).map(x=>x.documentNumber),
   ['E-500','PL-400','Q-200','Q-100']);
  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{query:' q-',documentType:'quotation',
@@ -1196,4 +1196,113 @@ test('shared recovery field capture preserves raw values and excludes unknown in
  const captured=RECOVERY_FIELDS.filter(key=>!lineFields.has(key));
  assert.deepEqual(captureRecoveryFields(input),Object.fromEntries(captured.map(key=>[key,input.get(key)])));
  assert.deepEqual(captureRecoveryFields(new Map([['remarks','']])),{remarks:''});
+});
+
+
+test('cross-page document selection retains earlier pages and enforces the existing 50-row limit',()=>{
+ const makeId=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
+ const first={documentId:makeId(1),revision:1,documentNumber:'Q-001',hidden:false};
+ const second={documentId:makeId(2),revision:2,documentNumber:'Q-002',hidden:false};
+ const third={documentId:makeId(3),revision:1,documentNumber:'Q-003',hidden:true};
+ const merged=mergeTradeLinkDocumentSelection([first],[second,third],new Set([third.documentId]));
+ assert.deepEqual(merged.documents.map(row=>row.documentId),[first.documentId,third.documentId]);
+ assert.equal(merged.overflow,false);
+ const full=Array.from({length:50},(_,i)=>({documentId:makeId(i+10),revision:1}));
+ const overflow=mergeTradeLinkDocumentSelection(full,[second],new Set([second.documentId]));
+ assert.equal(overflow.documents.length,50);
+ assert.equal(overflow.overflow,true);
+});
+
+test('repository filter normalization validates UTC date inputs and client/reference fallback search',()=>{
+ const filters=normalizeTradeLinkDraftListFilters({
+  updatedFrom:'2026-11-01',updatedTo:'2026-11-27',query:'REF-44'
+ });
+ assert.equal(filters.updatedFrom,'2026-11-01');
+ assert.equal(filters.updatedTo,'2026-11-27');
+ assert.equal(normalizeTradeLinkDraftListFilters({updatedFrom:'2026-02-30'}).updatedFrom,null);
+ const rows=[
+  {documentNumber:'Q-100',clientName:'Northwind',referenceNumber:'REF-441',
+   documentType:'quotation',workflowState:'draft',archived:false},
+  {documentNumber:'Q-200',clientName:'Southwind',referenceNumber:'REF-552',
+   documentType:'quotation',workflowState:'draft',archived:false}
+ ];
+ assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{query:'ref-44'}).map(row=>row.documentNumber),['Q-100']);
+ assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{query:'northwind'}).map(row=>row.documentNumber),['Q-100']);
+});
+
+test('server repository rendering preserves database order and reports the full filtered count',()=>{
+ const rows=[
+  {documentId:'11111111-1111-4111-8111-111111111111',boardItemId:'22222222-2222-4222-8222-222222222222',
+   documentType:'quotation',documentNumber:'Q-2',clientName:'Northwind',referenceNumber:'REF-2',
+   workflowState:'draft',revision:1,archived:false,hidden:false,createdByActor:true,
+   createdAt:'2026-11-02T00:00:00Z',updatedAt:'2026-11-03T00:00:00Z'},
+  {documentId:'33333333-3333-4333-8333-333333333333',boardItemId:'44444444-4444-4444-8444-444444444444',
+   documentType:'quotation',documentNumber:'Q-10',clientName:'Southwind',referenceNumber:'REF-10',
+   workflowState:'draft',revision:2,archived:false,hidden:false,createdByActor:true,
+   createdAt:'2026-11-01T00:00:00Z',updatedAt:'2026-11-04T00:00:00Z'}
+ ];
+ const filters=normalizeTradeLinkDraftListFilters({sortBy:'documentNumber',sortDirection:'asc'});
+ const view={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',sharedVisibility:true,
+  rows,listFilters:filters,selectedDocumentIds:[],selectedDocuments:[],
+  listPage:{server:true,hasMore:false,nextCursor:null,totalCount:55,limit:50,cursor:null,
+   history:[],pageIndex:1,appliedFilters:filters}};
+ const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:true});
+ assert.ok(html.indexOf('Q-2')<html.indexOf('Q-10'));
+ assert.match(html,/55 matching documents/);
+ assert.match(html,/Search document, client or reference/);
+ assert.match(html,/Last updated \(UTC\)/);
+ assert.match(html,/Select all documents on this page/);
+ assert.doesNotMatch(html,/current page only|Sort by applies to the visible page/);
+});
+
+test('domain client sends one server query for global sorting, UTC date ranges and reference search',async()=>{
+ const actorId='55555555-5555-4555-8555-555555555555';
+ const makeId=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
+ const rows=[1,2].map(n=>({
+  documentId:makeId(n),boardItemId:makeId(n+100),documentType:'quotation',
+  documentNumber:'Q-00'+n,clientName:'Northwind',referenceNumber:'REF-00'+n,
+  poNumber:null,revision:n,workflowState:'draft',archived:false,hidden:false,
+  createdByActor:true,createdAt:'2026-11-27T00:00:00Z',updatedAt:'2026-11-27T01:00:00Z',
+  assignedStage:null,primaryAt:null,secondaryAt:null
+ }));
+ const response={rows,hasMore:true,totalCount:3,
+  nextCursor:{sortBy:'documentNumber',sortValue:'q-002',documentId:rows[1].documentId}};
+ const calls=[];
+ const client=new TradeLinkDomainClient({
+  auth:{userId:actorId,getVerifiedUser:async()=>({id:actorId})},
+  api:{
+   context:async()=>({user_id:actorId,profile:{status:'active'},workspace_id:workspace}),
+   allowed:async()=>true,boardCached:async()=>detail,
+   rpc:async(name,args)=>{calls.push({name,args});return response;}
+  }
+ });
+ const page=await client.searchPage({query:'REF-00',updatedFrom:'2026-11-01',
+  updatedTo:'2026-11-27',sortBy:'documentNumber',sortDirection:'asc',limit:2});
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].name,'tl03_documents_query');
+ assert.equal(calls[0].args.p_search,'REF-00');
+ assert.equal(calls[0].args.p_updated_from,'2026-11-01');
+ assert.equal(calls[0].args.p_updated_to,'2026-11-27');
+ assert.equal(calls[0].args.p_sort_by,'documentNumber');
+ assert.equal(calls[0].args.p_sort_direction,'asc');
+ assert.equal(calls[0].args.p_cursor,null);
+ assert.equal(calls[0].args.p_limit,2);
+ assert.equal(page.totalCount,3);
+ assert.equal(page.rows[1].referenceNumber,'REF-002');
+ assert.equal(page.rows[1].hidden,false);
+ await assert.rejects(()=>client.searchPage({sortBy:'updatedAt',cursor:{
+  sortBy:'createdAt',sortValue:'2026-11-27T00:00:00Z',documentId:rows[0].documentId
+ }}),/Invalid TradeLink server repository query/);
+});
+
+test('CP-TL-OPT-01 migration installs the unified server query without replacing legacy RPCs',()=>{
+ const migration=readFileSync(new URL('../../supabase/migrations/20261127013157_cp_tl_opt_01_unified_server_document_repository.sql',import.meta.url),'utf8');
+ assert.match(migration,/CREATE FUNCTION public\.tl03_documents_query/);
+ assert.match(migration,/referenceNumber/);
+ assert.match(migration,/customerName/);
+ assert.match(migration,/p_updated_from date/);
+ assert.match(migration,/p_cursor jsonb/);
+ assert.match(migration,/extensions\.gin_trgm_ops/);
+ assert.match(migration,/tl03_documents_page/);
+ assert.match(migration,/GRANT EXECUTE ON FUNCTION public\.tl03_documents_query/);
 });

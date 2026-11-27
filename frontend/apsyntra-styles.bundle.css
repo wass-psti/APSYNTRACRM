@@ -42013,3 +42013,43 @@ html[data-aps-monday-theme="dark"] #app .ft3-new-boundary{border-color:#4b7168;b
 html[data-aps-monday-theme="dark"] #app .ft3-receipt-action,html[data-aps-monday-theme="dark"] #app .ft3-new-retry{border-color:#42665f;background:#24443e;color:#c8eee3}
 html[data-aps-monday-theme="dark"] #app .ft3-new-submit:disabled{border-color:#49635f;background:#49635f;color:#d4e3df}
 @media(prefers-reduced-motion:reduce){#app .ft3-new-request *{scroll-behavior:auto;transition:none!important}#app .ft3-new-submit:not(:disabled):hover{transform:none}}
+
+/* CP-TL-OPT-01 — unified repository controls and cross-page selection. */
+.tl-reference-document-datebar{
+ display:flex;align-items:end;flex-wrap:wrap;gap:10px 14px;
+ padding:14px 16px;border:1px solid var(--border,#dfe3e8);
+ border-radius:12px;background:var(--surface,#fff);
+}
+.tl-reference-document-datebar .tl-date-label{
+ flex-basis:100%;font-weight:650;color:var(--text,#202833);
+}
+.tl-reference-document-datebar label{
+ display:grid;gap:5px;min-width:150px;
+}
+.tl-reference-document-datebar input[type="date"]{
+ min-height:38px;padding:7px 10px;border:1px solid var(--border,#dfe3e8);
+ border-radius:8px;background:var(--surface,#fff);color:var(--text,#202833);
+}
+.tl-reference-document-datebar .tl-reference-date-presets{
+ display:flex;flex-wrap:wrap;gap:6px;
+}
+.tl-ref-selection-controls{
+ display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;
+}
+.tl-ref-selection-controls [data-tl-selected-count]{font-weight:650;white-space:nowrap;}
+.tl-ref-selection-controls [data-tl-selection-feedback]{
+ flex-basis:100%;font-size:.84rem;color:var(--muted,#667085);
+}
+.tl-draft-list-filters .tl-draft-field:first-child{min-width:min(100%,280px);}
+.tl-draft-pagination-controls{
+ display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;
+}
+@media(max-width:720px){
+ .tl-reference-document-datebar{align-items:stretch;}
+ .tl-reference-document-datebar label{flex:1 1 145px;}
+ .tl-reference-document-datebar .tl-reference-date-presets{flex:1 1 100%;}
+ .tl-ref-selection-controls{align-items:stretch;}
+ .tl-ref-selection-controls button{flex:1 1 140px;}
+ .tl-draft-pagination-controls{justify-content:stretch;}
+ .tl-draft-pagination-controls button{flex:1 1 120px;}
+}
