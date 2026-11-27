@@ -531,7 +531,7 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
    '<span class="tt-log-row-location" title="'+esc(r.location||'Unspecified')+'">'+esc(locationLabel(r.location||'Unspecified'))+'</span>'+
    '<span class="tt-log-row-department" title="'+esc(r.isOjt?'OJT intern · Shared login':r.department||'Unassigned')+'">'+esc(r.department||'Unassigned')+'</span>'+
    '<span class="tt-log-row-out" title="'+esc(validTime(r.clockOut)?phtDate(r.clockOut)+(approvedOt?' · Approved OT · '+clockOutText:''):'')+'">'+esc(clockOutText)+'</span>'+
-   '<span class="tt-log-row-duration" title="Completed work duration; short sessions have no lunch deduction">'+
+   '<span class="tt-log-row-duration" title="Completed work duration; unpaid lunch overlap excluded">'+
     esc(timeTrackerLogWorkDuration(r))+'</span><span class="tt-log-row-status"><span class="tt-log-badge '+(done?'tt-log-badge-done':
     state==='Active'?'tt-log-badge-active':'tt-log-badge-unknown')+'">'+esc(state)+'</span></span>'+
   '</summary>'+(gpsOptions.expandedRecordIds?.includes(r.id)?'':safeSessionDetails(r,now,gpsOptions))+'</details></td></tr>';
