@@ -41,14 +41,28 @@ const server=createServer((request,response)=>{
 const report={checkpoint:'CP-CRM-PERF-01',commit:process.env.GITHUB_SHA||'not-recorded',
  mode:'loopback source assets; no production network; isolated shell and table fixtures',
  repetitions,inventory:inventory.map(({id,label,kind})=>({id,label,kind,signedRuntime:'NOT_RUN'})),
- startup:{},shell:{},boards:{},frames:{},limitations:[
+ startup:{},shell:{},boards:{},frames:{},rendererResources:{},limitations:[
   'Signed-out startup only; not authenticated ready time.',
   'Shell fixture uses identical synthetic content for each registered route; not native application loading.',
   'Mobile viewport emulation, not physical mobile hardware.',
   'Warm HTTP-cache eligible; transfer size is recorded rather than assuming a hit.',
+  'CDP renderer task durations and heap snapshots are not host CPU or memory-leak certification.',
   'No production RPC, sustained CPU or signed multi-window benchmark.'
  ]};
 let browser;
+async function rendererMetrics(session){
+ const {metrics}=await session.send('Performance.getMetrics');
+ const names=['TaskDuration','ScriptDuration','LayoutDuration','RecalcStyleDuration',
+  'JSHeapUsedSize','Nodes','Documents','JSEventListeners'];
+ const map=new Map(metrics.map(metric=>[metric.name,metric.value]));
+ return Object.fromEntries(names.map(name=>[name,Number.isFinite(map.get(name))?map.get(name):null]));
+}
+function resourceInterval(before,after,elapsedMs){
+ const durationNames=['TaskDuration','ScriptDuration','LayoutDuration','RecalcStyleDuration'];
+ return {elapsedMs,deltaMs:Object.fromEntries(durationNames.map(name=>[
+  name,before[name]===null||after[name]===null?null:Math.max(0,(after[name]-before[name])*1000)
+ ])),before,after};
+}
 async function measureStartup(page,origin){
  await page.goto(origin+'/',{waitUntil:'domcontentloaded',timeout:45000});
  await page.waitForFunction(()=>window.__APSYNTRA_STARTUP?.state==='UNAUTHENTICATED'&&
@@ -57,6 +71,7 @@ async function measureStartup(page,origin){
  return page.evaluate(async()=>{
   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
   const readyMs=performance.now();
+  if(window.crmPerfResourceBufferFull)throw Error('Resource timing buffer exhausted');
   const entries=performance.getEntriesByType('resource').filter(entry=>{
    const url=new URL(entry.name);
    return url.origin===location.origin&&url.pathname.startsWith('/frontend/');
@@ -80,10 +95,17 @@ try{
   for(let i=0;i<repetitions;i++){
    const context=await browser.newContext({...options,serviceWorkers:'block'});
    try{
+    await context.addInitScript(()=>{
+     performance.setResourceTimingBufferSize(4096);
+     window.crmPerfResourceBufferFull=false;
+     performance.addEventListener('resourcetimingbufferfull',()=>{window.crmPerfResourceBufferFull=true;});
+    });
     const page=await context.newPage();
+    let errors=0;page.on('pageerror',()=>errors++);
     cold.push(await measureStartup(page,origin));
     await page.goto('about:blank');
     warm.push(await measureStartup(page,origin));
+    assert.equal(errors,0,'Uncaught startup page errors');
    }finally{await context.close();}
   }
   const keys=['readyMs','resourceCount','scriptStyleDecodedBytes','scriptStyleTransferBytes'];
@@ -94,6 +116,9 @@ try{
    let errors=0;page.on('pageerror',()=>errors++);
    await page.goto(origin+fixturePath);
    await page.waitForFunction(()=>!!window.crmBaseline);
+   const session=await context.newCDPSession(page);
+   await session.send('Performance.enable');
+   const resourceStart=await rendererMetrics(session),started=performance.now();
    const shell=await page.evaluate(async({inventory,repetitions})=>
     window.crmBaseline.shell(inventory,repetitions),{inventory,repetitions});
    assert.equal(shell.length,inventory.length);
@@ -116,10 +141,17 @@ try{
    }
    report.frames[name]=await page.evaluate(()=>window.crmBaseline.frames());
    assert.equal(report.frames[name].status,'COMPLETE');
+   const resourceEnd=await rendererMetrics(session);
+   const workload=resourceInterval(resourceStart,resourceEnd,performance.now()-started);
+   const idleStart=await rendererMetrics(session),idleTime=performance.now();
+   await new Promise(resolve=>setTimeout(resolve,5000));
+   const idleEnd=await rendererMetrics(session);
+   report.rendererResources[name]={workload,idle:resourceInterval(idleStart,idleEnd,performance.now()-idleTime)};
+   await session.detach();
    assert.equal(errors,0,'Fixture page errors');
   }finally{await context.close();}
   console.log('CP_CRM_PERF_01_PROFILE '+JSON.stringify({name,startup:report.startup[name],
-   shell:report.shell[name],boards:report.boards[name],frames:report.frames[name]}));
+   shell:report.shell[name],boards:report.boards[name],frames:report.frames[name],rendererResources:report.rendererResources[name]}));
  }
  const destination=resolve(root,'artifacts/crm-performance-baseline.json');
  mkdirSync(dirname(destination),{recursive:true});writeFileSync(destination,JSON.stringify(report,null,2)+'\n');

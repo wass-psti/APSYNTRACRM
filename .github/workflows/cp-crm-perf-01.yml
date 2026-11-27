@@ -33,3 +33,10 @@ jobs:
           BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           test -n "$BROWSER"
           CHROME_BIN="$BROWSER" node scripts/cp-crm-perf-01-browser.mjs
+      - name: Retain numeric baseline report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: crm-performance-baseline
+          path: artifacts/crm-performance-baseline.json
+          if-no-files-found: error
+          retention-days: 30
