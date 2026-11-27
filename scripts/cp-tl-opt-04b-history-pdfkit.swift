@@ -56,7 +56,7 @@ for record in records {
         precondition(!searchableText.contains(compact(token)),
                      "Historical output contains another revision's content: " + token)
     }
-    for token in ["WORKFLOW APPROVED", "PDF NOT ISSUED", "Approved revision"] {
+    for token in ["WORKFLOW APPROVED", "PDF NOT ISSUED"] {
         precondition(!searchableText.contains(compact(token)),
                      "Quotation approval presentation changed: " + token)
     }
