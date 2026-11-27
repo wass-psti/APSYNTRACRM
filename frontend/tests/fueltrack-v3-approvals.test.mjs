@@ -67,3 +67,27 @@ test('a pending request without a verified revision has no decision buttons',()=
  assert.match(html,/Decision actions are unavailable for this request/);
  assert.doesNotMatch(html,/data-action="ft3-approve"|data-action="ft3-reject"/);
 });
+
+test('approval cards show the verified request context needed for a decision',()=>{
+ const snapshot={...base,pendingCount:1,pending:[{
+  id:'55555555-5555-4555-8555-555555555554',title:'GAN 8289 — Requester',
+  createdAt:'2026-11-10T16:50:14Z',revision:1,requestType:'vehicle',
+  requestorName:'Requester',reference:'GAN 8289',vehicleOwner:'Vehicle Owner',
+  origin:'Mandaue',destination:'Cebu City',odometer:12000,distance:18.5,
+  purpose:'Equipment delivery to project site'
+ }]};
+ const html=renderFuelTrackApprovals({...args(snapshot),actionEnabled:true});
+ for(const value of ['Vehicle fuel','Requested by','Requester','Vehicle plate','GAN 8289',
+  'Vehicle owner','Vehicle Owner','Trip route','Mandaue → Cebu City',
+  '12,000 km','18.5 km','Equipment delivery to project site'])
+  assert.ok(html.includes(value),value);
+ assert.equal((html.match(/data-action="ft3-approve"/g)||[]).length,1);
+ assert.equal((html.match(/data-action="ft3-reject"/g)||[]).length,1);
+});
+test('malformed optional request context is rejected rather than rendered',()=>{
+ const snapshot={...base,pendingCount:1,pending:[{
+  id:'r1',title:'Request',createdAt:'2026-11-10T16:50:14Z',
+  requestType:'administrator',requestorName:'Requester'
+ }]};
+ assert.equal(fuelTrackApprovalModel(args(snapshot)),null);
+});
