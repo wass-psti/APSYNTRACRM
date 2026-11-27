@@ -104,12 +104,12 @@ export function validateManualOvertimeDraft({
 /** Administrative OT is duration-only and historical; it never fabricates clock times. */
 export function validateManualDurationOvertimeDraft({
  employeeId,date,durationMinutes,reason
-}={},directory=[],at=new Date()){
+}={},directory=[],at=new Date(),delegatedCurrent=false){
  if(typeof employeeId!=='string'||!directory.some(user=>
   user&&user.id===employeeId&&user.status==='active'))
   return {valid:false,message:'Select an active TimeTracker employee.'};
  if(!validDay(date))return {valid:false,message:'Select a valid overtime date.'};
- if(date>=phtDay(at))return {valid:false,message:'Administrative duration entries must use a past date.'};
+ if(delegatedCurrent?date>shiftPhtDay(phtDay(at),7):date>=phtDay(at))return {valid:false,message:delegatedCurrent?'Select a date no later than seven days ahead.':'Administrative duration entries must use a past date.'};
  if(!Number.isInteger(durationMinutes)||durationMinutes<30||durationMinutes>360||durationMinutes%30!==0)
   return {valid:false,message:'Choose 0.5 to 6 hours in 0.5-hour increments.'};
  const reasonResult=validateReason(reason);
@@ -140,6 +140,8 @@ export function projectTimeTrackerOtRows(rows=[]){
    decidedBy:typeof r.decidedBy==='string'?r.decidedBy:null,
    submittedBy:typeof r.submittedBy==='string'?r.submittedBy:null,
    submittedByName:String(r.submittedByName||'').slice(0,100),
+   filedByName:String(r.filedByName||r.submittedByName||(submissionSource==='employee'?r.name:'')||'').slice(0,100),
+   decidedByName:String(r.decidedByName||'').slice(0,100),
    submissionSource,isManual:submissionSource==='manual_admin',otPolicy,
    attendanceRecordId:typeof r.attendanceRecordId==='string'?r.attendanceRecordId:null,
     attendanceClockInAt:typeof r.attendanceClockInAt==='string'?r.attendanceClockInAt:null,
@@ -181,12 +183,13 @@ export function timeTrackerOtMetrics(rows=[],filters={},at=new Date()){
 const row=(r,access,query='',expandedRequestIds=[],otContractActive=false)=>{
  const initials=r.name.trim().split(/\s+/).slice(0,2).map(v=>v[0]||'').join('').toUpperCase();
  const canReview=r.status==='Submitted'&&r.canReviewOt===true;
+ const selected=expandedRequestIds.includes(r.id);
  const button=(action,label,primary=false)=>'<button type="button" class="'+(primary?'tt-ot-reference-primary':'tt-ot-reference-secondary')+
   '" data-action="'+action+'" data-id="'+esc(r.id)+'"'+
   (!otContractActive?' disabled title="Signed OT contract unavailable"':'')+'>'+label+'</button>';
  return '<article class="tt-ot-request tt-ot-reference-row" data-request-id="'+esc(r.id)+'" data-search-text="'+esc(r.searchText)+'"'+
-  (query&&!r.searchText.includes(query)?' hidden':'')+'>'+
-  '<div class="tt-ot-reference-person"><span class="tt-ot-reference-avatar" aria-hidden="true">'+esc(initials)+'</span><strong>'+esc(r.name)+'</strong></div>'+
+  (selected?' aria-current="true" tabindex="-1"':'')+(query&&!r.searchText.includes(query)?' hidden':'')+'>'+
+  '<div class="tt-ot-reference-person"><span class="tt-ot-reference-avatar" aria-hidden="true">'+esc(initials)+'</span><strong>'+esc(r.name)+(selected?' <em class="tt-ot-manual-badge">Selected request</em>':'')+'</strong></div>'+
   '<span class="tt-ot-reference-date">'+esc(fmt(r.date))+'</span>'+
   '<strong class="tt-ot-reference-hours">'+esc(minutesLabel(r.durationMinutes).trim())+'</strong>'+
   '<span class="tt-ot-reference-reason">'+esc(r.task||'Not supplied')+(r.isManual?' <em class="tt-ot-manual-badge">Manual Entry</em>':'')+'</span>'+
@@ -194,17 +197,10 @@ const row=(r,access,query='',expandedRequestIds=[],otContractActive=false)=>{
   '<div class="tt-ot-reference-actions">'+
   (canReview?'<div class="tt-ot-review-actions">'+button('tt-ot-approve','Approve',true)+button('tt-ot-reject','Reject')+'</div>':'')+
   (r.canEditDecision&&otContractActive?button('tt-ot-edit','Edit'):'')+
+  (r.canEditDecision&&otContractActive&&access.paidOtContractActive===true?button('tt-ot-remove','Remove'):'')+
   (r.canWithdraw&&otContractActive?button('tt-ot-withdraw','Remove'):'')+
-  '<details class="tt-ot-reference-details"'+(expandedRequestIds.includes(r.id)?' open':'')+'><summary>View</summary>'+
-  '<div class="tt-ot-detail">'+
-  '<span><b>Requested duration:</b> '+esc(minutesLabel(r.durationMinutes).trim())+'</span>'+
-  (r.otPolicy==='duration-v1'?'<span><b>Attendance:</b> '+(r.attendanceRecordId?'Matched':'Awaiting matching record')+'</span>'+
-   '<span><b>Actual OT:</b> '+esc(r.attendanceCredit?minutesLabel(r.attendanceCredit.actualMinutes).trim():'Not finalized')+'</span>'+
-   '<span><b>Payable OT:</b> '+esc(r.attendanceCredit?minutesLabel(r.attendanceCredit.payableMinutes).trim():'Not finalized')+'</span>':'')+
-  '<p><b>Reason:</b> '+esc(r.task||'Not supplied')+'</p>'+
-  (r.isManual?'<p><b>Entry type:</b> '+(r.otPolicy==='manual-duration-v1'?'Manual duration OT':'Manual OT')+
-   (access?.manualOtManager===true&&r.submittedByName?' · Entered by '+esc(r.submittedByName):'')+'</p>':'')+
-  '</div></details></div></article>';
+  '<div class="tt-ot-detail tt-ot-attribution"><span><b>Filed by:</b> '+esc(r.filedByName||'—')+'</span>'+
+  '<span><b>'+(r.status==='Rejected'?'Rejected by:':'Approved by:')+'</b> '+esc(r.status==='Submitted'?'—':r.decidedByName||'—')+'</span></div></div></article>';
 };
 const shiftPhtDay=(day,offset)=>new Date(Date.parse(day+'T00:00:00Z')+offset*msDay).toISOString().slice(0,10);
 export function timeTrackerOtDurationLabel(minutes){
@@ -299,19 +295,20 @@ function manualRequestForm({employeeId='',date='',durationMinutes=120,reason=''}
   .map(user=>'<option value="'+esc(user.id)+'"'+(employeeId===user.id?' selected':'')+'>'+esc(user.display_name||'Workforce member')+'</option>').join('');
  const amount=Number.isInteger(durationMinutes)&&durationMinutes>=30&&durationMinutes<=360&&durationMinutes%30===0?durationMinutes:null;
  const hours=amount===null?'':amount/60;
- const maxDate=shiftPhtDay(phtDay(now),-1);
+ const delegatedCurrent=access.paidOtContractActive===true;
+ const maxDate=shiftPhtDay(phtDay(now),delegatedCurrent?7:-1);
  return '<div class="tt-ot-backdrop" data-tt-ot-backdrop><section class="tt-ot-modal tt-ot-manual-section" role="dialog" aria-modal="true" tabindex="-1" aria-labelledby="tt-ot-modal-title">'+
-  '<header class="tt-ot-modal-header"><div><span class="tt-ot-modal-eyebrow">ADMINISTRATIVE ENTRY · System Admin / Admin</span><h3 id="tt-ot-modal-title">File Overtime</h3><p>Enter historical overtime for an employee using total hours only.</p></div>'+
+  '<header class="tt-ot-modal-header"><div><span class="tt-ot-modal-eyebrow">ADMINISTRATIVE ENTRY · IT / HR / Admin</span><h3 id="tt-ot-modal-title">File Overtime</h3><p>File overtime on behalf of an employee using total hours only.</p></div>'+
   '<button type="button" data-action="tt-ot-close" aria-label="Close overtime request"'+(busy?' disabled':'')+'>×</button></header>'+
   '<form id="tt-ot-manual-form"><div class="tt-ot-form-grid">'+
   '<label>Employee<select id="tt-ot-manual-employee" required'+(busy?' disabled':'')+'><option value="">Select employee</option>'+options+'</select></label>'+
-  '<label>Overtime date<input id="tt-ot-manual-date" type="date" required max="'+esc(maxDate)+'" value="'+esc(date)+'"'+(busy?' disabled':'')+'><small>Historical dates only. Current and future dates use employee filing.</small></label>'+
+  '<label>Overtime date<input id="tt-ot-manual-date" type="date" required max="'+esc(maxDate)+'" value="'+esc(date)+'"'+(busy?' disabled':'')+'><small>'+esc(delegatedCurrent?'Past dates, today or the next seven days.':'Historical dates only. Current and future dates use employee filing.')+'</small></label>'+
   '<label for="tt-ot-manual-duration-hours"><span>Requested overtime (hours)</span><input id="tt-ot-manual-duration-hours" type="number" min="0.5" max="6" step="0.5" required value="'+esc(hours)+'"'+(busy?' disabled':'')+'></label>'+
   '<div class="tt-ot-reference-duration"><span>Total overtime</span><strong data-tt-ot-manual-duration aria-live="polite">'+esc(amount===null?'—':minutesLabel(amount).trim())+'</strong></div>'+
   '<label>Reason<textarea id="tt-ot-manual-reason" maxlength="500" rows="3" required'+(busy?' disabled':'')+'>'+esc(reason)+'</textarea></label>'+
   '<div class="tt-ot-reason-chips">'+['Client support','Month-end reporting','Maintenance work'].map(v=>'<button type="button" data-action="tt-ot-reason" data-reason="'+esc(v)+'"'+(busy?' disabled':'')+'>'+esc(v)+'</button>').join('')+'</div>'+
   '<p class="tt-ot-gate" role="status">'+esc(filing.reason||
-    'Historical manual entries are submitted for the normal approval workflow. Start and end times are not collected.')+'</p>'+
+    'Delegated entries are submitted for the normal approval workflow. Start and end times are not collected.')+'</p>'+
    (!busy&&!enabled?'<button type="button" data-action="tt-refresh">Refresh overtime</button>':'')+'</div>'+
   '<footer class="tt-ot-modal-footer"><button type="button" data-action="tt-ot-close"'+(busy?' disabled':'')+'>Cancel</button><button type="submit"'+(enabled?'':' disabled')+'>File Overtime</button></footer></form></section></div>';
 }

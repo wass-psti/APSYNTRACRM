@@ -330,17 +330,21 @@ export class TimeTrackerNativeClient{
    if(response.scope==='AUTHORIZED_WORKSPACE_TEAM'&&
       response.bootstrapApprover!==true&&!durationOtApprover)
     deny('Team OT access is not authorized by the signed workspace role');
+   const paidOtContractActive=response.paidOtContract==='tt-paid-ot-1';
    const manualOtManager=response.manualOtManager===true;
+   if(paidOtContractActive&&manualOtManager&&!['HR','IT Administrator','System Admin'].includes(access.moduleRole)&&access.platformRole!=='admin_general_manager')
+    deny('Signed delegated OT role mismatch');
    const allowed=new Set(access.overviewDirectory.map(u=>'cloud:'+u.id));
    const projected=projectTimeTrackerOtRows(response.rows).filter(row=>
     row.ownerId==='cloud:'+access.userId||
+    (paidOtContractActive&&manualOtManager&&row.submittedBy===access.userId)||
     (response.scope==='AUTHORIZED_WORKSPACE_TEAM'&&
      (response.bootstrapApprover===true||
       (durationOtApprover&&(allowed.has(row.ownerId)||row.isManual)))));
    otRequests=projected;
    otAccess=Object.freeze({scope:response.scope,
     bootstrapApprover:response.bootstrapApprover,
-    manualOtManager,otContractActive:true,durationOtContractActive,
+    manualOtManager,otContractActive:true,durationOtContractActive,paidOtContractActive,
     durationOtApprover,durationOtHrApprover});
    }
   }catch(error){
@@ -818,7 +822,7 @@ export class TimeTrackerNativeClient{
   if(before.access.otContractActive!==true||before.access.durationOtContractActive!==true||
      before.access.manualOtManager!==true)
    deny('System Admin manual duration OT submission is unavailable');
-  const form=validateManualDurationOvertimeDraft(draft,before.access.overviewDirectory);
+  const form=validateManualDurationOvertimeDraft(draft,before.access.overviewDirectory,new Date(),before.access.paidOtContractActive===true);
   if(!form.valid)deny(form.message);
   await checkIdentity(this.auth,this.api,before.access,boardId);
   const receipt=await this.api.rpc('timetracker_ot_submit_manual_duration',{
@@ -878,17 +882,17 @@ export class TimeTrackerNativeClient{
      (receipt.submissionSource!==undefined&&receipt.submissionSource!==expectedSource))
    deny('OT decision receipt is not verified');
   await checkIdentity(this.auth,this.api,before.access,boardId);
-  return Object.freeze({id:requestId,status:decision});
+  return Object.freeze({id:requestId,status:decision,attendanceSync:receipt.attendanceSync||null});
  }
  async editOvertimeDecision(boardId,requestId,expectedStatus,expectedDecidedAt,decision){
   if(!TT_OT_WRITES_ACCEPTED||!uuid.test(requestId||'')||
      !['Approved','Rejected'].includes(expectedStatus)||
-     !['Approved','Rejected'].includes(decision)||decision===expectedStatus||
+     !['Approved','Rejected','Withdrawn'].includes(decision)||decision===expectedStatus||
      typeof expectedDecidedAt!=='string'||!Number.isFinite(Date.parse(expectedDecidedAt)))
    deny('Invalid OT decision correction');
   const before=await this.snapshot(boardId);
   const request=before.otRequests.find(r=>r.id===requestId);
-  if(before.access.otContractActive!==true||request?.canEditDecision!==true||
+  if(before.access.otContractActive!==true||(decision==='Withdrawn'&&before.access.paidOtContractActive!==true)||request?.canEditDecision!==true||
      request.status!==expectedStatus||request.decidedAt!==expectedDecidedAt)
    deny('OT decision changed or is outside the signed edit scope; refresh and try again');
   await checkIdentity(this.auth,this.api,before.access,boardId);
@@ -903,7 +907,7 @@ export class TimeTrackerNativeClient{
      receipt.submissionSource!==request.submissionSource)
    deny('OT decision correction receipt is not verified');
   await checkIdentity(this.auth,this.api,before.access,boardId);
-  return Object.freeze({id:requestId,status:decision});
+  return Object.freeze({id:requestId,status:decision,attendanceSync:receipt.attendanceSync||null});
  }
  async completeAutomaticClockOut(boardId,{recordId,geo}={}){
   if(!uuid.test(recordId||''))deny('A valid pending attendance record is required');
