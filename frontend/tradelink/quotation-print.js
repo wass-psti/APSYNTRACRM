@@ -120,8 +120,7 @@ export function renderTradeLinkQuotationPrint({row,company,template,currency,ter
   '" data-tradelink-company-profile="'+escape(company.id)+
   '" data-tradelink-profile-version="'+escape(profileVersion)+'"'+
   ' data-tradelink-render-snapshot-source="'+escape(snapshotSource)+'"'+
-  '" data-tradelink-legacy-company-default="'+legacyDefaulted+'"'+
-  '>'+
+  templateStyle(template)+' data-tradelink-legacy-company-default="'+legacyDefaulted+'">'+
   '<header class="tl-quote-letterhead"><img class="tl-quote-logo" src="'+escape(logo)+
    '" alt="'+escape(company.name)+' logo"><div class="tl-quote-company"><h1>'+
    escape(company.name)+'</h1><p>'+escape(company.address)+'</p><p>Tel: '+
