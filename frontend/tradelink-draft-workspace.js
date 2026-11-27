@@ -19,7 +19,7 @@ import {TradeLinkNativeClient,TL03_DOMAIN_READS_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
  TL03_WORKFLOW_OPERATIONAL_ENABLED,TL03_DUAL_REVIEW_ENABLED,
  validateTradeLinkDraftEnvelope,
- normalizeTradeLinkDomainRow} from './tradelink-native.js?v=cp-tl-opt-01-20261127-01';
+ normalizeTradeLinkDomainRow} from './tradelink-native.js?v=cp-tl-opt-04b-20261127-01';
 
 export const TL03_DRAFT_INTERFACE_ENABLED=true; // presentation only
 const typeLabels=Object.freeze([
