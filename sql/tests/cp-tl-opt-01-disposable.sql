@@ -328,8 +328,20 @@ END $cursor_validation$;
 DO $compatibility$
 BEGIN
  IF to_regprocedure(
-  'public.tl03_documents_page(uuid,text,text,text,text,text,timestamptz,uuid,integer)'
+  'public.tl03_documents_page(uuid,text,text,text,text,timestamptz,uuid,integer)'
  ) IS NULL
+  OR to_regprocedure(
+   'public.tl03_documents_page(uuid,text,text,text,text,text,timestamptz,uuid,integer)'
+  ) IS NULL
+  OR to_regprocedure('public.tl03_documents_list(uuid,integer)') IS NULL
+  OR NOT has_function_privilege('authenticated',
+   'public.tl03_documents_page(uuid,text,text,text,text,timestamptz,uuid,integer)','EXECUTE')
+  OR has_function_privilege('anon',
+   'public.tl03_documents_page(uuid,text,text,text,text,timestamptz,uuid,integer)','EXECUTE')
+  OR NOT has_function_privilege('authenticated',
+   'public.tl03_documents_page(uuid,text,text,text,text,text,timestamptz,uuid,integer)','EXECUTE')
+  OR has_function_privilege('anon',
+   'public.tl03_documents_page(uuid,text,text,text,text,text,timestamptz,uuid,integer)','EXECUTE')
   OR NOT has_function_privilege('authenticated',
    'public.tl03_documents_query(uuid,text,text,text,text,text,date,date,text,text,jsonb,integer)','EXECUTE')
   OR has_function_privilege('anon',
