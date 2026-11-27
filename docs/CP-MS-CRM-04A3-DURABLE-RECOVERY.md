@@ -36,6 +36,8 @@ by this repository checkpoint. The existing create RPC remains unchanged.
    existing create receipt table or remove operational records.
 
 Tests use representative PostgreSQL dependency bodies with synthetic identity
-helpers and a simulated browser storage/lock API. Real browser reload,
-cross-tab and production signed acceptance remain distinct gates.
+helpers, real concurrent creation/receipt transactions, simulated storage unit
+tests and a persistent Chromium profile with synthetic signed transport for
+reload, tab contention and browser restart. Genuine signed production
+acceptance remains a distinct gate.
 No additional libraries, authorization redesign, or model training.

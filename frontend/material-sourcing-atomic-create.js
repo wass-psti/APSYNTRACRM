@@ -99,7 +99,8 @@ async function withCreationRecovery(options,run){
   return id;
  };
  const save=id=>{
-  if(!UUID.test(id)||access()&&access()!==id)deny('Another material save needs recovery first.');
+  const current=access();
+  if(!UUID.test(id)||(current&&current!==id))deny('Another material save needs recovery first.');
   try{storage.setItem(key,id);}catch{deny('Creation recovery storage could not be saved. No material was submitted.');}
   if(access()!==id)deny('Creation recovery identifier could not be verified.');
  };

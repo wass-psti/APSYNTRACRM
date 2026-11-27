@@ -6,6 +6,8 @@ on:
       - 'sql/mrh-material-create-receipt-CANDIDATE-NOT-APPLIED.sql'
       - 'sql/mrh-atomic-crud-ROLLBACK-CANDIDATE.sql'
       - 'sql/tests/mrh-material-create-receipt-disposable.sql'
+      - 'scripts/cp-ms-crm-04a3-receipt-concurrency.sh'
+      - 'frontend/tests/material-sourcing-add-discoverability.test.mjs'
       - 'sql/tests/mrh-atomic-edit-disposable.sql'
       - 'sql/tests/mrh-atomic-edit-representative.sql'
       - 'sql/tests/mrh-atomic-edit-live-dependencies.sql'
@@ -25,6 +27,8 @@ on:
       - 'sql/mrh-material-create-receipt-CANDIDATE-NOT-APPLIED.sql'
       - 'sql/mrh-atomic-crud-ROLLBACK-CANDIDATE.sql'
       - 'sql/tests/mrh-material-create-receipt-disposable.sql'
+      - 'scripts/cp-ms-crm-04a3-receipt-concurrency.sh'
+      - 'frontend/tests/material-sourcing-add-discoverability.test.mjs'
       - 'sql/tests/mrh-atomic-edit-disposable.sql'
       - 'sql/tests/mrh-atomic-edit-representative.sql'
       - 'sql/tests/mrh-atomic-edit-live-dependencies.sql'
@@ -50,7 +54,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
-      - run: node --test frontend/tests/material-sourcing-add-material.test.mjs frontend/tests/material-sourcing-public-edit.test.mjs frontend/tests/material-sourcing-atomic-create.test.mjs
+      - run: node --test frontend/tests/material-sourcing-add-material.test.mjs frontend/tests/material-sourcing-public-edit.test.mjs frontend/tests/material-sourcing-atomic-create.test.mjs frontend/tests/material-sourcing-add-discoverability.test.mjs
       - name: Disposable PostgreSQL rollback and access parity
         run: |
           set -euo pipefail
@@ -81,3 +85,4 @@ jobs:
           docker cp sql/mrh-material-create-receipt-CANDIDATE-NOT-APPLIED.sql "$NAME:/tmp/mrh-receipt.sql"
           docker cp sql/mrh-atomic-crud-ROLLBACK-CANDIDATE.sql "$NAME:/tmp/mrh-rollback.sql"
           docker exec -i "$NAME" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -q < sql/tests/mrh-material-create-receipt-disposable.sql
+          bash scripts/cp-ms-crm-04a3-receipt-concurrency.sh "$NAME"

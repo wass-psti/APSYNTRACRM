@@ -21,7 +21,9 @@ test('authorized editors can still access and submit the existing atomic materia
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/case 'mrh-add-view'/);
  assert.doesNotMatch(app,/if\(name==='mrh-add-view'&&!state.edit\)break/);
- assert.match(app,/const created=await createMaterialSourcingAtomic\(/);
+ assert.match(app,/const created=MATERIAL_SOURCING_DURABLE_CREATE_ENABLED\?/);
+ assert.match(app,/await createMaterialWithRecovery\(/);
+ assert.match(app,/await createMaterialSourcingAtomic\(/);
  assert.match(app,/state.mrhAddView&&state.edit&&auth.isSignedIn/);
 });
 test('read-only UI change never modifies the production write contract',()=>{

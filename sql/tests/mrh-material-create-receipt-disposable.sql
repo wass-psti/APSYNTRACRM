@@ -37,12 +37,4 @@ do $$begin
  if has_function_privilege('anon','public.mrh_material_create_receipt(uuid)','execute') then
   raise exception 'receipt RPC accessible anonymously'; end if;
 end$$;
-\i /tmp/mrh-rollback.sql
-do $$begin
- if to_regprocedure('public.mrh_material_create_receipt(uuid)') is not null or
-    to_regprocedure('public.mrh_edit_material_atomic(uuid,jsonb,jsonb)') is not null or
-    to_regprocedure('public.mrh_create_material_atomic(uuid,text,jsonb,jsonb)') is null or
-    (select count(*) from private.mrh_material_create_requests)<>1 or
-    (select count(*) from public.work_board_items)<>1 then raise exception 'rollback altered existing data or contract'; end if;
- raise notice 'CP_MS_CRM_04A3_ADDITIVE_ROLLBACK_PASS';
-end$$;
+-- Rollback is exercised after the separate concurrent creation-receipt test.
