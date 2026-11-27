@@ -143,6 +143,8 @@ export function projectTimeTrackerOtRows(rows=[]){
    submissionSource,isManual:submissionSource==='manual_admin',otPolicy,
    attendanceRecordId:typeof r.attendanceRecordId==='string'?r.attendanceRecordId:null,
     attendanceClockInAt:typeof r.attendanceClockInAt==='string'?r.attendanceClockInAt:null,
+   canEditDecision:['Approved','Rejected'].includes(r.status)&&r.canEditDecision===true&&
+    typeof r.decidedAt==='string'&&Number.isFinite(Date.parse(r.decidedAt)),
    canReviewOt:r.canReviewOt===true,
    canReviewDuration:(otPolicy==='duration-v1'||otPolicy==='manual-duration-v1')&&
     (r.canReviewDuration===true||r.canReviewOt===true),
@@ -191,6 +193,7 @@ const row=(r,access,query='',expandedRequestIds=[],otContractActive=false)=>{
   '<span class="tt-ot-pill tt-ot-'+r.status.toLowerCase()+'">'+esc(r.status==='Submitted'?'Pending':r.status)+'</span>'+
   '<div class="tt-ot-reference-actions">'+
   (canReview?'<div class="tt-ot-review-actions">'+button('tt-ot-approve','Approve',true)+button('tt-ot-reject','Reject')+'</div>':'')+
+  (r.canEditDecision&&otContractActive?button('tt-ot-edit','Edit'):'')+
   (r.canWithdraw&&otContractActive?button('tt-ot-withdraw','Remove'):'')+
   '<details class="tt-ot-reference-details"'+(expandedRequestIds.includes(r.id)?' open':'')+'><summary>View</summary>'+
   '<div class="tt-ot-detail">'+

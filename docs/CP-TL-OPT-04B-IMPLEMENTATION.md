@@ -1,29 +1,54 @@
-# CP-TL-OPT-04B — Snapshot and Asset Foundation
+# CP-TL-OPT-04B — Immutable Document Render Snapshots
 
-## Scope
-- Correct the v1.42.0 PostgreSQL semantic-version check.
-- Require company and template rows to share the same profile version.
-- Preserve the existing immutable profile, template, revision and rendering-snapshot model.
-- Publish byte-for-byte, Git-blob-addressed copies of six company logos and two TradeLink stylesheets under the exact logical asset paths referenced by the migration.
-- Extend disposable PostgreSQL acceptance to cover version pairing, unpaired versions, semantic-version validation and historical snapshot immutability.
+## Delivered scope
 
-## Immutable asset layout
-- `frontend/assets/tradelink/profiles/v1/` contains the six versioned PNG assets.
-- `frontend/assets/tradelink/templates/` contains the two v1.42.0 CSS assets.
-- Each published file must have the same Git blob SHA-1 and bytes as its existing source file.
-- The existing source assets remain unchanged.
+- Corrected the PostgreSQL semantic-version check to accept the seeded `v1.42.0` version.
+- Company profile versions and template versions are paired by the same `profile_version`; a mismatched pair cannot be selected.
+- Published six versioned company logos and two versioned TradeLink stylesheets. The files are byte-for-byte copies of their existing sources and are addressed by Git blob hashes.
+- Added immutable render snapshots keyed by `document_id` and `revision`.
+- Added the signed `tl04_document_render_snapshot` read RPC for exact-revision retrieval.
+- Added automatic render-snapshot capture after a document insert or revision change, after the corresponding immutable document revision snapshot exists.
+- Connected the existing All Documents Print / Save as PDF action to the exact revision render snapshot.
+- The renderer now uses the saved company identity, logo assets, template version, versioned stylesheets, and saved terms. It does not silently substitute current company or template settings when the selected revision has no render snapshot.
+- The print preview waits for its versioned stylesheets before invoking browser print and removes those links when the preview closes.
 
-## Database acceptance
-- PostgreSQL 17 disposable instance only.
-- 63 historical revision snapshots: 47 legacy-derived and 16 legacy-defaulted.
-- New revision capture and signed historical RPC readback.
-- New company/template profile version 2 resolves only to matching template profile version 2.
-- A profile without a matching template version fails rather than silently combining versions.
-- Existing v1.42.0 historical snapshots remain unchanged after adding v1.43.0 fixtures.
-- Malformed semantic template versions are rejected.
+## Production database verification
 
-## Production activation gate
-Production migration `20261127120000` remains unapplied until this workflow passes. The production migration will then be applied once, followed by read-only verification of the 63-row backfill and RPC availability.
+Migration `20261127120000` is applied.
 
-## Next integration
-After the database and asset foundation is accepted, CP-TL-OPT-04B frontend work connects the exact revision snapshot to the existing TradeLink Print PDF action and runs all 18 module/company PDF combinations in Chromium and PDFKit.
+| Check | Verified result |
+|---|---:|
+| Historical revision rows | 63 |
+| Render snapshots | 63 |
+| Legacy-derived snapshots | 47 |
+| Legacy-defaulted snapshots | 16 |
+| Missing render snapshots | 0 |
+| Company/template profile-version mismatches | 0 |
+| Correct semantic-version constraint | Present |
+| Automatic render-capture trigger | Enabled |
+| Signed snapshot RPC | Present |
+| Authenticated RPC execute | Granted |
+| Anonymous RPC execute | Not granted |
+
+The automatic capture trigger is attached to `public.tradelink_documents` for inserts and revision changes. The existing revision-capture triggers execute first, so the render snapshot is created from the matching immutable revision content.
+
+## Automated acceptance
+
+- Disposable PostgreSQL 17 acceptance covers the 63-row historical backfill, legacy classification, exact historical terms, new revision 1 and revision 2 captures, signed RPC readback, profile/template version pairing, invalid semantic versions, and immutable snapshot guards.
+- Asset acceptance verifies all eight published assets against their source Git blob hashes and checks the referenced paths in the migration.
+- Node tests cover snapshot schema validation, revision identity, profile/template pairing, asset path and hash validation, exact terms, signed RPC arguments, and print-flow integration.
+- The production frontend build is included in the render-matrix workflow.
+- Chromium generates PDFs for all six TradeLink modules across all three company profiles (18 combinations).
+- macOS PDFKit verifies the resulting PDFs, including page dimensions, company identity, module title, document number, revision-specific terms, remarks, approval state, and the disclosure that browser print is not an electronically issued PDF.
+
+## Existing behavior preserved
+
+- Existing TradeLink workflow approval and revision rules remain unchanged.
+- The Print action continues to use the existing approved-revision and Board checks.
+- No new roles, permissions, or authorization grants were introduced.
+- No document is approved, issued, or persisted by the print renderer.
+- No gradient descent, backpropagation, model training, retraining, fine-tuning, or model-parameter update mechanism is introduced.
+
+## Acceptance boundary
+
+The database foundation and frontend integration are implemented. Final closeout requires the current GitHub Actions disposable PostgreSQL and 18-case Chromium/PDFKit workflows to pass, followed by successful GitHub Pages deployment verification.

@@ -1,0 +1,64 @@
+{
+  "initiative": "CP-CRM-PERF-01B",
+  "captured_at_utc": "2026-11-27T13:07:20Z",
+  "repository_commit_tested": "a1ccbed2f15d874d5764720570c9ffd097e44c26",
+  "fueltrans_benchmark": {
+    "workflow_run_id": 46000281137,
+    "conclusion": "success",
+    "artifact_id": 15197294446,
+    "signed_lifecycle_http_checks": 75,
+    "warm_navigation_cycles": 60,
+    "route_transitions": 120,
+    "browser_profiles": [
+      "desktop",
+      "mobile"
+    ],
+    "benchmark_contract": "1/1 passed",
+    "readiness_p95_ms": {
+      "desktop_dashboard": 100.49,
+      "desktop_ticket_queue": 100.39,
+      "mobile_dashboard": 100.54,
+      "mobile_ticket_queue": 100.08
+    },
+    "limitation": "Warm fixture navigation with emulated CRM host handshake; not full CRM startup or production host CPU/RAM."
+  },
+  "migration_parity": {
+    "repository_versions": 352,
+    "production_versions": 352,
+    "repository_only": [],
+    "production_only": [],
+    "duplicates": 0
+  },
+  "board_group_view_rpc": {
+    "observation_window_utc": [
+      "2026-11-27T11:40:00Z",
+      "2026-11-27T11:42:00Z"
+    ],
+    "endpoint": "/rest/v1/rpc/wm_board_group_view_read",
+    "requests": {
+      "total": 10,
+      "http_200": 5,
+      "http_404": 5
+    },
+    "postgres_errors": {
+      "count": 5,
+      "sqlstate": "42883",
+      "message": "function pg_catalog.coalesce(jsonb, jsonb) does not exist"
+    },
+    "affected_functions": [
+      "public.wm_board_group_view_read(uuid)",
+      "public.wm_board_group_view_set_all(uuid,boolean)"
+    ],
+    "existing_contract": {
+      "security_definer": true,
+      "search_path": "",
+      "authenticated_execute": true,
+      "anon_execute": false
+    },
+    "correction_migration": "supabase/migrations/20261127130720_cp_board_group_view_coalesce_fix.sql",
+    "production_applied": false,
+    "production_api_verified": false
+  },
+  "overall_status": "OPEN_BLOCKED",
+  "outstanding_blocker": "Certified schema-only M45 bootstrap and full disposable Supabase stack for full-host CRM acceptance."
+}

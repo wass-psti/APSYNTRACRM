@@ -97,7 +97,7 @@ import {TRADELINK_APPLICATION_ROUTE,tradeLinkApplicationHref,parseTradeLinkAppli
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows,
  searchTradeLinkBoardItems,captureTradeLinkTabMotion,mountTradeLinkTabMotion} from './tradelink-ui.js?v=cp-tl-opt-02-20261127-01';
 import {renderTradeLinkSavedDocumentOutput,mountTradeLinkSavedDocumentOutput,
- closeTradeLinkSavedDocumentOutput} from './tradelink-saved-document-output.js?v=cp-tl-universal-edit-01k-20261126-01-cp-tl-approval-02-20261127';
+ closeTradeLinkSavedDocumentOutput} from './tradelink-saved-document-output.js?v=cp-tl-opt-04b-20261127-01';
 import {TradeLinkAttachmentClient,TL03_ATTACHMENTS_ENABLED}
  from './tradelink-attachments.js';
 import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftForm,parseTradeLinkDraftForm,
@@ -108,12 +108,12 @@ import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftFor
  prepareTradeLinkDraftCommand,tradeLinkApprovalFreeDraftPreview,
  renderTradeLinkDraftLineItem,snapshotTradeLinkDraftLineItems,restoreTradeLinkPendingSave,updateTradeLinkDraftLocalAmounts,
  updateTradeLinkLineRowTotals,updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary,
- normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI,mergeTradeLinkDocumentSelection} from './tradelink-draft-workspace.js?v=cp-tl-opt-02-20261127-01';
+ normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI,mergeTradeLinkDocumentSelection} from './tradelink-draft-workspace.js?v=cp-tl-opt-04b-20261127-01';
 import {summarizeTradeLinkSubmitReadiness} from './tradelink-submit-readiness.js';
 import {TL03_DOMAIN_READS_ENABLED,TL03_ANALYTICS_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
  TL03_WORKFLOW_OPERATIONAL_ENABLED,TL03_DUAL_REVIEW_ENABLED,
- tradeLinkBoardProjectionMatches,tradeLinkSavedDraftMatches} from './tradelink-native.js?v=cp-tl-opt-01-20261127-01';
+ tradeLinkBoardProjectionMatches,tradeLinkSavedDraftMatches} from './tradelink-native.js?v=cp-tl-opt-04b-20261127-01';
 import {runTradeLinkStageASignedReadOnly,renderTradeLinkStageAAcceptance,sanitizeTradeLinkStageAReport} from './tradelink-stage-a-signed-acceptance.js';
 import {runTradeLinkLocalSessionRevocation,renderTradeLinkSessionRevocation,renderTradeLinkSignedOutRevocationResult,sanitizeTradeLinkRevocationReport} from './tradelink-revoked-session-acceptance.js';
 import {runWs01B2SignedDiscovery,renderWs01B2SignedAcceptance,sanitizeWs01B2Report} from './workspace-b2-signed-acceptance.js';
@@ -11573,6 +11573,30 @@ async function action(name,button){
   }finally{state.ttBusy=false;render();}
   break;
  }
+ case 'tt-ot-edit':{
+  if(!TT_OT_WRITES_ACCEPTED||state.ttBusy||state.view!=='board'||
+     state.tab!=='attendance'||state.ttView!=='ot'||
+     state.ttAttendance?.status!=='VERIFIED_READ')return;
+  const requestId=button.dataset.id;
+  const request=state.ttAttendance.otRequests?.find(row=>row.id===requestId);
+  if(state.ttAttendance.access?.otContractActive!==true||request?.canEditDecision!==true||
+     !['Approved','Rejected'].includes(request.status)||!request.decidedAt){
+   toast('This overtime decision is no longer available for editing. Refresh overtime and try again.',true);
+   return;
+  }
+  const decision=request.status==='Approved'?'Rejected':'Approved';
+  const note=decision==='Rejected'?
+   ' This removes the approval entitlement. Completed attendance timestamps are not changed.':
+   ' Existing approval deadlines and attendance eligibility still apply.';
+  if(!confirm('Change overtime status: '+request.status+' to '+decision+'?'+note+' This correction will be audited.'))return;
+  state.ttBusy=true;render();
+  try{
+   await timeTracker.editOvertimeDecision(state.boardId,requestId,request.status,request.decidedAt,decision);
+   await loadTimeTracker();
+   toast('Overtime status updated to '+decision.toLowerCase()+'.');
+  }finally{state.ttBusy=false;render();}
+  break;
+ }
  case 'tt-ot-approve':
  case 'tt-ot-reject':{
   if(!TT_OT_WRITES_ACCEPTED||state.ttBusy||
@@ -11586,7 +11610,7 @@ async function action(name,button){
    return;
   }
   const decision=name==='tt-ot-approve'?'Approved':'Rejected';
-  if(!confirm(decision+' this overtime request? The decision will be audited and cannot be reversed here.'))return;
+  if(!confirm(decision+' this overtime request? The decision will be audited. Authorized reviewers may correct it later.'))return;
   state.ttBusy=true;render();
   try{
    await timeTracker.decideOvertime(state.boardId,requestId,decision);

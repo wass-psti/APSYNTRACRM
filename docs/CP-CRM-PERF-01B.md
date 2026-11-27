@@ -98,7 +98,7 @@ A read-only route smoke was executed in a temporary tab using an already authent
 | Material Request Hub | 673 ms | 8 | 7 × 200, 1 × 404 |
 | Daily Department Activity | 1,864 ms | 2 | 2 × 200 |
 
-The five 404s were all `/rest/v1/rpc/wm_board_group_view_read`. The production database contains `public.wm_board_group_view_read(uuid)`, and `authenticated` has EXECUTE privilege. The frontend client passes `p_board_id`; the matching migration is present. The exact PostgREST exposure/schema-cache cause remains unconfirmed. The app currently falls back without a page error, but the failed request remains a known functional/performance defect and must not be reported as zero HTTP failures.
+The five failed responses were all `/rest/v1/rpc/wm_board_group_view_read`. Follow-up correlation against PostgreSQL logs confirmed five SQLSTATE `42883` errors: `function pg_catalog.coalesce(jsonb, jsonb) does not exist`. Both deployed `wm_board_group_view_read(uuid)` and `wm_board_group_view_set_all(uuid,boolean)` contained the invalid schema-qualified expression. The function signatures, `SECURITY DEFINER`, empty `search_path`, authenticated EXECUTE grants and anonymous denials are intact. A forward-only function-body correction and disposable regression are now staged; production application and live API verification remain pending.
 
 ### Route-level bottleneck attribution
 
@@ -149,16 +149,11 @@ Two read-only `pg_stat_statements` snapshots, 11m16s apart, show the following a
 
 These deltas support shared context/module directory/state retrieval as investigation targets. They do not establish a per-user CPU attribution or justify a code change by themselves.
 
-## Current schema parity and certification blocker — 2026-11-27 11:50 UTC
+## Historical schema parity snapshot — 2026-11-27 11:50 UTC
 
 The current production project is healthy and has 191 application tables and 747 application routines. Existing nonproduction branches do not provide a full CRM backend: invitation staging has 14 application tables and 13 routines; the OJT branch has zero application tables and routines. Neither has verified production migration parity.
 
-The repository now contains 351 `supabase/migrations` versions; production has 349 registered versions. The two repository-only versions at this inspection are:
-
-- `20261127120000_cp_tl_opt_04_document_template_render_snapshots.sql`
-- `20261127160000_cp_tt_shared_read_visibility.sql`
-
-They are unrelated to CP-CRM-PERF-01B and were not deployed by this work.
+At this historical 11:50 UTC inspection, the repository contained 351 `supabase/migrations` versions and production had 349 registered versions. That discrepancy was subsequently resolved; see the current 352/352 parity verification below.
 
 The first CRM migration remains `20260917142647_stage_g_m46_boards_backend_data_contract_recovery.sql`, which assumes a certified M45 schema. No root `supabase/config.toml` exists. The certified M45 schema-only bootstrap is not available in the current repository, searchable Project/Library files, or the checked project-download directories. No production schema export was performed; no paid Supabase branch was created.
 
@@ -166,7 +161,7 @@ The first CRM migration remains `20260917142647_stage_g_m46_boards_backend_data_
 
 **Passed:** TimeTracker foreground-controlled single/dual 30-minute cohorts; FuelTrans signed fixture with 120 transitions; 15 distinct live signed production screens plus the documented legacy alias; aggregate production edge/PostgreSQL attribution; live Realtime activity observation.
 
-**Still pending:** a full disposable Supabase stack with the certified M45 baseline, synthetic records, Auth/Realtime/Storage parity; controlled full-platform signed single/dual-window sustained resource measurement; host CPU/RAM/network attribution; controlled Realtime event/reconnect acceptance; and resolution or formal non-blocking acceptance of the five group-view RPC 404s.
+**Still pending:** a full disposable Supabase stack with the certified M45 baseline, synthetic records, Auth/Realtime/Storage parity; controlled full-platform signed single/dual-window sustained resource measurement; host CPU/RAM/network attribution; controlled Realtime event/reconnect acceptance; and production application plus live API verification of the group-view RPC correction.
 
 CP-CRM-PERF-01B remains **OPEN / BLOCKED**, not complete. The next step remains inside this milestone: obtain an approved protected schema-only M45 bootstrap (or approve a billable isolated schema-only Supabase environment), replay and verify the complete runtime contracts, then run the remaining controlled acceptance. No subsequent CRM performance initiative is opened.
 
@@ -193,3 +188,36 @@ The FuelTrans signed fixture was rerun after the subsequent application-shell, s
 
 This confirms the existing dashboard count fan-out remains six requests per visit, while the ticket queue uses one list request. The timings are warm fixture navigation measurements against real signed PostgREST reads with an emulated CRM host handshake; they do not certify full CRM startup, production network latency, or production host CPU/RAM. The fixture disables automatic refresh only inside its disposable browser.
 
+
+
+## Current-main verification refresh — 2026-11-27 13:07 UTC
+
+### FuelTrans signed benchmark follow-up
+
+- Workflow: [46000281137](https://github.com/wass-psti/APSYNTRACRM/actions/runs/46000281137) — success.
+- Tested commit: `a1ccbed2f15d874d5764720570c9ffd097e44c26`.
+- Retained artifact: `15197294446`.
+- Signed lifecycle HTTP checks: 75 passed.
+- Warm navigation: 60 cycles and 120 route transitions across desktop and mobile viewport profiles.
+- Benchmark contract: 1/1 passed; ticket integrity unchanged.
+- Desktop readiness P95: dashboard 100.49 ms; ticket queue 100.39 ms.
+- Mobile readiness P95: dashboard 100.54 ms; ticket queue 100.08 ms.
+- The fixture still uses an emulated CRM host handshake and warm navigation; it does not certify full CRM startup or production host CPU/RAM.
+
+### Current migration parity
+
+The latest main repository and production migration ledger now both contain **352 versions**, with zero repository-only versions, zero production-only versions and no duplicate repository versions. This supersedes the historical 349/348 and 351/349 snapshots above. It establishes version parity only; it does not supply the missing M45 baseline or prove full schema replay.
+
+### Board group-view RPC root cause and correction
+
+The read-only production log window from 2026-11-27 11:40–11:42 UTC contained 10 requests to `/rest/v1/rpc/wm_board_group_view_read`: five HTTP 200 and five HTTP 404. PostgreSQL recorded exactly five corresponding errors with SQLSTATE `42883` and message `function pg_catalog.coalesce(jsonb, jsonb) does not exist`.
+
+The additive migration `20261127130720_cp_board_group_view_coalesce_fix.sql` replaces only the read and bulk-update function bodies, using native `COALESCE(...)` syntax. It preserves function signatures, owner, `SECURITY DEFINER`, empty `search_path`, and existing function ACLs. No table/data, role, grant, RLS, session-guard or application authorization changes are included.
+
+A disposable PostgreSQL 17 regression job now reproduces the original SQLSTATE 42883 before applying the fix, then checks first-read defaults, repeated reads, individual preference revisions, bulk collapse/expand, empty-board results, new-group defaults and the existing authenticated/anonymous execution contract. Production application is intentionally pending until this disposable gate passes.
+
+### Remaining certification status
+
+The latest-main TimeTracker single/dual rerun [46000280981](https://github.com/wass-psti/APSYNTRACRM/actions/runs/46000280981) was still in progress at this evidence capture and is not counted as a pass.
+
+CP-CRM-PERF-01B remains **OPEN / BLOCKED** until the full-host M45-baseline workload, resource attribution, controlled Realtime event/reconnect checks, and production verification are complete. No subsequent CRM performance initiative is opened.

@@ -207,7 +207,8 @@ export function normalizeTradeLinkDocumentRenderSnapshot(value,documentId,revisi
   snapshot.schemaVersion!==1||!RENDER_SNAPSHOT_SOURCE.has(snapshot.snapshotSource)||
   value.snapshotSource!==snapshot.snapshotSource||
   typeof snapshot.capturedAt!=='string'||!Number.isFinite(Date.parse(snapshot.capturedAt))||
-  value.capturedAt!==snapshot.capturedAt||
+  typeof value.capturedAt!=='string'||!Number.isFinite(Date.parse(value.capturedAt))||
+  Date.parse(value.capturedAt)!==Date.parse(snapshot.capturedAt)||
   !Number.isSafeInteger(snapshot.profileVersion)||snapshot.profileVersion<1||
   !validCompany||!template||typeof template!=='object'||Array.isArray(template)||
   template.id!==company.templateId||template.profileId!==company.id||

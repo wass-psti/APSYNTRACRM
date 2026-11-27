@@ -539,3 +539,43 @@ test('manual duration preview updates hours without clock-time controls',()=>{
  assert.equal(nodes['#tt-ot-manual-duration-hours'].validationMessage,'');
  assert.equal(updateTimeTrackerManualOtPreview({id:'other'}),false);
 });
+
+test('OT Edit is available only for signed finalized decisions, beside View',()=>{
+ const decidedAt='2026-11-02T02:00:00.123456+00:00';
+ const access={otContractActive:true};
+ for(const status of ['Approved','Rejected']){
+  const row={...rows[1],status,decidedAt,canEditDecision:true};
+  const html=renderTimeTrackerOvertime({requests:[row],access,now});
+  assert.match(html,/data-action="tt-ot-edit"/);
+  assert.match(html,/<summary>View<\/summary>/);
+  assert.doesNotMatch(html,/data-action="tt-ot-approve"/);
+  assert.doesNotMatch(renderTimeTrackerOvertime({requests:[{...row,canEditDecision:false}],access,now}),/data-action="tt-ot-edit"/);
+  assert.doesNotMatch(renderTimeTrackerOvertime({requests:[row],access:{otContractActive:false},now}),/data-action="tt-ot-edit"/);
+ }
+ assert.doesNotMatch(renderTimeTrackerOvertime({requests:[{...rows[0],decidedAt,canEditDecision:true}],access,now}),/data-action="tt-ot-edit"/);
+});
+
+test('signed OT correction passes exact previous decision and verifies response',async()=>{
+ const decidedAt='2026-11-02T02:00:00.123456+00:00';
+ const request={...rows[1],id:'50000000-0000-4000-8000-000000000061',
+  decidedAt,canEditDecision:true,otPolicy:'duration-v1',submissionSource:'employee'};
+ const calls=[];
+ const snap={mode:'ACTIVE',actorId:admin,workspaceId:workspace,
+  scope:'AUTHORIZED_WORKSPACE_TEAM',bootstrapApprover:false,durationOtContract:'tt-duration-ot-1',
+  durationOtApprover:true,durationOtHrApprover:true,rows:[request]};
+ const handlers={timetracker_ot_edit_decision:args=>{
+  calls.push(args);
+  return {id:request.id,workspaceId:workspace,previousStatus:args.p_expected_status,
+   status:args.p_decision,decidedBy:admin,otPolicy:'duration-v1',submissionSource:'employee'};
+ }};
+ const client=setup({role:'HR',snapshot:snap,rpcHandlers:handlers});
+ assert.equal((await client.editOvertimeDecision(board,request.id,'Approved',decidedAt,'Rejected')).status,'Rejected');
+ assert.deepEqual(calls,[{p_board_id:board,p_request_id:request.id,p_expected_status:'Approved',
+  p_expected_decided_at:decidedAt,p_decision:'Rejected'}]);
+ await assert.rejects(()=>client.editOvertimeDecision(board,request.id,'Approved','2026-11-02T01:00:00Z','Rejected'),/changed or is outside/);
+ const denied=setup({role:'HR',snapshot:{...snap,rows:[{...request,canEditDecision:false}]},rpcHandlers:handlers});
+ await assert.rejects(()=>denied.editOvertimeDecision(board,request.id,'Approved',decidedAt,'Rejected'),/changed or is outside/);
+ const reverse=setup({role:'HR',snapshot:{...snap,rows:[{...request,status:'Rejected'}]},rpcHandlers:handlers});
+ assert.equal((await reverse.editOvertimeDecision(board,request.id,'Rejected',decidedAt,'Approved')).status,'Approved');
+ assert.equal(calls.length,2);
+});

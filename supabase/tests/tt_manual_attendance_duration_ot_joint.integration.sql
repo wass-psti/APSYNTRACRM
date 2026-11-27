@@ -35,7 +35,7 @@ DECLARE
  req uuid; record_id uuid; hist_id uuid; rev bigint;
  receipt jsonb; state jsonb; active_before jsonb; active_after jsonb; snap jsonb; admin_req uuid;
  queue_before jsonb; queue_after jsonb; hist jsonb; credit jsonb;
- ojt_before jsonb; ojt_after jsonb; result jsonb;
+ ojt_before jsonb; ojt_after jsonb; result jsonb; old_decision timestamptz;
 BEGIN
  INSERT INTO auth.sessions(id,user_id) VALUES(hr_session,hr);
  IF private.tt_role_in_workspace(hr,ws) IS DISTINCT FROM 'HR'
@@ -111,6 +111,56 @@ BEGIN
  WHERE workspace_id=ws AND module_id='time-tracker' AND state_key='timetracker.attendance.v1' AND scope='shared' AND owner_key='*';
  SELECT r INTO active_before FROM jsonb_array_elements(state->'records') r WHERE r->>'id'=record_id::text;
  IF active_before->'clockOut' IS DISTINCT FROM 'null'::jsonb THEN RAISE EXCEPTION 'Employee Clock was not active'; END IF;
+ -- Correct a finalized decision using the same signed HR identity, not direct SQL.
+ PERFORM set_config('request.jwt.claim.sub',hr::text,true);
+ PERFORM set_config('request.jwt.claim.session_id',hr_session::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',hr::text,'session_id',hr_session::text,'role','authenticated')::text,true);
+ PERFORM set_config('app.tt_admin_test_role','HR',true);
+ snap:=public.timetracker_ot_snapshot(board);
+ IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(snap->'rows') r
+  WHERE r->>'id'=req::text AND r->>'canEditDecision'='true')
+ THEN RAISE EXCEPTION 'HR cannot edit finalized employee OT: %',snap; END IF;
+ SELECT decided_at INTO old_decision FROM public.timetracker_ot_requests WHERE id=req;
+ receipt:=public.timetracker_ot_edit_decision(board,req,'Approved',old_decision,'Rejected');
+ IF receipt->>'status' IS DISTINCT FROM 'Rejected'
+  OR receipt->>'previousStatus' IS DISTINCT FROM 'Approved'
+  OR EXISTS(SELECT 1 FROM public.timetracker_ot_requests r WHERE r.id=req
+   AND r.attendance_record_id IS NOT NULL)
+  OR EXISTS(SELECT 1 FROM private.tt_auto_clockout_sessions q WHERE q.board_id=board
+   AND q.record_id=joint_case.record_id AND q.overtime_cutoff_at IS NOT NULL)
+ THEN RAISE EXCEPTION 'Revocation did not remove active entitlement: %',receipt; END IF;
+ BEGIN
+  PERFORM public.timetracker_ot_edit_decision(board,req,'Approved',old_decision,'Rejected');
+  RAISE EXCEPTION 'Stale OT correction unexpectedly succeeded';
+ EXCEPTION WHEN SQLSTATE 'PT409' THEN NULL;
+ END;
+ -- The employee cannot edit even a legitimate request and current revision.
+ SELECT decided_at INTO old_decision FROM public.timetracker_ot_requests WHERE id=req;
+ PERFORM set_config('request.jwt.claim.sub',emp::text,true);
+ PERFORM set_config('request.jwt.claim.session_id',emp_session::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',emp::text,'session_id',emp_session::text,'role','authenticated')::text,true);
+ PERFORM set_config('app.tt_admin_test_role','Employee',true);
+ BEGIN
+  PERFORM public.timetracker_ot_edit_decision(board,req,'Rejected',old_decision,'Approved');
+  RAISE EXCEPTION 'Employee OT edit unexpectedly succeeded';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ PERFORM set_config('request.jwt.claim.sub',admin::text,true);
+ PERFORM set_config('request.jwt.claim.session_id',admin_session::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin::text,'session_id',admin_session::text,'role','authenticated')::text,true);
+ PERFORM set_config('app.tt_admin_test_role','System Admin',true);
+ receipt:=public.timetracker_ot_edit_decision(board,req,'Rejected',old_decision,'Approved');
+ IF receipt->>'status' IS DISTINCT FROM 'Approved' OR receipt->>'previousStatus' IS DISTINCT FROM 'Rejected'
+ THEN RAISE EXCEPTION 'Admin OT reapproval failed: %',receipt; END IF;
+ PERFORM private.tt_process_auto_clockouts();
+ SELECT to_jsonb(q) INTO queue_before FROM private.tt_auto_clockout_sessions q WHERE q.board_id=board AND q.record_id=joint_case.record_id;
+ IF (queue_before->>'overtime_cutoff_at')::timestamptz IS DISTINCT FROM cutoff
+  OR (SELECT count(*) FROM public.timetracker_ot_audit a WHERE a.request_id=req AND a.event='decision_edited')<>2
+ THEN RAISE EXCEPTION 'Reapproval did not restore cutoff or audit corrections'; END IF;
+ SELECT value::jsonb,revision INTO state,rev FROM public.module_state_entries
+ WHERE workspace_id=ws AND module_id='time-tracker' AND state_key='timetracker.attendance.v1' AND scope='shared' AND owner_key='*';
+ SELECT r INTO active_after FROM jsonb_array_elements(state->'records') r WHERE r->>'id'=record_id::text;
+ IF active_after IS DISTINCT FROM active_before THEN RAISE EXCEPTION 'OT correction rewrote active attendance'; END IF;
  -- Real historical correction for the SAME employee, while the live OT is active.
  receipt:=public.timetracker_attendance_admin_create_historical(board,emp,today-3,
   ((today-3)+TIME '08:00') AT TIME ZONE 'Asia/Manila',NULL,'standard','Office-Base Duty',NULL,
