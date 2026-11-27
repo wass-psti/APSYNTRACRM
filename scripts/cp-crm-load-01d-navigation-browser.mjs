@@ -81,10 +81,10 @@ try {
   function renderSidebar(){
    const markup = links.map(link=>{
     const active = selected===link.key;
-    return '<a class="nav-link'+(active?' active':'')+'" href="'+link.href+'"'+
+    return '<a class="nav-link'+(active?' active':'')+'" style="display:block;height:24px" href="'+link.href+'"'+
      (active?' aria-current="page"':'')+'>'+link.label+'</a>';
    }).join('');
-   return '<aside class="aps-sidebar"><div class="sidebar-nav-scroll" style="height:72px;overflow:auto">'+markup+'</div></aside>';
+   return '<aside class="aps-sidebar"><div class="sidebar-nav-scroll" style="width:120px;height:72px;overflow:auto">'+markup+'</div></aside>';
   }
 
   function renderRoute(hash,{identity='user-1|workspace-1',sidebarSignature='catalog-v1',body=null}={}){
@@ -171,8 +171,8 @@ try {
    routeResults.push({hash,selected,activeLinkCount:activeLinks.length});
   }
 
-  await traverse('back','#/order-intake');
-  await traverse('forward','#/fueltrans/ticket/123');
+  await traverse('back','#/fueltrans/ticket/123');
+  await traverse('forward','#/daily-department-activity');
   ensure(root.querySelector('.shell')===shellBefore,'history navigation replaced the shell');
 
   const draft = root.querySelector('[data-draft]');

@@ -137,7 +137,7 @@ test('route completion uses the tested stale-response guard and hash navigation 
 test('the shell DOM helper updates content without replacing the shell, sidebar, or header',()=>{
  assert.equal(typeof updateExistingApplicationShell,'function');
  const source = readFileSync('frontend/application-shell-dom.js','utf8');
- assert.match(source,/existing\.querySelector\('\.main-content'\)\.innerHTML=body/);
- assert.match(source,/existing\.querySelector\('\.breadcrumb strong'\)\.textContent=breadcrumb/);
+ assert.match(source,/existing\.querySelector\('\.main-content'\)\.innerHTML\s*=\s*body/);
+ assert.match(source,/existing\.querySelector\('\.breadcrumb strong'\)\.textContent\s*=\s*breadcrumb/);
  assert.match(source,/aria-current/);
 });

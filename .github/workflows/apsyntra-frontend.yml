@@ -18,6 +18,7 @@ on:
       - "scripts/cp-board-col01-*.mjs"
       - "docs/CP-FRT-SEC10-ISOLATED-LIVE-ACCEPTANCE.md"
       - "scripts/pages-smoke.mjs"
+      - "scripts/cp-crm-load-01d-navigation-browser.mjs"
       - "scripts/pages-smoke-supersession.mjs"
       - "scripts/sec14-legacy-read-consumer-guard.mjs"
       - "docs/CP-FRT-SEC14-LEGACY-RPC-CONSUMER-COMPATIBILITY.md"
