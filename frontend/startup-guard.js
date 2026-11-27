@@ -27,7 +27,7 @@
   const node=overlay();
   if(!node)return;
   node.dataset.phase='fatal';
-  node.dataset.graphics='fallback';
+  node.dataset.paused='true';
   node.removeAttribute('role');
   node.setAttribute('aria-live','assertive');
   const label=node.querySelector('#apsyntra-init-phase');
