@@ -21,6 +21,9 @@ on:
       - 'supabase/migrations/*board_group_view*'
       - 'supabase/migration-source-manifest.json'
       - 'sql/tests/cp-crm-perf-01b-board-group-view-regression.sql'
+      - 'scripts/cp-crm-perf-01b-realtime-live.mjs'
+      - 'sql/tests/cp-crm-perf-01b-realtime-fixture.sql'
+      - 'frontend/tests/platform-sync.test.mjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -75,6 +78,70 @@ jobs:
           docker cp supabase/migrations/20261120194000_cp_board_group_view_01_user_prefs.sql "$postgres_container:$fixture_dir/supabase/migrations/20261120194000_cp_board_group_view_01_user_prefs.sql"
           docker cp supabase/migrations/20261127130720_cp_board_group_view_coalesce_fix.sql "$postgres_container:$fixture_dir/supabase/migrations/20261127130720_cp_board_group_view_coalesce_fix.sql"
           docker exec -w "$fixture_dir" "$postgres_container" psql -X -v ON_ERROR_STOP=1 -U "$PGUSER" -d "$PGDATABASE" -f sql/tests/cp-crm-perf-01b-board-group-view-regression.sql
+  realtime-transport:
+    name: Private Realtime event, signed invalidation and reconnect (local Supabase)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      SUPABASE_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13
+        with:
+          version: '2.121.0'
+      - name: Initialize an isolated local Supabase project
+        shell: bash
+        run: |
+          set -euo pipefail
+          workdir="$RUNNER_TEMP/cp-crm-perf-01b-realtime"
+          mkdir -p "$workdir"
+          cd "$workdir"
+          supabase init
+          echo "SUPABASE_WORKDIR=$workdir" >> "$GITHUB_ENV"
+      - name: Start local Auth, PostgREST and Realtime services
+        working-directory: ${{ env.SUPABASE_WORKDIR }}
+        run: |
+          set -euo pipefail
+          supabase start --exclude storage,functions,studio,mail,analytics,pooler
+          env_file="$RUNNER_TEMP/cp-crm-perf-01b-supabase.env"
+          supabase status --env --output-format text > "$env_file"
+          set -a
+          source "$env_file"
+          set +a
+          test -n "$API_URL"
+          test -n "$ANON_KEY"
+          test -n "$SERVICE_ROLE_KEY"
+          {
+            echo "API_URL=$API_URL"
+            echo "ANON_KEY=$ANON_KEY"
+            echo "SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+      - name: Install the private-channel and signed-read synthetic fixture
+        run: |
+          set -euo pipefail
+          db_container="$(docker ps --format '{{.ID}} {{.Names}}' | awk '$2 ~ /^supabase_db_/ {print $1; exit}')"
+          test -n "$db_container"
+          docker cp sql/tests/cp-crm-perf-01b-realtime-fixture.sql "$db_container:/tmp/cp-crm-perf-01b-realtime-fixture.sql"
+          docker exec "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/cp-crm-perf-01b-realtime-fixture.sql
+      - name: Run existing PlatformSync state-machine tests
+        run: node --test frontend/tests/platform-sync.test.mjs
+      - name: Verify real private broadcast, signed re-read and reconnect
+        run: node scripts/cp-crm-perf-01b-realtime-live.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cp-crm-perf-01b-realtime
+          path: artifacts/cp-crm-perf-01b-realtime.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Stop disposable Supabase services
+        if: always()
+        working-directory: ${{ env.SUPABASE_WORKDIR }}
+        run: supabase stop --no-backup || true
   fueltrans:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
