@@ -51,3 +51,4 @@ jobs:
           BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$BROWSER"
           CHROME_BIN="$BROWSER" node scripts/cp-ms-crm-03-browser.mjs
+          CHROME_BIN="$BROWSER" node scripts/priority5f-module-browser.mjs

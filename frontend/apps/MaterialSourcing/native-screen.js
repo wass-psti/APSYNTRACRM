@@ -3,7 +3,7 @@
  * No storage, separate login, demo data, pricing fallback or write transport.
  * The Add Material form and Details/Tasks/Activity drawer remain CRM-owned.
  */
-import {reconcileBoard,COMMERCIAL_FIELDS} from '../../../integrations/material-sourcing/crm-contract/reconcile.mjs';
+import {reconcileBoard,COMMERCIAL_FIELDS} from './reconcile.js';
 import {renderMaterialSourcingTracker,materialTrackerRows,filterMaterialTrackerRows} from '../../material-sourcing-tracker.js';
 import {readProtectedSourcingItem} from '../../material-sourcing-application.js';
 

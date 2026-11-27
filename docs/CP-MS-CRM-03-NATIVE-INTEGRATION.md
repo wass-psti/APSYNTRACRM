@@ -10,3 +10,5 @@ This increment adapts the recovered reference frontend hierarchy (header, seven 
 - Tests use synthetic UUID fixtures and a disposable Chromium static server with the real native module and signed-reader logic, fake session/API responses. This does not certify actual signed production runtime or pixel parity; manual signed verification and backend integration remain required.
 
 The native stylesheet is loaded once on entry to the signed sourcing route, matching CRM's existing lazy native style pattern. The startup HTML retains the single deterministic shared stylesheet and its existing source-order contract. Full CRM frontend regression runs in the dedicated CI workflow.
+
+The canonical reconciliation implementation now lives in frontend/apps/MaterialSourcing/reconcile.js so the entire runtime module graph is contained within the static frontend asset root. The original CP02 module path is a compatibility re-export, not a fork. This fixes the existing Priority 5F unsigned Chromium startup fixture, whose server intentionally serves only frontend assets. CI also runs that real browser startup test; the test's serving boundary is unchanged.

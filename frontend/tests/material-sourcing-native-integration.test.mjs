@@ -48,3 +48,14 @@ test('production entry connects native screen and keeps existing route and handl
  assert.match(app,/ensureNativeMaterialSourcingStyles\(document\)/);
  assert.match(index,/frontend\/app\.js\?v=[^"]*cp-ms-crm-03/);
 });
+
+test('native module graph stays within the shipped frontend tree; CP02 compatibility export remains identical',async()=>{
+ const runtime=await import('../apps/MaterialSourcing/reconcile.js');
+ const contract=await import('../../integrations/material-sourcing/crm-contract/reconcile.mjs');
+ assert.equal(runtime.reconcileBoard,contract.reconcileBoard);
+ for(const path of ['frontend/apps/MaterialSourcing/native-screen.js','frontend/apps/MaterialSourcing/reconcile.js']){
+  const source=readFileSync(path,'utf8');
+  assert.doesNotMatch(source,/from\s+['"][^'"]*integrations\//);
+  assert.doesNotMatch(source,/127\.0\.0\.1|localhost|demoItems|localStorage/);
+ }
+});
