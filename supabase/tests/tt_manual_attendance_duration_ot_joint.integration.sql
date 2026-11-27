@@ -125,11 +125,22 @@ BEGIN
   OR hist#>>'{clockOut,manualMethod}' IS DISTINCT FROM 'standard_nine_credited_hours'
   OR EXISTS(SELECT 1 FROM private.tt_auto_clockout_sessions q WHERE q.record_id=hist_id)
  THEN RAISE EXCEPTION 'Historical correction modified active OT or scheduler'; END IF;
+ -- A non-reviewer cannot cancel a decided OT.
+ PERFORM set_config('request.jwt.claim.sub',emp::text,true);
+ PERFORM set_config('request.jwt.claim.session_id',emp_session::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',emp::text,'session_id',emp_session::text,'role','authenticated')::text,true);
+ PERFORM set_config('app.tt_admin_test_role','Employee',true);
+ BEGIN
+  PERFORM public.timetracker_ot_cancel_decision(board,req,'Approved','Unauthorized attempt');
+  RAISE EXCEPTION 'Unauthorized cancellation succeeded';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
  -- Cancel a bound active approval; retain the binding for audit but release it
  -- for an authorized replacement approval.
  PERFORM set_config('request.jwt.claim.sub',hr::text,true);
  PERFORM set_config('request.jwt.claim.session_id',hr_session::text,true);
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',hr::text,'session_id',hr_session::text,'role','authenticated')::text,true);
+ PERFORM set_config('app.tt_admin_test_role','HR',true);
  snap:=public.timetracker_ot_snapshot(board);
  IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(snap->'rows') r
   WHERE r->>'id'=req::text AND r->>'canDeleteOt'='true') THEN RAISE EXCEPTION 'HR cancellation control missing'; END IF;
@@ -141,6 +152,14 @@ BEGIN
  SELECT to_jsonb(q) INTO queue_after FROM private.tt_auto_clockout_sessions q WHERE q.board_id=board AND q.record_id=joint_case.record_id;
  IF queue_after->>'overtime_cutoff_at' IS NOT NULL OR queue_after->>'status' IS DISTINCT FROM 'MONITORING'
  THEN RAISE EXCEPTION 'Active cutoff was not restored: %',queue_after; END IF;
+ IF private.tt_duration_ot_worker_minutes(ws,emp,record_id,started,
+   private.tt_auto_clockout_threshold(started),state)<>0
+ THEN RAISE EXCEPTION 'Cancelled OT still extends the worker threshold'; END IF;
+ BEGIN
+  PERFORM public.timetracker_ot_cancel_decision(board,req,'Approved','Repeated cancellation');
+  RAISE EXCEPTION 'Repeated cancellation unexpectedly succeeded';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
  PERFORM set_config('request.jwt.claim.sub',emp::text,true);
  PERFORM set_config('request.jwt.claim.session_id',emp_session::text,true);
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',emp::text,'session_id',emp_session::text,'role','authenticated')::text,true);
@@ -182,6 +201,7 @@ BEGIN
  PERFORM set_config('request.jwt.claim.sub',hr::text,true);
  PERFORM set_config('request.jwt.claim.session_id',hr_session::text,true);
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',hr::text,'session_id',hr_session::text,'role','authenticated')::text,true);
+ PERFORM set_config('app.tt_admin_test_role','HR',true);
  receipt:=public.timetracker_ot_decide_manual_duration(board,admin_req,'Approved');
  SELECT value::jsonb INTO state FROM public.module_state_entries
  WHERE workspace_id=ws AND module_id='time-tracker' AND state_key='timetracker.attendance.v1' AND scope='shared' AND owner_key='*';
@@ -197,6 +217,26 @@ BEGIN
   OR NOT EXISTS(SELECT 1 FROM private.tt_attendance_board_projection p
    WHERE p.board_id=board AND p.record_id=hist_id AND p.credited_ms=32400000)
  THEN RAISE EXCEPTION 'Completed cancellation did not preserve evidence and cap credit: %',receipt; END IF;
+ -- Rejected OT deletion must not touch canonical attendance or its revisions.
+ PERFORM set_config('request.jwt.claim.sub',emp::text,true);
+ PERFORM set_config('request.jwt.claim.session_id',emp_session::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',emp::text,'session_id',emp_session::text,'role','authenticated')::text,true);
+ PERFORM set_config('app.tt_admin_test_role','Employee',true);
+ receipt:=public.timetracker_ot_submit_duration(board,today+2,60,'Rejected overtime cancellation test');
+ admin_req:=(receipt->>'id')::uuid;
+ PERFORM set_config('request.jwt.claim.sub',hr::text,true);
+ PERFORM set_config('request.jwt.claim.session_id',hr_session::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',hr::text,'session_id',hr_session::text,'role','authenticated')::text,true);
+ PERFORM set_config('app.tt_admin_test_role','HR',true);
+ receipt:=public.timetracker_ot_decide_duration(board,admin_req,'Rejected');
+ SELECT value::jsonb,revision INTO state,rev FROM public.module_state_entries
+ WHERE workspace_id=ws AND module_id='time-tracker' AND state_key='timetracker.attendance.v1' AND scope='shared' AND owner_key='*';
+ receipt:=public.timetracker_ot_cancel_decision(board,admin_req,'Rejected','Remove rejected request without credit change');
+ IF receipt->>'attendanceEffect' IS DISTINCT FROM 'request_only'
+  OR NOT EXISTS(SELECT 1 FROM public.module_state_entries e WHERE e.workspace_id=ws AND e.module_id='time-tracker'
+   AND e.state_key='timetracker.attendance.v1' AND e.scope='shared' AND e.owner_key='*'
+   AND e.revision=rev AND e.value::jsonb=state)
+ THEN RAISE EXCEPTION 'Rejected OT deletion modified attendance: %',receipt; END IF;
  SELECT to_jsonb(j) INTO ojt_after FROM cron.job j WHERE jobname='tt-ojt-auto-clockout-9h';
  IF ojt_after IS DISTINCT FROM ojt_before THEN RAISE EXCEPTION 'OJT scheduler changed'; END IF;
  RAISE NOTICE 'PASS: actual manual create + HR preapproval + reconciler + OT worker + historical isolation + early closure + payable credit + board projection + OJT';

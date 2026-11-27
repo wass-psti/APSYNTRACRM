@@ -11485,7 +11485,7 @@ async function action(name,button){
    const receipt=await timeTracker.cancelOvertimeDecision(state.boardId,requestId,request.status,reason);
    await loadTimeTracker();
    const messages={request_only:'Overtime removed. No attendance credit changed.',
-    other_approval_retained:'Overtime removed. Another approval still applies.',
+    other_approval_retained:'Overtime removed. Another approved request remains; attendance was not reduced.',
     active_regular_cutoff:'Overtime removed. The regular clock-out cutoff will be used by the scheduler.',
     completed_credit_capped:'Overtime removed. Credited duration corrected to nine hours; original clock-out preserved.'};
    toast(messages[receipt.attendanceEffect]);
