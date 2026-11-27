@@ -46,6 +46,14 @@ try{
   const page=await browser.newPage({viewport:{width:1200,height:900}});
   await page.setContent('<!doctype html><html><head><meta charset="utf-8"><style>'+css+'</style></head><body><section id="tradelink-saved-print"><div class="tl-print-shell">'+html+'</div></section></body></html>');
   await page.locator('.tl-quote-logo').evaluate(img=>img.decode());
+  for(const selector of ['.tl-quote-workflow-line','.tl-quote-client',
+   '.tl-quote-commercial','.tl-quote-financial-summary',
+   '.tl-quote-approval-summary','.tl-quote-responsibility'])
+   assert.equal(await page.locator(selector).count(),1,profile+' reference layout '+selector);
+  assert.equal(await page.locator('.tl-quote-commercial dl>div').count(),5,
+   profile+' commercial fields');
+  assert.equal(await page.locator('.tl-quote-financial-summary dl>div').count(),6,
+   profile+' complete financial summary');
   assert.equal(await page.locator('tbody tr:not(.tl-official-note-row)').count(),count);
   assert.deepEqual(await page.locator('tbody tr:not(.tl-official-note-row) td:first-child').allTextContents(),Array.from({length:count},(_,i)=>String(i+1)));
   await page.emulateMedia({media:'print'});

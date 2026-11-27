@@ -86,5 +86,6 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/board-overhaul-experience.css",
  "frontend/fueltrack-v3-all-requests-redesign.css",
  "frontend/fueltrack-v3-new-request-redesign.css",
+ "frontend/tradelink-quotation-redesign.css",
 ]);
 export const STYLE_BUNDLE="frontend/apsyntra-styles.bundle.css";

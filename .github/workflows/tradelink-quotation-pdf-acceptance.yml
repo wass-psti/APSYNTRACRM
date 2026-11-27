@@ -1,0 +1,40 @@
+name: TradeLink Quotation PDF Layout Acceptance
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'scripts/priority5-style-manifest.mjs'
+      - 'frontend/apsyntra-styles.bundle.css'
+      - 'frontend/tradelink-quotation-redesign.css'
+      - 'frontend/tradelink/quotation-print.js'
+      - 'frontend/tradelink-saved-document-output.js'
+      - 'frontend/tests/tradelink-saved-document-output.test.mjs'
+      - 'scripts/cp-tl-quotation-print-browser.mjs'
+      - 'scripts/cp-tl-quotation-print-verify.swift'
+      - '.github/workflows/tradelink-quotation-pdf-acceptance.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  quotation-pdf:
+    name: Chromium print and PDFKit content acceptance
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Install Chromium for Playwright
+        run: npx playwright install chromium
+      - name: Run saved document and financial regression tests
+        run: node --test frontend/tests/tradelink-saved-document-output.test.mjs frontend/tests/tradelink-finance.test.mjs
+      - name: Render company profiles, multi-page items and long notes
+        run: node scripts/cp-tl-quotation-print-browser.mjs
+      - name: Verify actual PDF pages and extracted content with PDFKit
+        run: swift scripts/cp-tl-quotation-print-verify.swift /tmp/cp-tl-quotation-print

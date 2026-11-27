@@ -53,3 +53,34 @@ and note marker exactly once, financial total, terms end, approval and
 acceptance. Local test outputs are not production business documents.
 Use genuine signed approved quotations for final browser acceptance;
 no production document should be modified just to exercise print.
+
+
+## CP-TL-QUOTATION-REDESIGN-01 — reference-led composition
+
+The quotation renderer now uses the supplied Watchdog Automation OPC image as the
+composition reference for all three existing official company profiles. It retains
+the existing US Letter page, company-specific logo and legal identity, accent/table
+colors, saved revision resolver, signed Board verification, financial engine,
+browser print mechanism, saved terms, and approval disclosures.
+
+The presentation order is company/document header, workflow/revision band, client
+identity and contact details, bordered commercial-details panel, five-column item
+table, two-column financial summary, approval status and recorded responsibility,
+terms, client acceptance lines, and existing footer. The company-specific profile
+continues to determine the logo and branding; the redesign does not assign or alter
+a company profile.
+
+Existing labels, customer fields, notes, priced rows, discount and tax values,
+creator identity, reviewer/approver identities and recorded times, remarks, terms,
+acceptance wording, and the browser-copy / PDF-not-issued disclosure remain in the
+print output. A zero-value discount and its after-discount amount remain visible
+rather than disappearing from the financial summary. The existing VAT label is
+preserved. Long item descriptions and notes remain printable across pages with
+repeated table headings.
+
+The new quotation stylesheet is appended to the ordered CSS manifest and generated
+bundle. The stylesheet and application entry cache keys are advanced together.
+The saved-document regression test checks content retention and section order; the
+Chromium print suite renders WASS, OPC, PLC Systems, multi-page and long-note
+fixtures; the PDFKit verifier checks Letter dimensions, line-item and note
+uniqueness, totals, terms, approval and acceptance content.

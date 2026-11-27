@@ -301,3 +301,58 @@ test('All Documents displays immutable revisions and only offers reprint for app
  const denied=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:false,canReview:true});
  assert.doesNotMatch(denied,/data-action="tradelink-document-revision-print"/);
 });
+
+test('quotation PDF follows the reference hierarchy while preserving every existing content section',()=>{
+ const content={...docs.quotation,vendorId:'watchdog-opc',
+  templateId:tradeLinkCompanyTemplateSnapshot('watchdog-opc').id,
+  customerName:'Marcela Farms Inc',customerAddress:'Cebu City',
+  customerContact:'Synthetic Contact',customerEmail:'buyer@example.test',
+  customerPhone:'+63 900 000 0000',customerTin:'TIN-TEST',
+  referenceNumber:'Danfoss LCP',quoteStatus:'Working on it',
+  paymentTerms:'30 Days Net',validity:'30 Days',
+  deliveryCommitment:'3 Days (in Stock)',currency:'PHP',vatType:'exempt',
+  discountType:'fixed',discountValue:0,
+  items:[{...line,description:'VLT® Control Panel LCP 31 Model: 132B0200 Brand: Danfoss'},
+   {id:'note-1',kind:'note',description:'Installation note remains visible'}],
+  remarks:'Retain all saved quotation remarks',
+  verifiedByEmail:'sales-supervisor@example.test',
+  approvedByEmail:'management@example.test',
+  terms:'QUOTATION TERMS AND CONDITIONS\\n1. Validity\\nSynthetic terms remain visible'};
+ const approved={...record('quotation',content),workflow_state:'approved',
+  approval_policy:'standard-dual-v1',primary_reviewed_at:stamp,secondary_reviewed_at:stamp};
+ const html=renderTradeLinkSavedDocumentOutput(approved,workspace,id,
+  {creatorName:'Original TradeLink Creator'});
+ const sections=['tl-quote-letterhead','tl-quote-workflow-line','tl-quote-client',
+  'tl-quote-commercial','tl-official-items','tl-quote-financial-summary',
+  'tl-quote-approval','tl-quote-terms','tl-quote-acceptance','tl-official-footer'];
+ let previous=-1;
+ for(const section of sections){
+  const position=html.indexOf(section);
+  assert.ok(position>previous,section+' remains in the reference-led document order');
+  previous=position;
+ }
+ for(const text of [
+  'Watchdog Automation OPC','QUOTATION','Q-QA-20261108-01','CLIENT:',
+  'Marcela Farms Inc','Cebu City','Contact Person:','buyer@example.test',
+  '+63 900 000 0000','TIN-TEST','COMMERCIAL DETAILS','Reference:',
+  'Danfoss LCP','Commercial status:','Working on it','Payment Terms:',
+  '30 Days Net','Validity:','Delivery:','3 Days (in Stock)','Currency:',
+  'MATERIAL DESCRIPTION','UNIT PRICE','Installation note remains visible',
+  'Retain all saved quotation remarks','Subtotal:','Discount:','After discount:',
+  'VAT (0% - Tax Exempt):','TOTAL:','CREATED BY:','Original TradeLink Creator',
+  'REVIEWED BY:','APPROVED BY:','Recorded validation on','Approved revision 5',
+  'Electronic PDF approval and issuance have NOT been verified.',
+  'Standard Terms &amp; Conditions of Sale','Accepted by: (Client)',
+  '(Printed Name &amp; Signature)','Thank you for considering Watchdog Automation OPC.'
+ ])assert.ok(html.includes(text),'quotation output preserves: '+text);
+ assert.match(html,/class="tl-official-approval-stamp is-approved"/);
+ assert.match(html,/tl-quote-approval-summary/);
+ assert.match(html,/tl-quote-responsibility/);
+ assert.ok(html.includes('₱0.00'));
+ const css=readFileSync('frontend/tradelink-quotation-redesign.css','utf8');
+ const bundle=readFileSync('frontend/apsyntra-styles.bundle.css','utf8');
+ assert.ok(bundle.endsWith('/* frontend/tradelink-quotation-redesign.css */\\n'+css.trimEnd()+'\\n'));
+ for(const selector of ['.tl-quote-workflow-line','.tl-quote-commercial',
+  '.tl-quote-financial-summary','.tl-quote-approval-summary'])
+  assert.ok(css.includes(selector),'reference layout style exists: '+selector);
+});
