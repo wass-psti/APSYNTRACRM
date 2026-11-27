@@ -149,3 +149,158 @@ test('production OT click dispatch preserves signed legacy self-review, cancella
  assert.equal(failed.state.ttBusy,false);
  assert.ok(!failed.calls.some(c=>c[0]==='reload'));
 });
+
+const filingApp=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const filingOpenStart=filingApp.indexOf(" case 'tt-ot-prev':");
+const filingOpenEnd=filingApp.indexOf(" case 'tt-ot-reason':",filingOpenStart);
+const filingSubmitStart=filingApp.indexOf("if(event.target.id==='tt-ot-manual-form'){");
+const filingSubmitEnd=filingApp.indexOf("if(event.target.id==='login-form'){",filingSubmitStart);
+const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;
+const dispatchFilingAction=new AsyncFunction('name','button','state','render','toast','root',
+ 'timeTrackerOtFilingAvailability','switch(name){'+filingApp.slice(filingOpenStart,filingOpenEnd)+'}');
+const dispatchFilingSubmit=new AsyncFunction('event','state','timeTrackerOtFilingAvailability',
+ 'timeTracker','root','render','toast','notice','loadTimeTracker','timeTrackerOtWeekOffsetForDate',
+ filingApp.slice(filingSubmitStart,filingSubmitEnd));
+function filingState(accessOverride=access){
+ return {view:'board',tab:'attendance',ttView:'ot',ttBusy:false,boardId:'board',
+  ttAttendance:{status:'VERIFIED_READ',access:accessOverride,active:{id:'active-session'}},
+  ttOtDraft:{reason:'stale'},ttOtModalOpen:false,
+  ttOtFilters:{weekOffset:0,status:'All',search:''}};
+}
+const filingButton={dataset:{}};
+test('actual app click dispatcher opens and closes both filing dialogs for 100 consecutive cycles',async()=>{
+ const state=filingState({...access,moduleRole:'Employee',platformRole:'admin_general_manager'});
+ const calls={renders:0,focus:[],toasts:[]};
+ const root={querySelector(selector){return {focus(){calls.focus.push(selector)}}}};
+ for(let i=0;i<100;i++){
+  await dispatchFilingAction('tt-ot-open',filingButton,state,()=>calls.renders++,
+   (...args)=>calls.toasts.push(args),root,timeTrackerOtFilingAvailability);
+  assert.equal(state.ttOtModalOpen,true);
+  assert.deepEqual(state.ttOtDraft,{});
+  await dispatchFilingAction('tt-ot-close',filingButton,state,()=>calls.renders++,
+   (...args)=>calls.toasts.push(args),root,timeTrackerOtFilingAvailability);
+  assert.equal(state.ttOtModalOpen,false);
+  await dispatchFilingAction('tt-ot-manual-open',filingButton,state,()=>calls.renders++,
+   (...args)=>calls.toasts.push(args),root,timeTrackerOtFilingAvailability);
+  assert.equal(state.ttOtModalOpen,'manual');
+  await dispatchFilingAction('tt-ot-close',filingButton,state,()=>calls.renders++,
+   (...args)=>calls.toasts.push(args),root,timeTrackerOtFilingAvailability);
+  assert.equal(state.ttOtModalOpen,false);
+ }
+ assert.equal(calls.renders,400);
+ assert.equal(calls.focus.filter(x=>x==='#tt-ot-date').length,100);
+ assert.equal(calls.focus.filter(x=>x==='#tt-ot-manual-employee').length,100);
+ assert.deepEqual(calls.toasts,[]);
+});
+test('actual click dispatcher explains busy, unverified and unavailable manual states',async()=>{
+ for(const fixture of [
+  {busy:true,status:'VERIFIED_READ',access},
+  {busy:false,status:'LOADING',access},
+  {busy:false,status:'VERIFIED_READ',access:{...access,manualOtManager:false}}
+ ]){
+  const state=filingState(fixture.access);state.ttBusy=fixture.busy;
+  state.ttAttendance.status=fixture.status;
+  const messages=[];
+  await dispatchFilingAction('tt-ot-manual-open',filingButton,state,()=>{},
+   (...args)=>messages.push(args),{querySelector:()=>({focus(){}})},timeTrackerOtFilingAvailability);
+  assert.equal(state.ttOtModalOpen,false);
+  assert.equal(messages.length,1);
+  assert.equal(messages[0][1],true);
+ }
+ const employee=filingState({...access,manualOtManager:false,moduleRole:'Employee'});
+ await dispatchFilingAction('tt-ot-open',filingButton,employee,()=>{},
+  ()=>{}, {querySelector:()=>({focus(){}})},timeTrackerOtFilingAvailability);
+ assert.equal(employee.ttOtModalOpen,true);
+});
+function filingSubmitHarness(formId,{fail=false,accessOverride=access,busy=false,submitDelay}={}){
+ const calls=[];
+ const values={
+  '#tt-ot-date':'2026-11-27','#tt-ot-duration-hours':'2.5',
+  '#tt-ot-reason':'Emergency maintenance',
+  '#tt-ot-manual-employee':'worker-1','#tt-ot-manual-date':'2026-11-27',
+  '#tt-ot-manual-duration-hours':'2.5','#tt-ot-manual-reason':'Historical maintenance'
+ };
+ const state=filingState(accessOverride);
+ state.ttBusy=busy;state.ttOtModalOpen=formId==='tt-ot-form'?true:'manual';
+ state.ttOtFilters={weekOffset:0,status:'Submitted',search:'old'};
+ const root={querySelector(selector){return {value:values[selector]??'',focus(){calls.push(['focus',selector])}}}};
+ const submit=async(kind,...args)=>{
+  calls.push([kind,...args]);
+  if(submitDelay)await submitDelay;
+  if(fail)throw Error('network timeout');
+  return {id:kind==='employee'?'employee-ot':'manual-ot'};
+ };
+ const timeTracker={submitOvertime:(...args)=>submit('employee',...args),
+  submitManualOvertime:(...args)=>submit('manual',...args)};
+ const event={target:{id:formId},preventDefault(){calls.push(['preventDefault'])}};
+ const render=()=>calls.push(['render',state.ttBusy]);
+ const toast=(...args)=>calls.push(['toast',...args]);
+ const notice=error=>calls.push(['notice',error.message]);
+ const loadTimeTracker=async()=>calls.push(['reload']);
+ return {calls,state,event,root,timeTracker,render,toast,notice,loadTimeTracker};
+}
+async function dispatchAndFlush(h){
+ await dispatchFilingSubmit(h.event,h.state,timeTrackerOtFilingAvailability,
+  h.timeTracker,h.root,h.render,h.toast,h.notice,h.loadTimeTracker,()=>0);
+ for(let i=0;i<12;i++)await Promise.resolve();
+}
+test('actual employee and manual form-submit handlers send duration payloads and verify completion',async()=>{
+ for(const [formId,kind] of [['tt-ot-form','employee'],['tt-ot-manual-form','manual']]){
+  const h=filingSubmitHarness(formId);
+  await dispatchAndFlush(h);
+  const sent=h.calls.find(call=>call[0]===kind);
+  assert.ok(sent,kind+' RPC');
+  assert.equal(sent[2].date,'2026-11-27');
+  assert.equal(sent[2].durationMinutes,150);
+  assert.ok(sent[2].reason.length>0);
+  assert.equal(Object.hasOwn(sent[2],'start'),false);
+  assert.equal(Object.hasOwn(sent[2],'end'),false);
+  assert.equal(h.state.ttBusy,false);
+  assert.equal(h.state.ttOtModalOpen,false);
+  assert.equal(h.calls.filter(call=>call[0]==='reload').length,1);
+  assert.ok(h.calls.some(call=>call[0]==='toast'));
+ }
+});
+test('both submit handlers preserve their form and clear busy state after backend failure',async()=>{
+ for(const [formId,kind] of [['tt-ot-form','employee'],['tt-ot-manual-form','manual']]){
+  const h=filingSubmitHarness(formId,{fail:true});
+  await dispatchAndFlush(h);
+  assert.ok(h.calls.some(call=>call[0]===kind));
+  assert.ok(h.calls.some(call=>call[0]==='notice'&&call[1]==='network timeout'));
+  assert.equal(h.state.ttBusy,false);
+  assert.equal(h.state.ttOtModalOpen,formId==='tt-ot-form'?true:'manual');
+  assert.ok(h.state.ttOtDraft.reason);
+  assert.equal(h.calls.filter(call=>call[0]==='reload').length,0);
+ }
+});
+test('duplicate submit during an in-flight request sends only one overtime RPC',async()=>{
+ let release;
+ const submitDelay=new Promise(resolve=>{release=resolve;});
+ const h=filingSubmitHarness('tt-ot-form',{submitDelay});
+ await dispatchFilingSubmit(h.event,h.state,timeTrackerOtFilingAvailability,
+  h.timeTracker,h.root,h.render,h.toast,h.notice,h.loadTimeTracker,()=>0);
+ assert.equal(h.state.ttBusy,true);
+ await dispatchFilingSubmit(h.event,h.state,timeTrackerOtFilingAvailability,
+  h.timeTracker,h.root,h.render,h.toast,h.notice,h.loadTimeTracker,()=>0);
+ assert.equal(h.calls.filter(call=>call[0]==='employee').length,1);
+ assert.ok(h.calls.some(call=>call[0]==='toast'&&String(call[1]).includes('finishing another operation')));
+ release();
+ for(let i=0;i<12;i++)await Promise.resolve();
+ assert.equal(h.state.ttBusy,false);
+});
+test('100 delayed Clock-only snapshots are discarded after OT navigation',async()=>{
+ for(let i=0;i<100;i++){
+  const clockSnapshot={status:'VERIFIED_READ',clockOnly:true,generation:i};
+  const otSnapshot={status:'VERIFIED_READ',clockOnly:false,generation:i+1,
+   access:{otContractActive:true,durationOtContractActive:true}};
+  let resolveRead;
+  const pending=new Promise(resolve=>{resolveRead=resolve;});
+  const result=pending.then(fresh=>canApplyTimeTrackerBackgroundSnapshot({
+   snapshotAtRead:clockSnapshot,currentSnapshot:otSnapshot,
+   viewAtRead:'clock',currentView:'ot',runAtRead:i,currentRun:i+1,fresh
+  }));
+  resolveRead(clockSnapshot);
+  assert.equal(await result,false,'late Clock response '+i);
+  assert.equal(otSnapshot.access.durationOtContractActive,true);
+ }
+});

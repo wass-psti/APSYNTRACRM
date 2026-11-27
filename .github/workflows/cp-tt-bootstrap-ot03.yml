@@ -7,6 +7,7 @@ on:
       - "frontend/app.js"
       - "frontend/time-tracker-*.js"
       - "frontend/tests/time-tracker-overtime.test.mjs"
+      - "frontend/tests/time-tracker-ot-reliability.test.mjs"
       - "frontend/tests/time-tracker-duration-overtime-policy.test.mjs"
       - "frontend/time-tracker-duration-overtime-policy.js"
       - "supabase/migrations/20261126120000_cp_tt_duration_overtime.sql"
@@ -27,6 +28,7 @@ on:
       - "frontend/app.js"
       - "frontend/time-tracker-*.js"
       - "frontend/tests/time-tracker-overtime.test.mjs"
+      - "frontend/tests/time-tracker-ot-reliability.test.mjs"
       - "frontend/tests/time-tracker-duration-overtime-policy.test.mjs"
       - "frontend/time-tracker-duration-overtime-policy.js"
       - "supabase/migrations/20261126120000_cp_tt_duration_overtime.sql"
@@ -63,7 +65,7 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Validate TimeTracker OT contract and migration manifest
         run: |
-          node --test frontend/tests/time-tracker-overtime.test.mjs frontend/tests/time-tracker-duration-overtime-policy.test.mjs frontend/tests/time-tracker-ot-withdrawal.test.mjs
+          node --test frontend/tests/time-tracker-overtime.test.mjs frontend/tests/time-tracker-duration-overtime-policy.test.mjs frontend/tests/time-tracker-ot-withdrawal.test.mjs frontend/tests/time-tracker-ot-reliability.test.mjs
           node scripts/verify-migration-source-manifest.mjs
           node --check scripts/cp-tt-bootstrap-ot03-browser.mjs
           bash -n scripts/cp-tt-bootstrap-ot02-signed-disposable.sh
