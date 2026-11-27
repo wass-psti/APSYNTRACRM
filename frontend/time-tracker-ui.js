@@ -750,6 +750,7 @@ export function renderTimeTrackerNative({
  }
  if(selected==='log')html+=renderTimeTrackerLog({
   records:timeTrackerLogRowsForSnapshot(result),
+   otRequests:result.otRequests||[],otContractActive:result.access?.otContractActive===true,
   scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
   filters:logFilters,now,busy,
   gpsEligible:logGpsEligible,gpsData:logGpsData,gpsBusy:logGpsBusy,gpsError:logGpsError,

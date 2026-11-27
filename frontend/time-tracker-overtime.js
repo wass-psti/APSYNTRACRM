@@ -142,6 +142,7 @@ export function projectTimeTrackerOtRows(rows=[]){
    submittedByName:String(r.submittedByName||'').slice(0,100),
    submissionSource,isManual:submissionSource==='manual_admin',otPolicy,
    attendanceRecordId:typeof r.attendanceRecordId==='string'?r.attendanceRecordId:null,
+    attendanceClockInAt:typeof r.attendanceClockInAt==='string'?r.attendanceClockInAt:null,
    canReviewOt:r.canReviewOt===true,
    canReviewDuration:(otPolicy==='duration-v1'||otPolicy==='manual-duration-v1')&&
     (r.canReviewDuration===true||r.canReviewOt===true),
