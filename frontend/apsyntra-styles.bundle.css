@@ -22946,8 +22946,8 @@ html[data-aps-monday-theme="dark"] #app .ft3-approval-unavailable-icon{border-co
 .tl-quote-stage p.tl-quote-reviewed{color:#146b38}
 .tl-quote-approval.is-creator-authority{grid-template-columns:minmax(0,1fr)}
 .tl-quote-approval.is-creator-authority .tl-quote-approval-summary{grid-template-columns:minmax(145pt,.7fr) minmax(0,1.3fr);align-items:stretch}
-.tl-quote-approval.is-creator-authority .tl-quote-responsibility{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:22pt;align-items:start}
-.tl-quote-approval.is-creator-authority .tl-quote-responsibility>h3{grid-column:1/-1;margin-bottom:8pt}
+.tl-quote-responsibility.is-creator-authority{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:22pt;align-items:start}
+.tl-quote-responsibility.is-creator-authority>h3{grid-column:1/-1;margin-bottom:8pt}
 .tl-quote-approval.is-creator-authority .tl-quote-stage-authority{display:flex;flex-direction:column;align-items:flex-start;gap:3pt;min-width:0;padding:2pt 0 0;border:0;break-inside:avoid;page-break-inside:avoid}
 .tl-quote-approval.is-creator-authority .tl-quote-stage-authority h3{margin:0 0 2pt;font-size:9pt;line-height:1.2;color:#475467;font-weight:700}
 .tl-quote-approval.is-creator-authority .tl-quote-stage-authority strong{font-size:11pt;line-height:1.2;font-style:italic;font-weight:500;color:#e5c000;text-align:left;overflow-wrap:anywhere}
