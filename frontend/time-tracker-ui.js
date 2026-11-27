@@ -407,7 +407,7 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
    '<section class="tt-clock-card tt-attendance-console'+(active?' tt-compact-active':'')+'" aria-label="Attendance clock form">'+
     (success?'<div class="tt-clock-confirmed" role="status" aria-live="polite">'+
      '<span class="tt-clock-confirmed-icon" aria-hidden="true">✓</span>'+
-     '<div><strong>'+(success.startsWith('Clock Out')?'Successfully clocked out':'Successfully clocked in')+
+     '<div><strong>'+((success.startsWith('Clock Out')||success.startsWith('Attendance closed on the server.'))?'Successfully clocked out':'Successfully clocked in')+
      '</strong><p>'+esc(success)+'</p></div></div>':'')+
     (clockCorrectionNotice?'<p class="tt-clock-sync-status" role="status" aria-live="polite">'+esc(clockCorrectionNotice)+'</p>':'')+
     '<div class="tt-console-kicker"><span class="tt-console-kicker-mark" aria-hidden="true"></span> ATTENDANCE CONTROL</div>'+
