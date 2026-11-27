@@ -1,0 +1,124 @@
+name: CP-TL-OPT-03A Supabase Preview Migration Parity
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cp-tl-opt-03-preview-migration-parity.yml'
+      - 'scripts/verify-migration-source-manifest.mjs'
+      - 'scripts/cp-tl-opt-03-preview-parity.mjs'
+      - 'supabase/migration-source-manifest.json'
+      - 'supabase/migrations/20261126044952_retire_apsyntra_timetracker_qa_account.sql'
+      - 'supabase/applied-only/20261126044952_retire_apsyntra_timetracker_qa_account.sql'
+      - 'supabase/applied-only/README.md'
+      - 'sql/tests/cp-tl-opt-03-*.sql'
+      - 'docs/CP-TL-OPT-03.md'
+  pull_request:
+    paths:
+      - '.github/workflows/cp-tl-opt-03-preview-migration-parity.yml'
+      - 'scripts/verify-migration-source-manifest.mjs'
+      - 'scripts/cp-tl-opt-03-preview-parity.mjs'
+      - 'supabase/migration-source-manifest.json'
+      - 'supabase/migrations/20261126044952_retire_apsyntra_timetracker_qa_account.sql'
+      - 'supabase/applied-only/20261126044952_retire_apsyntra_timetracker_qa_account.sql'
+      - 'supabase/applied-only/README.md'
+      - 'sql/tests/cp-tl-opt-03-*.sql'
+      - 'docs/CP-TL-OPT-03.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview-migration-parity:
+    name: Paired source integrity and PostgreSQL 17 fixture acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable_ci_only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGDATABASE: postgres
+      PGUSER: postgres
+      PGPASSWORD: disposable_ci_only
+      PGCONNECT_TIMEOUT: '5'
+      PGOPTIONS: '-c statement_timeout=30000'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Verify manifest, source hashes and paired migration classification
+        run: |
+          set -euo pipefail
+          node --check scripts/verify-migration-source-manifest.mjs
+          node --check scripts/cp-tl-opt-03-preview-parity.mjs
+          node scripts/verify-migration-source-manifest.mjs
+          node scripts/cp-tl-opt-03-preview-parity.mjs
+      - name: Assert isolated PostgreSQL 17 runner
+        run: |
+          set -euo pipefail
+          test "$PGHOST" = 127.0.0.1
+          psql -X -v ON_ERROR_STOP=1 -Atqc \
+            "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" \
+            | grep -Fx 'postgres|t'
+      - name: Create five disposable fixture databases
+        run: |
+          set -euo pipefail
+          for db in cp_tl_opt03_fresh cp_tl_opt03_mismatch cp_tl_opt03_partial cp_tl_opt03_identity_only cp_tl_opt03_exact; do
+            createdb "$db"
+            psql -X -v ON_ERROR_STOP=1 -d "$db" -f sql/tests/cp-tl-opt-03-disposable-setup.sql
+          done
+      - name: Clean Preview schema skips production-only cleanup
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_fresh -f supabase/migrations/20261126044952_retire_apsyntra_timetracker_qa_account.sql
+          psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_fresh -f sql/tests/cp-tl-opt-03-assert-fresh.sql
+      - name: Mismatched QA identity aborts without mutation
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_mismatch -f sql/tests/cp-tl-opt-03-seed-mismatch.sql
+          if psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_mismatch -f supabase/migrations/20261126044952_retire_apsyntra_timetracker_qa_account.sql; then
+            echo 'Expected mismatched QA identity to abort' >&2
+            exit 1
+          fi
+          psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_mismatch -f sql/tests/cp-tl-opt-03-assert-mismatch.sql
+      - name: Partial QA fixture aborts without mutation
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_partial -f sql/tests/cp-tl-opt-03-seed-partial.sql
+          if psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_partial -f supabase/migrations/20261126044952_retire_apsyntra_timetracker_qa_account.sql; then
+            echo 'Expected partial QA fixture to abort' >&2
+            exit 1
+          fi
+          psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_partial -f sql/tests/cp-tl-opt-03-assert-partial.sql
+      - name: Exact identity with incomplete fixture aborts without mutation
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_identity_only -f sql/tests/cp-tl-opt-03-seed-identity-only.sql
+          if psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_identity_only -f supabase/migrations/20261126044952_retire_apsyntra_timetracker_qa_account.sql; then
+            echo 'Expected incomplete exact-identity fixture to abort' >&2
+            exit 1
+          fi
+          psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_identity_only -f sql/tests/cp-tl-opt-03-assert-identity-only.sql
+      - name: Exact QA fixture cleanup restores immutable audit trigger
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_exact -f sql/tests/cp-tl-opt-03-seed-exact.sql
+          psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_exact -f supabase/migrations/20261126044952_retire_apsyntra_timetracker_qa_account.sql
+          psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_exact -f sql/tests/cp-tl-opt-03-assert-exact.sql

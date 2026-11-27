@@ -1,0 +1,2 @@
+INSERT INTO auth.users (id,email) VALUES ('1b2674da-e106-40d9-ab1d-1ecfeb3d76e9','apsyntra-timetracker-qa@example.com');
+INSERT INTO public.profiles (id) VALUES ('1b2674da-e106-40d9-ab1d-1ecfeb3d76e9');
