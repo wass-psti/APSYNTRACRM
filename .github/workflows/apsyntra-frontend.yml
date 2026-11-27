@@ -114,6 +114,8 @@ jobs:
           for source in frontend/*.js; do node --check "$source"; done
           node --check frontend/vendor/supabase-auth.js
           node --check frontend/auth/supabase-auth-entry.js
+          node --check frontend/auth/failure-classification.js
+          node --check frontend/startup-recovery-policy.js
           node --check frontend/workspace-preference.js
           node --check scripts/build-supabase-auth-vendor.mjs
           node --check scripts/cp-ws-auth-continuity-browser.mjs
@@ -159,6 +161,13 @@ jobs:
           BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$BROWSER" || { echo 'BLOCKED: Chrome/Chromium unavailable'; exit 1; }
           CHROME_BIN="$BROWSER" node scripts/cp-crm-load-01d-navigation-browser.mjs
+
+      - name: Verify CP-CRM-SESSION-01A Auth recovery in isolated Chromium
+        run: |
+          set -euo pipefail
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$BROWSER" || { echo 'BLOCKED: Chrome/Chromium unavailable'; exit 1; }
+          CHROME_BIN="$BROWSER" npm run test:ws-auth:browser
 
   disposable-postgres:
     runs-on: ubuntu-latest
