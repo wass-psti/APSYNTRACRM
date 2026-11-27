@@ -107,6 +107,29 @@ REVOKE ALL ON FUNCTION private.tl03_can_create_draft(uuid)
  FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION private.tl03_can_create_draft(uuid) TO authenticated;
 
+-- The current production migration chain retains a nine-argument legacy page
+-- RPC. The isolated dual-review baseline starts with its earlier eight-argument
+-- form, so provide a disposable compatibility overload for the additive
+-- repository migration's preflight. The new repository query does not call it.
+CREATE FUNCTION public.tl03_documents_page(
+ p_board_id uuid,p_search text,p_document_type text,p_workflow_state text,
+ p_archive_mode text,p_visibility_mode text,p_before_at timestamptz,
+ p_before_id uuid,p_limit integer
+) RETURNS jsonb
+LANGUAGE sql SECURITY INVOKER SET search_path=''
+AS $page_compat$
+ SELECT public.tl03_documents_page(
+  p_board_id,p_search,p_document_type,p_workflow_state,p_archive_mode,
+  p_before_at,p_before_id,p_limit
+ );
+$page_compat$;
+REVOKE ALL ON FUNCTION public.tl03_documents_page(
+ uuid,text,text,text,text,text,timestamptz,uuid,integer
+) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.tl03_documents_page(
+ uuid,text,text,text,text,text,timestamptz,uuid,integer
+) TO authenticated;
+
 -- The repository test creates ordinary manager-owned records. This test-only
 -- policy stub supplies the established default value without changing review
 -- or approval functions in the production source migrations. This test-only
