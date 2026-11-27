@@ -73,3 +73,36 @@ test('a pending request without a verified revision has no decision buttons',()=
  assert.match(html,/Decision actions are unavailable for this request/);
  assert.doesNotMatch(html,/data-action="ft3-approve"|data-action="ft3-reject"/);
 });
+
+test('queue ordering is explicit and does not expose inactive sorting controls',()=>{
+ const html=renderFuelTrackApprovals({...args(base),actionEnabled:true});
+ assert.match(html,/Newest submissions first/);
+ assert.doesNotMatch(html,/<button[^>]*disabled[^>]*>Newest|<button[^>]*disabled[^>]*>Oldest|>Urgency<|>Name</);
+});
+test('review cards display vehicle route and purpose without untrusted markup',()=>{
+ const snapshot={...base,pendingCount:1,pending:[{
+  id:'55555555-5555-4555-8555-555555555555',title:'GAN 8289 — Requester',
+  createdAt:'2026-11-10T16:50:14Z',revision:1,requestType:'vehicle',
+  requestorName:'<img src=x onerror=alert(1)>',reference:'GAN 8289',
+  origin:'Mandaue',destination:'Cebu City',purpose:'Project transport reserve'
+ }]};
+ const html=renderFuelTrackApprovals({...args(snapshot),actionEnabled:true});
+ assert.match(html,/&lt;img/);
+ assert.doesNotMatch(html,/<img src=x/);
+ assert.match(html,/Mandaue → Cebu City/);
+ assert.match(html,/Project transport reserve/);
+});
+test('container review cards show quantity and responsible person',()=>{
+ const snapshot={...base,pendingCount:1,pending:[{
+  id:'55555555-5555-4555-8555-555555555556',title:'Container × 4 — Requester',
+  createdAt:'2026-11-10T16:50:14Z',revision:1,requestType:'container',
+  requestorName:'Requester',reference:'Container × 4',
+  containerCount:4,responsiblePerson:'Fleet Supervisor',
+  purpose:'Emergency generator reserve'
+ }]};
+ const html=renderFuelTrackApprovals({...args(snapshot),actionEnabled:true});
+ assert.match(html,/Container refill/);
+ assert.match(html,/4 containers/);
+ assert.match(html,/Fleet Supervisor/);
+ assert.match(html,/Emergency generator reserve/);
+});

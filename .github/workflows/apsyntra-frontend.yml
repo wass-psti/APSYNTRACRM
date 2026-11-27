@@ -25,6 +25,7 @@ on:
       - "frontend/**"
       - "supabase/migrations/*.sql"
       - "sql/tests/cp-crm-global-search-*.sql"
+      - "sql/tests/cp-tl-opt-01-*.sql"
       - "docs/CP-CRM-GLOBAL-SEARCH-01.md"
       - "supabase/migration-candidates/**"
       - "supabase/migration-source-manifest.json"
@@ -135,8 +136,20 @@ jobs:
         run: node scripts/sec14-legacy-read-consumer-guard.mjs
       - name: Verify recovered production migration source manifest
         run: node scripts/verify-migration-source-manifest.mjs
+      - name: Run TradeLink repository frontend regression tests
+        run: node --test frontend/tests/tradelink-draft-workspace.test.mjs
       - name: Test authentication and existing backend contracts
-        run: node --test frontend/tests/*.test.mjs
+        shell: bash
+        run: |
+          set +e
+          node --test frontend/tests/*.test.mjs > /tmp/apsyntra-frontend-tests.log 2>&1
+          test_status=$?
+          set -e
+          if [ "$test_status" -ne 0 ]; then
+            grep -E '^(not ok |# tests |# pass |# fail |  location:|  failureType:|  code:|  name:|    TestContext\\.)' /tmp/apsyntra-frontend-tests.log | head -n 100
+            exit "$test_status"
+          fi
+          tail -n 20 /tmp/apsyntra-frontend-tests.log
 
 
   disposable-postgres:
@@ -288,6 +301,33 @@ jobs:
             -f supabase/migrations/20261117020000_tradelink_immutable_revision_snapshots.sql \
             -f supabase/migrations/20261123103806_cp_tl_document_bulk_actions.sql \
             -f sql/tests/cp-tl-document-bulk-actions-disposable.sql
+      - name: Verify CP-TL-OPT-01 unified repository in disposable PostgreSQL 17
+        if: always()
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client
+          fi
+          createdb cp_tl_opt_01_disposable
+          PGDATABASE=cp_tl_opt_01_disposable psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-tl03-disposable-setup.sql \
+            -f sql/cp-tl03-staged-domain.sql \
+            -f sql/tradelink-documents-page-candidate.sql \
+            -f supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql \
+            -f sql/tests/cp-tl-document-identity-order-01b-preflight.sql \
+            -f supabase/migrations/20261123080322_cp_tl_document_identity_order_01.sql \
+            -f supabase/migrations/20261117020000_tradelink_immutable_revision_snapshots.sql \
+            -f supabase/migrations/20261123103806_cp_tl_document_bulk_actions.sql \
+            -f sql/tests/cp-tl-opt-01-disposable-setup.sql \
+            -f supabase/migrations/20261127013157_cp_tl_opt_01_unified_server_document_repository.sql \
+            -f supabase/migrations/20261127024948_cp_tl_opt_01_cursor_validation_fix.sql \
+            -f sql/tests/cp-tl-opt-01-disposable.sql
   disposable-toolbox-postgres:
     runs-on: ubuntu-latest
     permissions:

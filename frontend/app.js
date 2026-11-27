@@ -78,13 +78,13 @@ import {boardGrid,boardGridColumns,prepareBoardGrid} from './board/presentation/
 import {boardGroupArchiveSuffix} from './board/presentation/group-counts.js';
 import {renderBoardCollapsedRollup} from './board/presentation/group-rollups.js';
 import {BoardGroupStateClient} from './board/preferences/group-state-client.js';
-import {FUELTRACK_V3_ID,findFuelTrackV3Board,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-ui.js?v=cp-ft-all-requests-redesign-02-20261126-cp-ft-new-request-redesign-01-20261126-cp-ft-approvals-redesign-01-20261126';
+import {FUELTRACK_V3_ID,findFuelTrackV3Board,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-ui.js?v=cp-ft-all-requests-redesign-02-20261126-cp-ft-new-request-redesign-01-20261126-cp-ft-approvals-redesign-01-20261126-cp-ft-approvals-context-02-20261127-cp-ft-activity-ui-01-20261127';
 import {fuelTrackAnalyticsCsv} from './fueltrack-v3-signed-views.js';
 import {FUELTRACK_V3_APPLICATION_ROUTE,parseFuelTrackApplicationRoute} from './fueltrack-v3-application-route.js';
 import {verifyFuelTrackBackendSnapshot} from './fueltrack-v3-backend-projections.js';
 import {renderFuelTrackAnalytics,normalizeFuelTrackAnalyticsView,normalizeFuelTrackAnalyticsRange,normalizeFuelTrackAnalyticsMetric} from './fueltrack-v3-analytics.js';
 import {renderFuelTrackRequests,fuelTrackRequestsModel,fuelTrackRequestsSummary,fuelTrackRequestsCsv,fuelTrackRequestQuickDates,FUELTRACK_REQUEST_FILTER_DEFAULTS} from './fueltrack-v3-requests.js';
-import {FUELTRACK_ACTIVITY_FILTER_DEFAULTS,fuelTrackActivityModel,fuelTrackActivityCsv} from './fueltrack-v3-activity.js';
+import {FUELTRACK_ACTIVITY_FILTER_DEFAULTS,fuelTrackActivityModel,fuelTrackActivityCsv} from './fueltrack-v3-activity.js?v=cp-ft-activity-ui-01-20261127';
 import {FuelTrackV3DomainClient,verifyFuelTrackSubmission} from './fueltrack-v3-native.js';
 import {runFuelTrackSignedPreflight} from './fueltrack-v3-signed-preflight.js';
 import {fuelTrackNewRequestPayload} from './fueltrack-v3-new-request.js?v=cp-ft-new-request-redesign-01-20261126';
@@ -93,9 +93,9 @@ import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns,
  isTradeLinkBoard} from './tradelink-board-items.js';
 import {TRADELINK_APPLICATION_ROUTE,tradeLinkApplicationHref,parseTradeLinkApplicationRoute} from './tradelink-application-route.js';
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows,
- searchTradeLinkBoardItems,captureTradeLinkTabMotion,mountTradeLinkTabMotion} from './tradelink-ui.js?v=cp-tl-universal-edit-01k-20261126-01';
+ searchTradeLinkBoardItems,captureTradeLinkTabMotion,mountTradeLinkTabMotion} from './tradelink-ui.js?v=cp-tl-creator-attribution-01-20261127-01';
 import {renderTradeLinkSavedDocumentOutput,mountTradeLinkSavedDocumentOutput,
- closeTradeLinkSavedDocumentOutput} from './tradelink-saved-document-output.js?v=cp-tl-universal-edit-01k-20261126-01';
+ closeTradeLinkSavedDocumentOutput} from './tradelink-saved-document-output.js?v=cp-tl-universal-edit-01k-20261126-01-cp-tl-approval-02-20261127';
 import {TradeLinkAttachmentClient,TL03_ATTACHMENTS_ENABLED}
  from './tradelink-attachments.js';
 import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftForm,parseTradeLinkDraftForm,
@@ -106,12 +106,12 @@ import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftFor
  prepareTradeLinkDraftCommand,tradeLinkApprovalFreeDraftPreview,
  renderTradeLinkDraftLineItem,snapshotTradeLinkDraftLineItems,restoreTradeLinkPendingSave,updateTradeLinkDraftLocalAmounts,
  updateTradeLinkLineRowTotals,updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary,
- normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI} from './tradelink-draft-workspace.js?v=cp-tl-universal-edit-01k-20261126-01';
+ normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI,mergeTradeLinkDocumentSelection} from './tradelink-draft-workspace.js?v=cp-tl-creator-attribution-01-20261127-01';
 import {summarizeTradeLinkSubmitReadiness} from './tradelink-submit-readiness.js';
 import {TL03_DOMAIN_READS_ENABLED,TL03_ANALYTICS_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
  TL03_WORKFLOW_OPERATIONAL_ENABLED,TL03_DUAL_REVIEW_ENABLED,
- tradeLinkBoardProjectionMatches,tradeLinkSavedDraftMatches} from './tradelink-native.js?v=cp-tl-universal-edit-01k-20261126-01';
+ tradeLinkBoardProjectionMatches,tradeLinkSavedDraftMatches} from './tradelink-native.js?v=cp-tl-opt-01-20261127-01';
 import {runTradeLinkStageASignedReadOnly,renderTradeLinkStageAAcceptance,sanitizeTradeLinkStageAReport} from './tradelink-stage-a-signed-acceptance.js';
 import {runTradeLinkLocalSessionRevocation,renderTradeLinkSessionRevocation,renderTradeLinkSignedOutRevocationResult,sanitizeTradeLinkRevocationReport} from './tradelink-revoked-session-acceptance.js';
 import {runWs01B2SignedDiscovery,renderWs01B2SignedAcceptance,sanitizeWs01B2Report} from './workspace-b2-signed-acceptance.js';
@@ -3866,10 +3866,9 @@ async function readTradeLinkManagementAccess(){
   return same()&&allowed===true;
  }
 }
-// Server-wide TradeLink search is optional. A missing RPC is a capability
-// fact for the current loaded application, not a reason to retry a 404 on
-// every All Documents refresh. Reload after a backend activation to recheck.
-let tradeLinkDocumentsPageRpcUnavailable=false;
+// All Documents requires the unified server repository. Cache only a confirmed
+// missing-function response; never label a partial legacy page as global results.
+let tradeLinkDocumentsQueryRpcUnavailable=false;
 async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
  if(!tradeLinkAuthorizedListRoute()||!TL03_DOMAIN_READS_ENABLED||
   state.tradeLinkDraft.busy||(!tradeLinkCanCreate()&&state.tradeLinkSection!=='documents'&&!state.tradeLinkDraft.editRequestId))return;
@@ -3879,8 +3878,10 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
  const documents=state.tradeLinkSection==='documents';
  const filters=normalizeTradeLinkDraftListFilters(
   pageRequest?.filters??state.tradeLinkDraft.listFilters);
+ const preserveSelection=pageRequest?.preserveSelection===true;
  state.tradeLinkDraft={...state.tradeLinkDraft,
-  selectedDocumentIds:[],busy:true,error:''};render();
+  ...(preserveSelection?{}:{selectedDocumentIds:[],selectedDocuments:[]}),
+  busy:true,error:''};render();
  try{
   let result,managementCheckError='';
   // Explicit Refresh and intra-app return to All Documents must recover from
@@ -3892,46 +3893,30 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
    if(!same())return;
    state.boardManage=manage===true;
   }
-  if(documents&&!state.boardManage){
-   result=await tradeLinkDraftWorkspace.searchPage({
-    filters,cursor:pageRequest?.cursor??null});
+  if(documents){
+   if(tradeLinkDocumentsQueryRpcUnavailable)
+    throw new ApiError('The unified TradeLink repository query is unavailable. Reload after the backend deployment and retry.',503);
+   try{
+    result=await tradeLinkDraftWorkspace.searchPage({
+     filters,cursor:pageRequest?.cursor??null});
+   }catch(err){
+    if(err?.code!=='PGRST202'&&err?.code!=='42883')throw err;
+    if(same())tradeLinkDocumentsQueryRpcUnavailable=true;
+    throw new ApiError('The unified TradeLink repository query is not available. A partial 50-record response will not be shown as a global result set.',503);
+   }
    if(result.listPage){
     result.listPage={...result.listPage,history:pageRequest?.history??[],
      pageIndex:pageRequest?.pageIndex??0};
    }
-   result={...result,
-    message:'Showing all TradeLink documents in this workspace.',
-    assignedOnly:false,sharedVisibility:true};
-  }else if(documents){
-   if(!tradeLinkDocumentsPageRpcUnavailable){
-    try{
-     result=await tradeLinkDraftWorkspace.searchPage({
-      filters,cursor:pageRequest?.cursor??null});
-     if(result.listPage){
-      result.listPage={...result.listPage,history:pageRequest?.history??[],
-       pageIndex:pageRequest?.pageIndex??0};
-     }
-    }catch(err){
-     // An absent RPC is not evidence of an empty repository. Cache only
-     // confirmed missing-function errors; never swallow a signed denial.
-     if(err?.code!=='PGRST202'&&err?.code!=='42883')throw err;
-     if(same())tradeLinkDocumentsPageRpcUnavailable=true;
-    }
-   }
-   if(!result){
-    if(filters.visibilityMode!=='visible')
-     throw new ApiError('Hidden-document listing requires the TradeLink bulk-actions database update. Refresh after that update is deployed.',503);
-    result=await tradeLinkDraftWorkspace.list();
-    result.listPage=null;
-    result.message='Server-wide search is not activated. Showing the current signed 50-record response.';
-   }
+   result={...result,assignedOnly:false,sharedVisibility:true};
   }else result=await tradeLinkDraftWorkspace.list();
   if(same()){
    state.tradeLinkDraft={...state.tradeLinkDraft,...result,
     listFilters:filters,listPage:result.listPage??null,
     assignedOnly:false,sharedVisibility:documents,error:managementCheckError,
-    message:documents?'Showing all TradeLink documents in this workspace.':result.message,
-    selectedDocumentIds:[],documentPreview:null,busy:false};
+    message:documents?(state.boardManage?'Showing all TradeLink documents in this workspace.':
+     'Showing documents available to the signed-in account.'):result.message,
+    documentPreview:null,busy:false};
    const target=state.tradeLinkDraft.editRequestId;
    if(target&&!state.tradeLinkDraft.selected&&tradeLinkDraftRoute()){
     if(!result.rows.some(row=>row.documentId===target)){
@@ -3968,6 +3953,7 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
  }catch{
   if(same())state.tradeLinkDraft={...state.tradeLinkDraft,
    status:'READ_FAILED',rows:[],selected:null,documentPreview:null,listPage:null,
+   selectedDocumentIds:[],selectedDocuments:[],
    error:'Signed Draft list unavailable. No records were cached.'};
  }finally{if(same()){state.tradeLinkDraft.busy=false;render();}}
 }
@@ -4741,7 +4727,9 @@ async function applyTradeLinkDocumentBulkAction(operation){
  const selectedIds=[...new Set(state.tradeLinkDraft.selectedDocumentIds||[])];
  if(!selectedIds.length||selectedIds.length>50)return;
  const selectedSet=new Set(selectedIds);
- const documents=state.tradeLinkDraft.rows.filter(row=>selectedSet.has(row.documentId));
+ const documents=(Array.isArray(state.tradeLinkDraft.selectedDocuments)?
+  state.tradeLinkDraft.selectedDocuments:state.tradeLinkDraft.rows)
+  .filter(row=>selectedSet.has(row.documentId));
  if(documents.length!==selectedIds.length||documents.some(row=>
   !Number.isSafeInteger(row.revision)||row.revision<1||
   (operation==='hide'&&row.hidden===true)||
@@ -4767,7 +4755,7 @@ async function applyTradeLinkDocumentBulkAction(operation){
   }))});
   committed=true;
   if(!same())return;
-  state.tradeLinkDraft={...state.tradeLinkDraft,busy:false,selectedDocumentIds:[]};
+  state.tradeLinkDraft={...state.tradeLinkDraft,busy:false,selectedDocumentIds:[],selectedDocuments:[]};
   await loadTradeLinkDrafts(seq,{cursor:null,history:[],pageIndex:0,filters:pageFilters});
   if(!same())return;
   if(state.tradeLinkDraft.status==='AUTHORIZED_READ'){
@@ -9492,14 +9480,15 @@ async function action(name,button){
   const panel=button.closest('[data-tradelink-domain-list]');
   for(const checkbox of panel?.querySelectorAll('[data-tl-select-document]')||[])
    checkbox.checked=false;
-  state.tradeLinkDraft={...state.tradeLinkDraft,selectedDocumentIds:[]};
+  state.tradeLinkDraft={...state.tradeLinkDraft,selectedDocumentIds:[],selectedDocuments:[]};
   updateTradeLinkDocumentSelection(panel);
   break;
  }
  case 'tradelink-documents-date':
  case 'tradelink-documents-apply-dates':{
   if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
-     !TL03_DOMAIN_READS_ENABLED||!state.boardManage||
+     !TL03_DOMAIN_READS_ENABLED||
+     (!state.boardManage&&state.tradeLinkDraft?.sharedVisibility!==true)||
      state.tradeLinkDraft?.status!=='AUTHORIZED_READ'||state.tradeLinkDraft.busy)break;
   const panel=button.closest('[data-tradelink-domain-list]');
   const start=panel?.querySelector('[data-tl-updated-start]');
@@ -9517,15 +9506,22 @@ async function action(name,button){
    else if(range!=='today'&&range!=='clear')break;
    start.value=range==='clear'?'':fmt(from);
    end.value=range==='clear'?'':fmt(utcToday);
+   state.tradeLinkDraft.listFilters=normalizeTradeLinkDraftListFilters({
+    ...state.tradeLinkDraft.listFilters,updatedFrom:start.value,updatedTo:end.value
+   });
+   break;
   }
   if(start.value&&end.value&&start.value>end.value){
-   start.setCustomValidity('Start date must be before end date.');
+   start.setCustomValidity('Start date must be on or before the end date.');
    start.reportValidity();break;
   }
   start.setCustomValidity('');
-  updateTradeLinkDraftListUI(panel,state.tradeLinkDraft.listPage?.server?
-   state.tradeLinkDraft.listPage.appliedFilters:state.tradeLinkDraft.listFilters);
-  updateTradeLinkDocumentSelection(panel);
+  end.setCustomValidity('');
+  const filters=normalizeTradeLinkDraftListFilters({
+   ...state.tradeLinkDraft.listFilters,updatedFrom:start.value,updatedTo:end.value
+  });
+  state.tradeLinkDraft.listFilters=filters;
+  await loadTradeLinkDrafts(routeSerial,{cursor:null,history:[],pageIndex:0,filters});
   break;
  }
  case 'tradelink-documents-module':{
@@ -9560,11 +9556,11 @@ async function action(name,button){
   if(name==='tradelink-documents-next'&&page.hasMore&&page.nextCursor){
    await loadTradeLinkDrafts(routeSerial,{
     cursor:page.nextCursor,history:[...page.history,page.cursor],
-    pageIndex:page.pageIndex+1,filters:page.appliedFilters});
+    pageIndex:page.pageIndex+1,filters:page.appliedFilters,preserveSelection:true});
   }else if(name==='tradelink-documents-previous'&&page.history?.length){
    await loadTradeLinkDrafts(routeSerial,{
     cursor:page.history.at(-1),history:page.history.slice(0,-1),
-    pageIndex:page.pageIndex-1,filters:page.appliedFilters});
+    pageIndex:page.pageIndex-1,filters:page.appliedFilters,preserveSelection:true});
   }
   break;
  }
@@ -13896,22 +13892,35 @@ root.addEventListener('click',event=>{
 function updateTradeLinkDocumentSelection(panel){
  if(!panel||!tradeLinkAuthorizedListRoute()||!state.boardManage||
     state.tradeLinkDraft?.status!=='AUTHORIZED_READ')return;
- const selected=new Set();
  const rows=[...panel.querySelectorAll('[data-tradelink-domain-record]')];
+ const pageIds=new Set(rows.map(row=>
+  row.querySelector('[data-tl-select-document]')?.dataset.documentId).filter(Boolean));
+ const pageRows=state.tradeLinkDraft.rows.filter(row=>pageIds.has(row.documentId));
+ const checkedIds=new Set(rows.filter(row=>!row.hidden&&
+  row.querySelector('[data-tl-select-document]')?.checked).map(row=>
+   row.querySelector('[data-tl-select-document]')?.dataset.documentId).filter(Boolean));
+ const merged=mergeTradeLinkDocumentSelection(
+  state.tradeLinkDraft.selectedDocuments,pageRows,checkedIds,50);
+ const selectedDocuments=merged.documents;
+ const selectedIds=new Set(selectedDocuments.map(row=>row.documentId));
+ state.tradeLinkDraft={...state.tradeLinkDraft,
+  selectedDocuments,selectedDocumentIds:[...selectedIds]};
+ const selectedCount=selectedDocuments.length;
+ const selectedHidden=selectedDocuments.filter(row=>row.hidden===true).length;
  for(const row of rows){
   const checkbox=row.querySelector('[data-tl-select-document]');
   const id=checkbox?.dataset.documentId||'';
-  if(!id)continue;
-  if(!row.hidden&&checkbox.checked)selected.add(id);
-  else checkbox.checked=false;
+  if(!checkbox||!id)continue;
+  checkbox.checked=!row.hidden&&selectedIds.has(id);
+  checkbox.disabled=state.tradeLinkDraft.busy===true||
+   (selectedCount>=50&&!selectedIds.has(id));
  }
- const currentRows=state.tradeLinkDraft.rows.filter(row=>selected.has(row.documentId));
- state.tradeLinkDraft={...state.tradeLinkDraft,
-  selectedDocumentIds:currentRows.map(row=>row.documentId)};
- const selectedCount=currentRows.length;
- const selectedHidden=currentRows.filter(row=>row.hidden===true).length;
  const heading=panel.querySelector('[data-tl-selected-count]');
- if(heading)heading.textContent=selectedCount+' selected';
+ if(heading)heading.textContent=selectedCount+' selected across pages';
+ const feedback=panel.querySelector('[data-tl-selection-feedback]');
+ if(feedback)feedback.textContent=merged.overflow?
+  'Maximum of 50 documents per bulk action. Deselect an item to add another.':
+  selectedCount+' selected across pages. Up to 50 documents per bulk action.';
  const setDisabled=(action,disabled)=>{
   const button=panel.querySelector('[data-action="'+action+'"]');
   if(button)button.disabled=disabled||state.tradeLinkDraft.busy===true;
@@ -13928,21 +13937,21 @@ function updateTradeLinkDocumentSelection(panel){
  if(selectAll){
   selectAll.checked=visibleInputs.length>0&&visibleSelected===visibleInputs.length;
   selectAll.indeterminate=visibleSelected>0&&visibleSelected<visibleInputs.length;
+  selectAll.disabled=state.tradeLinkDraft.busy===true||
+   (selectedCount>=50&&visibleSelected<visibleInputs.length);
  }
 }
 function exportTradeLinkDocumentSelection(panel){
  if(!panel||!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
     !state.boardManage||state.tradeLinkDraft?.status!=='AUTHORIZED_READ')return false;
- const selected=new Set(state.tradeLinkDraft.selectedDocumentIds||[]);
- const rows=[...panel.querySelectorAll('[data-tradelink-domain-record]')]
-  .filter(row=>!row.hidden&&selected.has(row.dataset.documentId)&&
-   row.querySelector('[data-tl-select-document]')?.checked);
- if(!rows.length)return false;
- const records=rows.map(row=>({documentNumber:row.dataset.documentNumber,
-  clientName:row.dataset.clientName||null,documentType:row.dataset.documentType,
-  workflowState:row.dataset.workflowState,revision:Number(row.dataset.revision),
-  createdAt:row.dataset.createdAt,updatedAt:row.dataset.updatedAt,
-  archived:row.dataset.archived==='true'}));
+ const records=(Array.isArray(state.tradeLinkDraft.selectedDocuments)?
+  state.tradeLinkDraft.selectedDocuments:[]).map(row=>({
+   documentNumber:row.documentNumber,clientName:row.clientName??null,
+   documentType:row.documentType,workflowState:row.workflowState,
+   revision:row.revision,createdAt:row.createdAt,updatedAt:row.updatedAt,
+   archived:row.archived===true
+  }));
+ if(!records.length||records.length>50)return false;
  const csv=serializeTradeLinkDocumentCsv(records);
  const url=URL.createObjectURL(new Blob(['\ufeff',csv],{type:'text/csv;charset=utf-8'}));
  const anchor=document.createElement('a');
@@ -13963,7 +13972,8 @@ function captureTradeLinkDraftListFilters(event){
   query:get('query'),documentType:get('documentType'),
   workflowState:get('workflowState'),archiveMode:get('archiveMode'),
   visibilityMode:get('visibilityMode'),sortBy:get('sortBy'),
-  sortDirection:get('sortDirection')
+  sortDirection:get('sortDirection'),updatedFrom:get('updatedFrom'),
+  updatedTo:get('updatedTo')
  });
  state.tradeLinkDraft.listFilters=filters;
  if(!state.tradeLinkDraft.listPage?.server)
@@ -14296,7 +14306,7 @@ root.addEventListener('change',event=>{
    for(const row of panel?.querySelectorAll('[data-tradelink-domain-record]')||[]){
     if(row.hidden)continue;
     const checkbox=row.querySelector('[data-tl-select-document]');
-    if(checkbox)checkbox.checked=event.target.checked;
+    if(checkbox)checkbox.checked=event.target.checked?(!checkbox.disabled||checkbox.checked):false;
    }
   }
   updateTradeLinkDocumentSelection(panel);

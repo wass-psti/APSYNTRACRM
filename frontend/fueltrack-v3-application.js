@@ -6,9 +6,9 @@ import {renderFuelTrackNewRequest} from './fueltrack-v3-new-request.js?v=cp-ft-n
 import {WORK_MANAGEMENT_BOARD_IDS} from './workspace-application-ownership.js';
 import {FUELTRACK_V3_APPLICATION_ROUTE,fuelTrackApplicationHref} from './fueltrack-v3-application-route.js';
 export {FUELTRACK_V3_APPLICATION_ROUTE} from './fueltrack-v3-application-route.js';
-import {renderFuelTrackApprovals} from './fueltrack-v3-approvals.js?v=cp-ft-approvals-redesign-01-20261126';
+import {renderFuelTrackApprovals} from './fueltrack-v3-approvals.js?v=cp-ft-approvals-context-02-20261127';
 import {renderFuelTrackLightFuels,renderFuelTrackRefuelingDialog} from './fueltrack-v3-lightfuels.js';
-import {renderFuelTrackActivity} from './fueltrack-v3-activity.js';
+import {renderFuelTrackActivity} from './fueltrack-v3-activity.js?v=cp-ft-activity-ui-01-20261127';
 import {renderFuelTrackSignedDashboardRich,renderFuelTrackSignedRequestsRich,renderFuelTrackSignedAnalyticsRich} from './fueltrack-v3-signed-views.js?v=cp-ft-all-requests-redesign-02-20261126';
 import {verifyFuelTrackBackendSnapshot,projectFuelTrackApprovals,projectFuelTrackLightFuels,renderFuelTrackSignedDashboard,renderFuelTrackSignedRequests,renderFuelTrackSignedAnalytics} from './fueltrack-v3-backend-projections.js';
 export const FUELTRACK_V3_ID=WORK_MANAGEMENT_BOARD_IDS.fueltrack;

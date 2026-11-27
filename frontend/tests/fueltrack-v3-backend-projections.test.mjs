@@ -6,7 +6,7 @@ import {fuelTrackLightFuelsModel} from '../fueltrack-v3-lightfuels.js';
 const board='7af78b3f-67bf-4600-9aa1-9006d19d486e';
 const workspace='11111111-1111-4111-8111-111111111111';
 const id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
-const row={id,kind:'vehicle',details:{plate:'GAN 8289'},state:'submitted',
+const row={id,kind:'vehicle',details:{plate:'GAN 8289',owner:'Person A',origin:'Mandaue',destination:'Cebu City',purpose:'Equipment delivery to project site',odometer:12000,distance:18.5},state:'submitted',
  revision:1,requestor_name:'Person A',created_at:'2026-11-09T10:00:00Z'};
 const summary={total:1,submitted:1,approved:0,rejected:0,refuelingDone:0,completed:0,
  approvedToday:0,rejectedToday:0,decisionsToday:0,pendingCount:1,
@@ -26,6 +26,14 @@ test('Admin signed reads project correctly into existing Approvals model',()=>{
  assert.equal(model.pendingCount,1);
  assert.equal(model.pending[0].id,id);
  assert.equal(model.pending[0].revision,1);
+ assert.equal(model.pending[0].requestorName,'Person A');
+ assert.equal(model.pending[0].requestType,'vehicle');
+ assert.equal(model.pending[0].reference,'GAN 8289');
+ assert.equal(model.pending[0].purpose,'Equipment delivery to project site');
+ assert.equal(model.pending[0].origin,'Mandaue');
+ assert.equal(model.pending[0].destination,'Cebu City');
+ assert.equal(model.pending[0].odometer,12000);
+ assert.equal(model.pending[0].distance,18.5);
 });
 test('User cannot infer an Admin approval or refueling queue',()=>{
  const visible=verifyFuelTrackBackendSnapshot({...snap,role:'User'},board,workspace);
@@ -43,4 +51,16 @@ test('Approved requests flow to the existing LightFuels model without Board infe
 test('unrecognized status or invalid counts fail closed',()=>{
  assert.equal(verifyFuelTrackBackendSnapshot({...snap,rows:[{...row,state:'fabricated'}]},board,workspace),null);
  assert.equal(verifyFuelTrackBackendSnapshot({...snap,summary:{...summary,total:-1}},board,workspace),null);
+});
+
+test('container approval projection preserves verified quantity and responsible person',()=>{
+ const container={...row,id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',kind:'container',
+  details:{containerCount:4,responsiblePerson:'Fleet Supervisor',purpose:'Emergency generator reserve'}};
+ const visible=verifyFuelTrackBackendSnapshot({...snap,rows:[container]},board,workspace);
+ const projected=projectFuelTrackApprovals(visible);
+ const model=fuelTrackApprovalModel({snapshot:projected,boardId:board,workspaceId:workspace});
+ assert.equal(model.pending[0].requestType,'container');
+ assert.equal(model.pending[0].containerCount,4);
+ assert.equal(model.pending[0].responsiblePerson,'Fleet Supervisor');
+ assert.equal(model.pending[0].purpose,'Emergency generator reserve');
 });

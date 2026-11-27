@@ -46,9 +46,31 @@ try{
   const page=await browser.newPage({viewport:{width:1200,height:900}});
   await page.setContent('<!doctype html><html><head><meta charset="utf-8"><style>'+css+'</style></head><body><section id="tradelink-saved-print"><div class="tl-print-shell">'+html+'</div></section></body></html>');
   await page.locator('.tl-quote-logo').evaluate(img=>img.decode());
+  const approvalStamp=page.locator('.tl-official-approval-stamp');
+  assert.equal(await approvalStamp.innerText(),'APPROVED',
+   profile+' approved stamp contains only APPROVED');
+  assert.equal(await approvalStamp.locator('span').count(),0,
+   profile+' approved stamp has no subtitle, separators or revision text');
+  for(const selector of ['.tl-quote-workflow-line','.tl-quote-client',
+   '.tl-quote-commercial','.tl-quote-financial-summary',
+   '.tl-quote-approval-summary','.tl-quote-responsibility'])
+   assert.equal(await page.locator(selector).count(),1,profile+' reference layout '+selector);
+  assert.equal(await page.locator('.tl-quote-commercial dl>div').count(),5,
+   profile+' commercial fields');
+  assert.equal(await page.locator('.tl-quote-financial-summary dl>div').count(),6,
+   profile+' complete financial summary');
   assert.equal(await page.locator('tbody tr:not(.tl-official-note-row)').count(),count);
   assert.deepEqual(await page.locator('tbody tr:not(.tl-official-note-row) td:first-child').allTextContents(),Array.from({length:count},(_,i)=>String(i+1)));
   await page.emulateMedia({media:'print'});
+  const approvalPresentation=await approvalStamp.evaluate(element=>{
+   const style=getComputedStyle(element);
+   return {borderColor:style.borderTopColor,backgroundColor:style.backgroundColor,
+    color:style.color,display:style.display,textAlign:style.textAlign};
+  });
+  assert.deepEqual(approvalPresentation,{
+   borderColor:'rgb(24, 132, 81)',backgroundColor:'rgb(242, 251, 245)',
+   color:'rgb(18, 107, 66)',display:'flex',textAlign:'center'
+  },profile+' retains the green approval stamp presentation');
   const file=output+'/'+profile+'-'+count+'.pdf';
   await page.pdf({path:file,preferCSSPageSize:true,printBackground:true,displayHeaderFooter:false});
   expected.push({file,count,notes:items.filter(i=>i.kind==='note').flatMap(i=>i.description.match(/NOTETOKEN\d+/g)||[]),total:'₱'+formatTradeLinkAmount(calculateTradeLinkAmounts(content).total),profile});

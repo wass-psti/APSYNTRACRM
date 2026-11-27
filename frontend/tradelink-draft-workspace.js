@@ -19,7 +19,7 @@ import {TradeLinkNativeClient,TL03_DOMAIN_READS_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
  TL03_WORKFLOW_OPERATIONAL_ENABLED,TL03_DUAL_REVIEW_ENABLED,
  validateTradeLinkDraftEnvelope,
- normalizeTradeLinkDomainRow} from './tradelink-native.js?v=cp-tl-universal-edit-01k-20261126-01';
+ normalizeTradeLinkDomainRow} from './tradelink-native.js?v=cp-tl-opt-01-20261127-01';
 
 export const TL03_DRAFT_INTERFACE_ENABLED=true; // presentation only
 const typeLabels=Object.freeze([
@@ -83,7 +83,7 @@ export function initialTradeLinkDraftView(documentType=null){
  const selected=typeLabels.some(([key])=>key===documentType)?documentType:null;
  return {status:'READ_PENDING',rows:[],selected:null,documentPreview:null,busy:false,error:'',
   message:'',draftNotice:'',mode:'create',editRequestId:null,pendingCreateId:null,pendingCreateDraft:null,pendingSave:null,lineDrafts:null,unsavedChanges:false,
-  listFilters:initialTradeLinkDraftListFilters(),listPage:null,selectedDocumentIds:[],
+  listFilters:initialTradeLinkDraftListFilters(),listPage:null,selectedDocumentIds:[],selectedDocuments:[],
   assignedOnly:false,sharedVisibility:false,
   formValues:selected?{documentType:selected}:null};
 }
@@ -528,10 +528,12 @@ export class TradeLinkDraftWorkspace{
   const f=normalizeTradeLinkDraftListFilters(filters);
   const page=await this.client.searchPage({
    query:f.query,documentType:f.documentType,workflowState:f.workflowState,
-   archiveMode:f.archiveMode,visibilityMode:f.visibilityMode,cursor,limit});
+   archiveMode:f.archiveMode,visibilityMode:f.visibilityMode,
+   updatedFrom:f.updatedFrom,updatedTo:f.updatedTo,
+   sortBy:f.sortBy,sortDirection:f.sortDirection,cursor,limit});
   return {status:'AUTHORIZED_READ',rows:page.rows,
    listPage:{server:true,hasMore:page.hasMore,nextCursor:page.nextCursor,
-    cursor,history:[],pageIndex:0,appliedFilters:f}};
+    totalCount:page.totalCount,limit,cursor,history:[],pageIndex:0,appliedFilters:f}};
  }
  async read(documentId){
   if(!TL03_DOMAIN_READS_ENABLED)disabled();
@@ -717,24 +719,30 @@ function referenceAssignedPdfStage(field,value,label,stage,{
    'The server records the signed account and actual validation time.')+'</small>'+
   '</div>';
 }
-function referenceCreator(actorName){
+function referenceCreator(creatorName,documentSaved=false){
+ const creator=typeof creatorName==='string'?creatorName.trim():'';
+ const displayName=creator||(
+  documentSaved?'Original creator unavailable':'Current authenticated user');
  return '<div class="tl-reference-approval-creator"><span aria-hidden="true">♙</span><div>'+
-  '<strong>Created By</strong> <span class="tl-reference-approval-chip">Auto-captured on save</span>'+
-  '<p>'+(actorName?escape(actorName):'Current authenticated user')+'</p>'+
-  '<small>Signed server identity and timestamp are captured on successful save.</small>'+
+  '<strong>Created By</strong> <span class="tl-reference-approval-chip">'+
+  (documentSaved?'Original creator':'Auto-captured on save')+'</span>'+
+  '<p>'+escape(displayName)+'</p>'+
+  '<small>'+(documentSaved?
+   'Original creator identity is read from the saved document record.':
+   'Signed server identity and timestamp are captured on successful save.')+'</small>'+
   '</div></div>';
 }
-function renderApprovalFreeWorkflow(actorName,documentSaved){
+function renderApprovalFreeWorkflow(creatorName,documentSaved){
  return '<section id="tl-section-approval" class="tl-reference-approval" aria-label="Verification and approval workflow">'+
-  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
+  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(creatorName,documentSaved)+
   '<div class="tl-reference-approval-stage"><strong>Reviewer approval — Not Applicable</strong></div>'+
   '<div class="tl-reference-approval-stage"><strong>Management approval — Not Applicable</strong></div>'+
   '<p>'+(documentSaved?'No reviewer validation is expected for your new revision.':'No reviewer validation is expected for this document.')+
   ' The server confirms the applicable policy on save.</p></section>';
 }
-function renderReferenceModuleWorkflow(type,fieldValue,data,actorName,reviewContext={}){
+function renderReferenceModuleWorkflow(type,fieldValue,data,creatorName,reviewContext={}){
  if(type==='po'&&reviewContext.approvalFreePreview)
-  return renderApprovalFreeWorkflow(actorName,reviewContext.documentSaved);
+  return renderApprovalFreeWorkflow(creatorName,reviewContext.documentSaved);
  const {actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewStages=null,gmPreview=false}=reviewContext;
  const value=name=>fieldValue(name,data[name]||'');
  const stage=(field,stageName,label)=>referenceAssignedPdfStage(field,value(field),label,stageName,{
@@ -749,21 +757,21 @@ function renderReferenceModuleWorkflow(type,fieldValue,data,actorName,reviewCont
  const group=(title,content)=>'<div class="tl-reference-approval-stage">'+
   '<h5>'+title+'</h5>'+content+'</div>';
  if(type==='packing')return '<section id="tl-section-approval" class="tl-reference-approval tl-reference-module-approval" aria-label="Packing List verification and approval">'+
-  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
+  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(creatorName,documentSaved)+
   group('Primary Reviewer',field('Primary reviewer email','verifiedBy',value('verifiedBy'),
    'type="email" maxlength="254" required')+stage('verifiedBy','primary','Primary reviewer'))+
   group('Secondary Reviewer',field('Secondary reviewer email','approvedBy',value('approvedBy'),
    'type="email" maxlength="254" required')+stage('approvedBy','secondary','Secondary reviewer'))+
   help+'</section>';
  if(type==='esi')return '<section id="tl-section-approval" class="tl-reference-approval tl-reference-module-approval" aria-label="Electronic SI verification and approval">'+
-  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
+  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(creatorName,documentSaved)+
   group('Verified By (Finance Team)',
    person('Finance team member','verifiedBy','Select finance team member...',true,'primary'))+
   group('Approved By (Management)',
    person('Management approver','approvedBy','Select management member...',true,'secondary'))+
   help+'</section>';
  if(type==='delivery')return '<section id="tl-section-approval" class="tl-reference-approval tl-reference-module-approval" aria-label="Delivery tracking">'+
-  '<h4>Delivery Tracking</h4>'+referenceCreator(actorName)+
+  '<h4>Delivery Tracking</h4>'+referenceCreator(creatorName,documentSaved)+
   group('Checked By (Quality Control)',
    person('QC personnel','checkedBy','Select QC personnel...',true,'primary'))+
   group('Delivered By (Logistics)',
@@ -772,14 +780,14 @@ function renderReferenceModuleWorkflow(type,fieldValue,data,actorName,reviewCont
   '<input id="tl-ref-delivery-received" name="receivedBy" maxlength="5000" value="'+escape(value('receivedBy'))+'" placeholder="Enter recipient name"></div>'+
   help+'</section>';
  if(type==='payment')return '<section id="tl-section-approval" class="tl-reference-approval tl-reference-module-approval" aria-label="Payment acknowledgement">'+
-  '<h4>Payment Acknowledgement</h4>'+referenceCreator(actorName)+
+  '<h4>Payment Acknowledgement</h4>'+referenceCreator(creatorName,documentSaved)+
   group('Payment Received By (Finance)',
    person('Finance team member','receivedBy','Select finance team member...',true,'primary'))+
   group('Verified By (Administration)',
    person('Administrator','verifiedBy','Select admin...',true,'secondary'))+
   help+'</section>';
  if(type==='po')return '<section id="tl-section-approval" class="tl-reference-approval tl-reference-module-approval" aria-label="Supplier purchase order verification and approval">'+
-  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
+  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(creatorName,documentSaved)+
   group('Reviewed By (Account Manager)',
    referencePersonField('Account Manager','verifiedBy',
     (!documentSaved&&gmPreview||reviewStages?.approvalPolicy===GM_SALES_EXEMPT_POLICY)?value('verifiedBy'):value('verifiedBy')||'aacsenagan@watchdogautomation.com.ph',
@@ -856,9 +864,9 @@ export function quotationReviewControlEligibility({
 }
 /** Quotation has a fixed primary Sales Supervisor and an editable existing
  * management reviewer assignment. Each reviewer records an independent server event. */
-function renderQuotationVerification(fieldValue,data,actorName='',reviewContext={}){
+function renderQuotationVerification(fieldValue,data,creatorName='',reviewContext={}){
  if(reviewContext.approvalFreePreview)
-  return renderApprovalFreeWorkflow(actorName,reviewContext.documentSaved);
+  return renderApprovalFreeWorkflow(creatorName,reviewContext.documentSaved);
  const {actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewStages=null,gmPreview=false}=reviewContext;
  const {primary}=QUOTATION_APPROVAL_HIERARCHY;
  const exempt=reviewStages?.approvalPolicy===GM_SALES_EXEMPT_POLICY;
@@ -873,9 +881,13 @@ function renderQuotationVerification(fieldValue,data,actorName='',reviewContext=
  return '<section id="tl-section-approval" class="tl-reference-approval" aria-labelledby="tl-quotation-approval-heading">'+
   '<h4 id="tl-quotation-approval-heading">Verification &amp; Approval Workflow</h4>'+
   '<div class="tl-reference-approval-creator"><span aria-hidden="true">♙</span><div><strong>Created By</strong> '+
-   '<span class="tl-reference-approval-chip">Auto-captured on save</span><p>'+
-   (actorName?escape(actorName):'Current authenticated user')+
-   '</p><small>Identity and time are recorded by the signed server on successful save.</small></div></div>'+
+   '<span class="tl-reference-approval-chip">'+
+   (documentSaved?'Original creator':'Auto-captured on save')+'</span><p>'+
+   escape(creatorName||(documentSaved?'Original creator unavailable':'Current authenticated user'))+
+   '</p><small>'+(documentSaved?
+    'Original creator identity is read from the saved document record.':
+    'Identity and time are recorded by the signed server on successful save.')+
+   '</small></div></div>'+
   '<div class="tl-reference-approval-stage">'+
    (exempt||preview?'<strong>Sales Supervisor approval — '+(exempt?'Exempted':'Exemption on save')+'</strong><input type="hidden" name="verifiedByEmail" value="'+escape(primary.email)+'"><input type="hidden" name="verifiedBy" value="'+escape(primary.label)+'"><p>'+(exempt?'Not required for this General Manager revision.':'Management validation remains. Exemption is confirmed by the signed server on save.')+'</p>':
    '<label for="tl-quote-reviewer-email">Primary approver — Sales Supervisor</label>'+
@@ -1352,6 +1364,8 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
   row.content&&typeof row.content==='object'&&
   (!Array.isArray(row.content.items)||row.content.items.length<=TRADELINK_MAX_ITEMS);
  const data=editing?row.content:{};
+ // Saved records use the server-resolved original creator, never the viewer's session name.
+ const creatorName=editing?row.created_by_name:actorName;
  const fieldValue=(name,fallback='')=>formValues&&Object.hasOwn(formValues,name)?formValues[name]:fallback;
  const line=Array.isArray(data.items)?data.items[0]||{}:{};
  const writeEnabled=editing||mode==='create';
@@ -1526,9 +1540,9 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
      '<textarea name="terms" maxlength="5000" rows="12" placeholder="Enter terms and conditions">'+escape(selectedTerms)+'</textarea>'+
      '<small>Recovered from the original TradeLink v1.42.0 template. Changes are saved with this document revision. No PDF, approval or document is generated by changing terms locally; eligible saved records remain printable through the existing workflow.</small>'+
     '</label></details>'+
-   (type==='quotation'?renderQuotationVerification(fieldValue,data,actorName,{
+   (type==='quotation'?renderQuotationVerification(fieldValue,data,creatorName,{
     actorEmail,documentSaved:editing,documentId,workflowState,reviewStages,approvalFreePreview:approvalFree,gmPreview:tradeLinkGmApprovalPreview(actorEmail,actorModuleRole)}):
-    renderReferenceModuleWorkflow(type,fieldValue,data,actorName,{
+    renderReferenceModuleWorkflow(type,fieldValue,data,creatorName,{
      actorEmail,documentSaved:editing,documentId,workflowState,reviewStages,approvalFreePreview:approvalFree,gmPreview:tradeLinkGmApprovalPreview(actorEmail,actorModuleRole)}))+
    '<div class="tl-draft-actions">'+
     '<button type="button" class="secondary" data-action="tradelink-draft-clear">Clear form</button>'+
@@ -1562,20 +1576,28 @@ const draftSortFields=Object.freeze([
 ]);
 const draftSortDirections=Object.freeze([['asc','Ascending'],['desc','Descending']]);
 const matchAllowed=(list,value,fallback)=>list.some(([key])=>key===value)?value:fallback;
+const normalizeTradeLinkDate=value=>{
+ const date=typeof value==='string'?value.trim():'';
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return null;
+ const parsed=new Date(date+'T00:00:00.000Z');
+ return Number.isFinite(parsed.getTime())&&parsed.toISOString().slice(0,10)===date?date:null;
+};
 export function initialTradeLinkDraftListFilters(){
  return {query:'',documentType:'all',workflowState:'all',archiveMode:'active',
-  visibilityMode:'visible',sortBy:'createdAt',sortDirection:'desc'};
+  visibilityMode:'visible',sortBy:'createdAt',sortDirection:'desc',updatedFrom:null,updatedTo:null};
 }
 export function normalizeTradeLinkDraftListFilters(input={}){
  const f=input&&typeof input==='object'&&!Array.isArray(input)?input:{};
  return {
-  query:String(typeof f.query==='string'?f.query:'').trim().slice(0,120).toLocaleLowerCase(),
+  query:String(typeof f.query==='string'?f.query:'').trim().slice(0,120).toLowerCase(),
   documentType:matchAllowed(draftListTypes,f.documentType,'all'),
   workflowState:matchAllowed(draftListStates,f.workflowState,'all'),
   archiveMode:matchAllowed(draftArchiveModes,f.archiveMode,'active'),
   visibilityMode:matchAllowed(draftVisibilityModes,f.visibilityMode,'visible'),
   sortBy:matchAllowed(draftSortFields,f.sortBy,'createdAt'),
-  sortDirection:matchAllowed(draftSortDirections,f.sortDirection,'desc')
+  sortDirection:matchAllowed(draftSortDirections,f.sortDirection,'desc'),
+  updatedFrom:normalizeTradeLinkDate(f.updatedFrom),
+  updatedTo:normalizeTradeLinkDate(f.updatedTo)
  };
 }
 const tradeLinkDocumentLabel=value=>typeLabels.find(([id])=>id===value)?.[1]||String(value||'—');
@@ -1616,7 +1638,8 @@ function tradeLinkDraftRowMatches(row,filters){
   (filters.workflowState==='all'||row.workflowState===filters.workflowState)&&
   (filters.archiveMode==='all'||
    (filters.archiveMode==='archived'?archived:!archived))&&
-  String(row.documentNumber??'').toLocaleLowerCase().includes(filters.query);
+  [row.documentNumber,row.clientName,row.referenceNumber,row.poNumber].some(value=>
+   String(value??'').toLowerCase().includes(filters.query));
 }
 /** Stable, bounded ordering of the current signed response only; no backend query. */
 function sortTradeLinkDraftRows(rows,filters){
@@ -1646,12 +1669,33 @@ function renderTradeLinkTimestamp(value){
   timeZone:'UTC'}).format(new Date(value));
  return '<time datetime="'+escape(value)+'">'+escape(display)+'</time>';
 }
-/** Search only the bounded current server-authorized page. No remote search. */
+/** Bounded fallback search only; the active repository path searches on the server. */
 export function filterTradeLinkDraftAuthorizedRows(rows,input={}){
  const filters=normalizeTradeLinkDraftListFilters(input);
  if(!Array.isArray(rows))return [];
  return sortTradeLinkDraftRows(rows.slice(0,50).filter(row=>
   tradeLinkDraftRowMatches(row,filters)),filters);
+}
+/** Merge page selections without discarding records selected on earlier pages. */
+export function mergeTradeLinkDocumentSelection(existingDocuments,pageRows,checkedIds,limit=50){
+ if(!Number.isSafeInteger(limit)||limit<1||limit>50)return {documents:[],overflow:false};
+ const selected=new Map();
+ for(const row of Array.isArray(existingDocuments)?existingDocuments:[]){
+  if(validUuid(row?.documentId)&&Number.isSafeInteger(row?.revision)&&row.revision>0&&
+   selected.size<limit)selected.set(row.documentId,row);
+ }
+ const checked=checkedIds instanceof Set?checkedIds:new Set(
+  Array.isArray(checkedIds)?checkedIds:[]);
+ let overflow=false;
+ for(const row of Array.isArray(pageRows)?pageRows:[]){
+  const id=row?.documentId;
+  if(!validUuid(id))continue;
+  if(checked.has(id)){
+   if(selected.has(id)||selected.size<limit)selected.set(id,row);
+   else overflow=true;
+  }else selected.delete(id);
+ }
+ return {documents:[...selected.values()],overflow};
 }
 /** Update native controls and visible rows of the signed listing, never its data. */
 /** Date control is strictly local to the current authenticated response.
@@ -1673,6 +1717,9 @@ export function updateTradeLinkDraftListUI(container,input={}){
  for(const row of rows){
   const record={
    documentNumber:row.dataset?.documentNumber,
+   clientName:row.dataset?.clientName,
+   referenceNumber:row.dataset?.referenceNumber,
+   poNumber:row.dataset?.poNumber,
    documentType:row.dataset?.documentType,
    workflowState:row.dataset?.workflowState,
    archived:row.dataset?.archived==='true',
@@ -1777,8 +1824,8 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
  const selectedIds=new Set(Array.isArray(view.selectedDocumentIds)?view.selectedDocumentIds:[]);
  const page=readOnly&&enabled&&view.listPage?.server===true?view.listPage:null;
  const applied=page?normalizeTradeLinkDraftListFilters(page.appliedFilters):filters;
- const displayed=filterTradeLinkDraftAuthorizedRows(records,applied);
- const ordered=sortTradeLinkDraftRows(records,applied);
+ const displayed=page?records:filterTradeLinkDraftAuthorizedRows(records,applied);
+ const ordered=page?records:sortTradeLinkDraftRows(records,applied);
  const disabledAttr=enabled?'':' disabled';
  const filterSelect=(name,label,values,value)=>
   '<label class="tl-draft-field"><span>'+escape(label)+'</span>'+
@@ -1791,23 +1838,23 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
     'data-module="'+escape(id)+'"'+(filters.documentType===id?' aria-current="true"':'')+
     disabledAttr+'>'+escape(label)+'</button>').join('')+'</nav>':'')+
   '<div class="tl-draft-list-filters" role="search" aria-label="Search authorized TradeLink Draft records">'+
-   '<label class="tl-draft-field"><span>Search document number</span>'+
+   '<label class="tl-draft-field"><span>Search document, client, reference or PO</span>'+
     '<input name="query" type="search" maxlength="120" autocomplete="off" '+
-    'placeholder="'+(page?'Search all authorized documents':'Search this authorized page')+
+    'placeholder="'+(page?'Search documents, clients, references or PO numbers':'Search this authorized page')+
     '" value="'+escape(filters.query)+'" '+
     'data-tradelink-domain-filter aria-describedby="tl-draft-search-scope"'+disabledAttr+'></label>'+
    filterSelect('workflowState','Workflow state',draftListStates,filters.workflowState)+
   '</div>'+
-  (readOnly&&!canReview?'<div class="tl-reference-document-datebar" aria-label="Filter visible response by last updated date">'+
-   '<span class="tl-date-label">Updated date (UTC · current page only)</span>'+
-   '<label for="tl-doc-updated-start"><span class="sr-only">Updated from</span><input id="tl-doc-updated-start" type="date" data-tl-updated-start'+disabledAttr+'></label>'+
+  (readOnly?'<div class="tl-reference-document-datebar" aria-label="Filter the repository by last updated date">'+
+   '<span class="tl-date-label">Last updated (UTC)</span>'+
+   '<label for="tl-doc-updated-start"><span class="sr-only">Updated from</span><input id="tl-doc-updated-start" name="updatedFrom" type="date" value="'+escape(filters.updatedFrom||'')+'" data-tradelink-domain-filter data-tl-updated-start'+disabledAttr+'></label>'+
    '<span>to</span>'+
-   '<label for="tl-doc-updated-end"><span class="sr-only">Updated through</span><input id="tl-doc-updated-end" type="date" data-tl-updated-end'+disabledAttr+'></label>'+
+   '<label for="tl-doc-updated-end"><span class="sr-only">Updated through</span><input id="tl-doc-updated-end" name="updatedTo" type="date" value="'+escape(filters.updatedTo||'')+'" data-tradelink-domain-filter data-tl-updated-end'+disabledAttr+'></label>'+
    '<div class="tl-reference-date-presets">'+
    [['today','Today'],['week','This Week'],['month','This Month'],['30','Last 30 Days'],['clear','Clear']].map(([key,label])=>
     '<button type="button" data-action="tradelink-documents-date" data-range="'+key+'"'+disabledAttr+'>'+label+'</button>').join('')+
    '</div>'+
-   '<button type="button" class="tl-ref-apply-filter" data-action="tradelink-documents-apply-dates"'+disabledAttr+'>Apply Filters</button></div>':'')+
+   '<button type="button" class="tl-ref-apply-filter" data-action="tradelink-documents-apply-dates"'+disabledAttr+'>Apply Date Range</button></div>':'')+
   '<details class="tl-ref-advanced-filters"><summary>More filters and sorting</summary>'+
    '<div class="tl-ref-advanced-filter-grid">'+
    filterSelect('documentType','Document module',draftListTypes,filters.documentType)+
@@ -1822,40 +1869,43 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
     (view.busy?' disabled':'')+'>Search documents</button>'+
     '<button type="button" class="secondary" data-action="tradelink-documents-previous"'+
     (!page.history?.length||view.busy?' disabled':'')+'>Previous page</button>'+
-    '<span role="status">Page '+escape(page.pageIndex+1)+'</span>'+
+    '<span role="status">Page '+escape(page.pageIndex+1)+' · '+escape(page.totalCount)+' matches</span>'+
     '<button type="button" class="secondary" data-action="tradelink-documents-next"'+
     (!page.hasMore||view.busy?' disabled':'')+'>Next page</button></div>':'')+
   '<p id="tl-draft-search-scope" class="muted">'+
-    (page?'Search and filters cover all TradeLink documents in this workspace. Results are paged newest-first (50 per page); Sort by applies to the visible page. Select Search documents to apply new criteria.':
-      'Search and filters apply to the current signed TradeLink workspace response. They do not query other workspaces or fetch additional pages.')+
+    (page?'Search, date filtering and sorting run against the complete TradeLink repository in the database. Search includes document number, client name, reference number and PO number. Results use stable 50-record pages. Select Search documents to apply changed criteria.':
+      'This is a bounded fallback response. Global search, sorting and date filtering require the unified server repository query.')+
    '</p>'+
   '<div class="tl-ref-selection-row"><p data-tradelink-domain-count role="status" aria-live="polite" aria-atomic="true">'+
-   displayed.length+' of '+records.length+' documents in this response</p>'+
+   (page?displayed.length+' of '+page.totalCount+' matching documents · Page '+(page.pageIndex+1):
+    displayed.length+' of '+records.length+' documents in this response')+'</p>'+
    (readOnly&&!canReview?(()=>{
-    const selectedRows=displayed.filter(row=>selectedIds.has(row.documentId));
+    const selectedRows=Array.isArray(view.selectedDocuments)?view.selectedDocuments:
+     displayed.filter(row=>selectedIds.has(row.documentId));
     const selectedCount=selectedRows.length;
     const selectedHidden=selectedRows.filter(row=>row.hidden===true).length;
     const busy=view.busy===true;
-    return '<div class="tl-ref-selection-controls"><span data-tl-selected-count role="status" aria-live="polite">'+selectedCount+' selected</span>'+
+    return '<div class="tl-ref-selection-controls"><span data-tl-selected-count role="status" aria-live="polite">'+selectedCount+' selected across pages</span>'+
      '<button type="button" data-action="tradelink-documents-export-selection"'+(selectedCount&&!busy?'':' disabled')+'>Export selected CSV</button> '+
      (canManage?'<button type="button" data-action="tradelink-documents-delete-selection"'+(selectedCount&&!busy?'':' disabled')+'>Delete Selected</button> '+
       '<button type="button" data-action="tradelink-documents-hide-selection"'+(selectedCount&&!selectedHidden&&!busy?'':' disabled')+'>Hide Selected</button> '+
       '<button type="button" data-action="tradelink-documents-unhide-selection"'+(selectedCount===0||selectedHidden!==selectedCount||busy?' disabled':'')+'>Unhide Selected</button> ':'')+
-     '<button type="button" data-action="tradelink-documents-clear-selection"'+(selectedCount&&!busy?'':' disabled')+'>Clear selection</button></div>';
+     '<button type="button" data-action="tradelink-documents-clear-selection"'+(selectedCount&&!busy?'':' disabled')+'>Clear selection</button>'+
+     '<span data-tl-selection-feedback role="status">'+(selectedCount?selectedCount+' selected. Up to 50 documents per bulk action.':'Selection is retained across pages; select up to 50 documents.')+'</span></div>';
    })():'')+
    '</div>'+
   (records.length?
    '<div class="tl-records-scroll"><table class="tl-records-table">'+
     '<caption>'+(canReview&&!creatorMode?'Documents assigned to the signed account':readOnly?'Authorized TradeLink documents':'Authorized TradeLink Draft records')+
-     ' in current response</caption>'+
-    '<thead><tr>'+(readOnly&&!canReview?'<th class="tl-ref-select-column" scope="col"><input id="tl-select-visible-documents" type="checkbox" data-tl-select-all aria-label="Select all visible documents" /></th>':'')+
+     (page?' · page '+(page.pageIndex+1):' · current response')+'</caption>'+
+    '<thead><tr>'+(readOnly&&!canReview?'<th class="tl-ref-select-column" scope="col"><input id="tl-select-visible-documents" type="checkbox" data-tl-select-all aria-label="Select all documents on this page"'+(view.busy||selectedIds.size>=50&&displayed.some(row=>!selectedIds.has(row.documentId))?' disabled':'')+' /></th>':'')+
     '<th class="tl-ref-row-number" scope="col">No.</th><th class="tl-ref-doc-number" scope="col">Document Number</th><th class="tl-ref-client-name" scope="col">Client Name</th>'+
     '<th class="tl-ref-created-by" scope="col">Created By</th><th class="tl-ref-module" scope="col">Module</th><th class="tl-ref-created-at" scope="col">Created</th>'+
     '<th class="tl-ref-updated-at" scope="col">Last updated</th><th class="tl-ref-workflow-status" scope="col">Workflow Status</th>'+
     '<th class="tl-ref-revision-column" scope="col">Rev. No.</th><th scope="col">Actions</th>'+
     '</tr></thead><tbody data-tradelink-domain-list-body>'+
     ordered.map((row,index)=>{
-     const match=tradeLinkDraftRowMatches(row,applied);
+     const match=page?true:tradeLinkDraftRowMatches(row,applied);
      const ownerDraft=creatorMode&&row.createdByActor===true&&
       row.workflowState==='draft'&&!row.archived;
      const clientName=typeof row.clientName==='string'&&row.clientName.trim()?row.clientName:'—';
@@ -1864,13 +1914,14 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
       !row.archived&&['draft','for-approval','revision-required','approved'].includes(row.workflowState));
      return '<tr data-tradelink-domain-record data-document-id="'+escape(row.documentId)+'" data-document-number="'+
       escape(row.documentNumber)+'" data-client-name="'+escape(row.clientName??'')+
-      '" data-document-type="'+escape(row.documentType)+
+      '" data-reference-number="'+escape(row.referenceNumber??'')+'" data-po-number="'+
+      escape(row.poNumber??'')+'" data-document-type="'+escape(row.documentType)+
       '" data-workflow-state="'+escape(row.workflowState)+'" data-revision="'+
       escape(row.revision)+'" data-created-at="'+escape(tradeLinkTimestamp(row.createdAt)===null?'':row.createdAt)+
       '" data-updated-at="'+escape(tradeLinkTimestamp(row.updatedAt)===null?'':row.updatedAt)+'" data-archived="'+
       (row.archived===true?'true':'false')+'" data-hidden="'+(row.hidden===true?'true':'false')+'"'+(match?'':' hidden')+'>'+
-      (readOnly&&!canReview?'<td class="tl-ref-select-column"><input id="tl-select-'+escape(row.documentId)+'" type="checkbox" data-tl-select-document data-document-id="'+escape(row.documentId)+'"'+(match&&selectedIds.has(row.documentId)?' checked':'')+' aria-label="Select document '+escape(row.documentNumber)+'" /></td>':'')+
-      '<td class="tl-ref-row-number">'+escape(index+1)+'</td>'+
+      (readOnly&&!canReview?'<td class="tl-ref-select-column"><input id="tl-select-'+escape(row.documentId)+'" type="checkbox" data-tl-select-document data-document-id="'+escape(row.documentId)+'"'+(match&&selectedIds.has(row.documentId)?' checked':'')+(view.busy||selectedIds.size>=50&&!selectedIds.has(row.documentId)?' disabled':'')+' aria-label="Select document '+escape(row.documentNumber)+'" /></td>':'')+
+      '<td class="tl-ref-row-number">'+escape((page?page.pageIndex*50:0)+index+1)+'</td>'+
       '<td class="tl-ref-doc-number">'+escape(row.documentNumber)+'</td>'+
       '<td class="tl-ref-client-name" title="'+escape(clientName)+'"><span class="tl-ref-cell-truncate">'+escape(clientName)+'</span></td>'+
       '<td class="tl-ref-created-by" title="'+escape(createdByName)+'"><span class="tl-ref-cell-truncate">'+escape(createdByName)+'</span></td>'+
@@ -1998,7 +2049,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
 
     }).join('')+'</tbody></table></div>'+
    '<p data-tradelink-domain-no-match class="muted"'+(displayed.length?' hidden':'')+
-    '>No matching records in this authorized response.</p>':
+    '>'+(page?'No documents match the current repository filters.':'No matching records in this authorized response.')+'</p>':
    '<p class="muted" role="status" aria-live="polite">'+(view.busy?'Loading the signed TradeLink document list…':
     enabled?'No documents match the current TradeLink workspace filters.':
     view.status==='READ_FAILED'?'The signed document list could not be loaded. Refresh to retry; no local or cached records are being shown.':
@@ -2148,7 +2199,8 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
  return '<section class="tl-content-panel tl-document-repository" data-tl-screen="documents" aria-labelledby="tl-domain-repository-title">'+
   '<div class="tl-panel-heading tl-reference-repository-actions">'+
    '<h2 id="tl-domain-repository-title">All Documents <span class="tl-ref-count-badge">'+
-    escape(rows.length)+'</span></h2>'+
+    escape(view.listPage?.server===true&&Number.isSafeInteger(view.listPage.totalCount)?
+     view.listPage.totalCount:rows.length)+'</span></h2>'+
    '<div class="tl-reference-repository-buttons">'+
    (canCreate&&TL03_DOMAIN_WRITES_ENABLED?'<a class="primary" href="'+tradeLinkApplicationHref('drafts/quotation')+'">Create New Document</a>':'')+
    '<button type="button" class="secondary" data-action="tradelink-documents-refresh"'+

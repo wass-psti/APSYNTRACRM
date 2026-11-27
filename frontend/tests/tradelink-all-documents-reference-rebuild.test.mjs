@@ -53,7 +53,7 @@ test('reference All Documents uses real signed row fields, compact menu, and no 
 test('All Documents restores selected checkbox IDs after a render and exposes scoped bulk actions',()=>{
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,canManage:true,
   view:{...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',rows:[row],
-   selectedDocumentIds:[id]}});
+   selectedDocumentIds:[id],selectedDocuments:[row]}});
  assert.match(html,new RegExp('data-document-id="'+id+'" checked'));
  assert.match(html,/1 selected/);
  assert.match(html,/data-action="tradelink-documents-export-selection"/);
@@ -69,7 +69,7 @@ test('hidden document view enables Unhide only for selected hidden records',()=>
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,canManage:true,
   view:{...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',rows:[hiddenRow],
    listFilters:{...initialTradeLinkDraftView().listFilters,visibilityMode:'hidden'},
-   selectedDocumentIds:[id]}});
+   selectedDocumentIds:[id],selectedDocuments:[hiddenRow]}});
  assert.match(html,/data-action="tradelink-documents-unhide-selection"(?! disabled)/);
  assert.match(html,/data-action="tradelink-documents-hide-selection" disabled/);
 });
@@ -83,18 +83,22 @@ test('reference controls use a bounded updatedAt range, not a fabricated documen
  const html=render();
  for(const preset of ['today','week','month','30','clear'])
   assert.match(html,new RegExp('data-range="'+preset+'"'));
- assert.match(html,/Updated date \(UTC · current page only\)/);
+ assert.match(html,/Last updated \(UTC\)/);
  assert.match(html,/id="tl-doc-updated-start"[^>]+data-tl-updated-start/);
  assert.match(html,/id="tl-doc-updated-end"[^>]+data-tl-updated-end/);
  assert.match(html,/data-action="tradelink-documents-apply-dates"/);
  assert.match(html,/More filters and sorting/);
+ assert.match(html,/Global search, sorting and date filtering require the unified server repository query/);
  assert.match(html,/name="archiveMode"/);
  assert.match(html,/name="sortBy"/);
  const source=readFileSync('frontend/app.js','utf8');
  assert.match(source,/case 'tradelink-documents-apply-dates':/);
  assert.match(source,/state\.tradeLinkDraft\?\.status!=='AUTHORIZED_READ'/);
- assert.doesNotMatch(source.slice(source.indexOf("case 'tradelink-documents-date':"),
-  source.indexOf("case 'tradelink-documents-module':")),/localStorage|\.rpc\(/);
+ const handler=source.slice(source.indexOf("case 'tradelink-documents-date':"),
+  source.indexOf("case 'tradelink-documents-module':"));
+ assert.match(handler,/updatedFrom:start\.value,updatedTo:end\.value/);
+ assert.match(handler,/await loadTradeLinkDrafts\(routeSerial,\{cursor:null,history:\[\],pageIndex:0,filters\}\)/);
+ assert.doesNotMatch(handler,/localStorage|\.rpc\(/);
 });
 
 test('date filter changes only locally loaded, signed record visibility',()=>{

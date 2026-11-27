@@ -9,8 +9,14 @@ const requestId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const detail={board:{id:FUELTRACK_V3_ID,workspace_id:workspaceId,name:'FuelTrack+ v3',status:'active',description:'[APSYNTRA:MODULE:fueltrack:v1] Native'},items:[],columns:[],values:[]};
 const row={id:requestId,kind:'vehicle',revision:4,state:'completed',requestor_name:'Browser Acceptance',details:{plate:'GAN 8289',purpose:'Controlled regression fixture'},created_at:'2026-11-10T04:00:00Z',completed_at:'2026-11-10T07:00:00Z',actual_amount:500,fuel_liters:10};
 const snapshot={status:'VERIFIED_READ',boardId:FUELTRACK_V3_ID,workspaceId,role:'Admin',rows:[row],summary:{total:1,submitted:0,approved:0,rejected:0,refuelingDone:0,completed:1,totalAmount:500,totalLiters:10,approvedToday:0,rejectedToday:0,decisionsToday:0,pendingCount:0,activeQueue:0,completedToday:0,overdueCount:0}};
-const approvalRow={...row,state:'submitted',completed_at:null,created_at:'2026-11-26T08:00:00Z'};
-const approvalSnapshot={...snapshot,rows:[approvalRow],summary:{...snapshot.summary,total:1,submitted:1,approved:0,rejected:0,refuelingDone:0,completed:0,pendingCount:1}};
+const approvalRow={...row,state:'submitted',completed_at:null,created_at:'2026-11-26T08:00:00Z',
+ details:{plate:'GAN 8289',owner:'Fleet Owner',origin:'Mandaue',destination:'Cebu City',
+ purpose:'Controlled regression fixture',odometer:12000,distance:18.5}};
+const containerApprovalRow={...approvalRow,id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+ kind:'container',requestor_name:'Container Requester',
+ details:{containerCount:4,responsiblePerson:'Fleet Supervisor',purpose:'Emergency generator reserve'}};
+const approvalSnapshot={...snapshot,rows:[approvalRow,containerApprovalRow],
+ summary:{...snapshot.summary,total:2,submitted:2,approved:0,rejected:0,refuelingDone:0,completed:0,pendingCount:2}};
 const analytics={status:'VERIFIED_READ',boardId:FUELTRACK_V3_ID,workspaceId,daily:[{day:'2026-11-10',transactions:1,amount:500,liters:10}]};
 const styles=readFileSync('frontend/apsyntra-styles.bundle.css','utf8');
 const browser=await chromium.launch({headless:true});
@@ -72,22 +78,28 @@ try {
 
   if(section==='approvals'){
    assert.equal(await page.locator('.ft3-approval-metric').count(),4);
-   assert.equal(await page.locator('.ft3-approval-card').count(),1);
-   assert.equal(await page.locator('[data-action="ft3-approve"]').count(),1);
-   assert.equal(await page.locator('[data-action="ft3-reject"]').count(),1);
-   assert.equal(await page.locator('.ft3-approval-reason input').getAttribute('maxlength'),'1000');
-   assert.equal(await page.locator('.ft3-approval-decision').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),2);
-   assert.match(await page.locator('.ft3-approval-card').innerText(),/GAN 8289/);
+   assert.equal(await page.locator('.ft3-approval-card').count(),2);
+   assert.equal(await page.locator('[data-action="ft3-approve"]').count(),2);
+   assert.equal(await page.locator('[data-action="ft3-reject"]').count(),2);
+   assert.equal(await page.locator('.ft3-approval-reason input').first().getAttribute('maxlength'),'1000');
+   assert.equal(await page.locator('.ft3-approval-decision').first().evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),2);
+   assert.match(await page.locator('.ft3-approval-card').first().innerText(),/GAN 8289/);
+   assert.match(await page.locator('.ft3-approval-card').first().innerText(),/Mandaue → Cebu City/);
+   assert.match(await page.locator('.ft3-approval-card').first().innerText(),/Controlled regression fixture/);
+   assert.match(await page.locator('.ft3-approval-card').nth(1).innerText(),/4 containers/);
+   assert.match(await page.locator('.ft3-approval-card').nth(1).innerText(),/Fleet Supervisor/);
+   assert.equal(await page.locator('.ft3-approvals-sort button').count(),0);
+   assert.match(await page.locator('.ft3-approvals-sort').innerText(),/Newest submissions first/);
    await page.locator('html').evaluate(el=>el.setAttribute('data-aps-monday-theme','dark'));
    const darkMetric=await page.locator('.ft3-approval-metric').first().evaluate(el=>getComputedStyle(el).backgroundColor);
    assert.notEqual(darkMetric,'rgb(255, 255, 255)','Approval metrics use a dark theme surface');
    await page.locator('html').evaluate(el=>el.removeAttribute('data-aps-monday-theme'));
    await page.setViewportSize({width:390,height:844});
-   assert.equal(await page.locator('.ft3-approval-decision').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),1);
+   assert.equal(await page.locator('.ft3-approval-decision').first().evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),1);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'No approvals page overflow at 390px');
    await page.setViewportSize({width:360,height:844});
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'No approvals page overflow at 360px');
-   checks+=11;
+   checks+=18;
   }
   if(section==='new-request'){
    assert.equal(await page.locator('#ft3-new-request-form').count(),1);

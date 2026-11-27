@@ -44,8 +44,8 @@ test('reviewer presentation remains an assigned-document view and does not grant
 test('TradeLink route, sidebar module, host state and delegated data-action events reuse the existing CRM lifecycle',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const manifest=readFileSync('frontend/board/services/manifest.js','utf8');
- assert.match(app,/from '\.\/tradelink-ui\.js\?v=cp-tl-universal-edit-01k-20261126-01'/);
- assert.match(app,/from '\.\/tradelink-native\.js\?v=cp-tl-universal-edit-01k-20261126-01'/);
+ assert.match(app,/from '\.\/tradelink-ui\.js\?v=cp-tl-creator-attribution-01-20261127-01'/);
+ assert.match(app,/from '\.\/tradelink-native\.js\?v=cp-tl-opt-01-20261127-01'/);
  assert.match(app,/if\(parts\[0\]==='tradelink'\)/);
  assert.match(app,/parseTradeLinkApplicationRoute\(parts\)/);
  assert.match(app,/tradeLinkDraft:initialTradeLinkDraftView\(\)/);
