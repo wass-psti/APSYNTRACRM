@@ -63,8 +63,13 @@
       "catalog": {
         "read_invalid_coalesce": false,
         "set_all_invalid_coalesce": false,
-        "security_definer_preserved": true,
-        "empty_search_path_preserved": true,
+        "read_signature": "public.wm_board_group_view_read(uuid)",
+        "set_all_signature": "public.wm_board_group_view_set_all(uuid,boolean)",
+        "owner": "postgres",
+        "return_type": "jsonb",
+        "volatility": "VOLATILE",
+        "security_definer": true,
+        "empty_search_path": true,
         "authenticated_execute": true,
         "anon_execute": false
       },
