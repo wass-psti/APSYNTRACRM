@@ -3,15 +3,41 @@ on:
   pull_request:
     paths:
       - 'sql/mrh-atomic-material-edit-CANDIDATE-NOT-APPLIED.sql'
+      - 'sql/mrh-material-create-receipt-CANDIDATE-NOT-APPLIED.sql'
+      - 'sql/mrh-atomic-crud-ROLLBACK-CANDIDATE.sql'
+      - 'sql/tests/mrh-material-create-receipt-disposable.sql'
+      - 'scripts/cp-ms-crm-04a3-receipt-concurrency.sh'
+      - 'frontend/tests/material-sourcing-add-discoverability.test.mjs'
       - 'sql/tests/mrh-atomic-edit-disposable.sql'
+      - 'sql/tests/mrh-atomic-edit-representative.sql'
+      - 'sql/tests/mrh-atomic-edit-live-dependencies.sql'
+      - 'scripts/cp-ms-crm-04a2-concurrency.sh'
+      - 'frontend/material-sourcing-public-edit.js'
+      - 'frontend/material-sourcing-atomic-create.js'
+      - 'frontend/tests/material-sourcing-public-edit.test.mjs'
+      - 'frontend/tests/material-sourcing-atomic-create.test.mjs'
+      - 'frontend/app.js'
       - 'frontend/material-sourcing-add-material.js'
       - 'frontend/tests/material-sourcing-add-material.test.mjs'
       - '.github/workflows/cp-ms-crm-04a.yml'
   push:
-    branches: [main, integration/cp-ms-crm-04a]
+    branches: [main, integration/cp-ms-crm-04a, integration/cp-ms-crm-04a2]
     paths:
       - 'sql/mrh-atomic-material-edit-CANDIDATE-NOT-APPLIED.sql'
+      - 'sql/mrh-material-create-receipt-CANDIDATE-NOT-APPLIED.sql'
+      - 'sql/mrh-atomic-crud-ROLLBACK-CANDIDATE.sql'
+      - 'sql/tests/mrh-material-create-receipt-disposable.sql'
+      - 'scripts/cp-ms-crm-04a3-receipt-concurrency.sh'
+      - 'frontend/tests/material-sourcing-add-discoverability.test.mjs'
       - 'sql/tests/mrh-atomic-edit-disposable.sql'
+      - 'sql/tests/mrh-atomic-edit-representative.sql'
+      - 'sql/tests/mrh-atomic-edit-live-dependencies.sql'
+      - 'scripts/cp-ms-crm-04a2-concurrency.sh'
+      - 'frontend/material-sourcing-public-edit.js'
+      - 'frontend/material-sourcing-atomic-create.js'
+      - 'frontend/tests/material-sourcing-public-edit.test.mjs'
+      - 'frontend/tests/material-sourcing-atomic-create.test.mjs'
+      - 'frontend/app.js'
       - 'frontend/material-sourcing-add-material.js'
       - 'frontend/tests/material-sourcing-add-material.test.mjs'
       - '.github/workflows/cp-ms-crm-04a.yml'
@@ -28,7 +54,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
-      - run: node --test frontend/tests/material-sourcing-add-material.test.mjs frontend/tests/material-sourcing-public-edit.test.mjs frontend/tests/material-sourcing-atomic-create.test.mjs
+      - run: node --test frontend/tests/material-sourcing-add-material.test.mjs frontend/tests/material-sourcing-public-edit.test.mjs frontend/tests/material-sourcing-atomic-create.test.mjs frontend/tests/material-sourcing-add-discoverability.test.mjs
       - name: Disposable PostgreSQL rollback and access parity
         run: |
           set -euo pipefail
@@ -41,3 +67,22 @@ jobs:
           done
           docker cp sql/mrh-atomic-material-edit-CANDIDATE-NOT-APPLIED.sql "$NAME:/tmp/mrh-edit.sql"
           docker exec -i "$NAME" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -q < sql/tests/mrh-atomic-edit-disposable.sql
+      - name: Representative live-body CRUD and two-session concurrency
+        run: |
+          set -euo pipefail
+          NAME="mrh-representative-$GITHUB_RUN_ID"
+          docker run --rm -d --name "$NAME" -e POSTGRES_PASSWORD=isolatedtest postgres@sha256:ff87138949ad9a46f32ff23bd6852b52ce024a13dffe9b4087be98292cdd3b4f >/dev/null
+          trap 'docker rm -f "$NAME" >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 30); do
+            if docker exec "$NAME" pg_isready -U postgres >/dev/null; then break; fi
+            sleep 1
+          done
+          docker cp sql/tests/mrh-atomic-edit-live-dependencies.sql "$NAME:/tmp/mrh-live-dependencies.sql"
+          docker cp sql/mrh-atomic-material-create-PRODUCTION-ACTIVATED-20261111.sql "$NAME:/tmp/mrh-create.sql"
+          docker cp sql/mrh-atomic-material-edit-CANDIDATE-NOT-APPLIED.sql "$NAME:/tmp/mrh-edit.sql"
+          docker exec -i "$NAME" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -q < sql/tests/mrh-atomic-edit-representative.sql
+          bash scripts/cp-ms-crm-04a2-concurrency.sh "$NAME"
+          docker cp sql/mrh-material-create-receipt-CANDIDATE-NOT-APPLIED.sql "$NAME:/tmp/mrh-receipt.sql"
+          docker cp sql/mrh-atomic-crud-ROLLBACK-CANDIDATE.sql "$NAME:/tmp/mrh-rollback.sql"
+          docker exec -i "$NAME" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -q < sql/tests/mrh-material-create-receipt-disposable.sql
+          bash scripts/cp-ms-crm-04a3-receipt-concurrency.sh "$NAME"

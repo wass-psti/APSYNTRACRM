@@ -43,7 +43,7 @@ test('pre-validation creates only intended field writes and never guesses missin
 test('submit uses one idempotent atomic RPC instead of partial multi-step writes',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const start=app.indexOf("if(event.target.id==='mrh-add-material-form')");
- const section=app.slice(start,start+2900);
+ const section=app.slice(start,app.indexOf("if(event.target.matches('[data-ft3-receipt]'))",start));
  assert.ok(start>0);
  assert.match(section,/plan=parseMaterialAddForm\(state\.board,new FormData\(form\)\)/);
  assert.ok(section.indexOf('plan=parseMaterialAddForm')<
@@ -61,7 +61,7 @@ test('submit uses one idempotent atomic RPC instead of partial multi-step writes
 test('creation success requires a reloaded Main group row before opening synchronized details',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const start=app.indexOf("if(event.target.id==='mrh-add-material-form')");
- const section=app.slice(start,start+3600);
+ const section=app.slice(start,app.indexOf("if(event.target.matches('[data-ft3-receipt]'))",start));
  assert.match(section,/await loadBoard\(snapshot\.boardId,'sourcing'\)/);
  assert.match(section,/item\.id===created\.itemId/);
  assert.match(section,/item\.group_id===MATERIAL_SOURCING_GROUP\.id/);

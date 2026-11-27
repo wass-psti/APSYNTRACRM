@@ -6,6 +6,7 @@ import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,
  isApprovedPublicMaterialSourcingColumn} from './material-sourcing-schema-plan.js';
 import {parseProtectedSourcingValue} from './material-sourcing-application.js';
 import {ApiError} from './session.js';
+import {MATERIAL_SOURCING_DURABLE_CREATE_ENABLED} from './material-sourcing-atomic-create.js';
 const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[char]));
@@ -97,6 +98,7 @@ export function renderMaterialSourcingAddMaterial(detail,{canCreate=false}={}){
     '<span>'+missing.length+' public sourcing fields need activation. This uses the existing signed board schema workflow.</span>'+
     '<button type="button" class="secondary" data-action="mrh-activate-public">Enable missing fields</button></div>':'')+
    '<footer class="mrh-add-actions"><button type="submit" class="primary" data-mrh-add-submit>＋ Add Material</button>'+
+    (MATERIAL_SOURCING_DURABLE_CREATE_ENABLED?'<button type="button" class="secondary" data-action="mrh-recover-create">Recover previous save</button>':'')+
     '<button type="button" class="secondary" data-action="mrh-show-items">Cancel</button>'+
     '<p role="status" aria-live="polite" data-mrh-add-status></p></footer>'+
   '</form></section>';

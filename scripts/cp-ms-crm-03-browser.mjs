@@ -1,7 +1,8 @@
 // Repository-hosted static asset + Chromium fixture; no real credentials or production traffic.
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
-import {readFile,mkdir} from 'node:fs/promises';
+import {readFile,mkdir,mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
 import {resolve,extname,sep} from 'node:path';
 import {chromium} from 'playwright';
 import {fixture,workspaceId,userId,boardId} from './fixtures/cp-ms-crm-03-fixture.mjs';
@@ -135,5 +136,77 @@ try{
  check(formColors.background==='rgb(28, 36, 50)'&&formColors.color==='rgb(229, 237, 249)','existing Add Material form follows CRM dark theme');
  if(visualDir)await page.screenshot({path:resolve(visualDir,'native-add-dark.png'),fullPage:true});
  assert.deepEqual(errors,[]);assert.deepEqual(foreign,[]);
+ // Real browser storage and Web Locks; only the server/auth transport is synthetic.
+ const profile=await mkdtemp(resolve(tmpdir(),'mrh-recovery-'));
+ let recoveryContext,releaseWrite,enterWrite;
+ const entered=new Promise(resolve=>{enterWrite=resolve;});
+ const release=new Promise(resolve=>{releaseWrite=resolve;});
+ const req='77777777-7777-4777-8777-777777777777';
+ const other='88888888-8888-4888-8888-888888888888';
+ const recoveryDetail=fixture(),target=recoveryDetail.items[0];
+ const key='apsyntra.mrh.create.v1:'+userId+':'+workspaceId;
+ let writes=0,committed=false;
+ const launch=async()=>{
+  const context=await chromium.launchPersistentContext(profile,{executablePath:process.env.CHROME_BIN||undefined,
+   headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+  await context.exposeBinding('mrhRecoveryRpc',async(_source,name,args)=>{
+   if(name==='mrh_create_material_atomic'){
+    assert.equal(args.p_request_id,req);writes++;committed=true;enterWrite();
+    await release;throw Error('synthetic lost response');
+   }
+   if(name==='mrh_material_create_receipt'){
+    assert.equal(args.p_request_id,req);
+    return committed?{request_id:req,status:'committed',item_id:target.id}:{request_id:req,status:'unresolved'};
+   }
+   throw Error('Unexpected recovery RPC '+name);
+  });
+  return context;
+ };
+ const install=async tab=>{
+  await tab.goto(origin+'/');
+  await tab.evaluate(async({detail,workspaceId,userId,title})=>{
+   const m=await import('/frontend/material-sourcing-atomic-create.js');
+   const auth={isSignedIn:true,userId,getVerifiedUser:async()=>({id:userId})};
+   const api={context:async()=>({user_id:userId,workspace_id:workspaceId,profile:{status:'active'}}),
+    allowed:async()=>true,board:async()=>detail,rpc:async(name,args)=>
+     name==='material_request_hub_bootstrap'?{workspaceId,role:'ADMIN'}:window.mrhRecoveryRpc(name,args)};
+   const options={api,auth,workspaceId};
+   window.mrhRecoveryFixture={
+    submit:async newRequestId=>{try{
+     return await m.createMaterialWithRecovery({...options,form:{},formRequestId:null,newRequestId,
+      plan:{partNumber:title,ordinary:[],protectedValues:[{name:'Buying Price',value:987.65}]}});
+    }catch(error){return {error:error.message};}},
+    recover:()=>m.recoverMaterialCreation(options)
+   };
+  },{detail:recoveryDetail,workspaceId,userId,title:target.title});
+ };
+ try{
+  recoveryContext=await launch();
+  const one=recoveryContext.pages()[0]||await recoveryContext.newPage();
+  const two=await recoveryContext.newPage();
+  await install(one);await install(two);
+  check(await one.evaluate(()=>!!navigator.locks?.request),'real browser supports scoped Web Locks');
+  const first=one.evaluate(id=>window.mrhRecoveryFixture.submit(id),req);
+  await Promise.race([entered,first.then(result=>{throw Error('create never reached backend: '+JSON.stringify(result));})]);
+  const competing=two.evaluate(id=>window.mrhRecoveryFixture.submit(id),other);
+  await two.waitForFunction(async key=>(await navigator.locks.query()).pending.some(lock=>lock.name===key),key);
+  releaseWrite();
+  check(/lost response/.test((await first).error),'lost creation response retained in real browser');
+  check(/Recover previous save/.test((await competing).error)&&writes===1,'second tab waits then does not duplicate unresolved create');
+  check(await two.evaluate(key=>localStorage.getItem(key),key)===req,'shared storage contains only opaque request UUID');
+  await one.reload();
+  check(await one.evaluate(key=>localStorage.getItem(key),key)===req,'reload preserves opaque operation identifier');
+  await recoveryContext.close();recoveryContext=null;
+  recoveryContext=await launch();
+  const reopened=recoveryContext.pages()[0]||await recoveryContext.newPage();
+  await install(reopened);
+  check(await reopened.evaluate(key=>localStorage.getItem(key),key)===req,'persistent browser restart preserves operation identifier');
+  const recovered=await reopened.evaluate(()=>window.mrhRecoveryFixture.recover());
+  check(recovered.status==='committed'&&recovered.itemId===target.id&&writes===1,'restarted browser resolves prior commit with zero duplicate writes');
+  check(await reopened.evaluate(key=>localStorage.getItem(key),key)===null,'confirmed receipt clears only its recovery marker');
+  console.log('CP_MS_CRM_04A3_BROWSER_RECOVERY_PASS');
+ }finally{
+  releaseWrite();await recoveryContext?.close();await rm(profile,{recursive:true,force:true});
+ }
  console.log('CP_MS_CRM_03_BROWSER_PASS '+results.length+' checks; no uncaught errors or external traffic');
 }finally{await browser?.close();await new Promise(r=>server.close(r));}

@@ -132,11 +132,11 @@ import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,planMaterialSourcingS
 import {MATERIAL_TRACKER_DEFAULT_FILTERS,isMaterialTrackerBoard,materialTrackerRows,filterMaterialTrackerRows,materialTrackerPublicCsv} from './material-sourcing-tracker.js';
 import {renderNativeMaterialSourcing,sortNativeMaterials,loadNativeCommercialRow,ensureNativeMaterialSourcingStyles} from './apps/MaterialSourcing/native-screen.js?v=cp-ms-crm-03a-20261127';
 import {parseMaterialAddForm,materialAddPublicColumns} from './material-sourcing-add-material.js';
-import {createMaterialSourcingAtomic} from './material-sourcing-atomic-create.js';
+import {createMaterialSourcingAtomic,retainMaterialCreatePlan,createMaterialWithRecovery,recoverMaterialCreation,MATERIAL_SOURCING_DURABLE_CREATE_ENABLED} from './material-sourcing-atomic-create.js';
 import {showEngineeringDiagnostics} from './engineering-diagnostics-visibility.js';
 import {renderMaterialSourcingDetailTabs,renderMaterialSourcingPublicOverview,renderMaterialSourcingUnavailableDetails,classifyMaterialSourcingDetailError,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js';
 import {readMaterialBoardItemTasks,saveMaterialBoardItemTask,renderMaterialBoardItemTasks} from './material-sourcing-board-tasks.js';
-import {planMaterialSourcingPublicChanges,saveMaterialSourcingPublicChange,verifyMaterialSourcingPublicChanges} from './material-sourcing-public-edit.js';
+import {planMaterialSourcingPublicChanges,saveMaterialSourcingPublicChange,verifyMaterialSourcingPublicChanges,saveMaterialSourcingAtomic,MATERIAL_SOURCING_ATOMIC_EDIT_ENABLED} from './material-sourcing-public-edit.js';
 import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,planProtectedSourcingChanges,renderProtectedSourcingEditor,createMaterialSourcingPart} from './material-sourcing-application.js';
 import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} from './material-sourcing-controlled-activation.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
@@ -7590,6 +7590,15 @@ async function openBoardItemDetails(itemId){
    statusMessage('Saving '+total+' pending change'+(total===1?'':'s')+'…');
    let completed=0;
    try{
+    if(MATERIAL_SOURCING_ATOMIC_EDIT_ENABLED){
+     const {board,persisted}=await saveMaterialSourcingAtomic({...input,publicChanges,privateChanges:changes});
+     if(!current())return;
+     values=persisted;publicDetail=board;
+     if(state.boardId===snapshot.boardId)state.board=board;
+     updateDisplay(values);publicSavedDisplay();
+     statusMessage(total+' change'+(total===1?'':'s')+' saved atomically and verified.');
+     return;
+    }
     for(const change of publicChanges){
      await saveMaterialSourcingPublicChange({api:db,itemId,change});
      if(!current())return;
@@ -10152,6 +10161,37 @@ async function action(name,button){
    state.mrhAddBusy=false;
    if(trigger.isConnected)trigger.disabled=false;
   }
+  break;
+ }
+ case 'mrh-recover-create':{
+  if(!MATERIAL_SOURCING_DURABLE_CREATE_ENABLED||state.mrhAddBusy||!state.mrhAddView||
+     state.tab!=='sourcing'||!state.edit||!isMaterialTrackerBoard(state.board))break;
+  const form=root.querySelector('#mrh-add-material-form');
+  if(!form)break;
+  const status=form.querySelector('[data-mrh-add-status]');
+  const submit=form.querySelector('[data-mrh-add-submit]');
+  const snapshot={boardId:state.boardId,userId:auth.userId,workspaceId:state.context?.workspace_id,tab:'sourcing'};
+  const current=()=>boardHistoryAuthorized(snapshot)&&state.tab==='sourcing'&&state.mrhAddView&&form.isConnected;
+  state.mrhAddBusy=true;button.disabled=true;if(submit)submit.disabled=true;
+  try{
+   const result=await recoverMaterialCreation({api:db,auth,workspaceId:snapshot.workspaceId});
+   if(!current())break;
+   if(result.status==='none'){if(status)status.textContent='No previous creation is pending in this browser.';break;}
+   if(result.status==='unresolved'){
+    form.dataset.mrhRequestId=result.requestId;
+    if(status)status.textContent='No committed receipt yet. Re-enter the original material values and retry the same request.';
+    if(submit)submit.textContent='Retry original save';
+    break;
+   }
+   state.mrhAddView=false;db.invalidateBoardCache();
+   await loadBoard(snapshot.boardId,'sourcing');
+   if(!boardHistoryAuthorized(snapshot)||state.tab!=='sourcing')break;
+   if(result.available&&state.board?.items?.some(item=>item.id===result.itemId&&
+     item.group_id===MATERIAL_SOURCING_GROUP.id&&!item.archived_at))
+    await openBoardItemDetails(result.itemId);
+   toast('Previous creation committed. '+(result.available?'Review the recovered material.':'Its active Main group row is unavailable.')+' No new material was created.');
+  }catch(error){if(current()&&status)status.textContent=errorMessage(error);}
+  finally{state.mrhAddBusy=false;if(button.isConnected)button.disabled=false;if(submit?.isConnected)submit.disabled=false;}
   break;
  }
  case 'mrh-add-view':
@@ -14568,6 +14608,8 @@ root.addEventListener('submit',event=>{
   try{
    if(!form.reportValidity())return;
    plan=parseMaterialAddForm(state.board,new FormData(form));
+   if(!MATERIAL_SOURCING_DURABLE_CREATE_ENABLED)
+    plan=retainMaterialCreatePlan(form,plan,snapshot.userId+':'+snapshot.workspaceId);
   }catch(err){if(status)status.textContent=errorMessage(err);return;}
   state.mrhAddBusy=true;button.disabled=true;button.textContent='Saving material…';
   let uncertain=false;
@@ -14578,35 +14620,41 @@ root.addEventListener('submit',event=>{
    if(status)status.textContent='Secure request ID unavailable. Reload and retry.';
    return;
   }
-  form.dataset.mrhRequestId=requestId;
+  const formRequestId=form.dataset.mrhRequestId||null;
+  if(!MATERIAL_SOURCING_DURABLE_CREATE_ENABLED)form.dataset.mrhRequestId=requestId;
   Promise.resolve().then(async()=>{
    if(!authorized())throw new ApiError('Signed material workspace changed.',403);
-   const created=await createMaterialSourcingAtomic({
-    api:db,auth,workspaceId:snapshot.workspaceId,requestId,plan
-   });
+   const created=MATERIAL_SOURCING_DURABLE_CREATE_ENABLED?
+    await createMaterialWithRecovery({api:db,auth,workspaceId:snapshot.workspaceId,form,
+     formRequestId,newRequestId:requestId,plan,onRequestId:id=>{form.dataset.mrhRequestId=id;}}):
+    await createMaterialSourcingAtomic({api:db,auth,workspaceId:snapshot.workspaceId,requestId,plan});
    if(!authorized())return;
    db.invalidateBoardCache();
    state.mrhAddView=false;
    await loadBoard(snapshot.boardId,'sourcing');
    if(!boardHistoryAuthorized(snapshot)||state.tab!=='sourcing')return;
    const reloaded=state.board?.items?.find(item=>item.id===created.itemId&&
-    item.group_id===MATERIAL_SOURCING_GROUP.id&&item.title===created.partNumber);
+    item.group_id===MATERIAL_SOURCING_GROUP.id&&!item.archived_at&&item.title===created.partNumber);
    if(!reloaded){
-    toast('Material saved, but its board row is not loaded yet. Refresh Material Sourcing to verify.');
+    toast(created.recovered?'Previous creation committed; its active Main group row is unavailable. No new material was created.':
+     'Material saved, but its board row is not loaded yet. Refresh Material Sourcing to verify.');
     return;
    }
    await openBoardItemDetails(created.itemId);
-   if(boardHistoryAuthorized(snapshot)&&state.tab==='sourcing')
-    toast('Material '+created.partNumber+' saved and reloaded in Main group.');
+   if(boardHistoryAuthorized(snapshot)&&state.tab==='sourcing'){
+    if(created.recovered)toast('Previous material creation recovered; review the current values. No new material was created.');
+    else toast('Material '+created.partNumber+' saved and reloaded in Main group.');
+   }
   }).catch(error=>{
    if(!authorized())return;
    uncertain=true;
    if(status)status.textContent=
-    'Creation status needs verification. Refresh the board before trying again. '+
+    (MATERIAL_SOURCING_DURABLE_CREATE_ENABLED?'Creation status needs verification. Use Recover previous save or retry the original values. ':
+     'Creation status needs verification. Retry the original values on this form to safely reuse the request. ')+
     errorMessage(error);
-   // Retain same idempotency key, and never generate another item through this form.
-   button.disabled=true;
-   button.textContent='Refresh to verify material';
+   // The original plan and same request ID survive an uncertain response on this form.
+   button.disabled=false;
+   button.textContent='Retry original save';
   }).finally(()=>{
    state.mrhAddBusy=false;
    if(authorized()&&!uncertain&&form.isConnected){

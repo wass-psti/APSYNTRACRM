@@ -81,3 +81,48 @@ test('drawer uses existing signed board CAS with one Save action and no page ref
  assert.match(part,/data-mrh-save-all hidden>Save changes/);
  assert.doesNotMatch(part,/window\.location\.reload\(/);
 });
+
+test('atomic edit adapter is staged without replacing the production path',async()=>{
+ const {MATERIAL_SOURCING_ATOMIC_EDIT_ENABLED}=await import('../material-sourcing-public-edit.js');
+ assert.equal(MATERIAL_SOURCING_ATOMIC_EDIT_ENABLED,false);
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(app,/if\(MATERIAL_SOURCING_ATOMIC_EDIT_ENABLED\)\{/);
+ assert.match(app,/saveMaterialSourcingAtomic\(\{\.\.\.input,publicChanges,privateChanges:changes\}\)/);
+});
+test('atomic edit issues a single transaction and verifies receipt, public values and private revisions',async()=>{
+ const {saveMaterialSourcingAtomic}=await import('../material-sourcing-public-edit.js');
+ const workspace='33333333-3333-4333-8333-333333333333',actor='44444444-4444-4444-8444-444444444444';
+ const fresh=detail();fresh.board.workspace_id=workspace;
+ const publicChanges=planMaterialSourcingPublicChanges(fresh,id,{brand:'New'});
+ fresh.values[0].value='New';
+ const calls=[];
+ let role='ADMIN',revision=2,receiptCount=1,failWrite=false;
+ const auth={isSignedIn:true,userId:actor,getVerifiedUser:async()=>({id:actor})};
+ const api={context:async()=>({user_id:actor,workspace_id:workspace,profile:{status:'active'}}),
+  allowed:async()=>true,board:async()=>fresh,
+  rpc:async(name,args)=>{
+   calls.push([name,args]);
+   if(name==='material_request_hub_bootstrap')return {workspaceId:workspace,role};
+   if(name==='mrh_edit_material_atomic'){
+    if(failWrite)throw Error('response lost');
+    return {item_id:id,public_count:receiptCount,private_count:args.p_private_changes.length};
+   }
+   if(name==='mrh_sourcing_board_viewer_read')return {'Buying Price':{value:12,revision}};
+   throw Error('unexpected RPC');
+  }};
+ const options={api,auth,workspaceId:workspace,boardId:MATERIAL_SOURCING_BOARD_ID,itemId:id,publicChanges,
+  privateChanges:[{fieldName:'Buying Price',value:12,expectedRevision:1}]};
+ assert.equal((await saveMaterialSourcingAtomic(options)).persisted['Buying Price'].revision,2);
+ assert.equal(calls.filter(([name])=>name==='mrh_edit_material_atomic').length,1);
+ assert.deepEqual(calls.find(([name])=>name==='mrh_edit_material_atomic')[1].p_public_changes,
+  [{column_id:cols[1].id,value:'New',expected_value:'Brand'}]);
+ revision=3;await assert.rejects(()=>saveMaterialSourcingAtomic(options),/readback/);
+ revision=2;receiptCount=0;await assert.rejects(()=>saveMaterialSourcingAtomic(options),/receipt/);
+ receiptCount=1;failWrite=true;
+ const before=calls.filter(([name])=>name==='mrh_edit_material_atomic').length;
+ await assert.rejects(()=>saveMaterialSourcingAtomic(options),/response lost/);
+ assert.equal(calls.filter(([name])=>name==='mrh_edit_material_atomic').length,before+1);
+ failWrite=false;role='VIEWER';
+ await saveMaterialSourcingAtomic({...options,privateChanges:[]});
+ await assert.rejects(()=>saveMaterialSourcingAtomic(options),/Restricted/);
+});

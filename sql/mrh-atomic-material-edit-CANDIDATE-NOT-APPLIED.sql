@@ -30,7 +30,7 @@ begin
  if not found then raise exception 'Material unavailable' using errcode='PT409'; end if;
  -- Public-only editors retain existing board edit access. The delegated private
  -- writer retains its own current MRH scope/role check for any protected write.
- for v_change in select value from jsonb_array_elements(p_public_changes) loop
+ for v_change in select value from jsonb_array_elements(p_public_changes) order by value->>'column_id' nulls first loop
   if jsonb_typeof(v_change) is distinct from 'object' or not
     (v_change ? 'column_id' and v_change ? 'value' and v_change ? 'expected_value') then
    raise exception 'Invalid public change' using errcode='22023';
@@ -52,7 +52,7 @@ begin
   perform public.wm_set_board_cell_if_current(p_item_id,v_col,v_change->'value',v_change->'expected_value');
  end loop;
  v_seen:=array[]::text[];
- for v_change in select value from jsonb_array_elements(p_private_changes) loop
+ for v_change in select value from jsonb_array_elements(p_private_changes) order by value->>'field_name' loop
   if jsonb_typeof(v_change) is distinct from 'object' or not
    (v_change ? 'field_name' and v_change ? 'value' and v_change ? 'expected_revision') then
    raise exception 'Invalid protected change' using errcode='22023';

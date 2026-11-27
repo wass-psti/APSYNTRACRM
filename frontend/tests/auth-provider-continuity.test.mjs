@@ -310,12 +310,18 @@ test("a sign-out during a failed provider session read cannot reuse the old toke
 });
 
 test("provider session reads preserve valid tokens only for recoverable failures", async () => {
-  const { auth } = createAuth({ fetchImpl: async () => { throw Error("No Auth HTTP request is expected."); } });
+  const { auth } = createAuth({
+    fetchImpl: async () => {
+      throw Error("No Auth HTTP request is expected.");
+    },
+  });
   const current = session(userId, "recoverable-access", "recoverable-refresh");
   current.expires_at = Math.floor((Date.now() + 60000) / 1000);
   auth.receiveProviderEvent("SIGNED_IN", current);
   let expired = 0;
-  auth.onExpired = () => { expired++; };
+  auth.onExpired = () => {
+    expired++;
+  };
   auth.provider.getSession = async () => {
     const error = Error("temporary provider read failure");
     error.name = "AuthRetryableFetchError";
@@ -329,45 +335,80 @@ test("provider session reads preserve valid tokens only for recoverable failures
 });
 
 test("definitive provider refresh-token rejection expires a session exactly once", async () => {
-  const { auth } = createAuth({ fetchImpl: async () => { throw Error("No Auth HTTP request is expected."); } });
-  auth.receiveProviderEvent("SIGNED_IN",
-    session(userId, "invalid-refresh-access", "invalid-refresh-token"));
+  const { auth } = createAuth({
+    fetchImpl: async () => {
+      throw Error("No Auth HTTP request is expected.");
+    },
+  });
+  auth.receiveProviderEvent(
+    "SIGNED_IN",
+    session(userId, "invalid-refresh-access", "invalid-refresh-token"),
+  );
   let expired = 0;
-  auth.onExpired = () => { expired++; };
+  auth.onExpired = () => {
+    expired++;
+  };
   auth.provider.refreshSession = async () => ({
     data: { session: null, user: null },
     error: Object.assign(new Error("Refresh token not found"), {
-      name: "AuthApiError", status: 400, code: "refresh_token_not_found",
+      name: "AuthApiError",
+      status: 400,
+      code: "refresh_token_not_found",
     }),
   });
-  await assert.rejects(() => auth.refresh(),
-    (error) => error.code === "refresh_token_not_found");
+  await assert.rejects(
+    () => auth.refresh(),
+    (error) => error.code === "refresh_token_not_found",
+  );
   assert.equal(auth.isSignedIn, false);
   assert.equal(expired, 1);
 });
 
 test("a successful provider response with no session completes expiration", async () => {
-  const { auth } = createAuth({ fetchImpl: async () => { throw Error("No Auth HTTP request is expected."); } });
-  const current = session(userId, "missing-session-access", "missing-session-refresh");
+  const { auth } = createAuth({
+    fetchImpl: async () => {
+      throw Error("No Auth HTTP request is expected.");
+    },
+  });
+  const current = session(
+    userId,
+    "missing-session-access",
+    "missing-session-refresh",
+  );
   current.expires_at = Math.floor((Date.now() + 60000) / 1000);
   auth.receiveProviderEvent("SIGNED_IN", current);
   let expired = 0;
-  auth.onExpired = () => { expired++; };
-  auth.provider.getSession = async () => ({ data: { session: null }, error: null });
-  await assert.rejects(() => auth.token(), (error) => error.code === "SESSION_MISSING");
+  auth.onExpired = () => {
+    expired++;
+  };
+  auth.provider.getSession = async () => ({
+    data: { session: null },
+    error: null,
+  });
+  await assert.rejects(
+    () => auth.token(),
+    (error) => error.code === "SESSION_MISSING",
+  );
   assert.equal(auth.isSignedIn, false);
   assert.equal(expired, 1);
 });
 
 test("malformed provider session data cannot replace a still-valid in-memory session", async () => {
-  const { auth } = createAuth({ fetchImpl: async () => { throw Error("No Auth HTTP request is expected."); } });
+  const { auth } = createAuth({
+    fetchImpl: async () => {
+      throw Error("No Auth HTTP request is expected.");
+    },
+  });
   const current = session(userId, "last-good-access", "last-good-refresh");
   current.expires_at = Math.floor((Date.now() + 60000) / 1000);
   auth.receiveProviderEvent("SIGNED_IN", current);
   let expired = 0;
-  auth.onExpired = () => { expired++; };
+  auth.onExpired = () => {
+    expired++;
+  };
   auth.provider.getSession = async () => ({
-    data: { session: { access_token: "partial-session" } }, error: null,
+    data: { session: { access_token: "partial-session" } },
+    error: null,
   });
   assert.equal(await auth.token(), "last-good-access");
   assert.equal(auth.isSignedIn, true);
@@ -376,51 +417,81 @@ test("malformed provider session data cannot replace a still-valid in-memory ses
 });
 
 test("transient provider refresh failures preserve the current session", async () => {
-  const { auth } = createAuth({ fetchImpl: async () => { throw Error("No Auth HTTP request is expected."); } });
-  auth.receiveProviderEvent("SIGNED_IN",
-    session(userId, "refresh-retry-access", "refresh-retry-token"));
+  const { auth } = createAuth({
+    fetchImpl: async () => {
+      throw Error("No Auth HTTP request is expected.");
+    },
+  });
+  auth.receiveProviderEvent(
+    "SIGNED_IN",
+    session(userId, "refresh-retry-access", "refresh-retry-token"),
+  );
   let expired = 0;
-  auth.onExpired = () => { expired++; };
+  auth.onExpired = () => {
+    expired++;
+  };
   auth.provider.refreshSession = async () => ({
     data: { session: null, user: null },
     error: Object.assign(new Error("Network unavailable"), {
-      name: "AuthRetryableFetchError", status: 0,
+      name: "AuthRetryableFetchError",
+      status: 0,
     }),
   });
-  await assert.rejects(() => auth.refresh(),
-    (error) => error.code === "NETWORK_UNAVAILABLE");
+  await assert.rejects(
+    () => auth.refresh(),
+    (error) => error.code === "NETWORK_UNAVAILABLE",
+  );
   assert.equal(auth.isSignedIn, true);
   assert.equal(expired, 0);
   await auth.signOut({ scope: "local" });
 });
 
 test("unknown provider session-read errors do not reuse a cached token", async () => {
-  const { auth } = createAuth({ fetchImpl: async () => { throw Error("No Auth HTTP request is expected."); } });
-  const current = session(userId, "unknown-error-access", "unknown-error-refresh");
+  const { auth } = createAuth({
+    fetchImpl: async () => {
+      throw Error("No Auth HTTP request is expected.");
+    },
+  });
+  const current = session(
+    userId,
+    "unknown-error-access",
+    "unknown-error-refresh",
+  );
   current.expires_at = Math.floor((Date.now() + 60000) / 1000);
   auth.receiveProviderEvent("SIGNED_IN", current);
   let expired = 0;
-  auth.onExpired = () => { expired++; };
+  auth.onExpired = () => {
+    expired++;
+  };
   auth.provider.getSession = async () => ({
     data: { session: null },
     error: Object.assign(new Error("Unclassified provider response"), {
-      name: "AuthApiError", status: 400, code: "unknown_provider_code",
+      name: "AuthApiError",
+      status: 400,
+      code: "unknown_provider_code",
     }),
   });
-  await assert.rejects(() => auth.token(),
-    (error) => error.code === "unknown_provider_code");
+  await assert.rejects(
+    () => auth.token(),
+    (error) => error.code === "unknown_provider_code",
+  );
   assert.equal(auth.isSignedIn, true);
   assert.equal(expired, 0);
 });
 
 test("an older provider restore snapshot cannot replace a newer Auth event", async () => {
   const { auth } = createAuth({
-    fetchImpl: async () => { throw Error("No Auth HTTP request is expected."); },
+    fetchImpl: async () => {
+      throw Error("No Auth HTTP request is expected.");
+    },
   });
   const older = session(userId, "older-restore-access", "older-refresh");
   auth.receiveProviderEvent("SIGNED_IN", older);
   let resolveRead;
-  auth.provider.getSession = () => new Promise((resolve) => { resolveRead = resolve; });
+  auth.provider.getSession = () =>
+    new Promise((resolve) => {
+      resolveRead = resolve;
+    });
   const pending = auth.restore();
   await Promise.resolve();
   assert.equal(typeof resolveRead, "function");
