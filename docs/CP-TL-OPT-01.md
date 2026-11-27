@@ -27,18 +27,28 @@ Make TradeLink All Documents operate as one database-backed repository. Search, 
 
 ## Verification coverage
 
-The disposable PostgreSQL 17 acceptance job creates 60 synthetic documents and rolls them back. It checks:
+The dedicated PostgreSQL 17 workflow provisions an isolated database, installs the source-aligned TradeLink save/review baseline, applies both CP-TL-OPT-01 migrations, and runs the acceptance script. It creates 60 synthetic documents and rolls all inserted documents and Board events back.
 
-1. Search by document number, client name, reference number and PO number.
-2. Inclusive UTC last-updated filtering across the full 60-record fixture.
-3. Ascending and descending global sort behavior.
-4. Stable 50+10 pagination, including repeated sort values and document-ID tie-breaking.
-5. No duplicate or skipped IDs across pages.
-6. Continued availability of the legacy page RPC and authenticated-only execution of the new RPC.
-7. Presence of the new B-tree and trigram indexes.
-8. Multi-page cursor validation against PostgreSQL 17, including duplicate sort values and immutable document-ID tie-breaking.
+The acceptance suite checks:
 
-Frontend tests cover filter normalization, client/reference matching in the bounded fallback helper, preservation of server order, full result counts, query arguments, response validation and cross-page selection limits.
+1. Global substring search by document number, client name, reference number and PO number.
+2. Inclusive UTC last-updated date filtering: single-day, lower-bound-only and upper-bound-only ranges.
+3. All five sort fields—created time, updated time, document number, document type and revision—in ascending and descending order.
+4. Stable keyset pagination across 50+10 records, including full filtered counts and no duplicate or skipped IDs.
+5. Repeated sort values with immutable document-ID tie-breaking.
+6. Cursor rejection for extra or missing keys, mismatched sort fields, invalid value types, malformed UUIDs, timestamps and revisions, and overlong sort values.
+7. Valid cursor continuation for timestamp, document-type and revision sort paths.
+8. Retention of the legacy page/list RPCs, authenticated-only RPC execution and all seven repository B-tree/trigram indexes.
+
+Frontend tests cover filter normalization, client/reference matching in the bounded fallback helper, preservation of server order, full result counts, query arguments, response validation, cross-page selection snapshots and the existing 50-document bulk-selection limit.
+
+The same SQL acceptance script is also included in the broader `APSYNTRA CRM Frontend Validation` disposable PostgreSQL job.
+
+## CI evidence
+
+- Dedicated `CP-TL-OPT-01 Unified Server Repository Acceptance`: **passed**, GitHub Actions run `45959419178`, commit `d00463538383d3a45e73e824f2d4468c6bcaff02`.
+- Integrated frontend and disposable PostgreSQL regression: TradeLink repository frontend tests and the CP-TL-OPT-01 database acceptance step **passed** in run `45959201512`.
+- GitHub Pages build and deployment: **passed**, run `45959417660`.
 
 ## Production readback
 
