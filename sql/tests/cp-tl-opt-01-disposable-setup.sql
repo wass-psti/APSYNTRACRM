@@ -5,6 +5,15 @@
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS display_name text;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email text;
 
+-- Match the current production repository columns and retained sort indexes.
+ALTER TABLE public.tradelink_documents ADD COLUMN IF NOT EXISTS hidden_at timestamptz;
+ALTER TABLE public.tradelink_documents ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
+CREATE INDEX IF NOT EXISTS tl03_document_created
+ ON public.tradelink_documents(board_id,created_at DESC,id DESC);
+CREATE INDEX IF NOT EXISTS tl03_document_hidden_created
+ ON public.tradelink_documents(board_id,created_at DESC,id DESC)
+ WHERE hidden_at IS NOT NULL AND deleted_at IS NULL;
+
 UPDATE auth.users
 SET email='qa-manager@example.test',email_confirmed_at=clock_timestamp()
 WHERE id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
