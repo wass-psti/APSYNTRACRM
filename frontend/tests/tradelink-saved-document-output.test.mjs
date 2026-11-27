@@ -369,3 +369,28 @@ test('quotation PDF follows the reference hierarchy while preserving every exist
   '.tl-quote-financial-summary','.tl-quote-approval-summary'])
   assert.ok(css.includes(selector),'reference layout style exists: '+selector);
 });
+
+test('creator approval-free quotation replaces flat Not Applicable rows with the two-column authority display',()=>{
+ const content={...docs.quotation,
+  verifiedBy:'Assigned reviewer should not be displayed',
+  approvedBy:'Assigned approver should not be displayed'};
+ const creatorApprovalFree={
+  ...record('quotation',content),workflow_state:'approved',
+  approval_policy:'gm-creator-approval-free-v1',
+  primary_reviewed_at:null,secondary_reviewed_at:null
+ };
+ const html=renderTradeLinkSavedDocumentOutput(creatorApprovalFree,workspace,id,
+  {creatorName:'Original TradeLink Creator'});
+ assert.match(html,/class="tl-quote-approval is-creator-authority"/);
+ assert.match(html,/class="tl-quote-responsibility is-creator-authority"/);
+ assert.match(html,/<h3>REVIEWED BY:<\/h3><strong>Not Applicable<\/strong><p>Creator has approval authority<\/p>/);
+ assert.match(html,/<h3>APPROVED BY:<\/h3><strong>Not Applicable<\/strong><p>Creator has final approval authority<\/p>/);
+ assert.doesNotMatch(html,/Assigned reviewer should not be displayed|Assigned approver should not be displayed/);
+ const css=readFileSync('frontend/tradelink-quotation-redesign.css','utf8');
+ for(const selector of [
+  '.tl-quote-approval.is-creator-authority',
+  '.tl-quote-responsibility.is-creator-authority',
+  '.tl-quote-stage-authority strong',
+  '.tl-quote-stage-authority p'
+ ])assert.ok(css.includes(selector),'creator authority presentation rule: '+selector);
+});

@@ -51,11 +51,13 @@ function approval(row,data,creatorName){
   (stamp(at)?'tl-quote-reviewed':'')+'">'+
   (stamp(at)?'Recorded validation on '+escape(stamp(at)):'No recorded validation')+
   '</p></div>';
+ const authorityStage=(title,explanation)=>'<div class="tl-quote-stage tl-quote-stage-authority"><h3>'+title+
+  '</h3><strong>Not Applicable</strong><p>'+explanation+'</p></div>';
  const status=approved?'APPROVED':'NOT APPROVED';
  const statusDetails=approved?
   ' · WORKFLOW APPROVED · PDF NOT ISSUED · Approved revision '+escape(row.revision)+'.':
   ' · This print view does not approve the document.';
- return '<section class="tl-quote-approval" aria-label="Workflow assignments / recorded responsibility">'+
+ return '<section class="tl-quote-approval'+(approvalFree?' is-creator-authority':'')+'" aria-label="Workflow assignments / recorded responsibility">'+
   '<div class="tl-quote-approval-summary">'+
    '<div class="tl-official-approval-stamp '+(approved?'is-approved':'is-not-approved')+'">'+
     '<strong>'+status+'</strong><span>'+statusDetails+'</span></div>'+
@@ -63,12 +65,12 @@ function approval(row,data,creatorName){
     display(creatorName||'Recorded creator (name unavailable)')+'</strong><p>'+
     display(stamp(row.created_at))+'</p></div>'+
   '</div>'+
-  '<div class="tl-quote-responsibility"><h3>WORKFLOW ASSIGNMENTS / RECORDED RESPONSIBILITY</h3>'+
-   (approvalFree?'<div class="tl-quote-stage"><h3>REVIEWED BY:</h3><strong>Not Applicable</strong></div>':
+  '<div class="tl-quote-responsibility'+(approvalFree?' is-creator-authority':'')+'"><h3>WORKFLOW ASSIGNMENTS / RECORDED RESPONSIBILITY</h3>'+
+   (approvalFree?authorityStage('REVIEWED BY:','Creator has approval authority'):
     exempt?'<div class="tl-quote-stage"><h3>REVIEWED BY:</h3><strong>Not Applicable</strong>'+
      '<p>Sales Supervisor approval — Exempted</p></div>':
      stage('REVIEWED BY:',data.verifiedByEmail||data.verifiedBy,row.primary_reviewed_at))+
-   (approvalFree?'<div class="tl-quote-stage"><h3>APPROVED BY:</h3><strong>Not Applicable</strong></div>':
+   (approvalFree?authorityStage('APPROVED BY:','Creator has final approval authority'):
     stage('APPROVED BY:',data.approvedByEmail||data.approvedBy,row.secondary_reviewed_at))+
   '</div>'+
   '<p class="tl-quote-print-proof">Electronic PDF approval and issuance have NOT been verified.</p>'+
