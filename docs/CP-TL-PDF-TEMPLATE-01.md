@@ -78,8 +78,10 @@ rather than disappearing from the financial summary. The existing VAT label is
 preserved. Long item descriptions and notes remain printable across pages with
 repeated table headings.
 
-The new quotation stylesheet is appended to the ordered CSS manifest and generated
-bundle. The stylesheet and application entry cache keys are advanced together.
+The quotation stylesheet is registered beside the TradeLink module styles, before
+shared visual refinements and the established final application layers. The generated
+bundle follows the ordered manifest; the stylesheet and application entry cache keys
+are advanced together.
 The saved-document regression test checks content retention and section order; the
 Chromium print suite renders WASS, OPC, PLC Systems, multi-page and long-note
 fixtures; the PDFKit verifier checks Letter dimensions, line-item and note

@@ -351,7 +351,10 @@ test('quotation PDF follows the reference hierarchy while preserving every exist
  assert.ok(html.includes('₱0.00'));
  const css=readFileSync('frontend/tradelink-quotation-redesign.css','utf8');
  const bundle=readFileSync('frontend/apsyntra-styles.bundle.css','utf8');
- assert.ok(bundle.endsWith('/* frontend/tradelink-quotation-redesign.css */\n'+css.trimEnd()+'\n'));
+ const marker='/* frontend/tradelink-quotation-redesign.css */\n'+css.trimEnd()+'\n';
+ assert.equal(bundle.split(marker).length-1,1);
+ assert.ok(bundle.indexOf(marker)>bundle.indexOf('/* frontend/tradelink-ui-refresh.css */'));
+ assert.ok(bundle.indexOf(marker)<bundle.indexOf('/* frontend/board-overhaul-experience.css */'));
  for(const selector of ['.tl-quote-workflow-line','.tl-quote-commercial',
   '.tl-quote-financial-summary','.tl-quote-approval-summary'])
   assert.ok(css.includes(selector),'reference layout style exists: '+selector);
