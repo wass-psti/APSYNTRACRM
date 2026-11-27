@@ -9,9 +9,23 @@ const approvalDate=value=>new Intl.DateTimeFormat('en-PH',{
  month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',
  timeZone:'Asia/Manila',hour12:true
 }).format(new Date(value));
+const approvalFact=(label,value)=>value===null||value===undefined||value===''?'':'<div><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>';
 const approvalCard=(r,index,actionEnabled)=>{
  const canAct=actionEnabled&&Number.isSafeInteger(r.revision)&&r.revision>0;
  const reasonId='ft3-reason-'+r.id;
+ const numberLabel=value=>new Intl.NumberFormat('en-PH',{maximumFractionDigits:2}).format(value);
+ const facts=[
+  approvalFact('Request type',r.requestType==='vehicle'?'Vehicle fuel':r.requestType==='container'?'Container refill':null),
+  approvalFact('Requested by',r.requestorName),
+  approvalFact(r.requestType==='vehicle'?'Vehicle plate':'Asset reference',r.reference),
+  approvalFact('Vehicle owner',r.vehicleOwner),
+  approvalFact('Trip route',r.origin&&r.destination?r.origin+' → '+r.destination:null),
+  approvalFact('Odometer',r.odometer===null?null:numberLabel(r.odometer)+' km'),
+  approvalFact('Distance',r.distance===null?null:numberLabel(r.distance)+' km'),
+  approvalFact('Container quantity',r.containerCount===null?null:r.containerCount+' container'+(r.containerCount===1?'':'s')),
+  approvalFact('Responsible person',r.responsiblePerson)
+ ].filter(Boolean).join('');
+ const purpose=r.purpose?'<div class="ft3-approval-card-details ft3-approval-purpose" aria-label="Request purpose"><div><span>Purpose</span><strong>'+esc(r.purpose)+'</strong></div></div>':'';
  return '<li class="ft3-approval-card"><article aria-label="Fuel request awaiting approval">'+
   '<div class="ft3-approval-card-top"><div class="ft3-approval-identity">'+
   '<span class="ft3-approval-card-index" aria-hidden="true">'+String(index+1).padStart(2,'0')+'</span>'+
@@ -21,7 +35,8 @@ const approvalCard=(r,index,actionEnabled)=>{
   '<div class="ft3-approval-card-details"><div><span>Submitted</span><strong>'+
   esc(approvalDate(r.createdAt))+'</strong></div>'+
   '<div><span>Next step</span><strong>Approval decision</strong></div></div>'+
-  (canAct?'<div class="ft3-approval-decision">'+
+  (facts?'<div class="ft3-approval-card-details ft3-approval-request-facts" aria-label="Fuel request details">'+facts+'</div>':'')+
+  purpose+  (canAct?'<div class="ft3-approval-decision">'+
    '<div class="ft3-approval-decision-copy"><span>REVIEW ACTION</span>'+
    '<strong>Record your decision</strong><p>Approve the request or provide a reason to reject it.</p></div>'+
    '<div class="ft3-approval-controls">'+
@@ -53,14 +68,33 @@ export function fuelTrackApprovalModel({snapshot=null,boardId=null,workspaceId=n
    Number.isSafeInteger(snapshot[key])&&snapshot[key]>=0)||
   snapshot.decisionsToday<snapshot.approvedToday+snapshot.rejectedToday||
   snapshot.pendingCount<snapshot.pending.length)return null;
+ const optionalText=(value,max)=>value===undefined||value===null||
+  (typeof value==='string'&&value.length<=max);
+ const optionalNumber=(value,max)=>value===undefined||value===null||
+  (typeof value==='number'&&Number.isFinite(value)&&value>=0&&value<=max);
  if(!snapshot.pending.every(r=>r&&typeof r.id==='string'&&r.id.length>0&&
   typeof r.title==='string'&&r.title.length<=240&&
-  typeof r.createdAt==='string'&&Number.isFinite(Date.parse(r.createdAt))))return null;
+  typeof r.createdAt==='string'&&Number.isFinite(Date.parse(r.createdAt))&&
+  optionalText(r.requestorName,200)&&
+  (r.requestType===undefined||r.requestType===null||['vehicle','container'].includes(r.requestType))&&
+  optionalText(r.reference,120)&&optionalText(r.purpose,500)&&
+  optionalText(r.vehicleOwner,150)&&optionalText(r.origin,240)&&
+  optionalText(r.destination,240)&&optionalText(r.responsiblePerson,150)&&
+  optionalNumber(r.odometer,1000000000)&&optionalNumber(r.distance,10000000)&&
+  (r.containerCount===undefined||r.containerCount===null||
+   (Number.isSafeInteger(r.containerCount)&&r.containerCount>=1&&r.containerCount<=10000))))return null;
  const ids=snapshot.pending.map(r=>r.id);
  if(new Set(ids).size!==ids.length)return null;
  return Object.freeze({approvedToday:snapshot.approvedToday,rejectedToday:snapshot.rejectedToday,
   decisionsToday:snapshot.decisionsToday,pendingCount:snapshot.pendingCount,
-  pending:Object.freeze(snapshot.pending.map(r=>Object.freeze({id:r.id,title:r.title,createdAt:r.createdAt,revision:r.revision})))});
+  pending:Object.freeze(snapshot.pending.map(r=>Object.freeze({
+   id:r.id,title:r.title,createdAt:r.createdAt,revision:r.revision,
+   requestorName:r.requestorName??null,requestType:r.requestType??null,
+   reference:r.reference??null,purpose:r.purpose??null,vehicleOwner:r.vehicleOwner??null,
+   origin:r.origin??null,destination:r.destination??null,
+   odometer:r.odometer??null,distance:r.distance??null,
+   containerCount:r.containerCount??null,responsiblePerson:r.responsiblePerson??null
+  }))) });
 }
 export function renderFuelTrackApprovals({snapshot=null,boardId=null,workspaceId=null,actionEnabled=false}={}){
  const model=fuelTrackApprovalModel({snapshot,boardId,workspaceId});
@@ -80,9 +114,7 @@ export function renderFuelTrackApprovals({snapshot=null,boardId=null,workspaceId
  metric(model?model.rejectedToday:'—','Rejected today','×','rejected')+
  metric(model?model.decisionsToday:'—','Decisions today','↗','decisions')+
  metric(rate,'Approval rate','◷','rate')+'</div>'+
- '<div class="ft3-approvals-sort" aria-label="Approval queue sort options">'+
- '<span>Queue options</span><button type="button" disabled>Newest</button><button type="button" disabled>Oldest</button>'+
- '<button type="button" disabled>Urgency</button><button type="button" disabled>Name</button></div>'+
+ '<div class="ft3-approvals-sort" aria-label="Queue ordering"><span>Queue order</span><span>Newest submissions first</span></div>'+
  (model?(model.pendingCount===0?
   '<div class="ft3-approvals-empty"><span class="ft3-approvals-empty-icon" aria-hidden="true">✓</span>'+
   '<span class="ft3-approval-eyebrow">QUEUE STATUS</span><h3>All clear!</h3>'+
