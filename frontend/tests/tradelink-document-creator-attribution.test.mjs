@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
 import {initialTradeLinkDraftView,renderTradeLinkDraftWorkspace} from '../tradelink-draft-workspace.js';
 
@@ -79,4 +80,16 @@ test('new unsaved documents continue to show the current user as the pending cre
  const workflow=creatorWorkflow(html);
  assert.ok(workflow.includes('Alex P. Señagan'));
  assert.ok(workflow.includes('Auto-captured on save'));
+});
+
+test('deployed module graph cache-busts the corrected creator renderer',()=>{
+ const index=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ const ui=readFileSync(new URL('../tradelink-ui.js',import.meta.url),'utf8');
+ const application=readFileSync(new URL('../tradelink-application.js',import.meta.url),'utf8');
+ assert.ok(index.includes('app.js?v=')&&index.includes('cp-tl-creator-attribution-01-20261127-01'));
+ assert.ok(app.includes('tradelink-ui.js?v=cp-tl-creator-attribution-01-20261127-01'));
+ assert.ok(app.includes('tradelink-draft-workspace.js?v=cp-tl-creator-attribution-01-20261127-01'));
+ assert.ok(ui.includes('tradelink-application.js?v=cp-tl-creator-attribution-01-20261127-01'));
+ assert.ok(application.includes('tradelink-draft-workspace.js?v=cp-tl-creator-attribution-01-20261127-01'));
 });

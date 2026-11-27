@@ -212,7 +212,7 @@ test('TradeLink document menu correction is delivered through versioned applicat
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const ui=readFileSync(new URL('../tradelink-ui.js',import.meta.url),'utf8');
  const application=readFileSync(new URL('../tradelink-application.js',import.meta.url),'utf8');
- const version='cp-tl-universal-edit-01k-20261126-01';
+ const version='cp-tl-creator-attribution-01-20261127-01';
  const entryVersion=index.match(/frontend\/app\.js\?v=([^"]+)/)?.[1];
  assert.ok(entryVersion?.includes(version));
  assert.match(app,new RegExp('tradelink-ui\\.js\\?v='+version));
