@@ -139,7 +139,17 @@ jobs:
       - name: Run TradeLink repository frontend regression tests
         run: node --test frontend/tests/tradelink-draft-workspace.test.mjs
       - name: Test authentication and existing backend contracts
-        run: node --test frontend/tests/*.test.mjs
+        shell: bash
+        run: |
+          set +e
+          node --test frontend/tests/*.test.mjs > /tmp/apsyntra-frontend-tests.log 2>&1
+          test_status=$?
+          set -e
+          if [ "$test_status" -ne 0 ]; then
+            grep -E '^(not ok |# tests |# pass |# fail |  location:|  failureType:|  code:|  name:|    TestContext\\.)' /tmp/apsyntra-frontend-tests.log | head -n 100
+            exit "$test_status"
+          fi
+          tail -n 20 /tmp/apsyntra-frontend-tests.log
 
 
   disposable-postgres:
