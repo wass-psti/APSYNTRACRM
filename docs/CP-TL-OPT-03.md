@@ -33,12 +33,13 @@ The verifier checks exact directory contents, byte lengths, SHA-256 hashes, uniq
 
 ## Acceptance
 
-The CP-TL-OPT-03A GitHub Actions workflow uses an isolated PostgreSQL 17 service and five disposable databases. It verifies:
+The CP-TL-OPT-03A GitHub Actions workflow uses an isolated PostgreSQL 17 service and six disposable databases. It verifies:
 - clean Preview skip with no data mutation;
+- unrelated-only Preview data remains unchanged when the QA fixture is absent;
 - mismatched QA identity abort with data preserved;
 - partial fixture abort with data preserved;
 - exact identity with incomplete fixture abort with data preserved;
-- exact historical fixture cleanup with immutable audit trigger restored;
+- exact historical fixture cleanup while unrelated records remain unchanged and the immutable audit trigger is restored;
 - source manifest and archive/replay hashes.
 
 ## Deployment boundary

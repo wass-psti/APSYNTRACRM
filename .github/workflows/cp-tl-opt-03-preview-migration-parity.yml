@@ -77,10 +77,10 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -Atqc \
             "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" \
             | grep -Fx 'postgres|t'
-      - name: Create five disposable fixture databases
+      - name: Create six disposable fixture databases
         run: |
           set -euo pipefail
-          for db in cp_tl_opt03_fresh cp_tl_opt03_mismatch cp_tl_opt03_partial cp_tl_opt03_identity_only cp_tl_opt03_exact; do
+          for db in cp_tl_opt03_fresh cp_tl_opt03_unrelated cp_tl_opt03_mismatch cp_tl_opt03_partial cp_tl_opt03_identity_only cp_tl_opt03_exact; do
             createdb "$db"
             psql -X -v ON_ERROR_STOP=1 -d "$db" -f sql/tests/cp-tl-opt-03-disposable-setup.sql
           done
@@ -89,6 +89,12 @@ jobs:
           set -euo pipefail
           psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_fresh -f supabase/migrations/20261126044952_retire_apsyntra_timetracker_qa_account.sql
           psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_fresh -f sql/tests/cp-tl-opt-03-assert-fresh.sql
+      - name: Unrelated-only Preview data remains untouched when QA fixture is absent
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_unrelated -f sql/tests/cp-tl-opt-03-seed-unrelated.sql
+          psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_unrelated -f supabase/migrations/20261126044952_retire_apsyntra_timetracker_qa_account.sql
+          psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_unrelated -f sql/tests/cp-tl-opt-03-assert-unrelated.sql
       - name: Mismatched QA identity aborts without mutation
         run: |
           set -euo pipefail
@@ -116,9 +122,11 @@ jobs:
             exit 1
           fi
           psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_identity_only -f sql/tests/cp-tl-opt-03-assert-identity-only.sql
-      - name: Exact QA fixture cleanup restores immutable audit trigger
+      - name: Exact QA cleanup preserves unrelated data and restores audit trigger
         run: |
           set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_exact -f sql/tests/cp-tl-opt-03-seed-unrelated.sql
           psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_exact -f sql/tests/cp-tl-opt-03-seed-exact.sql
           psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_exact -f supabase/migrations/20261126044952_retire_apsyntra_timetracker_qa_account.sql
           psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_exact -f sql/tests/cp-tl-opt-03-assert-exact.sql
+          psql -X -v ON_ERROR_STOP=1 -d cp_tl_opt03_exact -f sql/tests/cp-tl-opt-03-assert-unrelated.sql
