@@ -1,6 +1,6 @@
 {
   "initiative": "CP-CRM-PERF-01B",
-  "captured_at_utc": "2026-11-27T13:35:00Z",
+  "captured_at_utc": "2026-11-27T13:40:00Z",
   "repository_commit_tested": "a1ccbed2f15d874d5764720570c9ffd097e44c26",
   "fueltrans_benchmark": {
     "workflow_run_id": 46000281137,
@@ -95,5 +95,20 @@
     }
   },
   "overall_status": "OPEN_BLOCKED",
-  "outstanding_blocker": "Certified schema-only M45 bootstrap and full disposable Supabase stack for full-host CRM acceptance; current-main TimeTracker single/dual sustained rerun still in progress."
+  "outstanding_blocker": "Certified schema-only M45 bootstrap and full disposable Supabase stack for full-host CRM acceptance; current-main TimeTracker single/dual sustained rerun remains in progress.",
+  "latest_main_checkpoint": {
+    "commit": "7e7e52c391991be6edc06d4ee57d3e8533d1b757",
+    "cp_crm_perf_01b_workflow_run_id": 46008920566,
+    "conclusion": "success",
+    "fueltrans_artifact_id": 15202915938,
+    "board_group_view_regression_job": "success",
+    "fueltrans_job": "success"
+  },
+  "runner_reliability": {
+    "failed_run_id": 46006936134,
+    "cause": "apt-get update failed because packages.microsoft.com returned HTTP 403; regression command was not reached",
+    "correction": "Run psql inside the existing PostgreSQL 17 service container; no external package-repository dependency",
+    "corrected_run_id": 46008920566,
+    "corrected_run_conclusion": "success"
+  }
 }
