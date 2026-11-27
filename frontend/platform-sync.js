@@ -1,3 +1,5 @@
+import {classifyAuthFailure} from './auth/failure-classification.js';
+
 /** CP-CRM-RT01: one signed connection for existing private board broadcasts.
  * Events are invalidation hints ONLY. Every visible record is re-read from signed RPCs.
  * No data, coordinates, roles or permissions are accepted from WebSocket payloads.
@@ -29,8 +31,9 @@ export function shouldRefreshWorkspaceBoardList({reason,view}={}){
  * Keep an independently verified signed session available for a bounded retry.
  */
 export function shouldPreserveSignedSessionOnContextFailure(error,{authSignedIn=false}={}){
- return authSignedIn===true&&
-  ([401,403].includes(Number(error?.status))||error?.code==='42501');
+ const failure=classifyAuthFailure(error,{operation:'workspace-context'});
+ return authSignedIn===true&&failure.category==='WORKSPACE_CONTEXT_UNAVAILABLE'&&
+  failure.preserveSession===true;
 }
 /** Retry a deferred reconciliation after a blocking local read/edit has cleared. */
 export function shouldResumeDeferredReconciliation(status,{blocked=false}={}){
