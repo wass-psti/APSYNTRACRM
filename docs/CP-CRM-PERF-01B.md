@@ -210,7 +210,7 @@ The latest main repository and production migration ledger now both contain **35
 
 ### Board group-view RPC root cause and correction
 
-The read-only production log window from 2026-11-27 11:40–11:42 UTC contained 10 requests to `/rest/v1/rpc/wm_board_group_view_read`: five HTTP 200 and five HTTP 404. PostgreSQL recorded exactly five corresponding errors with SQLSTATE `42883` and message `function pg_catalog.coalesce(jsonb, jsonb) does not exist`. The later 13:23:49–13:26:39 UTC window recorded 20 HTTP 200 responses and no 42883 errors from 13:23:15–13:40:00 UTC.
+The read-only production log window from 2026-11-27 11:40–11:42 UTC contained 10 requests to `/rest/v1/rpc/wm_board_group_view_read`: five HTTP 200 and five HTTP 404. PostgreSQL recorded exactly five corresponding errors with SQLSTATE `42883` and message `function pg_catalog.coalesce(jsonb, jsonb) does not exist`. After the correction, two later windows recorded 34 HTTP 200 responses (20 from 13:23:49–13:26:39 UTC and 14 from 13:34:47–13:37:28 UTC); no matching SQLSTATE 42883 errors appeared in the respective 13:23:15–13:40:00 and 13:26:40–13:45:00 UTC PostgreSQL log windows.
 
 The additive migration `20261127130720_cp_board_group_view_coalesce_fix.sql` replaces only the read and bulk-update function bodies, using native `COALESCE(...)` syntax. It preserves function signatures, owner, `SECURITY DEFINER`, empty `search_path`, and existing function ACLs. No table/data, role, grant, RLS, session-guard or application authorization changes are included.
 
