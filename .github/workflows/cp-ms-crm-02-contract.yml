@@ -4,6 +4,7 @@ on:
     paths:
       - 'integrations/material-sourcing/crm-contract/**'
       - 'frontend/material-sourcing-*.js'
+      - 'frontend/apps/MaterialSourcing/reconcile.js'
       - 'supabase/migrations/*mrh*'
       - 'sql/mrh-*.sql'
       - 'sql/tests/mrh-*.sql'
@@ -13,6 +14,7 @@ on:
     paths:
       - 'integrations/material-sourcing/crm-contract/**'
       - 'frontend/material-sourcing-*.js'
+      - 'frontend/apps/MaterialSourcing/reconcile.js'
       - 'supabase/migrations/*mrh*'
       - 'sql/mrh-*.sql'
       - 'sql/tests/mrh-*.sql'

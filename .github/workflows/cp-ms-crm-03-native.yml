@@ -1,0 +1,54 @@
+name: CP-MS-CRM-03 native frontend integration
+on:
+  pull_request:
+    paths:
+      - 'frontend/apps/MaterialSourcing/**'
+      - 'frontend/app.js'
+      - 'index.html'
+      - 'frontend/tests/material-sourcing-*.test.mjs'
+      - 'scripts/cp-ms-crm-03-browser.mjs'
+      - 'scripts/fixtures/cp-ms-crm-03-fixture.mjs'
+      - 'integrations/material-sourcing/crm-contract/**'
+      - '.github/workflows/cp-ms-crm-03-native.yml'
+  push:
+    branches: [main, integration/cp-ms-crm-03]
+    paths:
+      - 'frontend/apps/MaterialSourcing/**'
+      - 'frontend/app.js'
+      - 'index.html'
+      - 'frontend/tests/material-sourcing-*.test.mjs'
+      - 'scripts/cp-ms-crm-03-browser.mjs'
+      - 'scripts/fixtures/cp-ms-crm-03-fixture.mjs'
+      - 'integrations/material-sourcing/crm-contract/**'
+      - '.github/workflows/cp-ms-crm-03-native.yml'
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Static asset and existing CRM contract checks
+        run: |
+          npm ci --no-audit --no-fund
+          node scripts/verify-pages-source.mjs
+          node --check frontend/app.js
+          node --test frontend/tests/material-sourcing-*.test.mjs integrations/material-sourcing/crm-contract/reconcile.test.mjs
+      - name: CRM production build
+        run: npm run build
+      - name: Full existing CRM frontend regression
+        run: |
+          node --test frontend/tests/*.test.mjs > /tmp/ms-crm03-regression.log 2>&1 || { grep -E '^(not ok |# tests |# pass |# fail |  location:|  error:)' /tmp/ms-crm03-regression.log | head -n 120; exit 1; }
+          tail -n 20 /tmp/ms-crm03-regression.log
+      - name: Static Pages asset graph and responsive Chromium fixture
+        run: |
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$BROWSER"
+          CHROME_BIN="$BROWSER" node scripts/cp-ms-crm-03-browser.mjs
+          CHROME_BIN="$BROWSER" node scripts/priority5f-module-browser.mjs
