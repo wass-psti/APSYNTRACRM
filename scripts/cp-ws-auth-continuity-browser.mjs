@@ -199,7 +199,8 @@ async function runSessionFailureBrowserAcceptance(chromium, baseUrl, fixture, br
         "browser-last-good-refresh", 60);
       auth.receiveProviderEvent("SIGNED_IN", lastGoodSession);
       provider.getSession = async () => ({
-        data: { session: { access_token: "partial-session" }, error: null },
+        data: { session: { access_token: "partial-session" } },
+        error: null,
       });
       const lastGoodToken = await auth.token();
       const malformedResponsePreserved = lastGoodToken === lastGoodSession.access_token &&
