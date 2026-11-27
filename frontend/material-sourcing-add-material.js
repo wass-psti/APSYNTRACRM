@@ -128,7 +128,8 @@ export function parseMaterialAddForm(detail,fd){
   if(field.type==='dropdown'&&!['Local','Import'].includes(value))
    throw new ApiError('Invalid source type.',400);
   if(field.type==='date'&&(!/^\d{4}-\d{2}-\d{2}$/.test(value)||
-      Number.isNaN(Date.parse(value+'T00:00:00Z'))))
+      Number.isNaN(Date.parse(value+'T00:00:00Z'))||
+      new Date(value+'T00:00:00Z').toISOString().slice(0,10)!==value))
    throw new ApiError('Invalid required date.',400);
   ordinary.push({name:field.column,columnId:columns[key],value});
  }
