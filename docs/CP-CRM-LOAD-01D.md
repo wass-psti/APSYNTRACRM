@@ -37,4 +37,15 @@ The browser acceptance uses the production shell DOM helper, application-loading
 
 ## Verification
 
-CI execution is attached to the main-branch commit that introduces this checkpoint. Record the workflow run, test totals, Chromium output and Pages deployment result here after the run completes.
+CI execution and acceptance evidence are recorded below.
+
+
+## Verified results — 2026-11-27
+
+- Main-branch frontend validation: PASS — workflow run 45969692589. The complete frontend suite reported 4,023 tests passed and 0 failed.
+- Chromium acceptance: PASS — 10 application routes; Back/Forward; one document navigation entry; same-scope shell/sidebar/topbar/content-host identity; active route and breadcrumb updates; pending-read retention; stale-read rejection; in-shell route errors; sidebar refresh with scroll restoration; and fresh-shell behavior on scope change. Chromium reported zero page errors.
+- Disposable PostgreSQL jobs in the same frontend workflow: PASS.
+- GitHub Pages build and deployment: PASS — workflow run 45969691502.
+- Live Pages smoke: PASS for main commit 996c7430cfe5bf52a2257bd3764c9f0054f119ab. It verified the hosted entry point, application bundle, required static resources and approved endpoint reachability.
+
+The Chromium fixture imports and executes the same production shell DOM, loading-state and route-resolution modules used by frontend/app.js. It is intentionally isolated and read-only: it does not establish a signed-in production session or perform business writes. The live Pages smoke is a deployment/resource check, not a signed-in application-to-application browser session. The scoped CP-CRM-LOAD-01D code and DOM acceptance criteria are verified; a separate manual signed-in user session walkthrough was not claimed.
