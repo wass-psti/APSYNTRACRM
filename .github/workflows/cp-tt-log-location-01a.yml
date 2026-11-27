@@ -1,0 +1,75 @@
+name: CP-TT-LOG-LOCATION-01A — HR and System Admin Recorded GPS
+on:
+  pull_request:
+    paths:
+      - "frontend/time-tracker-native.js"
+      - "frontend/app.js"
+      - "frontend/tests/time-tracker-gps.test.mjs"
+      - "sql/tests/cp-tt-gps04-disposable-acceptance.sql"
+      - "supabase/migrations/20261127170000_cp_tt_log_location_01a_hr_admin_gps_read.sql"
+      - "supabase/migration-source-manifest.json"
+      - "docs/CP-TT-LOG-LOCATION-01A.md"
+      - ".github/workflows/cp-tt-log-location-01a.yml"
+  push:
+    branches: [main]
+    paths:
+      - "frontend/time-tracker-native.js"
+      - "frontend/app.js"
+      - "frontend/tests/time-tracker-gps.test.mjs"
+      - "sql/tests/cp-tt-gps04-disposable-acceptance.sql"
+      - "supabase/migrations/20261127170000_cp_tt_log_location_01a_hr_admin_gps_read.sql"
+      - "supabase/migration-source-manifest.json"
+      - "docs/CP-TT-LOG-LOCATION-01A.md"
+      - ".github/workflows/cp-tt-log-location-01a.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  gps-role-acceptance:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install pinned repository dependencies
+        run: npm ci
+      - name: Validate syntax, migration manifest, regression tests and production build
+        run: |
+          npm run check
+          node --check frontend/time-tracker-native.js
+          node --check frontend/app.js
+          npm test
+          npm run build
+      - name: Run signed GPS role acceptance on disposable PostgreSQL 17
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-board-collab01-disposable-setup.sql \
+            -f sql/tests/cp-tt-gps01-disposable-setup.sql \
+            -f sql/cp-tt-gps04-fix-privileged-snapshot-cte.sql \
+            -f supabase/migrations/20261127170000_cp_tt_log_location_01a_hr_admin_gps_read.sql \
+            -f sql/tests/cp-tt-gps04-disposable-acceptance.sql
