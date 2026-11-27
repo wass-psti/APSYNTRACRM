@@ -289,37 +289,63 @@ test('bootstrap self review forward migration preserves System Admin scope and a
  assert.doesNotMatch(sql,/gradient descent|backpropagation|training loop/i);
 });
 
-test('Bootstrap owns pending OT review actions while System Admin retains self-review denial',()=>{
- const selfRow={...rows[0],id:'50000000-0000-4000-8000-000000000041',ownerId:'cloud:'+admin,canReviewOt:true};
- const bootstrap=renderTimeTrackerOvertime({requests:[selfRow],
+test('Bootstrap receives self-review controls for every OT policy while System Admin self-review stays denied',()=>{
+ const selfRows=[
+  {...rows[0],id:'50000000-0000-4000-8000-000000000041',ownerId:'cloud:'+admin,
+   otPolicy:'legacy-range',submissionSource:'employee',canReviewOt:true},
+  {...rows[0],id:'50000000-0000-4000-8000-000000000042',ownerId:'cloud:'+admin,
+   otPolicy:'duration-v1',submissionSource:'employee',canReviewOt:true,canReviewDuration:true},
+  {...rows[0],id:'50000000-0000-4000-8000-000000000043',ownerId:'cloud:'+admin,
+   otPolicy:'manual-duration-v1',submissionSource:'manual_admin',canReviewOt:true,canReviewDuration:true}
+ ];
+ const bootstrap=renderTimeTrackerOvertime({requests:selfRows,
   access:{userId:admin,bootstrapApprover:true,otContractActive:true},now});
- assert.match(bootstrap,/data-action="tt-ot-approve"/);
- assert.match(bootstrap,/data-action="tt-ot-reject"/);
- const manual={...selfRow,submissionSource:'manual_admin',otPolicy:'manual-duration-v1',canReviewOt:false};
+ assert.equal((bootstrap.match(/data-action="tt-ot-approve"/g)||[]).length,3);
+ assert.equal((bootstrap.match(/data-action="tt-ot-reject"/g)||[]).length,3);
+ const manual={...selfRows[2],canReviewOt:false};
  const systemAdmin=renderTimeTrackerOvertime({requests:[manual],
   access:{userId:admin,moduleRole:'System Admin',manualOtManager:true,bootstrapApprover:false,otContractActive:true},now});
  assert.doesNotMatch(systemAdmin,/data-action="tt-ot-approve"/);
  assert.doesNotMatch(systemAdmin,/data-action="tt-ot-reject"/);
 });
 
-test('signed bootstrap client decides self-submitted OT and reads former members',async()=>{
- const self={...rows[0],id:'50000000-0000-4000-8000-000000000042',ownerId:'cloud:'+admin,canReviewOt:true};
- const former={...rows[0],id:'50000000-0000-4000-8000-000000000043',
+test('signed bootstrap client decides own legacy, duration and manual-duration OT',async()=>{
+ const selfRows=[
+  {...rows[0],id:'50000000-0000-4000-8000-000000000042',ownerId:'cloud:'+admin,
+   otPolicy:'legacy-range',submissionSource:'employee',canReviewOt:true},
+  {...rows[0],id:'50000000-0000-4000-8000-000000000043',ownerId:'cloud:'+admin,
+   otPolicy:'duration-v1',submissionSource:'employee',canReviewOt:true,canReviewDuration:true},
+  {...rows[0],id:'50000000-0000-4000-8000-000000000044',ownerId:'cloud:'+admin,
+   otPolicy:'manual-duration-v1',submissionSource:'manual_admin',canReviewOt:true,canReviewDuration:true}
+ ];
+ const former={...rows[0],id:'50000000-0000-4000-8000-000000000045',
   ownerId:'cloud:50000000-0000-4000-8000-000000000099',canReviewOt:true};
  const snapshot={mode:'ACTIVE',actorId:admin,workspaceId:workspace,
-  scope:'AUTHORIZED_WORKSPACE_TEAM',bootstrapApprover:true,manualOtManager:false,rows:[self,former]};
- let decideArgs;
+  scope:'AUTHORIZED_WORKSPACE_TEAM',bootstrapApprover:true,manualOtManager:false,rows:[...selfRows,former]};
+ const calls=[];
+ const receipt=(name,args,extra={})=>{
+  calls.push({name,args});
+  return {id:args.p_request_id,workspaceId:workspace,status:args.p_decision,
+   decidedBy:admin,...extra};
+ };
  const client=setup({snapshot,rpcHandlers:{
-  timetracker_ot_decide:args=>(decideArgs=args,{
-   id:args.p_request_id,workspaceId:workspace,status:args.p_decision,
-   decidedBy:admin,submissionSource:'employee'})
+  timetracker_ot_decide:args=>receipt('timetracker_ot_decide',args,{submissionSource:'employee'}),
+  timetracker_ot_decide_duration:args=>receipt('timetracker_ot_decide_duration',args,
+   {submissionSource:'employee',otPolicy:'duration-v1'}),
+  timetracker_ot_decide_manual_duration:args=>receipt('timetracker_ot_decide_manual_duration',args,
+   {submissionSource:'manual_admin',otPolicy:'manual-duration-v1'})
  }});
  const initial=await client.snapshot(board);
- assert.equal(initial.otRequests.length,2,'signed team OT must not depend on active employee directory');
- for(const decision of ['Approved','Rejected']){
-  const result=await client.decideOvertime(board,self.id,decision);
-  assert.equal(result.status,decision);
-  assert.equal(decideArgs.p_request_id,self.id);
+ assert.equal(initial.otRequests.length,4,'signed team OT must not depend on active employee directory');
+ for(const request of selfRows){
+  for(const decision of ['Approved','Rejected']){
+   const result=await client.decideOvertime(board,request.id,decision);
+   assert.equal(result.status,decision);
+   assert.equal(calls.at(-1).args.p_request_id,request.id);
+   const expected=request.otPolicy==='duration-v1'?'timetracker_ot_decide_duration':
+    request.otPolicy==='manual-duration-v1'?'timetracker_ot_decide_manual_duration':'timetracker_ot_decide';
+   assert.equal(calls.at(-1).name,expected);
+  }
  }
 });
 
