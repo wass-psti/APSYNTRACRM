@@ -106,10 +106,10 @@ export function renderNativePricingPanel(row,cells){
     '<input type="text" inputmode="decimal" maxlength="21" data-pricing-field="'+key+'" value="'+esc(draftValue(fields[key]))+'">')+'</label>').join('')+'</div>'+
   '<div data-pricing-result></div><p role="status" aria-live="polite" data-pricing-preview-status></p>'+
   '<button type="button" class="secondary" data-pricing-load>Load saved pricing &amp; FX</button>'+
-  '<button type="button" class="secondary" data-pricing-fetch hidden disabled>Capture latest ECB reference rates</button>'+
+  '<div data-pricing-fetch-host hidden><button type="button" class="secondary" data-pricing-fetch hidden disabled>Capture latest ECB reference rates</button></div>'+
   '<p data-pricing-fx-note>Daily reference rates, not live market or bank transaction quotes. USD/PHP is provider-rebased.</p>'+
   '<label>FX snapshot <select data-pricing-fx disabled><option value="">Manual preview only</option></select></label>'+
-  '<button type="button" class="secondary" data-pricing-save hidden disabled>Save inputs and calculated pricing</button>'+
+  '<div data-pricing-save-host hidden><button type="button" class="secondary" data-pricing-save hidden disabled>Save inputs and calculated pricing</button></div>'+
   '<p role="status" aria-live="polite" data-pricing-status>Saved pricing has not been loaded.</p>'+
   '<details><summary>Saved pricing history (latest 20)</summary><div data-pricing-history><p>Load saved pricing to view history.</p></div></details></section>';
 }
@@ -123,6 +123,8 @@ export function mountNativePricingPanel(host,{input,row,cells,canEdit,isCurrent,
  const status=host.querySelector('[data-pricing-status]'),fxSelect=host.querySelector('[data-pricing-fx]');
  const save=host.querySelector('[data-pricing-save]'),load=host.querySelector('[data-pricing-load]');
  const capture=host.querySelector('[data-pricing-fetch]'),fxNote=host.querySelector('[data-pricing-fx-note]');
+ // CRM button classes specify display; the unstyled container also honors hidden.
+ const showAction=(button,visible)=>{button.parentElement.hidden=!visible;button.hidden=!visible;};
  const current=()=>host.isConnected&&isCurrent()&&auth.userId===actor;
  const values=()=>Object.fromEntries([...inputKeys,'usd','eur'].map(k=>[k,field(k).value||null]));
  let context=null,busy=false,dirty=false,unconfirmed=false;
@@ -165,10 +167,10 @@ export function mountNativePricingPanel(host,{input,row,cells,canEdit,isCurrent,
    fxNote.textContent=describeFxSnapshot(snapshot)+(snapshot.retrievedAt?' · first retrieved '+snapshot.retrievedAt:'');
   }
   if(!fx)fxNote.textContent='Daily reference rates, not live market or bank transaction quotes. USD/PHP is provider-rebased.';
-  capture.hidden=!canEdit;
+  showAction(capture,canEdit);
   if(result.manualSelling!==undefined)host.querySelector('[data-pricing-manual]').textContent=result.manualSelling??'—';
   host.querySelector('[data-pricing-history]').innerHTML=renderPricingHistory(result.history);
-  save.hidden=!canEdit;
+  showAction(save,canEdit);
  }
  async function reload(fx){
   if(!current()||busy)return;
@@ -180,7 +182,7 @@ export function mountNativePricingPanel(host,{input,row,cells,canEdit,isCurrent,
    status.textContent=dirty?'Latest saved state loaded. Review your retained preview inputs before saving.':'Saved pricing context loaded. Select a stored FX snapshot to save pricing.';
   }catch{
    if(!current())return;
-   context=null;fxSelect.value='';save.hidden=true;capture.hidden=true;
+   context=null;fxSelect.value='';showAction(save,false);showAction(capture,false);
    status.textContent='Saved pricing unavailable for this item or not activated. Preview remains available; no pricing write was attempted.';
   }finally{if(current())setBusy(false);}
  }
@@ -265,7 +267,7 @@ export function mountNativePricingPanel(host,{input,row,cells,canEdit,isCurrent,
    usd:nextCells?.['Ex. Rate USD']?.value,eur:nextCells?.['Ex. Rate EUR']?.value};
   // Ordinary material writes invalidate a previously loaded exact baseline.
   // Preserve a modified pricing draft rather than overwriting user input.
-  context=null;fxSelect.value='';fxSelect.disabled=true;save.hidden=true;capture.hidden=true;capture.disabled=true;
+  context=null;fxSelect.value='';fxSelect.disabled=true;showAction(save,false);showAction(capture,false);capture.disabled=true;
   field('usd').disabled=false;field('eur').disabled=false;
   if(!dirty)for(const key of Object.keys(updated))field(key).value=draftValue(updated[key]);
   host.querySelector('[data-pricing-manual]').textContent=draftValue(nextCells?.['Selling Price (VAT-EX)']?.value)||'—';
