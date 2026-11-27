@@ -394,6 +394,43 @@ test("transient provider refresh failures preserve the current session", async (
   await auth.signOut({ scope: "local" });
 });
 
+test("unknown provider session-read errors do not reuse a cached token", async () => {
+  const { auth } = createAuth({ fetchImpl: async () => { throw Error("No Auth HTTP request is expected."); } });
+  const current = session(userId, "unknown-error-access", "unknown-error-refresh");
+  current.expires_at = Math.floor((Date.now() + 60000) / 1000);
+  auth.receiveProviderEvent("SIGNED_IN", current);
+  let expired = 0;
+  auth.onExpired = () => { expired++; };
+  auth.provider.getSession = async () => ({
+    data: { session: null },
+    error: Object.assign(new Error("Unclassified provider response"), {
+      name: "AuthApiError", status: 400, code: "unknown_provider_code",
+    }),
+  });
+  await assert.rejects(() => auth.token(),
+    (error) => error.code === "unknown_provider_code");
+  assert.equal(auth.isSignedIn, true);
+  assert.equal(expired, 0);
+});
+
+test("an older provider restore snapshot cannot replace a newer Auth event", async () => {
+  const { auth } = createAuth({
+    fetchImpl: async () => { throw Error("No Auth HTTP request is expected."); },
+  });
+  const older = session(userId, "older-restore-access", "older-refresh");
+  auth.receiveProviderEvent("SIGNED_IN", older);
+  let resolveRead;
+  auth.provider.getSession = () => new Promise((resolve) => { resolveRead = resolve; });
+  const pending = auth.restore();
+  await Promise.resolve();
+  assert.equal(typeof resolveRead, "function");
+  const newer = session(userId, "newer-event-access", "newer-refresh");
+  auth.receiveProviderEvent("TOKEN_REFRESHED", newer);
+  resolveRead({ data: { session: older }, error: null });
+  assert.equal(await pending, true);
+  assert.equal(auth.accessToken, "newer-event-access");
+});
+
 test("a refreshed cross-tab token is reused after a 401 without another refresh", async () => {
   let apiCalls = 0;
   let refreshCalls = 0;
