@@ -111,7 +111,7 @@ BEGIN
    'terms','CP-TL-OPT-04-NEW-REVISION-ONE','items','[]'::jsonb),
   v_actor,v_actor,clock_timestamp(),clock_timestamp());
  UPDATE public.tradelink_documents SET revision=2,
-  content=jsonb_set(content,'{terms}',to_jsonb('CP-TL-OPT-04-NEW-REVISION-TWO'),true),
+  content=jsonb_set(content,'{terms}',to_jsonb('CP-TL-OPT-04-NEW-REVISION-TWO'::text),true),
   updated_at=clock_timestamp() WHERE id=v_new_id;
 
  SELECT public.tl04_document_render_snapshot(v_board,v_new_id,1) INTO v_value;
