@@ -91,7 +91,7 @@ function termsBlock(terms,company){
  '<section class="tl-quote-acceptance"><div><b>Accepted by: (Client)</b><div class="tl-quote-sign-line"></div><span>(Printed Name &amp; Signature)</span></div><div><b>Date:</b><div class="tl-quote-sign-line"></div></div></section>'+
  '<footer class="tl-official-footer">Thank you for considering '+escape(company.name)+'. We are excited to bring this solution to life.</footer>';
 }
-export function renderTradeLinkQuotationPrint({row,company,template,currency,terms,legacyDefaulted,creatorName}){
+export function renderTradeLinkQuotationPrint({row,company,template,currency,terms,legacyDefaulted,creatorName,profileVersion='legacy',snapshotSource='legacy-static'}){
  const d=row.content;
  const logoAsset=company.quotationLogoAsset||profiles[company.id]?.logo;
  if(!logoAsset)throw new Error('Immutable quotation logo is unavailable.');
@@ -125,8 +125,9 @@ export function renderTradeLinkQuotationPrint({row,company,template,currency,ter
   escape(company.id)+'" data-tradelink-signed-output data-tradelink-template-version="'+
   escape(template.version)+'" data-tradelink-template-id="'+escape(template.id)+
   '" data-tradelink-company-profile="'+escape(company.id)+
-  '" data-tradelink-legacy-company-default="'+legacyDefaulted+'"'+
-  '>'+
+  '" data-tradelink-profile-version="'+escape(profileVersion)+'"'+
+  ' data-tradelink-render-snapshot-source="'+escape(snapshotSource)+'"'+
+  templateStyle(template)+' data-tradelink-legacy-company-default="'+legacyDefaulted+'">'+
   '<header class="tl-quote-letterhead"><img class="tl-quote-logo" src="'+escape(logo)+
    '" alt="'+escape(company.name)+' logo"><div class="tl-quote-company"><h1>'+
    escape(company.name)+'</h1><p>'+escape(company.address)+'</p><p>Tel: '+

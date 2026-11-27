@@ -147,7 +147,11 @@ test('saved quotation uses the stored company, template version, colors, logo an
  assert.match(html,/data-tradelink-template-id="watchdog-opc-reference-v1"/);
  assert.match(html,/data-tradelink-profile-version="1"/);
  assert.match(html,/data-tradelink-render-snapshot-source="captured"/);
- assert.match(html,/style="--tl-official-accent:#14b866;--tl-official-table-bg:#e3f7e9;--tl-official-table-text:#244f78;--tl-official-rule:#2f68c4"/);
+ assert.doesNotMatch(html,/\\sstyle=/);
+ assert.match(html,/tl-official-profile-watchdog-opc/);
+ const templateCss=readFileSync(new URL('../assets/tradelink/templates/tradelink-application-v1.42.0-fc3a9e2dd3626a4b7657ea72c105b042d8128287.css',import.meta.url),'utf8');
+ assert.match(templateCss,/tl-official-profile-watchdog-opc[^}]*--tl-official-accent:#14b866/);
+ assert.match(templateCss,/tl-official-profile-watchdog-opc[^}]*--tl-official-table-bg:#e3f7e9/);
  assert.match(html,/watchdog-opc-quotation-6d43decfa6a476219c2cae149311c84bd7109c57\.png/);
  assert.match(html,/CP-TL-OPT-04B IMMUTABLE SNAPSHOT TERMS/);
  assert.doesNotMatch(html,/Watchdog Automation Sales &amp; Services/);

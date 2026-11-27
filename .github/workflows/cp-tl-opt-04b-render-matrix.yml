@@ -10,6 +10,8 @@ on:
       - 'frontend/tradelink-saved-document-output.js'
       - 'frontend/tradelink/quotation-print.js'
       - 'frontend/tests/tradelink-render-snapshot.test.mjs'
+      - 'frontend/tests/tradelink-saved-document-output.test.mjs'
+      - 'frontend/tradelink-quotation-redesign.css'
       - 'frontend/assets/tradelink/profiles/v1/**'
       - 'frontend/assets/tradelink/templates/**'
       - 'scripts/cp-tl-opt-04b-render-matrix-browser.mjs'
