@@ -6,7 +6,7 @@ Make TradeLink All Documents operate as one database-backed repository. Search, 
 
 ## Delivered implementation
 
-- Added `public.tl03_documents_query` and its private implementation. The function is additive; the existing `tl03_documents_page` and list RPCs remain available.
+- Added `public.tl03_documents_query` and its private implementation. The function is additive; the existing `tl03_documents_page` and list RPCs remain available. A follow-up migration (`20261127024948`) corrects cursor-key validation to use PostgreSQL's supported `jsonb_object_keys()` function.
 - Database-wide substring search covers document number, customer name, reference number and PO number.
 - Document type, workflow state, archive state and visibility filters are applied before pagination.
 - Inclusive last-updated date ranges are interpreted as UTC dates and applied in SQL before pagination.
@@ -36,11 +36,12 @@ The disposable PostgreSQL 17 acceptance job creates 60 synthetic documents and r
 5. No duplicate or skipped IDs across pages.
 6. Continued availability of the legacy page RPC and authenticated-only execution of the new RPC.
 7. Presence of the new B-tree and trigram indexes.
+8. Multi-page cursor validation against PostgreSQL 17, including duplicate sort values and immutable document-ID tie-breaking.
 
 Frontend tests cover filter normalization, client/reference matching in the bounded fallback helper, preservation of server order, full result counts, query arguments, response validation and cross-page selection limits.
 
 ## Production readback
 
-The Supabase migration ledger contains version `20261127013157`. The public and private repository functions are present, and all seven query indexes are present. The production document count was read without modifying document data.
+The Supabase migration ledger contains versions `20261127013157` and `20261127024948`. The public and private repository functions are present, all seven query indexes are present, and the cursor-validation correction is applied and read back from the production function definition. The production document count was read without modifying document data.
 
 GitHub Actions and GitHub Pages acceptance are evaluated against the resulting main-branch commit; they are not inferred from source creation or a successful build alone.

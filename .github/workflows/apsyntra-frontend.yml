@@ -136,6 +136,8 @@ jobs:
         run: node scripts/sec14-legacy-read-consumer-guard.mjs
       - name: Verify recovered production migration source manifest
         run: node scripts/verify-migration-source-manifest.mjs
+      - name: Run TradeLink repository frontend regression tests
+        run: node --test frontend/tests/tradelink-draft-workspace.test.mjs
       - name: Test authentication and existing backend contracts
         run: node --test frontend/tests/*.test.mjs
 
@@ -314,6 +316,7 @@ jobs:
             -f supabase/migrations/20261123103806_cp_tl_document_bulk_actions.sql \
             -f sql/tests/cp-tl-opt-01-disposable-setup.sql \
             -f supabase/migrations/20261127013157_cp_tl_opt_01_unified_server_document_repository.sql \
+            -f supabase/migrations/20261127024948_cp_tl_opt_01_cursor_validation_fix.sql \
             -f sql/tests/cp-tl-opt-01-disposable.sql
   disposable-toolbox-postgres:
     runs-on: ubuntu-latest

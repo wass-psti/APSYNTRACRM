@@ -2408,6 +2408,13 @@
       "file": "20261127013157_cp_tl_opt_01_unified_server_document_repository.sql",
       "bytes": 18000,
       "sha256": "a512fc41377a5b6593e134a2e9c9a2d5c7cae1daaa7133b8e484a4b196d22d16"
+    },
+    {
+      "version": "20261127024948",
+      "name": "cp_tl_opt_01_cursor_validation_fix",
+      "file": "20261127024948_cp_tl_opt_01_cursor_validation_fix.sql",
+      "bytes": 13152,
+      "sha256": "70a1e91638ccae634ce77623096a8422582df194682f173791323310a25d9a09"
     }
   ],
   "applied_only": [

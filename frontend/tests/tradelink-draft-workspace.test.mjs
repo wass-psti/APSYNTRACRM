@@ -1306,3 +1306,10 @@ test('CP-TL-OPT-01 migration installs the unified server query without replacing
  assert.match(migration,/tl03_documents_page/);
  assert.match(migration,/GRANT EXECUTE ON FUNCTION public\.tl03_documents_query/);
 });
+
+test('CP-TL-OPT-01 cursor correction uses supported PostgreSQL JSONB key enumeration',()=>{
+ const migration=readFileSync(new URL('../../supabase/migrations/20261127024948_cp_tl_opt_01_cursor_validation_fix.sql',import.meta.url),'utf8');
+ assert.match(migration,/jsonb_object_keys/);
+ assert.doesNotMatch(migration,/jsonb_object_length/);
+ assert.match(migration,/CREATE OR REPLACE FUNCTION private\.tl03_documents_query/);
+});
