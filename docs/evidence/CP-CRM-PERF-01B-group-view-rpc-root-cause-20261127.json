@@ -1,6 +1,6 @@
 {
   "initiative": "CP-CRM-PERF-01B",
-  "captured_at_utc": "2026-11-27T13:07:20Z",
+  "captured_at_utc": "2026-11-27T13:35:00Z",
   "repository_commit_tested": "a1ccbed2f15d874d5764720570c9ffd097e44c26",
   "fueltrans_benchmark": {
     "workflow_run_id": 46000281137,
@@ -23,8 +23,8 @@
     "limitation": "Warm fixture navigation with emulated CRM host handshake; not full CRM startup or production host CPU/RAM."
   },
   "migration_parity": {
-    "repository_versions": 352,
-    "production_versions": 352,
+    "repository_versions": 354,
+    "production_versions": 354,
     "repository_only": [],
     "production_only": [],
     "duplicates": 0
@@ -56,9 +56,44 @@
       "anon_execute": false
     },
     "correction_migration": "supabase/migrations/20261127130720_cp_board_group_view_coalesce_fix.sql",
-    "production_applied": false,
-    "production_api_verified": false
+    "production_applied": true,
+    "production_api_verified": true,
+    "production_verification": {
+      "migration_ledger_version": "20261127130720",
+      "catalog": {
+        "read_invalid_coalesce": false,
+        "set_all_invalid_coalesce": false,
+        "security_definer_preserved": true,
+        "empty_search_path_preserved": true,
+        "authenticated_execute": true,
+        "anon_execute": false
+      },
+      "post_fix_edge_window_utc": [
+        "2026-11-27T13:23:49Z",
+        "2026-11-27T13:26:39Z"
+      ],
+      "post_fix_http_200_requests": 20,
+      "post_fix_sqlstate_42883_errors": 0
+    },
+    "disposable_regression": {
+      "workflow_run_id": 46007697167,
+      "conclusion": "success",
+      "postgres_version": 17,
+      "reproduced_original_sqlstate": "42883",
+      "verified_corrected_functions": true,
+      "assertions": [
+        "first-read defaults",
+        "repeated read persistence",
+        "individual preference update and revision",
+        "bulk collapse",
+        "bulk expansion",
+        "empty board read and bulk update",
+        "new group starts expanded",
+        "authenticated execute preserved",
+        "anonymous execute remains unavailable"
+      ]
+    }
   },
   "overall_status": "OPEN_BLOCKED",
-  "outstanding_blocker": "Certified schema-only M45 bootstrap and full disposable Supabase stack for full-host CRM acceptance."
+  "outstanding_blocker": "Certified schema-only M45 bootstrap and full disposable Supabase stack for full-host CRM acceptance; current-main TimeTracker single/dual sustained rerun still in progress."
 }

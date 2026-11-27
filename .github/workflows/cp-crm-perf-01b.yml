@@ -19,6 +19,7 @@ on:
       - 'supabase/migrations/*native*'
       - 'supabase/migrations/*workspace*'
       - 'supabase/migrations/*board_group_view*'
+      - 'supabase/migration-source-manifest.json'
       - 'sql/tests/cp-crm-perf-01b-board-group-view-regression.sql'
   workflow_dispatch:
 permissions:

@@ -79,6 +79,17 @@ AS $$ SELECT COALESCE(pg_catalog.current_setting('qa.bootstrap',true),'false')='
 SET LOCAL ROLE authenticated;
 SELECT pg_catalog.set_config('request.jwt.claim.sub', :'gps_actor',true);
 SELECT pg_catalog.set_config('request.jwt.claim.session_id', :'gps_session',true);
+-- The standalone fixture reads individual GUCs; combined OT reads JSON claims.
+-- Set both to the same synthetic actor and verify before any role assertion.
+SELECT pg_catalog.set_config('request.jwt.claims',
+ pg_catalog.jsonb_build_object('sub', :'gps_actor','session_id', :'gps_session')::text,true);
+DO $identity$
+BEGIN
+ IF auth.uid() IS DISTINCT FROM current_setting('qa.gps_actor')::uuid
+  OR auth.jwt()->>'session_id' IS DISTINCT FROM current_setting('qa.gps_session') THEN
+  RAISE EXCEPTION 'GPS signed fixture actor/session mismatch';
+ END IF;
+END $identity$;
 SELECT pg_catalog.set_config('qa.bootstrap','false',true);
 DO $verify$
 DECLARE v jsonb; v_role text;
@@ -93,17 +104,17 @@ BEGIN
   PERFORM pg_catalog.set_config('qa.time_tracker_role',v_role,true);
   IF v_role IN ('HR','System Admin','Supervisor') THEN
    v:=public.timetracker_gps_snapshot(v_board,v_day,v_day,NULL);
-   IF v->>'scope'<>'AUTHORIZED_WORKSPACE_GPS'
-    OR v->>'actorId'<>v_actor::text
-    OR v->>'workspaceId'<>'10000000-0000-4000-8000-000000000001'
-    OR v->>'boardId'<>v_board::text
-    OR pg_catalog.jsonb_array_length(v->'events')<>1
-    OR v->>'truncated'<>'false'
-    OR v #>> '{events,0,recordId}'<>'synthetic-gps-log-location-01a'
-    OR v #>> '{events,0,kind}'<>'in'
-    OR (v #>> '{events,0,latitude}')::double precision<>10.2
-    OR (v #>> '{events,0,longitude}')::double precision<>123.9
-    OR (v #>> '{events,0,accuracyM}')::double precision<>14 THEN
+   IF v->>'scope' IS DISTINCT FROM 'AUTHORIZED_WORKSPACE_GPS'
+    OR v->>'actorId' IS DISTINCT FROM v_actor::text
+    OR v->>'workspaceId' IS DISTINCT FROM '10000000-0000-4000-8000-000000000001'
+    OR v->>'boardId' IS DISTINCT FROM v_board::text
+    OR pg_catalog.jsonb_array_length(v->'events') IS DISTINCT FROM 1
+    OR v->>'truncated' IS DISTINCT FROM 'false'
+    OR v #>> '{events,0,recordId}' IS DISTINCT FROM 'synthetic-gps-log-location-01a'
+    OR v #>> '{events,0,kind}' IS DISTINCT FROM 'in'
+    OR (v #>> '{events,0,latitude}')::double precision IS DISTINCT FROM 10.2
+    OR (v #>> '{events,0,longitude}')::double precision IS DISTINCT FROM 123.9
+    OR (v #>> '{events,0,accuracyM}')::double precision IS DISTINCT FROM 14 THEN
     RAISE EXCEPTION 'FAIL: signed GPS evidence contract failed for role %',v_role;
    END IF;
   ELSE
@@ -117,7 +128,7 @@ BEGIN
  PERFORM pg_catalog.set_config('qa.time_tracker_role','Employee',true);
  PERFORM pg_catalog.set_config('qa.bootstrap','true',true);
  v:=public.timetracker_gps_snapshot(v_board,v_day,v_day,NULL);
- IF pg_catalog.jsonb_array_length(v->'events')<>1 THEN
+ IF pg_catalog.jsonb_array_length(v->'events') IS DISTINCT FROM 1 THEN
   RAISE EXCEPTION 'FAIL: bootstrap administrator GPS access regressed';
  END IF;
  PERFORM pg_catalog.set_config('qa.bootstrap','false',true);
