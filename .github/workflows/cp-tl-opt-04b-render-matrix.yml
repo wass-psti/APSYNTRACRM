@@ -1,0 +1,46 @@
+name: CP-TL-OPT-04B Immutable Render Matrix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/app.js'
+      - 'frontend/tradelink-domain-client.js'
+      - 'frontend/tradelink-draft-workspace.js'
+      - 'frontend/tradelink-saved-document-output.js'
+      - 'frontend/tradelink/quotation-print.js'
+      - 'frontend/tests/tradelink-render-snapshot.test.mjs'
+      - 'frontend/assets/tradelink/profiles/v1/**'
+      - 'frontend/assets/tradelink/templates/**'
+      - 'scripts/cp-tl-opt-04b-render-matrix-browser.mjs'
+      - 'scripts/cp-tl-opt-04b-render-matrix-pdfkit.swift'
+      - '.github/workflows/cp-tl-opt-04b-render-matrix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-matrix:
+    name: 18 Chromium and PDFKit render combinations
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Install Chromium for Playwright
+        run: npx playwright install chromium
+      - name: Run signed snapshot, output and workflow contract tests
+        run: node --test frontend/tests/tradelink-domain-client.test.mjs frontend/tests/tradelink-saved-document-output.test.mjs frontend/tests/tradelink-render-snapshot.test.mjs
+      - name: Build the production frontend
+        run: npm run build
+      - name: Render six modules across all three immutable company profiles
+        run: node scripts/cp-tl-opt-04b-render-matrix-browser.mjs
+      - name: Verify all generated PDFs with macOS PDFKit
+        run: swift scripts/cp-tl-opt-04b-render-matrix-pdfkit.swift /tmp/cp-tl-opt-04b-render-matrix
