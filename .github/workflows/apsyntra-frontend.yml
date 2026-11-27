@@ -25,6 +25,7 @@ on:
       - "frontend/**"
       - "supabase/migrations/*.sql"
       - "sql/tests/cp-crm-global-search-*.sql"
+      - "sql/tests/cp-tl-opt-01-*.sql"
       - "docs/CP-CRM-GLOBAL-SEARCH-01.md"
       - "supabase/migration-candidates/**"
       - "supabase/migration-source-manifest.json"
