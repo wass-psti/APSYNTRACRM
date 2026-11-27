@@ -95,7 +95,7 @@ import {TRADELINK_APPLICATION_ROUTE,tradeLinkApplicationHref,parseTradeLinkAppli
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows,
  searchTradeLinkBoardItems,captureTradeLinkTabMotion,mountTradeLinkTabMotion} from './tradelink-ui.js?v=cp-tl-universal-edit-01k-20261126-01';
 import {renderTradeLinkSavedDocumentOutput,mountTradeLinkSavedDocumentOutput,
- closeTradeLinkSavedDocumentOutput} from './tradelink-saved-document-output.js?v=cp-tl-universal-edit-01k-20261126-01-cp-tl-quotation-redesign-01-20261127';
+ closeTradeLinkSavedDocumentOutput} from './tradelink-saved-document-output.js?v=cp-tl-universal-edit-01k-20261126-01-cp-tl-quotation-redesign-02-20261127';
 import {TradeLinkAttachmentClient,TL03_ATTACHMENTS_ENABLED}
  from './tradelink-attachments.js';
 import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftForm,parseTradeLinkDraftForm,

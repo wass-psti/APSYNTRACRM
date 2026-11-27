@@ -317,7 +317,7 @@ test('quotation PDF follows the reference hierarchy while preserving every exist
   remarks:'Retain all saved quotation remarks',
   verifiedByEmail:'sales-supervisor@example.test',
   approvedByEmail:'management@example.test',
-  terms:'QUOTATION TERMS AND CONDITIONS\\n1. Validity\\nSynthetic terms remain visible'};
+  terms:'QUOTATION TERMS AND CONDITIONS\n1. Validity\nSynthetic terms remain visible'};
  const approved={...record('quotation',content),workflow_state:'approved',
   approval_policy:'standard-dual-v1',primary_reviewed_at:stamp,secondary_reviewed_at:stamp};
  const html=renderTradeLinkSavedDocumentOutput(approved,workspace,id,
@@ -339,10 +339,10 @@ test('quotation PDF follows the reference hierarchy while preserving every exist
   '30 Days Net','Validity:','Delivery:','3 Days (in Stock)','Currency:',
   'MATERIAL DESCRIPTION','UNIT PRICE','Installation note remains visible',
   'Retain all saved quotation remarks','Subtotal:','Discount:','After discount:',
-  'VAT (0% - Tax Exempt):','TOTAL:','CREATED BY:','Original TradeLink Creator',
+  'VAT / tax classification:','VAT (0% - Tax Exempt):','TOTAL:','CREATED BY:','Original TradeLink Creator',
   'REVIEWED BY:','APPROVED BY:','Recorded validation on','Approved revision 5',
   'Electronic PDF approval and issuance have NOT been verified.',
-  'Standard Terms &amp; Conditions of Sale','Accepted by: (Client)',
+  'Standard Terms &amp; Conditions of Sale','Synthetic terms remain visible','Accepted by: (Client)',
   '(Printed Name &amp; Signature)','Thank you for considering Watchdog Automation OPC.'
  ])assert.ok(html.includes(text),'quotation output preserves: '+text);
  assert.match(html,/class="tl-official-approval-stamp is-approved"/);
@@ -351,7 +351,7 @@ test('quotation PDF follows the reference hierarchy while preserving every exist
  assert.ok(html.includes('₱0.00'));
  const css=readFileSync('frontend/tradelink-quotation-redesign.css','utf8');
  const bundle=readFileSync('frontend/apsyntra-styles.bundle.css','utf8');
- assert.ok(bundle.endsWith('/* frontend/tradelink-quotation-redesign.css */\\n'+css.trimEnd()+'\\n'));
+ assert.ok(bundle.endsWith('/* frontend/tradelink-quotation-redesign.css */\n'+css.trimEnd()+'\n'));
  for(const selector of ['.tl-quote-workflow-line','.tl-quote-commercial',
   '.tl-quote-financial-summary','.tl-quote-approval-summary'])
   assert.ok(css.includes(selector),'reference layout style exists: '+selector);

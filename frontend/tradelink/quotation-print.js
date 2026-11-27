@@ -30,10 +30,12 @@ function totals(data,currency){
  const discountLabel=data.discountType==='percentage'&&Number(data.discountValue)>0?
   'Discount ('+data.discountValue+'%)':'Discount';
  const pair=(name,n,c=currency)=>'<div><dt>'+escape(name)+':</dt><dd>'+money(n,c)+'</dd></div>';
+ const textPair=(name,value)=>'<div><dt>'+escape(name)+':</dt><dd>'+display(value)+'</dd></div>';
+ const vatLabel=vatLabels[data.vatType]||data.vatType||'—';
  return '<section class="tl-official-totals tl-quote-financial-summary"><dl>'+
   pair('Subtotal',t.subtotal)+pair(discountLabel,-t.discount)+
-  pair('After discount',t.taxable)+
-  pair('VAT ('+(vatLabels[data.vatType]||data.vatType||'—')+')',t.vat)+
+  pair('After discount',t.taxable)+textPair('VAT / tax classification',vatLabel)+
+  pair('VAT ('+vatLabel+')',t.vat)+
   '<div class="tl-official-grand"><dt>TOTAL:</dt><dd>'+money(t.total,currency)+'</dd></div>'+
   (currency!=='PHP'&&data.exchangeRate>0?
    pair('PHP equivalent · saved exchange rate',t.phpEquivalent,'PHP'):'')+
