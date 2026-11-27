@@ -694,6 +694,27 @@ function historyPage(result,period,busy,view){
   '</div></div>';
 }
 
+/** OJT keeps its existing personal Clock and gains strictly read-only views. */
+export function renderTimeTrackerOjtSharedRead(sharedRead){
+ if(!sharedRead)return '<p class="tt-muted">Shared attendance and OT are unavailable. Refresh to retry.</p><button type="button" class="secondary" data-action="tt-refresh">Refresh shared records</button>';
+ const rows=timeTrackerLogRowsForSnapshot({status:'VERIFIED_READ',sharedRead});
+ const attendance=rows.slice().sort((a,b)=>Date.parse(b.clockIn)-Date.parse(a.clockIn));
+ const ot=sharedRead.overtime||[];
+ const table=(headers,records)=>'<div class="table-scroll"><table class="board-table"><thead><tr>'+
+  headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+
+  (records.map(row=>'<tr>'+row.map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('')||
+   '<tr><td colspan="'+headers.length+'">No authorized records.</td></tr>')+'</tbody></table></div>';
+ return '<section class="tt-secondary-content" aria-label="Shared attendance and overtime">'+
+  '<h3>Shared records</h3><p class="tt-muted">View authorized employee and intern records. Read-only.</p>'+
+  '<button type="button" class="secondary" data-action="tt-refresh">Refresh shared records</button>'+
+  '<details><summary>Attendance Log ('+attendance.length+')</summary>'+
+  table(['Employee','Department','Clock In','Clock Out','Status'],attendance.map(r=>[
+   r.name,r.department,date(r.clockIn),date(r.clockOut),r.status]))+'</details>'+
+  '<details><summary>Overtime ('+ot.length+')</summary>'+
+  table(['Employee','Date','Requested Hours','Status'],ot.map(r=>[
+   r.name,r.date,r.durationMinutes===null?'—':String(r.durationMinutes/60),r.status==='Submitted'?'Pending':r.status]))+
+  '</details></section>';
+}
 export function renderTimeTrackerNative({
  result=null,displayName='',referenceShell=false,busy=false,clockPending=false,clockPendingAction='clock-out',locationPreference='',workPlanDraft='',ojtWorkPlanDraft='',geoPromptVisible=false,geoPermission='unknown',geoMessage='',clockStage='idle',clockCorrectionNotice='',error='',success='',period='all',view='clock',now=new Date(),employeesSearch='',employeesTab='directory',employeesDepartment='',overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otManualVisibleCount=50,otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError='',
@@ -732,6 +753,8 @@ export function renderTimeTrackerNative({
   html+=renderTimeTrackerOjtClock({roster:result.ojtRoster,selected:ojtSelected,
    attendance:ojtAttendance,busy:busy||ojtBusy,error:ojtError,success:ojtSuccess,
    workPlanDraft:ojtWorkPlanDraft,locationSelection:ojtLocationSelection,geoProgress:ojtGeoProgress});
+  if(ojtSelected&&result.ojtRoster?.mode==='SHARED_LOGIN'&&ojtAttendance)
+   html+=renderTimeTrackerOjtSharedRead(ojtAttendance.sharedRead);
   html+=applicationFooter()+'</div></section>';
   return html;
  }
@@ -751,7 +774,7 @@ export function renderTimeTrackerNative({
  if(selected==='log')html+=renderTimeTrackerLog({
   records:timeTrackerLogRowsForSnapshot(result),
    otRequests:result.otRequests||[],otContractActive:result.access?.otContractActive===true,
-  scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
+  scope:result.sharedRead?.log?.scope||result.log?.scope||'OWN_ATTENDANCE_ONLY',
   filters:logFilters,now,busy,
   gpsEligible:logGpsEligible,gpsData:logGpsData,gpsBusy:logGpsBusy,gpsError:logGpsError,
   gpsErrorRecordId:logGpsErrorRecordId,expandedRecordIds:logExpandedRecordIds,mapEnabled,mapTheme,
