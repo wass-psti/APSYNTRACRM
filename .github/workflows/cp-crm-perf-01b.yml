@@ -6,6 +6,18 @@ on:
       - '.github/workflows/cp-crm-perf-01b.yml'
       - 'scripts/cp-crm-perf-01b-fueltrans.mjs'
       - 'frontend/tests/crm-perf-01b-fueltrans.test.mjs'
+      - 'frontend/app.js'
+      - 'frontend/data.js'
+      - 'frontend/session.js'
+      - 'frontend/platform-sync.js'
+      - 'frontend/workspace-application-ownership.js'
+      - 'frontend/native-application-access.js'
+      - 'frontend/fueltrans/**'
+      - 'scripts/cp-ft-ui06-gotrue-postgrest.sh'
+      - 'scripts/cp-ft-ui06-two-session.mjs'
+      - 'supabase/migrations/*fueltrans*'
+      - 'supabase/migrations/*native*'
+      - 'supabase/migrations/*workspace*'
   workflow_dispatch:
 permissions:
   contents: read
