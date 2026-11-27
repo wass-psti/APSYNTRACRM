@@ -10,7 +10,7 @@ on:
       - 'sql/tests/mrh-*.sql'
       - '.github/workflows/cp-ms-crm-02-contract.yml'
   push:
-    branches: [main, integration/cp-ms-crm-02]
+    branches: [main, integration/cp-ms-crm-02, integration/cp-ms-crm-04b1]
     paths:
       - 'integrations/material-sourcing/crm-contract/**'
       - 'frontend/material-sourcing-*.js'
@@ -69,6 +69,8 @@ jobs:
           for f in integrations/material-sourcing/supabase/migrations/*.sql integrations/material-sourcing/supabase/seed.sql integrations/material-sourcing/crm-contract/pricing-contract.sql; do
             docker exec -i "$name" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 < "$f"
           done
+          docker cp sql/mrh-pricing-v1-CANDIDATE-NOT-APPLIED.sql "$name:/tmp/mrh-pricing-v1.sql"
+          docker exec -i "$name" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 < sql/tests/mrh-pricing-v1-disposable.sql
           docker stop "$name" >/dev/null
       - name: Clean disposable containers
         if: always()
