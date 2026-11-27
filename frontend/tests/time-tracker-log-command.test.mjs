@@ -199,21 +199,27 @@ test('Clock-In keeps AM/PM labels correct immediately around noon and midnight i
  ].sort());
 });
 
-test('Work Duration is blank until completion and short shifts have no lunch deduction',()=>{
+test('Work Duration is blank until completion and deducts only actual lunch overlap',()=>{
  const active={...records[0],clockIn:'2026-11-04T00:00:00Z'};
  assert.equal(timeTrackerLogWorkDuration(active),'');
  const close=(clockOut,creditedMs)=>({...active,clockOut,status:'Completed',creditedMs});
- assert.equal(timeTrackerLogWorkDuration(close('2026-11-04T05:30:00Z',16200000)),'05:30:00');
- assert.equal(timeTrackerLogWorkDuration(close('2026-11-04T08:59:59Z',28799000)),'08:59:59');
- assert.equal(timeTrackerLogWorkDuration(close('2026-11-04T09:00:00Z',28800000)),'09:00:00');
- assert.equal(timeTrackerLogWorkDuration(close('2026-11-04T09:30:00Z',30600000)),'09:00:00');
+ assert.equal(timeTrackerLogWorkDuration(close('2026-11-04T03:30:00Z',12600000)),'03:30:00');
+ assert.equal(timeTrackerLogWorkDuration(close('2026-11-04T04:30:00Z',14400000)),'04:00:00');
+ assert.equal(timeTrackerLogWorkDuration(close('2026-11-04T05:30:00Z',16200000)),'04:30:00');
+ assert.equal(timeTrackerLogWorkDuration(close('2026-11-04T08:59:59Z',28799000)),'07:59:59');
+ assert.equal(timeTrackerLogWorkDuration(close('2026-11-04T09:00:00Z',28800000)),'08:00:00');
+ assert.equal(timeTrackerLogWorkDuration(close('2026-11-04T09:30:00Z',30600000)),'08:30:00');
+ assert.equal(timeTrackerLogWorkDuration({...active,clockIn:'2026-11-27T00:24:12Z',
+  clockOut:'2026-11-27T09:52:13Z',status:'Completed'}),'08:28:01');
+ assert.equal(timeTrackerLogWorkDuration({...active,clockIn:'2026-11-04T05:00:00Z',
+  clockOut:'2026-11-04T07:00:00Z',status:'Completed'}),'02:00:00');
  const closed=close('2026-11-04T10:00:00Z',32400000);
  assert.equal(timeTrackerLogWorkDuration(closed),'09:00:00');
  assert.equal(timeTrackerLogWorkDuration(close('2026-11-04T11:00:00Z',36000000)),'10:00:00');
  assert.equal(timeTrackerLogWorkDuration({...closed,workDurationMs:3600000}),'01:00:00');
  const html=render({records:[active,close('2026-11-04T05:30:00Z',16200000)]});
  assert.match(html,/class="tt-log-row-duration"[^>]*><\/span>/);
- assert.match(html,/class="tt-log-row-duration"[^>]*>05:30:00<\/span>/);
+ assert.match(html,/class="tt-log-row-duration"[^>]*>04:30:00<\/span>/);
  assert.doesNotMatch(html,/data-tt-log-active-duration/);
  const styles=readFileSync('frontend/apps/TimeTracker/time-tracker-reference-shell.css','utf8');
  assert.match(styles,/data-tt-log-width-duration="96"/);

@@ -952,7 +952,7 @@ try {
   );
   assert.equal(
     await page.locator(".tt-log-row-duration").textContent(),
-    "09:00:00",
+    "08:00:00",
   );
   const logTable = page.locator(".tt-log-table");
   const logGeometry = await logTable.evaluate((table) => {
