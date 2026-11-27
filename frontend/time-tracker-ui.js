@@ -703,14 +703,15 @@ export function renderTimeTrackerNative({
 }={}){
  const verified=result?.status==='VERIFIED_READ';
  const employeesEligible=verified&&canViewTimeTrackerEmployees(result.access);
- const selected=((view==='employees'&&!employeesEligible)||(view==='team'&&teamEligible!==true)||
+ let selected=((view==='employees'&&!employeesEligible)||(view==='team'&&teamEligible!==true)||
   (view==='gps'&&gpsEligible!==true))?'clock':
  ['overview','clock','employees','log','reports','calendar','ot','hours','team','monitor','gps'].includes(view)?view:'clock';
  const sharedOjt=verified&&['SHARED_LOGIN','SHARED_DISABLED','SERVICE_UNAVAILABLE','SETUP_REQUIRED'].includes(result.ojtRoster?.mode);
+ if(sharedOjt&&(!ojtSelected||result.ojtRoster?.mode!=='SHARED_LOGIN'||!['clock','log','ot'].includes(selected)))selected='clock';
  const reference=referenceShell&&verified&&!sharedOjt;
  let html='<section class="tt-native" aria-label="TimeTracker attendance application"><div class="fm1-app tt-application" data-tt-view="'+selected+'" data-tt-application-root'+(reference?' data-tt-reference-shell':'')+'>'+
   (reference?'':head(verified?result.access:null,busy,selected))+
-  (sharedOjt?'<nav class="tt-ojt-navigation" aria-label="Intern attendance"><strong>OJT attendance</strong></nav>':
+  (sharedOjt?'<nav class="tt-ojt-navigation" aria-label="Intern attendance"><strong>OJT attendance</strong>'+ (ojtSelected&&result.ojtRoster?.mode==='SHARED_LOGIN'?['clock','log','ot'].map(key=>'<button type="button" data-action="tt-tab" data-target="'+key+'" aria-pressed="'+(selected===key)+'"'+(busy?' disabled':'')+'>'+({clock:'Clock',log:'Log',ot:'OT'}[key])+'</button>').join(''):'')+'</nav>':
    navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true,employeesEligible))+
   (sharedOjt||selected==='employees'||(verified&&selected==='log')?'':applicationHeading(selected,busy,verified&&adminEligible,verified&&adminFullAccess)+((verified&&(selected==='log'||(selected==='clock'&&TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&result.access?.attendanceWritesAccepted===true)))?'':notifications(verified,verified&&result.access?.attendanceWritesAccepted===true,busy)));
  if(busy&&verified&&selected==='clock')html+='<div class="tt-clock-sync-status" role="status" aria-live="polite">'+
@@ -728,7 +729,7 @@ export function renderTimeTrackerNative({
    '</div></div>'+applicationFooter()+'</div></section>';
   return html;
  }
- if(sharedOjt){
+ if(sharedOjt&&selected==='clock'){
   html+=renderTimeTrackerOjtClock({roster:result.ojtRoster,selected:ojtSelected,
    attendance:ojtAttendance,busy:busy||ojtBusy,error:ojtError,success:ojtSuccess,
    workPlanDraft:ojtWorkPlanDraft,locationSelection:ojtLocationSelection,geoProgress:ojtGeoProgress});
@@ -751,7 +752,7 @@ export function renderTimeTrackerNative({
  if(selected==='log')html+=renderTimeTrackerLog({
   records:timeTrackerLogRowsForSnapshot(result),
    otRequests:result.otRequests||[],otContractActive:result.access?.otContractActive===true,
-  scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
+  scope:result.sharedLog?.scope||result.log?.scope||'OWN_ATTENDANCE_ONLY',
   filters:logFilters,now,busy,
   gpsEligible:logGpsEligible,gpsData:logGpsData,gpsBusy:logGpsBusy,gpsError:logGpsError,
   gpsErrorRecordId:logGpsErrorRecordId,expandedRecordIds:logExpandedRecordIds,mapEnabled,mapTheme,
