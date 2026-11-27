@@ -1570,34 +1570,6 @@
   ],
   "forward_migrations": [
     {
-      "version": "20261127100000",
-      "name": "cp_tt_ot_duration_approver_scope_and_manual_duration",
-      "file": "20261127100000_cp_tt_ot_duration_approver_scope_and_manual_duration.sql",
-      "bytes": 17608,
-      "sha256": "3ee8826ab7e6c1a226ddea81759e4a7d946ff4be9de6ae40afc4ee119eb1c607"
-    },
-    {
-      "version": "20261126120000",
-      "name": "cp_tt_duration_overtime",
-      "file": "20261126120000_cp_tt_duration_overtime.sql",
-      "bytes": 23735,
-      "sha256": "86b101e067dc443dec188b7607e015dd58d90ddb1d0fb0e95d5704a131dd79d9"
-    },
-    {
-      "version": "20261126082753",
-      "name": "tradelink_shared_projection_verification",
-      "file": "20261126082753_tradelink_shared_projection_verification.sql",
-      "bytes": 2289,
-      "sha256": "5bd1821bd47adb94db9ea6aeb7f9c94620dbc6265352abf65b51a1cd5c875898"
-    },
-    {
-      "version": "20261126072856",
-      "name": "tradelink_universal_edit_shared_save",
-      "file": "20261126072856_tradelink_universal_edit_shared_save.sql",
-      "bytes": 21959,
-      "sha256": "e7eaf299c7f252058fba63412e0984810b53d2832caf92c9221f54070a632ab5"
-    },
-    {
       "version": "20261116005252",
       "name": "cp_board_trash_permanent_delete_01",
       "file": "20261116005252_cp_board_trash_permanent_delete_01.sql",
@@ -2382,11 +2354,25 @@
       "sha256": "183c67bbba12de00684fb51e1e1625791e053120cf1027aff5152b9d8bcc570f"
     },
     {
+      "version": "20261126072856",
+      "name": "tradelink_universal_edit_shared_save",
+      "file": "20261126072856_tradelink_universal_edit_shared_save.sql",
+      "bytes": 21959,
+      "sha256": "e7eaf299c7f252058fba63412e0984810b53d2832caf92c9221f54070a632ab5"
+    },
+    {
       "version": "20261126075745",
       "name": "cp_dda_fe_03a_prod_persistence_rpc",
       "file": "20261126075745_cp_dda_fe_03a_prod_persistence_rpc.sql",
       "bytes": 21263,
       "sha256": "0f12ccd2384714311773a4fa1abef3e550596eabdade9a3746f5c9b215f6ebd5"
+    },
+    {
+      "version": "20261126082753",
+      "name": "tradelink_shared_projection_verification",
+      "file": "20261126082753_tradelink_shared_projection_verification.sql",
+      "bytes": 2289,
+      "sha256": "5bd1821bd47adb94db9ea6aeb7f9c94620dbc6265352abf65b51a1cd5c875898"
     },
     {
       "version": "20261126090000",
@@ -2424,6 +2410,13 @@
       "sha256": "7e6a51f76f731551fc1d3ce802898e44511fb9119a2f642cf76583492069dbc9"
     },
     {
+      "version": "20261126120000",
+      "name": "cp_tt_duration_overtime",
+      "file": "20261126120000_cp_tt_duration_overtime.sql",
+      "bytes": 23735,
+      "sha256": "86b101e067dc443dec188b7607e015dd58d90ddb1d0fb0e95d5704a131dd79d9"
+    },
+    {
       "version": "20261127013157",
       "name": "cp_tl_opt_01_unified_server_document_repository",
       "file": "20261127013157_cp_tl_opt_01_unified_server_document_repository.sql",
@@ -2436,6 +2429,20 @@
       "file": "20261127024948_cp_tl_opt_01_cursor_validation_fix.sql",
       "bytes": 13152,
       "sha256": "70a1e91638ccae634ce77623096a8422582df194682f173791323310a25d9a09"
+    },
+    {
+      "version": "20261127100000",
+      "name": "cp_tt_ot_duration_approver_scope_and_manual_duration",
+      "file": "20261127100000_cp_tt_ot_duration_approver_scope_and_manual_duration.sql",
+      "bytes": 17608,
+      "sha256": "3ee8826ab7e6c1a226ddea81759e4a7d946ff4be9de6ae40afc4ee119eb1c607"
+    },
+    {
+      "version": "20261127170000",
+      "name": "cp_tt_shared_read_only_visibility",
+      "file": "20261127170000_cp_tt_shared_read_only_visibility.sql",
+      "bytes": 4977,
+      "sha256": "5948e8e1c7cbd1db843ece0013d39b2e51a98004e865884b7b4ea20d26c908cf"
     }
   ],
   "applied_only": [
