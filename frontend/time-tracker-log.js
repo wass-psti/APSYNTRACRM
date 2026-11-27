@@ -213,20 +213,53 @@ function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=fals
   durationLabel(row.creditedMs):'Not finalized';
  const eventLabel=active?'Clock-out not yet recorded':
   row.clockOut?'Clock-out timestamp recorded':'Clock-out evidence unavailable';
- // Exact fixes originate ONLY from the server-authorized, identity-checked
- // timetracker_gps_snapshot RPC. The broad attendance Log never supplies GPS.
- const events=gpsEligible&&Array.isArray(gpsData?.events)?
+ // Exact fixes come only from the signed, Log-specific GPS RPC. The broad
+ // attendance projection remains GPS-redacted.
+ const employeeId=typeof row.ownerId==='string'&&row.ownerId.startsWith('cloud:')?
+  row.ownerId.slice(6):null;
+ const rangeForDate=date=>{
+  const ranges=Array.isArray(gpsData?.ranges)?gpsData.ranges:[];
+  const matches=ranges.filter(range=>range&&date>=range.from&&date<=range.to&&
+   (range.userId==null||range.userId===employeeId));
+  return matches.find(range=>range.userId===employeeId)||
+   matches.find(range=>range.userId==null)||null;
+ };
+ const events=gpsEligible&&employeeId&&Array.isArray(gpsData?.events)?
   gpsData.events.filter(p=>p.recordId===row.id&&
    row.ownerId==='cloud:'+p.userId&&['in','out'].includes(p.kind)&&
    Array.isArray(gpsData.ranges)&&gpsData.ranges.some(range=>
-    manilaDay(p.timestamp)>=range.from&&manilaDay(p.timestamp)<=range.to)):[];
- const days=[manilaDay(row.clockIn),...(row.clockOut?[manilaDay(row.clockOut)]:[])];
- const covered=Boolean(gpsEligible&&gpsData?.ranges?.some(r=>
-  days.every(d=>d>=r.from&&d<=r.to)));
+    manilaDay(p.timestamp)>=range.from&&manilaDay(p.timestamp)<=range.to&&
+    (range.userId==null||range.userId===p.userId))):[];
+ const gpsFixFor=kind=>events.find(point=>point.kind===kind)||null;
+ const gpsFixStatus=kind=>{
+  if(!gpsEligible)return 'Access restricted';
+  if(!employeeId||(kind==='out'&&!row.clockOut))return 'Not applicable';
+  if(gpsFixFor(kind))return 'Captured';
+  const timestamp=kind==='in'?row.clockIn:row.clockOut;
+  const range=rangeForDate(manilaDay(timestamp));
+  if(range){
+   const truncated=range.truncated===true||
+    (range.truncated==null&&gpsData?.truncated===true);
+   return truncated?'Not loaded':'Not captured';
+  }
+  return gpsBusy?'Loading':'Not loaded';
+ };
+ const clockInGpsStatus=gpsFixStatus('in');
+ const clockOutGpsStatus=gpsFixStatus('out');
+ const applicableStatuses=[clockInGpsStatus,clockOutGpsStatus];
+ const covered=Boolean(gpsEligible&&applicableStatuses.every(status=>
+  ['Captured','Not captured','Not applicable'].includes(status)));
  const available=events.length>0;
- const gpsStatus=available?'Recorded':covered&&!gpsData?.truncated?
-  'Not recorded':'Not loaded';
+ const gpsStatus=!gpsEligible?'Access restricted':!employeeId?'Not applicable':
+  available?'Recorded':covered?'Not recorded':'Not loaded';
+ const gpsTone=status=>status==='Captured'?'green':
+  status==='Not captured'?'amber':'neutral';
+ const gpsStatusTone=available?'green':gpsStatus==='Not recorded'?'amber':'neutral';
+ const gpsStatusSummary='<p class="tt-log-gps-status-summary">'+
+  '<span>Clock-in GPS: <strong>'+esc(clockInGpsStatus)+'</strong></span>'+
+  '<span>Clock-out GPS: <strong>'+esc(clockOutGpsStatus)+'</strong></span></p>';
  const locationEvidence=gpsEligible?
+  gpsStatusSummary+
   (available?
    '<div class="tt-log-gps-evidence" aria-label="Signed attendance GPS fixes">'+
    events.map(p=>'<div class="tt-log-gps-fix"><strong>'+
@@ -238,15 +271,17 @@ function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=fals
     'href="https://www.openstreetmap.org/?mlat='+p.latitude+'&mlon='+p.longitude+
     '#map=17/'+p.latitude+'/'+p.longitude+'">Open point on map</a></div>').join('')+
    '</div>':
-   '<span>'+esc(gpsBusy?'Loading signed GPS evidence…':
-    covered&&!gpsData?.truncated?'No captured GPS fix is available for this record.':
-    'Exact GPS details are available through the privileged signed evidence endpoint.')+'</span>')+
-  '<button type="button" class="tt-log-evidence-load" data-action="tt-log-gps-load" '+
+   '<span>'+esc(!employeeId?'GPS evidence is not available for this attendance identity.':
+    gpsBusy?'Loading signed GPS evidence…':
+    covered?'No captured GPS fix is available for this record.':
+    'GPS evidence has not been fully loaded for this record.')+'</span>')+
+  (employeeId?
+   '<button type="button" class="tt-log-evidence-load" data-action="tt-log-gps-load" '+
    'data-record-id="'+esc(row.id)+'"'+(gpsBusy?' disabled':'')+
-   '>'+esc(available?'Refresh GPS evidence':'Load recorded GPS')+'</button>'+
+   '>'+esc(available?'Refresh GPS evidence':'Load recorded GPS')+'</button>':'')+
   (gpsError&&(!gpsErrorRecordId||gpsErrorRecordId===row.id)?
    '<p class="tt-log-gps-error" role="alert">'+esc(gpsError)+'</p>':''):
-  '<span>Exact coordinates are restricted to bootstrap administrators and assigned TimeTracker Supervisors.</span>';
+  '<span>Exact coordinates are available to signed Attendance Log GPS viewers.</span>';
 
  const mapMarkup=(gpsEligible&&available?
      '<div class="tt-log-map-modes" role="group" aria-label="Street map style">'+
@@ -282,13 +317,13 @@ function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=fals
     field('Clock-out basis',row.clockOutBasis||'Not recorded')+'</div>'+
     (row.location==='Offsite (Home)'&&row.workNote?'<div class="tt-record-note"><small>Offsite work note</small><p>'+esc(row.workNote)+'</p></div>':'')+'</section>'+
    '<section class="tt-record-card tt-record-evidence"><div class="tt-record-card-head"><h4>Evidence</h4><span class="tt-record-chip tt-record-chip-amber">Not independently verified</span></div>'+
-    '<div class="tt-record-evidence-list">'+evidence('GPS',gpsStatus,available?'green':'neutral')+evidence('Timing','Recorded','green')+
+    '<div class="tt-record-evidence-list">'+evidence('GPS',gpsStatus,gpsStatusTone)+evidence('Clock-in GPS',clockInGpsStatus,gpsTone(clockInGpsStatus))+evidence('Clock-out GPS',clockOutGpsStatus,gpsTone(clockOutGpsStatus))+evidence('Timing','Recorded','green')+
     evidence('Edits','Not verified','amber')+evidence('Device','Unavailable')+evidence('Audit score','N/A')+'</div>'+
     '<p class="tt-record-disclaimer">Read-only view. Edit history and independent audit are not available.</p></section>'+
    '<section class="tt-record-card tt-record-location'+(gpsEligible?' tt-record-location-privileged':'')+'"><h4>Location</h4>'+
     (gpsEligible&&available?'<div class="tt-record-map">'+mapMarkup+'</div>':
      '<div class="tt-record-map-placeholder" role="img" aria-label="Map unavailable">'+logIcon('<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>')+'Map unavailable</div>')+
-    '<div class="tt-record-location-summary"><span>'+esc(location)+'</span><small>'+esc('GPS '+gpsStatus.toLowerCase())+'</small></div>'+
+    '<div class="tt-record-location-summary"><span>'+esc(location)+'</span><small>'+esc('Clock-in: '+clockInGpsStatus+' · Clock-out: '+clockOutGpsStatus)+'</small></div>'+
     '<div class="tt-record-location-access">'+locationEvidence+'</div></section>'+
    (adminActions?'<div class="tt-record-admin">'+adminActions+'</div>':'')+
    '</div>';
@@ -297,7 +332,10 @@ function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=fals
   '<div class="tt-log-evidence-title"><strong>AUDIT DETAILS</strong>'+
    '<span class="tt-log-evidence-unverified">Evidence not independently verified</span></div>'+
   '<div class="tt-log-audit-grid">'+
-   auditPill('GPS',gpsStatus,available?'green':'neutral')+
+   auditPill('GPS',gpsStatus,gpsStatusTone)+
+   auditPill('Clock-in GPS',clockInGpsStatus,gpsTone(clockInGpsStatus))+
+   auditPill('Clock-out GPS',clockOutGpsStatus,gpsTone(clockOutGpsStatus))+
+
    auditPill('Timing','Recorded','green')+
    auditPill('Edits','Not verified','neutral')+
    auditPill('Device','Unavailable','neutral')+
