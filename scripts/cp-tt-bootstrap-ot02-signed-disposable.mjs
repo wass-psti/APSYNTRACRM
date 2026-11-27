@@ -237,7 +237,7 @@ assert.ok(workerSnap.rows.every(row=>row.ownerId===`cloud:${worker.id}`));
 const reLogin=expect(await call(auth,'/token?grant_type=password',{email:bootstrap.email,password}),200,'bootstrap reconnect login');
 const fresh={...bootstrap,token:reLogin.access_token};
 const freshSnap=receipt(await rpc(fresh,'timetracker_ot_snapshot',{p_board_id:board}),'reconnected bootstrap readback');
-for(const x of [a,b,c,d])assert.ok(freshSnap.rows.find(row=>row.id===x.id));
+for(const x of [a,b,c,d,bootstrapDurationRequest])assert.ok(freshSnap.rows.find(row=>row.id===x.id));
 expect(await rpc(worker,'timetracker_ot_decide',{p_board_id:board,p_request_id:a.id,p_decision:'Rejected'}),403,'worker denial');
 const legacyHrPending=receipt(await submit(worker,'15:00','16:00',
  'legacy employee request visible to HR',shiftDay(date,3)),'legacy employee pending');
