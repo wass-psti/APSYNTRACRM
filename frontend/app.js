@@ -38,6 +38,7 @@ import {WorkspaceInvitationClient,WS02D_INVITE_CLIENT_ENABLED} from './workspace
 import {WorkspaceInvitationManagementClient} from './workspace-invitation-management.js';
 import {WorkspaceInvitationAcceptanceClient,captureInvitationLink,renderInvitationAcceptance} from './workspace-invitation-acceptance.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
+import {resolveApplicationLoadingState} from './application-loading.js';
 import {renderAuthMarkup} from './auth/markup.js';
 import {validateAccessRequest} from './request-access.js';
 import {captureAuthReturn,
@@ -622,6 +623,22 @@ function sharedApplicationLoading(){
  return renderBoardLoading({hidden:document.hidden,
   lowPower:navigator.connection?.saveData===true||
    (Number.isFinite(navigator.deviceMemory)&&navigator.deviceMemory<=4)});
+}
+/** Central inventory of reads that previously replaced a mounted app with a splash. */
+function applicationReadPending(){
+ const tradeLinkInitialRead=state.view==='board'&&state.tlStandalone&&
+  isTradeLinkBoard(state.board?.board)&&(
+   (state.tradeLinkActivityBusy&&!state.tradeLinkActivity)||
+   (state.tradeLinkAnalyticsBusy&&!state.tradeLinkAnalytics)||
+   (state.tradeLinkDraft?.busy&&state.tradeLinkDraft?.status==='LOADING'));
+ return initialAccountRoleReadPending===true||!!applicationRouteRead||
+  (state.view==='board'&&state.loading===true)||
+  (['board','talkbox'].includes(state.view)&&!!state.nativeInitialRead)||
+  (state.view==='board'&&state.tab==='attendance'&&state.ttReadLoading===true)||
+  (state.view==='board'&&state.tab==='finance'&&state.frtFinanceBusy===true)||
+  (state.view==='board'&&state.boardId===FUELTRACK_V3_ID&&state.fuelTrackBackendBusy===true)||
+  (state.view==='talkbox'&&talkBoxState.busy===true&&!talkBoxState.page)||
+  tradeLinkInitialRead;
 }
 let orderIntakeRoute=null,orderIntakeRecord=null,orderIntakeRecordRun=0;
 let orderIntakeCreateSave=null,orderIntakeCreateScope=null,orderIntakeEditorGeneration=0;
@@ -2401,6 +2418,18 @@ function preserveTimeTrackerLogExpansion(){
  state.ttLogExpandedIds=retainTimeTrackerLogDetailIds(state.ttAttendance,state.ttLogExpandedIds);
 }
 function render(){
+ const loadingState=resolveApplicationLoadingState({
+  pending:applicationReadPending(),
+  hasRenderedShell:!!root.querySelector(':scope > .shell'),
+  isSignedIn:auth.isSignedIn===true&&state.context?.user_id===auth.userId,
+  userId:state.context?.user_id,
+  workspaceId:state.context?.workspace_id,
+  renderedScope:shellIdentity,
+  workspaceTransitionPending:state.workspaceTransitionPending===true
+ });
+ // Keep the existing DOM intact for same-scope reads. This preserves the
+ // current shell, controls, focus, scroll, selections, and unsaved form values.
+ if(loadingState==='retain-shell')return;
  // Protected Material Sourcing item details cannot survive a session, board,
  // or workspace transition, even when the enclosing drawer remains mounted.
  if(modal?.querySelector('[data-mrh-private-host]')&&
