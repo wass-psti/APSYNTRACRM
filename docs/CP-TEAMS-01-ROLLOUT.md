@@ -36,7 +36,7 @@ No authenticated or anonymous table-level access is granted. Signed snapshot and
 3. **Legacy role migration**: current CRM admin, bootstrap, old System Admin candidate, per-user board invitations and per-module roles must be mapped to the new grants safely. Do not erase existing assignments or silently widen permission.
 4. **Board authorization integration**: the proposed effective board access helper is NOT wired to all currently authoritative board read/write/RLS/allowed() checks. It must be integrated and independently tested so direct Viewer/Editor grants and team Viewer/Editor grants union correctly, with immediate revocation after removal.
 5. **Domain authorization**: all boards, workspaces, HR records, TimeTracker, TradeLink, finance approvals, Storage and other app domains require explicit audited System Admin backend checks. The current candidate remains workspace-scoped, not universal cross-workspace control. Never use client badges or service-role/RLS blanket bypass to claim full authority.
-6. **Board Invite team search**: the current Invite UI remains person-based. Implement a separately signed team search and team-to-board Viewer permission endpoint, board-manager authority, signed readback and audit. A Teams Content assignment is a prerequisite, not proof the Invite dialog already supports teams.
+6. **Board Invite team search**: the Invite UI now includes optional server-verified team-name matches and Viewer-only bulk team assignment. The signed lookup/invite RPCs are staged in sql/cp-teams-board-invite-CANDIDATE-NOT-APPLIED.sql. Until that candidate is separately reviewed and deployed, the new team search is disabled and existing person invitations remain unchanged. A board owner or System Admin is required by the staged RPCs. Effective team-derived board access still requires existing board authorization integration.
 7. **New workspace lifecycle**: the candidate seeds General administration only in existing workspaces. New-workspace creation must atomically seed the system team, have an approved recovery owner and protect uniqueness. This is an activation blocker.
 8. **High-assurance administration**: require recent MFA/reauth for privileged grants/removals, plus full audit review, revoked/inactive account tests, recovery procedures and a rehearsed rollback. Production requires explicit change approval and genuine signed two-account staging acceptance.
 
@@ -54,7 +54,7 @@ No authenticated or anonymous table-level access is granted. Signed snapshot and
 - [ ] Disposable real PostgreSQL 17 schema/mutation tests
 - [ ] Reviewed actor/session and two-user signed negative tests
 - [ ] Approved initial System Admin and new-workspace bootstrap
-- [ ] Effective team/direct board permission enforcement and Invite team search
+- [ ] Effective team/direct board permission enforcement and production activation of staged Invite team search
 - [ ] Domain access/MFA and cross-workspace authority model
 - [ ] Controlled staged rollout, audit and rollback approval
 
