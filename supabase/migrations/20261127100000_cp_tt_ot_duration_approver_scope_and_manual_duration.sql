@@ -264,7 +264,7 @@ BEGIN
   'IF NOT v_ot_approver THEN')
  LOOP
   IF pg_catalog.cardinality(pg_catalog.string_to_array(d,old))<>
-    CASE WHEN old='IF NOT v_bootstrap AND NOT v_manual_admin THEN' THEN 3 ELSE 2 END THEN
+    (CASE WHEN old='IF NOT v_bootstrap AND NOT v_manual_admin THEN' THEN 3 ELSE 2 END) THEN
    RAISE EXCEPTION 'Legacy OT decision role-gate drift: %',old; END IF;
   d:=pg_catalog.replace(d,old,replacement);
  END LOOP;
