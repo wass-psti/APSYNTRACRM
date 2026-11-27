@@ -94,6 +94,8 @@ jobs:
       - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13
         with:
           version: '2.121.0'
+      - name: Validate live Realtime test script syntax
+        run: node --check scripts/cp-crm-perf-01b-realtime-live.mjs
       - name: Initialize an isolated local Supabase project
         shell: bash
         run: |
@@ -139,6 +141,9 @@ jobs:
           set -a
           source "$env_file"
           set +a
+          printf 'Supabase local env variable names: '
+          cut -d= -f1 "$env_file" | tr '\n' ' '
+          echo
           PUBLISHABLE_KEY="${PUBLISHABLE_KEY:-${ANON_KEY:-}}"
           test -n "$API_URL"
           test -n "$PUBLISHABLE_KEY"
