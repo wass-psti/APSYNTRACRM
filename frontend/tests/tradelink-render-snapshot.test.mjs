@@ -82,6 +82,13 @@ test('signed render snapshot normalizer accepts the exact document revision and 
  assert.ok(Object.isFrozen(result.snapshot.template.stylesheetAssets));
 });
 
+test('render snapshot timestamp strings are compared by instant rather than formatting',()=>{
+ const value=snapshotResult();
+ value.capturedAt='2026-11-27T12:24:28.621Z';
+ const normalized=normalizeTradeLinkDocumentRenderSnapshot(value,documentId,5);
+ assert.equal(Date.parse(normalized.capturedAt),Date.parse(normalized.snapshot.capturedAt));
+});
+
 test('render snapshot normalizer rejects mismatched revision, profile, template, hash and unsafe assets',()=>{
  assert.throws(()=>normalizeTradeLinkDocumentRenderSnapshot(snapshotResult(),documentId,4),/Invalid or mismatched/);
  assert.throws(()=>normalizeTradeLinkDocumentRenderSnapshot(snapshotResult(),userId,5),/Invalid or mismatched/);
