@@ -244,8 +244,10 @@ test('supplied FuelTrack reference options preserve exact distinct labels and re
 test('Approvals reference is mounted while decision statistics fail closed',()=>{
  const html=renderFuelTrackV3Application({detail:fixture(),section:'approvals'});
  for(const label of ['Approved today','Rejected today','Decisions today','Approval rate',
-  'Newest','Oldest','Urgency','Name','Refresh'])
+  'Newest submissions first','Refresh'])
   assert.ok(html.includes(label),label);
+ assert.doesNotMatch(html,/Queue options|>Newest<|>Oldest<|>Urgency<|>Name</);
+ assert.equal((html.match(/<button[^>]*disabled/g)||[]).length,0);
  assert.match(html,/Approval statistics and pending requests are unavailable/);
  assert.doesNotMatch(html,/All clear!|100%|0 pending review/);
  assert.match(html,/data-action="refresh-board"/);
