@@ -11588,7 +11588,7 @@ async function action(name,button){
   const note=decision==='Rejected'?
    ' This removes the approval entitlement. Completed attendance timestamps are not changed.':
    ' Existing approval deadlines and attendance eligibility still apply.';
-  if(!confirm('Change overtime status from '+request.status+' to '+decision+'?'+note+' This correction will be audited.'))return;
+  if(!confirm('Change overtime status: '+request.status+' to '+decision+'?'+note+' This correction will be audited.'))return;
   state.ttBusy=true;render();
   try{
    await timeTracker.editOvertimeDecision(state.boardId,requestId,request.status,request.decidedAt,decision);
