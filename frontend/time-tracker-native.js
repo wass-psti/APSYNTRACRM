@@ -632,6 +632,34 @@ export class TimeTrackerNativeClient{
    deny('GPS authorization was revoked during the request');
   return data;
  }
+ /**
+  * Read GPS evidence for Attendance Log viewers without expanding GPS Hub access.
+  * The server rechecks the same role and signed board/workspace scope.
+  */
+ async logGpsEvidence(boardId,{from,to,userId=null}={}){
+  const access=await this.access(boardId);
+  const allowedRoles=['System Admin','HR','Supervisor'];
+  const bootstrap=await this.api.rpc('apsyntra_role_is_bootstrap');
+  if(bootstrap!==true&&!allowedRoles.includes(access.moduleRole))
+   deny('Only System Admin, HR, bootstrap administrators and TimeTracker Supervisors can view Attendance Log GPS evidence');
+  const day=/^\d{4}-(0[1-9]|1[0-2])-([0-3]\d)$/;
+  if(!day.test(from||'')||!day.test(to||''))
+   deny('Valid GPS date range required');
+  if(userId!==null&&!uuid.test(userId))
+   deny('GPS employee filter invalid');
+  const payload=await this.api.rpc('timetracker_log_gps_snapshot',{
+   p_board_id:boardId,p_from:from,p_to:to,p_user_id:userId
+  });
+  const data=validateTimeTrackerGps(payload,{
+   userId:access.userId,workspaceId:access.workspaceId,boardId
+  });
+  await checkIdentity(this.auth,this.api,access,boardId);
+  const fresh=await this.access(boardId);
+  const freshBootstrap=await this.api.rpc('apsyntra_role_is_bootstrap');
+  if(freshBootstrap!==true&&!allowedRoles.includes(fresh.moduleRole))
+   deny('Attendance Log GPS access was revoked during the request');
+  return data;
+ }
  /** Read selected full attendance records for the System Admin editor only. */
  async attendanceAdminRecords(boardId,recordIds=[]){
   const access=await this.access(boardId);

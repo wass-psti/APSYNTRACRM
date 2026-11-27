@@ -2464,6 +2464,13 @@
       "file": "20261127160000_cp_tt_shared_read_visibility.sql",
       "bytes": 5199,
       "sha256": "4439c4a6c4b6320a4da5e4313fa89c48ea1952b713e8497479c3bfbeed48858c"
+    },
+    {
+      "version": "20261127170000",
+      "name": "cp_tt_log_location_01a_log_scoped_gps",
+      "file": "20261127170000_cp_tt_log_location_01a_log_scoped_gps.sql",
+      "bytes": 6321,
+      "sha256": "dac9726d9546dd9f1f1a79fff5d2858ee78fa6002bfcbe28b722da62417bbdb0"
     }
   ],
   "applied_only": [

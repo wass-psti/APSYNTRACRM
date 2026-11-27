@@ -1321,6 +1321,9 @@
 .tt-monitor-unavailable{font-size:11px;color:#9c8580;padding:12px;border:1px dashed #e2d5cf;border-radius:5px}
 
 /* CP-TT-GPS-LOG-01: privileged signed attendance event GPS evidence. */
+.tt-log-gps-status-summary{display:flex;align-items:center;gap:6px 16px;flex-wrap:wrap;
+ margin:0 0 8px;font-size:11px;line-height:1.5;color:var(--muted,#6e7784)}
+.tt-log-gps-status-summary strong{font-weight:700;color:var(--text,#344256)}
 .tt-log-gps-evidence{display:grid;gap:9px;margin:12px 0}
 .tt-log-gps-fix{display:flex;align-items:flex-start;gap:8px 16px;flex-wrap:wrap;
  border:1px solid #d9e6de;background:#f6fbf7;border-radius:7px;padding:11px 12px;

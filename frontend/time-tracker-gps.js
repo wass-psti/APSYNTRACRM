@@ -8,6 +8,19 @@ export function timeTrackerGpsWindow(now=new Date(),days=7){
  const today=manilaDay(now);
  return {from:new Date(Date.parse(today+'T00:00:00Z')-(days-1)*86400000).toISOString().slice(0,10),to:today};
 }
+/** Return the complete Philippine-local date span for one attendance session. */
+export function timeTrackerGpsRecordWindow(record){
+ const start=Date.parse(record?.clockIn);
+ const end=Date.parse(record?.clockOut||record?.clockIn);
+ if(!Number.isFinite(start)||!Number.isFinite(end)||end<start)return null;
+ const from=manilaDay(record.clockIn);
+ const to=manilaDay(record.clockOut||record.clockIn);
+ const fromMs=Date.parse(from+'T00:00:00Z');
+ const toMs=Date.parse(to+'T00:00:00Z');
+ if(!Number.isFinite(fromMs)||!Number.isFinite(toMs)||
+    toMs<fromMs||toMs-fromMs>30*86400000)return null;
+ return Object.freeze({from,to});
+}
 export function validateTimeTrackerGps(payload,{userId,workspaceId,boardId}){
  if(!uuid.test(userId)||!uuid.test(workspaceId)||!uuid.test(boardId)||
   payload?.scope!=='AUTHORIZED_WORKSPACE_GPS'||payload.actorId!==userId||

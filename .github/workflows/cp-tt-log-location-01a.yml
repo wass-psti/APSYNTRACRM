@@ -1,0 +1,90 @@
+name: CP-TT-LOG-LOCATION-01A — Attendance Log GPS role alignment
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "frontend/app.js"
+      - "frontend/time-tracker-native.js"
+      - "frontend/time-tracker-gps.js"
+      - "frontend/time-tracker-log.js"
+      - "frontend/styles.css"
+      - "frontend/apsyntra-styles.bundle.css"
+      - "frontend/tests/time-tracker-log-location-01a.test.mjs"
+      - "supabase/migrations/20261127170000_cp_tt_log_location_01a_log_scoped_gps.sql"
+      - "sql/tests/cp-tt-log-location-01a-*.sql"
+      - ".github/workflows/cp-tt-log-location-01a.yml"
+  push:
+    branches: [main, "cp-tt-log-location-*"]
+    paths:
+      - "frontend/app.js"
+      - "frontend/time-tracker-native.js"
+      - "frontend/time-tracker-gps.js"
+      - "frontend/time-tracker-log.js"
+      - "frontend/styles.css"
+      - "frontend/apsyntra-styles.bundle.css"
+      - "frontend/tests/time-tracker-log-location-01a.test.mjs"
+      - "supabase/migrations/20261127170000_cp_tt_log_location_01a_log_scoped_gps.sql"
+      - "sql/tests/cp-tt-log-location-01a-*.sql"
+      - ".github/workflows/cp-tt-log-location-01a.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Check changed TimeTracker JavaScript
+        run: |
+          node --check frontend/app.js
+          node --check frontend/time-tracker-native.js
+          node --check frontend/time-tracker-gps.js
+          node --check frontend/time-tracker-log.js
+          node --check frontend/tests/time-tracker-log-location-01a.test.mjs
+      - name: Run focused GPS and Attendance Log regressions
+        run: |
+          node --test \
+            frontend/tests/time-tracker-log-location-01a.test.mjs \
+            frontend/tests/time-tracker-gps.test.mjs \
+            frontend/tests/time-tracker-log-visual.test.mjs
+  disposable-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Apply Log GPS migration and verify isolated role behavior
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-tt-log-location-01a-disposable-setup.sql \
+            -f supabase/migrations/20261127170000_cp_tt_log_location_01a_log_scoped_gps.sql \
+            -f sql/tests/cp-tt-log-location-01a-disposable-acceptance.sql
