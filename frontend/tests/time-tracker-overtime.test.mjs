@@ -80,11 +80,11 @@ test('staged duration-only modal remains read-only until the signed duration con
  assert.doesNotMatch(bootstrap,/type="submit" disabled/);
  assert.equal(TT_OT_WRITES_ACCEPTED,true);
 });
-function setup({role='System Admin',snapshot=null,rpcHandlers={}}={}){
+function setup({role='System Admin',snapshot=null,rpcHandlers={},platformRole=role==='Employee'?'employee':'admin_general_manager'}={}){
  const auth={userId:admin,getVerifiedUser:async()=>({id:admin})};
  const api={
   context:async()=>({user_id:admin,workspace_id:workspace,
-   profile:{status:'active',platform_role:'admin_general_manager'}}),
+   profile:{status:'active',platform_role:platformRole}}),
   nativeApplicationBoardContext:async moduleId=>({
    contract:'native-app-board-v1',moduleId,userId:admin,workspaceId:workspace,role,
    board:{id:board,workspace_id:workspace,name:'TimeTracker Attendance',status:'active',

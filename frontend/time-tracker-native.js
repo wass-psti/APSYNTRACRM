@@ -286,6 +286,8 @@ export class TimeTrackerNativeClient{
    const durationOtContractActive=response.durationOtContract==='tt-duration-ot-1';
    const durationOtApprover=durationOtContractActive&&response.durationOtApprover===true;
    const durationOtHrApprover=durationOtApprover&&response.durationOtHrApprover===true;
+   if(durationOtApprover&&!['HR','System Admin'].includes(access.moduleRole)&&access.platformRole!=='admin_general_manager')
+    deny('Signed OT approver role does not match the TimeTracker workspace role');
    if(response.scope==='AUTHORIZED_WORKSPACE_TEAM'&&
       response.bootstrapApprover!==true&&!durationOtApprover)
     deny('Team OT access is not authorized by the signed workspace role');
