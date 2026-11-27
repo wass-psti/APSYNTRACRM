@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {startupVerifiedRead,startupFailureDescription,transientStartupFailure}
  from '../startup-recovery-policy.js';
+import {classifyAuthFailure} from '../auth/failure-classification.js';
 
 const failure=(status=0,code='')=>Object.assign(new Error('Synthetic provider error'),{status,code});
 
@@ -14,6 +15,15 @@ test('only explicitly transient read errors qualify for startup recovery',()=>{
  for(const e of [failure(0,'REQUEST_ABORTED'),failure(400),failure(401),
   failure(403),failure(404),failure(409),failure(422),null])
   assert.equal(transientStartupFailure(e),false);
+});
+test('workspace-context failures are classified separately from Auth identity failures',()=>{
+ const workspace=classifyAuthFailure(failure(403),{operation:'workspace-context'});
+ const identity=classifyAuthFailure(failure(403),{operation:'identity'});
+ assert.equal(workspace.category,'WORKSPACE_CONTEXT_UNAVAILABLE');
+ assert.equal(workspace.preserveSession,true);
+ assert.equal(workspace.invalidateSession,false);
+ assert.equal(identity.category,'AUTH_SESSION_INVALID');
+ assert.equal(identity.invalidateSession,true);
 });
 test('one bounded retry restores a transient signed read without duplicate loops',async()=>{
  for(const e of [failure(0,'NETWORK_UNAVAILABLE'),failure(0,'REQUEST_TIMEOUT'),
