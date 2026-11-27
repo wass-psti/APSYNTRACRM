@@ -136,6 +136,7 @@ export function projectTimeTrackerOtRows(rows=[]){
    id:r.id.slice(0,140),ownerId:String(r.ownerId||'').slice(0,48),
    name:String(r.name||'Signed employee').slice(0,100),date:r.date,status:r.status,
    canWithdraw:r.status==='Submitted'&&r.canWithdraw===true,
+   canDeleteOt:['Approved','Rejected'].includes(r.status)&&r.canDeleteOt===true,
    decidedAt:typeof r.decidedAt==='string'&&Number.isFinite(Date.parse(r.decidedAt))?r.decidedAt:null,
    decidedBy:typeof r.decidedBy==='string'?r.decidedBy:null,
    submittedBy:typeof r.submittedBy==='string'?r.submittedBy:null,
@@ -192,6 +193,7 @@ const row=(r,access,query='',expandedRequestIds=[],otContractActive=false)=>{
   '<div class="tt-ot-reference-actions">'+
   (canReview?'<div class="tt-ot-review-actions">'+button('tt-ot-approve','Approve',true)+button('tt-ot-reject','Reject')+'</div>':'')+
   (r.canWithdraw&&otContractActive?button('tt-ot-withdraw','Remove'):'')+
+  (r.canDeleteOt&&otContractActive?button('tt-ot-cancel-decision','Delete OT'):'')+
   '<details class="tt-ot-reference-details"'+(expandedRequestIds.includes(r.id)?' open':'')+'><summary>View</summary>'+
   '<div class="tt-ot-detail">'+
   '<span><b>Requested duration:</b> '+esc(minutesLabel(r.durationMinutes).trim())+'</span>'+

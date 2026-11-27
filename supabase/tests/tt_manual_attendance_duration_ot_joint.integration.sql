@@ -125,6 +125,38 @@ BEGIN
   OR hist#>>'{clockOut,manualMethod}' IS DISTINCT FROM 'standard_nine_credited_hours'
   OR EXISTS(SELECT 1 FROM private.tt_auto_clockout_sessions q WHERE q.record_id=hist_id)
  THEN RAISE EXCEPTION 'Historical correction modified active OT or scheduler'; END IF;
+ -- Cancel a bound active approval; retain the binding for audit but release it
+ -- for an authorized replacement approval.
+ PERFORM set_config('request.jwt.claim.sub',hr::text,true);
+ PERFORM set_config('request.jwt.claim.session_id',hr_session::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',hr::text,'session_id',hr_session::text,'role','authenticated')::text,true);
+ snap:=public.timetracker_ot_snapshot(board);
+ IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(snap->'rows') r
+  WHERE r->>'id'=req::text AND r->>'canDeleteOt'='true') THEN RAISE EXCEPTION 'HR cancellation control missing'; END IF;
+ receipt:=public.timetracker_ot_cancel_decision(board,req,'Approved','Joint cancellation of active approval');
+ IF receipt->>'attendanceEffect' IS DISTINCT FROM 'active_regular_cutoff'
+  OR NOT EXISTS(SELECT 1 FROM public.timetracker_ot_requests r WHERE r.id=req AND r.status='Withdrawn' AND r.attendance_record_id=joint_case.record_id)
+  OR NOT EXISTS(SELECT 1 FROM public.timetracker_ot_audit a WHERE a.request_id=req AND a.event='cancelled' AND a.actor_id=hr)
+ THEN RAISE EXCEPTION 'Approved active cancellation failed: %',receipt; END IF;
+ SELECT to_jsonb(q) INTO queue_after FROM private.tt_auto_clockout_sessions q WHERE q.board_id=board AND q.record_id=joint_case.record_id;
+ IF queue_after->>'overtime_cutoff_at' IS NOT NULL OR queue_after->>'status' IS DISTINCT FROM 'MONITORING'
+ THEN RAISE EXCEPTION 'Active cutoff was not restored: %',queue_after; END IF;
+ PERFORM set_config('request.jwt.claim.sub',emp::text,true);
+ PERFORM set_config('request.jwt.claim.session_id',emp_session::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',emp::text,'session_id',emp_session::text,'role','authenticated')::text,true);
+ PERFORM set_config('app.tt_admin_test_role','Employee',true);
+ receipt:=public.timetracker_ot_submit_duration(board,today,180,'Refiling after audited cancellation');
+ req:=(receipt->>'id')::uuid;
+ PERFORM set_config('request.jwt.claim.sub',hr::text,true);
+ PERFORM set_config('request.jwt.claim.session_id',hr_session::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',hr::text,'session_id',hr_session::text,'role','authenticated')::text,true);
+ receipt:=public.timetracker_ot_decide_duration(board,req,'Approved');
+ IF receipt->>'attendanceRecordId' IS DISTINCT FROM record_id::text
+ THEN RAISE EXCEPTION 'Replacement approval did not bind'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',admin::text,true);
+ PERFORM set_config('request.jwt.claim.session_id',admin_session::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin::text,'session_id',admin_session::text,'role','authenticated')::text,true);
+ PERFORM set_config('app.tt_admin_test_role','System Admin',true);
  -- Close early through the actual administrator clock-out RPC: no unworked OT is payable.
  PERFORM pg_sleep(0.01);
  ended:=date_trunc('milliseconds',clock_timestamp());
@@ -137,6 +169,34 @@ BEGIN
  THEN RAISE EXCEPTION 'Unworked OT incorrectly payable: %',credit; END IF;
  IF NOT EXISTS(SELECT 1 FROM private.tt_attendance_board_projection p WHERE p.board_id=board AND p.record_id=joint_case.record_id AND p.clock_out_at IS NOT NULL)
  THEN RAISE EXCEPTION 'Early completed manual attendance projection missing'; END IF;
+ -- Historical approved OT removal caps credit and preserves both punches.
+ SELECT revision INTO rev FROM public.module_state_entries
+ WHERE workspace_id=ws AND module_id='time-tracker' AND state_key='timetracker.attendance.v1' AND scope='shared' AND owner_key='*';
+ receipt:=public.timetracker_attendance_admin_create_historical(board,emp,today-4,
+  ((today-4)+TIME '08:00') AT TIME ZONE 'Asia/Manila',
+  ((today-4)+TIME '20:00') AT TIME ZONE 'Asia/Manila','actual','Office-Base Duty',NULL,
+  'Completed extended shift before cancellation',rev,gen_random_uuid());
+ hist_id:=(receipt->>'recordId')::uuid;
+ receipt:=public.timetracker_ot_submit_manual_duration(board,emp,today-4,120,'Historical overtime for cancellation test');
+ admin_req:=(receipt->>'id')::uuid;
+ PERFORM set_config('request.jwt.claim.sub',hr::text,true);
+ PERFORM set_config('request.jwt.claim.session_id',hr_session::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',hr::text,'session_id',hr_session::text,'role','authenticated')::text,true);
+ receipt:=public.timetracker_ot_decide_manual_duration(board,admin_req,'Approved');
+ SELECT value::jsonb INTO state FROM public.module_state_entries
+ WHERE workspace_id=ws AND module_id='time-tracker' AND state_key='timetracker.attendance.v1' AND scope='shared' AND owner_key='*';
+ SELECT r INTO hist FROM jsonb_array_elements(state->'records') r WHERE r->>'id'=hist_id::text;
+ receipt:=public.timetracker_ot_cancel_decision(board,admin_req,'Approved','Revoke historical approval and credit');
+ SELECT value::jsonb INTO state FROM public.module_state_entries
+ WHERE workspace_id=ws AND module_id='time-tracker' AND state_key='timetracker.attendance.v1' AND scope='shared' AND owner_key='*';
+ SELECT r INTO active_after FROM jsonb_array_elements(state->'records') r WHERE r->>'id'=hist_id::text;
+ IF receipt->>'attendanceEffect' IS DISTINCT FROM 'completed_credit_capped'
+  OR active_after->'clockOut' IS DISTINCT FROM hist->'clockOut'
+  OR active_after->'clockIn' IS DISTINCT FROM hist->'clockIn'
+  OR active_after->>'creditedMsOverride' IS DISTINCT FROM '32400000'
+  OR NOT EXISTS(SELECT 1 FROM private.tt_attendance_board_projection p
+   WHERE p.board_id=board AND p.record_id=hist_id AND p.credited_ms=32400000)
+ THEN RAISE EXCEPTION 'Completed cancellation did not preserve evidence and cap credit: %',receipt; END IF;
  SELECT to_jsonb(j) INTO ojt_after FROM cron.job j WHERE jobname='tt-ojt-auto-clockout-9h';
  IF ojt_after IS DISTINCT FROM ojt_before THEN RAISE EXCEPTION 'OJT scheduler changed'; END IF;
  RAISE NOTICE 'PASS: actual manual create + HR preapproval + reconciler + OT worker + historical isolation + early closure + payable credit + board projection + OJT';

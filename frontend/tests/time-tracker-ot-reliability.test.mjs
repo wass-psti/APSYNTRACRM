@@ -304,3 +304,18 @@ test('100 delayed Clock-only snapshots are discarded after OT navigation',async(
   assert.equal(otSnapshot.access.durationOtContractActive,true);
  }
 });
+
+test('decided OT deletion controls require signed row-level cancellation permission',()=>{
+ const request={id:'cancel-1',ownerId:'cloud:another',name:'Employee',date:'2026-11-27',
+  durationMinutes:120,task:'Test cancellation',otPolicy:'duration-v1'};
+ for(const status of ['Approved','Rejected','Submitted']){
+  for(const canDeleteOt of [true,false]){
+   const html=renderTimeTrackerOvertime({requests:[{...request,status,canDeleteOt}],
+    access:{...access,otContractActive:true},filters:{status},now});
+   assert.equal(html.includes('data-action="tt-ot-cancel-decision"'),
+    status!=='Submitted'&&canDeleteOt);
+  }
+ }
+ assert.doesNotMatch(renderTimeTrackerOvertime({requests:[{...request,status:'Approved',canDeleteOt:true}],
+  access:{...access,otContractActive:false},filters:{status:'Approved'},now}),/data-action="tt-ot-cancel-decision"/);
+});

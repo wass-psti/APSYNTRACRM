@@ -12,6 +12,7 @@ on:
       - "frontend/time-tracker-duration-overtime-policy.js"
       - "supabase/migrations/20261126120000_cp_tt_duration_overtime.sql"
       - "supabase/migrations/20261127100000_cp_tt_ot_duration_approver_scope_and_manual_duration.sql"
+      - "supabase/migrations/20261127150000_cp_tt_ot_decision_cancellation.sql"
       - "sql/tests/cp-tt-duration-ot-prerequisites.sql"
       - "supabase/tests/tt_duration_overtime_staged.integration.sql"
       - "supabase/tests/tt_manual_attendance_duration_ot_joint.integration.sql"
@@ -33,6 +34,7 @@ on:
       - "frontend/time-tracker-duration-overtime-policy.js"
       - "supabase/migrations/20261126120000_cp_tt_duration_overtime.sql"
       - "supabase/migrations/20261127100000_cp_tt_ot_duration_approver_scope_and_manual_duration.sql"
+      - "supabase/migrations/20261127150000_cp_tt_ot_decision_cancellation.sql"
       - "sql/tests/cp-tt-duration-ot-prerequisites.sql"
       - "supabase/tests/tt_duration_overtime_staged.integration.sql"
       - "supabase/tests/tt_manual_attendance_duration_ot_joint.integration.sql"
@@ -224,6 +226,7 @@ jobs:
               -f ../supabase/migrations/20261127100000_cp_tt_ot_duration_approver_scope_and_manual_duration.sql
           }
           if [ "$MERGE_ORDER" = manual-first ]; then manual; overtime; else overtime; manual; fi
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f ../supabase/migrations/20261127150000_cp_tt_ot_decision_cancellation.sql
       - name: Run hybrid and joint manual-OT acceptance
         run: |
           set -euo pipefail
