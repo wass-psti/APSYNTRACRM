@@ -149,7 +149,7 @@ jobs:
           test_status=$?
           set -e
           if [ "$test_status" -ne 0 ]; then
-            grep -E '^(not ok |# tests |# pass |# fail |  location:|  failureType:|  code:|  name:|    TestContext\\.)' /tmp/apsyntra-frontend-tests.log | head -n 100
+            grep -A 24 -B 3 -E '^(not ok |# tests |# pass |# fail )' /tmp/apsyntra-frontend-tests.log | head -n 220
             exit "$test_status"
           fi
           tail -n 20 /tmp/apsyntra-frontend-tests.log
