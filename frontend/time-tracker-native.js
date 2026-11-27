@@ -26,6 +26,8 @@ export const TT_DEPARTMENTS=TT_TEAM_DEPARTMENTS;
 export const TT_ROLES=Object.freeze([
  'System Admin','IT Administrator','HR','Supervisor','Finance','OJT','Employee'
 ]);
+// These roles can read the existing signed, recorded GPS evidence snapshot.
+export const TT_GPS_EVIDENCE_ROLES=Object.freeze(['Supervisor','HR','System Admin']);
 export const TT_POLICY=Object.freeze({
  version:'1.0',standardClockInMinutes:480,unpaidBreakStartMinutes:720,
  unpaidBreakEndMinutes:780,requiredWorkMs:9*60*60*1000
@@ -612,8 +614,8 @@ export class TimeTrackerNativeClient{
  async gpsEvidence(boardId,{from,to,userId=null}={}){
   const access=await this.access(boardId);
   const bootstrap=await this.api.rpc('apsyntra_role_is_bootstrap');
-  if(bootstrap!==true&&access.moduleRole!=='Supervisor')
-   deny('Only bootstrap administrators and TimeTracker Supervisors can view GPS evidence');
+  if(bootstrap!==true&&!TT_GPS_EVIDENCE_ROLES.includes(access.moduleRole))
+   deny('TimeTracker GPS evidence access requires HR, System Admin, Supervisor or bootstrap administrator role');
   const day=/^\d{4}-(0[1-9]|1[0-2])-([0-3]\d)$/;
   if(!day.test(from||'')||!day.test(to||''))
    deny('Valid GPS date range required');
@@ -627,8 +629,8 @@ export class TimeTrackerNativeClient{
   });
   await checkIdentity(this.auth,this.api,access,boardId);
   const fresh=await this.access(boardId);
-  if(fresh.moduleRole!=='Supervisor'&&
-     await this.api.rpc('apsyntra_role_is_bootstrap')!==true)
+  const freshBootstrap=await this.api.rpc('apsyntra_role_is_bootstrap');
+  if(freshBootstrap!==true&&!TT_GPS_EVIDENCE_ROLES.includes(fresh.moduleRole))
    deny('GPS authorization was revoked during the request');
   return data;
  }

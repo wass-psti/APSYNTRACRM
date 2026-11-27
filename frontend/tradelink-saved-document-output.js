@@ -75,14 +75,6 @@ const stylesheetUrl=asset=>{
   throw new ApiError('Invalid immutable TradeLink stylesheet reference.',409);
  return new URL('./assets/tradelink/'+asset,import.meta.url).href;
 };
-const templateStyle=template=>{
- const colors=[template.accent,template.tableBackground,template.tableText,template.ruleColor];
- if(!colors.every(value=>typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value)))
-  throw new ApiError('Invalid immutable TradeLink template colors.',409);
- return ' style="--tl-official-accent:'+colors[0]+';--tl-official-table-bg:'+colors[1]+
-  ';--tl-official-table-text:'+colors[2]+';--tl-official-rule:'+colors[3]+'"';
-};
-
 function renderTerms(terms){
  const lines=String(terms||'').replace(/\r/g,'').split('\n');
  if(!lines.some(line=>line.trim()))return '';
@@ -203,7 +195,7 @@ export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId
   (renderSnapshot&&((data.vendorId&&data.vendorId!==company.id)||
    (data.templateId&&data.templateId!==template.id)||
    (typeof data.terms==='string'&&data.terms!==renderSnapshot.snapshot.terms))))
-  throw new ApiError('Saved TradeLink official profile and company/template snapshot do not match the selected revision.',409);
+  throw new ApiError('Saved TradeLink official profile does not match the selected revision's company/template snapshot.',409);
  const logo=logoUrl(company.logoAsset);
  const currency=TRADELINK_CURRENCIES.includes(data.currency)?data.currency:'—';
  const terms=renderSnapshot?renderSnapshot.snapshot.terms:
@@ -274,7 +266,6 @@ export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId
   'data-tradelink-company-profile="'+safe(company.id)+'" '+
   'data-tradelink-profile-version="'+safe(renderSnapshot?.snapshot.profileVersion??'legacy')+'" '+
   'data-tradelink-render-snapshot-source="'+safe(renderSnapshot?.snapshotSource??'legacy-static')+'"'+
-  templateStyle(template)+' '+
   'data-tradelink-legacy-company-default="'+(legacyDefaulted?'true':'false')+'">'+
   main+termsPage+'</article>';
 }

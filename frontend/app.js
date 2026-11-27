@@ -1277,13 +1277,17 @@ function sidebar(){
  </aside>`;
 }
 /** Signed session-local basemap opt-in. No persisted third-party access consent. */
+function timeTrackerGpsEvidenceEligible(){
+ return state.roleVerified===true||
+  ['Supervisor','HR','System Admin'].includes(state.ttAttendance?.access?.moduleRole);
+}
 function timeTrackerMapConsentKey(){
  return [state.context?.user_id,state.context?.workspace_id,state.boardId].join('|');
 }
 function timeTrackerSignedMapConfigs(){
  if(state.view!=='board'||state.tab!=='attendance'||!auth.isSignedIn||
   state.ttAttendance?.status!=='VERIFIED_READ'||
-  !(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'))
+  !timeTrackerGpsEvidenceEligible())
   return [];
  const actor=state.context?.user_id,ws=state.context?.workspace_id;
  if(state.ttView==='log'){
@@ -2035,7 +2039,7 @@ function renderTimeTrackerApplication(){
   teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,
   monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,
   monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,
-  logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',
+  logGpsEligible:timeTrackerGpsEvidenceEligible(),
   logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,
   logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,
   logExpandedRecordIds:state.ttLogExpandedIds,
@@ -2044,10 +2048,9 @@ function renderTimeTrackerApplication(){
   adminDirectory:state.ttLogAdminEditor?.directory||state.ttAttendance?.access?.overviewDirectory||[],
   adminSelectedIds:state.ttLogSelectedIds,adminEditor:state.ttLogAdminEditor,adminDeleteConfirm:state.ttLogAdminDeleteConfirm,
   adminBusy:state.ttLogAdminBusy,adminError:state.ttLogAdminError,adminSuccess:state.ttLogAdminSuccess,
-  mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&
-   (state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),
+  mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&timeTrackerGpsEvidenceEligible(),
   mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
-  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',
+  gpsEligible:timeTrackerGpsEvidenceEligible(),
   gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,
   gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError,
   gpsDiagnosticsAvailable:getTimeTrackerGpsDiagnostics().events.length>0
@@ -2249,8 +2252,8 @@ function boardPage(){
   '>'+t.label+'</a></div>').join('')}</div>
 
 <div data-board-live-content>
-${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFundTrackerApplication():state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,otExpandedRequestIds:state.ttOtExpandedRequestIds,clockPendingAction:state.ttClockPending?.action||'clock-out',error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,employeesSearch:state.ttEmployeesSearch,employeesTab:state.ttEmployeesTab,employeesDepartment:state.ttEmployeesDepartment,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otManualVisibleCount:state.ttOtManualVisibleCount,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,adminEligible:state.ttAttendance?.access?.moduleRole==='System Admin',adminDirectory:state.ttLogAdminEditor?.directory||state.ttAttendance?.access?.overviewDirectory||[],adminSelectedIds:state.ttLogSelectedIds,adminEditor:state.ttLogAdminEditor,adminBusy:state.ttLogAdminBusy,adminError:state.ttLogAdminError,adminSuccess:state.ttLogAdminSuccess,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
- gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,canCreate:state.boardManage||state.tradeLinkModuleRole==='User',actorId:state.context?.user_id||'',actorName:name(),actorEmail:state.context?.profile?.email||'',actorModuleRole:state.tradeLinkModuleRole}):state.tab==='issues'?issuesPage():`
+${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFundTrackerApplication():state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,otExpandedRequestIds:state.ttOtExpandedRequestIds,clockPendingAction:state.ttClockPending?.action||'clock-out',error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,employeesSearch:state.ttEmployeesSearch,employeesTab:state.ttEmployeesTab,employeesDepartment:state.ttEmployeesDepartment,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otManualVisibleCount:state.ttOtManualVisibleCount,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:timeTrackerGpsEvidenceEligible(),logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,adminEligible:state.ttAttendance?.access?.moduleRole==='System Admin',adminDirectory:state.ttLogAdminEditor?.directory||state.ttAttendance?.access?.overviewDirectory||[],adminSelectedIds:state.ttLogSelectedIds,adminEditor:state.ttLogAdminEditor,adminBusy:state.ttLogAdminBusy,adminError:state.ttLogAdminError,adminSuccess:state.ttLogAdminSuccess,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&timeTrackerGpsEvidenceEligible(),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
+ gpsEligible:timeTrackerGpsEvidenceEligible(),gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,canCreate:state.boardManage||state.tradeLinkModuleRole==='User',actorId:state.context?.user_id||'',actorName:name(),actorEmail:state.context?.profile?.email||'',actorModuleRole:state.tradeLinkModuleRole}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar">
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ New item</button>':''}
  <div class="search-wrap board-toolbar-search"><svg class="board-toolbar-search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 5 5"></path></svg><input id="search-board-items" class="search-input" aria-label="Search board items" placeholder="Search" value="${e(state.boardItemSearch)}" /></div>
@@ -5573,8 +5576,7 @@ async function loadTimeTrackerLogGps(seq=routeSerial,record=null,{force=false}={
  if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='log'||
     state.ttAttendance?.status!=='VERIFIED_READ'||!auth.isSignedIn||
     state.ttBusy||state.ttLogGpsBusy)return;
- const eligible=state.roleVerified===true||
-  state.ttAttendance.access?.moduleRole==='Supervisor';
+ const eligible=timeTrackerGpsEvidenceEligible();
  if(!eligible)return;
  const run=++state.ttLogGpsRunId,identity=state.context?.user_id,
   workspace=state.context?.workspace_id,boardId=state.boardId;
@@ -5619,8 +5621,8 @@ async function loadTimeTrackerLogGps(seq=routeSerial,record=null,{force=false}={
    state.ttLogGpsErrorRecordId=record?.id||'';
    if(status===401||/signed session required|session.*expir|session.*revok/i.test(message))
     state.ttLogGpsError='Your signed session is no longer valid. Sign in again to view GPS evidence.';
-   else if(status===403||/GPS.*(denied|restricted)|bootstrap.*Supervisor|access denied/i.test(message))
-    state.ttLogGpsError='GPS authorization was denied. Only bootstrap administrators and assigned TimeTracker Supervisors may view coordinates.';
+   else if(status===403||/GPS.*(denied|restricted|access requires)|bootstrap.*administrator|access denied/i.test(message))
+    state.ttLogGpsError='GPS authorization was denied. HR, System Admin, assigned Supervisors and bootstrap administrators may view coordinates.';
    else if(code==='PGRST202'||/function.*not found|schema cache/i.test(message))
     state.ttLogGpsError='The GPS evidence service is not available in the active backend schema.';
    else if(/date window|date range|future date/i.test(message))
@@ -5641,8 +5643,7 @@ async function loadTimeTrackerGps(seq=routeSerial,{force=false}={}){
  if(state.view!=='board'||state.tab!=='attendance'||
     state.ttAttendance?.status!=='VERIFIED_READ'||!auth.isSignedIn||
     state.ttBusy||state.ttGpsBusy||state.ttView!=='gps')return;
- const eligible=state.roleVerified===true||
-  state.ttAttendance.access?.moduleRole==='Supervisor';
+ const eligible=timeTrackerGpsEvidenceEligible();
  if(!eligible)return;
  const run=++state.ttGpsRunId,identity=state.context?.user_id,
   workspace=state.context?.workspace_id,boardId=state.boardId;
@@ -5667,7 +5668,7 @@ async function loadTimeTrackerGps(seq=routeSerial,{force=false}={}){
   if(run===state.ttGpsRunId&&seq===routeSerial){
    state.ttGpsData=null;
    state.ttGpsError='Signed GPS evidence is unavailable or access was denied.';
-   if(err?.status===403||/GPS authorization|GPS evidence is restricted|Only bootstrap/.test(String(err?.message||'')))
+   if(err?.status===403||/GPS authorization|GPS evidence (is restricted|access requires)|Only bootstrap/.test(String(err?.message||'')))
     state.ttView='clock';
   }
  }finally{
@@ -11005,21 +11006,21 @@ async function action(name,button){
  case 'tt-map-fullscreen':{
   if(!auth.isSignedIn||state.view!=='board'||state.tab!=='attendance'||
      state.ttAttendance?.status!=='VERIFIED_READ'||
-     !(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor')||
+     !timeTrackerGpsEvidenceEligible()||
      !['log','gps'].includes(state.ttView))return;
   await toggleTimeTrackerMapFullscreen(button.closest('.tt-map-host'));break;
  }
  case 'tt-map-retry':{
   if(!auth.isSignedIn||state.view!=='board'||state.tab!=='attendance'||
     state.ttAttendance?.status!=='VERIFIED_READ'||
-    !(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor')||
+    !timeTrackerGpsEvidenceEligible()||
     !['log','gps'].includes(state.ttView))return;
   await retryTimeTrackerMaps(root,timeTrackerSignedMapConfigs(),button.closest('.tt-map-host'));break;
  }
  case 'tt-map-enable':{
   if(!auth.isSignedIn||state.view!=='board'||state.tab!=='attendance'||
    state.ttAttendance?.status!=='VERIFIED_READ'||
-   !(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor')||
+   !timeTrackerGpsEvidenceEligible()||
    !['log','gps'].includes(state.ttView))return;
   state.ttMapConsent=true;
   state.ttMapConsentIdentity=timeTrackerMapConsentKey();
@@ -11176,7 +11177,7 @@ async function action(name,button){
  case 'tt-log-gps-load':{
   if(state.ttView!=='log'||state.ttBusy||state.ttLogGpsBusy||
      state.ttAttendance?.status!=='VERIFIED_READ'||!auth.isSignedIn||
-     !(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'))return;
+     !timeTrackerGpsEvidenceEligible())return;
   const record=(state.ttAttendance.log?.rows||[]).find(r=>
    r.id===button.dataset.recordId);
   if(!record||typeof record.ownerId!=='string'||!record.ownerId.startsWith('cloud:'))return;
@@ -11339,7 +11340,7 @@ async function action(name,button){
  }
  case 'tt-gps-view':{
   if(state.ttView!=='gps'||state.ttBusy||state.ttAttendance?.status!=='VERIFIED_READ'||
-     !(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'))return;
+     !timeTrackerGpsEvidenceEligible())return;
   const next=button.dataset.view;
   if(!['map','geofence','trail','accuracy','trends'].includes(next))return;
   state.ttGpsView=next;render();break;
@@ -11347,7 +11348,7 @@ async function action(name,button){
  case 'tt-gps-zoom':{
   if(state.ttView!=='gps'||state.ttBusy||state.ttGpsBusy||
      state.ttAttendance?.status!=='VERIFIED_READ'||
-     !(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'))return;
+     !timeTrackerGpsEvidenceEligible())return;
   const direction=button.dataset.direction;
   if(direction!=='in'&&direction!=='out')return;
   const current=Number(state.ttGpsFilters.zoom)||1;
@@ -11359,7 +11360,7 @@ async function action(name,button){
  case 'tt-map-style':{
   if(!['gps','log'].includes(state.ttView)||state.ttBusy||state.ttGpsBusy||
      state.ttAttendance?.status!=='VERIFIED_READ'||
-     !(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'))return;
+     !timeTrackerGpsEvidenceEligible())return;
   const theme=button.dataset.theme;
   if(theme!=='map'&&theme!=='dark')return;
   state.ttGpsFilters={...state.ttGpsFilters,theme};

@@ -43,25 +43,27 @@ test('broad attendance snapshot remains GPS-free and cannot supply the scoped GP
 });
 
 import {TimeTrackerNativeClient} from '../time-tracker-native.js';
-test('signed server GPS endpoint accepts only bootstrap or assigned Supervisor',async()=>{
+test('signed server GPS endpoint accepts bootstrap, Supervisor, HR and System Admin only',async()=>{
  const assigned='10000000-0000-4000-8000-000000000012';
  const payload={...raw};
- const make=(moduleRole,bootstrap=false,foreign=false)=>{
-  let calls=0;
+ const make=(moduleRole,bootstrap=false,foreign=false,freshRole=moduleRole)=>{
+  let calls=0,accessReads=0,currentRole=moduleRole;
   const client=new TimeTrackerNativeClient({
    auth:{userId:id,isSignedIn:true,getVerifiedUser:async()=>({id})},
    api:{
     context:async()=>({user_id:id,workspace_id:ws,profile:{status:'active'}}),
-    nativeApplicationBoardContext:async moduleId=>({
-     contract:'native-app-board-v1',moduleId,userId:id,workspaceId:ws,role:moduleRole,
-     board:{id:board,workspace_id:ws,name:'TimeTracker Attendance',status:'active',
-      description:'[APSYNTRA:MODULE:timetracker:v1]',archived_at:null,trashed_at:null}
-    }),
+    nativeApplicationBoardContext:async moduleId=>{
+     accessReads++;
+     currentRole=accessReads===1?moduleRole:freshRole;
+     return {contract:'native-app-board-v1',moduleId,userId:id,workspaceId:ws,role:currentRole,
+      board:{id:board,workspace_id:ws,name:'TimeTracker Attendance',status:'active',
+       description:'[APSYNTRA:MODULE:timetracker:v1]',archived_at:null,trashed_at:null}};
+    },
     board:async()=>({board:{id:board,workspace_id:ws,name:'TimeTracker Attendance'}}),
     allowed:async()=>true,
     rpc:async(name)=>{
      if(name==='has_module_access')return true;
-     if(name==='list_module_directory')return [{id,status:'active',module_role:moduleRole,display_name:'Example'}];
+     if(name==='list_module_directory')return [{id,status:'active',module_role:currentRole,display_name:'Example'}];
      if(name==='apsyntra_role_is_bootstrap')return bootstrap;
      if(name==='timetracker_gps_snapshot'){calls++;return {...payload,workspaceId:foreign?assigned:ws};}
      throw Error('Unexpected RPC '+name);
@@ -71,26 +73,34 @@ test('signed server GPS endpoint accepts only bootstrap or assigned Supervisor',
   return {client,get calls(){return calls;}};
  };
  const params={from:'2026-11-01',to:'2026-11-02'};
- for(const [role,bootstrap] of [['Supervisor',false],['Employee',true]]){
+ for(const [role,bootstrap] of [['Supervisor',false],['HR',false],['System Admin',false],['Employee',true]]){
   const x=make(role,bootstrap);
   assert.equal((await x.client.gpsEvidence(board,params)).events.length,1);
   assert.equal(x.calls,1);
  }
- for(const role of ['Employee','HR','Finance','System Admin','IT Administrator','OJT']){
+ for(const role of ['Employee','Finance','IT Administrator','OJT']){
   const x=make(role,false);
-  await assert.rejects(()=>x.client.gpsEvidence(board,params),/Only bootstrap administrators/);
+  await assert.rejects(()=>x.client.gpsEvidence(board,params),/GPS evidence access requires/);
   assert.equal(x.calls,0);
  }
+ const revoked=make('HR',false,false,'Employee');
+ await assert.rejects(()=>revoked.client.gpsEvidence(board,params),/revoked during the request/);
+ assert.equal(revoked.calls,1);
  const cross=make('Supervisor',false,true);
  await assert.rejects(()=>cross.client.gpsEvidence(board,params),/Signed GPS scope mismatch/);
 });
-test('GPS app wiring retains privacy and clears state on logout and expiry',()=>{
+test('GPS app wiring retains privacy and clears state on logout and expiry'test('GPS app wiring retains privacy and clears state on logout and expiry',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/timeTracker\.gpsEvidence/);
  assert.match(app,/case 'tt-gps-load'/);
  assert.match(app,/case 'tt-gps-compare'/);
  assert.match(app,/state\.ttGpsRunId\+\+/);
- assert.match(app,/gpsEligible:state\.roleVerified===true\|\|state\.ttAttendance\?\.access\?\.moduleRole==='Supervisor'/);
+ assert.match(app,/function timeTrackerGpsEvidenceEligible\(\)/);
+ assert.match(app,/\['Supervisor','HR','System Admin'\]\.includes\(state\.ttAttendance\?\.access\?\.moduleRole\)/);
+ assert.match(app,/logGpsEligible:timeTrackerGpsEvidenceEligible\(\)/);
+ assert.match(app,/gpsEligible:timeTrackerGpsEvidenceEligible\(\)/);
+ assert.match(app,/mapEnabled:auth\.isSignedIn&&state\.ttAttendance\?\.status==='VERIFIED_READ'&&timeTrackerGpsEvidenceEligible\(\)/);
+ assert.match(app,/timeTrackerSignedMapConfigs\(\)[\s\S]*?timeTrackerGpsEvidenceEligible\(\)/);
 });
 
 test('GPS reference redesign renders accessible mapped tabs, counters and filters',()=>{
