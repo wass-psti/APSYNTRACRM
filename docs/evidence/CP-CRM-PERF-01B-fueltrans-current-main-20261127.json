@@ -1,0 +1,201 @@
+{
+  "checkpoint": "CP-CRM-PERF-01B",
+  "workflowRun": "45996002315",
+  "commit": "6bf859627f6f72b2906f000549de7828f521a864",
+  "artifactId": "15195772599",
+  "application": "fueltrans",
+  "scope": "signed native application, emulated CRM host",
+  "signedLifecycleHttpChecks": 75,
+  "browserBenchmark": {
+    "profiles": 2,
+    "cycles": 60,
+    "transitions": 120
+  },
+  "integrity": "PASS",
+  "disposableContainers": "removed on exit",
+  "testContract": {
+    "tests": 1,
+    "passed": 1,
+    "failed": 0
+  },
+  "profiles": {
+    "desktop": {
+      "dashboard": {
+        "readyMs": {
+          "samples": 30,
+          "min": 99.44,
+          "p50": 99.93,
+          "p95": 100.49,
+          "max": 100.55,
+          "mean": 99.96
+        },
+        "requests": {
+          "samples": 30,
+          "min": 7,
+          "p50": 7,
+          "p95": 7,
+          "max": 7,
+          "mean": 7
+        },
+        "countRequests": {
+          "samples": 30,
+          "min": 6,
+          "p50": 6,
+          "p95": 6,
+          "max": 6,
+          "mean": 6
+        },
+        "responseBytes": {
+          "samples": 30,
+          "min": 14368,
+          "p50": 14368,
+          "p95": 14368,
+          "max": 14368,
+          "mean": 14368
+        },
+        "maxReadMs": {
+          "samples": 30,
+          "min": 14.87,
+          "p50": 17.01,
+          "p95": 20.57,
+          "max": 21.72,
+          "mean": 17.51
+        }
+      },
+      "tickets": {
+        "readyMs": {
+          "samples": 30,
+          "min": 82.78,
+          "p50": 83.48,
+          "p95": 100.39,
+          "max": 103.61,
+          "mean": 89.53
+        },
+        "requests": {
+          "samples": 30,
+          "min": 1,
+          "p50": 1,
+          "p95": 1,
+          "max": 1,
+          "mean": 1
+        },
+        "countRequests": {
+          "samples": 30,
+          "min": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "responseBytes": {
+          "samples": 30,
+          "min": 49558,
+          "p50": 49558,
+          "p95": 49558,
+          "max": 49558,
+          "mean": 49558
+        },
+        "maxReadMs": {
+          "samples": 30,
+          "min": 11.75,
+          "p50": 12.79,
+          "p95": 13.66,
+          "max": 14.06,
+          "mean": 12.74
+        }
+      }
+    },
+    "mobileViewport": {
+      "dashboard": {
+        "readyMs": {
+          "samples": 30,
+          "min": 99.59,
+          "p50": 100.01,
+          "p95": 100.54,
+          "max": 100.62,
+          "mean": 100.04
+        },
+        "requests": {
+          "samples": 30,
+          "min": 7,
+          "p50": 7,
+          "p95": 7,
+          "max": 7,
+          "mean": 7
+        },
+        "countRequests": {
+          "samples": 30,
+          "min": 6,
+          "p50": 6,
+          "p95": 6,
+          "max": 6,
+          "mean": 6
+        },
+        "responseBytes": {
+          "samples": 30,
+          "min": 14368,
+          "p50": 14368,
+          "p95": 14368,
+          "max": 14368,
+          "mean": 14368
+        },
+        "maxReadMs": {
+          "samples": 30,
+          "min": 14.63,
+          "p50": 16.13,
+          "p95": 18.22,
+          "max": 18.25,
+          "mean": 16.26
+        }
+      },
+      "tickets": {
+        "readyMs": {
+          "samples": 30,
+          "min": 82.87,
+          "p50": 83.31,
+          "p95": 100.08,
+          "max": 100.1,
+          "mean": 86.41
+        },
+        "requests": {
+          "samples": 30,
+          "min": 1,
+          "p50": 1,
+          "p95": 1,
+          "max": 1,
+          "mean": 1
+        },
+        "countRequests": {
+          "samples": 30,
+          "min": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "responseBytes": {
+          "samples": 30,
+          "min": 49558,
+          "p50": 49558,
+          "p95": 49558,
+          "max": 49558,
+          "mean": 49558
+        },
+        "maxReadMs": {
+          "samples": 30,
+          "min": 11.16,
+          "p50": 12.84,
+          "p95": 14.89,
+          "max": 20.62,
+          "mean": 13.11
+        }
+      }
+    }
+  },
+  "limitations": [
+    "Real PostgREST signed reads; existing host handshake and optional services emulated.",
+    "Thirty warm navigation cycles per viewport; not full CRM startup.",
+    "Automatic refresh disabled only inside the disposable browser to isolate navigation.",
+    "Response body sizes from Chromium request accounting; not network wire totals."
+  ]
+}
