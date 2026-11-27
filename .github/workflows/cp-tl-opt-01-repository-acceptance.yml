@@ -1,0 +1,93 @@
+name: CP-TL-OPT-01 Unified Server Repository Acceptance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cp-tl-opt-01-repository-acceptance.yml'
+      - 'sql/cp-tl03-staged-domain.sql'
+      - 'sql/tests/cp-tl03-disposable-setup.sql'
+      - 'sql/tests/cp-tl-opt-01-disposable-setup.sql'
+      - 'sql/tests/cp-tl-opt-01-disposable.sql'
+      - 'supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql'
+      - 'supabase/migrations/20261127013157_cp_tl_opt_01_unified_server_document_repository.sql'
+      - 'supabase/migrations/20261127024948_cp_tl_opt_01_cursor_validation_fix.sql'
+  pull_request:
+    paths:
+      - '.github/workflows/cp-tl-opt-01-repository-acceptance.yml'
+      - 'sql/cp-tl03-staged-domain.sql'
+      - 'sql/tests/cp-tl03-disposable-setup.sql'
+      - 'sql/tests/cp-tl-opt-01-disposable-setup.sql'
+      - 'sql/tests/cp-tl-opt-01-disposable.sql'
+      - 'supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql'
+      - 'supabase/migrations/20261127013157_cp_tl_opt_01_unified_server_document_repository.sql'
+      - 'supabase/migrations/20261127024948_cp_tl_opt_01_cursor_validation_fix.sql'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repository-acceptance:
+    name: PostgreSQL 17 global search, sorting, dates, cursors and pagination
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable_ci_only
+          POSTGRES_DB: tradelink_opt01_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d tradelink_opt01_disposable"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGDATABASE: tradelink_opt01_disposable
+      PGUSER: postgres
+      PGPASSWORD: disposable_ci_only
+      PGCONNECT_TIMEOUT: '5'
+      PGOPTIONS: '-c statement_timeout=30000'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Assert isolated PostgreSQL 17 runner identity
+        run: |
+          set -euo pipefail
+          test "$PGHOST" = 127.0.0.1
+          test "$PGDATABASE" = tradelink_opt01_disposable
+          psql -X -v ON_ERROR_STOP=1 -Atqc \
+            "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" \
+            | grep -Fx 'tradelink_opt01_disposable|t'
+
+      - name: Create source-aligned TradeLink fixture and install the existing signed save/review baseline
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-tl03-disposable-setup.sql \
+            -f sql/cp-tl03-staged-domain.sql \
+            -f supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql
+
+      - name: Seed disposable repository reviewer identities and search prerequisites
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl-opt-01-disposable-setup.sql
+
+      - name: Apply unified server-side repository migration in disposable PostgreSQL only
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261127013157_cp_tl_opt_01_unified_server_document_repository.sql
+
+      - name: Apply cursor-validation correction in disposable PostgreSQL only
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261127024948_cp_tl_opt_01_cursor_validation_fix.sql
+
+      - name: Verify global search, inclusive UTC dates, all sort directions, cursor validation and 50+10 pagination
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl-opt-01-disposable.sql
