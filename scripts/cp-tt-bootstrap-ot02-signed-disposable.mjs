@@ -321,3 +321,9 @@ if(process.env.CP_TT_OT03_BROWSER==='1'){
  }),'HR approves duration OT');
  assert.equal(approved.status,'Approved');
 }
+
+if(process.env.CP_CRM_PERF_01A_MODE){
+ const {runSignedPerformanceBaseline}=await import('./cp-crm-perf-01a-signed.mjs');
+ await runSignedPerformanceBaseline({authUrl:auth,restUrl:rest,db,worker,hr,board,workspace,
+  integrityRead:()=>sql("SELECT json_build_array((SELECT md5(coalesce(string_agg(to_jsonb(r)::text, ',' ORDER BY id),'')) FROM public.timetracker_ot_requests r),(SELECT md5(coalesce(string_agg(to_jsonb(a)::text, ',' ORDER BY event_id),'')) FROM public.timetracker_ot_audit a))::text")});
+}

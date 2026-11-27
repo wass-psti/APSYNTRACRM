@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Disposable signed OT performance</title>
+<link rel="stylesheet" href="../../apsyntra-styles.bundle.css"></head>
+<body><main class="main"><div class="main-content" id="ot-root"></div></main>
+<script type="module">
+import {renderTimeTrackerOvertime} from '../../time-tracker-overtime.js';
+import {PlatformSync} from '../../platform-sync.js';
+const host=document.querySelector('#ot-root');
+const twoFrames=()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)));
+let identity,token,board,workspace,moduleRole,snapshot,filter='All',controller;
+let reads=[],interactions=[],syncFailures=0,renderCount=0;
+function render(){
+ host.innerHTML=renderTimeTrackerOvertime({requests:snapshot.rows,filters:{status:filter},
+  now:new Date(),access:{userId:identity,moduleRole,bootstrapApprover:snapshot.bootstrapApprover,
+   manualOtManager:snapshot.manualOtManager,otContractActive:true,
+   durationOtContractActive:snapshot.durationOtContract==='tt-duration-ot-1',
+   durationOtHrApprover:snapshot.durationOtHrApprover===true,
+   durationOtApprover:snapshot.durationOtApprover===true}});
+ renderCount++;
+}
+async function read(path,body){
+ const start=performance.now();
+ const response=await fetch(path,{method:body?'POST':'GET',headers:{
+  Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},
+  ...(body?{body:JSON.stringify(body)}:{})});
+ const text=await response.text();
+ reads.push({operation:body?'ot-snapshot':'auth-user',status:response.status,
+  ms:performance.now()-start,bytes:new TextEncoder().encode(text).length});
+ if(!response.ok)throw Error('Disposable signed read failed: '+response.status);
+ return JSON.parse(text);
+}
+async function refresh(){
+ const fresh=await read('/rpc/timetracker_ot_snapshot',{p_board_id:board});
+ if(fresh.actorId!==identity||!Array.isArray(fresh.rows))throw Error('Signed OT scope mismatch');
+ snapshot=fresh;render();return true;
+}
+host.addEventListener('click',event=>{
+ const button=event.target.closest('[data-action="tt-ot-status"]');
+ if(!button||!snapshot)return;
+ const start=performance.now();
+ filter=button.dataset.status;render();
+ void twoFrames().then(()=>interactions.push(performance.now()-start));
+});
+window.crmSignedPerf={
+ async init(input){
+  ({identity,token,board,workspace,moduleRole}=input);
+  const user=await read('/auth/user');
+  if(user.id!==identity)throw Error('GoTrue identity mismatch');
+  await refresh();await twoFrames();
+  return {ready:true,rows:snapshot.rows.length,requests:reads.length};
+ },
+ async start(){
+  // Exercise actual polling fallback. Both pages are deliberately eligible
+  // for foreground polling, independent of headless tab visibility.
+  controller=new PlatformSync({auth:{isSignedIn:true,userId:identity},api:{},
+   WebSocketImpl:null,visible:()=>true,online:()=>true,
+   onInvalidate:async()=>{try{return await refresh();}catch{syncFailures++;return false;}}});
+  controller.start({userId:identity,workspaceId:workspace,boardIds:[board]});
+  if(controller.lastTransport!=='polling')throw Error('Polling fallback not active');
+ },
+ async stop(){
+  const until=performance.now()+10000;
+  while(controller?.inFlight&&performance.now()<until)await new Promise(done=>setTimeout(done,20));
+  if(controller?.inFlight)throw Error('Polling did not settle');
+  controller?.stop();
+ },
+ drain(){
+  const result={reads,interactions,syncFailures,renderCount,rows:snapshot?.rows.length??0};
+  reads=[];interactions=[];syncFailures=0;renderCount=0;return result;
+ }
+};
+</script></body></html>

@@ -1,0 +1,50 @@
+name: CP-CRM-PERF-01A Signed Runtime and Sustained Workload
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cp-crm-perf-01a.yml'
+      - 'scripts/cp-crm-perf-01a-signed.mjs'
+      - 'scripts/lib/crm-signed-performance.mjs'
+      - 'frontend/tests/crm-signed-performance.test.mjs'
+      - 'frontend/tests/fixtures/crm-signed-performance.html'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signed-performance:
+    name: Disposable signed OT baseline (${{ matrix.mode }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [smoke, single, dual]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Verify report contracts and existing OT reliability
+        run: |
+          node --check scripts/cp-crm-perf-01a-signed.mjs
+          node --check scripts/cp-tt-bootstrap-ot02-signed-disposable.mjs
+          node --test frontend/tests/crm-signed-performance.test.mjs frontend/tests/crm-performance-baseline.test.mjs frontend/tests/time-tracker-ot-reliability.test.mjs
+      - name: Signed disposable fixture and bounded workload
+        env:
+          CP_CRM_PERF_01A_MODE: ${{ matrix.mode }}
+        run: |
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$BROWSER"
+          CHROME_BIN="$BROWSER" bash scripts/cp-tt-bootstrap-ot02-signed-disposable.sh
+      - name: Retain numeric report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: crm-signed-performance-${{ matrix.mode }}
+          path: artifacts/crm-signed-performance-${{ matrix.mode }}.json
+          if-no-files-found: error
+          retention-days: 30
