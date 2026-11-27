@@ -2450,6 +2450,13 @@
       "file": "20261127110000_cp_tt_ot_self_review_parity_02.sql",
       "bytes": 6762,
       "sha256": "aa0b5e89102e79fa89a031ce00cfb702d7fcf5bc1a982c07aabcc08dcd62499e"
+    },
+    {
+      "version": "20261127120000",
+      "name": "cp_tl_opt_04_document_template_render_snapshots",
+      "file": "20261127120000_cp_tl_opt_04_document_template_render_snapshots.sql",
+      "bytes": 46172,
+      "sha256": "fa7da4da057afd6af42edcde8ebba25bcbf5d467486d11f6ff7570b827f0db6f"
     }
   ],
   "applied_only": [
