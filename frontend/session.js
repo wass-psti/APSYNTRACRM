@@ -1,5 +1,6 @@
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
 import {GoTrueClient} from './vendor/supabase-auth.js';
+import {classifyAuthFailure} from './auth/failure-classification.js';
 
 const STORE_KEY='apsyntra.crm.auth.v1';
 const MIGRATION_KEY='apsyntra.crm.auth.migration.v1';
@@ -7,6 +8,10 @@ const VERIFIED_USER_CACHE_TTL_MS=30000;
 const PROVIDER_SESSION_REFRESH_MARGIN_MS=90000;
 const PROVIDER_SESSION_CHECK_INTERVAL_MS=30000;
 const isObject=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
+const validProviderSession=value=>isObject(value)&&
+  typeof value.access_token==='string'&&value.access_token.length>0&&
+  typeof value.refresh_token==='string'&&value.refresh_token.length>0&&
+  Number.isFinite(Number(value.expires_at));
 const browserSessionStorage=()=>{
   try{return globalThis.sessionStorage??null;}
   catch{return null;}
@@ -15,12 +20,20 @@ const browserLocalStorage=()=>{
   try{return globalThis.localStorage??null;}
   catch{return null;}
 };
-const providerError=error=>new ApiError(
-  typeof error?.message==='string'?error.message:'Authentication request failed.',
-  Number.isInteger(error?.status)?error.status:0,
-  error?.name==='AuthRetryableFetchError'?'NETWORK_UNAVAILABLE':
-    typeof error?.code==='string'?error.code:'AUTH_PROVIDER_ERROR'
-);
+const providerError=(error,operation='request')=>{
+  const failure=classifyAuthFailure(error,{operation});
+  const normalized=new ApiError(
+    typeof error?.message==='string'?error.message:'Authentication request failed.',
+    Number.isInteger(error?.status)?error.status:0,
+    typeof error?.code==='string'&&error.code?error.code:failure.code
+  );
+  normalized.providerErrorName=error?.providerErrorName||error?.name||'';
+  normalized.failureClassification=failure;
+  normalized.failureOperation=operation;
+  if(Number.isFinite(Number(error?.retryAfterMs))&&Number(error.retryAfterMs)>=0)
+    normalized.retryAfterMs=Number(error.retryAfterMs);
+  return normalized;
+};
 const validLegacySession=value=>isObject(value)&&isObject(value.user)&&
   typeof value.user.id==='string'&&typeof value.access_token==='string'&&
   typeof value.refresh_token==='string'&&Number.isFinite(value.expires_at);
@@ -82,6 +95,18 @@ export class AuthClient {
     this.verifiedUserPending=null;
     this.verifiedUserRevision++;
   }
+  handleAuthFailure(error,operation){
+    const failure=error?.failureClassification&&error.failureOperation===operation?
+      error.failureClassification:classifyAuthFailure(error,{operation});
+    if(failure.invalidateSession)this.expireSession();
+    return failure;
+  }
+  expireSession(){
+    if(!this.session)return false;
+    this.clear();
+    this.onExpired();
+    return true;
+  }
   receiveProviderEvent(event,session){
     if(this.ignoreProviderSessionEvents||event==='INITIAL_SESSION')return;
     const previous=this.session;
@@ -106,12 +131,32 @@ export class AuthClient {
   }
   async restoreProvider(){
     this.ignoreProviderSessionEvents=false;
-    const result=await this.provider.getSession();
-    if(result.error)throw providerError(result.error);
-    let session=result.data?.session||null;
-    this.session=session;
-    this.invalidateVerifiedUser();
-    this.providerSessionReadAt=null;
+    let result;
+    try{result=await this.provider.getSession();}
+    catch(error){
+      const normalized=providerError(error,'session-read');
+      const failure=this.handleAuthFailure(normalized,'session-read');
+      if(failure.invalidateSession&&!this.session)return false;
+      throw normalized;
+    }
+    if(result?.error){
+      const normalized=providerError(result.error,'session-read');
+      const failure=this.handleAuthFailure(normalized,'session-read');
+      if(failure.invalidateSession&&!this.session)return false;
+      throw normalized;
+    }
+    if(!isObject(result)||!isObject(result.data))
+      throw new ApiError('Authentication provider returned an incomplete session response.',500,'AUTH_RESPONSE_INVALID');
+    let session=result.data.session||null;
+    if(session&&!validProviderSession(session))
+      throw new ApiError('Authentication provider returned an incomplete session.',500,'AUTH_RESPONSE_INVALID');
+    if(!session){
+      if(this.session)this.expireSession();
+      else this.session=null;
+    }else{
+      this.session=session;
+      this.invalidateVerifiedUser();
+    }
     let migrated=false;
     let migratedUser=null;
     if(!session){
@@ -128,20 +173,40 @@ export class AuthClient {
           this.markLegacyMigrationComplete();
           return false;
         }
-        const imported=await this.provider.setSession({
-          access_token:legacy.access_token,refresh_token:legacy.refresh_token
-        });
-        if(imported.error){
-          const error=providerError(imported.error);
-          if([400,401,403].includes(error.status)){
+        let imported;
+        try{
+          imported=await this.provider.setSession({
+            access_token:legacy.access_token,refresh_token:legacy.refresh_token
+          });
+        }catch(error){
+          const normalized=providerError(error,'legacy-import');
+          const failure=this.handleAuthFailure(normalized,'legacy-import');
+          if(failure.invalidateSession){
             this.markLegacyMigrationComplete();
             return false;
           }
-          throw error;
+          throw normalized;
+        }
+        if(imported?.error){
+          const normalized=providerError(imported.error,'legacy-import');
+          const failure=this.handleAuthFailure(normalized,'legacy-import');
+          if(failure.invalidateSession){
+            this.markLegacyMigrationComplete();
+            return false;
+          }
+          throw normalized;
         }
         session=imported.data?.session||null;
         migratedUser=imported.data?.user||null;
+        if(session&&!validProviderSession(session))
+          throw new ApiError('Authentication provider returned an incomplete migrated session.',500,'AUTH_RESPONSE_INVALID');
         migrated=!!session;
+        if(!session){
+          this.markLegacyMigrationComplete();
+          return false;
+        }
+        this.session=session;
+        this.invalidateVerifiedUser();
       }
     }
     if(!session){this.session=null;return false;}
@@ -155,13 +220,11 @@ export class AuthClient {
       this.markLegacyMigrationComplete();
       return true;
     }catch(error){
-      if([400,401,403].includes(error?.status)){
-        await this.provider.signOut({scope:'local'}).catch(()=>{});
-        this.session=null;
+      const failure=this.handleAuthFailure(error,'identity');
+      if(failure.invalidateSession){
         this.markLegacyMigrationComplete();
         return false;
       }
-      // Keep a valid, recoverable provider session through network failures.
       throw error;
     }
   }
@@ -316,11 +379,11 @@ export class AuthClient {
       this.signInInProgress=true;
       try{
         const result=await this.provider.signInWithPassword({email:email.trim(),password});
-        if(result.error)throw providerError(result.error);
+        if(result.error)throw providerError(result.error,'sign-in');
         const session=result.data?.session;
         const user=result.data?.user||session?.user;
         if(!session||typeof user?.id!=='string'||user.id!==session.user?.id)
-          throw new ApiError('Authentication did not return a valid session.',401);
+          throw new ApiError('Authentication did not return a valid session.',401,'AUTH_RESPONSE_INVALID');
         this.session={...session,user};
         this.invalidateVerifiedUser();
         this.providerSessionReadAt=null;
@@ -334,9 +397,7 @@ export class AuthClient {
     this.save(data);
     try{await this.getVerifiedUser();}
     catch(err){
-      // Bad credentials/revoked tokens invalidate a session. An offline or
-      // timed-out *verification* does not revoke the freshly issued tokens.
-      if([400,401,403].includes(err?.status))this.clear();
+      this.handleAuthFailure(err,'identity');
       throw err;
     }
     return this.session.user;
@@ -354,14 +415,27 @@ export class AuthClient {
       if(this.verifiedUserPending?.key===key)return this.verifiedUserPending.promise;
       const revision=this.verifiedUserRevision;
       const pending=(async()=>{
-        const result=await this.provider.getUser(token);
-        if(result.error)throw providerError(result.error);
-        const user=result.data?.user;
+        let result;
+        try{result=await this.provider.getUser(token);}
+        catch(error){
+          const normalized=providerError(error,'identity');
+          this.handleAuthFailure(normalized,'identity');
+          throw normalized;
+        }
+        if(result?.error){
+          const normalized=providerError(result.error,'identity');
+          this.handleAuthFailure(normalized,'identity');
+          throw normalized;
+        }
+        const user=result?.data?.user;
         if(!this.session||this.userId!==expectedUserId)
-          throw new ApiError('Session changed during verification.',401,'SESSION_CHANGED');
-        if(!isObject(user)||user.id!==expectedUserId){
-          if(this.accessToken===token)this.clear();
-          throw new ApiError('Session verification failed.',401,'SESSION_CHANGED');
+          throw new ApiError('Session changed during verification.',409,'SESSION_CHANGED');
+        if(!isObject(user)||typeof user.id!=='string')
+          throw new ApiError('Authentication provider returned an incomplete identity response.',500,'AUTH_RESPONSE_INVALID');
+        if(user.id!==expectedUserId){
+          const error=new ApiError('Session verification failed.',401,'AUTH_SESSION_INVALID');
+          this.handleAuthFailure(error,'identity');
+          throw error;
         }
         if(revision===this.verifiedUserRevision&&this.accessToken===token){
           this.session={...this.session,user};
@@ -378,7 +452,7 @@ export class AuthClient {
     const token=await this.token();
     const expectedUserId=this.session?.user?.id;
     if(!this.session||typeof expectedUserId!=='string')
-      throw new ApiError('Session changed during verification.',401,'SESSION_CHANGED');
+      throw new ApiError('Session changed during verification.',409,'SESSION_CHANGED');
     const key=expectedUserId+':'+token;
     const cached=this.verifiedUserCache;
     const cacheAge=this.clock()-(cached?.verifiedAt??0);
@@ -387,16 +461,22 @@ export class AuthClient {
     if(this.verifiedUserPending?.key===key)return this.verifiedUserPending.promise;
     const revision=this.verifiedUserRevision;
     const pending=(async()=>{
-      const data=await this.call('/auth/v1/user',{accessToken:token,requestKind:'read'});
+      let data;
+      try{data=await this.call('/auth/v1/user',{accessToken:token,requestKind:'read'});}
+      catch(error){
+        this.handleAuthFailure(error,'identity');
+        throw error;
+      }
       if(!this.session||this.userId!==expectedUserId)
-        throw new ApiError('Session changed during verification.',401,'SESSION_CHANGED');
-      if(!isObject(data)||typeof data.id!=='string'||data.id!==expectedUserId){
-        if(this.accessToken===token)this.clear();
-        throw new ApiError('Session verification failed.',401,'SESSION_CHANGED');
+        throw new ApiError('Session changed during verification.',409,'SESSION_CHANGED');
+      if(!isObject(data)||typeof data.id!=='string')
+        throw new ApiError('Authentication service returned an incomplete identity response.',500,'AUTH_RESPONSE_INVALID');
+      if(data.id!==expectedUserId){
+        const error=new ApiError('Session verification failed.',401,'AUTH_SESSION_INVALID');
+        this.handleAuthFailure(error,'identity');
+        throw error;
       }
       if(revision===this.verifiedUserRevision&&this.accessToken===token){
-        // The server-verified profile is a short-lived local cache. Browser
-        // storage remains best-effort and never becomes the auth authority.
         this.session={...this.session,user:data};
         try{this.storage?.setItem(STORE_KEY,JSON.stringify(this.session));}
         catch{/* In-memory identity remains verified for this tab. */}
@@ -423,7 +503,8 @@ export class AuthClient {
       if(!this.session)return false;
       try{await this.getVerifiedUser();return true;}
       catch(error){
-        if([400,401,403].includes(error?.status)){this.clear();return false;}
+        const failure=this.handleAuthFailure(error,'identity');
+        if(failure.invalidateSession)return false;
         throw error;
       }
     }
@@ -440,11 +521,10 @@ export class AuthClient {
     try{
       await this.getVerifiedUser();return true;
     }catch(error){
-      if([400,401,403].includes(error?.status)){
-        this.clear();return false;
-      }
-      // Network outage, timeouts, 5xx and 429 are indeterminate; preserve the
-      // original secure session for an explicit same-page recovery attempt.
+      const failure=this.handleAuthFailure(error,'identity');
+      if(failure.invalidateSession)return false;
+      // Transport, storage and malformed-response failures do not prove that
+      // the previously stored session has been revoked.
       throw error;
     }
   }
@@ -452,25 +532,42 @@ export class AuthClient {
     if(this.provider){
       if(this.refreshing)return this.refreshing;
       this.refreshing=(async()=>{
-        const result=await this.provider.refreshSession();
-        if(result.error){
-          const error=providerError(result.error);
-          if([400,401,403].includes(error.status)){
-            const hadSession=!!this.session;
-            this.clear();
-            if(hadSession)this.onExpired();
-          }
+        let result;
+        try{result=await this.provider.refreshSession();}
+        catch(rawError){
+          const error=providerError(rawError,'refresh');
+          const failure=this.handleAuthFailure(error,'refresh');
+          const currentExpiry=Number(this.session?.expires_at)*1000;
+          if(failure.category==='SESSION_CHANGED'&&this.session?.access_token&&
+             Number.isFinite(currentExpiry)&&currentExpiry>this.clock())
+            return this.session.access_token;
           throw error;
         }
-        this.session=result.data?.session||null;
+        if(result?.error){
+          const error=providerError(result.error,'refresh');
+          const failure=this.handleAuthFailure(error,'refresh');
+          const currentExpiry=Number(this.session?.expires_at)*1000;
+          if(failure.category==='SESSION_CHANGED'&&this.session?.access_token&&
+             Number.isFinite(currentExpiry)&&currentExpiry>this.clock())
+            return this.session.access_token;
+          throw error;
+        }
+        const next=result?.data?.session||null;
+        if(!next){
+          const error=new ApiError('Session expired.',401,'SESSION_MISSING');
+          this.handleAuthFailure(error,'refresh');
+          throw error;
+        }
+        if(!validProviderSession(next))
+          throw new ApiError('Authentication provider returned an incomplete refreshed session.',500,'AUTH_RESPONSE_INVALID');
+        this.session=next;
         this.invalidateVerifiedUser();
         this.providerSessionReadAt=null;
-        if(!this.session?.access_token)throw new ApiError('Session expired.',401);
         return this.session.access_token;
       })().finally(()=>{this.refreshing=null;});
       return this.refreshing;
     }
-    if(!this.session)throw new ApiError('Session expired.',401);
+    if(!this.session)throw new ApiError('Session expired.',401,'SESSION_MISSING');
     if(this.refreshing)return this.refreshing;
     this.refreshing=(async()=>{
       const prev=this.session;
@@ -479,11 +576,9 @@ export class AuthClient {
           method:'POST',body:{refresh_token:prev.refresh_token}
         });
         this.save(next);return this.session.access_token;
-      }catch(err){
-        if(err.status===400||err.status===401||err.status===403){
-          this.clear();this.onExpired();
-        }
-        throw err;
+      }catch(error){
+        this.handleAuthFailure(error,'refresh');
+        throw error;
       }
     })().finally(()=>{this.refreshing=null;});
     return this.refreshing;
@@ -501,13 +596,30 @@ export class AuthClient {
     const pending=(async()=>{
       const revision=this.verifiedUserRevision;
       this.providerSessionReadAt=this.clock();
-      const result=await this.provider.getSession();
-      if(result.error)throw providerError(result.error);
-      const next=result.data?.session||null;
-      // A BroadcastChannel auth event received during this read is newer than
-      // the storage snapshot. Never overwrite that event with an older read.
+      let result;
+      try{result=await this.provider.getSession();}
+      catch(rawError){
+        const error=providerError(rawError,'session-read');
+        this.handleAuthFailure(error,'session-read');
+        throw error;
+      }
+      if(result?.error){
+        const error=providerError(result.error,'session-read');
+        this.handleAuthFailure(error,'session-read');
+        throw error;
+      }
+      if(!isObject(result)||!isObject(result.data))
+        throw new ApiError('Authentication provider returned an incomplete session response.',500,'AUTH_RESPONSE_INVALID');
+      const next=result.data.session||null;
       if(revision!==this.verifiedUserRevision)return this.session;
+      if(next&&!validProviderSession(next))
+        throw new ApiError('Authentication provider returned an incomplete session.',500,'AUTH_RESPONSE_INVALID');
       const previousToken=this.accessToken,previousUser=this.userId;
+      if(!next){
+        if(this.session)this.expireSession();
+        else this.session=null;
+        return null;
+      }
       this.session=next;
       if(previousToken!==this.accessToken||previousUser!==this.userId)
         this.invalidateVerifiedUser();
@@ -527,12 +639,15 @@ export class AuthClient {
       let latest;
       try{latest=await this.readProviderSession();}
       catch(error){
-        // A transient provider/storage failure must not discard a still-valid
-        // in-memory access token, but never reuse it after a sign-out or switch.
+        // Reuse the last token only when the classifier says the failure did
+        // not prove that the session was invalidated.
+        const failure=error?.failureClassification||
+          classifyAuthFailure(error,{operation:'session-read'});
         const latest=this.session;
         const latestExpiresAt=Number(latest?.expires_at)*1000;
-        if(latest?.access_token&&Number.isFinite(latestExpiresAt)&&
-           latestExpiresAt>this.clock())return latest.access_token;
+        if(failure.preserveSession&&latest?.access_token&&
+           Number.isFinite(latestExpiresAt)&&latestExpiresAt>this.clock())
+          return latest.access_token;
         throw error;
       }
       if(!latest?.access_token)
@@ -548,9 +663,12 @@ export class AuthClient {
       let current;
       try{current=await this.readProviderSession({force:true});}
       catch(error){
+        const failure=error?.failureClassification||
+          classifyAuthFailure(error,{operation:'session-read'});
         const cached=this.session;
         const expiresAt=Number(cached?.expires_at)*1000;
-        if(cached?.access_token&&cached.access_token!==rejectedToken&&
+        if(failure.preserveSession&&cached?.access_token&&
+           cached.access_token!==rejectedToken&&
            Number.isFinite(expiresAt)&&expiresAt>this.clock())return cached.access_token;
         throw error;
       }
