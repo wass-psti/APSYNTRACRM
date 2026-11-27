@@ -41,8 +41,8 @@ export function materialTrackerRows(detail,{today=new Date()}={}){
 }
 export function filterMaterialTrackerRows(rows,filters={}){
  const query=String(filters.search||'').toLocaleLowerCase().trim().slice(0,120);
- const source=['Local','Import'].includes(filters.source)?filters.source:'all';
- return rows.filter(row=>(source==='all'||row.source===source)&&
+ const source=['Local','Import','Unknown'].includes(filters.source)?filters.source:'all';
+ return rows.filter(row=>(source==='all'||(source==='Unknown'?!row.source:row.source===source))&&
   (!filters.overdue||row.overdue)&&(!query||
   [row.partNumber,row.description,row.brand,row.rfq].some(v=>v.toLocaleLowerCase().includes(query))));
 }

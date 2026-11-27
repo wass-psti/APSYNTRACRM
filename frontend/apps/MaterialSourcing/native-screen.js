@@ -4,8 +4,9 @@
  * The Add Material form and Details/Tasks/Activity drawer remain CRM-owned.
  */
 import {reconcileBoard,COMMERCIAL_FIELDS} from './reconcile.js';
-import {renderMaterialSourcingTracker,materialTrackerRows,filterMaterialTrackerRows} from '../../material-sourcing-tracker.js';
+import {materialTrackerRows,filterMaterialTrackerRows} from '../../material-sourcing-tracker.js';
 import {readProtectedSourcingItem} from '../../material-sourcing-application.js';
+import {renderMaterialSourcingAddMaterial} from '../../material-sourcing-add-material.js';
 
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>new Intl.NumberFormat('en-PH').format(n);
@@ -24,8 +25,20 @@ export const nativeColumns=Object.freeze([
  ['leadWeeks','Lead (wks)','public'],['requiredDate','Date required','public']
 ]);
 const moneyKeys=new Set(['legacySelling','buyingPrice','shipping','usd','eur']);
-function card(label,value,icon,note=''){
- return '<article class="ms-native-metric"><i aria-hidden="true">'+icon+'</i><div><small>'+escape(label)+'</small><strong>'+escape(value)+'</strong>'+(note?'<small>'+escape(note)+'</small>':'')+'</div></article>';
+function card(label,value,icon,note='',sourceFilter=null){
+ const tag=sourceFilter?'button':'article';
+ const attrs=sourceFilter?' type="button" data-action="mrh-native-source" data-source="'+escape(sourceFilter.source)+'" aria-pressed="'+sourceFilter.active+'"':'';
+ return '<'+tag+' class="ms-native-metric"'+attrs+'><i aria-hidden="true">'+icon+'</i><div><small>'+escape(label)+'</small><strong>'+escape(value)+'</strong>'+(note?'<small>'+escape(note)+'</small>':'')+'</div></'+tag+'>';
+}
+function sourceDistribution(local,imported,unknown){
+ const total=local+imported+unknown;
+ const first=total?100*local/total:0;
+ const second=total?100*imported/total:0;
+ const arc=(tone,length,offset)=>'<circle class="ms-native-ring-'+tone+'" cx="50" cy="50" r="36" pathLength="100" stroke-dasharray="'+length+' '+(100-length)+'" stroke-dashoffset="'+(-offset)+'" transform="rotate(-90 50 50)"/>';
+ return '<article class="ms-native-metric ms-native-distribution"><svg viewBox="0 0 100 100" role="img" aria-label="Materials by source, by record count: Local '+local+', Import '+imported+', Unspecified '+unknown+'"><circle class="ms-native-ring-base" cx="50" cy="50" r="36"/>'+
+  (total?arc('local',first,0)+arc('import',second,first):'')+'</svg><div><small>Materials by source</small>'+
+  [['local','Local',local],['import','Import',imported],['unknown','Unspecified',unknown]].map(([tone,label,count])=>'<div class="ms-native-legend"><span class="ms-native-dot-'+tone+'" aria-hidden="true">●</span> '+label+': <b>'+fmt(count)+'</b></div>').join('')+
+  '<small>Record count, not cost</small></div></article>';
 }
 function publicCell(record,key){
  const value=record.publicValues[key];
@@ -47,7 +60,7 @@ function rowMarkup(record,overdue){
 // document retains its single deterministic stylesheet; only this route adds
 // the scoped reference styles, once per document.
 export function ensureNativeMaterialSourcingStyles(doc){
- const href=new URL('./native-screen.css?v=cp-ms-crm-03-20261127',import.meta.url).href;
+ const href=new URL('./native-screen.css?v=cp-ms-crm-03a-20261127',import.meta.url).href;
  const existing=Array.from(doc.querySelectorAll('link[rel="stylesheet"]')).find(link=>link.href===href);
  if(existing)return existing;
  const link=doc.createElement('link');link.rel='stylesheet';link.href=href;doc.head.append(link);return link;
@@ -57,27 +70,31 @@ export function renderNativeMaterialSourcing(detail,filters={},now=new Date(),op
  let projection;
  try{projection=reconcileBoard(detail,{workspaceId:options.workspaceId});}
  catch{return '<section class="panel" role="alert">Material Sourcing board data is unavailable. Refresh the current workspace.</section>';}
- if(options.view==='add')return renderMaterialSourcingTracker(detail,filters,now,options);
+ const adding=options.view==='add';
  const all=materialTrackerRows(detail,{today:now}),shown=filterMaterialTrackerRows(all,filters);
  const byId=new Map(projection.records.map(record=>[record.id,record]));
  const records=shown.map(row=>({record:byId.get(row.id),overdue:row.overdue})).filter(x=>x.record);
  const local=all.filter(row=>row.source==='Local').length,imported=all.filter(row=>row.source==='Import').length,unknown=all.length-local-imported;
  const heading=projection.itemsComplete?'Total items':'Loaded items';
- const filterOptions=[['all','All sources'],['Local','Local'],['Import','Import']];
+ const filterOptions=[['all','All sources'],['Local','Local'],['Import','Import'],['Unknown','Unspecified']];
+ const metricFilter=source=>adding?null:{source,active:filters.source===source};
  const headings=nativeColumns.map(([key,label,kind])=>'<th scope="col" data-ms-col="'+key+'">'+
  (kind==='identity'||kind==='public'?'<button type="button" data-action="mrh-native-sort" data-column="'+key+'" aria-label="Sort by '+escape(label)+'">'+escape(label)+' <span aria-hidden="true">↕</span></button>':escape(label))+'</th>').join('');
  return '<section class="mrh-tracker ms-native-sourcing" aria-label="Material Sourcing application">'+
  '<header class="ms-native-header"><div class="ms-native-brand"><span class="ms-native-logo" aria-hidden="true">◈</span><div><h2>Material Sourcing</h2><p>Procurement tracking &amp; material management</p></div></div>'+
  '<div class="ms-native-header-actions"><span class="ms-native-tag">CRM · Signed board data</span><button type="button" class="secondary" data-action="refresh-board" aria-label="Refresh Material Sourcing">↻ Refresh</button></div></header>'+
  '<div class="ms-native-body"><details class="ms-native-metrics-panel" open><summary>Key metrics</summary><div class="ms-native-metrics">'+
- card(heading,fmt(all.length),'◇')+card('Total buying','—','₱','Calculation pending')+card('Local',fmt(local),'⌖')+card('Import',fmt(imported),'◎')+
+ card(heading,fmt(all.length),'◇')+card('Total buying','—','₱','Calculation pending')+card('Local',fmt(local),'⌖','',metricFilter('Local'))+card('Import',fmt(imported),'◎','',metricFilter('Import'))+
  card('USD rate','—','$','No current snapshot')+card('EUR rate','—','€','No current snapshot')+
- '<article class="ms-native-metric ms-native-distribution"><div><small>Materials by source</small><strong>'+fmt(all.length)+'</strong><small>Local '+fmt(local)+' · Import '+fmt(imported)+' · Unspecified '+fmt(unknown)+'</small></div></article></div></details>'+
+ sourceDistribution(local,imported,unknown)+'</div></details>'+
  '<div class="ms-native-rates"><span>⇄ Exchange rates</span><span class="ms-native-tag">USD —</span><span class="ms-native-tag">EUR —</span><small>Stored per-item rates are available through signed reads. No current FX snapshot.</small></div>'+
  (!projection.itemsComplete?'<p class="mrh-data-warning" role="status">Partial board page: counts, filters and exports apply to loaded records only.</p>':'')+
  (projection.deferred.length?'<p class="mrh-data-warning" role="status">Other-group or archived records are outside the current sourcing projection; their identities remain unchanged.</p>':'')+
  (projection.missingPublicFields.length?'<p class="mrh-data-warning" role="status">Some sourcing fields are not available in this board projection.</p>':'')+
- '<nav class="ms-native-tabs mrh-tracker-viewtabs" aria-label="Material Tracker views"><span class="mrh-active-view" aria-current="page">All items</span><button type="button" data-action="mrh-add-view">＋ Add Material</button><button type="button" disabled title="Requires the extended MRH transaction contract">Bulk Import</button></nav>'+
+ '<nav class="ms-native-tabs mrh-tracker-viewtabs" aria-label="Material Tracker views">'+
+ (adding?'<button type="button" data-action="mrh-show-items">All items</button><span class="mrh-active-view" aria-current="page">Add Material</span>':'<span class="mrh-active-view" aria-current="page">All items</span><button type="button" data-action="mrh-add-view">＋ Add Material</button>')+
+ '<button type="button" disabled title="Requires the extended MRH transaction contract">Bulk Import</button></nav>'+
+ (adding?'<div class="mrh-add-app ms-native-add"><div class="mrh-add-canvas">'+renderMaterialSourcingAddMaterial(detail,{canCreate:options.canCreate===true})+'</div></div>':
  '<div class="ms-native-surface"><div class="mrh-tracker-controls">'+
  '<label class="mrh-search-field"><span class="sr-only">Search materials</span><input type="search" id="mrh-tracker-search" placeholder="Search materials, part numbers, brands or RFQs…" maxlength="120" value="'+escape(filters.search||'')+'"></label>'+
  '<label class="mrh-source-filter"><span class="sr-only">Source Type</span><select id="mrh-tracker-source">'+filterOptions.map(([value,label])=>'<option value="'+value+'"'+((filters.source||'all')===value?' selected':'')+'>'+label+'</option>').join('')+'</select></label>'+
@@ -85,7 +102,7 @@ export function renderNativeMaterialSourcing(detail,filters={},now=new Date(),op
  '<button type="button" class="mrh-export-csv" data-action="mrh-export-csv" title="Export only loaded public fields">⇩ Export CSV</button><span class="mrh-loaded-count" role="status">'+records.length+' of '+all.length+' loaded</span></div>'+
  '<div class="ms-native-table-scroll mrh-tracker-table-scroll" role="region" aria-label="Horizontally scrollable materials table" tabindex="0"><table class="ms-native-table mrh-tracker-table"><thead><tr>'+headings+'</tr></thead><tbody>'+
  '<tr class="mrh-group-row"><th scope="rowgroup" colspan="'+nativeColumns.length+'">◇ '+escape(projection.records[0]?.group||'Main group')+' <span class="mrh-group-count">'+fmt(all.length)+'</span></th></tr>'+
- (records.length?records.map(({record,overdue})=>rowMarkup(record,overdue)).join(''):'<tr><td colspan="'+nativeColumns.length+'">No matching materials in the authorized board.</td></tr>')+'</tbody></table></div></div>'+
+ (records.length?records.map(({record,overdue})=>rowMarkup(record,overdue)).join(''):'<tr><td colspan="'+nativeColumns.length+'">No matching materials in the authorized board.</td></tr>')+'</tbody></table></div></div>')+
  '<p class="ms-native-note">Main group is preserved. Load costs reads only the selected item through the existing signed contract. Stored selling prices are historical values; calculated totals, full reports and bulk import require the extended backend. Commercial values are not included in public CSV.</p></div></section>';
 }
 /** DOM-only sorting of loaded public fields; no write, storage, or commercial sorting. */
@@ -122,7 +139,8 @@ export async function loadNativeCommercialRow(button,{api,auth,workspaceId,board
    cell.textContent=value===undefined?'—':moneyKeys.has(key)?money(value):String(value);
    cell.title=value===undefined?'Not recorded':'Stored signed value; not a calculated total';
   }
-  status.textContent='Stored values loaded';button.textContent='Reload costs';return true;
+  status.textContent=Object.keys(cells).length?'Stored values loaded':'Signed read verified; no stored commercial values.';
+  button.textContent='Reload costs';return true;
  }catch{
   if(current()){clear();status.textContent='Commercial values unavailable. Retry.';}
   return false;

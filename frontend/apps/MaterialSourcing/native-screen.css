@@ -37,3 +37,24 @@ html[data-aps-monday-theme="dark"] .ms-native-sourcing{--ms-surface:#1c2432;--ms
 @container (max-width:1150px){.ms-native-sourcing .ms-native-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}.ms-native-sourcing .ms-native-distribution{grid-column:span 2}}
 @container (max-width:680px){.ms-native-sourcing .ms-native-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.ms-native-sourcing .ms-native-distribution{grid-column:span 2}.ms-native-sourcing .ms-native-metric{min-height:94px}}
 @media(max-width:480px){.ms-native-sourcing .ms-native-body,.ms-native-sourcing .ms-native-header{padding:12px}.ms-native-sourcing .ms-native-table [data-ms-col="name"]{min-width:145px;max-width:170px}.ms-native-sourcing .ms-native-header-actions{gap:6px}}
+
+/* CP-MS-CRM-03A — restored reference source filter cards and count distribution. */
+.ms-native-sourcing button.ms-native-metric{text-align:left;cursor:pointer;white-space:normal;font:inherit}
+.ms-native-sourcing button.ms-native-metric[aria-pressed="true"]{border-color:var(--ms-accent);background:var(--ms-soft)}
+.ms-native-sourcing button.ms-native-metric:focus-visible{outline:2px solid var(--ms-accent);outline-offset:2px}
+.ms-native-sourcing .ms-native-distribution svg{width:65px;height:65px;flex:none}
+.ms-native-sourcing .ms-native-distribution circle{fill:none;stroke-width:15}
+.ms-native-sourcing .ms-native-ring-base{stroke:#94a3b8}
+.ms-native-sourcing .ms-native-ring-local{stroke:#10b981}
+.ms-native-sourcing .ms-native-ring-import{stroke:#0ea5e9}
+.ms-native-sourcing .ms-native-dot-local{color:#10b981}
+.ms-native-sourcing .ms-native-dot-import{color:#0ea5e9}
+.ms-native-sourcing .ms-native-dot-unknown{color:#94a3b8}
+.ms-native-sourcing .ms-native-legend{font-size:11px;white-space:normal;line-height:1.5;color:var(--ms-muted)}
+.ms-native-sourcing .ms-native-legend b{color:var(--ms-ink)}
+.ms-native-sourcing .ms-native-add .mrh-add-canvas{background:var(--ms-bg);padding:0 0 12px}
+html[data-aps-monday-theme="dark"] .ms-native-sourcing .ms-native-add :is(.mrh-add-form,.mrh-add-head,.mrh-add-actions,.mrh-add-unavailable){background:var(--ms-surface);color:var(--ms-ink);border-color:var(--ms-line)}
+html[data-aps-monday-theme="dark"] .ms-native-sourcing .ms-native-add :is(.mrh-add-head h3,.mrh-add-section h4){color:var(--ms-ink)}
+html[data-aps-monday-theme="dark"] .ms-native-sourcing .ms-native-add :is(.mrh-add-field label,.mrh-add-field small,.mrh-add-head p,.mrh-add-hint){color:var(--ms-muted)}
+html[data-aps-monday-theme="dark"] .ms-native-sourcing .ms-native-add :is(input,select,textarea){background:var(--ms-bg);color:var(--ms-ink);border-color:var(--ms-line)}
+html[data-aps-monday-theme="dark"] .ms-native-sourcing .ms-native-add :is(.mrh-add-section,.mrh-add-fields){border-color:var(--ms-line)}

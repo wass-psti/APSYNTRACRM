@@ -130,7 +130,7 @@ import {canRetainVisibleBoard,replaceVisibleBoardContent} from './board/services
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board/presentation/loading.js';
 import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
 import {MATERIAL_TRACKER_DEFAULT_FILTERS,isMaterialTrackerBoard,materialTrackerRows,filterMaterialTrackerRows,materialTrackerPublicCsv} from './material-sourcing-tracker.js';
-import {renderNativeMaterialSourcing,sortNativeMaterials,loadNativeCommercialRow,ensureNativeMaterialSourcingStyles} from './apps/MaterialSourcing/native-screen.js?v=cp-ms-crm-03-20261127';
+import {renderNativeMaterialSourcing,sortNativeMaterials,loadNativeCommercialRow,ensureNativeMaterialSourcingStyles} from './apps/MaterialSourcing/native-screen.js?v=cp-ms-crm-03a-20261127';
 import {parseMaterialAddForm,materialAddPublicColumns} from './material-sourcing-add-material.js';
 import {createMaterialSourcingAtomic} from './material-sourcing-atomic-create.js';
 import {showEngineeringDiagnostics} from './engineering-diagnostics-visibility.js';
@@ -10084,6 +10084,20 @@ async function action(name,button){
   openBoardQuickColumnPicker(button);break;
  }
  case 'tt-board-gps':{try{await openTimeTrackerBoardProjectedGps();}catch(err){notice(err);}break;}
+ case 'mrh-native-source':{
+  if(state.view!=='board'||state.tab!=='sourcing'||state.mrhAddView||
+     !isMaterialTrackerBoard(state.board)||!auth.isSignedIn||
+     state.context?.user_id!==auth.userId||state.board.board.workspace_id!==state.context?.workspace_id||
+     !['Local','Import'].includes(button.dataset.source))break;
+  const source=button.dataset.source;
+  const select=root.querySelector('#mrh-tracker-source');
+  if(select){
+   select.value=state.mrhTrackerFilters.source===source?'all':source;
+   select.dispatchEvent(new Event('change',{bubbles:true}));
+   root.querySelector('[data-action="mrh-native-source"][data-source="'+source+'"]')?.focus({preventScroll:true});
+  }
+  break;
+ }
  case 'mrh-native-sort':{
   if(state.view==='board'&&state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)&&
      auth.isSignedIn&&state.context?.user_id===auth.userId&&state.board.board.workspace_id===state.context?.workspace_id)
@@ -14380,7 +14394,7 @@ root.addEventListener('change',event=>{
  if(state.view==='board'&&state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)&&
     ['mrh-tracker-source','mrh-tracker-overdue'].includes(event.target.id)){
   state.mrhTrackerFilters={...state.mrhTrackerFilters,
-   ...(event.target.id==='mrh-tracker-source'?{source:['all','Local','Import'].includes(event.target.value)?event.target.value:'all'}:
+   ...(event.target.id==='mrh-tracker-source'?{source:['all','Local','Import','Unknown'].includes(event.target.value)?event.target.value:'all'}:
     {overdue:event.target.checked===true})};
   const current=root.querySelector('.mrh-tracker');
   if(current)current.outerHTML=renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'});
