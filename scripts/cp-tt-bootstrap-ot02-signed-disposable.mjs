@@ -91,13 +91,14 @@ async function decision(actor,id,status,label){
  assert.equal(result.id,id);assert.equal(result.status,status);assert.equal(result.decidedBy,actor.id);
  return result;
 }
-function assertDatabase(id,status,decider){
+function assertDatabase(id,status,decider,submitter=null){
  assert.match(id,uuid);assert.match(decider,uuid);
  const row=sql(`SELECT status||'|'||decided_by::text||'|'||(decided_at IS NOT NULL)::text FROM public.timetracker_ot_requests WHERE id='${id}'`);
  assert.equal(row,`${status}|${decider}|true`);
  const owner=sql(`SELECT owner_id::text FROM public.timetracker_ot_requests WHERE id='${id}'`);
  const audit=sql(`SELECT event||'|'||actor_id::text FROM public.timetracker_ot_audit WHERE request_id='${id}' ORDER BY event_id`);
- assert.equal(audit,`submitted|${owner}\n${status.toLowerCase()}|${decider}`);
+ const submittedBy=submitter||owner;
+ assert.equal(audit,`submitted|${submittedBy}\n${status.toLowerCase()}|${decider}`);
  checks++;
 }
 await ready();
