@@ -40,17 +40,19 @@ for record in records {
         return String(value.uppercased().filter { !$0.isWhitespace })
     }
     let searchableText = compact(text)
-    for token in [company, title, documentNumber, marker, termsMarker, remarksMarker,
-                  "APPROVED", "CP-TL-OPT-04B Acceptance Creator"] {
+    var requiredTokens = [company, title, documentNumber, marker, termsMarker, remarksMarker,
+                          "APPROVED",
+                          "Electronic PDF approval and issuance have NOT been verified",
+                          "CP-TL-OPT-04B Acceptance Creator"]
+    if type != "quotation" {
+        requiredTokens.append(contentsOf: ["WORKFLOW APPROVED", "PDF NOT ISSUED", "Approved revision"])
+    }
+    for token in requiredTokens {
         let normalizedToken = compact(token)
         if !searchableText.contains(normalizedToken) {
             fatalError("PDFKit could not find " + token + " in " + file +
                        ". Extracted text: " + String(text.prefix(2000)))
         }
-    }
-    for token in ["WORKFLOW APPROVED", "PDF NOT ISSUED", "Approved revision"] {
-        precondition(!searchableText.contains(compact(token)),
-                     "Unexpected approval subtitle " + token + " in " + file)
     }
     print("VERIFIED PDFKit " + (record["profile"] as! String) + " / " + type +
           " pages=" + String(pdf.pageCount) + " size=" + pageSize)
