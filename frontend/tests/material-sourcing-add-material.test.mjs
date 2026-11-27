@@ -104,3 +104,11 @@ test('all six approved public fields become enabled from signed custom columns',
  assert.deepEqual(plan.ordinary.find(f=>f.name==='Source Type').value,'Local');
  assert.deepEqual(plan.ordinary.find(f=>f.name==='Quantity').value,3);
 });
+
+test('create rejects normalized impossible dates before sending an RPC',()=>{
+ const activated={...detail,columns:[...detail.columns,
+  {id:'date-col',name:'Date required',data_type:'date',column_key:'custom:date',system_key:null,visible:true}]};
+ for(const due of ['2026-02-30','2026-04-31','2025-02-29'])
+  assert.throws(()=>parseMaterialAddForm(activated,draft({partNumber:'X',due})),/Invalid required date/);
+ assert.equal(parseMaterialAddForm(activated,draft({partNumber:'X',due:'2028-02-29'})).ordinary[0].value,'2028-02-29');
+});
