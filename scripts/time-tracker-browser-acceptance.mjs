@@ -131,7 +131,10 @@ try {
     const otHours = host.querySelector("#tt-ot-duration-hours");
     const otReason = host.querySelector("#tt-ot-reason");
     const otForm = host.querySelector("#tt-ot-form");
-    const otDetails = host.querySelector(".tt-ot-detail")?.textContent;
+    const otRow = host.querySelector('[data-request-id="test-ot"]');
+    const otDetails = otRow.querySelector(".tt-ot-attribution")?.textContent;
+    const otRequestedHours = otRow.querySelector(".tt-ot-reference-hours")?.textContent;
+    const otViewDisclosures = otRow.querySelectorAll("details, summary").length;
     const otLegacyFields = host.querySelectorAll(
       '#tt-ot-start, #tt-ot-end, #tt-ot-form input[type="time"]',
     ).length;
@@ -200,6 +203,8 @@ try {
       otInvalid,
       otRecovered,
       otDetails,
+      otRequestedHours,
+      otViewDisclosures,
       otDuration,
       otProgress,
       otReasonCount,
@@ -220,8 +225,11 @@ try {
   assert.equal(twelveHour.otValid, true);
   assert.equal(twelveHour.otInvalid, true);
   assert.equal(twelveHour.otRecovered, true);
-  assert.match(twelveHour.otDetails, /Requested duration:\s*2h/);
-  assert.doesNotMatch(twelveHour.otDetails, /18:00|20:00|06:00 PM|08:00 PM/);
+  assert.equal(twelveHour.otRequestedHours, "2h");
+  assert.equal(twelveHour.otViewDisclosures, 0);
+  assert.match(twelveHour.otDetails, /Filed by:\s*Test Employee/);
+  assert.match(twelveHour.otDetails, /Approved by:\s*—/);
+  assert.doesNotMatch(twelveHour.otDetails, /Requested duration:|Actual OT:|Payable OT:|Reason:|18:00|20:00|06:00 PM|08:00 PM/);
   assert.equal(twelveHour.otDuration, "2 hr 30 min");
   assert.equal(twelveHour.otProgress, 150);
   assert.equal(twelveHour.otReasonCount, "26 / 500");
@@ -713,6 +721,8 @@ try {
     false,
   );
   assert.equal(await page.locator(".tt-ot-manual-badge").count(), 1);
+  assert.match(await page.locator(".tt-ot-attribution").innerText(), /Filed by:\s*System Admin/);
+  assert.match(await page.locator(".tt-ot-attribution").innerText(), /Approved by:\s*—/);
   assert.equal(await page.locator('[data-action="tt-ot-approve"]').count(), 1);
   assert.equal(await page.locator('[data-action="tt-ot-reject"]').count(), 1);
   assert.equal(await page.locator("#tt-ot-week-jump-form").count(), 1);
