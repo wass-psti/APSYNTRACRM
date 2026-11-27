@@ -51,7 +51,7 @@ RESET ROLE;
 -- Give every row the same creation timestamp to exercise the immutable-ID
 -- tie-breaker. Updated timestamps span three UTC dates for inclusive filtering.
 WITH numbered AS (
- SELECT id,pg_catalog.substring(document_number from 7)::integer AS n
+ SELECT id,pg_catalog.substr(document_number,7)::integer AS n
  FROM public.tradelink_documents
  WHERE board_id='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88'::uuid
   AND document_number LIKE 'Q-OPT-%'
