@@ -13,6 +13,8 @@ export async function runPendingTimeTrackerAutoClockout({
     state.view!=='board'||state.tab!=='attendance'||state.boardId!==boardId||
     state.context?.user_id!==identity||state.context?.workspace_id!==workspaceId||
     state.ttAttendance?.active?.id!==pending.recordId)return;
+ // Clock-only reads omit OT and other secondary-view data.
+ const readAttendance=()=>timeTracker.snapshot(boardId,{clockOnly:state.ttView==='clock'});
  const attempt=++state.ttAutoClockoutRunId;
  const sameSession=()=>attempt===state.ttAutoClockoutRunId&&seq===getRouteSerial()&&
   auth.isSignedIn&&state.view==='board'&&state.tab==='attendance'&&
@@ -54,7 +56,7 @@ export async function runPendingTimeTrackerAutoClockout({
     action:'automatic-clock-out'});
    return;
   }
-  const snapshot=await timeTracker.snapshot(boardId,{clockOnly:true});
+  const snapshot=await readAttendance();
   recordTimeTrackerGpsDiagnostic({phase:'attendance-readback-success',
    action:'automatic-clock-out',result:snapshot?.status==='VERIFIED_READ'?'verified':'unverified'});
   if(!sameSession()){
@@ -86,7 +88,7 @@ export async function runPendingTimeTrackerAutoClockout({
   if(!sameSession())return;
   if(commitAttempted){
    try{
-    const latest=await timeTracker.snapshot(boardId,{clockOnly:true});
+    const latest=await readAttendance();
     if(!sameSession())return;
     state.ttAttendance=latest;
     const reconciled=latest.records.find(row=>row.id===pending.recordId);

@@ -199,7 +199,7 @@ import {renderFRTArchive} from './frt-archive-ui.js';
 import {renderFRTVoucherDocument} from './frt-voucher-document.js';
 import {renderFRTCompanyProfileEditor,hydrateFRTCompanyProfileForm} from './frt-company-profile.js';
 import {FRT_BOARD_ID,isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
-import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED,TT_DEPARTMENTS} from './time-tracker-native.js';
+import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED,TT_DEPARTMENTS,canApplyTimeTrackerBackgroundSnapshot} from './time-tracker-native.js';
 import {recordTimeTrackerGpsDiagnostic,exportTimeTrackerGpsDiagnostics,
  getTimeTrackerGpsDiagnostics,clearTimeTrackerGpsDiagnostics} from './time-tracker-gps-diagnostics.js';
 import {FundTrackerNativeClient} from './fund-tracker-native.js';
@@ -220,7 +220,7 @@ import {applyTimeTrackerOverviewFilters,filterTimeTrackerOverviewRows,syncTimeTr
 import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,timeTrackerLogRowsForSnapshot,retainTimeTrackerLogDetailIds,TT_LOG_DEFAULT_FILTERS,startTimeTrackerLogColumnResize} from './time-tracker-log.js';
 import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAULT_FILTERS} from './time-tracker-reports.js';
 import {timeTrackerCalendarMonth,shiftTimeTrackerCalendarMonth} from './time-tracker-calendar.js';
-import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED,TT_OT_MAX_WEEK_OFFSET,timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate,updateTimeTrackerOvertimePreview,updateTimeTrackerManualOtPreview} from './time-tracker-overtime.js';
+import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED,TT_OT_MAX_WEEK_OFFSET,timeTrackerOtWeek,timeTrackerOtWeekOffsetForDate,updateTimeTrackerOvertimePreview,updateTimeTrackerManualOtPreview,timeTrackerOtFilingAvailability} from './time-tracker-overtime.js';
 import {timeTrackerMyHoursWeek} from './time-tracker-my-hours.js';
 import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
 import {probeTimeTrackerMonitor} from './time-tracker-monitor.js';
@@ -3009,11 +3009,15 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   if(tab==='issues')state.issues=await db.issues(boardId,workspaceId);
   if(tab==='talkbox')await loadTalkBox();
   if(tab==='attendance'&&moduleByBoardName(detail.board.name)?.key==='timetracker'){
+   const snapshotAtRead=state.ttAttendance,viewAtRead=state.ttView,runAtRead=state.ttRunId;
    const fresh=await timeTracker.snapshot(boardId,{
     clockOnly:timeTrackerClockOnlyForRoute(userId,workspaceId,boardId),
     nativeContext:nativeModuleId==='time-tracker'?resolvedNative:null
    });
-   if(!isCurrent()||platformSyncEditInProgress())return false;
+   if(!isCurrent()||platformSyncEditInProgress()||!canApplyTimeTrackerBackgroundSnapshot({
+    snapshotAtRead,currentSnapshot:state.ttAttendance,viewAtRead,currentView:state.ttView,
+    runAtRead,currentRun:state.ttRunId,fresh
+   }))return false;
    state.ttAttendance=fresh;
    if(state.ttClockPending)reconcileTimeTrackerClock(fresh,{allowRetry:true});
   }
@@ -10864,11 +10868,12 @@ async function action(name,button){
   if(next!=='log'){state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogSelectedIds=[];state.ttLogAdminError='';state.ttLogAdminSuccess='';}
   state.ttView=next;
   saveTimeTrackerViewPreference(timeTrackerViewStorage(),timeTrackerWorkNoteScope()||{},next);
-  render();
-  animateTabContent('.tt-secondary-content, .tt-clock-stage');
-  // Clock opens with only critical signed reads. Hydrate secondary views on demand.
+  // Hydrate secondary views before displaying controls that require full signed data.
   const requiresDetail=next!=='clock'&&state.ttAttendance?.clockOnly===true;
   if(requiresDetail)await loadTimeTracker();
+  else render();
+  if(state.ttView===next&&state.tab==='attendance')
+   animateTabContent('.tt-secondary-content, .tt-clock-stage');
   if(next==='employees'&&!requiresDetail)await loadTimeTracker();
   if(next==='team')await loadTimeTrackerTeam();
   if(next==='monitor')await loadTimeTrackerMonitor();
@@ -11395,12 +11400,18 @@ async function action(name,button){
  case 'tt-ot-open':
  case 'tt-ot-manual-open':
  case 'tt-ot-close':{
-  if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='ot'||
-     state.ttBusy||state.ttAttendance?.status!=='VERIFIED_READ')return;
-  if(name==='tt-ot-open'){state.ttOtDraft={};state.ttOtModalOpen=true;}
-  if(name==='tt-ot-manual-open'){
-   if(state.ttAttendance.access?.manualOtManager!==true||state.ttAttendance.access?.moduleRole!=='System Admin')return;
-   state.ttOtDraft={};state.ttOtModalOpen='manual';
+  if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='ot')return;
+  const isFiling=name==='tt-ot-open'||name==='tt-ot-manual-open';
+  if(state.ttBusy||state.ttAttendance?.status!=='VERIFIED_READ'){
+   if(isFiling)toast(state.ttBusy?'TimeTracker is finishing another operation. Try again when it completes.':
+    'Overtime workflow needs verification. Refresh overtime and try again.',true);
+   return;
+  }
+  if(isFiling){
+   const manual=name==='tt-ot-manual-open';
+   const filing=timeTrackerOtFilingAvailability(state.ttAttendance.access,state.ttBusy,manual);
+   if(!filing.canOpen){toast(filing.reason,true);return;}
+   state.ttOtDraft={};state.ttOtModalOpen=manual?'manual':true;
   }
   if(name==='tt-ot-close'){state.ttOtModalOpen=false;state.ttOtDraft={};}
   if(name==='tt-ot-current')state.ttOtFilters={...state.ttOtFilters,weekOffset:0};
@@ -14694,11 +14705,10 @@ root.addEventListener('submit',event=>{
  if(event.target.id==='tt-ot-manual-form'){
   event.preventDefault();
   const access=state.ttAttendance?.access;
-  if(!TT_OT_WRITES_ACCEPTED||access?.manualOtManager!==true||
-     access?.moduleRole!=='System Admin'||state.view!=='board'||
-     state.tab!=='attendance'||state.ttView!=='ot'||
-     state.ttAttendance?.status!=='VERIFIED_READ'||state.ttBusy){
-   toast('Manual OT submission is unavailable for this TimeTracker session.',true);
+  if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='ot')return;
+  const filing=timeTrackerOtFilingAvailability(access,state.ttBusy,true);
+  if(state.ttAttendance?.status!=='VERIFIED_READ'||!filing.canSubmit){
+   toast(filing.reason||'Overtime workflow needs verification. Refresh overtime and try again.',true);
    return;
   }
   const draft={
@@ -14726,12 +14736,12 @@ root.addEventListener('submit',event=>{
  }
  if(event.target.id==='tt-ot-form'){
   event.preventDefault();
-  if(!TT_OT_WRITES_ACCEPTED){
-   toast('OT submission remains disabled until signed backend authorization and audit are verified.',true);
+  if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='ot')return;
+  const filing=timeTrackerOtFilingAvailability(state.ttAttendance?.access,state.ttBusy);
+  if(state.ttAttendance?.status!=='VERIFIED_READ'||!filing.canSubmit){
+   toast(filing.reason||'Overtime workflow needs verification. Refresh overtime and try again.',true);
    return;
   }
-  if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='ot'||
-     state.ttAttendance?.status!=='VERIFIED_READ'||state.ttBusy)return;
   const draft={
    date:root.querySelector('#tt-ot-date')?.value||'',
    durationMinutes:(()=>{

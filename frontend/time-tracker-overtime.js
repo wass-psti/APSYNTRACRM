@@ -2,6 +2,16 @@
 export const TT_OT_WRITES_ACCEPTED=true;
 export const TT_OT_MAX_WEEK_OFFSET=5200;
 export const TT_OT_DEFAULT_FILTERS=Object.freeze({weekOffset:0,status:'All',search:'',sort:'newest'});
+/** Signed workflow, not clock state, determines filing readiness. */
+export function timeTrackerOtFilingAvailability(access={},busy=false,manual=false){
+ const permitted=!manual||access.manualOtManager===true;
+ const ready=TT_OT_WRITES_ACCEPTED&&access.otContractActive===true&&
+  access.durationOtContractActive===true;
+ const reason=busy?'TimeTracker is finishing another operation. Try again when it completes.':
+  !permitted?'Manual OT filing is unavailable for this TimeTracker session.':
+  !ready?'Duration-only OT filing is not active for this workspace yet. Refresh overtime to check the workflow again.':'';
+ return {canOpen:permitted&&!busy,canSubmit:permitted&&ready&&!busy,reason};
+}
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const msDay=86400000;
 const validDay=x=>typeof x==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(x)&&
@@ -237,8 +247,8 @@ function requestForm({date='',reason='',durationMinutes=120}={},now=new Date(),o
  const selectedDate=date||phtDay(now);
  const amount=Number.isInteger(durationMinutes)&&durationMinutes>=30&&durationMinutes<=360&&durationMinutes%30===0?durationMinutes:null;
  const durationHours=amount===null?'':amount/60;
- const active=TT_OT_WRITES_ACCEPTED&&otContractActive===true&&durationMode===true;
- const disabled=!active||busy;
+ const filing=timeTrackerOtFilingAvailability({otContractActive,durationOtContractActive:durationMode},busy);
+ const disabled=!filing.canSubmit;
  return '<div class="tt-ot-backdrop" data-tt-ot-backdrop>'+
   '<section class="tt-ot-modal" role="dialog" aria-modal="true" tabindex="-1"'+(busy?' aria-busy="true"':'')+' aria-labelledby="tt-ot-modal-title" aria-describedby="tt-ot-modal-description">'+
    '<header class="tt-ot-modal-header"><div><span class="tt-ot-modal-eyebrow">TIME TRACKER · OVERTIME</span>'+
@@ -268,9 +278,9 @@ function requestForm({date='',reason='',durationMinutes=120}={},now=new Date(),o
      '<textarea id="tt-ot-reason" name="reason" maxlength="500" rows="3" required'+(busy?' disabled':'')+' placeholder="Briefly explain the work that needs to be completed…" aria-describedby="tt-ot-reason-help tt-ot-reason-count">'+esc(reason)+'</textarea>'+
      '<span class="tt-ot-reason-meta"><small id="tt-ot-reason-help">Provide at least 10 characters, up to 500.</small>'+
       '<small data-tt-ot-reason-count aria-live="polite">'+String(reason).length+' / 500</small></span></label></div>'+
-   '<p class="tt-ot-gate" role="status">'+(active?
-    'Your request will be sent to the authorized OT approval queue for System Admin, Admin, or HR review.':
-    'Duration-only OT filing is not active for this workspace yet. Please contact a TimeTracker administrator.')+'</p>'+
+   '<p class="tt-ot-gate" role="status">'+esc(filing.reason||
+     'Your request will be sent to the authorized OT approval queue for System Admin, Admin, or HR review.')+'</p>'+
+    (!busy&&!filing.canSubmit?'<button type="button" data-action="tt-refresh">Refresh overtime</button>':'')+
    '<footer class="tt-ot-modal-footer"><button type="button" data-action="tt-ot-close"'+(busy?' disabled':'')+'>Cancel</button>'+
     '<button type="submit"'+(disabled?' disabled':'')+'>'+(busy?'Submitting…':'File Overtime')+'</button></footer></form>'+
   '</section></div>';
@@ -279,15 +289,15 @@ function manualRequestForm({employeeId='',date='',durationMinutes=120,reason=''}
  const directory=Array.isArray(access.overviewDirectory)?access.overviewDirectory:[];
  const canManage=access.manualOtManager===true;
  if(!canManage)return '';
- const enabled=TT_OT_WRITES_ACCEPTED&&access.otContractActive===true&&
-  access.durationOtContractActive===true&&!busy;
+ const filing=timeTrackerOtFilingAvailability(access,busy,true);
+ const enabled=filing.canSubmit;
  const options=directory.filter(user=>user&&user.status==='active'&&typeof user.id==='string')
   .map(user=>'<option value="'+esc(user.id)+'"'+(employeeId===user.id?' selected':'')+'>'+esc(user.display_name||'Workforce member')+'</option>').join('');
  const amount=Number.isInteger(durationMinutes)&&durationMinutes>=30&&durationMinutes<=360&&durationMinutes%30===0?durationMinutes:null;
  const hours=amount===null?'':amount/60;
  const maxDate=shiftPhtDay(phtDay(now),-1);
  return '<div class="tt-ot-backdrop" data-tt-ot-backdrop><section class="tt-ot-modal tt-ot-manual-section" role="dialog" aria-modal="true" tabindex="-1" aria-labelledby="tt-ot-modal-title">'+
-  '<header class="tt-ot-modal-header"><div><span class="tt-ot-modal-eyebrow">ADMINISTRATIVE ENTRY · System Admin</span><h3 id="tt-ot-modal-title">File Overtime</h3><p>Enter historical overtime for an employee using total hours only.</p></div>'+
+  '<header class="tt-ot-modal-header"><div><span class="tt-ot-modal-eyebrow">ADMINISTRATIVE ENTRY · System Admin / Admin</span><h3 id="tt-ot-modal-title">File Overtime</h3><p>Enter historical overtime for an employee using total hours only.</p></div>'+
   '<button type="button" data-action="tt-ot-close" aria-label="Close overtime request"'+(busy?' disabled':'')+'>×</button></header>'+
   '<form id="tt-ot-manual-form"><div class="tt-ot-form-grid">'+
   '<label>Employee<select id="tt-ot-manual-employee" required'+(busy?' disabled':'')+'><option value="">Select employee</option>'+options+'</select></label>'+
@@ -296,7 +306,9 @@ function manualRequestForm({employeeId='',date='',durationMinutes=120,reason=''}
   '<div class="tt-ot-reference-duration"><span>Total overtime</span><strong data-tt-ot-manual-duration aria-live="polite">'+esc(amount===null?'—':minutesLabel(amount).trim())+'</strong></div>'+
   '<label>Reason<textarea id="tt-ot-manual-reason" maxlength="500" rows="3" required'+(busy?' disabled':'')+'>'+esc(reason)+'</textarea></label>'+
   '<div class="tt-ot-reason-chips">'+['Client support','Month-end reporting','Maintenance work'].map(v=>'<button type="button" data-action="tt-ot-reason" data-reason="'+esc(v)+'"'+(busy?' disabled':'')+'>'+esc(v)+'</button>').join('')+'</div>'+
-  '<p class="tt-ot-gate">Historical manual entries are submitted for the normal approval workflow. Start and end times are not collected.</p></div>'+
+  '<p class="tt-ot-gate" role="status">'+esc(filing.reason||
+    'Historical manual entries are submitted for the normal approval workflow. Start and end times are not collected.')+'</p>'+
+   (!busy&&!enabled?'<button type="button" data-action="tt-refresh">Refresh overtime</button>':'')+'</div>'+
   '<footer class="tt-ot-modal-footer"><button type="button" data-action="tt-ot-close"'+(busy?' disabled':'')+'>Cancel</button><button type="submit"'+(enabled?'':' disabled')+'>File Overtime</button></footer></form></section></div>';
 }
 export function updateTimeTrackerManualOtPreview(form){
@@ -316,12 +328,16 @@ export function renderTimeTrackerOvertime({
  const opts={...TT_OT_DEFAULT_FILTERS,...filters},m=timeTrackerOtMetrics(requests,opts,now);
  const statuses=[['All','All',m.submitted+m.approved+m.rejected],['Submitted','Pending',m.submitted],['Approved','Approved',m.approved],['Rejected','Rejected',m.rejected]];
  const canManage=access.manualOtManager===true;
+ const filing=timeTrackerOtFilingAvailability(access,busy);
+ const manualFiling=timeTrackerOtFilingAvailability(access,busy,true);
+ const disabled=availability=>availability.canOpen?'':' disabled title="'+esc(availability.reason)+'"';
  const metric=(label,value,detail,cls='')=>'<article class="tt-ot-reference-metric '+cls+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small>'+esc(detail)+'</small></article>';
  return '<section class="tt-overtime tt-overtime-command tt-ot-reference" aria-label="TimeTracker overtime requests">'+
  '<header class="tt-ot-reference-header"><div><h3>Overtime</h3><p>Review overtime requests and their current workflow state.</p></div><div class="tt-ot-reference-header-actions">'+
- '<button type="button" class="tt-ot-reference-secondary" data-action="tt-refresh" aria-label="Refresh overtime">↻</button>'+
- '<button type="button" class="'+(canManage?'tt-ot-reference-secondary':'tt-ot-reference-primary')+'" data-action="tt-ot-open">'+(canManage?'File my overtime':'+ File Overtime')+'</button>'+
- (canManage?'<button type="button" class="tt-ot-reference-primary" data-action="tt-ot-manual-open">+ File Overtime</button>':'')+'</div></header>'+
+ '<button type="button" class="tt-ot-reference-secondary" data-action="tt-refresh" aria-label="Refresh overtime"'+disabled(filing)+'>↻</button>'+
+ '<button type="button" class="'+(canManage?'tt-ot-reference-secondary':'tt-ot-reference-primary')+'" data-action="tt-ot-open"'+disabled(filing)+'>'+(canManage?'File my overtime':'+ File Overtime')+'</button>'+
+ (canManage?'<button type="button" class="tt-ot-reference-primary" data-action="tt-ot-manual-open"'+disabled(manualFiling)+'>+ File Overtime</button>':'')+'</div></header>'+
+ (busy?'<p class="tt-ot-gate" role="status">'+esc(filing.reason)+'</p>':'')+
  '<div class="tt-ot-reference-metrics">'+metric('Approved overtime this week',minutesLabel(m.approvedMinutes).trim(),m.approved+' requests approved')+
  metric('Awaiting approval',m.submitted,minutesLabel(m.pendingMinutes).trim()+' total · Review below',m.submitted?'tt-ot-reference-pending':'')+
  metric('Rejected',m.rejected,minutesLabel(m.rejectedMinutes).trim())+'</div>'+
@@ -337,7 +353,7 @@ export function renderTimeTrackerOvertime({
  '<div class="tt-ot-reference-row tt-ot-reference-labels" aria-hidden="true"><span>Employee</span><span>Date</span><span>Requested Hours</span><span>Reason</span><span>Status</span><span>Actions</span></div>'+
  m.statusRows.map(r=>row(r,access,m.search,expandedRequestIds,access.otContractActive===true)).join('')+
  '<div class="tt-ot-empty" data-tt-ot-empty'+(m.visible.length?' hidden':'')+'><span class="tt-ot-reference-empty-icon" aria-hidden="true">◷</span>'+
- (m.submitted+m.approved+m.rejected===0?'<strong>No overtime this week</strong><p>Overtime requests for this week will appear here.</p><button type="button" class="tt-ot-reference-primary" data-action="'+(canManage?'tt-ot-manual-open':'tt-ot-open')+'">+ File Overtime</button>':'<strong>No matching requests</strong><p>Try a different week, search or status.</p>')+'</div>'+
+ (m.submitted+m.approved+m.rejected===0?'<strong>No overtime this week</strong><p>Overtime requests for this week will appear here.</p><button type="button" class="tt-ot-reference-primary" data-action="'+(canManage?'tt-ot-manual-open':'tt-ot-open')+'"'+disabled(canManage?manualFiling:filing)+'>+ File Overtime</button>':'<strong>No matching requests</strong><p>Try a different week, search or status.</p>')+'</div>'+
  '<footer class="tt-ot-reference-footer"><span>Manual entries are tagged</span><strong>'+m.visible.length+' of '+m.statusRows.length+' total</strong></footer></section>'+
  (modalOpen==='manual'?manualRequestForm(form,access,now,busy):modalOpen?requestForm(form,now,access.otContractActive===true,busy,access.durationOtContractActive===true):'')+'</section>';
 }

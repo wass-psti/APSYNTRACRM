@@ -28,8 +28,8 @@ function pendingSnapshot(){
    pendingAt:'2026-11-20T10:31:00.000Z'},
   records:[{id:recordId,status:'Active',automatic:false}]};
 }
-function harness({capture,complete,snapshot}={}){
- const state={view:'board',tab:'attendance',boardId:board,
+function harness({capture,complete,snapshot,ttView='clock'}={}){
+ const state={view:'board',tab:'attendance',ttView,boardId:board,
   context:{user_id:user,workspace_id:workspace},
   ttAttendance:pendingSnapshot(),ttAutoClockoutBusy:false,ttAutoClockoutRunId:0,
   ttBusy:false,ttClockPending:null,ttGeoPromptVisible:false,ttGeoPermission:'unknown',
@@ -45,7 +45,7 @@ function harness({capture,complete,snapshot}={}){
   async completeAutomaticClockOut(...args){completions++;return complete?
    complete(...args):{mode:'COMMITTED',scheduledClockOutAt:scheduled,
     gpsCapturedAt:geo.capturedAt,recordId};},
-  async snapshot(){reads++;return snapshot?snapshot():{
+  async snapshot(...args){reads++;return snapshot?snapshot(...args):{
    status:'VERIFIED_READ',active:null,
    records:[{id:recordId,status:'Completed',automatic:true,clockOut:scheduled}]
   };}
@@ -176,4 +176,33 @@ test('database migration converts due states to PENDING_GPS and preserves atomic
  assert.match(migration,/pending_at=NULL/);
  assert.match(migration,/scheduled_clock_out_at=NULL/);
  assert.doesNotMatch(migration,/server-auto-clockout/);
+});
+
+test('automatic clock-out readback preserves OT data after successful and uncertain commits',async()=>{
+ for(const uncertain of [false,true]){
+  const options=[];
+  const sim=harness({ttView:'ot',
+   complete:uncertain?async()=>{throw Error('Uncertain response');}:undefined,
+   snapshot:(_board,opts)=>{
+    options.push(opts);
+    return {status:'VERIFIED_READ',clockOnly:opts.clockOnly,active:null,
+     access:{durationOtContractActive:!opts.clockOnly},
+     otRequests:opts.clockOnly?[]:[{id:'existing-ot'}],
+     records:[{id:recordId,status:'Completed',automatic:true,clockOut:scheduled}]};
+   }
+  });
+  await sim.run();
+  assert.deepEqual(options,[{clockOnly:false}]);
+  assert.equal(sim.state.ttAttendance.access.durationOtContractActive,true);
+  assert.deepEqual(sim.state.ttAttendance.otRequests,[{id:'existing-ot'}]);
+  assert.equal(sim.state.ttBusy,false);
+ }
+ const options=[];
+ const sim=harness({snapshot:(_board,opts)=>{
+  options.push(opts);
+  return {status:'VERIFIED_READ',active:null,records:[
+   {id:recordId,status:'Completed',automatic:true,clockOut:scheduled}]};
+ }});
+ await sim.run();
+ assert.deepEqual(options,[{clockOnly:true}]);
 });

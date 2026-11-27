@@ -33,6 +33,14 @@ export const TT_POLICY=Object.freeze({
 const deny=(message)=>{throw new Error(message);};
 const isRecord=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
 const safeTime=v=>typeof v==='string'&&Number.isFinite(Date.parse(v));
+/** Background reads cannot replace newer or more complete view snapshots. */
+export function canApplyTimeTrackerBackgroundSnapshot({
+ snapshotAtRead,currentSnapshot,viewAtRead,currentView,runAtRead,currentRun,fresh
+}){
+ return snapshotAtRead===currentSnapshot&&viewAtRead===currentView&&
+  runAtRead===currentRun&&fresh?.status==='VERIFIED_READ'&&
+  (fresh.clockOnly!==true||currentView==='clock');
+}
 export function attendanceClassification(record){
  if(record?.clockOut?.status==='administratively_closed'||record?.reconciliation?.type==='legacy_duplicate_session')
   return 'Administrative closure';
