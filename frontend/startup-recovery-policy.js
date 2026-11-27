@@ -53,4 +53,3 @@ export function startupFailureDescription(error,stage='authentication'){
   'encountered an unexpected client error';
  return stageLabel+' '+condition+'. Your existing signed session is preserved where valid. Retry the connection; no changes will be submitted automatically.';
 }
-}
