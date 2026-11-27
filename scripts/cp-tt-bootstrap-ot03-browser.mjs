@@ -97,6 +97,41 @@ export async function runSignedOtBrowserAcceptance({restUrl,bootstrap,worker,hr,
   assert.equal((await adminPage.evaluate(()=>window.__otLastDecision.result)).status,'Approved');
   const refreshed=await load(adminPage,bootstrap,'Submitted','System Admin');
   assert.equal(refreshed.rows.find(r=>r.id===selfPending.id).status,'Approved');
+
+  const ownDurationRow=original.rows.find(r=>r.id===bootstrapDurationRequest.id);
+  assert.equal(ownDurationRow?.canReviewOt,true,'Bootstrap snapshot exposes own duration review capability');
+  assert.equal(ownDurationRow?.canReviewDuration,true,'Bootstrap snapshot exposes own duration-specific capability');
+  const ownDurationCard=adminPage.locator(`[data-request-id="${bootstrapDurationRequest.id}"]`);
+  await ownDurationCard.locator('summary').click();
+  assert.equal(await ownDurationCard.locator('[data-action="tt-ot-approve"]').count(),1);
+  assert.equal(await ownDurationCard.locator('[data-action="tt-ot-reject"]').count(),1);
+  await ownDurationCard.locator('[data-action="tt-ot-approve"]').click();
+  await adminPage.waitForFunction(id=>window.__otLastDecision?.result?.id===id,bootstrapDurationRequest.id);
+  const ownDurationDecision=await adminPage.evaluate(()=>window.__otLastDecision.result);
+  assert.equal(ownDurationDecision.status,'Approved');
+  assert.equal(ownDurationDecision.decidedBy,bootstrap.id);
+  const approvedSelfDuration=await load(adminPage,bootstrap,'Approved','System Admin');
+  assert.equal(approvedSelfDuration.rows.find(r=>r.id===bootstrapDurationRequest.id).status,'Approved');
+  assert.equal(approvedSelfDuration.rows.find(r=>r.id===bootstrapDurationRequest.id).decidedBy,bootstrap.id);
+
+  await load(adminPage,bootstrap,'Submitted','System Admin');
+  const ownManualRow=original.rows.find(r=>r.id===bootstrapManualDurationRequest.id);
+  assert.equal(ownManualRow?.canReviewOt,true,'Bootstrap snapshot exposes own manual-duration review capability');
+  assert.equal(ownManualRow?.canReviewDuration,true,'Bootstrap snapshot exposes own manual-duration capability');
+  const ownManualCard=adminPage.locator(`[data-request-id="${bootstrapManualDurationRequest.id}"]`);
+  await ownManualCard.locator('summary').click();
+  assert.equal(await ownManualCard.locator('[data-action="tt-ot-approve"]').count(),1);
+  assert.equal(await ownManualCard.locator('[data-action="tt-ot-reject"]').count(),1);
+  await ownManualCard.locator('[data-action="tt-ot-reject"]').click();
+  await adminPage.waitForFunction(id=>window.__otLastDecision?.result?.id===id,bootstrapManualDurationRequest.id);
+  const ownManualDecision=await adminPage.evaluate(()=>window.__otLastDecision.result);
+  assert.equal(ownManualDecision.status,'Rejected');
+  assert.equal(ownManualDecision.decidedBy,bootstrap.id);
+  const rejectedSelfManual=await load(adminPage,bootstrap,'Rejected','System Admin');
+  assert.equal(rejectedSelfManual.rows.find(r=>r.id===bootstrapManualDurationRequest.id).status,'Rejected');
+  assert.equal(rejectedSelfManual.rows.find(r=>r.id===bootstrapManualDurationRequest.id).decidedBy,bootstrap.id);
+
+  await load(adminPage,bootstrap,'Submitted','System Admin');
   const pendingCard=adminPage.locator(`[data-request-id="${workerPending.id}"]`);
   await pendingCard.locator('summary').click();
   assert.doesNotMatch(await pendingCard.innerText(),/\b\d{1,2}:\d{2}\b/,
