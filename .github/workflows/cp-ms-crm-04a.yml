@@ -2,6 +2,8 @@ name: CP-MS-CRM-04A disposable atomic edit candidate
 on:
   pull_request:
     paths:
+      - 'supabase/migrations/20261127113859_cp_ms_crm_04a4_atomic_crud_recovery.sql'
+      - 'supabase/migration-source-manifest.json'
       - 'sql/mrh-atomic-material-edit-CANDIDATE-NOT-APPLIED.sql'
       - 'sql/mrh-material-create-receipt-CANDIDATE-NOT-APPLIED.sql'
       - 'sql/mrh-atomic-crud-ROLLBACK-CANDIDATE.sql'
@@ -21,8 +23,10 @@ on:
       - 'frontend/tests/material-sourcing-add-material.test.mjs'
       - '.github/workflows/cp-ms-crm-04a.yml'
   push:
-    branches: [main, integration/cp-ms-crm-04a, integration/cp-ms-crm-04a2]
+    branches: [main, integration/cp-ms-crm-04a, integration/cp-ms-crm-04a2, integration/cp-ms-crm-04a4]
     paths:
+      - 'supabase/migrations/20261127113859_cp_ms_crm_04a4_atomic_crud_recovery.sql'
+      - 'supabase/migration-source-manifest.json'
       - 'sql/mrh-atomic-material-edit-CANDIDATE-NOT-APPLIED.sql'
       - 'sql/mrh-material-create-receipt-CANDIDATE-NOT-APPLIED.sql'
       - 'sql/mrh-atomic-crud-ROLLBACK-CANDIDATE.sql'
@@ -55,6 +59,8 @@ jobs:
         with:
           node-version: '22'
       - run: node --test frontend/tests/material-sourcing-add-material.test.mjs frontend/tests/material-sourcing-public-edit.test.mjs frontend/tests/material-sourcing-atomic-create.test.mjs frontend/tests/material-sourcing-add-discoverability.test.mjs
+      - name: Verify registered migration source integrity
+        run: node scripts/verify-migration-source-manifest.mjs
       - name: Disposable PostgreSQL rollback and access parity
         run: |
           set -euo pipefail

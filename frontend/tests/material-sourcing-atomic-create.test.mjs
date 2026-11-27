@@ -122,8 +122,8 @@ function recoveryFixture(){
  const options={...f.options,storage,locks:null,newRequestId:request,form:{},formRequestId:null};
  return {options,values,getWrites:()=>writes,setCommitted:x=>{committed=x;},setLoseResponse:x=>{loseResponse=x;}};
 }
-test('durable recovery is staged until explicit backend activation',()=>{
- assert.equal(MATERIAL_SOURCING_DURABLE_CREATE_ENABLED,false);
+test('durable recovery is enabled after approved backend activation',()=>{
+ assert.equal(MATERIAL_SOURCING_DURABLE_CREATE_ENABLED,true);
 });
 test('lost response survives new form and resolves via receipt without any duplicate write or persisted payload',async()=>{
  const f=recoveryFixture(),key=materialCreationRecoveryKey(actor,workspace);
