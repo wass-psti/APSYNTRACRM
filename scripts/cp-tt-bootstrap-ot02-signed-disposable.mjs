@@ -91,13 +91,14 @@ async function decision(actor,id,status,label){
  assert.equal(result.id,id);assert.equal(result.status,status);assert.equal(result.decidedBy,actor.id);
  return result;
 }
-function assertDatabase(id,status,decider){
+function assertDatabase(id,status,decider,submitter=null){
  assert.match(id,uuid);assert.match(decider,uuid);
  const row=sql(`SELECT status||'|'||decided_by::text||'|'||(decided_at IS NOT NULL)::text FROM public.timetracker_ot_requests WHERE id='${id}'`);
  assert.equal(row,`${status}|${decider}|true`);
  const owner=sql(`SELECT owner_id::text FROM public.timetracker_ot_requests WHERE id='${id}'`);
  const audit=sql(`SELECT event||'|'||actor_id::text FROM public.timetracker_ot_audit WHERE request_id='${id}' ORDER BY event_id`);
- assert.equal(audit,`submitted|${owner}\n${status.toLowerCase()}|${decider}`);
+ const submittedBy=submitter||owner;
+ assert.equal(audit,`submitted|${submittedBy}\n${status.toLowerCase()}|${decider}`);
  checks++;
 }
 await ready();
@@ -138,6 +139,11 @@ const durationRequest=receipt(await rpc(worker,'timetracker_ot_submit_duration',
 }),'employee duration OT submission');
 assert.equal(durationRequest.otPolicy,'duration-v1');
 assert.equal(durationRequest.durationMinutes,180);
+const bootstrapDurationRequest=receipt(await rpc(bootstrap,'timetracker_ot_submit_duration',{
+ p_board_id:board,p_date:date,p_duration_minutes:90,
+ p_reason:'Additional engineering work for Bootstrap Administrator self-review'
+}),'Bootstrap self-filed duration OT');
+assert.equal(bootstrapDurationRequest.otPolicy,'duration-v1');
 const hrOwnRequest=receipt(await rpc(hr,'timetracker_ot_submit_duration',{
  p_board_id:board,p_date:date,p_duration_minutes:60,
  p_reason:'Additional HR system reconciliation work'
@@ -150,6 +156,16 @@ assert.equal(hrPendingSnapshot.scope,'AUTHORIZED_WORKSPACE_TEAM');
 assert.equal(hrPendingSnapshot.rows.find(row=>row.id===durationRequest.id).canReviewOt,true);
 assert.equal(hrPendingSnapshot.rows.find(row=>row.id===durationRequest.id).canReviewDuration,true);
 assert.equal(hrPendingSnapshot.rows.find(row=>row.id===hrOwnRequest.id).canReviewOt,false);
+const bootstrapOwnDurationSnapshot=receipt(await rpc(bootstrap,'timetracker_ot_snapshot',{p_board_id:board}),'Bootstrap self-review duration snapshot');
+const bootstrapOwnDurationRow=bootstrapOwnDurationSnapshot.rows.find(row=>row.id===bootstrapDurationRequest.id);
+assert.equal(bootstrapOwnDurationRow?.canReviewOt,true);
+assert.equal(bootstrapOwnDurationRow?.canReviewDuration,true);
+const bootstrapOwnDurationApproval=receipt(await rpc(bootstrap,'timetracker_ot_decide_duration',{
+ p_board_id:board,p_request_id:bootstrapDurationRequest.id,p_decision:'Approved'
+}),'Bootstrap approves own duration OT');
+assert.equal(bootstrapOwnDurationApproval.status,'Approved');
+assert.equal(bootstrapOwnDurationApproval.decidedBy,bootstrap.id);
+assertDatabase(bootstrapDurationRequest.id,'Approved',bootstrap.id);
 const workerDurationSnapshot=receipt(await rpc(worker,'timetracker_ot_snapshot',{p_board_id:board}),'employee duration snapshot');
 assert.equal(workerDurationSnapshot.rows.find(row=>row.id===durationRequest.id).canReviewOt,false);
 assert.ok(workerDurationSnapshot.rows.every(row=>row.ownerId===`cloud:${worker.id}`));
@@ -221,7 +237,7 @@ assert.ok(workerSnap.rows.every(row=>row.ownerId===`cloud:${worker.id}`));
 const reLogin=expect(await call(auth,'/token?grant_type=password',{email:bootstrap.email,password}),200,'bootstrap reconnect login');
 const fresh={...bootstrap,token:reLogin.access_token};
 const freshSnap=receipt(await rpc(fresh,'timetracker_ot_snapshot',{p_board_id:board}),'reconnected bootstrap readback');
-for(const x of [a,b,c,d])assert.ok(freshSnap.rows.find(row=>row.id===x.id));
+for(const x of [a,b,c,d,bootstrapDurationRequest])assert.ok(freshSnap.rows.find(row=>row.id===x.id));
 expect(await rpc(worker,'timetracker_ot_decide',{p_board_id:board,p_request_id:a.id,p_decision:'Rejected'}),403,'worker denial');
 const legacyHrPending=receipt(await submit(worker,'15:00','16:00',
  'legacy employee request visible to HR',shiftDay(date,3)),'legacy employee pending');
@@ -267,6 +283,21 @@ assert.equal(manualRemoved.withdrawnBy,admin.id);
 assert.equal(sql(`SELECT event||'|'||actor_id::text FROM public.timetracker_ot_audit WHERE request_id='${manual.id}' ORDER BY event_id`),
  `submitted|${admin.id}\nwithdrawn|${admin.id}`);
 const manualDate=shiftDay(date,-1);
+const bootstrapManualDurationRequest=receipt(await rpc(admin,'timetracker_ot_submit_manual_duration',{
+ p_board_id:board,p_owner_id:bootstrap.id,p_date:shiftDay(date,-3),p_duration_minutes:90,
+ p_reason:'Historical work entered for Bootstrap Administrator self-review'
+}),'Bootstrap-owned manual duration OT entry');
+assert.equal(bootstrapManualDurationRequest.otPolicy,'manual-duration-v1');
+const bootstrapManualSnapshot=receipt(await rpc(bootstrap,'timetracker_ot_snapshot',{p_board_id:board}),'Bootstrap self-review manual duration snapshot');
+const bootstrapManualRow=bootstrapManualSnapshot.rows.find(row=>row.id===bootstrapManualDurationRequest.id);
+assert.equal(bootstrapManualRow?.canReviewOt,true);
+assert.equal(bootstrapManualRow?.canReviewDuration,true);
+const bootstrapManualDecision=receipt(await rpc(bootstrap,'timetracker_ot_decide_manual_duration',{
+ p_board_id:board,p_request_id:bootstrapManualDurationRequest.id,p_decision:'Rejected'
+}),'Bootstrap rejects own manual duration OT');
+assert.equal(bootstrapManualDecision.status,'Rejected');
+assert.equal(bootstrapManualDecision.decidedBy,bootstrap.id);
+assertDatabase(bootstrapManualDurationRequest.id,'Rejected',bootstrap.id,admin.id);
 const manualDuration=receipt(await rpc(admin,'timetracker_ot_submit_manual_duration',{
  p_board_id:board,p_owner_id:worker.id,p_date:manualDate,p_duration_minutes:150,
  p_reason:'Historical engineering work entered as a duration-only manual request'
@@ -295,6 +326,15 @@ const platformManualApproval=receipt(await rpc(hr,'timetracker_ot_decide_manual_
  p_board_id:board,p_request_id:platformManualDuration.id,p_decision:'Approved'
 }),'HR approves platform Admin manual duration OT');
 assert.equal(platformManualApproval.status,'Approved');
+const reconnectedBootstrap=expect(await call(auth,'/token?grant_type=password',{
+ email:bootstrap.email,password
+}),200,'Bootstrap reconnect after duration policy decisions');
+const reconnectedBootstrapActor={...bootstrap,token:reconnectedBootstrap.access_token};
+const reconnectedBootstrapSnapshot=receipt(await rpc(reconnectedBootstrapActor,'timetracker_ot_snapshot',{p_board_id:board}),
+ 'Bootstrap manual-duration reauthentication readback');
+const reconnectedManualRow=reconnectedBootstrapSnapshot.rows.find(row=>row.id===bootstrapManualDurationRequest.id);
+assert.equal(reconnectedManualRow?.status,'Rejected');
+assert.equal(reconnectedManualRow?.decidedBy,bootstrap.id);
 const ojtPlatformManualSnapshot=receipt(await rpc(ojt,'timetracker_ot_snapshot',{p_board_id:board}),'OJT cannot see platform Admin manual OT');
 assert.ok(!ojtPlatformManualSnapshot.rows.some(row=>row.id===platformManualDuration.id));
 const racing=receipt(await submit(worker,'14:00','15:00','concurrent decision'),'race request');
@@ -311,8 +351,20 @@ console.log(`SIGNED_OT_HTTP_AND_SQL_CHECKS_PASS count=${checks}`);
 if(process.env.CP_TT_OT03_BROWSER==='1'){
  const selfPending=receipt(await submit(bootstrap,'22:00','23:00','browser self approval'),'browser self submit');
  const workerPending=receipt(await submit(worker,'17:00','18:00','browser other decline'),'browser worker submit');
+ const bootstrapBrowserDurationRequest=receipt(await rpc(bootstrap,'timetracker_ot_submit_duration',{
+  p_board_id:board,p_date:shiftDay(date,3),p_duration_minutes:60,
+  p_reason:'Additional Bootstrap Administrator work for browser self-review acceptance'
+ }),'Bootstrap browser duration self-review fixture');
+ const bootstrapBrowserManualDurationRequest=receipt(await rpc(admin,'timetracker_ot_submit_manual_duration',{
+  p_board_id:board,p_owner_id:bootstrap.id,p_date:shiftDay(date,-4),p_duration_minutes:60,
+  p_reason:'Historical Bootstrap Administrator work for browser self-review acceptance'
+ }),'Bootstrap browser manual-duration self-review fixture');
  const {runSignedOtBrowserAcceptance}=await import('./cp-tt-bootstrap-ot03-browser.mjs');
- await runSignedOtBrowserAcceptance({restUrl:rest,bootstrap,worker,hr,board,selfPending,workerPending,durationRequest,hrOwnRequest});
+ await runSignedOtBrowserAcceptance({restUrl:rest,bootstrap,worker,hr,board,selfPending,workerPending,
+  durationRequest,hrOwnRequest,bootstrapDurationRequest:bootstrapBrowserDurationRequest,
+  bootstrapManualDurationRequest:bootstrapBrowserManualDurationRequest});
+ assertDatabase(bootstrapBrowserDurationRequest.id,'Approved',bootstrap.id);
+ assertDatabase(bootstrapBrowserManualDurationRequest.id,'Rejected',bootstrap.id,admin.id);
  const approved=receipt(await rpc(hr,'timetracker_ot_snapshot',{p_board_id:board}),'HR duration post-browser readback');
  assert.equal(approved.rows.find(row=>row.id===durationRequest.id).status,'Approved');
 }else{
