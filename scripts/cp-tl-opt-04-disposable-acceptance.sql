@@ -74,6 +74,7 @@ WHERE n<=19 OR n=43;
 
 \ir ../supabase/migrations/20261127120000_cp_tl_opt_04_document_template_render_snapshots.sql
 
+SET request.jwt.claim.sub='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 DO $assert$
 DECLARE v_count bigint;v_derived bigint;v_defaulted bigint;v_value jsonb;
  v_new_id uuid:='99999999-9999-4999-8999-999999999991'::uuid;
@@ -153,7 +154,6 @@ BEGIN
 END
 $assert$;
 
-SET request.jwt.claim.sub='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 DO $signed_read$
 DECLARE v_value jsonb;
 BEGIN
