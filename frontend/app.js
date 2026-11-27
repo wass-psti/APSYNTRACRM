@@ -513,7 +513,10 @@ async function talkBoxAttachments(){
 function talkBoxCurrent(scope){return auth.isSignedIn&&state.view==='talkbox'&&state.tab==='talkbox'&&state.context?.user_id===auth.userId&&
  [auth.userId,state.context.workspace_id,state.boardId].join('|')===scope;}
 function renderTalkBoxNativeApplication(){
- if(state.loading||state.nativeInitialRead==='talkbox'||(talkBoxState.busy&&!talkBoxState.page))return sharedApplicationLoading();
+ const talkBoxScope=[auth.userId,state.context?.workspace_id,state.boardId].join('|');
+ const hasCurrentPage=!!talkBoxState.page&&talkBoxState.scope===talkBoxScope;
+ if((state.loading||state.nativeInitialRead==='talkbox'||talkBoxState.busy)&&!hasCurrentPage)
+  return sharedApplicationLoading();
  return renderTalkBoxApplication({
   page:talkBoxState.page,selected:talkBoxState.selected,
   busy:talkBoxState.busy||state.loading,
@@ -1995,7 +1998,10 @@ function timeTrackerOjtAdminScope(){
  return {userId:a.userId,workspaceId:a.workspaceId,boardId:a.boardId};
 }
 function renderTimeTrackerApplication(){
- if(state.ttReadLoading||state.nativeInitialRead==='attendance')return sharedApplicationLoading();
+ // Keep the last signed attendance snapshot visible during refresh. Route
+ // changes clear the snapshot before loading, so this only retains same-route data.
+ if((state.ttReadLoading||state.nativeInitialRead==='attendance')&&!state.ttAttendance)
+  return sharedApplicationLoading();
  return renderTimeTrackerNative({
   displayName:name(),referenceShell:state.ttStandalone===true,
   ojtSelected:timeTrackerOjtScope()?state.ttOjtSelected:null,
@@ -2043,7 +2049,9 @@ function renderTimeTrackerApplication(){
  });
 }
 function renderFundTrackerApplication(){
- if(state.frtFinanceBusy||state.nativeInitialRead==='finance')return sharedApplicationLoading();
+ // A background financial read must not replace an already rendered tracker.
+ if((state.frtFinanceBusy||state.nativeInitialRead==='finance')&&!state.frtFinance)
+  return sharedApplicationLoading();
  return renderFundTrackerNative({
    result:state.frtFinance,busy:state.frtFinanceBusy,
    detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,
@@ -2052,7 +2060,12 @@ function renderFundTrackerApplication(){
   });
  }
  function renderFuelTrackApplication(){
- if(state.fuelTrackBackendBusy||state.nativeInitialRead==='fueltrack')return sharedApplicationLoading();
+ const fuelTrackScope=[auth.userId,state.context?.workspace_id,state.boardId].join('|');
+ const hasCurrentData=state.fuelTrackRequestScope===fuelTrackScope&&
+  !!(state.fuelTrackBackend?.snapshot||state.fuelTrackActivity);
+ // Keep the current section visible while signed activity/backend reads refresh it.
+ if((state.fuelTrackBackendBusy||state.nativeInitialRead==='fueltrack')&&!hasCurrentData)
+  return sharedApplicationLoading();
  return renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,
   actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,
   analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,
