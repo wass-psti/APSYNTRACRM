@@ -351,7 +351,7 @@ test('quotation PDF follows the reference hierarchy while preserving every exist
   'MATERIAL DESCRIPTION','UNIT PRICE','Installation note remains visible',
   'Retain all saved quotation remarks','Subtotal:','Discount:','After discount:',
   'VAT / tax classification:','VAT (0% - Tax Exempt):','TOTAL:','CREATED BY:','Original TradeLink Creator',
-  'REVIEWED BY:','APPROVED BY:','Recorded validation on','Approved revision 5',
+  'REVIEWED BY:','APPROVED BY:','Recorded validation on','Revision 5',
   'Electronic PDF approval and issuance have NOT been verified.',
   'Standard Terms &amp; Conditions of Sale','Synthetic terms remain visible','Accepted by: (Client)',
   '(Printed Name &amp; Signature)','Thank you for considering Watchdog Automation OPC.'
