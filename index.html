@@ -10,7 +10,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; style-src-attr 'none'; img-src 'self' data: blob: https://tile.openstreetmap.org https://jtlusodorfnyzgyuewkz.supabase.co; font-src 'self'; connect-src 'self' https://jtlusodorfnyzgyuewkz.supabase.co wss://jtlusodorfnyzgyuewkz.supabase.co https://unpkg.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://formsubmit.co; frame-src blob:;"/>
   <title>APSYNTRA CRM — Workspace</title>
   <link rel="icon" href="./frontend/apsyntra-logo.webp" type="image/webp"/>
-  <link rel="stylesheet" href="./frontend/apsyntra-styles.bundle.css?v=cp-mobile-workspace-switch-01-account-02-tt-reference-03-log-reference-shared-splash-record-popup-work-duration-cp-tl-ui-refresh-02-20261125-cp-tl-all-documents-ui-03-20261125-compact-datebar-01-cp-tl-analytics-ui-01-20261125-cp-tl-activity-ui-01-20261125-cp-tl-user-manual-ui-02-20261125-cp-frt-ui-01-20261125-cp-tl-document-menu-02-20261126-cp-frt-aging-ui-01-20261126-contrast-01-20261126-cp-fueltrack-dashboard-ui-03-20261126-cp-ft-analytics-01-20261126-cp-ft-all-requests-redesign-01-20261126-cp-ft-all-requests-redesign-02-20261126-account-regression-03-cp-ft-new-request-redesign-01-20261126-account-release-04-cp-ft-approvals-redesign-01-20261126-cp-ft-all-requests-redesign-02-20261126-cp-tl-universal-edit-01k-20261126-01-cp-tl-approval-01a-20261127-cp-ft-activity-ui-01-20261127-cp-tl-opt-01-20261127-02"/>
+  <link rel="stylesheet" href="./frontend/apsyntra-styles.bundle.css?v=cp-mobile-workspace-switch-01-account-02-tt-reference-03-log-reference-shared-splash-record-popup-work-duration-cp-tl-ui-refresh-02-20261125-cp-tl-all-documents-ui-03-20261125-compact-datebar-01-cp-tl-analytics-ui-01-20261125-cp-tl-activity-ui-01-20261125-cp-tl-user-manual-ui-02-20261125-cp-frt-ui-01-20261125-cp-tl-document-menu-02-20261126-cp-frt-aging-ui-01-20261126-contrast-01-20261126-cp-fueltrack-dashboard-ui-03-20261126-cp-ft-analytics-01-20261126-cp-ft-all-requests-redesign-01-20261126-cp-ft-all-requests-redesign-02-20261126-account-regression-03-cp-ft-new-request-redesign-01-20261126-account-release-04-cp-ft-approvals-redesign-01-20261126-cp-ft-all-requests-redesign-02-20261126-cp-tl-universal-edit-01k-20261126-01-cp-tl-approval-01a-20261127-cp-ft-activity-ui-01-20261127-cp-tl-opt-01-20261127-02-crm-shared-startup-20261127"/>
 
   <!-- Ordered sources embedded in the generated stylesheet (not extra requests):
        frontend/styles.css
@@ -101,29 +101,22 @@
        frontend/fueltrack-v3-all-requests-redesign.css
        frontend/fueltrack-v3-new-request-redesign.css
   -->
-  <script src="./frontend/startup-guard.js" defer></script>
+  <script src="./frontend/startup-guard.js?v=crm-shared-startup-20261127" defer></script>
   <script type="module" src="./frontend/app.js?v=cp-ft-all-requests-redesign-02-20261126-cp-tl-universal-edit-01k-20261126-01-cp-tl-approval-02-20261127-cp-mobile-workspace-switch-01-account-02-tt-reference-03-log-reference-shared-splash-record-popup-work-duration-cp-tl-ui-refresh-02-20261125-cp-tl-all-documents-ui-03-20261125-compact-datebar-01-cp-tl-analytics-ui-01-20261125-cp-tl-activity-ui-01-20261125-cp-tl-user-manual-ui-02-20261125-cp-frt-ui-01-20261125-cp-tl-document-menu-02-20261126-cp-frt-aging-ui-01-20261126-contrast-01-20261126-cp-fueltrack-dashboard-ui-03-20261126-cp-ft-analytics-01-20261126-cp-ft-all-requests-redesign-01-20261126-cp-ft-all-requests-redesign-02-20261126-account-regression-03-cp-ft-new-request-redesign-01-20261126-account-release-04-cp-ft-approvals-redesign-01-20261126-cp-ft-approvals-context-02-20261127-cp-ft-all-requests-redesign-02-20261126-cp-tl-universal-edit-01k-20261126-01-cp-tl-approval-02-20261127-cp-ft-activity-ui-01-20261127-cp-tl-opt-01-20261127-01-cp-tl-creator-attribution-01-20261127-01"></script>
   <script type="module" src="./frontend/monday-inspired-ui.js"></script>
   <script type="module" src="./frontend/mobile-home.js?v=cp-mobile-workspace-switch-01-account-02"></script>
 </head>
 <body>
-  <div id="apsyntra-init" class="aps-init" data-phase="startup" data-graphics="fallback"
-       role="status" aria-live="polite" aria-label="APSYNTRA CRM initialization">
-    <div class="aps-init-orb-fallback" aria-hidden="true"></div>
-    <div id="apsyntra-init-scene" class="aps-init-scene" aria-hidden="true"></div>
-    <div class="aps-init-content">
-      <div class="aps-init-eyebrow">Advanced Workspace Intelligence</div>
-      <h1 class="aps-init-name">APSYNTRA <span>CRM</span></h1>
-      <p class="aps-init-tagline">NEURAL CORE / ENTERPRISE SYSTEMS</p>
-      <div class="aps-init-readiness">
-        <div class="aps-init-track" aria-hidden="true"></div>
-        <div class="aps-init-details">
-          <span id="apsyntra-init-phase" class="aps-init-status">Preparing frontend…</span>
-          <span>Secure startup</span>
-        </div>
-      </div>
+  <!-- First-paint counterpart of renderBoardLoading(); keep the same shared loader classes. -->
+  <div id="apsyntra-init" class="apx-loader aps-init" data-phase="startup" data-paused="false" data-quality="full"
+       role="status" aria-live="polite" aria-atomic="true">
+    <div class="apx-loader__inner aps-init-content">
+      <img class="apx-loader__logo" src="./frontend/apsyntra-logo.webp" alt="" width="64" height="64">
+      <div><p class="apx-loader__title">APSYNTRA <span>CRM</span></p>
+        <p class="apx-loader__sub">Loading your workspace…</p></div>
+      <div class="apx-loader__track" aria-hidden="true"><div class="apx-loader__bar"></div></div>
+      <span id="apsyntra-init-phase" class="aps-init-status">Preparing frontend…</span>
     </div>
-    <div class="aps-init-footer" aria-hidden="true">PRECISION · CONNECTIVITY · INTELLIGENCE</div>
   </div>
   <div id="app"></div>
   <noscript>JavaScript is required to sign in to APSYNTRA CRM.</noscript>

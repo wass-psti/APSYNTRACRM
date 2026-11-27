@@ -24,58 +24,67 @@ test('startup phases describe real work without invented progress or access succ
  assert.ok(app.lastIndexOf('finishInitialization()')>app.lastIndexOf('await onRoute()'));
  assert.doesNotMatch(app,/await startInitialization\(/);
 });
-test('WebGL starts optionally and is not required for startup completion',()=>{
+test('first paint matches the existing TimeTracker shared loader',()=>{
  const html=readFileSync('index.html','utf8');
  const source=readFileSync('frontend/initialization-core.js','utf8');
- const renderer=readFileSync('frontend/initialization-neural-scene.js','utf8');
  const css=readFileSync('frontend/initialization-core.css','utf8');
- assert.match(html,/id="apsyntra-init"/);
- assert.match(html,/id="apsyntra-init-phase"/);
- assert.match(html,/id="app"><\/div>/);
- assert.match(source,/import\('\.\/initialization-neural-scene\.js'\)/);
- assert.match(source,/prefers-reduced-motion: reduce/);
- assert.match(source,/if\(finished\|\|!overlay\.isConnected\)/);
- assert.match(renderer,/getContext\('webgl2'/);
- assert.match(renderer,/ShaderMaterial/);
- assert.match(renderer,/new THREE\.BufferGeometry/);
- assert.match(renderer,/gsap@3\.12\.5/);
- assert.match(renderer,/three@0\.170\.0/);
- assert.match(renderer,/renderer\.setSize\(w,h,false\)/);
- assert.match(renderer,/renderer\.forceContextLoss\(\)/);
- assert.match(renderer,/geometry\.dispose\(\)/);
- assert.match(renderer,/document\.addEventListener\('visibilitychange'/);
- assert.match(renderer,/document\.removeEventListener\('visibilitychange'/);
- assert.match(css,/prefers-reduced-motion:reduce/);
- assert.doesNotMatch(source,/fetch\(|XMLHttpRequest|access_token|role|permission/);
- assert.doesNotMatch(renderer,/fetch\(|XMLHttpRequest|access_token|role|permission/);
- assert.doesNotMatch(html,/data-progress="\d+"/);
+ const shared=readFileSync('frontend/board/presentation/loading.js','utf8');
+ const markup=html.slice(html.indexOf('<div id="apsyntra-init"'),html.indexOf('<div id="app">'));
+ for(const cls of ['apx-loader','apx-loader__inner','apx-loader__logo','apx-loader__title','apx-loader__sub','apx-loader__track','apx-loader__bar']){
+  assert.ok(markup.includes(cls),cls);
+  assert.ok(shared.includes(cls),cls);
+ }
+ assert.ok(markup.includes('APSYNTRA <span>CRM</span>'));
+ assert.ok(markup.includes('Loading your workspace…'));
+ assert.ok(markup.includes('apsyntra-logo.webp'));
+ assert.ok(markup.includes('aria-atomic="true"'));
+ assert.ok(markup.includes('id="apsyntra-init-phase"'));
+ assert.ok(html.includes('<div id="app"></div>'));
+ assert.ok(!markup.includes('aps-init-orb'));
+ assert.ok(!source.includes('initialization-neural-scene'));
+ assert.ok(!source.includes('WebGL'));
+ assert.ok(css.includes('min-height:100dvh'));
+ assert.ok(css.includes('prefers-reduced-motion:reduce'));
+ assert.ok(css.includes('.aps-init-retry:focus-visible'));
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.ok(app.includes('if(initialAccountRoleReadPending){root.innerHTML=sharedApplicationLoading();return;}'));
+ assert.equal(app.split('startInitialization();').length,2);
 });
-test('reduced-motion fallback remains accessible and is removed immediately on readiness',()=>{
- let removed=false;
- const node={dataset:{},isConnected:true,
+test('reduced-motion readiness removes the overlay and its visibility listener without remounting it',()=>{
+ let removed=false,listener=null;
+ const node={dataset:{phase:'startup'},isConnected:true,
   classList:{add(v){assert.equal(v,'aps-init-exiting')}},
   setAttribute(k,v){assert.equal(k,'aria-hidden');assert.equal(v,'true')},
   querySelector(sel){assert.equal(sel,'#apsyntra-init-phase');return label},
   remove(){removed=true;this.isConnected=false;},
   addEventListener(){},removeEventListener(){}};
  const label={textContent:''};
- const host={isConnected:true};
- globalThis.document={hidden:false,getElementById(id){
-  if(id==='apsyntra-init')return node;
-  if(id==='apsyntra-init-scene')return host;
-  return null;
- }};
- globalThis.window={WebGL2RenderingContext:function(){},
-  matchMedia(){return {matches:true}},clearTimeout(){},setTimeout(){throw Error('Reduced motion must not defer readiness');}};
- startInitialization();
- assert.equal(node.dataset.graphics,'reduced');
- setInitializationPhase('authentication');
- assert.equal(label.textContent,'Restoring signed session…');
- finishInitialization();
- assert.equal(removed,true);
- assert.equal(node.inert,true);
- setInitializationPhase('workspace');
- assert.equal(label.textContent,'Restoring signed session…');
- delete globalThis.document;
- delete globalThis.window;
+ globalThis.document={hidden:false,getElementById(id){return id==='apsyntra-init'&&!removed?node:null;},
+  addEventListener(type,fn){assert.equal(type,'visibilitychange');listener=fn;},
+  removeEventListener(type,fn){assert.equal(type,'visibilitychange');assert.equal(fn,listener);listener=null;}};
+ globalThis.window={matchMedia(){return {matches:true}},clearTimeout(){},setTimeout(){throw Error('Reduced motion must not defer readiness');}};
+ try{
+  startInitialization();
+  assert.equal(node.dataset.paused,'false');
+  document.hidden=true;listener();
+  assert.equal(node.dataset.paused,'true');
+  document.hidden=false;listener();
+  assert.equal(node.dataset.paused,'false');
+  setInitializationPhase('authentication');
+  assert.equal(label.textContent,'Restoring signed session…');
+  finishInitialization();
+  assert.equal(removed,true);
+  assert.equal(node.inert,true);
+  assert.equal(listener,null);
+  startInitialization();
+  setInitializationPhase('workspace');
+  assert.equal(label.textContent,'Restoring signed session…');
+ }finally{delete globalThis.document;delete globalThis.window;}
+});
+test('fatal startup recovery is still actionable and stops the loading animation',()=>{
+ const guard=readFileSync('frontend/startup-guard.js','utf8');
+ assert.ok(guard.includes("node.dataset.paused='true'"));
+ assert.ok(guard.includes("node.querySelector('.aps-init-content')"));
+ assert.ok(guard.includes("button.className='aps-init-retry'"));
+ assert.ok(guard.includes('window.location.reload()'));
 });

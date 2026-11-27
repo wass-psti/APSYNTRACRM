@@ -21,7 +21,8 @@ test('Priority 5F reduces the exact anonymous startup ES module graph without re
 test('existing boot entry, initialization recovery and security policy are unchanged',()=>{
  const html=readFileSync('index.html','utf8');
  const app=readFileSync('frontend/app.js','utf8');
- assert.match(html,/<script src="\.\/frontend\/startup-guard\.js" defer><\/script>/);
+ assert.match(html,/<script src="\.\/frontend\/startup-guard\.js(?:\?v=[^"]+)?" defer><\/script>/);
+ assert.ok(html.indexOf('src="./frontend/startup-guard.js')<html.indexOf('src="./frontend/app.js'),'guard precedes the module entry');
  assert.match(html,/<script type="module" src="\.\/frontend\/app\.js(?:\?v=[^"]+)?"><\/script>/);
  assert.match(html,/style-src-attr 'none'/);
  assert.match(app,/if\(await startupVerifiedRead\(async\(\)=>await auth\.restore\(\)\)\)/);
