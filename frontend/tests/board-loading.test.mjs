@@ -42,7 +42,10 @@ test('native authorization and attendance read both use the shared splash',()=>{
  assert.ok(app.includes("if(applicationRouteRead){shell(sharedApplicationLoading());return;}"));
  assert.ok(app.includes("beginApplicationRouteRead('TimeTracker')"));
  assert.ok(app.includes("location.hash!==token.hash"));
- assert.ok(app.includes("if(state.ttReadLoading||state.nativeInitialRead==='attendance')return sharedApplicationLoading()"));
+ assert.match(app,/if\(\(state\.ttReadLoading\|\|state\.nativeInitialRead==='attendance'\)&&!state\.ttAttendance\)/);
+ assert.match(app,/if\(\(state\.frtFinanceBusy\|\|state\.nativeInitialRead==='finance'\)&&!state\.frtFinance\)/);
+ assert.match(app,/if\(\(state\.fuelTrackBackendBusy\|\|state\.nativeInitialRead==='fueltrack'\)&&!hasCurrentData\)/);
+ assert.match(app,/if\(\(state\.loading\|\|state\.nativeInitialRead==='talkbox'\|\|talkBoxState\.busy\)&&!hasCurrentPage\)/);
  assert.ok(app.includes("state.ttReadLoading=false;state.ttBusy=false;render()"));
  assert.ok(app.includes("setBoardLoadingVisibility(root,document.hidden)"));
  for(const path of ['frontend/fm1/components.js','frontend/fueltrans-lazy.js','frontend/fueltrans/app.js'])
