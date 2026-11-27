@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {createMaterialSourcingAtomic} from '../material-sourcing-atomic-create.js';
+import {createMaterialSourcingAtomic,retainMaterialCreatePlan} from '../material-sourcing-atomic-create.js';
 import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP} from '../material-sourcing-schema-plan.js';
 const actor='11111111-1111-4111-8111-111111111111';
 const workspace='22222222-2222-4222-8222-222222222222';
@@ -72,4 +72,33 @@ test('migration binds exact board/group and protects idempotent private request 
  assert.match(sql,/v_existing\.actor_id<>v_actor/);
  assert.match(sql,/grant execute on function public\.mrh_create_material_atomic.*authenticated/);
  assert.doesNotMatch(sql,/^\s*(?:delete|update|truncate|drop)\s+public\.(?:work_board|workspaces|profiles)/im);
+});
+
+test('same-form retry retains the original plan and refuses a different payload or signed scope',()=>{
+ const form={};
+ const first=retainMaterialCreatePlan(form,plan,'actor:workspace');
+ assert.deepEqual(first,plan);
+ assert.equal(retainMaterialCreatePlan(form,plan,'actor:workspace'),first);
+ assert.throws(()=>retainMaterialCreatePlan(form,{...plan,partNumber:'changed'},'actor:workspace'),/original/);
+ assert.throws(()=>retainMaterialCreatePlan(form,plan,'other:workspace'),/original/);
+ assert.deepEqual(retainMaterialCreatePlan({}, {...plan,partNumber:'new'},'actor:workspace').partNumber,'new');
+});
+test('uncertain create response can replay the same request and verifies fresh persisted data',async()=>{
+ const f=fixture(),rpc=f.options.api.rpc;
+ let tries=0,invalidated=0;
+ f.options.api.invalidateBoardCache=()=>{invalidated++;};
+ f.options.api.rpc=async(name,args)=>{
+  if(name==='mrh_create_material_atomic'){
+   assert.equal(args.p_request_id,request);
+   if(++tries===1)throw Error('response lost');
+   return {item_id:item,request_id:request,created:false};
+  }
+  return rpc(name,args);
+ };
+ await assert.rejects(()=>createMaterialSourcingAtomic(f.options),/response lost/);
+ const replay=await createMaterialSourcingAtomic(f.options);
+ assert.equal(replay.created,false);
+ assert.equal(replay.itemId,item);
+ assert.equal(tries,2);
+ assert.equal(invalidated,1);
 });

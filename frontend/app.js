@@ -132,11 +132,11 @@ import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,planMaterialSourcingS
 import {MATERIAL_TRACKER_DEFAULT_FILTERS,isMaterialTrackerBoard,materialTrackerRows,filterMaterialTrackerRows,materialTrackerPublicCsv} from './material-sourcing-tracker.js';
 import {renderNativeMaterialSourcing,sortNativeMaterials,loadNativeCommercialRow,ensureNativeMaterialSourcingStyles} from './apps/MaterialSourcing/native-screen.js?v=cp-ms-crm-03a-20261127';
 import {parseMaterialAddForm,materialAddPublicColumns} from './material-sourcing-add-material.js';
-import {createMaterialSourcingAtomic} from './material-sourcing-atomic-create.js';
+import {createMaterialSourcingAtomic,retainMaterialCreatePlan} from './material-sourcing-atomic-create.js';
 import {showEngineeringDiagnostics} from './engineering-diagnostics-visibility.js';
 import {renderMaterialSourcingDetailTabs,renderMaterialSourcingPublicOverview,renderMaterialSourcingUnavailableDetails,classifyMaterialSourcingDetailError,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js';
 import {readMaterialBoardItemTasks,saveMaterialBoardItemTask,renderMaterialBoardItemTasks} from './material-sourcing-board-tasks.js';
-import {planMaterialSourcingPublicChanges,saveMaterialSourcingPublicChange,verifyMaterialSourcingPublicChanges} from './material-sourcing-public-edit.js';
+import {planMaterialSourcingPublicChanges,saveMaterialSourcingPublicChange,verifyMaterialSourcingPublicChanges,saveMaterialSourcingAtomic,MATERIAL_SOURCING_ATOMIC_EDIT_ENABLED} from './material-sourcing-public-edit.js';
 import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,planProtectedSourcingChanges,renderProtectedSourcingEditor,createMaterialSourcingPart} from './material-sourcing-application.js';
 import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} from './material-sourcing-controlled-activation.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
@@ -7590,6 +7590,15 @@ async function openBoardItemDetails(itemId){
    statusMessage('Saving '+total+' pending change'+(total===1?'':'s')+'…');
    let completed=0;
    try{
+    if(MATERIAL_SOURCING_ATOMIC_EDIT_ENABLED){
+     const {board,persisted}=await saveMaterialSourcingAtomic({...input,publicChanges,privateChanges:changes});
+     if(!current())return;
+     values=persisted;publicDetail=board;
+     if(state.boardId===snapshot.boardId)state.board=board;
+     updateDisplay(values);publicSavedDisplay();
+     statusMessage(total+' change'+(total===1?'':'s')+' saved atomically and verified.');
+     return;
+    }
     for(const change of publicChanges){
      await saveMaterialSourcingPublicChange({api:db,itemId,change});
      if(!current())return;
@@ -14568,6 +14577,7 @@ root.addEventListener('submit',event=>{
   try{
    if(!form.reportValidity())return;
    plan=parseMaterialAddForm(state.board,new FormData(form));
+   plan=retainMaterialCreatePlan(form,plan,snapshot.userId+':'+snapshot.workspaceId);
   }catch(err){if(status)status.textContent=errorMessage(err);return;}
   state.mrhAddBusy=true;button.disabled=true;button.textContent='Saving material…';
   let uncertain=false;
@@ -14602,11 +14612,11 @@ root.addEventListener('submit',event=>{
    if(!authorized())return;
    uncertain=true;
    if(status)status.textContent=
-    'Creation status needs verification. Refresh the board before trying again. '+
+    'Creation status needs verification. Retry the original values on this form to safely reuse the request. '+
     errorMessage(error);
-   // Retain same idempotency key, and never generate another item through this form.
-   button.disabled=true;
-   button.textContent='Refresh to verify material';
+   // The original plan and same request ID survive an uncertain response on this form.
+   button.disabled=false;
+   button.textContent='Retry original save';
   }).finally(()=>{
    state.mrhAddBusy=false;
    if(authorized()&&!uncertain&&form.isConnected){

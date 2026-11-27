@@ -1,5 +1,6 @@
 /** Existing signed board CAS contract for ordinary Material Sourcing fields. */
 import {ApiError} from './session.js';
+import {authorizeMaterialSourcingViewer,authorizeMaterialSourcingItem,revalidateMaterialSourcingSession,readProtectedSourcingItem} from './material-sourcing-application.js';
 import {materialAddPublicColumns} from './material-sourcing-add-material.js';
 import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP} from './material-sourcing-schema-plan.js';
 const fail=message=>{throw new ApiError(message,400)};
@@ -56,7 +57,7 @@ export async function saveMaterialSourcingPublicChange({api,itemId,change}){
 }
 export function verifyMaterialSourcingPublicChanges(detail,itemId,changes){
  const columns=materialAddPublicColumns(detail),item=detail?.items?.find(i=>i.id===itemId);
- if(!item||item.group_id!==MATERIAL_SOURCING_GROUP.id)return false;
+ if(detail?.board?.id!==MATERIAL_SOURCING_BOARD_ID||!item||item.archived_at||item.group_id!==MATERIAL_SOURCING_GROUP.id)return false;
  return changes.every(change=>{
   const id=change.columnId;
   if(id===null)return item.title===change.value;
@@ -64,4 +65,40 @@ export function verifyMaterialSourcingPublicChanges(detail,itemId,changes){
   const current=(detail.values||[]).find(v=>v.item_id===itemId&&v.column_id===id)?.value??null;
   return current===change.value;
  });
+}
+
+// Staged until explicit production migration activation and signed acceptance.
+export const MATERIAL_SOURCING_ATOMIC_EDIT_ENABLED=false;
+
+/** A single signed transaction; never fall back after an uncertain write. */
+export async function saveMaterialSourcingAtomic({api,auth,workspaceId,boardId,itemId,publicChanges=[],privateChanges=[]}){
+ const scope={api,auth,workspaceId,boardId,itemId};
+ if(!Array.isArray(publicChanges)||!Array.isArray(privateChanges)||
+    !publicChanges.length&&!privateChanges.length||
+    publicChanges.length>8||privateChanges.length>11)
+  fail('Invalid material changes.');
+ const actor=privateChanges.length?
+  await authorizeMaterialSourcingItem({...scope,edit:true}):
+  await authorizeMaterialSourcingViewer(scope);
+ if(!privateChanges.length&&await api.allowed(boardId,'edit')!==true)
+  throw new ApiError('Sourcing board edit permission denied.',403);
+ await revalidateMaterialSourcingSession(scope,actor);
+ const receipt=await api.rpc('mrh_edit_material_atomic',{
+  p_item_id:itemId,
+  p_public_changes:publicChanges.map(change=>({column_id:change.columnId,value:change.value,expected_value:change.expectedValue})),
+  p_private_changes:privateChanges.map(change=>({field_name:change.fieldName,value:change.value,expected_revision:change.expectedRevision}))
+ });
+ await revalidateMaterialSourcingSession(scope,actor);
+ if(receipt?.item_id!==itemId||receipt?.public_count!==publicChanges.length||
+    receipt?.private_count!==privateChanges.length)
+  throw new ApiError('Atomic edit receipt could not be verified. Reconcile before retrying.',409);
+ api.invalidateBoardCache?.(boardId,{invalidateContext:false});
+ const [board,persisted]=await Promise.all([api.board(boardId),readProtectedSourcingItem(scope)]);
+ await revalidateMaterialSourcingSession(scope,actor);
+ if(board?.board?.workspace_id!==workspaceId||
+    !verifyMaterialSourcingPublicChanges(board,itemId,publicChanges)||
+    privateChanges.some(change=>persisted[change.fieldName]?.value!==change.value||
+     persisted[change.fieldName]?.revision!==(change.expectedRevision??0)+1))
+  throw new ApiError('Atomic edit readback could not be verified. Reconcile before retrying.',409);
+ return {board,persisted};
 }

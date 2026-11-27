@@ -10,6 +10,19 @@ import {authorizeMaterialSourcingItem,revalidateMaterialSourcingSession,
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const deny=(message,status=409)=>{throw new ApiError(message,status)};
 const eq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+// Only mounted-form memory, never persistent browser storage or a global draft.
+const pendingForms=new WeakMap();
+export function retainMaterialCreatePlan(form,plan,scope){
+ const existing=pendingForms.get(form);
+ if(existing){
+  if(existing.scope!==scope||!eq(existing.plan,plan))
+   deny('Retry the original material values in the same signed workspace before starting a different creation.');
+  return existing.plan;
+ }
+ const retained=JSON.parse(JSON.stringify(plan));
+ pendingForms.set(form,{scope,plan:retained});
+ return retained;
+}
 export async function createMaterialSourcingAtomic({
  api,auth,workspaceId,requestId,plan
 }={}){
@@ -31,6 +44,7 @@ export async function createMaterialSourcingAtomic({
    typeof response?.created!=='boolean')
   deny('Material save response uncertain. Reload and inspect before retrying.');
  // Always check persisted server projection; a successful RPC alone is insufficient.
+ api.invalidateBoardCache?.(MATERIAL_SOURCING_BOARD_ID,{invalidateContext:false});
  const detail=await api.board(MATERIAL_SOURCING_BOARD_ID);
  await revalidateMaterialSourcingSession(scope,actor);
  if(detail?.board?.workspace_id!==workspaceId||!detail.groups?.some(g=>

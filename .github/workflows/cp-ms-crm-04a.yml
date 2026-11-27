@@ -4,14 +4,30 @@ on:
     paths:
       - 'sql/mrh-atomic-material-edit-CANDIDATE-NOT-APPLIED.sql'
       - 'sql/tests/mrh-atomic-edit-disposable.sql'
+      - 'sql/tests/mrh-atomic-edit-representative.sql'
+      - 'sql/tests/mrh-atomic-edit-live-dependencies.sql'
+      - 'scripts/cp-ms-crm-04a2-concurrency.sh'
+      - 'frontend/material-sourcing-public-edit.js'
+      - 'frontend/material-sourcing-atomic-create.js'
+      - 'frontend/tests/material-sourcing-public-edit.test.mjs'
+      - 'frontend/tests/material-sourcing-atomic-create.test.mjs'
+      - 'frontend/app.js'
       - 'frontend/material-sourcing-add-material.js'
       - 'frontend/tests/material-sourcing-add-material.test.mjs'
       - '.github/workflows/cp-ms-crm-04a.yml'
   push:
-    branches: [main, integration/cp-ms-crm-04a]
+    branches: [main, integration/cp-ms-crm-04a, integration/cp-ms-crm-04a2]
     paths:
       - 'sql/mrh-atomic-material-edit-CANDIDATE-NOT-APPLIED.sql'
       - 'sql/tests/mrh-atomic-edit-disposable.sql'
+      - 'sql/tests/mrh-atomic-edit-representative.sql'
+      - 'sql/tests/mrh-atomic-edit-live-dependencies.sql'
+      - 'scripts/cp-ms-crm-04a2-concurrency.sh'
+      - 'frontend/material-sourcing-public-edit.js'
+      - 'frontend/material-sourcing-atomic-create.js'
+      - 'frontend/tests/material-sourcing-public-edit.test.mjs'
+      - 'frontend/tests/material-sourcing-atomic-create.test.mjs'
+      - 'frontend/app.js'
       - 'frontend/material-sourcing-add-material.js'
       - 'frontend/tests/material-sourcing-add-material.test.mjs'
       - '.github/workflows/cp-ms-crm-04a.yml'
