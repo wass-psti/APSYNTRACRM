@@ -17,6 +17,11 @@ export function cpuInterval(before,after){
  return +(100*(total-idle)/total).toFixed(2);
 }
 
+export function assertForegroundInteractionPage(visibilityState){
+ if(visibilityState!=='visible')throw Error('Interaction timing requires a foreground browser page');
+ return true;
+}
+
 export function workloadMode(mode){
  if(mode==='smoke')return {windows:2,phaseMs:35000,phases:['idle']};
  if(mode==='single'||mode==='dual')return {windows:mode==='single'?1:2,

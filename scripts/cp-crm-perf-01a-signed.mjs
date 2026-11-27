@@ -11,7 +11,7 @@ import {promisify} from 'node:util';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {chromium} from 'playwright';
 import {summarizeSamples,benchmarkInventory} from './lib/crm-performance-baseline.mjs';
-import {rpcSummary,cpuInterval,workloadMode} from './lib/crm-signed-performance.mjs';
+import {rpcSummary,cpuInterval,workloadMode,assertForegroundInteractionPage} from './lib/crm-signed-performance.mjs';
 
 const run=promisify(execFile),root=resolve(import.meta.dirname,'..');
 const fixture='/frontend/tests/fixtures/crm-signed-performance.html';
@@ -147,14 +147,21 @@ export async function runSignedPerformanceBaseline({authUrl,restUrl,db,worker,hr
     const initial=await Promise.all(sessions.map(renderer)),hostStart=hostCpu();
     const start=performance.now(),deadline=start+plan.phaseMs,containerSamples=[];
     let nextClick=start,nextResource=start;
+    const interactionVisibility=[];
     while(performance.now()<deadline){
      const now=performance.now();
      if(phase==='interaction'&&now>=nextClick){
-      await Promise.all(pages.map(async(page)=>{
+      // Background tabs can throttle requestAnimationFrame to one frame per second.
+      // Foreground each page before measuring its real two-frame interaction latency.
+      for(const page of pages){
+       await page.bringToFront();
+       const visibility=await page.evaluate(()=>document.visibilityState);
+       interactionVisibility.push(visibility);
+       assertForegroundInteractionPage(visibility);
        const active=page.locator('[data-action="tt-ot-status"][aria-pressed="true"]');
        const target=page.locator('[data-action="tt-ot-status"][aria-pressed="false"]').first();
        assert.ok(await active.count());await target.click({timeout:5000});
-      }));
+      }
       nextClick+=15000;
      }
      if(now>=nextResource){
@@ -174,6 +181,8 @@ export async function runSignedPerformanceBaseline({authUrl,restUrl,db,worker,hr
     if(phase==='interaction')assert.ok(interactions.length>=plan.windows*30,'Insufficient interaction samples');
     const result={phase,elapsedMs,requests,perWindow:deltas.map(item=>({requests:rpcSummary(item.reads),
      renders:item.renderCount,rows:item.rows})),interactions:interactions.length?summarizeSamples(interactions):null,
+     interactionVisibility:phase==='interaction'?{checks:interactionVisibility.length,
+      nonVisible:interactionVisibility.filter(value=>value!=='visible').length}:null,
      hostCpuPercent:cpuInterval(hostStart,hostCpu()),containerSamples,renderer:{initial,final}};
     report.phases.push(result);
     console.log('CP_CRM_PERF_01A_PHASE '+JSON.stringify(result));
