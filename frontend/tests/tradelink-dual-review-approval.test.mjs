@@ -9,7 +9,7 @@ const source=async path=>readFile(new URL(path,root),'utf8');
 
 test('application imports the dual-review capability before using reviewer actions',async()=>{
  const app=await source('frontend/app.js');
- assert.match(app,/import\s*\{[^}]*\bTL03_DUAL_REVIEW_ENABLED\b[^}]*\}\s*from\s*['\"]\.\/tradelink-native\.js\?v=cp-tl-opt-01-20261127-01['\"]/s);
+ assert.match(app,/import\s*\{[^}]*\bTL03_DUAL_REVIEW_ENABLED\b[^}]*\}\s*from\s*['\"]\.\/tradelink-native\.js\?v=cp-tl-opt-04b-20261127-01['\"]/s);
 });
 
 test('dual-review capability is enabled and all existing status labels remain present',()=>{

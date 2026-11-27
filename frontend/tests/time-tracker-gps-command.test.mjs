@@ -82,7 +82,8 @@ test('privileged scope, map redaction, and tile origin policies remain unchanged
   result:{status:'VERIFIED_READ',access:{moduleRole:'Employee'},records:[]}
  });
  assert.doesNotMatch(denied,/tt-gps-command-hero|Employee One/);
- assert.match(app,/gpsEligible:state\.roleVerified===true\|\|state\.ttAttendance\?\.access\?\.moduleRole==='Supervisor'/);
+ assert.match(app,/gpsEligible:timeTrackerGpsEvidenceEligible\(\)/);
+ assert.match(app,/function timeTrackerGpsEvidenceEligible\(\)\{\s*return state\.roleVerified===true\|\|\s*\['Supervisor','HR','System Admin'\]\.includes\(state\.ttAttendance\?\.access\?\.moduleRole\)/);
  assert.match(index,/img-src 'self' data: blob: https:\/\/tile\.openstreetmap\.org/);
  const map=readFileSync('frontend/time-tracker-map.js','utf8');
  assert.match(map,/TT_OSM_TILES/);

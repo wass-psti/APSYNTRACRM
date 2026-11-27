@@ -89,7 +89,7 @@ test('signed server GPS endpoint accepts bootstrap, Supervisor, HR and System Ad
  const cross=make('Supervisor',false,true);
  await assert.rejects(()=>cross.client.gpsEvidence(board,params),/Signed GPS scope mismatch/);
 });
-test('GPS app wiring retains privacy and clears state on logout and expiry'test('GPS app wiring retains privacy and clears state on logout and expiry',()=>{
+test('GPS app wiring retains privacy and clears state on logout and expiry',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/timeTracker\.gpsEvidence/);
  assert.match(app,/case 'tt-gps-load'/);
