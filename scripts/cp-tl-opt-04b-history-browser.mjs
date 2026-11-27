@@ -57,7 +57,7 @@ await mkdir(outputDirectory,{recursive:true});
 function buildRevision(revision){
  const marker='CP-TL-OPT-04B-REVISION-'+revision;
  const terms=marker+'-TERMS\n'+
-  '1. Historical terms are bound to this exact approved revision.\n'+
+  '1. Historical terms are bound to this exact revision.\n'+
   '2. Company profile, template version and stylesheet hashes remain immutable.\n'+
   marker+'-TERMS-END';
  const itemMarker=marker+'-ITEM';
