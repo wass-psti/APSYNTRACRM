@@ -101,13 +101,34 @@ BEGIN
  IF result->>'totalCount'<>'20'
   OR pg_catalog.jsonb_array_length(result->'rows')<>5
   OR result->>'hasMore'<>'true'
-  OR (result->'rows'->0->>'updatedAt')::timestamptz<
-     timestamptz '2026-11-02 00:00:00+00'
-  OR (result->'rows'->4->>'updatedAt')::timestamptz>=
-     timestamptz '2026-11-03 00:00:00+00' THEN
-  RAISE EXCEPTION 'Database-wide inclusive UTC date filter failed: %',result;
+  OR result->'rows'->0->>'documentNumber'<>'Q-OPT-021'
+  OR (result->'rows'->4->>'updatedAt')::timestamptz<>
+     timestamptz '2026-11-02 12:00:00+00' THEN
+  RAISE EXCEPTION 'Single-day inclusive UTC date filter failed: %',result;
  END IF;
- RAISE NOTICE 'CP-TL-OPT-01 UTC date range PASS: 20 matches across the complete repository';
+
+ result:=public.tl03_documents_query(
+  board,'','all','all','active','visible',
+  DATE '2026-11-02',NULL,'updatedAt','asc',NULL,50);
+ IF result->>'totalCount'<>'40'
+  OR pg_catalog.jsonb_array_length(result->'rows')<>40
+  OR result->>'hasMore'<>'false'
+  OR result->'rows'->0->>'documentNumber'<>'Q-OPT-021'
+  OR result->'rows'->39->>'documentNumber'<>'Q-OPT-060' THEN
+  RAISE EXCEPTION 'Inclusive UTC lower-bound filter failed: %',result;
+ END IF;
+
+ result:=public.tl03_documents_query(
+  board,'','all','all','active','visible',
+  NULL,DATE '2026-11-02','updatedAt','asc',NULL,50);
+ IF result->>'totalCount'<>'40'
+  OR pg_catalog.jsonb_array_length(result->'rows')<>40
+  OR result->>'hasMore'<>'false'
+  OR result->'rows'->0->>'documentNumber'<>'Q-OPT-001'
+  OR result->'rows'->39->>'documentNumber'<>'Q-OPT-040' THEN
+  RAISE EXCEPTION 'Inclusive UTC upper-bound filter failed: %',result;
+ END IF;
+ RAISE NOTICE 'CP-TL-OPT-01 UTC date range PASS: inclusive start/end, single day and open-ended ranges';
 END $date_range$;
 
 DO $pagination$
@@ -185,34 +206,100 @@ DO $sort$
 DECLARE
  board uuid:='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88';
  result jsonb;
+ sort_case record;
 BEGIN
- result:=public.tl03_documents_query(
-  board,'','all','all','active','visible',NULL,NULL,
-  'documentNumber','desc',NULL,1);
- IF result->'rows'->0->>'documentNumber'<>'Q-OPT-060' THEN
-  RAISE EXCEPTION 'Descending document-number sort failed: %',result; END IF;
- result:=public.tl03_documents_query(
-  board,'','all','all','active','visible',NULL,NULL,
-  'createdAt','asc',NULL,1);
- IF result->'rows'->0->>'documentNumber'<>'Q-OPT-001' THEN
-  RAISE EXCEPTION 'Ascending creation-time sort failed: %',result; END IF;
- result:=public.tl03_documents_query(
-  board,'','all','all','active','visible',NULL,NULL,
-  'updatedAt','desc',NULL,1);
- IF result->'rows'->0->>'documentNumber'<>'Q-OPT-060' THEN
-  RAISE EXCEPTION 'Descending last-updated sort failed: %',result; END IF;
- result:=public.tl03_documents_query(
-  board,'','all','all','active','visible',NULL,NULL,
-  'revision','desc',NULL,1);
- IF result->'rows'->0->>'documentNumber'<>'Q-OPT-060' THEN
-  RAISE EXCEPTION 'Descending revision sort tie-breaker failed: %',result; END IF;
- result:=public.tl03_documents_query(
-  board,'','all','all','active','visible',NULL,NULL,
-  'documentType','asc',NULL,1);
- IF result->'rows'->0->>'documentNumber'<>'Q-OPT-001' THEN
-  RAISE EXCEPTION 'Ascending document-type sort failed: %',result; END IF;
- RAISE NOTICE 'CP-TL-OPT-01 global sorting PASS: all five sort fields and both directions';
+ FOR sort_case IN
+  SELECT * FROM (VALUES
+   ('createdAt','asc','Q-OPT-001'),
+   ('createdAt','desc','Q-OPT-060'),
+   ('updatedAt','asc','Q-OPT-001'),
+   ('updatedAt','desc','Q-OPT-060'),
+   ('documentNumber','asc','Q-OPT-001'),
+   ('documentNumber','desc','Q-OPT-060'),
+   ('documentType','asc','Q-OPT-001'),
+   ('documentType','desc','Q-OPT-060'),
+   ('revision','asc','Q-OPT-001'),
+   ('revision','desc','Q-OPT-060')
+  ) AS cases(sort_by,sort_direction,expected_document)
+ LOOP
+  result:=public.tl03_documents_query(
+   board,'','all','all','active','visible',NULL,NULL,
+   sort_case.sort_by,sort_case.sort_direction,NULL,1);
+  IF result->'rows'->0->>'documentNumber' IS DISTINCT FROM sort_case.expected_document THEN
+   RAISE EXCEPTION 'Global sort failed for % %: %',
+    sort_case.sort_by,sort_case.sort_direction,result;
+  END IF;
+ END LOOP;
+ RAISE NOTICE 'CP-TL-OPT-01 global sorting PASS: all five sort fields in ascending and descending order';
 END $sort$;
+
+DO $cursor_validation$
+DECLARE
+ board uuid:='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88';
+ invalid_cursor jsonb;
+ result jsonb;
+BEGIN
+ FOR invalid_cursor IN
+  SELECT value FROM pg_catalog.jsonb_array_elements(pg_catalog.jsonb_build_array(
+   pg_catalog.jsonb_build_object('sortBy','documentNumber','sortValue','q-opt-050',
+    'documentId','00000000-0000-4000-8000-000000000050','extra','not-allowed'),
+   pg_catalog.jsonb_build_object('sortBy','documentNumber',
+    'documentId','00000000-0000-4000-8000-000000000050'),
+   pg_catalog.jsonb_build_object('sortBy','updatedAt','sortValue','2026-11-02 12:00:00+00',
+    'documentId','00000000-0000-4000-8000-000000000050'),
+   pg_catalog.jsonb_build_object('sortBy','documentNumber','sortValue',50,
+    'documentId','00000000-0000-4000-8000-000000000050'),
+   pg_catalog.jsonb_build_object('sortBy','documentNumber','sortValue','q-opt-050',
+    'documentId','invalid-id'),
+   pg_catalog.jsonb_build_object('sortBy','createdAt','sortValue','not-a-date',
+    'documentId','00000000-0000-4000-8000-000000000050'),
+   pg_catalog.jsonb_build_object('sortBy','revision','sortValue','1;drop',
+    'documentId','00000000-0000-4000-8000-000000000050'),
+   pg_catalog.jsonb_build_object('sortBy','documentNumber','sortValue',
+    pg_catalog.repeat('x',2001),'documentId','00000000-0000-4000-8000-000000000050')
+  )) AS invalid(value)
+ LOOP
+  BEGIN
+   PERFORM public.tl03_documents_query(
+    board,'','all','all','active','visible',NULL,NULL,
+    'documentNumber','asc',invalid_cursor,5);
+   RAISE EXCEPTION 'Invalid TradeLink repository cursor was accepted: %',invalid_cursor;
+  EXCEPTION WHEN SQLSTATE '22023' THEN
+   NULL;
+  END;
+ END LOOP;
+
+ result:=public.tl03_documents_query(
+  board,'','all','all','active','visible',NULL,NULL,
+  'updatedAt','asc',
+  pg_catalog.jsonb_build_object('sortBy','updatedAt',
+   'sortValue','2026-11-02 12:00:00+00',
+   'documentId','00000000-0000-4000-8000-000000000040'),1);
+ IF result->'rows'->0->>'documentNumber'<>'Q-OPT-041' THEN
+  RAISE EXCEPTION 'Valid updated-time cursor failed: %',result;
+ END IF;
+
+ result:=public.tl03_documents_query(
+  board,'','all','all','active','visible',NULL,NULL,
+  'documentType','asc',
+  pg_catalog.jsonb_build_object('sortBy','documentType',
+   'sortValue','quotation',
+   'documentId','00000000-0000-4000-8000-000000000050'),1);
+ IF result->'rows'->0->>'documentNumber'<>'Q-OPT-051' THEN
+  RAISE EXCEPTION 'Valid document-type cursor failed: %',result;
+ END IF;
+
+ result:=public.tl03_documents_query(
+  board,'','all','all','active','visible',NULL,NULL,
+  'revision','asc',
+  pg_catalog.jsonb_build_object('sortBy','revision',
+   'sortValue','1',
+   'documentId','00000000-0000-4000-8000-000000000050'),1);
+ IF result->'rows'->0->>'documentNumber'<>'Q-OPT-051' THEN
+  RAISE EXCEPTION 'Valid revision cursor failed: %',result;
+ END IF;
+ RAISE NOTICE 'CP-TL-OPT-01 cursor validation PASS: exact keys, sort match, value type, UUID and sort-specific values';
+END $cursor_validation$;
 
 DO $compatibility$
 BEGIN
@@ -223,10 +310,13 @@ BEGIN
    'public.tl03_documents_query(uuid,text,text,text,text,text,date,date,text,text,jsonb,integer)','EXECUTE')
   OR has_function_privilege('anon',
    'public.tl03_documents_query(uuid,text,text,text,text,text,date,date,text,text,jsonb,integer)','EXECUTE')
-  OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_indexes
-   WHERE schemaname='public' AND indexname='tl03_document_sort_number')
-  OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_indexes
-   WHERE schemaname='public' AND indexname='tl03_document_search_reference_trgm') THEN
+  OR (SELECT count(*) FROM pg_catalog.pg_indexes
+   WHERE schemaname='public' AND indexname=ANY(ARRAY[
+    'tl03_document_sort_number','tl03_document_sort_type',
+    'tl03_document_sort_revision','tl03_document_search_number_trgm',
+    'tl03_document_search_client_trgm','tl03_document_search_reference_trgm',
+    'tl03_document_search_po_reference_trgm'
+   ]))<>7 THEN
   RAISE EXCEPTION 'CP-TL-OPT-01 compatibility, grant or index verification failed';
  END IF;
  RAISE NOTICE 'CP-TL-OPT-01 compatibility PASS: legacy page RPC retained; query indexes and grants present';
