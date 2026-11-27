@@ -75,7 +75,8 @@ test('default street map is identity-bound and nonprivileged views never initial
  assert.match(app,/mapEnabled:auth\.isSignedIn&&state\.ttAttendance\?\.status==='VERIFIED_READ'/);
  assert.match(app,/void mountSignedTimeTrackerMaps\(\)/);
  assert.doesNotMatch(app,/if\(state\.ttMapConsent\)void mountSignedTimeTrackerMaps/);
- assert.match(app,/state\.ttAttendance\.access\?\.moduleRole==='Supervisor'/);
+ assert.match(app,/function timeTrackerGpsEvidenceEligible\(\)\{\s*return state\.roleVerified===true\|\|\s*\['Supervisor','HR','System Admin'\]\.includes\(state\.ttAttendance\?\.access\?\.moduleRole\)/);
+ assert.match(app,/mapEnabled:auth\.isSignedIn&&state\.ttAttendance\?\.status==='VERIFIED_READ'&&timeTrackerGpsEvidenceEligible\(\)/);
  assert.match(app,/case 'tt-map-retry'/);
  assert.match(app,/setTimeTrackerMapTheme\(theme\)/);
  assert.match(app,/Date\.now\(\)-state\.ttLogGpsCacheAt<15000/);

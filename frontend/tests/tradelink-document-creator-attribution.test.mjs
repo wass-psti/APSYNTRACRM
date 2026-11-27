@@ -90,7 +90,7 @@ test('deployed module graph cache-busts the corrected creator renderer',()=>{
  const selection='cp-tl-opt-02-20261127-01';
  assert.ok(index.includes('app.js?v=')&&index.includes('cp-tl-creator-attribution-01-20261127-01')&&index.includes(selection));
  assert.ok(app.includes('tradelink-ui.js?v='+selection));
- assert.ok(app.includes('tradelink-draft-workspace.js?v='+selection));
+ assert.ok(app.includes('tradelink-draft-workspace.js?v=cp-tl-opt-04b-20261127-01'));
  assert.ok(ui.includes('tradelink-application.js?v='+selection));
  assert.ok(application.includes('tradelink-draft-workspace.js?v='+selection));
 });
