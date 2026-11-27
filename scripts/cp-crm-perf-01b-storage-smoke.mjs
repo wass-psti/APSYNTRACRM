@@ -144,6 +144,11 @@ try {
     completed: cleanupErrors.length === 0,
     errors: cleanupErrors,
   };
+  if (cleanupErrors.length > 0) {
+    report.status = 'failed';
+    const cleanupMessage = cleanupErrors.join('; ');
+    report.error = report.error ? report.error + '; ' + cleanupMessage : cleanupMessage;
+  }
   report.timings = timings;
   mkdirSync(resolve('artifacts'), {recursive: true});
   writeFileSync(resolve('artifacts/cp-crm-perf-01b-storage.json'), JSON.stringify(report, null, 2) + '\n');
