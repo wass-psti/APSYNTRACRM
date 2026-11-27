@@ -122,5 +122,15 @@
     "correction": "Run psql inside the existing PostgreSQL 17 service container; no external package-repository dependency",
     "corrected_run_id": 46008920566,
     "corrected_run_conclusion": "success"
-  }
+  },
+  "execution_constraints": {
+    "gradient_descent_introduced": false,
+    "backpropagation_introduced": false,
+    "model_training_loops_introduced": false,
+    "model_retraining_or_fine_tuning_introduced": false,
+    "model_parameter_updates_introduced": false,
+    "training_dependencies_added": [],
+    "inference_architecture_changed": false
+  },
+  "production_data_writes_from_benchmark": 0
 }
