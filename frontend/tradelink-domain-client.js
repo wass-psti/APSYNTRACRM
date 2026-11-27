@@ -173,10 +173,10 @@ export function normalizeTradeLinkRevisionBundle(value,workspaceId,documentId,re
 const RENDER_SNAPSHOT_SOURCE=new Set(['captured','legacy-derived','legacy-defaulted']);
 const RENDER_TERMS_SOURCE=new Set(['document','template-default','legacy-defaulted']);
 const RENDER_PROFILE_ID=/^[a-z0-9][a-z0-9-]{0,63}$/;
-const RENDER_VERSION=/^v[0-9]+\\.[0-9]+\\.[0-9]+$/;
+const RENDER_VERSION=/^v[0-9]+\.[0-9]+\.[0-9]+$/;
 const RENDER_COLOR=/^#[0-9a-f]{6}$/i;
-const RENDER_LOGO_ASSET=/^profiles\\/v1\\/[a-z0-9][a-z0-9-]*-[a-f0-9]{40}\\.png$/;
-const RENDER_STYLESHEET_ASSET=/^templates\\/[a-z0-9][a-z0-9._-]*-[a-f0-9]{40}\\.css$/;
+const RENDER_LOGO_ASSET=/^profiles\/v1\/[a-z0-9][a-z0-9-]*-[a-f0-9]{40}\.png$/;
+const RENDER_STYLESHEET_ASSET=/^templates\/[a-z0-9][a-z0-9._-]*-[a-f0-9]{40}\.css$/;
 
 /** Validate the signed, exact-revision rendering snapshot returned by CP-TL-OPT-04. */
 export function normalizeTradeLinkDocumentRenderSnapshot(value,documentId,revision){

@@ -71,7 +71,7 @@ const moduleFields=Object.freeze({
 });
 const logoUrl=asset=>new URL('./assets/tradelink/'+asset,import.meta.url).href;
 const stylesheetUrl=asset=>{
- if(typeof asset!=='string'||!/^templates\\/[a-z0-9][a-z0-9._-]*-[a-f0-9]{40}\\.css$/.test(asset))
+ if(typeof asset!=='string'||!/^templates\/[a-z0-9][a-z0-9._-]*-[a-f0-9]{40}\.css$/.test(asset))
   throw new ApiError('Invalid immutable TradeLink stylesheet reference.',409);
  return new URL('./assets/tradelink/'+asset,import.meta.url).href;
 };
