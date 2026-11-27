@@ -202,7 +202,9 @@ export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId
  const terms=renderSnapshot?renderSnapshot.snapshot.terms:
   (typeof data.terms==='string'?data.terms:TRADELINK_DEFAULT_TERMS[row.document_type]||'');
  if(row.document_type==='quotation')return renderTradeLinkQuotationPrint({
-  row,company,template,currency,legacyDefaulted,creatorName:resolvedCreatorName,terms
+  row,company,template,currency,legacyDefaulted,creatorName:resolvedCreatorName,terms,
+  profileVersion:renderSnapshot?.snapshot.profileVersion??'legacy',
+  snapshotSource:renderSnapshot?.snapshotSource??'legacy-static'
  });
  const address=String(company.address||'').split(/\r?\n/).filter(Boolean)
   .map(line=>'<p>'+safe(line)+'</p>').join('');

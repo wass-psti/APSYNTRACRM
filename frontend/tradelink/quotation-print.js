@@ -7,13 +7,6 @@ const display=value=>value==null||value===''?'—':escape(value);
 const hasText=value=>value!=null&&String(value).trim()!=='';
 const money=(n,currency)=>currency==='PHP'?'₱'+formatTradeLinkAmount(n):formatTradeLinkAmount(n)+' '+escape(currency);
 const label=(name,value)=>'<p><b>'+escape(name)+':</b> '+display(value)+'</p>';
-const templateStyle=template=>{
- const colors=[template.accent,template.tableBackground,template.tableText,template.ruleColor];
- if(!colors.every(value=>typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value)))
-  throw new Error('Invalid immutable TradeLink template colors.');
- return ' style="--tl-official-accent:'+colors[0]+';--tl-official-table-bg:'+colors[1]+
-  ';--tl-official-table-text:'+colors[2]+';--tl-official-rule:'+colors[3]+'"';
-};
 const stamp=value=>value&&Number.isFinite(Date.parse(value))?new Intl.DateTimeFormat('en-US',{
  timeZone:'Asia/Manila',month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true
 }).format(new Date(value)):'';
@@ -91,7 +84,7 @@ function termsBlock(terms,company){
  '<section class="tl-quote-acceptance"><div><b>Accepted by: (Client)</b><div class="tl-quote-sign-line"></div><span>(Printed Name &amp; Signature)</span></div><div><b>Date:</b><div class="tl-quote-sign-line"></div></div></section>'+
  '<footer class="tl-official-footer">Thank you for considering '+escape(company.name)+'. We are excited to bring this solution to life.</footer>';
 }
-export function renderTradeLinkQuotationPrint({row,company,template,currency,terms,legacyDefaulted,creatorName}){
+export function renderTradeLinkQuotationPrint({row,company,template,currency,terms,legacyDefaulted,creatorName,profileVersion='legacy',snapshotSource='legacy-static'}){
  const d=row.content;
  const logoAsset=company.quotationLogoAsset||profiles[company.id]?.logo;
  if(!logoAsset)throw new Error('Immutable quotation logo is unavailable.');
@@ -125,6 +118,8 @@ export function renderTradeLinkQuotationPrint({row,company,template,currency,ter
   escape(company.id)+'" data-tradelink-signed-output data-tradelink-template-version="'+
   escape(template.version)+'" data-tradelink-template-id="'+escape(template.id)+
   '" data-tradelink-company-profile="'+escape(company.id)+
+  '" data-tradelink-profile-version="'+escape(profileVersion)+'"'+
+  ' data-tradelink-render-snapshot-source="'+escape(snapshotSource)+'"'+
   '" data-tradelink-legacy-company-default="'+legacyDefaulted+'"'+
   '>'+
   '<header class="tl-quote-letterhead"><img class="tl-quote-logo" src="'+escape(logo)+
