@@ -1,0 +1,91 @@
+name: Material Sourcing repository integration baseline
+on:
+  pull_request:
+    paths:
+      - 'integrations/material-sourcing/**'
+      - '.github/workflows/cp-ms-crm-01-baseline.yml'
+  push:
+    branches: [integration/cp-ms-crm-01]
+    paths:
+      - 'integrations/material-sourcing/**'
+      - '.github/workflows/cp-ms-crm-01-baseline.yml'
+permissions:
+  contents: read
+concurrency:
+  group: material-sourcing-baseline-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: integrations/material-sourcing
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Verify preserved source manifest
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import {createHash} from 'node:crypto';
+          import assert from 'node:assert/strict';
+          const manifest=JSON.parse(fs.readFileSync('SOURCE-MANIFEST.json','utf8'));
+          for (const f of manifest.files) {
+            const content=fs.readFileSync(f.path);
+            assert.equal(content.length,f.bytes,f.path);
+            assert.equal(createHash('sha256').update(content).digest('hex'),f.sha256,f.path);
+          }
+          console.log('Verified '+manifest.files.length+' preserved source files');
+          JS
+      - name: Install locked dependencies and build
+        run: |
+          npm ci --no-audit --no-fund
+          npm exec -- tsc --noEmit --noUnusedLocals --noUnusedParameters
+          npm run build
+          npm test
+      - name: Install disposable Chromium
+        run: |
+          npx --no-install playwright-core install --with-deps chromium
+          echo "CHROMIUM_PATH=$(node --input-type=module -e 'import {chromium} from "playwright-core"; console.log(chromium.executablePath())')" >> "$GITHUB_ENV"
+      - name: Prepare disposable PostgreSQL
+        run: |
+          docker run --detach --name supabase_db_material-sourcing-local -p 127.0.0.1:55322:5432 -e POSTGRES_PASSWORD=postgres postgres:17
+          for i in $(seq 1 60); do
+            if docker exec supabase_db_material-sourcing-local pg_isready -U postgres -d postgres >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          docker exec supabase_db_material-sourcing-local pg_isready -U postgres -d postgres
+          docker exec supabase_db_material-sourcing-local psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'create role anon nologin; create role authenticated nologin;'
+          for f in supabase/migrations/*.sql supabase/seed.sql; do
+            docker exec -i supabase_db_material-sourcing-local psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 < "$f"
+          done
+      - name: Database and migration checks
+        run: |
+          npm run test:backend
+          npm run test:migrations
+      - name: Frontend browser regression
+        run: |
+          node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4173 --strictPort > /tmp/ms-ci-preview.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+          APP_URL=http://127.0.0.1:4173/ npm run test:browser
+          APP_URL=http://127.0.0.1:4173/ npm run test:advanced
+      - name: Transactional CRUD, pricing, collaboration and bulk acceptance
+        run: |
+          npm run test:crud
+          npm run test:pricing
+          npm run test:collaboration
+          npm run test:bulk
+      - name: Remove disposable database
+        if: always()
+        run: docker rm -f supabase_db_material-sourcing-local || true
