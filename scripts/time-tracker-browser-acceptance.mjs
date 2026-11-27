@@ -153,12 +153,13 @@ try {
     const otValid = otHours.checkValidity();
     otHours.value = "2.25";
     updateTimeTrackerOvertimePreview(otForm);
-    const otInvalid = !otHours.checkValidity() &&
+    const otInvalid =
+      !otHours.checkValidity() &&
       otHours.getAttribute("aria-invalid") === "true";
     otHours.value = "2.5";
     updateTimeTrackerOvertimePreview(otForm);
-    const otRecovered = otHours.checkValidity() &&
-      !otHours.hasAttribute("aria-invalid");
+    const otRecovered =
+      otHours.checkValidity() && !otHours.hasAttribute("aria-invalid");
     host.innerHTML = renderTimeTrackerAdminEditor({
       timeOnly: true,
       editor: {
@@ -568,9 +569,12 @@ try {
   );
   // A legacy OT contract alone cannot enable hours-only submission.
   await page.evaluate(
-    (result) => window.__timeTrackerRender({
-      view: "ot", result, otModalOpen: true,
-    }),
+    (result) =>
+      window.__timeTrackerRender({
+        view: "ot",
+        result,
+        otModalOpen: true,
+      }),
     {
       ...otFixture,
       access: { ...otFixture.access, durationOtContractActive: false },
@@ -694,11 +698,13 @@ try {
     manualAdminFixture,
   );
   assert.equal(await page.locator("#tt-ot-manual-form").count(), 1);
-  assert.equal(await page.locator('#tt-ot-manual-form input[type="time"]').count(), 0);
+  assert.equal(
+    await page.locator('#tt-ot-manual-form input[type="time"]').count(),
+    0,
+  );
+  const manualHours = page.locator("#tt-ot-manual-duration-hours");
   assert.deepEqual(
-    await page.locator("#tt-ot-manual-duration-hours").evaluate((el) => [
-      el.type, el.min, el.max, el.step,
-    ]),
+    await manualHours.evaluate((el) => [el.type, el.min, el.max, el.step]),
     ["number", "0.5", "6", "0.5"],
   );
   assert.equal(await page.locator("#tt-ot-manual-employee option").count(), 3);
@@ -768,20 +774,24 @@ try {
   for (const moduleRole of ["HR", "System Admin", "Admin"]) {
     for (const canReviewOt of [true, false]) {
       await page.evaluate(
-        (result) => window.__timeTrackerRender({
-          view: "ot", result,
-          now: new Date("2026-11-17T12:00:00Z"),
-          otFilters: { status: "Submitted" },
-        }),
+        (result) =>
+          window.__timeTrackerRender({
+            view: "ot",
+            result,
+            now: new Date("2026-11-17T12:00:00Z"),
+            otFilters: { status: "Submitted" },
+          }),
         {
           ...otFixture,
           access: { ...otFixture.access, moduleRole, durationOtApprover: true },
-          otRequests: [{
-            ...submittedOt,
-            otPolicy: "duration-v1",
-            canReviewOt,
-            canReviewDuration: canReviewOt,
-          }],
+          otRequests: [
+            {
+              ...submittedOt,
+              otPolicy: "duration-v1",
+              canReviewOt,
+              canReviewDuration: canReviewOt,
+            },
+          ],
         },
       );
       assert.equal(
