@@ -38,6 +38,16 @@ test('one bounded retry restores a transient signed read without duplicate loops
   assert.deepEqual(waits,[350]);
  }
 });
+test('startup retry respects a provider-supplied Retry-After delay',async()=>{
+ let calls=0,waits=[];
+ const limited=Object.assign(failure(429),{retryAfterMs:1800});
+ const result=await startupVerifiedRead(async()=>{
+  calls++;if(calls===1)throw limited;return 'recovered';
+ },{wait:async ms=>{waits.push(ms);}});
+ assert.equal(result,'recovered');
+ assert.equal(calls,2);
+ assert.deepEqual(waits,[1800]);
+});
 test('repeated transport failure is surfaced after two reads, not retried indefinitely',async()=>{
  let calls=0;
  const e=failure(0,'REQUEST_TIMEOUT');
