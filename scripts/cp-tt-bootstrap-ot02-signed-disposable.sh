@@ -89,6 +89,7 @@ cat > "/tmp/$ID-duration-ot-apply.sql" <<'SQL'
 SET apsyntra.test_disposable='on';
 \i /repo/supabase/migrations/20261126120000_cp_tt_duration_overtime.sql
 \i /repo/supabase/migrations/20261127100000_cp_tt_ot_duration_approver_scope_and_manual_duration.sql
+\i /repo/supabase/migrations/20261127110000_cp_tt_ot_self_review_parity_02.sql
 SQL
 docker cp "/tmp/$ID-duration-ot-apply.sql" "$DB:/tmp/duration-ot-apply.sql"
 rm -f "/tmp/$ID-duration-ot-apply.sql"
