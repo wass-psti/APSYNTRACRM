@@ -23,3 +23,7 @@ The TradeLink editor passed the current authenticated user's `actorName` into th
 The regression test opens a saved document as Alex while the saved record identifies Dionny as its creator. It verifies Dionny remains displayed in every document module, that untrusted content cannot override the creator, that a missing profile name never falls back to Alex, and that a new unsaved document still displays the current user as pending creator.
 
 No training, retraining, gradient descent, backpropagation, or model-parameter update path is introduced.
+
+## Deployment cache-busting
+
+The renderer import chain is versioned from `index.html` through `app.js`, `tradelink-ui.js`, `tradelink-application.js`, and the updated draft-workspace module. The dedicated regression suite asserts that every link in this chain uses the creator-attribution release key, preventing a browser from retaining the previous renderer module after deployment.
