@@ -130,7 +130,7 @@ import {canRetainVisibleBoard,replaceVisibleBoardContent} from './board/services
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board/presentation/loading.js';
 import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
 import {MATERIAL_TRACKER_DEFAULT_FILTERS,isMaterialTrackerBoard,materialTrackerRows,filterMaterialTrackerRows,materialTrackerPublicCsv} from './material-sourcing-tracker.js';
-import {renderNativeMaterialSourcing,sortNativeMaterials,loadNativeCommercialRow} from './apps/MaterialSourcing/native-screen.js?v=cp-ms-crm-03-20261127';
+import {renderNativeMaterialSourcing,sortNativeMaterials,loadNativeCommercialRow,ensureNativeMaterialSourcingStyles} from './apps/MaterialSourcing/native-screen.js?v=cp-ms-crm-03-20261127';
 import {parseMaterialAddForm,materialAddPublicColumns} from './material-sourcing-add-material.js';
 import {createMaterialSourcingAtomic} from './material-sourcing-atomic-create.js';
 import {showEngineeringDiagnostics} from './engineering-diagnostics-visibility.js';
@@ -2113,6 +2113,7 @@ function renderMaterialSourcingTracker(detail,filters,now,options){
  if(!auth.isSignedIn||state.context?.user_id!==auth.userId||state.workspaceTransitionPending||
     detail?.board?.workspace_id!==workspaceId)
   return '<section class="panel" role="status">Loading Material Sourcing for the current workspace…</section>';
+ ensureNativeMaterialSourcingStyles(document);
  return renderNativeMaterialSourcing(detail,filters,now,{...options,workspaceId});
 }
 function boardPage(){

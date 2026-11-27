@@ -43,6 +43,15 @@ function rowMarkup(record,overdue){
   return '<td data-ms-col="'+key+'" data-ms-sort="'+escape(value.sort)+'" title="'+escape(value.title)+'">'+body+(key==='requiredDate'&&overdue?' <span class="mrh-overdue-label">Overdue</span>':'')+'</td>';
  }).join('')+'</tr>';
 }
+// Match the established CRM lazy native-style delivery pattern. The entry
+// document retains its single deterministic stylesheet; only this route adds
+// the scoped reference styles, once per document.
+export function ensureNativeMaterialSourcingStyles(doc){
+ const href=new URL('./native-screen.css?v=cp-ms-crm-03-20261127',import.meta.url).href;
+ const existing=Array.from(doc.querySelectorAll('link[rel="stylesheet"]')).find(link=>link.href===href);
+ if(existing)return existing;
+ const link=doc.createElement('link');link.rel='stylesheet';link.href=href;doc.head.append(link);return link;
+}
 export function renderNativeMaterialSourcing(detail,filters={},now=new Date(),options={}){
  // The caller supplies the current signed workspace, never a URL or stored actor.
  let projection;

@@ -6,7 +6,7 @@ import {resolve,extname,sep} from 'node:path';
 import {chromium} from 'playwright';
 import {fixture,workspaceId,userId,boardId} from './fixtures/cp-ms-crm-03-fixture.mjs';
 const cwd=process.cwd();
-const html='<!doctype html><html lang="en" data-aps-monday-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/frontend/apsyntra-styles.bundle.css"><link rel="stylesheet" href="/frontend/apps/MaterialSourcing/native-screen.css"></head><body><div id="app"><div class="shell"><aside class="aps-sidebar"><nav><a href="#/overview">Overview</a></nav></aside><main class="main aps-board-shell"><header class="topbar"><div class="breadcrumb"><strong>Material Request Hub</strong></div></header><div class="main-content"></div></main></div></div></body></html>';
+const html='<!doctype html><html lang="en" data-aps-monday-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/frontend/apsyntra-styles.bundle.css"></head><body><div id="app"><div class="shell"><aside class="aps-sidebar"><nav><a href="#/overview">Overview</a></nav></aside><main class="main aps-board-shell"><header class="topbar"><div class="breadcrumb"><strong>Material Request Hub</strong></div></header><div class="main-content"></div></main></div></div></body></html>';
 const mime={'.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.html':'text/html','.webp':'image/webp','.svg':'image/svg+xml'};
 const server=createServer(async(req,res)=>{
  try{
@@ -30,6 +30,10 @@ try{
  await page.evaluate(async({detail,workspaceId,userId,boardId})=>{
   const native=await import('/frontend/apps/MaterialSourcing/native-screen.js');
   const host=document.querySelector('.main-content');
+  const initial=document.querySelectorAll('link[rel="stylesheet"]').length;
+  const styles=native.ensureNativeMaterialSourcingStyles(document);
+  if(initial!==1||styles!==native.ensureNativeMaterialSourcingStyles(document))throw Error('Native style delivery is not isolated');
+  if(!styles.sheet)await new Promise((resolve,reject)=>{styles.addEventListener('load',resolve,{once:true});styles.addEventListener('error',reject,{once:true});});
   let active=true,deny=false,delay=null,reads=0;
   const auth={isSignedIn:true,userId,getVerifiedUser:async()=>({id:auth.userId})};
   const api={context:async()=>({user_id:userId,workspace_id:workspaceId,profile:{status:'active'}}),
@@ -52,6 +56,7 @@ try{
   render();
  },{detail:fixture(),workspaceId,userId,boardId});
  const rows=page.locator('tr[data-ms-item]');
+ check(await page.locator('link[rel="stylesheet"]').count()===2,'single startup bundle plus one route-scoped stylesheet');
  check(await rows.count()===3,'native projection displays all three synthetic UUID records');
  check(await page.locator('thead th[data-ms-col]').count()===24,'24 reference columns');
  check(await page.evaluate(()=>window.msFixture.reads())===0,'no commercial calls on initial render');

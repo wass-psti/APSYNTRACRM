@@ -42,6 +42,10 @@ jobs:
           node --test frontend/tests/material-sourcing-*.test.mjs integrations/material-sourcing/crm-contract/reconcile.test.mjs
       - name: CRM production build
         run: npm run build
+      - name: Full existing CRM frontend regression
+        run: |
+          node --test frontend/tests/*.test.mjs > /tmp/ms-crm03-regression.log 2>&1 || { grep -E '^(not ok |# tests |# pass |# fail |  location:|  error:)' /tmp/ms-crm03-regression.log | head -n 120; exit 1; }
+          tail -n 20 /tmp/ms-crm03-regression.log
       - name: Static Pages asset graph and responsive Chromium fixture
         run: |
           BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"

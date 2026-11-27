@@ -44,6 +44,7 @@ test('production entry connects native screen and keeps existing route and handl
  assert.match(app,/case 'mrh-native-sort'/);
  assert.match(app,/parts\[2\]==='sourcing'&&parts\[1\]===MATERIAL_SOURCING_BOARD_ID/);
  assert.match(app,/createMaterialSourcingAtomic\(/);assert.match(app,/readMaterialBoardItemTasks\(/);
- assert.match(index,/frontend\/apps\/MaterialSourcing\/native-screen\.css/);
+ assert.equal((index.match(/<link rel="stylesheet"/g)||[]).length,1);
+ assert.match(app,/ensureNativeMaterialSourcingStyles\(document\)/);
  assert.match(index,/frontend\/app\.js\?v=[^"]*cp-ms-crm-03/);
 });
