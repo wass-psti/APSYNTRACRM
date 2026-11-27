@@ -2443,6 +2443,13 @@
       "file": "20261127100000_cp_tt_ot_duration_approver_scope_and_manual_duration.sql",
       "bytes": 17608,
       "sha256": "3ee8826ab7e6c1a226ddea81759e4a7d946ff4be9de6ae40afc4ee119eb1c607"
+    },
+    {
+      "version": "20261127110000",
+      "name": "cp_tt_ot_self_review_parity_02",
+      "file": "20261127110000_cp_tt_ot_self_review_parity_02.sql",
+      "bytes": 6762,
+      "sha256": "aa0b5e89102e79fa89a031ce00cfb702d7fcf5bc1a982c07aabcc08dcd62499e"
     }
   ],
   "applied_only": [
