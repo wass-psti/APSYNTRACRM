@@ -5,7 +5,7 @@ on:
       - 'integrations/material-sourcing/**'
       - '.github/workflows/cp-ms-crm-01-baseline.yml'
   push:
-    branches: [integration/cp-ms-crm-01]
+    branches: [main, integration/cp-ms-crm-01]
     paths:
       - 'integrations/material-sourcing/**'
       - '.github/workflows/cp-ms-crm-01-baseline.yml'
