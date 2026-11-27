@@ -193,6 +193,7 @@ async function connectSender(accessToken, socketUrl) {
         topic,
         'broadcast',
         {
+          type: 'broadcast',
           event: 'board-change',
           payload: {
             board_id: boardId,
