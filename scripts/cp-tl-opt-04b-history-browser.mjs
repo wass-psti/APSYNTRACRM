@@ -154,7 +154,7 @@ async function renderPdf(scenario,fileName,forbiddenMarkers){
    title:'QUOTATION',documentNumber:scenario.content.documentNumber,
    marker:scenario.marker,termsMarker:scenario.termsMarker,
    itemMarker:scenario.itemMarker,remarksMarker:scenario.remarksMarker,
-   total:scenario.total,forbiddenMarkers,pageSize:'letter'
+   total:scenario.total,currency:'PHP',forbiddenMarkers,pageSize:'letter'
   });
   console.log('PASS Chromium historical revision',scenario.revision,fileName,pdf.length+' bytes');
  }finally{
