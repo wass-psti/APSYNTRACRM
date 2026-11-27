@@ -139,6 +139,11 @@ const durationRequest=receipt(await rpc(worker,'timetracker_ot_submit_duration',
 }),'employee duration OT submission');
 assert.equal(durationRequest.otPolicy,'duration-v1');
 assert.equal(durationRequest.durationMinutes,180);
+const bootstrapDurationRequest=receipt(await rpc(bootstrap,'timetracker_ot_submit_duration',{
+ p_board_id:board,p_date:date,p_duration_minutes:90,
+ p_reason:'Additional engineering work for Bootstrap Administrator self-review'
+}),'Bootstrap self-filed duration OT');
+assert.equal(bootstrapDurationRequest.otPolicy,'duration-v1');
 const hrOwnRequest=receipt(await rpc(hr,'timetracker_ot_submit_duration',{
  p_board_id:board,p_date:date,p_duration_minutes:60,
  p_reason:'Additional HR system reconciliation work'
