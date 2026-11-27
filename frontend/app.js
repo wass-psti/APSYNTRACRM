@@ -7449,7 +7449,7 @@ async function openBoardItemDetails(itemId){
   let values=null,busy=false,editing=false,needsReopen=false;
   let publicDetail=state.board,canPublicEdit=false,canProtectedEdit=false;
   const pricingHost=itemDialog.querySelector('[data-mrh-pricing-host]');
-  let pricingMounted=false;
+  let pricingPanel=null;
   const editToggle=itemDialog.querySelector('[data-mrh-editor-toggle]');
   const saveAll=itemDialog.querySelector('[data-mrh-save-all]');
   const statusMessage=message=>{
@@ -7562,8 +7562,8 @@ async function openBoardItemDetails(itemId){
      editToggle.textContent=editing?'Done editing':'Edit material fields';
     }
     updateButtons();
-    if(pricingHost&&!pricingMounted){
-     mountNativePricingPanel(pricingHost,{
+    if(pricingHost&&!pricingPanel){
+     pricingPanel=mountNativePricingPanel(pricingHost,{
       input,row:publicRow(),cells:values,canEdit:canProtectedEdit,isCurrent:current,
       canSave:()=>!editing&&!busy&&!needsReopen,
       onBusy:value=>{busy=value;updateButtons();},
@@ -7574,12 +7574,11 @@ async function openBoardItemDetails(itemId){
        if(!ok)throw new ApiError('Pricing saved; material details require refresh.',409);
       }
      });
-     pricingMounted=true;
-    }
+    }else pricingPanel?.updateStored(publicRow(),values);
     return true;
    }catch(error){
     if(!current())return false;
-    if(pricingHost){pricingHost.replaceChildren();pricingMounted=false;}
+    if(pricingHost){pricingHost.replaceChildren();pricingPanel=null;}
     values=null;
     if(editToggle)editToggle.hidden=true;
     if(saveAll)saveAll.hidden=true;
@@ -7614,6 +7613,7 @@ async function openBoardItemDetails(itemId){
      values=persisted;publicDetail=board;
      if(state.boardId===snapshot.boardId)state.board=board;
      updateDisplay(values);publicSavedDisplay();
+     pricingPanel?.updateStored(publicRow(),values);
      statusMessage(total+' change'+(total===1?'':'s')+' saved atomically and verified.');
      return;
     }
@@ -7642,6 +7642,7 @@ async function openBoardItemDetails(itemId){
     values=persisted;publicDetail=board;
     if(state.boardId===snapshot.boardId)state.board=board;
     updateDisplay(values);publicSavedDisplay();
+    pricingPanel?.updateStored(publicRow(),values);
     statusMessage(total+' change'+(total===1?'':'s')+
      ' saved and verified. Continue editing or select Done editing.');
    }catch(error){
@@ -7655,6 +7656,7 @@ async function openBoardItemDetails(itemId){
      values=persisted;publicDetail=board;
      if(state.boardId===snapshot.boardId)state.board=board;
      updateDisplay(values);publicSavedDisplay();
+     pricingPanel?.updateStored(publicRow(),values);
      const unresolvedPrivate=Object.entries(originalDraft).filter(([name,raw])=>{
       try{return planProtectedSourcingChanges(persisted,{[name]:raw}).length>0;}
       catch{return true;}

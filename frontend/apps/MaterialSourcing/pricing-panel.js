@@ -2,7 +2,7 @@
  * Server pricing context is loaded only on demand; legacy material saves remain independent.
  * No persisted commercial drafts, provider calls or inferred rates.
  */
-import {authorizeMaterialSourcingViewer,authorizeMaterialSourcingItem,revalidateMaterialSourcingSession} from './material-sourcing-application.js';
+import {authorizeMaterialSourcingViewer,authorizeMaterialSourcingItem,revalidateMaterialSourcingSession} from '../../material-sourcing-application.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const required=['quantity','buyingPrice','currency','shipping','shipCurrency','usd','eur'];
 const inputKeys=['quantity','buyingPrice','currency','shipping','shipCurrency','source'];
@@ -121,7 +121,9 @@ export function mountNativePricingPanel(host,{input,row,cells,canEdit,isCurrent,
   const result=calculatePricingPreview(values());
   host.querySelector('[data-pricing-result]').innerHTML=costMarkup(result);
   host.querySelector('[data-pricing-preview-status]').textContent=previewMessage(result);
-  save.disabled=busy||unconfirmed||!context?.state?.fxSnapshotId||!['complete','partial'].includes(result.status);
+  const source=field('source').value;
+  const sourceWritable=source!=='Unknown'||context?.inputs?.source==='Unknown';
+  save.disabled=busy||unconfirmed||!context?.state?.fxSnapshotId||!sourceWritable||!['complete','partial'].includes(result.status);
   return result;
  };
  const setBusy=v=>{
@@ -187,7 +189,7 @@ export function mountNativePricingPanel(host,{input,row,cells,canEdit,isCurrent,
   if(!['complete','partial'].includes(calculated.status))return;
   const fx=context.state.fxSnapshotId,expected=context.state;
   const draft=Object.fromEntries(inputKeys.map(k=>[k,field(k).value||null]));
-  let attempted=false;
+  let attempted=false,verified=false;
   setBusy(true);onBusy(true);status.textContent='Saving pricing atomically…';
   try{
    const who=await authorizeMaterialSourcingItem({...input,edit:true});
@@ -201,17 +203,32 @@ export function mountNativePricingPanel(host,{input,row,cells,canEdit,isCurrent,
     !idPattern.test(receipt?.pricingVersionId||'')||!same(receipt.calculation,calculated))throw Error('Pricing receipt mismatch.');
    const result=await read(fx,receipt.pricingVersionId);
    if(!same(result.receipt,receipt))throw Error('Saved version readback mismatch.');
+   verified=true;
    if(!current())return;
    dirty=false;apply(result,fx,true);
    status.textContent='Saved and verified pricing version '+receipt.pricingVersionId+'.';
    await onSaved();
   }catch{
    if(current()){
-    unconfirmed=attempted;
-    status.textContent=attempted?'Save not confirmed. Your draft is retained. Load saved pricing and review history before retrying.':'Pricing save could not start. Your draft is retained.';
+    unconfirmed=attempted&&!verified;
+    status.textContent=verified?'Pricing saved and verified; reopen the material details to refresh the other fields.':attempted?'Save not confirmed. Your draft is retained. Load saved pricing and review history before retrying.':'Pricing save could not start. Your draft is retained.';
    }
   }finally{if(current()){onBusy(false);setBusy(false);}}
  });
  preview();
- return {preview};
+ return {preview,updateStored(nextRow,nextCells){
+  if(!current()||busy)return;
+  const updated={quantity:nextRow?.quantity,source:nextRow?.source,
+   buyingPrice:nextCells?.['Buying Price']?.value,currency:nextCells?.Currency?.value,
+   shipping:nextCells?.['Shipping Cost']?.value,shipCurrency:nextCells?.['Shipping Cost Currency']?.value,
+   usd:nextCells?.['Ex. Rate USD']?.value,eur:nextCells?.['Ex. Rate EUR']?.value};
+  // Ordinary material writes invalidate a previously loaded exact baseline.
+  // Preserve a modified pricing draft rather than overwriting user input.
+  context=null;fxSelect.value='';fxSelect.disabled=true;save.hidden=true;
+  field('usd').disabled=false;field('eur').disabled=false;
+  if(!dirty)for(const key of Object.keys(updated))field(key).value=draftValue(updated[key]);
+  host.querySelector('[data-pricing-manual]').textContent=draftValue(nextCells?.['Selling Price (VAT-EX)']?.value)||'—';
+  status.textContent=dirty?'Material values refreshed. Pricing draft retained; load saved pricing to review the latest baseline.':'Material values refreshed. Load saved pricing to obtain an exact baseline.';
+  preview();
+ }};
 }

@@ -99,6 +99,14 @@ begin
  -- source locks to commit. If persisted values differ from the requested
  -- calculation (including server normalization), the whole transaction rolls back.
  receipt:=private.mrh_pricing_persist(p_item,p_fx,private.mrh_pricing_input_state(p_item,p_fx));
+ -- A rounded total match alone cannot prove exact persistence.
+ if (receipt->'pricingInputs'->>'quantity')::numeric is distinct from (p_draft->>'quantity')::numeric
+ or (receipt->'pricingInputs'->>'buyingPrice')::numeric is distinct from (p_draft->>'buyingPrice')::numeric
+ or (receipt->'pricingInputs'->>'shipping')::numeric is distinct from (p_draft->>'shipping')::numeric
+ or receipt->'pricingInputs'->>'currency' is distinct from p_draft->>'currency'
+ or receipt->'pricingInputs'->>'shipCurrency' is distinct from p_draft->>'shipCurrency'
+ or receipt->'pricingInputs'->>'source' is distinct from p_draft->>'source' then
+  raise exception 'Persisted pricing inputs differ from reviewed draft' using errcode='PT409';end if;
  if receipt->'calculation' is distinct from calculated then
   raise exception 'Persisted pricing calculation differs from the reviewed draft' using errcode='PT409';end if;
  return receipt;

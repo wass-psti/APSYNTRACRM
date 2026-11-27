@@ -35,6 +35,7 @@ declare w uuid; r bigint;
 begin
  w:=private.mrh_sourcing_scope(p_board,p_item);
  if current_setting('mrh.fixture_fail',true)='yes' and p_name='Shipping Cost' then raise exception 'synthetic writer failure' using errcode='22023';end if;
+ if current_setting('mrh.fixture_normalize',true)='yes' and p_name='Buying Price' then p_val:=to_jsonb(round((p_val#>>'{}')::numeric,5));end if;
  if p_rev is null then
   insert into private.mrh_sourcing_sensitive_cells(board_id,workspace_id,item_id,field_name,value,revision)
    values(p_board,w,p_item,p_name,p_val,1) on conflict do nothing returning revision into r;
@@ -81,6 +82,12 @@ begin
  perform set_config('mrh.fixture_fail','no',true);
  if private.mrh_pricing_input_state(i,fx) is distinct from ctx->'state'
  or (select count(*) from private.mrh_pricing_versions where item_id=i)<>before_count+1 then raise exception 'partial pricing save leaked';end if;
+ perform set_config('mrh.fixture_normalize','yes',true);
+ begin perform public.mrh_save_pricing_atomic(i,fx,ctx->'state',draft||'{"buyingPrice":"120.360002"}');
+  raise exception 'rounded input drift accepted';exception when sqlstate 'PT409' then null;end;
+ perform set_config('mrh.fixture_normalize','no',true);
+ if private.mrh_pricing_input_state(i,fx) is distinct from ctx->'state'
+ or (select count(*) from private.mrh_pricing_versions where item_id=i)<>before_count+1 then raise exception 'input drift rollback leaked';end if;
  begin perform public.mrh_save_pricing_atomic(i,fx,ctx->'state',draft||'{"shipping":"0.0000001"}');
   raise exception 'invalid precision accepted';exception when sqlstate '22023' then null;end;
  begin perform public.mrh_pricing_context(j,fx,null);raise exception 'foreign FX exposed';
