@@ -13,7 +13,8 @@ begin
  w:=(s->>'workspaceId')::uuid;
  -- The selected immutable FX is always returned, even beyond the recent list.
  select coalesce(jsonb_agg(jsonb_build_object('snapshotId',f.id,'provenance',f.provenance,
-  'usd',f.usd::numeric(20,8)::text,'eur',f.eur::numeric(20,8)::text,'recordedAt',f.recorded_at)
+  'usd',f.usd::numeric(20,8)::text,'eur',f.eur::numeric(20,8)::text,'recordedAt',f.recorded_at,
+  'provider',f.provider,'observationRef',f.observation_ref,'observedAt',f.observed_at,'retrievedAt',f.retrieved_at)
   order by f.recorded_at desc,f.id), '[]'::jsonb) into snapshots
  from (select * from private.mrh_fx_snapshots where workspace_id=w and item_id=p_item
   order by (id is not distinct from p_fx) desc,recorded_at desc,id limit 50) f;

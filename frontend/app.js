@@ -138,7 +138,7 @@ import {renderMaterialSourcingDetailTabs,renderMaterialSourcingPublicOverview,re
 import {readMaterialBoardItemTasks,saveMaterialBoardItemTask,renderMaterialBoardItemTasks} from './material-sourcing-board-tasks.js';
 import {planMaterialSourcingPublicChanges,saveMaterialSourcingPublicChange,verifyMaterialSourcingPublicChanges,saveMaterialSourcingAtomic,MATERIAL_SOURCING_ATOMIC_EDIT_ENABLED} from './material-sourcing-public-edit.js';
 import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,planProtectedSourcingChanges,renderProtectedSourcingEditor,createMaterialSourcingPart} from './material-sourcing-application.js?v=cp-ms-crm-04b4';
-import {mountNativePricingPanel} from './apps/MaterialSourcing/pricing-panel.js?v=cp-ms-crm-04b4';
+import {mountNativePricingPanel} from './apps/MaterialSourcing/pricing-panel.js?v=cp-ms-crm-04b5';
 import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} from './material-sourcing-controlled-activation.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines,

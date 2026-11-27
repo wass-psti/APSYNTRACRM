@@ -14,7 +14,7 @@ on:
       - 'scripts/cp-ms-crm-04b3-pricing-concurrency.sh'
       - '.github/workflows/cp-ms-crm-02-contract.yml'
   push:
-    branches: [main, integration/cp-ms-crm-02, integration/cp-ms-crm-04b1, integration/cp-ms-crm-04b2, integration/cp-ms-crm-04b3, integration/cp-ms-crm-04b4]
+    branches: [main, integration/cp-ms-crm-02, integration/cp-ms-crm-04b1, integration/cp-ms-crm-04b2, integration/cp-ms-crm-04b3, integration/cp-ms-crm-04b4, integration/cp-ms-crm-04b5]
     paths:
       - 'integrations/material-sourcing/crm-contract/**'
       - 'frontend/material-sourcing-*.js'
@@ -90,6 +90,18 @@ jobs:
           docker exec -i "$name" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 < sql/tests/mrh-pricing-interface-disposable.sql
           docker cp "$name:/tmp/mrh-pricing-preview-oracle.jsonl" /tmp/mrh-pricing-preview-oracle.jsonl
           MRH_PRICING_ORACLE=/tmp/mrh-pricing-preview-oracle.jsonl node --test frontend/tests/material-sourcing-pricing-panel.test.mjs
+          docker cp sql/mrh-fx-acquisition-CANDIDATE-NOT-APPLIED.sql "$name:/tmp/mrh-fx-acquisition.sql"
+          docker exec -i "$name" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 < sql/tests/mrh-fx-acquisition-disposable.sql
+          # Only B.5 integration branch/PR requires live public-provider evidence.
+          # Ordinary CRM regression stays deterministic and independent of provider uptime.
+          if [ "$GITHUB_REF" = "refs/heads/integration/cp-ms-crm-04b5" ] || [ "${GITHUB_HEAD_REF:-}" = "integration/cp-ms-crm-04b5" ]; then
+            curl --fail --silent --show-error --max-time 8 --proto '=https' 'https://api.frankfurter.dev/v2/rate/USD/PHP?providers=ECB' -o /tmp/mrh-live-usd.json
+            curl --fail --silent --show-error --max-time 8 --proto '=https' 'https://api.frankfurter.dev/v2/rate/EUR/PHP?providers=ECB' -o /tmp/mrh-live-eur.json
+            docker cp /tmp/mrh-live-usd.json "$name:/tmp/mrh-live-usd.json"
+            docker cp /tmp/mrh-live-eur.json "$name:/tmp/mrh-live-eur.json"
+            docker exec "$name" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -c "select private.mrh_fx_provider_pair(pg_read_file('/tmp/mrh-live-usd.json'),pg_read_file('/tmp/mrh-live-eur.json'),clock_timestamp()) as live_provider_pair"
+            echo CP_MS_CRM_04B5_LIVE_PROVIDER_PAIR_PASS
+          fi
           docker stop "$name" >/dev/null
       - name: Clean disposable containers
         if: always()
