@@ -158,7 +158,7 @@ BEGIN
   'public.tl03_documents_page(uuid,text,text,text,text,text,timestamptz,uuid,integer)'
  ) IS NULL THEN
   IF to_regprocedure(
-   'public.tl03_documents_page(uuid,text,text,text,timestamptz,uuid,integer)'
+   'public.tl03_documents_page(uuid,text,text,text,text,timestamptz,uuid,integer)'
   ) IS NULL THEN
    RAISE EXCEPTION 'Disposable legacy eight-argument document page RPC is missing';
   END IF;
