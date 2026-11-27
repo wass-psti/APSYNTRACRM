@@ -196,7 +196,7 @@ export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId
   (renderSnapshot&&((data.vendorId&&data.vendorId!==company.id)||
    (data.templateId&&data.templateId!==template.id)||
    (typeof data.terms==='string'&&data.terms!==renderSnapshot.snapshot.terms))))
-  throw new ApiError('Saved TradeLink company/template snapshot does not match the selected revision.',409);
+  throw new ApiError('Saved TradeLink official profile and company/template snapshot do not match the selected revision.',409);
  const logo=logoUrl(company.logoAsset);
  const currency=TRADELINK_CURRENCIES.includes(data.currency)?data.currency:'—';
  const terms=renderSnapshot?renderSnapshot.snapshot.terms:

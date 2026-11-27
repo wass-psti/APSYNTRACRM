@@ -263,8 +263,10 @@ test('print action reloads signed record and matching Board before mounting the 
   /creatorName=record\.created_by_name/,
   /board\.board\.workspace_id!==ws/,
   /item\.title===listed\.documentNumber/,
-  /renderTradeLinkSavedDocumentOutput\(record,ws,documentId,\{creatorName\}\)/,
-  /mountTradeLinkSavedDocumentOutput\(markup\)/,
+  /renderTradeLinkSavedDocumentOutput\(record,ws,documentId,\{creatorName,renderSnapshot\}\)/,
+  /mountTradeLinkSavedDocumentOutput\(markup,\{/,
+  /await active\.stylesheetReady/,
+  /stylesheetLinks\.forEach\(link=>link\.remove\(\)/,
   /if\(!same\(\)\)return/
  ])assert.match(flow,pattern);
  assert.match(source,/case 'tradelink-document-print'/);
