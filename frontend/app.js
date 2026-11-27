@@ -11573,6 +11573,30 @@ async function action(name,button){
   }finally{state.ttBusy=false;render();}
   break;
  }
+ case 'tt-ot-edit':{
+  if(!TT_OT_WRITES_ACCEPTED||state.ttBusy||state.view!=='board'||
+     state.tab!=='attendance'||state.ttView!=='ot'||
+     state.ttAttendance?.status!=='VERIFIED_READ')return;
+  const requestId=button.dataset.id;
+  const request=state.ttAttendance.otRequests?.find(row=>row.id===requestId);
+  if(state.ttAttendance.access?.otContractActive!==true||request?.canEditDecision!==true||
+     !['Approved','Rejected'].includes(request.status)||!request.decidedAt){
+   toast('This overtime decision is no longer available for editing. Refresh overtime and try again.',true);
+   return;
+  }
+  const decision=request.status==='Approved'?'Rejected':'Approved';
+  const note=decision==='Rejected'?
+   ' This removes the approval entitlement. Completed attendance timestamps are not changed.':
+   ' Existing approval deadlines and attendance eligibility still apply.';
+  if(!confirm('Change overtime status from '+request.status+' to '+decision+'?'+note+' This correction will be audited.'))return;
+  state.ttBusy=true;render();
+  try{
+   await timeTracker.editOvertimeDecision(state.boardId,requestId,request.status,request.decidedAt,decision);
+   await loadTimeTracker();
+   toast('Overtime status updated to '+decision.toLowerCase()+'.');
+  }finally{state.ttBusy=false;render();}
+  break;
+ }
  case 'tt-ot-approve':
  case 'tt-ot-reject':{
   if(!TT_OT_WRITES_ACCEPTED||state.ttBusy||
@@ -11586,7 +11610,7 @@ async function action(name,button){
    return;
   }
   const decision=name==='tt-ot-approve'?'Approved':'Rejected';
-  if(!confirm(decision+' this overtime request? The decision will be audited and cannot be reversed here.'))return;
+  if(!confirm(decision+' this overtime request? The decision will be audited. Authorized reviewers may correct it later.'))return;
   state.ttBusy=true;render();
   try{
    await timeTracker.decideOvertime(state.boardId,requestId,decision);
