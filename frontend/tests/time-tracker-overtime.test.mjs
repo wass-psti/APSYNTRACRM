@@ -208,7 +208,7 @@ test('signed manual duration OT RPC verifies employee owner and administrator su
  assert.equal('p_start' in rpcArgs,false);
  assert.equal('p_end' in rpcArgs,false);
  await assert.rejects(()=>setup({role:'Employee',snapshot:{...snapshot,
-  scope:'OWN_OT_ONLY',manualOtManager:false}}).submitManualOvertime(board,{
+  scope:'OWN_OT_ONLY',manualOtManager:false,durationOtApprover:false}}).submitManualOvertime(board,{
    employeeId:worker,date:'2025-11-02',durationMinutes:120,
    reason:'Emergency preparation overtime entered by an administrator'
   }),/manual duration OT submission is unavailable/);
