@@ -597,3 +597,11 @@ test('paid OT table exposes signed attribution and finalized removal without the
  assert.equal(validateManualDurationOvertimeDraft(draft,directory,now,true).valid,true);
  assert.equal(validateManualDurationOvertimeDraft({...draft,date:'2026-11-10'},directory,now,true).valid,false);
 });
+
+test('OT search deep-link identifies the requested row without reopening a View disclosure',()=>{
+ const row=rows[1];
+ const html=renderTimeTrackerOvertime({requests:[row],access:{otContractActive:true},now,expandedRequestIds:[row.id]});
+ assert.match(html,/aria-current="true" tabindex="-1"/);
+ assert.match(html,/Selected request/);
+ assert.doesNotMatch(html,/<summary>View<\/summary>/);
+});

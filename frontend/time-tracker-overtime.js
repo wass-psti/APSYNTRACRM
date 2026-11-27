@@ -183,12 +183,13 @@ export function timeTrackerOtMetrics(rows=[],filters={},at=new Date()){
 const row=(r,access,query='',expandedRequestIds=[],otContractActive=false)=>{
  const initials=r.name.trim().split(/\s+/).slice(0,2).map(v=>v[0]||'').join('').toUpperCase();
  const canReview=r.status==='Submitted'&&r.canReviewOt===true;
+ const selected=expandedRequestIds.includes(r.id);
  const button=(action,label,primary=false)=>'<button type="button" class="'+(primary?'tt-ot-reference-primary':'tt-ot-reference-secondary')+
   '" data-action="'+action+'" data-id="'+esc(r.id)+'"'+
   (!otContractActive?' disabled title="Signed OT contract unavailable"':'')+'>'+label+'</button>';
  return '<article class="tt-ot-request tt-ot-reference-row" data-request-id="'+esc(r.id)+'" data-search-text="'+esc(r.searchText)+'"'+
-  (query&&!r.searchText.includes(query)?' hidden':'')+'>'+
-  '<div class="tt-ot-reference-person"><span class="tt-ot-reference-avatar" aria-hidden="true">'+esc(initials)+'</span><strong>'+esc(r.name)+'</strong></div>'+
+  (selected?' aria-current="true" tabindex="-1"':'')+(query&&!r.searchText.includes(query)?' hidden':'')+'>'+
+  '<div class="tt-ot-reference-person"><span class="tt-ot-reference-avatar" aria-hidden="true">'+esc(initials)+'</span><strong>'+esc(r.name)+(selected?' <em class="tt-ot-manual-badge">Selected request</em>':'')+'</strong></div>'+
   '<span class="tt-ot-reference-date">'+esc(fmt(r.date))+'</span>'+
   '<strong class="tt-ot-reference-hours">'+esc(minutesLabel(r.durationMinutes).trim())+'</strong>'+
   '<span class="tt-ot-reference-reason">'+esc(r.task||'Not supplied')+(r.isManual?' <em class="tt-ot-manual-badge">Manual Entry</em>':'')+'</span>'+
