@@ -1,0 +1,36 @@
+name: CP-CRM-PERF-01B Signed Application Baseline
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cp-crm-perf-01b.yml'
+      - 'scripts/cp-crm-perf-01b-fueltrans.mjs'
+      - 'frontend/tests/crm-perf-01b-fueltrans.test.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fueltrans:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: node --test frontend/tests/crm-perf-01b-fueltrans.test.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Real signed disposable FuelTrans benchmark
+        env:
+          CP_CRM_PERF_01B_FUELTRANS: '1'
+        run: bash scripts/cp-ft-ui06-gotrue-postgrest.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: crm-perf-01b-fueltrans
+          path: artifacts/crm-perf-01b-fueltrans.json
+          if-no-files-found: error
+          retention-days: 30
