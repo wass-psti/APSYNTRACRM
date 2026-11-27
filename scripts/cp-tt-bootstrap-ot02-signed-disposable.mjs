@@ -283,6 +283,21 @@ assert.equal(manualRemoved.withdrawnBy,admin.id);
 assert.equal(sql(`SELECT event||'|'||actor_id::text FROM public.timetracker_ot_audit WHERE request_id='${manual.id}' ORDER BY event_id`),
  `submitted|${admin.id}\nwithdrawn|${admin.id}`);
 const manualDate=shiftDay(date,-1);
+const bootstrapManualDurationRequest=receipt(await rpc(admin,'timetracker_ot_submit_manual_duration',{
+ p_board_id:board,p_owner_id:bootstrap.id,p_date:shiftDay(date,-3),p_duration_minutes:90,
+ p_reason:'Historical work entered for Bootstrap Administrator self-review'
+}),'Bootstrap-owned manual duration OT entry');
+assert.equal(bootstrapManualDurationRequest.otPolicy,'manual-duration-v1');
+const bootstrapManualSnapshot=receipt(await rpc(bootstrap,'timetracker_ot_snapshot',{p_board_id:board}),'Bootstrap self-review manual duration snapshot');
+const bootstrapManualRow=bootstrapManualSnapshot.rows.find(row=>row.id===bootstrapManualDurationRequest.id);
+assert.equal(bootstrapManualRow?.canReviewOt,true);
+assert.equal(bootstrapManualRow?.canReviewDuration,true);
+const bootstrapManualDecision=receipt(await rpc(bootstrap,'timetracker_ot_decide_manual_duration',{
+ p_board_id:board,p_request_id:bootstrapManualDurationRequest.id,p_decision:'Rejected'
+}),'Bootstrap rejects own manual duration OT');
+assert.equal(bootstrapManualDecision.status,'Rejected');
+assert.equal(bootstrapManualDecision.decidedBy,bootstrap.id);
+assertDatabase(bootstrapManualDurationRequest.id,'Rejected',bootstrap.id,admin.id);
 const manualDuration=receipt(await rpc(admin,'timetracker_ot_submit_manual_duration',{
  p_board_id:board,p_owner_id:worker.id,p_date:manualDate,p_duration_minutes:150,
  p_reason:'Historical engineering work entered as a duration-only manual request'
