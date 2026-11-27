@@ -46,35 +46,37 @@ function renderSavedEditor(documentType,createdByName='Dionny P. Señagan'){
 }
 
 function creatorWorkflow(html){
- const match=html.match(/<section id="tl-section-approval"[\\s\\S]*?<\\/section>/);
- assert.ok(match,'expected the Verification & Approval Workflow section');
- return match[0];
+ const start=html.indexOf('<section id="tl-section-approval"');
+ assert.notEqual(start,-1,'expected the Verification & Approval Workflow section');
+ const closing=html.indexOf('</section>',start);
+ assert.notEqual(closing,-1,'expected the workflow section to close');
+ return html.slice(start,closing+'</section>'.length);
 }
 
 test('saved creator attribution always uses the immutable server creator for all six modules',()=>{
  for(const documentType of documentTypes){
   const workflow=creatorWorkflow(renderSavedEditor(documentType));
-  assert.match(workflow,/Dionny P\\. Señagan/,documentType);
-  assert.doesNotMatch(workflow,/Alex P\\. Señagan/,documentType);
-  assert.doesNotMatch(workflow,/Untrusted content creator/,documentType);
-  assert.match(workflow,/Original creator/,documentType);
+  assert.ok(workflow.includes('Dionny P. Señagan'),documentType);
+  assert.ok(!workflow.includes('Alex P. Señagan'),documentType);
+  assert.ok(!workflow.includes('Untrusted content creator'),documentType);
+  assert.ok(workflow.includes('Original creator'),documentType);
  }
 });
 
 test('missing saved creator profile never falls back to the viewing user',()=>{
  const workflow=creatorWorkflow(renderSavedEditor('quotation',null));
- assert.match(workflow,/Original creator unavailable/);
- assert.doesNotMatch(workflow,/Alex P\\. Señagan/);
+ assert.ok(workflow.includes('Original creator unavailable'));
+ assert.ok(!workflow.includes('Alex P. Señagan'));
 });
 
 test('new unsaved documents continue to show the current user as the pending creator',()=>{
+ const view={...initialTradeLinkDraftView('quotation'),mode:'create'};
  const html=renderTradeLinkDraftWorkspace({
-  detail,workspaceId,view:initialTradeLinkDraftView('quotation'),
-  canManage:true,canCreate:true,actorId:viewerId,
+  detail,workspaceId,view,canManage:true,canCreate:true,actorId:viewerId,
   actorName:'Alex P. Señagan',actorEmail:'asenagan@watchdogautomation.com.ph',
   actorModuleRole:'User',showModuleTabs:false
  });
  const workflow=creatorWorkflow(html);
- assert.match(workflow,/Alex P\\. Señagan/);
- assert.match(workflow,/Auto-captured on save/);
+ assert.ok(workflow.includes('Alex P. Señagan'));
+ assert.ok(workflow.includes('Auto-captured on save'));
 });
