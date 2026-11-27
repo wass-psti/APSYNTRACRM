@@ -43,7 +43,25 @@ $probe$;
 GRANT EXECUTE ON FUNCTION public.cp_crm_perf_01b_realtime_probe_read(uuid)
 TO authenticated;
 
-ALTER TABLE realtime.messages ENABLE ROW LEVEL SECURITY;
+DO $verify_realtime_table$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'realtime'
+      AND c.relname = 'messages'
+      AND c.relrowsecurity
+  ) THEN
+    RAISE EXCEPTION 'Supabase Realtime messages table must have RLS enabled';
+  END IF;
+END;
+$verify_realtime_table$;
+
+-- Supabase owns realtime.messages with its dedicated admin role.
+-- Grant it to postgres only for this disposable fixture, then revoke it.
+GRANT supabase_realtime_admin TO postgres;
+SET ROLE supabase_realtime_admin;
 
 CREATE POLICY cp_crm_perf_01b_realtime_receive
 ON realtime.messages
@@ -60,6 +78,9 @@ WITH CHECK (
   realtime.topic() = 'realtime:board:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
   AND extension = 'broadcast'
 );
+
+RESET ROLE;
+REVOKE supabase_realtime_admin FROM postgres;
 
 NOTIFY pgrst, 'reload schema';
 
