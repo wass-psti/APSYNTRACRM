@@ -51,7 +51,7 @@ The automatic capture trigger is attached to `public.tradelink_documents` for in
 
 ## Final acceptance and closeout — 2026-11-27
 
-<badge> CLOSED </badge>
+**Status: CLOSED**
 
 All CP-TL-OPT-04B acceptance gates are verified.
 
