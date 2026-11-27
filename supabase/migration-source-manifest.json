@@ -2478,6 +2478,13 @@
       "file": "20261127170000_cp_tt_log_location_01a_hr_admin_gps_read.sql",
       "bytes": 5323,
       "sha256": "f2b1081c08cdf7909332527e04daf70d75de8bf2b145e737d378c34f4fbdd94f"
+    },
+    {
+      "version": "20261127180000",
+      "name": "cp_tt_ot_edit_decision",
+      "file": "20261127180000_cp_tt_ot_edit_decision.sql",
+      "bytes": 6605,
+      "sha256": "420838e000b7931240211e66831dec57c1792d86463b5c29d369fd2a4a3728a4"
     }
   ],
   "applied_only": [
