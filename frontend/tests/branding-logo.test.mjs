@@ -29,7 +29,8 @@ test('sidebar, login, access denied and browser favicon retain uploaded branding
  assert.doesNotMatch(html,/aps-init-brand-icon/);
  assert.doesNotMatch(loadingCss,/aps-init-brand-icon/);
  assert.match(html,/id="apsyntra-init"/);
- assert.match(html,/class="aps-init-name"/);
+ assert.match(html,/<img class="apx-loader__logo" src="\.\/frontend\/apsyntra-logo\.webp" alt="" width="64" height="64">/);
+ assert.match(html,/<p class="apx-loader__title">APSYNTRA <span>CRM<\/span><\/p>/);
  assert.match(html,/<link rel="icon" href="\.\/frontend\/apsyntra-logo\.webp" type="image\/webp"\/>/);
  assert.ok(css.includes('.brand-mark{display:block;'));
  assert.ok(app.includes(ref));
