@@ -50,7 +50,7 @@ begin
  fx:=(receipt->>'snapshotId')::uuid;
  if receipt->>'provider'<>'Frankfurter v2 / ECB' or receipt->>'provenance'<>'provider_reported'
   or receipt->>'usd'<>'64.45000000' or receipt->>'eur'<>'71.12345678'
-  or left(receipt->>'observedAt',10)<>d or fx is null then raise exception 'provider receipt %',receipt;end if;
+  or left(receipt->>'observedAt',10)<>d or receipt->>'observationRef' is distinct from ('frankfurter-v2:ECB:'||d||':USD/PHP+EUR/PHP') or fx is null then raise exception 'provider receipt %',receipt;end if;
  repeated:=public.mrh_capture_latest_fx(i);
  if repeated is distinct from receipt or (select count(*) from private.mrh_fx_snapshots where item_id=i)<>n+1 then raise exception 'provider replay changed snapshot';end if;
  ctx:=public.mrh_pricing_context(i,fx,null);

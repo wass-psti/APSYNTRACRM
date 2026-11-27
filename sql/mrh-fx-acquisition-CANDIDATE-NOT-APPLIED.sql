@@ -5,7 +5,7 @@ create function private.mrh_fx_provider_row(p_body text,p_base text)
 returns jsonb language plpgsql immutable set search_path='' as $$
 declare v jsonb; d text; r text;
 begin
- if p_base not in ('USD','EUR') or p_body is null or octet_length(p_body)>16384 then
+ if p_base is null or p_base not in ('USD','EUR') or p_body is null or octet_length(p_body)>16384 then
   raise exception 'FX provider response invalid' using errcode='PT502';end if;
  begin v:=p_body::jsonb;
  exception when invalid_text_representation then raise exception 'FX provider response invalid' using errcode='PT502';end;
@@ -67,21 +67,21 @@ end $$;
 create function public.mrh_capture_latest_fx(p_item uuid)
 returns jsonb language plpgsql volatile security definer set search_path='' set timezone='UTC' as $$
 declare b constant uuid:='617c4c0f-e343-4b3b-8456-50d47dcbaf99';
- w uuid; payload jsonb; id uuid;
+ w uuid; payload jsonb; v_snapshot uuid;
 begin
  w:=private.mrh_sourcing_scope(b,p_item);
  if not coalesce(public.work_board_access(b,'edit'),false) then raise exception 'FX capture denied' using errcode='42501';end if;
- if not exists(select 1 from public.work_board_items where id=p_item and board_id=b
-  and group_id='21566a87-b287-4a61-b521-bb233956e09e' and archived_at is null) then
+ if not exists(select 1 from public.work_board_items i where i.id=p_item and i.board_id=b
+  and i.group_id='21566a87-b287-4a61-b521-bb233956e09e' and archived_at is null) then
   raise exception 'Material unavailable' using errcode='PT409';end if;
  -- Network outside item locks. Existing immutable capture acquires scope locks.
  payload:=private.mrh_fx_fetch_latest();
  if private.mrh_sourcing_scope(b,p_item) is distinct from w or not coalesce(public.work_board_access(b,'edit'),false) then
   raise exception 'FX capture denied' using errcode='42501';end if;
  if private.mrh_fx_material_workspace(p_item) is distinct from w then raise exception 'Material scope changed' using errcode='PT409';end if;
- id:=private.mrh_fx_capture_provider(p_item,payload->>'usd',payload->>'eur',payload->>'provider',
+ v_snapshot:=private.mrh_fx_capture_provider(p_item,payload->>'usd',payload->>'eur',payload->>'provider',
   payload->>'observationRef',(payload->>'observedAt')::timestamptz,(payload->>'retrievedAt')::timestamptz);
- return private.mrh_fx_read(w,p_item,id);
+ return private.mrh_fx_read(w,p_item,v_snapshot);
 end $$;
 revoke all on function private.mrh_fx_provider_row(text,text),private.mrh_fx_provider_pair(text,text,timestamptz),
  private.mrh_fx_fetch_latest() from public,anon,authenticated;
