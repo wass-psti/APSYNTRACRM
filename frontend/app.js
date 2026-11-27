@@ -134,10 +134,11 @@ import {renderNativeMaterialSourcing,sortNativeMaterials,loadNativeCommercialRow
 import {parseMaterialAddForm,materialAddPublicColumns} from './material-sourcing-add-material.js';
 import {createMaterialSourcingAtomic,retainMaterialCreatePlan,createMaterialWithRecovery,recoverMaterialCreation,MATERIAL_SOURCING_DURABLE_CREATE_ENABLED} from './material-sourcing-atomic-create.js';
 import {showEngineeringDiagnostics} from './engineering-diagnostics-visibility.js';
-import {renderMaterialSourcingDetailTabs,renderMaterialSourcingPublicOverview,renderMaterialSourcingUnavailableDetails,classifyMaterialSourcingDetailError,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js';
+import {renderMaterialSourcingDetailTabs,renderMaterialSourcingPublicOverview,renderMaterialSourcingUnavailableDetails,classifyMaterialSourcingDetailError,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js?v=cp-ms-crm-04b4';
 import {readMaterialBoardItemTasks,saveMaterialBoardItemTask,renderMaterialBoardItemTasks} from './material-sourcing-board-tasks.js';
 import {planMaterialSourcingPublicChanges,saveMaterialSourcingPublicChange,verifyMaterialSourcingPublicChanges,saveMaterialSourcingAtomic,MATERIAL_SOURCING_ATOMIC_EDIT_ENABLED} from './material-sourcing-public-edit.js';
-import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,planProtectedSourcingChanges,renderProtectedSourcingEditor,createMaterialSourcingPart} from './material-sourcing-application.js';
+import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,planProtectedSourcingChanges,renderProtectedSourcingEditor,createMaterialSourcingPart} from './material-sourcing-application.js?v=cp-ms-crm-04b4';
+import {mountNativePricingPanel} from './apps/MaterialSourcing/pricing-panel.js?v=cp-ms-crm-04b4';
 import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} from './material-sourcing-controlled-activation.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines,
@@ -7447,6 +7448,8 @@ async function openBoardItemDetails(itemId){
   });
   let values=null,busy=false,editing=false,needsReopen=false;
   let publicDetail=state.board,canPublicEdit=false,canProtectedEdit=false;
+  const pricingHost=itemDialog.querySelector('[data-mrh-pricing-host]');
+  let pricingMounted=false;
   const editToggle=itemDialog.querySelector('[data-mrh-editor-toggle]');
   const saveAll=itemDialog.querySelector('[data-mrh-save-all]');
   const statusMessage=message=>{
@@ -7559,9 +7562,24 @@ async function openBoardItemDetails(itemId){
      editToggle.textContent=editing?'Done editing':'Edit material fields';
     }
     updateButtons();
+    if(pricingHost&&!pricingMounted){
+     mountNativePricingPanel(pricingHost,{
+      input,row:publicRow(),cells:values,canEdit:canProtectedEdit,isCurrent:current,
+      canSave:()=>!editing&&!busy&&!needsReopen,
+      onBusy:value=>{busy=value;updateButtons();},
+      onSaved:async()=>{
+       db.invalidateBoardCache?.(snapshot.boardId,{invalidateContext:false});
+       const ok=await refresh();
+       if(ok&&current()&&state.boardId===snapshot.boardId)state.board=publicDetail;
+       if(!ok)throw new ApiError('Pricing saved; material details require refresh.',409);
+      }
+     });
+     pricingMounted=true;
+    }
     return true;
    }catch(error){
     if(!current())return false;
+    if(pricingHost){pricingHost.replaceChildren();pricingMounted=false;}
     values=null;
     if(editToggle)editToggle.hidden=true;
     if(saveAll)saveAll.hidden=true;

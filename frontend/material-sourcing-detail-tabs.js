@@ -55,7 +55,7 @@ export function renderMaterialSourcingDetailTabs(summaryHtml){
   '<section id="mrh-detail-panel-details" role="tabpanel" aria-labelledby="mrh-detail-tab-details" data-mrh-detail-panel="details">'+
    '<div data-mrh-public-host>'+summaryHtml+'</div>'+
    '<div data-mrh-private-host role="region" aria-label="Protected Material Sourcing details">'+
-   '<p role="status" class="muted">Loading available material details…</p></div></section>'+
+   '<p role="status" class="muted">Loading available material details…</p></div><div data-mrh-pricing-host></div></section>'+
   '<section id="mrh-detail-panel-tasks" role="tabpanel" aria-labelledby="mrh-detail-tab-tasks" data-mrh-detail-panel="tasks" hidden>'+
    '<div data-mrh-board-tasks>'+renderMaterialSourcingTasksUnavailable()+'</div></section>'+
   '<section id="mrh-detail-panel-activity" role="tabpanel" aria-labelledby="mrh-detail-tab-activity" data-mrh-detail-panel="activity" hidden>'+
