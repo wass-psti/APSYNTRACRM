@@ -1,6 +1,6 @@
 {
   "initiative": "CP-CRM-PERF-01B",
-  "captured_at_utc": "2026-11-27T13:45:00Z",
+  "captured_at_utc": "2026-11-27T13:50:30Z",
   "repository_commit_tested": "a1ccbed2f15d874d5764720570c9ffd097e44c26",
   "fueltrans_benchmark": {
     "workflow_run_id": 46000281137,
@@ -112,12 +112,12 @@
     }
   },
   "overall_status": "OPEN_BLOCKED",
-  "outstanding_blocker": "Certified schema-only M45 bootstrap and full disposable Supabase stack for full-host CRM acceptance; current-main TimeTracker single/dual sustained rerun remains in progress.",
+  "outstanding_blocker": "Certified schema-only M45 bootstrap and full disposable Supabase stack for full-host CRM acceptance; current-main TimeTracker single/dual 30-minute rerun remains in progress.",
   "latest_main_checkpoint": {
-    "commit": "7e7e52c391991be6edc06d4ee57d3e8533d1b757",
-    "cp_crm_perf_01b_workflow_run_id": 46008920566,
+    "commit": "84f4bc4095ec603c950dbe2bb426ede056025fa5",
+    "cp_crm_perf_01b_workflow_run_id": 46010259472,
     "conclusion": "success",
-    "fueltrans_artifact_id": 15202915938,
+    "fueltrans_artifact_id": 15203416748,
     "board_group_view_regression_job": "success",
     "fueltrans_job": "success"
   },
@@ -137,5 +137,12 @@
     "training_dependencies_added": [],
     "inference_architecture_changed": false
   },
-  "production_data_writes_from_benchmark": 0
+  "production_data_writes_from_benchmark": 0,
+  "current_main_timetracker_rerun": {
+    "workflow_run_id": 46010259411,
+    "status": "in_progress",
+    "smoke": "success",
+    "single_30_minute": "in_progress",
+    "dual_30_minute": "in_progress"
+  }
 }
