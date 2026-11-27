@@ -52,6 +52,7 @@ const server=createServer(async(req,res)=>{
  const allowStatic=new Set([
   '/frontend/tests/fixtures/board-cache-two-tab.html',
   '/frontend/data.js','/frontend/session.js','/frontend/config.js',
+  '/frontend/auth/failure-classification.js',
   '/frontend/vendor/supabase-auth.js',
   '/frontend/native-application-access.js','/frontend/board/cache-channel.js',
   '/frontend/workspace-application-ownership.js','/frontend/workspace-identity.js','/frontend/dda-release.js',
