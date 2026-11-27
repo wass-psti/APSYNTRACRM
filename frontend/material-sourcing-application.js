@@ -201,7 +201,7 @@ export function renderProtectedSourcingEditor(cells,{editing=false}={}){
    '</div>'+
   section('Pricing & Cost','₱',['Buying Price','Currency'])+
   '<section class="mrh-private-section mrh-calculated-section"><h3><span aria-hidden="true">▤</span>Calculated totals</h3>'+
-  '<p>Not calculated — verified exchange rates and approved landed-cost rules are not configured.</p></section>'+
+  '<p>Not calculated here — use the pricing preview below. Stored manual selling prices remain separate.</p></section>'+
   section('Logistics','▧',['Vendor Details','Shipping Cost','Shipping Cost Currency'])+
   (editing?'<p class="mrh-private-edit-note">Save all pending changes together. Each field retains its existing revision check.</p>':'')+
   '</div>';

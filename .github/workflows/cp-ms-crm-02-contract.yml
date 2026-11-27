@@ -4,7 +4,9 @@ on:
     paths:
       - 'integrations/material-sourcing/crm-contract/**'
       - 'frontend/material-sourcing-*.js'
-      - 'frontend/apps/MaterialSourcing/reconcile.js'
+      - 'frontend/apps/MaterialSourcing/**'
+      - 'frontend/app.js'
+      - 'frontend/tests/material-sourcing-*.test.mjs'
       - 'supabase/migrations/*mrh*'
       - 'sql/mrh-*.sql'
       - 'sql/tests/mrh-*.sql'
@@ -12,11 +14,13 @@ on:
       - 'scripts/cp-ms-crm-04b3-pricing-concurrency.sh'
       - '.github/workflows/cp-ms-crm-02-contract.yml'
   push:
-    branches: [main, integration/cp-ms-crm-02, integration/cp-ms-crm-04b1, integration/cp-ms-crm-04b2, integration/cp-ms-crm-04b3]
+    branches: [main, integration/cp-ms-crm-02, integration/cp-ms-crm-04b1, integration/cp-ms-crm-04b2, integration/cp-ms-crm-04b3, integration/cp-ms-crm-04b4]
     paths:
       - 'integrations/material-sourcing/crm-contract/**'
       - 'frontend/material-sourcing-*.js'
-      - 'frontend/apps/MaterialSourcing/reconcile.js'
+      - 'frontend/apps/MaterialSourcing/**'
+      - 'frontend/app.js'
+      - 'frontend/tests/material-sourcing-*.test.mjs'
       - 'supabase/migrations/*mrh*'
       - 'sql/mrh-*.sql'
       - 'sql/tests/mrh-*.sql'
@@ -81,6 +85,11 @@ jobs:
           docker cp sql/mrh-pricing-persistence-CANDIDATE-NOT-APPLIED.sql "$name:/tmp/mrh-pricing-persistence.sql"
           docker exec -i "$name" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 < sql/tests/mrh-pricing-persistence-disposable.sql
           bash scripts/cp-ms-crm-04b3-pricing-concurrency.sh "$name"
+          docker cp sql/mrh-atomic-material-edit-CANDIDATE-NOT-APPLIED.sql "$name:/tmp/mrh-atomic-edit.sql"
+          docker cp sql/mrh-pricing-interface-CANDIDATE-NOT-APPLIED.sql "$name:/tmp/mrh-pricing-interface.sql"
+          docker exec -i "$name" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 < sql/tests/mrh-pricing-interface-disposable.sql
+          docker cp "$name:/tmp/mrh-pricing-preview-oracle.jsonl" /tmp/mrh-pricing-preview-oracle.jsonl
+          MRH_PRICING_ORACLE=/tmp/mrh-pricing-preview-oracle.jsonl node --test frontend/tests/material-sourcing-pricing-panel.test.mjs
           docker stop "$name" >/dev/null
       - name: Clean disposable containers
         if: always()
