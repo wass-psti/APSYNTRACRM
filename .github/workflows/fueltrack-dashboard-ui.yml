@@ -31,6 +31,7 @@ on:
       - 'scripts/build-priority5-styles.mjs'
       - 'frontend/fueltrack-v3-backend-projections.js'
       - 'frontend/tests/fueltrack-v3-backend-projections.test.mjs'
+      - 'frontend/tests/fueltrack-v3-application.test.mjs'
   pull_request:
     paths:
       - 'frontend/fueltrack-v3-signed-views.js'
@@ -61,6 +62,7 @@ on:
       - 'scripts/build-priority5-styles.mjs'
       - 'frontend/fueltrack-v3-backend-projections.js'
       - 'frontend/tests/fueltrack-v3-backend-projections.test.mjs'
+      - 'frontend/tests/fueltrack-v3-application.test.mjs'
 permissions:
   contents: read
 jobs:
