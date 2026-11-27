@@ -19,13 +19,13 @@ if (typeof globalThis.WebSocket !== 'function') {
 
 const delay = ms => new Promise(resolveDelay => setTimeout(resolveDelay, ms));
 
-async function waitFor(label, predicate, timeoutMs = 15000) {
+async function waitFor(label, predicate, timeoutMs = 15000, diagnostics = null) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     if (predicate()) return Date.now() - start;
     await delay(50);
   }
-  throw new Error('Timed out waiting for ' + label);
+  throw new Error('Timed out waiting for ' + label + '; diagnostics=' + JSON.stringify(diagnostics ? diagnostics() : {}));
 }
 
 function parseFrame(event) {
@@ -174,7 +174,7 @@ async function connectSender(accessToken, socketUrl) {
   ]));
   const joined = await joinReply;
   if (joined[4]?.status !== 'ok') {
-    throw new Error('Local Realtime sender could not join the private board channel');
+    throw new Error('Local Realtime sender could not join the private board channel: ' + JSON.stringify(joined[4] || {}));
   }
 
   let messageNumber = 0;
@@ -300,18 +300,33 @@ try {
     onInvalidate
   });
 
-  const joinStart = Date.now();
-  sync.start({userId, workspaceId, boardIds: [boardId]});
-  const initialJoinMs = await waitFor(
-    'PlatformSync private board channel join',
-    () => sync.lastTransport === 'realtime' && sync.joined.has(boardId) && sync.lastSyncAt !== null
-  );
-  assert.ok(initialJoinMs >= 0);
-
   const base = new URL(apiUrl);
   const socketUrl = 'ws://' + base.host + '/realtime/v1/websocket?apikey=' +
     encodeURIComponent(apiKey) + '&vsn=2.0.0';
+  const senderJoinStart = Date.now();
   sender = await connectSender(accessToken, socketUrl);
+  const senderJoinMs = Date.now() - senderJoinStart;
+
+  sync.start({userId, workspaceId, boardIds: [boardId]});
+  const diagnostics = () => ({
+    lastTransport: sync.lastTransport,
+    socketReadyState: sync.socket?.readyState ?? null,
+    joinedBoardIds: [...sync.joined.keys()],
+    pendingJoinCount: sync.joins.size,
+    lastSyncAt: sync.lastSyncAt,
+    recentStatus: statuses.slice(-8).map(item => ({
+      phase: item.phase,
+      transport: item.transport,
+      detail: item.detail
+    }))
+  });
+  const initialJoinMs = await waitFor(
+    'PlatformSync private board channel join',
+    () => sync.lastTransport === 'realtime' && sync.joined.has(boardId) && sync.lastSyncAt !== null,
+    15000,
+    diagnostics
+  );
+  assert.ok(initialJoinMs >= 0);
 
   const firstBroadcastStart = Date.now();
   await sender.broadcast();
@@ -359,6 +374,7 @@ try {
     localDisposableStack: true,
     signedAuthSession: true,
     privateBoardTopic: topic,
+    senderJoinMs,
     initialJoinMs,
     firstBroadcastLatencyMs,
     reconnectLatencyMs,
