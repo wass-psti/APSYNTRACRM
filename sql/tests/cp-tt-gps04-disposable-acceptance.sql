@@ -76,7 +76,6 @@ $role$;
 CREATE OR REPLACE FUNCTION public.apsyntra_role_is_bootstrap()
 RETURNS boolean LANGUAGE sql STABLE SET search_path=''
 AS $$ SELECT COALESCE(pg_catalog.current_setting('qa.bootstrap',true),'false')='true' $$;
-SET LOCAL ROLE authenticated;
 SELECT pg_catalog.set_config('request.jwt.claim.sub', :'gps_actor',true);
 SELECT pg_catalog.set_config('request.jwt.claim.session_id', :'gps_session',true);
 -- The standalone fixture reads individual GUCs; combined OT reads JSON claims.
@@ -90,6 +89,8 @@ BEGIN
   RAISE EXCEPTION 'GPS signed fixture actor/session mismatch';
  END IF;
 END $identity$;
+-- Direct fixture helper access is checked as its owner; RPC assertions run signed.
+SET LOCAL ROLE authenticated;
 SELECT pg_catalog.set_config('qa.bootstrap','false',true);
 DO $verify$
 DECLARE v jsonb; v_role text;
