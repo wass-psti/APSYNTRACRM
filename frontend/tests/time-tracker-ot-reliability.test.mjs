@@ -155,10 +155,10 @@ const filingOpenStart=filingApp.indexOf(" case 'tt-ot-prev':");
 const filingOpenEnd=filingApp.indexOf(" case 'tt-ot-reason':",filingOpenStart);
 const filingSubmitStart=filingApp.indexOf("if(event.target.id==='tt-ot-manual-form'){");
 const filingSubmitEnd=filingApp.indexOf("if(event.target.id==='login-form'){",filingSubmitStart);
-const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;
-const dispatchFilingAction=new AsyncFunction('name','button','state','render','toast','root',
+const FilingAsyncFunction=Object.getPrototypeOf(async function(){}).constructor;
+const dispatchFilingAction=new FilingAsyncFunction('name','button','state','render','toast','root',
  'timeTrackerOtFilingAvailability','switch(name){'+filingApp.slice(filingOpenStart,filingOpenEnd)+'}');
-const dispatchFilingSubmit=new AsyncFunction('event','state','timeTrackerOtFilingAvailability',
+const dispatchFilingSubmit=new FilingAsyncFunction('event','state','timeTrackerOtFilingAvailability',
  'timeTracker','root','render','toast','notice','loadTimeTracker','timeTrackerOtWeekOffsetForDate',
  filingApp.slice(filingSubmitStart,filingSubmitEnd));
 function filingState(accessOverride=access){
