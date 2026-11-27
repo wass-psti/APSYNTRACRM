@@ -46,16 +46,13 @@ export function creditedAttendanceRecordMs(record,start,end){
  return creditedAttendanceMs(start,end);
 }
 
-/** Completed Log work duration. Short sessions retain their exact elapsed
- * duration; longer shifts retain at least nine hours before ordinary
- * lunch-adjusted credits exceed nine. The live Clock and server cutoff are
- * deliberately unchanged. An explicit, valid signed admin override wins.
+/** Completed Log work duration follows the authoritative Philippine lunch
+ * overlap policy, with no artificial nine-hour floor. A valid signed admin
+ * credit adjustment remains authoritative. The live Clock and cutoff are unchanged.
  */
 export function completedLogWorkDurationMs(start,end,override){
  const a=Date.parse(start),b=Date.parse(end);
  if(!Number.isFinite(a)||!Number.isFinite(b)||b<a)return null;
  if(Number.isSafeInteger(override)&&override>=0&&override<=2678400000)return override;
- const elapsed=b-a;
- const nine=9*PHT_HOUR_MS;
- return Math.max(Math.min(elapsed,nine),creditedAttendanceMs(start,end));
+ return creditedAttendanceMs(start,end);
 }
