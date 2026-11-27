@@ -1,0 +1,269 @@
+{
+  "milestone": "CP-CRM-PERF-01B",
+  "capturedAt": "2026-11-27T11:40:53.277Z",
+  "finishedAt": "2026-11-27T11:41:29.589Z",
+  "durationSeconds": 37.89,
+  "environment": {
+    "type": "production-read-only-route-observation",
+    "browser": "Brave Browser",
+    "session": "existing authenticated session",
+    "temporaryTab": true,
+    "originalTabRestored": true,
+    "credentialExported": false,
+    "formOrMutationControlsUsed": false,
+    "clockInOrClockOutMutationRequests": 0
+  },
+  "routeCoverage": {
+    "routeHashesExercised": 16,
+    "distinctScreenRootsLoaded": 15,
+    "expectedScreensLoaded": 15,
+    "legacyAliases": [
+      {
+        "name": "Toolbox Issues",
+        "destination": "TalkBox",
+        "reason": "explicit legacy board-route redirect in frontend/app.js"
+      }
+    ],
+    "pageErrors": 0,
+    "unhandledRejections": 0,
+    "longTaskCount": 1,
+    "maxLongTaskMs": 118,
+    "heapUsedBytes": {
+      "min": 14655859,
+      "max": 17719639
+    },
+    "domNodes": {
+      "min": 1138,
+      "max": 2558
+    },
+    "allDistinctScreensVisible": true,
+    "measurements": "single-pass heading readiness and browser resource timing; not a statistically valid P95 or sustained benchmark"
+  },
+  "routes": [
+    {
+      "screen": "FM1 Ticketing",
+      "headingReadinessMs": 1716.9,
+      "apiRequests": 4,
+      "statuses": {
+        "200": 4
+      }
+    },
+    {
+      "screen": "TimeTracker",
+      "headingReadinessMs": 1868.7,
+      "apiRequests": 11,
+      "statuses": {
+        "200": 11
+      }
+    },
+    {
+      "screen": "Fund Tracker",
+      "headingReadinessMs": 2068.5,
+      "apiRequests": 11,
+      "statuses": {
+        "200": 11
+      }
+    },
+    {
+      "screen": "FuelTrack+",
+      "headingReadinessMs": 1571.9,
+      "apiRequests": 8,
+      "statuses": {
+        "200": 8
+      }
+    },
+    {
+      "screen": "TradeLink",
+      "headingReadinessMs": 1027.2,
+      "apiRequests": 6,
+      "statuses": {
+        "200": 6
+      }
+    },
+    {
+      "screen": "Paseo de Lomboy",
+      "headingReadinessMs": 3980.9,
+      "apiRequests": 5,
+      "statuses": {
+        "200": 5
+      }
+    },
+    {
+      "screen": "TalkBox",
+      "headingReadinessMs": 2014.7,
+      "apiRequests": 8,
+      "statuses": {
+        "200": 8
+      }
+    },
+    {
+      "screen": "FuelTrans",
+      "headingReadinessMs": 1866.5,
+      "apiRequests": 11,
+      "statuses": {
+        "200": 11
+      }
+    },
+    {
+      "screen": "Tool Traceability",
+      "headingReadinessMs": 694.6,
+      "apiRequests": 13,
+      "statuses": {
+        "200": 12,
+        "404": 1
+      }
+    },
+    {
+      "screen": "Order Intake",
+      "headingReadinessMs": 6607.8,
+      "apiRequests": 10,
+      "statuses": {
+        "200": 10
+      }
+    },
+    {
+      "screen": "Employee Evaluation",
+      "headingReadinessMs": 676.7,
+      "apiRequests": 8,
+      "statuses": {
+        "200": 7,
+        "404": 1
+      }
+    },
+    {
+      "screen": "Charter Navigator",
+      "headingReadinessMs": 653.5,
+      "apiRequests": 9,
+      "statuses": {
+        "200": 8,
+        "404": 1
+      }
+    },
+    {
+      "screen": "APS AIMS",
+      "headingReadinessMs": 657.1,
+      "apiRequests": 8,
+      "statuses": {
+        "200": 7,
+        "404": 1
+      }
+    },
+    {
+      "screen": "Material Request Hub",
+      "headingReadinessMs": 673.1,
+      "apiRequests": 8,
+      "statuses": {
+        "200": 7,
+        "404": 1
+      }
+    },
+    {
+      "screen": "Daily Department Activity",
+      "headingReadinessMs": 1863.8,
+      "apiRequests": 2,
+      "statuses": {
+        "200": 2
+      }
+    }
+  ],
+  "knownIssues": [
+    {
+      "endpoint": "/rest/v1/rpc/wm_board_group_view_read",
+      "failures": 5,
+      "httpStatus": 404,
+      "databaseFunctionPresent": true,
+      "authenticatedExecutePrivilege": true,
+      "rootCause": "unconfirmed PostgREST exposure or schema-cache mismatch",
+      "applicationImpact": "non-fatal preference fallback; page remains loaded"
+    }
+  ],
+  "productionLogs": {
+    "windowStart": "2026-11-27T10:55:00Z",
+    "windowEnd": "2026-11-27T11:25:00Z",
+    "edgeLogRecords": 2215,
+    "nonOptionsHttp200": 1857,
+    "websocket101": 30,
+    "nonOptions4xx": 0,
+    "nonOptions5xx": 0,
+    "realtimeHandleEventInfo": 21,
+    "endpoints": [
+      {
+        "path": "/rest/v1/rpc/wm_auth_access_context",
+        "requests": 456,
+        "originP95Ms": 287.25
+      },
+      {
+        "path": "/rest/v1/rpc/work_board_access",
+        "requests": 295,
+        "originP95Ms": 304
+      },
+      {
+        "path": "/rest/v1/rpc/native_application_board_context",
+        "requests": 139,
+        "originP95Ms": 305.3
+      },
+      {
+        "path": "/rest/v1/rpc/apsyntra_crm_my_effective_access",
+        "requests": 70,
+        "originP95Ms": 579.85
+      },
+      {
+        "path": "/rest/v1/rpc/list_module_directory",
+        "requests": 24,
+        "originP95Ms": 432.45
+      },
+      {
+        "path": "/rest/v1/rpc/list_module_state",
+        "requests": 22,
+        "originP95Ms": 792.4
+      },
+      {
+        "path": "/realtime/v1/websocket",
+        "requests": 30,
+        "originP95Ms": 186.4
+      }
+    ]
+  },
+  "bottleneckEvidence": {
+    "orderIntake": {
+      "sequentialPages": 10,
+      "pageSize": 100,
+      "endpoint": "/rest/v1/order_intake_operational_registry",
+      "browserResourceP95Ms": 784.3,
+      "edgeOriginP95Ms": 661.4,
+      "codePath": "frontend/order-intake-read-state.js"
+    },
+    "paseoAdminEdgeExecutionMs": {
+      "adminSession": 1490,
+      "adminCourts": 668,
+      "adminReservationsPage": 1209
+    }
+  },
+  "schemaParity": {
+    "productionApplicationTables": 191,
+    "productionApplicationRoutines": 747,
+    "invitationStagingTables": 14,
+    "invitationStagingRoutines": 13,
+    "ojtBranchTables": 0,
+    "ojtBranchRoutines": 0,
+    "repositoryMigrationVersions": 351,
+    "productionMigrationVersions": 349,
+    "repositoryOnlyMigrations": [
+      "20261127120000_cp_tl_opt_04_document_template_render_snapshots.sql",
+      "20261127160000_cp_tt_shared_read_visibility.sql"
+    ],
+    "rootSupabaseConfigPresent": false,
+    "firstCrmMigration": "20260917142647_stage_g_m46_boards_backend_data_contract_recovery.sql",
+    "requiresM45Bootstrap": true,
+    "m45BootstrapAvailable": false
+  },
+  "status": "OPEN_BLOCKED",
+  "remainingAcceptance": [
+    "certified M45 schema-only baseline",
+    "disposable full Supabase stack with Auth/Realtime/Storage",
+    "synthetic-data full-host signed 30-minute single/dual-window benchmark",
+    "host CPU/RAM/network attribution",
+    "controlled Realtime event/reconnect test",
+    "resolve or formally accept wm_board_group_view_read 404"
+  ]
+}
