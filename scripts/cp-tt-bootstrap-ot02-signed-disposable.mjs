@@ -156,6 +156,16 @@ assert.equal(hrPendingSnapshot.scope,'AUTHORIZED_WORKSPACE_TEAM');
 assert.equal(hrPendingSnapshot.rows.find(row=>row.id===durationRequest.id).canReviewOt,true);
 assert.equal(hrPendingSnapshot.rows.find(row=>row.id===durationRequest.id).canReviewDuration,true);
 assert.equal(hrPendingSnapshot.rows.find(row=>row.id===hrOwnRequest.id).canReviewOt,false);
+const bootstrapOwnDurationSnapshot=receipt(await rpc(bootstrap,'timetracker_ot_snapshot',{p_board_id:board}),'Bootstrap self-review duration snapshot');
+const bootstrapOwnDurationRow=bootstrapOwnDurationSnapshot.rows.find(row=>row.id===bootstrapDurationRequest.id);
+assert.equal(bootstrapOwnDurationRow?.canReviewOt,true);
+assert.equal(bootstrapOwnDurationRow?.canReviewDuration,true);
+const bootstrapOwnDurationApproval=receipt(await rpc(bootstrap,'timetracker_ot_decide_duration',{
+ p_board_id:board,p_request_id:bootstrapDurationRequest.id,p_decision:'Approved'
+}),'Bootstrap approves own duration OT');
+assert.equal(bootstrapOwnDurationApproval.status,'Approved');
+assert.equal(bootstrapOwnDurationApproval.decidedBy,bootstrap.id);
+assertDatabase(bootstrapDurationRequest.id,'Approved',bootstrap.id);
 const workerDurationSnapshot=receipt(await rpc(worker,'timetracker_ot_snapshot',{p_board_id:board}),'employee duration snapshot');
 assert.equal(workerDurationSnapshot.rows.find(row=>row.id===durationRequest.id).canReviewOt,false);
 assert.ok(workerDurationSnapshot.rows.every(row=>row.ownerId===`cloud:${worker.id}`));
