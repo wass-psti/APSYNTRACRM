@@ -92,7 +92,24 @@ BEGIN
 END
 $view$;
 
+-- The repository query also evaluates the existing creator capability. This
+-- disposable helper models the fixture's General Manager path; it does not
+-- add or change any production role, grant, or authorization rule.
+CREATE OR REPLACE FUNCTION private.tl03_can_create_draft(p_board_id uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
+AS $create$
+ SELECT auth.uid() IS NOT NULL
+  AND p_board_id='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88'::uuid
+  AND public.work_board_access(p_board_id,'manage') IS TRUE
+$create$;
+REVOKE ALL ON FUNCTION private.tl03_can_create_draft(uuid)
+ FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION private.tl03_can_create_draft(uuid) TO authenticated;
+
 -- The repository test creates ordinary manager-owned records. This test-only
+-- policy stub supplies the established default value without changing review
+-- or approval functions in the production source migrations. This test-only
 -- policy stub supplies the established default value without changing review
 -- or approval functions in the production source migrations.
 CREATE OR REPLACE FUNCTION private.tl03_revision_approval_policy(
