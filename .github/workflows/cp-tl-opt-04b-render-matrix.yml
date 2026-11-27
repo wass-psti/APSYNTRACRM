@@ -8,6 +8,7 @@ on:
       - 'frontend/tradelink-domain-client.js'
       - 'frontend/tradelink-draft-workspace.js'
       - 'frontend/tradelink-saved-document-output.js'
+      - 'frontend/tradelink-finance.js'
       - 'frontend/tradelink/quotation-print.js'
       - 'frontend/tests/tradelink-render-snapshot.test.mjs'
       - 'frontend/tests/tradelink-saved-document-output.test.mjs'
@@ -16,6 +17,8 @@ on:
       - 'frontend/assets/tradelink/templates/**'
       - 'scripts/cp-tl-opt-04b-render-matrix-browser.mjs'
       - 'scripts/cp-tl-opt-04b-render-matrix-pdfkit.swift'
+      - 'scripts/cp-tl-opt-04b-history-browser.mjs'
+      - 'scripts/cp-tl-opt-04b-history-pdfkit.swift'
       - '.github/workflows/cp-tl-opt-04b-render-matrix.yml'
   workflow_dispatch:
 
@@ -46,3 +49,7 @@ jobs:
         run: node scripts/cp-tl-opt-04b-render-matrix-browser.mjs
       - name: Verify all generated PDFs with macOS PDFKit
         run: swift scripts/cp-tl-opt-04b-render-matrix-pdfkit.swift /tmp/cp-tl-opt-04b-render-matrix
+      - name: Render historical revision 4 before and after revision 5
+        run: node scripts/cp-tl-opt-04b-history-browser.mjs
+      - name: Verify exact historical revision reproduction with PDFKit
+        run: swift scripts/cp-tl-opt-04b-history-pdfkit.swift /tmp/cp-tl-opt-04b-history
