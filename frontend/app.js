@@ -10862,6 +10862,8 @@ async function action(name,button){
      state.ttAttendance?.status!=='VERIFIED_READ')return;
   const next=button.dataset.target;
   if(!['overview','clock','employees','log','reports','calendar','ot','hours','team','monitor','gps'].includes(next))return;
+  if(['SHARED_LOGIN','SHARED_DISABLED','SERVICE_UNAVAILABLE','SETUP_REQUIRED'].includes(state.ttAttendance.ojtRoster?.mode)&&
+    (next!=='clock'&&(!timeTrackerOjtScope()||!state.ttOjtSelected||!['log','ot'].includes(next))))return;
   if(next==='gps'&&state.roleVerified!==true&&state.ttAttendance.access?.moduleRole!=='Supervisor')return;
   if(next==='team'&&state.roleVerified!==true)return;
   if(next==='employees'&&!canViewTimeTrackerEmployees(state.ttAttendance.access))return;
