@@ -21,8 +21,6 @@ CREATE TABLE public.workspace_members(workspace_id uuid NOT NULL REFERENCES publ
  user_id uuid NOT NULL REFERENCES public.profiles(id),active boolean NOT NULL,PRIMARY KEY(workspace_id,user_id));
 CREATE TABLE public.work_boards(id uuid PRIMARY KEY,workspace_id uuid NOT NULL REFERENCES public.workspaces(id),
  name text NOT NULL,status text NOT NULL,archived_at timestamptz,trashed_at timestamptz);
-CREATE TABLE public.work_board_members(board_id uuid NOT NULL REFERENCES public.work_boards(id),
- user_id uuid NOT NULL REFERENCES public.profiles(id),role text NOT NULL,PRIMARY KEY(board_id,user_id));
 CREATE TABLE public.module_role_assignments(user_id uuid NOT NULL REFERENCES public.profiles(id),
  module_id text NOT NULL,enabled boolean NOT NULL,role text NOT NULL,PRIMARY KEY(user_id,module_id));
 CREATE TABLE public.apsyntra_role_bootstrap_identities(user_id uuid PRIMARY KEY REFERENCES public.profiles(id));
@@ -46,14 +44,6 @@ CREATE FUNCTION public.module_role_for(p_module_id text,p_user_id uuid DEFAULT a
 RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
 AS $$ SELECT m.role FROM public.module_role_assignments m JOIN public.profiles p ON p.id=m.user_id
  WHERE m.user_id=p_user_id AND m.module_id=p_module_id AND m.enabled AND p.status='active' $$;
-CREATE FUNCTION public.work_board_access(p_board_id uuid,p_required text DEFAULT 'view')
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
-AS $$ SELECT p_required='view' AND EXISTS(
- SELECT 1 FROM public.work_board_members bm JOIN public.work_boards b ON b.id=bm.board_id
- WHERE bm.board_id=p_board_id AND bm.user_id=auth.uid()
-  AND b.workspace_id=public.current_workspace_id(auth.uid())
-  AND bm.role IN ('owner','editor','viewer')
-) $$;
 CREATE FUNCTION public.apsyntra_role_is_bootstrap()
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
 AS $$ SELECT EXISTS(SELECT 1 FROM public.apsyntra_role_bootstrap_identities bi
@@ -69,12 +59,12 @@ BEGIN
   RAISE EXCEPTION 'Current signed session required' USING ERRCODE='42501';
  END IF;
  v_ws:=public.current_workspace_id(v_actor);
- IF v_ws IS NULL OR public.has_module_access('time-tracker',v_actor) IS DISTINCT FROM TRUE
+ IF v_ws IS NULL OR p_board_id IS DISTINCT FROM '46bf4ee7-368a-4c35-842c-8593ea1f6ac3'::uuid
+ OR public.has_module_access('time-tracker',v_actor) IS DISTINCT FROM TRUE
  OR public.module_role_for('time-tracker',v_actor) IS NULL
  OR NOT EXISTS(SELECT 1 FROM public.work_boards b WHERE b.id=p_board_id AND b.workspace_id=v_ws
-  AND b.name='TimeTracker Attendance' AND b.status='active'
-  AND b.archived_at IS NULL AND b.trashed_at IS NULL
-  AND public.work_board_access(b.id,'view')) THEN
+  AND b.name='TimeTracker Attendance' AND b.description LIKE '[APSYNTRA:MODULE:timetracker:v1]%'
+  AND b.status='active' AND b.archived_at IS NULL AND b.trashed_at IS NULL) THEN
   RAISE EXCEPTION 'Signed TimeTracker application, board or workspace access denied' USING ERRCODE='42501';
  END IF;
  RETURN v_ws;
@@ -99,17 +89,9 @@ INSERT INTO public.workspace_members(workspace_id,user_id,active) VALUES
  ('10000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000015',true),
  ('10000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000016',true),
  ('20000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000017',true);
-INSERT INTO public.work_boards(id,workspace_id,name,status) VALUES
- ('46bf4ee7-368a-4c35-842c-8593ea1f6ac3','10000000-0000-4000-8000-000000000001','TimeTracker Attendance','active'),
- ('20000000-0000-4000-8000-000000000022','20000000-0000-4000-8000-000000000002','TimeTracker Attendance','active');
-INSERT INTO public.work_board_members(board_id,user_id,role) VALUES
- ('46bf4ee7-368a-4c35-842c-8593ea1f6ac3','10000000-0000-4000-8000-000000000011','viewer'),
- ('46bf4ee7-368a-4c35-842c-8593ea1f6ac3','10000000-0000-4000-8000-000000000012','viewer'),
- ('46bf4ee7-368a-4c35-842c-8593ea1f6ac3','10000000-0000-4000-8000-000000000013','viewer'),
- ('46bf4ee7-368a-4c35-842c-8593ea1f6ac3','10000000-0000-4000-8000-000000000014','viewer'),
- ('46bf4ee7-368a-4c35-842c-8593ea1f6ac3','10000000-0000-4000-8000-000000000015','viewer'),
- ('46bf4ee7-368a-4c35-842c-8593ea1f6ac3','10000000-0000-4000-8000-000000000016','viewer'),
- ('20000000-0000-4000-8000-000000000022','20000000-0000-4000-8000-000000000017','viewer');
+INSERT INTO public.work_boards(id,workspace_id,name,description,status) VALUES
+ ('46bf4ee7-368a-4c35-842c-8593ea1f6ac3','10000000-0000-4000-8000-000000000001','TimeTracker Attendance','[APSYNTRA:MODULE:timetracker:v1]','active'),
+ ('20000000-0000-4000-8000-000000000022','20000000-0000-4000-8000-000000000002','TimeTracker Attendance','[APSYNTRA:MODULE:timetracker:v1]','active');
 INSERT INTO public.module_role_assignments(user_id,module_id,enabled,role) VALUES
  ('10000000-0000-4000-8000-000000000011','time-tracker',true,'Employee'),
  ('10000000-0000-4000-8000-000000000012','time-tracker',true,'HR'),
