@@ -9,9 +9,10 @@ on:
       - 'sql/mrh-*.sql'
       - 'sql/tests/mrh-*.sql'
       - 'scripts/cp-ms-crm-04b2-fx-concurrency.sh'
+      - 'scripts/cp-ms-crm-04b3-pricing-concurrency.sh'
       - '.github/workflows/cp-ms-crm-02-contract.yml'
   push:
-    branches: [main, integration/cp-ms-crm-02, integration/cp-ms-crm-04b1, integration/cp-ms-crm-04b2]
+    branches: [main, integration/cp-ms-crm-02, integration/cp-ms-crm-04b1, integration/cp-ms-crm-04b2, integration/cp-ms-crm-04b3]
     paths:
       - 'integrations/material-sourcing/crm-contract/**'
       - 'frontend/material-sourcing-*.js'
@@ -20,6 +21,7 @@ on:
       - 'sql/mrh-*.sql'
       - 'sql/tests/mrh-*.sql'
       - 'scripts/cp-ms-crm-04b2-fx-concurrency.sh'
+      - 'scripts/cp-ms-crm-04b3-pricing-concurrency.sh'
       - '.github/workflows/cp-ms-crm-02-contract.yml'
 permissions:
   contents: read
@@ -76,6 +78,9 @@ jobs:
           docker cp sql/mrh-fx-snapshots-CANDIDATE-NOT-APPLIED.sql "$name:/tmp/mrh-fx-snapshots.sql"
           docker exec -i "$name" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 < sql/tests/mrh-fx-snapshots-disposable.sql
           bash scripts/cp-ms-crm-04b2-fx-concurrency.sh "$name"
+          docker cp sql/mrh-pricing-persistence-CANDIDATE-NOT-APPLIED.sql "$name:/tmp/mrh-pricing-persistence.sql"
+          docker exec -i "$name" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 < sql/tests/mrh-pricing-persistence-disposable.sql
+          bash scripts/cp-ms-crm-04b3-pricing-concurrency.sh "$name"
           docker stop "$name" >/dev/null
       - name: Clean disposable containers
         if: always()
