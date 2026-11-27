@@ -266,7 +266,7 @@ export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId
   'data-tradelink-company-profile="'+safe(company.id)+'" '+
   'data-tradelink-profile-version="'+safe(renderSnapshot?.snapshot.profileVersion??'legacy')+'" '+
   'data-tradelink-render-snapshot-source="'+safe(renderSnapshot?.snapshotSource??'legacy-static')+'"'+
-  'data-tradelink-legacy-company-default="'+(legacyDefaulted?'true':'false')+'">'+
+  ' data-tradelink-legacy-company-default="'+(legacyDefaulted?'true':'false')+'">'+
   main+termsPage+'</article>';
 }
 let active=null;
