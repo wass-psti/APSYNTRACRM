@@ -73,3 +73,19 @@ test('task revisions preserved; incompatible states not conflated',()=>{
  assert.equal(reconcileTask({...base,status:'done'}).revision,7);
  assert.equal(existingTaskStatus('Done'),'done');assert.throws(()=>existingTaskStatus('Stuck'),/compatible CRM contract/);
 });
+
+import {readFileSync} from 'node:fs';
+test('historical disposable task and viewer fixtures exercise the deployed migration bodies',()=>{
+ const read=path=>readFileSync(new URL('../../../'+path,import.meta.url),'utf8');
+ // Ignore only comments, whitespace, transaction wrappers and the historical
+ // installation guard prefix. Never modify the production migration itself.
+ const clean=s=>s.split('\n').map(l=>l.trim()).filter(l=>l&&!l.startsWith('--')&&!/^(begin|commit);$/i.test(l)).join('\n').replace(/;+/g,';');
+ for(const [migration,candidate,marker] of [
+ ['supabase/migrations/20261110062757_mrh_board_item_tasks_activation_20261110.sql','sql/mrh-board-item-tasks-CANDIDATE-NOT-APPLIED.sql','$mrh_activation_guard$;'],
+ ['supabase/migrations/20261111041157_mrh_board_viewer_commercial_read_20261111.sql','sql/mrh-sourcing-board-viewer-commercial-read-CANDIDATE-NOT-APPLIED.sql','$guard$;']
+ ]){
+  const installed=read(migration),offset=installed.indexOf(marker);
+  assert.ok(offset>=0,migration+' installation guard marker');
+  assert.equal(clean(installed.slice(offset+marker.length)),clean(read(candidate)),migration+' runtime body differs');
+ }
+});

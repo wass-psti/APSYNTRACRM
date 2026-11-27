@@ -71,3 +71,7 @@ Exact pricing candidate in pricing-contract.sql is temporary and test-only. It c
 ## Acceptance and limits
 
 Run the focused reconciliation tests, existing MRH frontend tests, disposable MRH SQL fixtures, standalone pricing compatibility and baseline regression in CI. Fixtures use fake auth settings only; do not claim genuine signed or deployed acceptance. The module is not yet wired to the CRM route, and no schema changes are deployed. Unknown field mappings or incompatible statuses must remain visible instead of silently defaulting.
+
+### Disposable test harness clarification
+
+The original task and commercial-viewer fixtures intentionally use minimal synthetic tables and (for tasks) out-of-scope groups. Historical production installation guards require the original exact board metadata and are not applicable to these runtime fixtures. CI runs the existing candidate bodies only after the JavaScript parity test proves they match the activated migration bodies (ignoring only guard prefix, comments and transaction wrapper). The atomic-create fixture runs the actual migration including its installation guard. No production guard is removed or bypassed, and no migration is executed against production.

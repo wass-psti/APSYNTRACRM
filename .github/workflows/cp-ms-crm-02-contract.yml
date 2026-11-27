@@ -5,6 +5,8 @@ on:
       - 'integrations/material-sourcing/crm-contract/**'
       - 'frontend/material-sourcing-*.js'
       - 'supabase/migrations/*mrh*'
+      - 'sql/mrh-*.sql'
+      - 'sql/tests/mrh-*.sql'
       - '.github/workflows/cp-ms-crm-02-contract.yml'
   push:
     branches: [main, integration/cp-ms-crm-02]
@@ -12,6 +14,8 @@ on:
       - 'integrations/material-sourcing/crm-contract/**'
       - 'frontend/material-sourcing-*.js'
       - 'supabase/migrations/*mrh*'
+      - 'sql/mrh-*.sql'
+      - 'sql/tests/mrh-*.sql'
       - '.github/workflows/cp-ms-crm-02-contract.yml'
 permissions:
   contents: read
@@ -48,8 +52,8 @@ jobs:
             docker stop "$name" >/dev/null
           }
           run_contract atomic sql/tests/mrh-atomic-material-disposable.sql supabase/migrations/20261110173953_mrh_material_atomic_create_20261111.sql /tmp/mrh-atomic.sql
-          run_contract tasks sql/tests/mrh-board-item-tasks-disposable.sql supabase/migrations/20261110062757_mrh_board_item_tasks_activation_20261110.sql /tmp/mrh-task-candidate.sql
-          run_contract viewer sql/tests/mrh-sourcing-board-viewer-disposable.sql supabase/migrations/20261111041157_mrh_board_viewer_commercial_read_20261111.sql /tmp/mrh-board-viewer-candidate.sql
+          run_contract tasks sql/tests/mrh-board-item-tasks-disposable.sql sql/mrh-board-item-tasks-CANDIDATE-NOT-APPLIED.sql /tmp/mrh-task-candidate.sql
+          run_contract viewer sql/tests/mrh-sourcing-board-viewer-disposable.sql sql/mrh-sourcing-board-viewer-commercial-read-CANDIDATE-NOT-APPLIED.sql /tmp/mrh-board-viewer-candidate.sql
       - name: Disposable PostgreSQL — exact pricing compatibility
         run: |
           set -eu
