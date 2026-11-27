@@ -228,3 +228,47 @@ test('Manual clock-out is limited to active records and full System Admin contro
  assert.doesNotMatch(render({records:[active],adminEligible:true,adminFullAccess:false}),/data-action="tt-log-admin-manual-clock-out"/);
  assert.doesNotMatch(render({records:[active]}),/data-action="tt-log-admin-manual-clock-out"/);
 });
+
+test('Clock Out appends OT only for a signed matching approved request beyond nine credited hours',()=>{
+ const employee={...records[1],id:'extended',clockIn:'2026-11-03T00:00:00Z',
+  clockOut:'2026-11-03T12:00:00Z',creditedMs:39600000};
+ const approval={ownerId:employee.ownerId,date:'2026-11-03',status:'Approved',durationMinutes:120};
+ const clockOut=(rows,requests,active=true,filters={})=>[...render({
+  records:rows,otRequests:requests,otContractActive:active,filters
+ }).matchAll(/class="tt-log-row-out"[^>]*>([^<]+)<\/span>/g)].map(match=>match[1]);
+ assert.deepEqual(clockOut([employee],[approval]),['08:00:00 PM - OT']);
+ for(const request of [
+  {...approval,status:'Submitted'},{...approval,status:'Rejected'},
+  {...approval,status:'Withdrawn'},{...approval,ownerId:'cloud:two'},
+  {...approval,date:'2026-11-02'},{...approval,durationMinutes:0},
+  {...approval,attendanceRecordId:'other-record'},
+  {...approval,attendanceRecordId:employee.id,attendanceClockInAt:'2026-11-03T01:00:00Z'}
+ ]){
+  assert.deepEqual(clockOut([employee],[request]),['08:00:00 PM']);
+ }
+ assert.deepEqual(clockOut([employee],[approval],false),['08:00:00 PM']);
+ assert.deepEqual(clockOut([employee],[]),['08:00:00 PM']);
+ assert.deepEqual(clockOut([{...employee,clockOut:'2026-11-03T10:00:00Z'}],[approval]),['06:00:00 PM']);
+ assert.deepEqual(clockOut([{...employee,workDurationMs:32400000}],[approval]),['08:00:00 PM']);
+ assert.deepEqual(clockOut([{...employee,status:'Active',clockOut:null}],[approval]),['—']);
+ assert.deepEqual(clockOut([{...employee,classification:'Administrative closure'}],[approval]),['08:00:00 PM']);
+ assert.deepEqual(clockOut([{...employee,isOjt:true,department:'OJT'}],[approval]),['08:00:00 PM']);
+ const second={...employee,id:'second',clockIn:'2026-11-03T01:00:00Z',
+  clockOut:'2026-11-03T09:00:00Z',status:'Completed'};
+ assert.ok(clockOut([employee,second],[approval]).every(t=>!t.endsWith(' - OT')));
+ assert.ok(clockOut([employee,{...second,department:'HR'}],[approval],true,{department:'Engineering'})
+  .every(t=>!t.endsWith(' - OT')));
+ assert.deepEqual(clockOut([employee,second],[{...approval,attendanceRecordId:employee.id,
+  attendanceClockInAt:employee.clockIn}]),['05:00:00 PM','08:00:00 PM - OT']);
+ assert.deepEqual(clockOut([employee],[{...approval,otPolicy:'manual-duration-v1',isManual:true}]),
+  ['08:00:00 PM - OT']);
+ const overnight={...employee,clockIn:'2026-11-02T23:00:00Z',clockOut:'2026-11-03T16:00:00Z'};
+ assert.deepEqual(clockOut([overnight],[approval]),['12:00:00 AM - OT']);
+ assert.deepEqual(clockOut([overnight],[{...approval,date:'2026-11-04'}]),['12:00:00 AM']);
+});
+test('native Log route receives only signed OT snapshot data and preserves the binding timestamp',()=>{
+ const ui=readFileSync('frontend/time-tracker-ui.js','utf8');
+ assert.match(ui,/renderTimeTrackerLog\(\{\s*records:timeTrackerLogRowsForSnapshot\(result\),\s*otRequests:result\.otRequests\|\|\[\],otContractActive:result\.access\?\.otContractActive===true/);
+ const overtime=readFileSync('frontend/time-tracker-overtime.js','utf8');
+ assert.match(overtime,/attendanceClockInAt:typeof r\.attendanceClockInAt==='string'\?r\.attendanceClockInAt:null/);
+});

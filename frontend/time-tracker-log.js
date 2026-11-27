@@ -5,6 +5,7 @@ import {formatTimeTrackerClock,formatTimeTrackerShortDateTime,formatTimeTrackerD
 import {TT_LOCATIONS,creditedAttendanceMs,completedLogWorkDurationMs,manilaClockMinutes} from './time-tracker-policy.js';
 import {filterMyAttendancePeriod} from './time-tracker-native.js';
 import {manilaDay} from './time-tracker-overview.js';
+import {TT_REGULAR_WORK_MINUTES} from './time-tracker-duration-overtime-policy.js';
 import {mapFrame} from './time-tracker-map.js';
 import {renderTimeTrackerAdminEditor,renderTimeTrackerAdminDeleteDialog,renderTimeTrackerManualClockOut,TT_ADMIN_RECORD_LIMIT} from './time-tracker-record-management.js';
 import {renderTimeTrackerOjtAdminEditor} from './apps/TimeTracker/time-tracker-ojt-admin-editor.js';
@@ -474,6 +475,41 @@ export function timeTrackerLogWorkDuration(row){
  return durationLabel(ms);
 }
 
+/** Display-only OT evidence from the signed snapshot, never an attendance mutation.
+ * Match employee and Philippine clock-in date. Prefer an explicit attendance
+ * binding; unbound legacy/manual approvals require one unambiguous session.
+ * Count the full authorized history before applying Log filters.
+ */
+export function timeTrackerLogApprovedOtRecords(records=[],otRequests=[],otContractActive=false){
+ const matched=new Set();
+ if(otContractActive!==true||!Array.isArray(records)||!Array.isArray(otRequests))return matched;
+ const key=(owner,date)=>owner+'|'+date;
+ const byDay=new Map();
+ for(const row of safeRows(records)){
+  if(row.isOjt||row.department==='OJT'||typeof row.ownerId!=='string'||!row.ownerId.startsWith('cloud:'))continue;
+  const day=key(row.ownerId,manilaDay(row.clockIn));
+  const group=byDay.get(day)||[];
+  group.push(row);
+  byDay.set(day,group);
+ }
+ for(const request of otRequests){
+  if(request?.status!=='Approved'||!Number.isInteger(request.durationMinutes)||request.durationMinutes<=0)continue;
+  const group=byDay.get(key(request.ownerId,request.date))||[];
+  const candidates=request.attendanceRecordId!=null?
+   group.filter(row=>row.id===request.attendanceRecordId):group;
+  if(candidates.length!==1)continue;
+  const row=candidates[0];
+  if(request.attendanceClockInAt!=null&&
+     (!validTime(request.attendanceClockInAt)||Date.parse(request.attendanceClockInAt)!==Date.parse(row.clockIn)))continue;
+  if(row.status!=='Completed'||row.classification==='Administrative closure'||!validTime(row.clockOut))continue;
+  const regularMs=TT_REGULAR_WORK_MINUTES*60000;
+  if(creditedAttendanceMs(row.clockIn,row.clockOut)<=regularMs||
+     (Number.isSafeInteger(row.workDurationMs)&&row.workDurationMs<=regularMs))continue;
+  matched.add(row);
+ }
+ return matched;
+}
+
 const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
  const hidden=query&&!searchText(r).includes(query.toLocaleLowerCase().trim());
  const selected=gpsOptions.selectedIds?.includes(r.id)===true||
@@ -481,6 +517,8 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
  const done=r.status==='Completed';
  const state=r.classification==='Administrative closure'?
   'Administrative closure':done?'Completed':r.status==='Active'?'Active':'Unknown';
+ const approvedOt=gpsOptions.approvedOtRecords?.has(r)===true;
+ const clockOutText=validTime(r.clockOut)?formatTimeTrackerClock(r.clockOut,{seconds:true})+(approvedOt?' - OT':''):'—';
  return '<tr class="tt-log-filterable aps-record-selectable'+(selected?' is-selected board-row-selected':'')+
   '" aria-selected="'+selected+'" data-record-id="'+esc(r.id)+'" data-log-search="'+esc(searchText(r))+'"'+
   (hidden?' hidden':'')+'>'+
@@ -493,7 +531,7 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
    '<span class="tt-log-row-person"><span class="tt-log-avatar" aria-hidden="true">'+esc(logInitials(r.name))+'</span><strong title="'+esc(r.name||'Signed member')+'">'+esc(r.name||'Signed member')+'</strong><small class="tt-log-row-date">'+esc(logRowDate(r.clockIn))+'</small></span>'+
    '<span class="tt-log-row-location" title="'+esc(r.location||'Unspecified')+'">'+esc(locationLabel(r.location||'Unspecified'))+'</span>'+
    '<span class="tt-log-row-department" title="'+esc(r.isOjt?'OJT intern · Shared login':r.department||'Unassigned')+'">'+esc(r.department||'Unassigned')+'</span>'+
-   '<span class="tt-log-row-out" title="'+esc(validTime(r.clockOut)?phtDate(r.clockOut):'')+'">'+esc(validTime(r.clockOut)?formatTimeTrackerClock(r.clockOut,{seconds:true}):'—')+'</span>'+
+   '<span class="tt-log-row-out" title="'+esc(validTime(r.clockOut)?phtDate(r.clockOut)+(approvedOt?' · Approved OT · '+clockOutText:''):'')+'">'+esc(clockOutText)+'</span>'+
    '<span class="tt-log-row-duration" title="Completed work duration; short sessions have no lunch deduction">'+
     esc(timeTrackerLogWorkDuration(r))+'</span><span class="tt-log-row-status"><span class="tt-log-badge '+(done?'tt-log-badge-done':
     state==='Active'?'tt-log-badge-active':'tt-log-badge-unknown')+'">'+esc(state)+'</span></span>'+
@@ -501,6 +539,7 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
 };
 export function renderTimeTrackerLog({
  records=[],scope='OWN_ATTENDANCE_ONLY',filters={},now=new Date(),busy=false,
+ otRequests=[],otContractActive=false,
  gpsEligible=false,gpsData=null,gpsBusy=false,gpsError='',gpsErrorRecordId='',
  expandedRecordIds=[],mapEnabled=false,mapTheme='map',
  adminEligible=false,adminFullAccess=adminEligible,adminDirectory=[],selectedIds=[],adminEditor=null,adminDeleteConfirm=null,
@@ -509,6 +548,7 @@ export function renderTimeTrackerLog({
  const options={...TT_LOG_DEFAULT_FILTERS,...filters};
  const rows=filterTimeTrackerLogRows(records,{...options,search:''},now);
  const visible=filterTimeTrackerLogRows(records,options,now);
+ const approvedOtRecords=timeTrackerLogApprovedOtRecords(records,otRequests,otContractActive);
  const editableVisible=visible.some(row=>!row.isOjt);
  const standardSelected=selectedIds.filter(id=>rows.some(row=>row.id===id&&!row.isOjt));
  const query=String(options.search??'').slice(0,120);
@@ -571,7 +611,7 @@ export function renderTimeTrackerLog({
       gpsEligible:!r.isOjt&&gpsEligible,gpsData:r.isOjt?null:gpsData,gpsBusy,gpsError,gpsErrorRecordId,
       expandedRecordIds,mapEnabled:!r.isOjt&&mapEnabled,mapTheme,
       adminEligible,adminFullAccess,
-      adminBusy,selectedIds})).join('')+
+      adminBusy,selectedIds,approvedOtRecords})).join('')+
      '</tbody></table></div></div>':
      '<p class="tt-log-empty">No authorized attendance sessions match these filters.</p>')+
    (rows.length?'<p id="tt-log-empty-search" class="tt-log-empty"'+
