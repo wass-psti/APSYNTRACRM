@@ -1980,6 +1980,18 @@ function timeTrackerOjtScope(){
   state.view!=='board'||state.tab!=='attendance')return null;
  return {userId:a.userId,workspaceId:a.workspaceId,boardId:a.boardId};
 }
+// Shared reads are optional for the personal OJT Clock; failed peer reads
+// never turn a successful personal clock action into a failed write.
+async function timeTrackerOjtSnapshotWithShared(scope,internId){
+ const personal=await timeTrackerOjt.snapshot(scope,internId);
+ let sharedRead=null;
+ const access=state.ttAttendance?.access;
+ if(access&&access.userId===scope.userId&&access.workspaceId===scope.workspaceId&&access.boardId===scope.boardId){
+  try{sharedRead=await timeTracker.sharedReadSnapshot(scope.boardId,access,internId);}
+  catch{/* Do not retain stale peer data or block personal OJT attendance. */}
+ }
+ return {...personal,sharedRead};
+}
 function timeTrackerOjtAdminScope(){
  const a=state.ttAttendance?.access;
  if(!a||!['System Admin','IT Administrator'].includes(a.moduleRole)||
@@ -5148,7 +5160,7 @@ async function loadTimeTracker(seq=routeSerial,nativeContext=null){
      clearTimeTrackerOjtSelection();
     }else{
      try{
-      state.ttOjtSnapshot=await timeTrackerOjt.snapshot(ojtScope,state.ttOjtSelected.id);
+      state.ttOjtSnapshot=await timeTrackerOjtSnapshotWithShared(ojtScope,state.ttOjtSelected.id);
       state.ttOjtPending=false;
      }catch{
       clearTimeTrackerOjtSelection();
@@ -10637,7 +10649,7 @@ async function action(name,button){
    await timeTrackerOjt.commit(scope,selected.id,{
     action,recordId:active?.id||null,location:locationValue,geo,workNote:note
    });
-   state.ttOjtSnapshot=await timeTrackerOjt.snapshot(scope,selected.id);
+   state.ttOjtSnapshot=await timeTrackerOjtSnapshotWithShared(scope,selected.id);
    state.ttOjtPending=false;
    if(action==='clock-in')ttWorkNoteDraft.clear(timeTrackerWorkNoteScope(selected.id));
    state.ttOjtSuccess=action==='clock-in'?
@@ -14868,7 +14880,7 @@ root.addEventListener('change',async event=>{
  try{
   // A dropdown selection only loads that intern's signed attendance snapshot.
   // GPS and attendance writes remain behind the explicit Start Session action.
-  const attendance=await timeTrackerOjt.snapshot(scope,id);
+  const attendance=await timeTrackerOjtSnapshotWithShared(scope,id);
   if(!timeTrackerOjtScope()||state.context?.user_id!==scope.userId||
     state.boardId!==scope.boardId||
     !state.ttAttendance?.ojtRoster?.interns?.some(row=>row.id===id))
