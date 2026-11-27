@@ -265,8 +265,6 @@ test('print action reloads signed record and matching Board before mounting the 
   /item\.title===listed\.documentNumber/,
   /renderTradeLinkSavedDocumentOutput\(record,ws,documentId,\{creatorName,renderSnapshot\}\)/,
   /mountTradeLinkSavedDocumentOutput\(markup,\{/,
-  /await active\.stylesheetReady/,
-  /stylesheetLinks\.forEach\(link=>link\.remove\(\)/,
   /if\(!same\(\)\)return/
  ])assert.match(flow,pattern);
  assert.match(source,/case 'tradelink-document-print'/);
@@ -281,6 +279,8 @@ test('print action reloads signed record and matching Board before mounting the 
  assert.match(markup,/Enable Background graphics/);
  assert.match(markup,/Legacy company profile defaulted|legacyNotice/);
  assert.match(markup,/windowRef\.print\(\)/);
+ assert.match(markup,/await active\.stylesheetReady/);
+ assert.match(markup,/stylesheetLinks\.forEach\(link=>link\.remove\(\)/);
  assert.doesNotMatch(markup,/localStorage|sessionStorage|window[.]open|new Blob|createObjectURL/);
  const css=readFileSync('frontend/tradelink-application.css','utf8');
  assert.match(css,/@media print/);
