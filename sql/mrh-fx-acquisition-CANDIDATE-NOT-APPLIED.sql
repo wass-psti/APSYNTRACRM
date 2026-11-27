@@ -36,14 +36,14 @@ begin
   raise exception 'FX observation is future-dated or older than seven calendar days' using errcode='PT502';end if;
  -- Midnight UTC encodes the provider's calendar date, not a claimed publication time.
  return jsonb_build_object('usd',u->>'rate','eur',e->>'rate','provider','Frankfurter v2 / ECB',
-  'observationRef','frankfurter-v2:ECB:'||u->>'date'||':USD/PHP+EUR/PHP',
+  'observationRef','frankfurter-v2:ECB:'||(u->>'date')||':USD/PHP+EUR/PHP',
   'observedAt',d::timestamp at time zone 'UTC','retrievedAt',p_retrieved);
 end $$;
 
 -- Only two fixed HTTPS endpoints. No item or workspace IDs transmitted.
 -- Per-request timeout bounds: 1.5s connect / 3.5s total, two requests.
 create function private.mrh_fx_fetch_latest()
-returns jsonb language plpgsql volatile set search_path='' set timezone='UTC'
+returns jsonb language plpgsql volatile set search_path=pg_catalog,mrh_fx_http,pg_temp set timezone='UTC'
 set http.curlopt_connecttimeout_ms='1500' set http.curlopt_timeout_ms='3500'
 set http.curlopt_ssl_verifypeer='1' set http.curlopt_ssl_verifyhost='2'
 as $$
