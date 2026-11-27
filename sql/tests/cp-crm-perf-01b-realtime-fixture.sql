@@ -58,11 +58,6 @@ BEGIN
 END;
 $verify_realtime_table$;
 
--- Supabase owns realtime.messages with its dedicated admin role.
--- Grant it to postgres only for this disposable fixture, then revoke it.
-GRANT supabase_realtime_admin TO postgres;
-SET ROLE supabase_realtime_admin;
-
 CREATE POLICY cp_crm_perf_01b_realtime_receive
 ON realtime.messages
 FOR SELECT TO authenticated
@@ -78,9 +73,6 @@ WITH CHECK (
   realtime.topic() = 'realtime:board:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
   AND extension = 'broadcast'
 );
-
-RESET ROLE;
-REVOKE supabase_realtime_admin FROM postgres;
 
 NOTIFY pgrst, 'reload schema';
 

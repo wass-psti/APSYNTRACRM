@@ -157,7 +157,8 @@ jobs:
           db_container="$(docker ps --format '{{.ID}} {{.Names}}' | awk '$2 ~ /^supabase_db_/ {print $1; exit}')"
           test -n "$db_container"
           docker cp sql/tests/cp-crm-perf-01b-realtime-fixture.sql "$db_container:/tmp/cp-crm-perf-01b-realtime-fixture.sql"
-          docker exec "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/cp-crm-perf-01b-realtime-fixture.sql
+          docker exec "$db_container" psql -X -U supabase_admin -d postgres -Atqc "SELECT current_user, rolsuper FROM pg_roles WHERE rolname=current_user" | grep -Fx 'supabase_admin|t'
+          docker exec "$db_container" psql -X -v ON_ERROR_STOP=1 -U supabase_admin -d postgres -f /tmp/cp-crm-perf-01b-realtime-fixture.sql
       - name: Run existing PlatformSync state-machine tests
         run: node --test frontend/tests/platform-sync.test.mjs
       - name: Verify real private broadcast, signed re-read and reconnect
