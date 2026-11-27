@@ -1,0 +1,35 @@
+name: CP-CRM-PERF-01 Platform Baseline
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/cp-crm-perf-01-browser.mjs'
+      - 'scripts/lib/crm-performance-baseline.mjs'
+      - 'frontend/tests/crm-performance-baseline.test.mjs'
+      - 'frontend/tests/fixtures/crm-performance-baseline.html'
+      - '.github/workflows/cp-crm-perf-01.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  baseline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Verify benchmark inventory and measurement contracts
+        run: |
+          node --check scripts/cp-crm-perf-01-browser.mjs
+          node --test frontend/tests/crm-performance-baseline.test.mjs frontend/tests/performance-profile.test.mjs frontend/tests/performance-critical-path.test.mjs frontend/tests/performance-entry-waterfall.test.mjs
+      - name: Measure repository source startup and shared DOM helpers
+        run: |
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$BROWSER"
+          CHROME_BIN="$BROWSER" node scripts/cp-crm-perf-01-browser.mjs
