@@ -21,6 +21,8 @@ const safeRows=rows=>Array.isArray(rows)?rows.filter(r=>r&&validTime(r.clockIn))
  */
 export function timeTrackerLogRowsForSnapshot(snapshot){
  if(snapshot?.status!=='VERIFIED_READ')return [];
+ if(snapshot.sharedLog?.scope==='AUTHORIZED_WORKSPACE_TEAM'&&Array.isArray(snapshot.sharedLog.rows))
+  return snapshot.sharedLog.rows;
  const standard=snapshot.log?.rows||snapshot.records||[];
  if(!['System Admin','IT Administrator'].includes(snapshot.access?.moduleRole))
   return standard;
