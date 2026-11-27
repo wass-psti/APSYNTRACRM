@@ -2462,8 +2462,8 @@
       "version": "20261127120000",
       "name": "cp_tl_opt_04_document_template_render_snapshots",
       "file": "20261127120000_cp_tl_opt_04_document_template_render_snapshots.sql",
-      "bytes": 46172,
-      "sha256": "fa7da4da057afd6af42edcde8ebba25bcbf5d467486d11f6ff7570b827f0db6f"
+      "bytes": 46214,
+      "sha256": "f983a56d01202aa8d0dc1bb18b682999e76e202216c1fb978bcf96f4f5aee15a"
     },
     {
       "version": "20261127160000",

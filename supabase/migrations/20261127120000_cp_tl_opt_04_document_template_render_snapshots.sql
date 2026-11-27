@@ -13,7 +13,7 @@ CREATE TABLE private.tradelink_company_profile_versions (
 
 CREATE TABLE private.tradelink_template_versions (
  template_id text NOT NULL,
- template_version text NOT NULL CHECK (template_version ~ '^v[0-9]+\\.[0-9]+\\.[0-9]+$'),
+ template_version text NOT NULL CHECK (template_version ~ '^v[0-9]+[.][0-9]+[.][0-9]+$'),
  profile_id text NOT NULL,
  profile_version integer NOT NULL,
  template jsonb NOT NULL CHECK (jsonb_typeof(template)='object'),
@@ -539,6 +539,7 @@ BEGIN
  INTO v_template_version,v_template,v_default_terms
  FROM private.tradelink_template_versions t
  WHERE t.template_id=v_template_id AND t.profile_id=v_profile_id
+  AND t.profile_version=v_profile_version
  ORDER BY t.created_at DESC,t.template_version DESC LIMIT 1;
  IF v_template IS NULL THEN
   RAISE EXCEPTION 'TradeLink template version unavailable: %',v_template_id USING ERRCODE='22023';

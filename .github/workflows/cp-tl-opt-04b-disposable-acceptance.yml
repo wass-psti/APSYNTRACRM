@@ -1,0 +1,78 @@
+name: CP-TL-OPT-04B Disposable PostgreSQL Acceptance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/20261127120000_cp_tl_opt_04_document_template_render_snapshots.sql'
+      - 'supabase/migration-source-manifest.json'
+      - 'scripts/cp-tl-opt-04-disposable-acceptance.sql'
+      - 'scripts/cp-tl-opt-04-asset-acceptance.mjs'
+      - 'frontend/assets/tradelink/profiles/v1/**'
+      - 'frontend/assets/tradelink/templates/**'
+      - '.github/workflows/cp-tl-opt-04b-disposable-acceptance.yml'
+  pull_request:
+    paths:
+      - 'supabase/migrations/20261127120000_cp_tl_opt_04_document_template_render_snapshots.sql'
+      - 'supabase/migration-source-manifest.json'
+      - 'scripts/cp-tl-opt-04-disposable-acceptance.sql'
+      - 'scripts/cp-tl-opt-04-asset-acceptance.mjs'
+      - 'frontend/assets/tradelink/profiles/v1/**'
+      - 'frontend/assets/tradelink/templates/**'
+      - '.github/workflows/cp-tl-opt-04b-disposable-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-17:
+    name: Immutable snapshot migration and historical backfill
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable_ci_only
+          POSTGRES_DB: tradelink_opt04b_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d tradelink_opt04b_disposable"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGDATABASE: tradelink_opt04b_disposable
+      PGUSER: postgres
+      PGPASSWORD: disposable_ci_only
+      PGCONNECT_TIMEOUT: '5'
+      PGOPTIONS: '-c statement_timeout=30000'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Verify migration manifest and immutable source assets
+        run: |
+          node scripts/verify-migration-source-manifest.mjs
+          node scripts/cp-tl-opt-04-asset-acceptance.mjs
+      - name: Assert isolated PostgreSQL 17 runner
+        run: |
+          set -euo pipefail
+          test "$PGDATABASE" = tradelink_opt04b_disposable
+          psql -X -v ON_ERROR_STOP=1 -Atqc \
+            "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" \
+            | grep -Fx 'tradelink_opt04b_disposable|t'
+      - name: Run complete 63-revision backfill, version-pairing and immutable RPC acceptance
+        run: psql -X -v ON_ERROR_STOP=1 -f scripts/cp-tl-opt-04-disposable-acceptance.sql

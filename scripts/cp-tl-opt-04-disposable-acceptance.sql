@@ -164,6 +164,77 @@ BEGIN
  END IF;
 END
 $signed_read$;
+
+DO $versioning$
+DECLARE v_value jsonb;
+BEGIN
+ INSERT INTO private.tradelink_company_profile_versions
+  (profile_id,profile_version,profile,source_template_version)
+ VALUES ('watchdog-opc',2,jsonb_build_object(
+  'id','watchdog-opc','templateId','watchdog-opc-reference-v1',
+  'name','Watchdog Automation OPC — CP-TL-OPT-04B version 2',
+  'address','Synthetic QA address','phone','+63 917 7073079',
+  'quotationPhone','+63 917 7073079','email','qa@example.test',
+  'website','qa.example.test','tin','QA-TIN',
+  'logoAsset','profiles/v1/watchdog-opc-f55506ddd9b2569658f2eecac7f081cc08ba3a19.png',
+  'quotationLogoAsset','profiles/v1/watchdog-opc-quotation-6d43decfa6a476219c2cae149311c84bd7109c57.png'
+ ),'v1.43.0');
+ INSERT INTO private.tradelink_template_versions
+  (template_id,template_version,profile_id,profile_version,template,default_terms)
+ VALUES ('watchdog-opc-reference-v1','v1.43.0','watchdog-opc',2,
+  jsonb_build_object('id','watchdog-opc-reference-v1','version','v1.43.0',
+   'profileId','watchdog-opc','profileVersion',2,'accent','#14b866',
+   'tableBackground','#e3f7e9','tableText','#244f78','ruleColor','#2f68c4',
+   'termsMode','flow','rendererVersion','tradelink-renderer-v1',
+   'stylesheetAssets',jsonb_build_array(
+    'templates/tradelink-application-v1.42.0-fc3a9e2dd3626a4b7657ea72c105b042d8128287.css',
+    'templates/tradelink-quotation-redesign-v1.42.0-866f644ed2f9a5fa569e799351feac19a90325fa.css'
+   )
+  ),jsonb_build_object('quotation','CP-TL-OPT-04B-V2-DEFAULT-TERMS'));
+ v_value:=private.tl04_build_document_render_snapshot('quotation',
+  jsonb_build_object('documentType','quotation','documentNumber','Q-OPT04B-V2',
+   'vendorId','watchdog-opc','templateId','watchdog-opc-reference-v1',
+   'terms','CP-TL-OPT-04B-V2-DOCUMENT-TERMS'),'captured');
+ IF v_value->>'profileVersion'<>'2'
+  OR v_value->'company'->>'name'<>'Watchdog Automation OPC — CP-TL-OPT-04B version 2'
+  OR v_value->'template'->>'version'<>'v1.43.0'
+  OR v_value->'template'->>'profileVersion'<>'2'
+  OR v_value->>'terms'<>'CP-TL-OPT-04B-V2-DOCUMENT-TERMS' THEN
+  RAISE EXCEPTION 'Latest company/template versions were not paired for the new render snapshot';
+ END IF;
+ SELECT render_snapshot INTO v_value
+ FROM private.tradelink_document_render_snapshots
+ WHERE document_id='00000000-0000-4000-8000-000000000001'::uuid AND revision=1;
+ IF v_value->>'profileVersion'<>'1'
+  OR v_value->'template'->>'version'<>'v1.42.0'
+  OR v_value->'company'->>'name'<>'Watchdog Automation OPC' THEN
+  RAISE EXCEPTION 'Adding a new company/template version changed an existing historical snapshot';
+ END IF;
+ INSERT INTO private.tradelink_company_profile_versions
+  (profile_id,profile_version,profile,source_template_version)
+ VALUES ('cp-tl-opt-04b-unpaired',1,
+  jsonb_build_object('id','cp-tl-opt-04b-unpaired',
+   'templateId','cp-tl-opt-04b-unpaired-template','name','Synthetic unpaired profile'),
+  'v1.42.0');
+ BEGIN
+  PERFORM private.tl04_build_document_render_snapshot('quotation',
+   jsonb_build_object('vendorId','cp-tl-opt-04b-unpaired',
+    'templateId','cp-tl-opt-04b-unpaired-template','terms','test'),'captured');
+  RAISE EXCEPTION 'Unpaired company/template versions unexpectedly resolved';
+ EXCEPTION WHEN SQLSTATE '22023' THEN NULL;
+ END;
+ BEGIN
+  INSERT INTO private.tradelink_template_versions
+   (template_id,template_version,profile_id,profile_version,template,default_terms)
+  VALUES ('watchdog-sales-reference-v1','v1.42','watchdog-sales',1,
+   jsonb_build_object('id','watchdog-sales-reference-v1','version','v1.42'),
+   jsonb_build_object('quotation','invalid version QA'));
+  RAISE EXCEPTION 'Malformed semantic template version unexpectedly inserted';
+ EXCEPTION WHEN check_violation THEN NULL;
+ END;
+END
+$versioning$;
+
 SELECT 'PASS: 63 historical render snapshots (47 legacy-derived, 16 legacy-defaulted).' AS result;
 SELECT 'PASS: new revisions capture separate immutable rendering snapshots.' AS result;
 SELECT 'PASS: historical read RPC and immutable profile/template/snapshot guards.' AS result;
