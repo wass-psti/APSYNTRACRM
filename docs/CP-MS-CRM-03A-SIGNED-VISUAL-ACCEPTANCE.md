@@ -17,3 +17,5 @@ Use an already signed CRM session in Work Management, open Material Request Hub 
 5. Return a redacted pass/fail checklist; never share credentials, commercial values or personal data.
 
 The signed browser connector was unavailable during CP03A. Genuine signed production acceptance and subjective visual review remain pending until an existing session is inspected. Do not create accounts, change authorization, populate production test fixtures, or claim that synthetic Chromium checks prove production signed access.
+
+The shared dashboard does not expose its list refresh action in Add Material. This retains the prior form behavior and avoids introducing a new route-level draft-discard path.

@@ -99,6 +99,7 @@ try{
  await page.getByRole('button',{name:/Add Material/}).click();
  check(await page.locator('#mrh-add-material-form').isVisible(),'existing add form reachable');
  check(await page.locator('.ms-native-metrics').isVisible(),'reference dashboard remains visible in Add Material');
+ check(await page.locator('.ms-native-header [data-action="refresh-board"]').count()===0,'Add Material does not expose a refresh action that could discard an unsaved form');
  if(visualDir)await page.screenshot({path:resolve(visualDir,'native-add-light.png'),fullPage:true});
  await page.getByRole('button',{name:/All items/i}).click();
  check(await rows.count()===3,'existing return to list');

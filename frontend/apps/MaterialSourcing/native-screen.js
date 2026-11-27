@@ -82,7 +82,8 @@ export function renderNativeMaterialSourcing(detail,filters={},now=new Date(),op
  (kind==='identity'||kind==='public'?'<button type="button" data-action="mrh-native-sort" data-column="'+key+'" aria-label="Sort by '+escape(label)+'">'+escape(label)+' <span aria-hidden="true">↕</span></button>':escape(label))+'</th>').join('');
  return '<section class="mrh-tracker ms-native-sourcing" aria-label="Material Sourcing application">'+
  '<header class="ms-native-header"><div class="ms-native-brand"><span class="ms-native-logo" aria-hidden="true">◈</span><div><h2>Material Sourcing</h2><p>Procurement tracking &amp; material management</p></div></div>'+
- '<div class="ms-native-header-actions"><span class="ms-native-tag">CRM · Signed board data</span><button type="button" class="secondary" data-action="refresh-board" aria-label="Refresh Material Sourcing">↻ Refresh</button></div></header>'+
+ '<div class="ms-native-header-actions"><span class="ms-native-tag">CRM · Signed board data</span>'+
+ (adding?'':'<button type="button" class="secondary" data-action="refresh-board" aria-label="Refresh Material Sourcing">↻ Refresh</button>')+'</div></header>'+
  '<div class="ms-native-body"><details class="ms-native-metrics-panel" open><summary>Key metrics</summary><div class="ms-native-metrics">'+
  card(heading,fmt(all.length),'◇')+card('Total buying','—','₱','Calculation pending')+card('Local',fmt(local),'⌖','',metricFilter('Local'))+card('Import',fmt(imported),'◎','',metricFilter('Import'))+
  card('USD rate','—','$','No current snapshot')+card('EUR rate','—','€','No current snapshot')+

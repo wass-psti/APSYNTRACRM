@@ -72,6 +72,7 @@ test('reference source cards are actionable, unknown source filter is explicit, 
  assert.match(add,/ms-native-metrics/);assert.match(add,/id="mrh-add-material-form"/);
  assert.match(add,/data-action="mrh-show-items"/);
  assert.doesNotMatch(add,/data-action="mrh-native-source"/);
+ assert.doesNotMatch(add,/data-action="refresh-board"/);
  assert.doesNotMatch(add,/class="ms-native-table /);
 });
 test('live Pages hash smoke covers all three native runtime assets',()=>{
