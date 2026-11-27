@@ -59,99 +59,135 @@ $reviewer_fixture$;
 CREATE SCHEMA IF NOT EXISTS extensions;
 CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA extensions;
 
-CREATE OR REPLACE FUNCTION public.has_module_access(
- p_module_id text,p_user_id uuid DEFAULT auth.uid()
-) RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
-AS $module_access$
- SELECT p_user_id IS NOT NULL
-  AND EXISTS(
-   SELECT 1 FROM public.module_role_assignments a
-   JOIN public.profiles p ON p.id=a.user_id
-   JOIN public.workspace_members wm ON wm.user_id=a.user_id AND wm.active
-   WHERE a.user_id=p_user_id AND a.module_id=p_module_id AND a.enabled
-    AND p.status='active'
-  )
-$module_access$;
-
-CREATE OR REPLACE FUNCTION private.tl03_can_view_documents(p_board_id uuid)
-RETURNS boolean
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=''
-AS $view$
-DECLARE actor uuid:=auth.uid();
+-- Supply only missing helpers in the older source-aligned disposable fixture.
+-- Never replace helpers installed by the full production migration sequence.
+DO $fixture_helpers$
 BEGIN
- IF actor IS NULL
-  OR p_board_id IS DISTINCT FROM '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88'::uuid
-  OR private.wm_board_config_session_active() IS DISTINCT FROM TRUE
-  OR public.has_module_access('tradelink',actor) IS DISTINCT FROM TRUE
- THEN RETURN false; END IF;
- RETURN EXISTS(
-  SELECT 1 FROM auth.users u
-  JOIN public.profiles p ON p.id=u.id
-  JOIN public.work_boards b ON b.id=p_board_id
-  JOIN public.workspace_members wm
-   ON wm.user_id=actor AND wm.workspace_id=b.workspace_id AND wm.active IS TRUE
-  WHERE u.id=actor AND u.email_confirmed_at IS NOT NULL
-   AND p.status='active'
-   AND b.workspace_id=public.current_workspace_id(actor)
-   AND b.name='TradeLink' AND b.status='active'
-   AND b.archived_at IS NULL AND b.trashed_at IS NULL
-   AND b.description LIKE '[APSYNTRA:MODULE:tradelink:v1]%'
- );
+ IF to_regprocedure('public.has_module_access(text,uuid)') IS NULL THEN
+  EXECUTE $create$
+   CREATE FUNCTION public.has_module_access(
+    p_module_id text,p_user_id uuid DEFAULT auth.uid()
+   ) RETURNS boolean
+   LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
+   AS $body$
+    SELECT p_user_id IS NOT NULL
+     AND EXISTS(
+      SELECT 1 FROM public.module_role_assignments a
+      JOIN public.profiles p ON p.id=a.user_id
+      JOIN public.workspace_members wm ON wm.user_id=a.user_id AND wm.active
+      WHERE a.user_id=p_user_id AND a.module_id=p_module_id AND a.enabled
+       AND p.status='active'
+     )
+   $body$;
+   REVOKE ALL ON FUNCTION public.has_module_access(text,uuid)
+    FROM PUBLIC,anon,authenticated;
+   GRANT EXECUTE ON FUNCTION public.has_module_access(text,uuid)
+    TO authenticated;
+  $create$;
+ END IF;
+
+ IF to_regprocedure('private.tl03_can_view_documents(uuid)') IS NULL THEN
+  EXECUTE $create$
+   CREATE FUNCTION private.tl03_can_view_documents(p_board_id uuid)
+   RETURNS boolean
+   LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=''
+   AS $body$
+   DECLARE actor uuid:=auth.uid();
+   BEGIN
+    IF actor IS NULL
+     OR p_board_id IS DISTINCT FROM '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88'::uuid
+     OR private.wm_board_config_session_active() IS DISTINCT FROM TRUE
+     OR public.has_module_access('tradelink',actor) IS DISTINCT FROM TRUE
+    THEN RETURN false; END IF;
+    RETURN EXISTS(
+     SELECT 1 FROM auth.users u
+     JOIN public.profiles p ON p.id=u.id
+     JOIN public.work_boards b ON b.id=p_board_id
+     JOIN public.workspace_members wm
+      ON wm.user_id=actor AND wm.workspace_id=b.workspace_id AND wm.active IS TRUE
+     WHERE u.id=actor AND u.email_confirmed_at IS NOT NULL
+      AND p.status='active'
+      AND b.workspace_id=public.current_workspace_id(actor)
+      AND b.name='TradeLink' AND b.status='active'
+      AND b.archived_at IS NULL AND b.trashed_at IS NULL
+      AND b.description LIKE '[APSYNTRA:MODULE:tradelink:v1]%'
+    );
+   END
+   $body$;
+   REVOKE ALL ON FUNCTION private.tl03_can_view_documents(uuid)
+    FROM PUBLIC,anon,authenticated;
+   GRANT EXECUTE ON FUNCTION private.tl03_can_view_documents(uuid)
+    TO authenticated;
+  $create$;
+ END IF;
+
+ IF to_regprocedure('private.tl03_can_create_draft(uuid)') IS NULL THEN
+  EXECUTE $create$
+   CREATE FUNCTION private.tl03_can_create_draft(p_board_id uuid)
+   RETURNS boolean
+   LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
+   AS $body$
+    SELECT auth.uid() IS NOT NULL
+     AND p_board_id='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88'::uuid
+     AND public.work_board_access(p_board_id,'manage') IS TRUE
+   $body$;
+   REVOKE ALL ON FUNCTION private.tl03_can_create_draft(uuid)
+    FROM PUBLIC,anon,authenticated;
+   GRANT EXECUTE ON FUNCTION private.tl03_can_create_draft(uuid)
+    TO authenticated;
+  $create$;
+ END IF;
+
+ IF to_regprocedure('private.tl03_revision_approval_policy(uuid,bigint)') IS NULL THEN
+  EXECUTE $create$
+   CREATE FUNCTION private.tl03_revision_approval_policy(
+    p_document_id uuid,p_revision bigint
+   ) RETURNS text
+   LANGUAGE sql STABLE SET search_path=''
+   AS $body$
+    SELECT 'standard-dual-v1'::text
+   $body$;
+   REVOKE ALL ON FUNCTION private.tl03_revision_approval_policy(uuid,bigint)
+    FROM PUBLIC,anon,authenticated;
+   GRANT EXECUTE ON FUNCTION private.tl03_revision_approval_policy(uuid,bigint)
+    TO authenticated;
+  $create$;
+ END IF;
+
+ IF to_regprocedure(
+  'public.tl03_documents_page(uuid,text,text,text,text,text,timestamptz,uuid,integer)'
+ ) IS NULL THEN
+  IF to_regprocedure(
+   'public.tl03_documents_page(uuid,text,text,text,timestamptz,uuid,integer)'
+  ) IS NULL THEN
+   RAISE EXCEPTION 'Disposable legacy eight-argument document page RPC is missing';
+  END IF;
+  EXECUTE $create$
+   CREATE FUNCTION public.tl03_documents_page(
+    p_board_id uuid,p_search text,p_document_type text,p_workflow_state text,
+    p_archive_mode text,p_visibility_mode text,p_before_at timestamptz,
+    p_before_id uuid,p_limit integer
+   ) RETURNS jsonb
+   LANGUAGE sql SECURITY INVOKER SET search_path=''
+   AS $body$
+    SELECT public.tl03_documents_page(
+     p_board_id,p_search,p_document_type,p_workflow_state,p_archive_mode,
+     p_before_at,p_before_id,p_limit
+    )
+   $body$;
+   REVOKE ALL ON FUNCTION public.tl03_documents_page(
+    uuid,text,text,text,text,text,timestamptz,uuid,integer
+   ) FROM PUBLIC,anon,authenticated;
+   GRANT EXECUTE ON FUNCTION public.tl03_documents_page(
+    uuid,text,text,text,text,text,timestamptz,uuid,integer
+   ) TO authenticated;
+  $create$;
+ END IF;
 END
-$view$;
-
--- The repository query also evaluates the existing creator capability. This
--- disposable helper models the fixture's General Manager path; it does not
--- add or change any production role, grant, or authorization rule.
-CREATE OR REPLACE FUNCTION private.tl03_can_create_draft(p_board_id uuid)
-RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
-AS $create$
- SELECT auth.uid() IS NOT NULL
-  AND p_board_id='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88'::uuid
-  AND public.work_board_access(p_board_id,'manage') IS TRUE
-$create$;
-REVOKE ALL ON FUNCTION private.tl03_can_create_draft(uuid)
- FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION private.tl03_can_create_draft(uuid) TO authenticated;
-
--- The current production migration chain retains a nine-argument legacy page
--- RPC. The isolated dual-review baseline starts with its earlier eight-argument
--- form, so provide a disposable compatibility overload for the additive
--- repository migration's preflight. The new repository query does not call it.
-CREATE FUNCTION public.tl03_documents_page(
- p_board_id uuid,p_search text,p_document_type text,p_workflow_state text,
- p_archive_mode text,p_visibility_mode text,p_before_at timestamptz,
- p_before_id uuid,p_limit integer
-) RETURNS jsonb
-LANGUAGE sql SECURITY INVOKER SET search_path=''
-AS $page_compat$
- SELECT public.tl03_documents_page(
-  p_board_id,p_search,p_document_type,p_workflow_state,p_archive_mode,
-  p_before_at,p_before_id,p_limit
- );
-$page_compat$;
-REVOKE ALL ON FUNCTION public.tl03_documents_page(
- uuid,text,text,text,text,text,timestamptz,uuid,integer
-) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.tl03_documents_page(
- uuid,text,text,text,text,text,timestamptz,uuid,integer
-) TO authenticated;
+$fixture_helpers$;
 
 -- The repository test creates ordinary manager-owned records. This test-only
--- policy stub supplies the established default value without changing review
--- or approval functions in the production source migrations. This test-only
--- policy stub supplies the established default value without changing review
--- or approval functions in the production source migrations.
-CREATE OR REPLACE FUNCTION private.tl03_revision_approval_policy(
- p_document_id uuid,p_revision bigint
-) RETURNS text
-LANGUAGE sql STABLE SET search_path=''
-AS $policy$
- SELECT 'standard-dual-v1'::text
-$policy$;
-
+-- policy stub is created only when the earlier disposable baseline lacks it.
 DO $extension$
 BEGIN
  IF NOT EXISTS(
