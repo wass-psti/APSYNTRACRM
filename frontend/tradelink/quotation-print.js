@@ -7,6 +7,13 @@ const display=value=>value==null||value===''?'—':escape(value);
 const hasText=value=>value!=null&&String(value).trim()!=='';
 const money=(n,currency)=>currency==='PHP'?'₱'+formatTradeLinkAmount(n):formatTradeLinkAmount(n)+' '+escape(currency);
 const label=(name,value)=>'<p><b>'+escape(name)+':</b> '+display(value)+'</p>';
+const templateStyle=template=>{
+ const colors=[template.accent,template.tableBackground,template.tableText,template.ruleColor];
+ if(!colors.every(value=>typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value)))
+  throw new Error('Invalid immutable TradeLink template colors.');
+ return ' style="--tl-official-accent:'+colors[0]+';--tl-official-table-bg:'+colors[1]+
+  ';--tl-official-table-text:'+colors[2]+';--tl-official-rule:'+colors[3]+'"';
+};
 const stamp=value=>value&&Number.isFinite(Date.parse(value))?new Intl.DateTimeFormat('en-US',{
  timeZone:'Asia/Manila',month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true
 }).format(new Date(value)):'';
