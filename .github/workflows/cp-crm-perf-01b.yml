@@ -54,18 +54,26 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Install PostgreSQL CLI (disposable runner only)
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends postgresql-client
-      - name: Assert isolated PostgreSQL runner identity
+      - name: Assert isolated PostgreSQL 17 service identity
         run: |
           set -euo pipefail
           test "$PGHOST" = 127.0.0.1
           test "$PGDATABASE" = board_group_view_disposable
-          psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" | grep -Fx 'board_group_view_disposable|t'
+          postgres_container="$(docker ps --filter 'ancestor=postgres:17' --format '{{.ID}}' | head -n 1)"
+          test -n "$postgres_container"
+          docker exec "$postgres_container" pg_isready -U "$PGUSER" -d "$PGDATABASE"
+          docker exec "$postgres_container" psql -X -v ON_ERROR_STOP=1 -U "$PGUSER" -d "$PGDATABASE" -Atqc "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" | grep -Fx 'board_group_view_disposable|t'
       - name: Reproduce SQLSTATE 42883 and verify corrected Board group-view RPCs
-        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-crm-perf-01b-board-group-view-regression.sql
+        run: |
+          set -euo pipefail
+          postgres_container="$(docker ps --filter 'ancestor=postgres:17' --format '{{.ID}}' | head -n 1)"
+          test -n "$postgres_container"
+          fixture_dir=/tmp/cp-crm-perf-01b
+          docker exec "$postgres_container" mkdir -p "$fixture_dir/sql/tests" "$fixture_dir/supabase/migrations"
+          docker cp sql/tests/cp-crm-perf-01b-board-group-view-regression.sql "$postgres_container:$fixture_dir/sql/tests/cp-crm-perf-01b-board-group-view-regression.sql"
+          docker cp supabase/migrations/20261120194000_cp_board_group_view_01_user_prefs.sql "$postgres_container:$fixture_dir/supabase/migrations/20261120194000_cp_board_group_view_01_user_prefs.sql"
+          docker cp supabase/migrations/20261127130720_cp_board_group_view_coalesce_fix.sql "$postgres_container:$fixture_dir/supabase/migrations/20261127130720_cp_board_group_view_coalesce_fix.sql"
+          docker exec -w "$fixture_dir" "$postgres_container" psql -X -v ON_ERROR_STOP=1 -U "$PGUSER" -d "$PGDATABASE" -f sql/tests/cp-crm-perf-01b-board-group-view-regression.sql
   fueltrans:
     runs-on: ubuntu-24.04
     timeout-minutes: 15

@@ -2466,6 +2466,13 @@
       "sha256": "f983a56d01202aa8d0dc1bb18b682999e76e202216c1fb978bcf96f4f5aee15a"
     },
     {
+      "version": "20261127130720",
+      "name": "cp_board_group_view_coalesce_fix",
+      "file": "20261127130720_cp_board_group_view_coalesce_fix.sql",
+      "bytes": 5137,
+      "sha256": "d50d56ef9691bad1879c26decc9df30d50c4b23964d2317050aad6cd75ed54e4"
+    },
+    {
       "version": "20261127160000",
       "name": "cp_tt_shared_read_visibility",
       "file": "20261127160000_cp_tt_shared_read_visibility.sql",
