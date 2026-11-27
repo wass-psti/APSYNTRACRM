@@ -2492,6 +2492,13 @@
       "file": "20261127180000_cp_tt_ot_edit_decision.sql",
       "bytes": 6605,
       "sha256": "420838e000b7931240211e66831dec57c1792d86463b5c29d369fd2a4a3728a4"
+    },
+    {
+      "version": "20261127190000",
+      "name": "cp_tt_paid_ot_attendance",
+      "file": "20261127190000_cp_tt_paid_ot_attendance.sql",
+      "bytes": 21741,
+      "sha256": "6a6f360bfc34a8f82b9500c98a7ed3573048ce98feafda30c36f31d6c1d18490"
     }
   ],
   "applied_only": [

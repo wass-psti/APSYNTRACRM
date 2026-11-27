@@ -171,7 +171,7 @@ test('System Admin sees hours-only manual OT controls and review actions only fo
  assert.match(html,/tt-ot-manual-employee/);
  assert.match(html,/ADMINISTRATIVE ENTRY/);
  assert.match(html,/Manual Entry/);
- assert.match(html,/Entered by Administrator/);
+ assert.match(html,/Filed by:<\/b> Administrator/);
  assert.match(html,/id="tt-ot-manual-duration-hours"/);
  assert.doesNotMatch(html,/id="tt-ot-manual-(start|end)"/);
  assert.equal((html.match(/data-action="tt-ot-approve"/g)||[]).length,1);
@@ -540,14 +540,15 @@ test('manual duration preview updates hours without clock-time controls',()=>{
  assert.equal(updateTimeTrackerManualOtPreview({id:'other'}),false);
 });
 
-test('OT Edit is available only for signed finalized decisions, beside View',()=>{
+test('OT Edit is available only for signed finalized decisions, beside attribution',()=>{
  const decidedAt='2026-11-02T02:00:00.123456+00:00';
  const access={otContractActive:true};
  for(const status of ['Approved','Rejected']){
   const row={...rows[1],status,decidedAt,canEditDecision:true};
   const html=renderTimeTrackerOvertime({requests:[row],access,now});
   assert.match(html,/data-action="tt-ot-edit"/);
-  assert.match(html,/<summary>View<\/summary>/);
+  assert.doesNotMatch(html,/<summary>View<\/summary>|Actual OT:|Payable OT:/);
+  assert.match(html,/Filed by:/);
   assert.doesNotMatch(html,/data-action="tt-ot-approve"/);
   assert.doesNotMatch(renderTimeTrackerOvertime({requests:[{...row,canEditDecision:false}],access,now}),/data-action="tt-ot-edit"/);
   assert.doesNotMatch(renderTimeTrackerOvertime({requests:[row],access:{otContractActive:false},now}),/data-action="tt-ot-edit"/);
@@ -578,4 +579,21 @@ test('signed OT correction passes exact previous decision and verifies response'
  const reverse=setup({role:'HR',snapshot:{...snap,rows:[{...request,status:'Rejected'}]},rpcHandlers:handlers});
  assert.equal((await reverse.editOvertimeDecision(board,request.id,'Rejected',decidedAt,'Approved')).status,'Approved');
  assert.equal(calls.length,2);
+});
+
+test('paid OT table exposes signed attribution and finalized removal without the View disclosure',()=>{
+ const row={...rows[1],status:'Approved',decidedAt:'2026-11-02T02:00:00Z',canEditDecision:true,
+  filedByName:'IT Operator',decidedByName:'HR Reviewer'};
+ const access={otContractActive:true,paidOtContractActive:true};
+ const html=renderTimeTrackerOvertime({requests:[row],access,now});
+ assert.match(html,/Filed by:<\/b> IT Operator/);
+ assert.match(html,/Approved by:<\/b> HR Reviewer/);
+ assert.match(html,/data-action="tt-ot-remove"/);
+ assert.doesNotMatch(html,/<summary>View<\/summary>|Actual OT:|Payable OT:/);
+ assert.doesNotMatch(renderTimeTrackerOvertime({requests:[{...row,canEditDecision:false}],access,now}),/data-action="tt-ot-remove"/);
+ assert.match(renderTimeTrackerOvertime({requests:[{...row,status:'Rejected'}],access,now}),/Rejected by:<\/b> HR Reviewer/);
+ const draft={employeeId:worker,date:'2026-11-03',durationMinutes:120,reason:'Delegated engineering inspection'};
+ const directory=[{id:worker,status:'active'}];
+ assert.equal(validateManualDurationOvertimeDraft(draft,directory,now,true).valid,true);
+ assert.equal(validateManualDurationOvertimeDraft({...draft,date:'2026-11-10'},directory,now,true).valid,false);
 });

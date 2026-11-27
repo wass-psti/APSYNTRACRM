@@ -106,3 +106,6 @@ html[data-aps-monday-theme="dark"] #app .aps-board-shell .tt-native .tt-overtime
  #app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-modal-footer{margin-left:-16px;margin-right:-16px;padding:12px 16px}
  #app .aps-board-shell .tt-native .tt-overtime.tt-ot-reference .tt-ot-empty:not([hidden]){min-height:220px}
 }
+
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-attribution{flex-basis:100%;display:grid;gap:3px;min-width:0;overflow-wrap:anywhere;color:var(--ot-muted)}
+#app .aps-board-shell .tt-native .tt-ot-reference .tt-ot-attribution small{font-size:11px;line-height:1.4}

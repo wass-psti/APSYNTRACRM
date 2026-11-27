@@ -194,6 +194,7 @@ BEGIN
    ELSE
     -- Existing worker owns active closure. It shares the employee advisory lock.
     UPDATE private.tt_auto_clockout_sessions SET overtime_cutoff_at=CASE WHEN v_minutes>0 THEN v_target END,
+     status=CASE WHEN v_minutes=0 THEN 'MONITORING' ELSE status END,
      last_evaluated_at=NULL,updated_at=v_now
      WHERE workspace_id=v_ws AND board_id=p_board_id AND employee_id=v_owner AND record_id=v_id
       AND clock_in_at=v_start AND threshold_at=v_base
