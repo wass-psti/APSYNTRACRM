@@ -52,7 +52,8 @@ test('signed historical exemption normalizes and prints without representing the
  assert.equal(normalized.selected.approved,true);
  const markup=renderTradeLinkSavedDocumentOutput(normalized.selected,workspaceId,documentId);
  assert.match(markup,/Sales Supervisor approval — Exempted/);
- assert.match(markup,/WORKFLOW APPROVED/);
+ assert.ok(markup.includes('<div class="tl-official-approval-stamp is-approved"><strong>APPROVED</strong></div>'));
+ assert.doesNotMatch(markup,/WORKFLOW APPROVED|PDF NOT ISSUED|Approved revision/);
  assert.throws(()=>normalizeTradeLinkRevisionBundle({...bundle,selected:{...saved,approval_policy:STANDARD_APPROVAL_POLICY}},workspaceId,documentId,1));
  assert.throws(()=>normalizeTradeLinkRevisionBundle({...bundle,revisions:[{...meta,approvalPolicy:undefined}]},workspaceId,documentId,1));
 });

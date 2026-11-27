@@ -56,7 +56,8 @@ test('PDF issuance stays closed before template and backend activation',async()=
 });
 test('workflow-approved print cannot claim electronic PDF approval',()=>{
  const html=renderTradeLinkSavedDocumentOutput(record,ws,doc);
- assert.match(html,/WORKFLOW APPROVED · PDF NOT ISSUED/);
+ assert.ok(html.includes('<div class="tl-official-approval-stamp is-approved"><strong>APPROVED</strong></div>'));
+ assert.doesNotMatch(html,/WORKFLOW APPROVED|PDF NOT ISSUED|Approved revision/);
  assert.match(html,/Electronic PDF approval and issuance have NOT been verified/);
  assert.doesNotMatch(html,/data-tradelink-electronic-pdf-approved|Digital signature verified/);
 });
