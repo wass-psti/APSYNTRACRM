@@ -351,8 +351,20 @@ console.log(`SIGNED_OT_HTTP_AND_SQL_CHECKS_PASS count=${checks}`);
 if(process.env.CP_TT_OT03_BROWSER==='1'){
  const selfPending=receipt(await submit(bootstrap,'22:00','23:00','browser self approval'),'browser self submit');
  const workerPending=receipt(await submit(worker,'17:00','18:00','browser other decline'),'browser worker submit');
+ const bootstrapBrowserDurationRequest=receipt(await rpc(bootstrap,'timetracker_ot_submit_duration',{
+  p_board_id:board,p_date:shiftDay(date,3),p_duration_minutes:60,
+  p_reason:'Additional Bootstrap Administrator work for browser self-review acceptance'
+ }),'Bootstrap browser duration self-review fixture');
+ const bootstrapBrowserManualDurationRequest=receipt(await rpc(admin,'timetracker_ot_submit_manual_duration',{
+  p_board_id:board,p_owner_id:bootstrap.id,p_date:shiftDay(date,-4),p_duration_minutes:60,
+  p_reason:'Historical Bootstrap Administrator work for browser self-review acceptance'
+ }),'Bootstrap browser manual-duration self-review fixture');
  const {runSignedOtBrowserAcceptance}=await import('./cp-tt-bootstrap-ot03-browser.mjs');
- await runSignedOtBrowserAcceptance({restUrl:rest,bootstrap,worker,hr,board,selfPending,workerPending,durationRequest,hrOwnRequest});
+ await runSignedOtBrowserAcceptance({restUrl:rest,bootstrap,worker,hr,board,selfPending,workerPending,
+  durationRequest,hrOwnRequest,bootstrapDurationRequest:bootstrapBrowserDurationRequest,
+  bootstrapManualDurationRequest:bootstrapBrowserManualDurationRequest});
+ assertDatabase(bootstrapBrowserDurationRequest.id,'Approved',bootstrap.id);
+ assertDatabase(bootstrapBrowserManualDurationRequest.id,'Rejected',bootstrap.id,admin.id);
  const approved=receipt(await rpc(hr,'timetracker_ot_snapshot',{p_board_id:board}),'HR duration post-browser readback');
  assert.equal(approved.rows.find(row=>row.id===durationRequest.id).status,'Approved');
 }else{
