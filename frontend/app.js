@@ -49,7 +49,7 @@ import {sidebarIcon,animateSidebarSelection,stopSidebarSelection} from './sideba
 import {sidebarActiveRoute} from './sidebar-active-route.js';
 import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-visuals.js';
 import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board/presentation/catalog-visuals.js';
-import {BOARD_ITEM_PAGE_SIZE,DomainApi,validUuid} from './data.js';
+import {BOARD_ITEM_PAGE_SIZE,DomainApi,validUuid} from './data.js?v=cp-ms-crm-05c1-readback-20261128';
 import {nativeApplicationModuleForBoardId,nativeApplicationModuleForBoardRoute,workspaceRouteAllowsBoardCatalogFallback} from './native-application-access.js';
 import {BoardCacheChannel} from './board/cache-channel.js';
 import {BoardTrashPermanentDeleteClient,eligibleTrashBoard} from './board/crud/trash-permanent-delete.js';
@@ -10148,7 +10148,7 @@ async function action(name,button){
   if(!isCurrent()||state.mrhAddBusy||state.mrhLifecycleBusy||state.mrhImportOpen)break;
   state.mrhImportOpen=true;
   try{
-   const {openMaterialBatch}=await import('./apps/MaterialSourcing/batch-operations-ui.js?v=cp-ms-crm-05c-20261128');
+   const {openMaterialBatch}=await import('./apps/MaterialSourcing/batch-operations-ui.js?v=cp-ms-crm-05c1-readback-20261128');
    if(!isCurrent())break;
    await openMaterialBatch({api:db,auth,workspaceId:snapshot.workspaceId,isCurrent,
     onComplete:async()=>{if(isCurrent())await loadBoard(snapshot.boardId,'sourcing');}});
