@@ -4,22 +4,22 @@ create schema mrh_fx_http;
 create table mrh_fx_http.calls(url text);
 -- Session configuration double: assert the real acquisition sets and restores options.
 create function mrh_fx_http.http_list_curlopt()
-returns table(curlopt text,value text) language sql as $
+returns table(curlopt text,value text) language sql as $$
  select key,value from jsonb_each_text(coalesce(nullif(current_setting('mrh.fixture_curlopts',true),''),'{}')::jsonb)
-$;
+$$;
 create function mrh_fx_http.http_set_curlopt(curlopt varchar,value varchar)
-returns boolean language plpgsql as $
+returns boolean language plpgsql as $$
 begin
  if current_setting('mrh.fx_mode',true)='config_failure' and curlopt='CURLOPT_TIMEOUT_MS' and value='3500' then return false;end if;
  perform set_config('mrh.fixture_curlopts',
   (coalesce(nullif(current_setting('mrh.fixture_curlopts',true),''),'{}')::jsonb||jsonb_build_object(curlopt,value))::text,false);
  return true;
-end $;
+end $$;
 create function mrh_fx_http.http_reset_curlopt()
-returns boolean language plpgsql as $
+returns boolean language plpgsql as $$
 begin
  perform set_config('mrh.fixture_curlopts','{}',false);return true;
-end $;
+end $$;
 create function mrh_fx_http.http_get(url varchar)
 returns table(status integer,content_type varchar,content text)
 language plpgsql as $$
