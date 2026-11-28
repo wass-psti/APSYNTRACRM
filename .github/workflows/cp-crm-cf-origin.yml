@@ -21,7 +21,7 @@ jobs:
         with:
           deno-version: v2.5.6
       - name: Test real entrypoints without network or database access
-        run: deno test --no-check --allow-env=APSYNTRA_ALLOWED_ORIGIN server/tests/cp-crm-cf-dual-origin.test.ts
+        run: deno test --no-check --node-modules-dir=none --allow-env=APSYNTRA_ALLOWED_ORIGIN server/tests/cp-crm-cf-dual-origin.test.ts
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
