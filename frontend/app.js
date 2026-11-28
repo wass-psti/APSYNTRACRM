@@ -130,7 +130,7 @@ import {canRetainVisibleBoard,replaceVisibleBoardContent} from './board/services
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board/presentation/loading.js';
 import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
 import {MATERIAL_TRACKER_DEFAULT_FILTERS,isMaterialTrackerBoard,materialTrackerRows,filterMaterialTrackerRows,materialTrackerPublicCsv} from './material-sourcing-tracker.js';
-import {renderNativeMaterialSourcing,sortNativeMaterials,loadNativeCommercialRow,ensureNativeMaterialSourcingStyles} from './apps/MaterialSourcing/native-screen.js?v=cp-ms-crm-05d-reference-20261128';
+import {renderNativeMaterialSourcing,sortNativeMaterials,loadNativeCommercialRow,ensureNativeMaterialSourcingStyles} from './apps/MaterialSourcing/native-screen.js?v=cp-ms-crm-05d2a-20261128';
 import {findLifecycleMaterial,setMaterialArchived} from './apps/MaterialSourcing/lifecycle.js?v=cp-ms-crm-05b-20261128';
 import {loadBoardPricing} from './apps/MaterialSourcing/pricing-projection.js?v=cp-ms-crm-05a-20261128';
 import {parseMaterialAddForm,materialAddPublicColumns} from './material-sourcing-add-material.js';
@@ -10139,6 +10139,17 @@ async function action(name,button){
   if(state.view==='board'&&state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)&&
      auth.isSignedIn&&state.context?.user_id===auth.userId&&state.board.board.workspace_id===state.context?.workspace_id)
    sortNativeMaterials(button);
+  break;
+ }
+ case 'mrh-native-procurement':{
+  const snapshot={boardId:state.boardId,userId:auth.userId,workspaceId:state.context?.workspace_id};
+  const isCurrent=()=>button.isConnected&&boardHistoryAuthorized(snapshot)&&state.tab==='sourcing'&&
+   !state.mrhAddView&&!state.workspaceTransitionPending&&isMaterialTrackerBoard(state.board);
+  if(!isCurrent())break;
+  try{
+   const {openProcurementWorkflow}=await import('./apps/MaterialSourcing/procurement-workflow-ui.js?v=cp-ms-crm-05d2a-20261128');
+   if(isCurrent())await openProcurementWorkflow(button,{api:db,auth,workspaceId:snapshot.workspaceId,isCurrent,canEdit:state.edit===true});
+  }catch(error){if(isCurrent())notice(error);}
   break;
  }
  case 'mrh-native-procurement-references':{
