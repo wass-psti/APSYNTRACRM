@@ -8,7 +8,7 @@ export async function openMaterialBatch({api,auth,workspaceId,isCurrent,onComple
  const detail=await loadBatchMaterials(scope);
  if(!active())return;
  const dialog=document.createElement('dialog');
- dialog.className='panel';dialog.style.cssText='width:min(800px,94vw);max-height:85vh;overflow:auto;';
+ dialog.className='panel ms-native-batch-dialog';
  dialog.setAttribute('aria-label','Material batch operations');
  dialog.innerHTML='<h2>Material batch operations</h2><p>Select up to '+BATCH_LIMIT+' materials. Each item is a separate verified transaction. A failed or uncertain item stops further writes.</p>'+
  '<label>Operation <select data-action-choice><option value="edit">Edit field</option><option value="archive">Archive</option><option value="restore">Restore</option></select></label>'+
