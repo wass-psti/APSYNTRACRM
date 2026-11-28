@@ -140,8 +140,8 @@ try{
   const layout=await page.evaluate(()=>{const host=document.querySelector('.ms-native-sourcing'),scroller=host.querySelector('.ms-native-table-scroll');return {host:host.getBoundingClientRect().width,scroll:scroller.scrollWidth,client:scroller.clientWidth,document:document.documentElement.scrollWidth,viewport:innerWidth};});
   check(layout.host<=width&&layout.scroll>layout.client&&layout.document<=width+1,'contained horizontal scroll at '+width+'px');
  }
- const narrowMetricColumns=await page.locator('.ms-native-metrics').evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length);
- check(narrowMetricColumns===1,'narrow CRM content uses one readable metric column');
+ const narrowMetricColumns=await page.locator('.ms-native-metrics').evaluateAll(nodes=>nodes.map(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length));
+ check(narrowMetricColumns.length===2&&narrowMetricColumns.every(n=>n===1),'narrow CRM content uses one readable metric column');
  if(visualDir)await page.screenshot({path:resolve(visualDir,'native-mobile-320-light.png'),fullPage:true});
  await page.setViewportSize({width:390,height:844});
  if(visualDir)await page.screenshot({path:resolve(visualDir,'native-mobile-light.png'),fullPage:true});
