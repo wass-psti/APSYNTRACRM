@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {id,userId,workspaceId,fixture} from '../../scripts/fixtures/cp-ms-crm-03-fixture.mjs';
-import {rfqPayload,quotationPayload,matchingSupplierSources,verifiedPoPayload,lookupClientPo} from '../apps/MaterialSourcing/procurement-workflow-ui.js';
+import {rfqPayload,quotationPayload,matchingSupplierSources,eligibleClientPo,verifiedPoPayload,lookupClientPo} from '../apps/MaterialSourcing/procurement-workflow-ui.js';
 import {renderNativeMaterialSourcing} from '../apps/MaterialSourcing/native-screen.js';
 
 const source={id:id(650),supplier:' Synthetic Supplier ',reference:'PO-QA'};
 const other={id:id(651),supplier:'Another Supplier',reference:'PO-OTHER'};
 const client={id:id(800),workspace_id:workspaceId,record_kind:'native',archived:false,revision:1,po_number:'QA-PO',source_key:null};
+const legacy={...client,id:id(801),record_kind:'legacy',archived:null,revision:1,source_key:'legacy-qa',po_number:'QA-LEGACY'};
 const fields={supplier:'Synthetic Supplier',supplier_source_id:source.id,reference:'Q-001',issued_on:'2026-11-28',valid_until:'2026-12-31',
  quantity:'5.25',unit_price:'99.1234',currency:'USD',shipping_total:'10',shipping_currency:'USD',tax_basis:'tax_exclusive',lead_weeks:'2.5',notes:'<literal>'};
 
@@ -35,6 +36,12 @@ test('supplier PO linkage uses only matching verified source and explicit eligib
  assert.throws(()=>verifiedPoPayload(other.id,fields,[source,other],null,[]),/supplier PO/);
  assert.throws(()=>verifiedPoPayload(source.id,fields,[source],client.id,[{...client,archived:null}]),/client PO/);
  assert.throws(()=>verifiedPoPayload(source.id,fields,[source],client.id,[]),/client PO/);
+ assert.deepEqual(verifiedPoPayload(source.id,fields,[source],legacy.id,[legacy]),{supplier_po_id:source.id,client_po_id:legacy.id,client_po_kind:'legacy'});
+ assert.equal(eligibleClientPo({...legacy,archived:false}),true);
+ assert.equal(eligibleClientPo({...legacy,archived:true}),false);
+ assert.equal(eligibleClientPo({...client,archived:null}),false);
+ assert.equal(eligibleClientPo({...legacy,archived:undefined}),false);
+ assert.equal(eligibleClientPo({...legacy,record_kind:'unknown'}),false);
 });
 test('signed client lookup reads exact registry identity and filters approved archive state',async()=>{
  const calls=[];
@@ -43,12 +50,21 @@ test('signed client lookup reads exact registry identity and filters approved ar
  const scope={auth,api,workspaceId,isCurrent:()=>true};
  assert.deepEqual(await lookupClientPo(scope,'QA-PO'),[client]);
  const url=new URL(calls[0][0],'https://fixture.invalid');
- assert.equal(url.pathname,'/rest/v1/order_intake_registry');assert.equal(url.searchParams.get('archived'),'eq.false');
+ assert.equal(url.pathname,'/rest/v1/order_intake_operational_registry');assert.equal(url.searchParams.get('or'),'(archived.eq.false,and(record_kind.eq.legacy,archived.is.null))');
  assert.equal(url.searchParams.get('workspace_id'),'eq.'+workspaceId);assert.equal(url.searchParams.get('po_number'),'eq.QA-PO');
  assert.equal(calls[0][1].retryableRead,true);
  await assert.rejects(lookupClientPo({...scope,isCurrent:()=>false},client.id),/view changed/);
- auth.authorized=async()=>[{...client,archived:true}];
- await assert.rejects(lookupClientPo(scope,'QA-PO'),/Invalid client PO/);
+ auth.authorized=async()=>[legacy];
+ assert.deepEqual(await lookupClientPo(scope,'QA-LEGACY'),[legacy]);
+ assert.deepEqual(await lookupClientPo(scope,legacy.id.toUpperCase()),[legacy]);
+ for(const row of [{...legacy,archived:true},{...legacy,record_kind:'native',archived:null},{...legacy,po_number:'OTHER'}]){
+  auth.authorized=async()=>[row];
+  await assert.rejects(lookupClientPo(scope,'QA-LEGACY'),/Invalid client PO/);
+ }
+ auth.authorized=async()=>[{...legacy,workspace_id:id(999)}];
+ await assert.rejects(lookupClientPo(scope,'QA-LEGACY'),/Invalid operational historical order/);
+ auth.authorized=async()=>[{...legacy,revision:null}];
+ await assert.rejects(lookupClientPo(scope,'QA-LEGACY'),/Invalid operational historical order/);
 });
 test('native per-item workflow is available to both signed viewer and editor, not Add Material',()=>{
  for(const canCreate of [false,true]){
