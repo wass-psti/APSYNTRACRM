@@ -11,7 +11,12 @@ test('native route uses reconciled UUID records and approved wide-table field or
  assert.match(html,/data-action="board-item-detail" data-id="33333333-3333-4333-8333-000000000200"/);
  assert.match(html,/Main group/);assert.match(html,/data-ms-col="quantity" data-ms-sort="0"/);
  assert.match(html,/Selling price \(VAT-ex, stored\)/);
- assert.match(html,/Calculation pending/);assert.match(html,/No current FX snapshot/);
+ assert.match(html,/data-ms-financial-value="buying">—/);
+ assert.match(html,/data-ms-financial-value="usd">—/);
+ assert.match(html,/data-ms-financial-value="eur">—/);
+ assert.match(html,/Financial data not loaded/);
+ assert.match(html,/data-action="mrh-native-pricing"/);
+ assert.match(html,/data-ms-derived="totalLanded"[^>]*>—/);
  assert.doesNotMatch(html,/64\.45|71\.00|demo-0|Engineering Services/);
 });
 test('existing filter and public CSV actions remain compatible',()=>{
