@@ -27,8 +27,13 @@ main, repository root, build command:
 
 Deploy command (preview service only):
 
-    npx --yes wrangler@4.166.0 deploy --config wrangler.preview.jsonc
+    node scripts/deploy-cloudflare-preview.mjs
 
+The standard root wrangler.jsonc is named for the separate preview. The deploy
+script rejects a mismatched WRANGLER_CI_OVERRIDE_NAME before invoking Wrangler.
+Cloudflare Builds can override the configured name, so always verify the selected
+Worker in the dashboard. Disable non-production branch builds for this initial
+acceptance to avoid unreviewed additional preview deployments.
 Set Node 22 if needed. Do not connect the existing production Worker yet.
 Confirm the preview endpoint and verify root redirect, login, session refresh,
 workspace/role behavior, app navigation, representative read/write persistence
@@ -47,3 +52,28 @@ any credential, permission, Auth redirect or database changes. Keep GitHub
 Pages active. Do not deploy production from the preview config. A new
 production Wrangler configuration and CI-gated activation are separate work.
 Do not claim success based on artifact or dry-run alone.
+
+## CP-CRM-CF-01A hosted acceptance and rollback record
+
+Observed November 28, 2026: production Worker `apsyntracrm` has a Dashboard
+manual deployment, displayed version prefix `ae4f8d6f`, created 14:46:44 UTC,
+no bindings, no custom domains or routes, Logs enabled, Traces disabled.
+Its public root returned HTTP 200 plain text `Hello World!`. The proposed
+preview host returned 404 / Cloudflare error 1042. Pages returned HTTP 200 HTML.
+These are observations, not a full export of Worker configuration.
+Before production activation obtain the full version identifier and review
+code, variables (names only), compatibility flags, routes and Git settings;
+retain the original code/configuration and rollback target. Do not rely on
+indefinite version retention. No production changes authorized by this checkpoint.
+
+After the separate preview deploys, run the Cloudflare validation workflow
+manually on main with hosted_smoke=true. Match the Cloudflare build commit to
+the GitHub run commit. It compares the actual public HTTPS responses for the
+CRM and Paseo entry points, representative modules, vendor engines, stylesheet
+and recovery assets to the checkout. An absent preview or different bytes fails
+the hosted gate; no credentials or writes are used by this check.
+Then conduct genuine signed browser acceptance with authorized test accounts
+and fixtures: login, refresh and logout, workspace switching, representative
+native app reads/writes and reload, uploads/downloads, PDF/export, GPS and Paseo
+deep-link recovery. Confirm old Pages remains operational and compare CORS and
+Auth callback behavior without changing it preemptively.

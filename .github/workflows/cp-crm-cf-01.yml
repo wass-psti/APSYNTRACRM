@@ -3,8 +3,10 @@ on:
   push:
     branches: [main]
     paths:
-      - 'wrangler.preview.jsonc'
+      - 'wrangler.jsonc'
       - 'scripts/package-cloudflare-assets.mjs'
+      - 'scripts/deploy-cloudflare-preview.mjs'
+      - 'scripts/verify-cloudflare-preview.sh'
       - '.github/workflows/cp-crm-cf-01.yml'
       - 'index.html'
       - '404.html'
@@ -12,6 +14,11 @@ on:
       - 'frontend/**'
       - 'paseo/**'
   workflow_dispatch:
+    inputs:
+      hosted_smoke:
+        description: Verify the deployed preview against this commit (read-only)
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -33,14 +40,20 @@ jobs:
       - name: Validate isolated Worker configuration without uploading
         env:
           WRANGLER_SEND_METRICS: 'false'
-        run: npx --yes wrangler@4.166.0 deploy --config wrangler.preview.jsonc --dry-run
+        run: |
+          node --check scripts/deploy-cloudflare-preview.mjs
+          if WRANGLER_CI_OVERRIDE_NAME=apsyntracrm node scripts/deploy-cloudflare-preview.mjs --dry-run; then
+            echo 'Unexpected acceptance of production target' >&2
+            exit 1
+          fi
+          node scripts/deploy-cloudflare-preview.mjs --dry-run
       - name: Verify static HTTP behavior in local Workers runtime on CI
         env:
           WRANGLER_SEND_METRICS: 'false'
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@4.166.0 dev --config wrangler.preview.jsonc --local --ip 127.0.0.1 --port 8791 > /tmp/cf-preview.log 2>&1 &
+          npx --yes wrangler@4.166.0 dev --config wrangler.jsonc --local --ip 127.0.0.1 --port 8791 > /tmp/cf-preview.log 2>&1 &
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true; cat /tmp/cf-preview.log' EXIT
           base=http://127.0.0.1:8791
@@ -48,20 +61,7 @@ jobs:
             if curl -fsS "$base/APSYNTRACRM/" -o /tmp/cf-index; then break; fi
             sleep 2
           done
-          curl -fsS "$base/APSYNTRACRM/" -o /tmp/cf-index
-          cmp index.html /tmp/cf-index
-          test "$(curl -s -o /dev/null -w '%{http_code}' "$base/")" = 302
-          test "$(curl -s -o /dev/null -w '%{redirect_url}' "$base/")" = "$base/APSYNTRACRM/"
-          curl -fsS "$base/APSYNTRACRM/frontend/app.js" -o /tmp/cf-app
-          cmp frontend/app.js /tmp/cf-app
-          curl -fsS "$base/APSYNTRACRM/frontend/apsyntra-styles.bundle.css" -o /tmp/cf-css
-          cmp frontend/apsyntra-styles.bundle.css /tmp/cf-css
-          curl -fsS "$base/APSYNTRACRM/paseo/" -o /tmp/cf-paseo
-          cmp paseo/index.html /tmp/cf-paseo
-          test "$(curl -s -o /tmp/cf-404 -w '%{http_code}' "$base/APSYNTRACRM/paseo/courts")" = 404
-          cmp paseo/404.html /tmp/cf-404
-          test "$(curl -s -o /dev/null -w '%{http_code}' "$base/APSYNTRACRM/frontend/tests/not-a-runtime-asset.js")" = 404
-          test "$(curl -s -o /dev/null -w '%{http_code}' "$base/APSYNTRACRM/supabase/config.toml")" = 404
+          bash scripts/verify-cloudflare-preview.sh "$base"
       - uses: actions/upload-artifact@v4
         with:
           name: apsyntracrm-cloudflare-preview
@@ -69,3 +69,14 @@ jobs:
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 7
+  hosted-smoke:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.hosted_smoke }}
+    needs: static-preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compare hosted preview against this commit
+        run: bash scripts/verify-cloudflare-preview.sh https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev
