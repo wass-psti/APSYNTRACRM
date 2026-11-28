@@ -17,7 +17,7 @@ function scaled(value){
  if(!/^(?:0|[1-9]\d*)(?:\.\d{1,4})?$/.test(raw))fail('Invalid quotation number.');
  const [whole,decimal='']=raw.split('.');
  const n=BigInt(whole)*10000n+BigInt(decimal.padEnd(4,'0'));
- if(n>10000000000000000n)fail('Quotation number out of range.');
+ if(n>10000000000000n)fail('Quotation number out of range.');
  return n;
 }
 function formatScaled(n,places){
