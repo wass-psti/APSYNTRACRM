@@ -98,7 +98,7 @@ export function renderNativeMaterialSourcing(detail,filters={},now=new Date(),op
  (projection.missingPublicFields.length?'<p class="mrh-data-warning" role="status">Some sourcing fields are not available in this board projection.</p>':'')+
  '<nav class="ms-native-tabs mrh-tracker-viewtabs" aria-label="Material Tracker views">'+
  (adding?'<button type="button" data-action="mrh-show-items">All items</button><span class="mrh-active-view" aria-current="page">Add Material</span>':'<span class="mrh-active-view" aria-current="page">All items</span><button type="button" data-action="mrh-add-view"> + Add Material</button>')+
- (options.canCreate===true&&!adding?'<button type="button" data-action="mrh-native-import">Bulk Import</button>':'<button type="button" disabled title="Use the active signed material list to import">Bulk Import</button>')+'</nav>'+
+ (options.canCreate===true&&!adding?'<button type="button" data-action="mrh-native-import">Bulk Import</button><button type="button" data-action="mrh-native-batch">Batch operations</button>':'<button type="button" disabled title="Use the active signed material list to import">Bulk Import</button>')+'</nav>'+
  (adding?'<div class="mrh-add-app ms-native-add"><div class="mrh-add-canvas">'+renderMaterialSourcingAddMaterial(detail,{canCreate:options.canCreate===true})+'</div></div>':
  '<div class="ms-native-surface"><div class="mrh-tracker-controls">'+
  '<label class="mrh-search-field"><span class="sr-only">Search materials</span><input type="search" id="mrh-tracker-search" placeholder="Search materials, part numbers, brands or RFQs…" maxlength="120" value="'+escape(filters.search||'')+'"></label>'+
