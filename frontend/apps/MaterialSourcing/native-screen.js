@@ -48,7 +48,7 @@ function publicCell(record,key){
 }
 function rowMarkup(record,overdue,canArchive){
  return '<tr data-ms-item="'+escape(record.id)+'">'+nativeColumns.map(([key,,kind])=>{
-  if(key==='name')return '<td data-ms-col="name" data-ms-sort="'+escape(record.name)+'"><button type="button" class="mrh-part-link" data-action="board-item-detail" data-id="'+escape(record.id)+'">'+escape(record.name)+'</button><button type="button" class="ms-native-read" data-action="mrh-native-commercial" data-id="'+escape(record.id)+'" aria-label="Load commercial values for '+escape(record.name)+'">Load costs</button>'+(canArchive?'<button type="button" class="ms-native-read" data-action="mrh-native-archive" data-id="'+escape(record.id)+'" aria-label="Archive material '+escape(record.name)+'">Archive</button>':'')+'<span class="ms-native-row-status" data-ms-row-status role="status"></span><small class="ms-native-row-status" data-ms-pricing-state>Pricing not loaded</small><small class="ms-native-row-status">Calculated selling (VAT-ex/unit): <span data-ms-derived="selling">—</span></small></td>';
+  if(key==='name')return '<td data-ms-col="name" data-ms-sort="'+escape(record.name)+'"><button type="button" class="mrh-part-link" data-action="board-item-detail" data-id="'+escape(record.id)+'">'+escape(record.name)+'</button><button type="button" class="ms-native-read" data-action="mrh-native-commercial" data-id="'+escape(record.id)+'" aria-label="Load commercial values for '+escape(record.name)+'">Load costs</button><button type="button" class="ms-native-read" data-action="mrh-native-procurement" data-id="'+escape(record.id)+'" data-material="'+escape(record.name)+'" aria-label="Open procurement for '+escape(record.name)+'">RFQ &amp; procurement</button>'+(canArchive?'<button type="button" class="ms-native-read" data-action="mrh-native-archive" data-id="'+escape(record.id)+'" aria-label="Archive material '+escape(record.name)+'">Archive</button>':'')+'<span class="ms-native-row-status" data-ms-row-status role="status"></span><small class="ms-native-row-status" data-ms-pricing-state>Pricing not loaded</small><small class="ms-native-row-status">Calculated selling (VAT-ex/unit): <span data-ms-derived="selling">—</span></small></td>';
   if(key==='created')return '<td data-ms-col="created" data-ms-sort="'+escape(record.createdAt||'')+'">'+escape(date(record.createdAt))+'</td>';
   if(kind==='commercial')return '<td data-ms-col="'+key+'" data-ms-commercial="'+key+'" title="Use Load costs for this material">—</td>';
   if(kind==='derived')return '<td data-ms-col="'+key+'" data-ms-derived="'+key+'" title="Saved authoritative pricing">—</td>';
@@ -61,7 +61,7 @@ function rowMarkup(record,overdue,canArchive){
 // document retains its single deterministic stylesheet; only this route adds
 // the scoped reference styles, once per document.
 export function ensureNativeMaterialSourcingStyles(doc){
- const href=new URL('./native-screen.css?v=cp-ms-crm-05c-20261128',import.meta.url).href;
+ const href=new URL('./native-screen.css?v=cp-ms-crm-05d2a-20261128',import.meta.url).href;
  const existing=Array.from(doc.querySelectorAll('link[rel="stylesheet"]')).find(link=>link.href===href);
  if(existing)return existing;
  const link=doc.createElement('link');link.rel='stylesheet';link.href=href;doc.head.append(link);return link;
@@ -99,6 +99,7 @@ export function renderNativeMaterialSourcing(detail,filters={},now=new Date(),op
  '<nav class="ms-native-tabs mrh-tracker-viewtabs" aria-label="Material Tracker views">'+
  (adding?'<button type="button" data-action="mrh-show-items">All items</button><span class="mrh-active-view" aria-current="page">Add Material</span>':'<span class="mrh-active-view" aria-current="page">All items</span><button type="button" data-action="mrh-add-view"> + Add Material</button>')+
  (options.canCreate===true&&!adding?'<button type="button" data-action="mrh-native-import">Bulk Import</button><button type="button" data-action="mrh-native-batch">Batch operations</button>':'<button type="button" disabled title="Use the active signed material list to import">Bulk Import</button>')+(adding?'':'<button type="button" data-action="mrh-native-procurement-references" aria-expanded="false" aria-controls="ms-procurement-references">Supplier &amp; PO references</button>')+'</nav>'+
+ (adding?'':'<section class="ms-native-surface ms-procurement-workflow" aria-label="RFQ and procurement workflow" data-ms-procurement-workflow hidden></section>')+
  (adding?'':'<section id="ms-procurement-references" class="ms-native-surface" aria-label="Procurement references" data-ms-procurement-references hidden></section>')+
  (adding?'<div class="mrh-add-app ms-native-add"><div class="mrh-add-canvas">'+renderMaterialSourcingAddMaterial(detail,{canCreate:options.canCreate===true})+'</div></div>':
  '<div class="ms-native-surface"><div class="mrh-tracker-controls">'+
