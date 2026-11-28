@@ -88,7 +88,10 @@ export async function openMaterialImport({api,auth,workspaceId,isCurrent,onCompl
    const results=await executeMaterialImport({api,auth,workspaceId,review,approvedDigest:digest,storage,locks,isCurrent:active,
     onProgress:p=>status(p.completed+' of '+p.total+' material receipts verified.')});
    reset();marker=null;
-   status(results.length+' material receipts verified. Import complete.');
+   const list=document.createElement('ul');
+   for(const result of results){const li=document.createElement('li');li.textContent='Source row '+result.sourceRow+' · '+result.state+' receipt · '+result.itemId;list.append(li);}
+   el('[data-preview]').append(list);
+   status(results.length+' material receipts verified. Import complete. Recovered receipts establish prior creation, not unchanged current values.');
    // Keep result visible; do not submit again if refresh fails.
    try{await onComplete(results);}catch{status(results.length+' receipts verified. Refresh the board to see the results.');}
   }catch(error){
@@ -98,7 +101,9 @@ export async function openMaterialImport({api,auth,workspaceId,isCurrent,onCompl
  el('[data-close]').addEventListener('click',()=>{if(!busy)dialog.close();});
  dialog.addEventListener('cancel',e=>{if(busy)e.preventDefault();});
  dialog.addEventListener('close',()=>dialog.remove(),{once:true});
+ const closed=new Promise(resolve=>dialog.addEventListener('close',resolve,{once:true}));
  document.body.append(dialog);dialog.showModal();
  try{marker=readMaterialImportRecovery(storage,key);if(marker)status('An interrupted import exists. Select the original worksheet to resume.');}
  catch(error){status(error.message);}
+ await closed;
 }
