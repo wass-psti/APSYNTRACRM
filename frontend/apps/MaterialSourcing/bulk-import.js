@@ -78,8 +78,9 @@ export async function importReviewDigest(review,crypt=globalThis.crypto){
   invalid:r.plan?null:r.reason})),crypt);
 }
 export async function executeMaterialImport({api,auth,workspaceId,review,approvedDigest,
- storage=globalThis.localStorage,locks=globalThis.navigator?.locks,crypt=globalThis.crypto,
+ storage,locks=globalThis.navigator?.locks,crypt=globalThis.crypto,
  isCurrent=()=>true,onProgress=()=>{}}){
+ storage??=locks?.request?globalThis.localStorage:globalThis.sessionStorage;
  const actor=auth.userId,key=importRecoveryKey(actor,workspaceId);
  const scope={api,auth,workspaceId,boardId,itemId:placeholder,edit:true};
  const ensureCurrent=()=>{if(!isCurrent()||auth.userId!==actor)fail('Material import view or session changed. Resume using the same worksheet.');};
@@ -99,7 +100,6 @@ export async function executeMaterialImport({api,auth,workspaceId,review,approve
   for(const entry of marker.rows){
    const row=review[entry.index];
    if(!row?.plan)fail('Recovery row no longer matches the original plan.');
-   if(entry.itemId){results.push({sourceRow:row.sourceRow,itemId:entry.itemId,state:'verified'});continue;}
    ensureCurrent();
    // Read the existing signed receipt before duplicate review: a committed
    // interrupted row must not be mistaken for a different existing material.
@@ -107,6 +107,10 @@ export async function executeMaterialImport({api,auth,workspaceId,review,approve
    await revalidateMaterialSourcingSession(scope,actor);
    if(receipt?.request_id!==entry.requestId||!['committed','unresolved'].includes(receipt.status)||
       (receipt.status==='committed'&&!validUuid(receipt.item_id)))fail('Creation receipt unavailable; import stopped.');
+   if(entry.itemId){
+    if(receipt.status!=='committed'||receipt.item_id!==entry.itemId)fail('Previously verified receipt no longer matches. Reconcile before continuing.');
+    results.push({sourceRow:row.sourceRow,itemId:entry.itemId,state:'recovered'});continue;
+   }
    if(receipt.status==='unresolved'){
     api.invalidateBoardCache?.(boardId,{invalidateContext:false});
     const fresh=complete(await api.board(boardId,{complete:true}),workspaceId);
