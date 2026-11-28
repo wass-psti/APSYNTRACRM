@@ -179,3 +179,22 @@ existing JWT flags and approve all six candidate bundles explicitly. A separate
 Material Sourcing migration manifest failure on c7fb55b remains outside this
 scope; the browser runtime files were unchanged from the previously validated
 2e0e22a revision until this origin diagnostic change.
+
+## CP-CRM-CF-02A.1 — release pinning and continuous delivery gate
+
+The Watchdog preview release 282e57892bff4d98d9153bce88a0d2063d28ead8
+(version 6c111901-3470-42c2-ad36-5e3a0aa9a1df) passed independent hosted
+smoke. A dispatch against moving main checked a different revision and failed.
+Use the optional release_sha input (40 lowercase hex, reachable from main)
+for read-only verification of the actual deployed commit. Automatic delivery
+now starts only after successful full APSYNTRA CRM Frontend Validation on
+same-repository main, packages the exact completed run's revision, validates
+its migration manifest, and skips a superseded revision. Existing static
+push validation remains independent. The full frontend path filter includes
+all preview packaging inputs. The deployment job remains disabled until
+CF_WATCHDOG_PREVIEW_AUTO_DEPLOY=true and a dedicated preview-only Cloudflare
+credential CF_WATCHDOG_PREVIEW_API_TOKEN are explicitly provisioned. Do not
+reuse OAuth, enable the old account variables or modify production. Provision
+an individual Worker Editor token for apsyntracrm-preview where available;
+never grant account-wide write access merely to make CI pass. A successful
+isolated candidate workflow is not proof of automatic delivery.

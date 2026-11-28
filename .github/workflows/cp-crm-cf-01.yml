@@ -13,22 +13,42 @@ on:
       - 'service-worker.js'
       - 'frontend/**'
       - 'paseo/**'
+  # Deployment follows the exact successful full CRM validation run, not a moving main ref.
+  workflow_run:
+    workflows: ["APSYNTRA CRM Frontend Validation"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       hosted_smoke:
         description: Verify the deployed preview against this commit (read-only)
         type: boolean
         default: false
+      release_sha:
+        description: Optional exact main-history commit for read-only hosted verification
+        type: string
+        default: ''
 permissions:
   contents: read
 jobs:
   static-preview:
+    if: ${{ github.event_name != 'workflow_run' || (vars.CF_WATCHDOG_PREVIEW_AUTO_DEPLOY == 'true' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.head_branch == 'main' && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.release_sha || github.sha }}
+          fetch-depth: 0
+      - name: Verify immutable revision belongs to main history
+        env:
+          REQUESTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.release_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$REQUESTED_SHA"
+          git merge-base --is-ancestor HEAD origin/main
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -82,11 +102,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.release_sha || github.sha }}
       - name: Compare hosted preview against this commit
         run: bash scripts/verify-cloudflare-preview.sh https://apsyntracrm-preview.watchdog-521.workers.dev
   deploy-preview:
     # Explicitly opt in only after provisioning the dedicated CI credential.
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.CF_WATCHDOG_PREVIEW_AUTO_DEPLOY == 'true' }}
+    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.head_branch == 'main' && vars.CF_WATCHDOG_PREVIEW_AUTO_DEPLOY == 'true' }}
     needs: static-preview
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -97,13 +118,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.release_sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Run existing frontend regression suite before delivery
+      - name: Verify release and migration manifest after full CRM CI
+        env:
+          VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          npm ci --no-audit --no-fund
-          npm test
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$VALIDATED_SHA"
+          node scripts/verify-migration-source-manifest.mjs
       - uses: actions/download-artifact@v4
         with:
           name: apsyntracrm-cloudflare-preview
@@ -115,7 +140,7 @@ jobs:
           set -euo pipefail
           current="$(git ls-remote origin refs/heads/main | cut -f1)"
           test -n "$current"
-          if [ "$current" = "$GITHUB_SHA" ]; then
+          if [ "$current" = "$(git rev-parse HEAD)" ]; then
             echo "deploy=true" >> "$GITHUB_OUTPUT"
           else
             echo "Superseded commit; skipping deployment"
