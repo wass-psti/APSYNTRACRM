@@ -2534,6 +2534,13 @@
       "file": "20261128121317_cp_ms_crm_04c1b_mrh_fx_acquisition.sql",
       "bytes": 7278,
       "sha256": "25dea15a668a2eb7691cd716ab750f618db8a3489367142d7b81492df6bc397f"
+    },
+    {
+      "version": "20261128130403",
+      "name": "cp_ms_crm_05a_mrh_pricing_board_projection",
+      "file": "20261128130403_cp_ms_crm_05a_mrh_pricing_board_projection.sql",
+      "bytes": 4295,
+      "sha256": "5af07c8f5cccefadd996e55304556997fbf9dd26594bf15ddbdf7f3e2a319650"
     }
   ],
   "applied_only": [
