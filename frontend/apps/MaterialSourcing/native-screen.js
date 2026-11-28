@@ -25,10 +25,10 @@ export const nativeColumns=Object.freeze([
  ['leadWeeks','Lead (wks)','public'],['requiredDate','Date required','public']
 ]);
 const moneyKeys=new Set(['legacySelling','buyingPrice','shipping','usd','eur']);
-function card(label,value,icon,note='',sourceFilter=null){
+function card(label,value,icon,note='',sourceFilter=null,financialKey=null){
  const tag=sourceFilter?'button':'article';
  const attrs=sourceFilter?' type="button" data-action="mrh-native-source" data-source="'+escape(sourceFilter.source)+'" aria-pressed="'+sourceFilter.active+'"':'';
- return '<'+tag+' class="ms-native-metric"'+attrs+'><i aria-hidden="true">'+icon+'</i><div><small>'+escape(label)+'</small><strong>'+escape(value)+'</strong>'+(note?'<small>'+escape(note)+'</small>':'')+'</div></'+tag+'>';
+ return '<'+tag+' class="ms-native-metric"'+attrs+'><i aria-hidden="true">'+icon+'</i><div><small>'+escape(label)+'</small><strong'+(financialKey?' data-ms-financial-value="'+financialKey+'"':'')+'>'+escape(value)+'</strong>'+(note?'<small>'+escape(note)+'</small>':'')+'</div></'+tag+'>';
 }
 function sourceDistribution(local,imported,unknown){
  const total=local+imported+unknown;
@@ -47,10 +47,10 @@ function publicCell(record,key){
 }
 function rowMarkup(record,overdue){
  return '<tr data-ms-item="'+escape(record.id)+'">'+nativeColumns.map(([key,,kind])=>{
-  if(key==='name')return '<td data-ms-col="name" data-ms-sort="'+escape(record.name)+'"><button type="button" class="mrh-part-link" data-action="board-item-detail" data-id="'+escape(record.id)+'">'+escape(record.name)+'</button><button type="button" class="ms-native-read" data-action="mrh-native-commercial" data-id="'+escape(record.id)+'" aria-label="Load commercial values for '+escape(record.name)+'">Load costs</button><span class="ms-native-row-status" data-ms-row-status role="status"></span></td>';
+  if(key==='name')return '<td data-ms-col="name" data-ms-sort="'+escape(record.name)+'"><button type="button" class="mrh-part-link" data-action="board-item-detail" data-id="'+escape(record.id)+'">'+escape(record.name)+'</button><button type="button" class="ms-native-read" data-action="mrh-native-commercial" data-id="'+escape(record.id)+'" aria-label="Load commercial values for '+escape(record.name)+'">Load costs</button><span class="ms-native-row-status" data-ms-row-status role="status"></span><small class="ms-native-row-status" data-ms-pricing-state>Pricing not loaded</small><small class="ms-native-row-status">Calculated selling (VAT-ex/unit): <span data-ms-derived="selling">—</span></small></td>';
   if(key==='created')return '<td data-ms-col="created" data-ms-sort="'+escape(record.createdAt||'')+'">'+escape(date(record.createdAt))+'</td>';
   if(kind==='commercial')return '<td data-ms-col="'+key+'" data-ms-commercial="'+key+'" title="Use Load costs for this material">—</td>';
-  if(kind==='derived')return '<td data-ms-col="'+key+'" title="Authoritative calculation not yet connected">—</td>';
+  if(kind==='derived')return '<td data-ms-col="'+key+'" data-ms-derived="'+key+'" title="Saved authoritative pricing">—</td>';
   const value=publicCell(record,key);
   const body=key==='source'&&['Local','Import'].includes(value.display)?'<span class="mrh-source '+value.display.toLowerCase()+'">'+escape(value.display)+'</span>':escape(value.display);
   return '<td data-ms-col="'+key+'" data-ms-sort="'+escape(value.sort)+'" title="'+escape(value.title)+'">'+body+(key==='requiredDate'&&overdue?' <span class="mrh-overdue-label">Overdue</span>':'')+'</td>';
@@ -85,10 +85,11 @@ export function renderNativeMaterialSourcing(detail,filters={},now=new Date(),op
  '<div class="ms-native-header-actions"><span class="ms-native-tag">CRM · Signed board data</span>'+
  (adding?'':'<button type="button" class="secondary" data-action="refresh-board" aria-label="Refresh Material Sourcing">↻ Refresh</button>')+'</div></header>'+
  '<div class="ms-native-body"><details class="ms-native-metrics-panel" open><summary>Key metrics</summary><div class="ms-native-metrics">'+
- card(heading,fmt(all.length),'◇')+card('Total buying','—','₱','Calculation pending')+card('Local',fmt(local),'L','',metricFilter('Local'))+card('Import',fmt(imported),'◎','',metricFilter('Import'))+
- card('USD rate','—','$','No current snapshot')+card('EUR rate','—','€','No current snapshot')+
+ card(heading,fmt(all.length),'◇')+card('Total buying (PHP)','—','₱','Current complete pricing only',null,'buying')+card('Local',fmt(local),'L','',metricFilter('Local'))+card('Import',fmt(imported),'◎','',metricFilter('Import'))+
+ card('Captured USD rate','—','$','Provider reference',null,'usd')+card('Captured EUR rate','—','€','Provider reference',null,'eur')+
  sourceDistribution(local,imported,unknown)+'</div></details>'+
- '<div class="ms-native-rates"><span>⇄ Exchange rates</span><span class="ms-native-tag">USD —</span><span class="ms-native-tag">EUR —</span><small>Stored per-item rates are available through signed reads. No current FX snapshot.</small></div>'+
+ '<div class="ms-native-rates"><span>⇄ Latest captured provider rates</span><small data-ms-fx-summary>No board FX read yet.</small></div>'+
+ (adding?'':'<section class="ms-native-surface" aria-label="Authoritative financial totals"><div class="ms-native-header-actions"><button type="button" class="secondary" data-action="mrh-native-pricing">Load / refresh authoritative pricing</button><span role="status" data-ms-pricing-status>Financial data not loaded.</span></div><p data-ms-coverage>Financial coverage not loaded.</p><div class="ms-native-metrics">'+card('Total shipping (PHP)','—','₱','',null,'shipping')+card('Total landed (PHP)','—','₱','',null,'landed')+card('Total selling (VAT-in)','—','₱','',null,'sellingVatIn')+'</div></section>')+
  (!projection.itemsComplete?'<p class="mrh-data-warning" role="status">Partial board page: counts, filters and exports apply to loaded records only.</p>':'')+
  (projection.deferred.length?'<p class="mrh-data-warning" role="status">Other-group or archived records are outside the current sourcing projection; their identities remain unchanged.</p>':'')+
  (projection.missingPublicFields.length?'<p class="mrh-data-warning" role="status">Some sourcing fields are not available in this board projection.</p>':'')+
@@ -104,7 +105,7 @@ export function renderNativeMaterialSourcing(detail,filters={},now=new Date(),op
  '<div class="ms-native-table-scroll mrh-tracker-table-scroll" role="region" aria-label="Horizontally scrollable materials table" tabindex="0"><table class="ms-native-table mrh-tracker-table"><thead><tr>'+headings+'</tr></thead><tbody>'+
  '<tr class="mrh-group-row"><th scope="rowgroup" colspan="'+nativeColumns.length+'">◇ '+escape(projection.records[0]?.group||'Main group')+' <span class="mrh-group-count">'+fmt(all.length)+'</span></th></tr>'+
  (records.length?records.map(({record,overdue})=>rowMarkup(record,overdue)).join(''):'<tr><td colspan="'+nativeColumns.length+'">No matching materials in the authorized board.</td></tr>')+'</tbody></table></div></div>')+
- '<p class="ms-native-note">Main group is preserved. Load costs reads only the selected item through the existing signed contract. Stored selling prices are historical values; calculated totals, full reports and bulk import require the extended backend. Commercial values are not included in public CSV.</p></div></section>';
+ '<p class="ms-native-note">Main group is preserved. Load costs reads only the selected item through the existing signed contract. Stored manual selling prices remain separate from calculated pricing. Load authoritative pricing for board-wide saved calculations. Full reports and bulk import remain pending. Commercial values are not included in public CSV.</p></div></section>';
 }
 /** DOM-only sorting of loaded public fields; no write, storage, or commercial sorting. */
 export function sortNativeMaterials(button){

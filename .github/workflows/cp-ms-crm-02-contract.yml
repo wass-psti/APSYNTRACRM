@@ -92,6 +92,8 @@ jobs:
           MRH_PRICING_ORACLE=/tmp/mrh-pricing-preview-oracle.jsonl node --test frontend/tests/material-sourcing-pricing-panel.test.mjs
           docker cp sql/mrh-fx-acquisition-CANDIDATE-NOT-APPLIED.sql "$name:/tmp/mrh-fx-acquisition.sql"
           docker exec -i "$name" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 < sql/tests/mrh-fx-acquisition-disposable.sql
+          docker cp sql/mrh-pricing-board-projection-CANDIDATE-NOT-APPLIED.sql "$name:/tmp/mrh-pricing-board-projection.sql"
+          docker exec -i "$name" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 < sql/tests/mrh-pricing-board-projection-disposable.sql
           # Only B.5 integration branch/PR requires live public-provider evidence.
           # Ordinary CRM regression stays deterministic and independent of provider uptime.
           if [ "$GITHUB_REF" = "refs/heads/integration/cp-ms-crm-04b5" ] || [ "${GITHUB_HEAD_REF:-}" = "integration/cp-ms-crm-04b5" ]; then

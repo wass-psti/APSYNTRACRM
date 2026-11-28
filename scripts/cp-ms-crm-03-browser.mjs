@@ -32,15 +32,28 @@ try{
  await page.goto(origin+'/#/boards/'+boardId+'/sourcing');
  await page.evaluate(async({detail,workspaceId,userId,boardId})=>{
   const native=await import('/frontend/apps/MaterialSourcing/native-screen.js');
+  const pricing=await import('/frontend/apps/MaterialSourcing/pricing-projection.js');
   const host=document.querySelector('.main-content');
   const initial=document.querySelectorAll('link[rel="stylesheet"]').length;
   const styles=native.ensureNativeMaterialSourcingStyles(document);
   if(initial!==1||styles!==native.ensureNativeMaterialSourcingStyles(document))throw Error('Native style delivery is not isolated');
   if(!styles.sheet)await new Promise((resolve,reject)=>{styles.addEventListener('load',resolve,{once:true});styles.addEventListener('error',reject,{once:true});});
-  let active=true,deny=false,delay=null,reads=0,empty=false,filters={};
+  let active=true,deny=false,delay=null,reads=0,empty=false,filters={},projectionReads=0,projectionDenied=false;
   const auth={isSignedIn:true,userId,getVerifiedUser:async()=>({id:auth.userId})};
   const api={context:async()=>({user_id:userId,workspace_id:workspaceId,profile:{status:'active'}}),
    allowed:async()=>!deny,rpc:async(name,args)=>{
+    if(name==='mrh_pricing_board_projection'&&args.p_board_id===boardId){
+     projectionReads++;
+     if(projectionDenied)throw Error('synthetic projection unavailable');
+     return {boardId,workspaceId,coverage:{total:3,current:1,missing:1,stale:1,partial:0,incomplete:0,unavailable:0},
+      totals:{buying:'25.00',shipping:'5.00',landed:'30.00',sellingVatIn:'56.78'},
+      rows:[{itemId:detail.items[0].id,state:'stale',pricingVersionId:'older',costs:null},
+       {itemId:detail.items[1].id,state:'current',pricingVersionId:'version',fxSnapshotId:'snapshot',formulaVersion:'mrh-pricing-v1',
+        costs:{php:'10.00',shipPhp:'2.00',landed:'12.00',totalLanded:'30.00',selling:'20.28',vatIn:'56.78'}},
+       {itemId:detail.items[2].id,state:'missing',costs:null}],
+      latestFx:{snapshotId:'snapshot',provider:'Synthetic provider',provenance:'provider_reported',observationRef:'synthetic-observation',
+       observedAt:'2026-11-26T00:00:00Z',retrievedAt:'2026-11-27T00:00:00Z',usd:'64.45000000',eur:'71.00000000'}};
+    }
     if(name!=='mrh_sourcing_board_viewer_read'||args.p_board_id!==boardId)throw Error('wrong signed read');
     reads++;if(delay)await delay.promise;
     if(empty)return {};
@@ -53,12 +66,13 @@ try{
     render({...filters,source:filters.source===button.dataset.source?'all':button.dataset.source});
    }
    if(button.dataset.action==='mrh-native-sort')native.sortNativeMaterials(button);
+   if(button.dataset.action==='mrh-native-pricing')void pricing.loadBoardPricing(button,{api,boardId,workspaceId,isCurrent:()=>active&&auth.isSignedIn&&auth.userId===userId});
    if(button.dataset.action==='mrh-native-commercial')void native.loadNativeCommercialRow(button,{api,auth,workspaceId,boardId,isCurrent:()=>active&&auth.isSignedIn&&auth.userId===userId});
    if(button.dataset.action==='mrh-add-view')render({}, {view:'add'});
    if(button.dataset.action==='mrh-show-items')render();
   });
   host.addEventListener('change',e=>{if(e.target.id==='mrh-tracker-source')render({...filters,source:e.target.value});});
-  window.msFixture={render,empty:()=>{empty=true;},deny:()=>{deny=true;},allow:()=>{deny=false;},reads:()=>reads,
+  window.msFixture={render,projectionReads:()=>projectionReads,denyProjection:()=>{projectionDenied=true;},empty:()=>{empty=true;},deny:()=>{deny=true;},allow:()=>{deny=false;},reads:()=>reads,
    delay:()=>{let resolve;const promise=new Promise(r=>resolve=r);delay={promise,resolve};},release:()=>{delay.resolve();delay=null;},
    leave:()=>{active=false;host.innerHTML='<h1>Overview</h1>';},return:()=>{active=true;render();}};
   render();
@@ -68,6 +82,23 @@ try{
  check(await rows.count()===3,'native projection displays all three synthetic UUID records');
  check(await page.locator('thead th[data-ms-col]').count()===24,'24 reference columns');
  check(await page.evaluate(()=>window.msFixture.reads())===0,'no commercial calls on initial render');
+ const projectionButton=page.getByRole('button',{name:'Load / refresh authoritative pricing'});
+ await projectionButton.click();
+ await page.getByText('Authoritative pricing loaded.',{exact:false}).waitFor();
+ check(await page.evaluate(()=>window.msFixture.projectionReads())===1,'one board-wide pricing call');
+ check(await page.locator('[data-ms-financial-value="landed"]').textContent()==='₱30.00','authoritative total landed displayed');
+ check(await page.locator('[data-ms-financial-value="buying"]').textContent()==='₱25.00','exact buying total displayed');
+ check(await page.locator('[data-ms-fx-summary]').textContent().then(v=>v.includes('synthetic-observation')),'provider provenance displayed');
+ const pricedRow=rows.filter({hasText:'SYNTHETIC-A'});
+ check(await pricedRow.locator('[data-ms-derived="totalLanded"]').textContent()==='₱30.00','authoritative derived cell displayed');
+ check(await pricedRow.locator('[data-ms-derived="selling"]').textContent()==='₱20.28','calculated selling separate from legacy');
+ check(await rows.filter({hasText:'SYNTHETIC-B'}).locator('[data-ms-pricing-state]').textContent()==='Stale pricing — save again','stale row classified');
+ check(await rows.filter({hasText:'SYNTHETIC-C'}).locator('[data-ms-pricing-state]').textContent()==='No saved pricing','unpriced row classified');
+ await page.evaluate(()=>window.msFixture.denyProjection());
+ await projectionButton.click();
+ await page.getByText('Authoritative pricing unavailable.',{exact:false}).waitFor();
+ check(await page.locator('[data-ms-financial-value="landed"]').textContent()==='—','failed projection clears previous totals');
+ check(await pricedRow.locator('[data-ms-derived="totalLanded"]').textContent()==='—','failed projection clears previous row values');
  if(visualDir)await page.screenshot({path:resolve(visualDir,'native-desktop-light.png'),fullPage:true});
  await page.locator('[data-action="mrh-native-source"][data-source="Local"]').click();
  check(await rows.count()===1&&(await rows.first().innerText()).includes('SYNTHETIC-B'),'reference Local card filters the list');
@@ -109,8 +140,8 @@ try{
   const layout=await page.evaluate(()=>{const host=document.querySelector('.ms-native-sourcing'),scroller=host.querySelector('.ms-native-table-scroll');return {host:host.getBoundingClientRect().width,scroll:scroller.scrollWidth,client:scroller.clientWidth,document:document.documentElement.scrollWidth,viewport:innerWidth};});
   check(layout.host<=width&&layout.scroll>layout.client&&layout.document<=width+1,'contained horizontal scroll at '+width+'px');
  }
- const narrowMetricColumns=await page.locator('.ms-native-metrics').evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length);
- check(narrowMetricColumns===1,'narrow CRM content uses one readable metric column');
+ const narrowMetricColumns=await page.locator('.ms-native-metrics').evaluateAll(nodes=>nodes.map(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length));
+ check(narrowMetricColumns.length===2&&narrowMetricColumns.every(n=>n===1),'narrow CRM content uses one readable metric column');
  if(visualDir)await page.screenshot({path:resolve(visualDir,'native-mobile-320-light.png'),fullPage:true});
  await page.setViewportSize({width:390,height:844});
  if(visualDir)await page.screenshot({path:resolve(visualDir,'native-mobile-light.png'),fullPage:true});
