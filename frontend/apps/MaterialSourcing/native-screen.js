@@ -6,6 +6,7 @@
 import {reconcileBoard,COMMERCIAL_FIELDS} from './reconcile.js';
 import {materialTrackerRows,filterMaterialTrackerRows} from '../../material-sourcing-tracker.js';
 import {readProtectedSourcingItem} from '../../material-sourcing-application.js';
+import {MATERIAL_SOURCING_GROUP} from '../../material-sourcing-schema-plan.js';
 import {renderMaterialSourcingAddMaterial} from '../../material-sourcing-add-material.js';
 
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -45,9 +46,9 @@ function publicCell(record,key){
  if(value?.state!=='present')return {display:'—',sort:'',title:value?.state==='unsupported'?'Historical value requires reconciliation':value?.state==='unavailable'?'Field unavailable':'Not recorded'};
  return {display:value.value,sort:value.value,title:'Stored board value'};
 }
-function rowMarkup(record,overdue){
+function rowMarkup(record,overdue,canArchive){
  return '<tr data-ms-item="'+escape(record.id)+'">'+nativeColumns.map(([key,,kind])=>{
-  if(key==='name')return '<td data-ms-col="name" data-ms-sort="'+escape(record.name)+'"><button type="button" class="mrh-part-link" data-action="board-item-detail" data-id="'+escape(record.id)+'">'+escape(record.name)+'</button><button type="button" class="ms-native-read" data-action="mrh-native-commercial" data-id="'+escape(record.id)+'" aria-label="Load commercial values for '+escape(record.name)+'">Load costs</button><span class="ms-native-row-status" data-ms-row-status role="status"></span><small class="ms-native-row-status" data-ms-pricing-state>Pricing not loaded</small><small class="ms-native-row-status">Calculated selling (VAT-ex/unit): <span data-ms-derived="selling">—</span></small></td>';
+  if(key==='name')return '<td data-ms-col="name" data-ms-sort="'+escape(record.name)+'"><button type="button" class="mrh-part-link" data-action="board-item-detail" data-id="'+escape(record.id)+'">'+escape(record.name)+'</button><button type="button" class="ms-native-read" data-action="mrh-native-commercial" data-id="'+escape(record.id)+'" aria-label="Load commercial values for '+escape(record.name)+'">Load costs</button>'+(canArchive?'<button type="button" class="ms-native-read" data-action="mrh-native-archive" data-id="'+escape(record.id)+'" aria-label="Archive material '+escape(record.name)+'">Archive</button>':'')+'<span class="ms-native-row-status" data-ms-row-status role="status"></span><small class="ms-native-row-status" data-ms-pricing-state>Pricing not loaded</small><small class="ms-native-row-status">Calculated selling (VAT-ex/unit): <span data-ms-derived="selling">—</span></small></td>';
   if(key==='created')return '<td data-ms-col="created" data-ms-sort="'+escape(record.createdAt||'')+'">'+escape(date(record.createdAt))+'</td>';
   if(kind==='commercial')return '<td data-ms-col="'+key+'" data-ms-commercial="'+key+'" title="Use Load costs for this material">—</td>';
   if(kind==='derived')return '<td data-ms-col="'+key+'" data-ms-derived="'+key+'" title="Saved authoritative pricing">—</td>';
@@ -71,6 +72,8 @@ export function renderNativeMaterialSourcing(detail,filters={},now=new Date(),op
  try{projection=reconcileBoard(detail,{workspaceId:options.workspaceId});}
  catch{return '<section class="panel" role="alert">Material Sourcing board data is unavailable. Refresh the current workspace.</section>';}
  const adding=options.view==='add';
+ const archivedIds=new Set(projection.deferred.filter(row=>row.reason==='archived'&&row.groupId===MATERIAL_SOURCING_GROUP.id).map(row=>row.id));
+ const archivedRows=detail.items.filter(row=>archivedIds.has(row.id));
  const all=materialTrackerRows(detail,{today:now}),shown=filterMaterialTrackerRows(all,filters);
  const byId=new Map(projection.records.map(record=>[record.id,record]));
  const records=shown.map(row=>({record:byId.get(row.id),overdue:row.overdue})).filter(x=>x.record);
@@ -104,7 +107,9 @@ export function renderNativeMaterialSourcing(detail,filters={},now=new Date(),op
  '<button type="button" class="mrh-export-csv" data-action="mrh-export-csv" title="Export only loaded public fields">⇩ Export CSV</button><span class="mrh-loaded-count" role="status">'+records.length+' of '+all.length+' loaded</span></div>'+
  '<div class="ms-native-table-scroll mrh-tracker-table-scroll" role="region" aria-label="Horizontally scrollable materials table" tabindex="0"><table class="ms-native-table mrh-tracker-table"><thead><tr>'+headings+'</tr></thead><tbody>'+
  '<tr class="mrh-group-row"><th scope="rowgroup" colspan="'+nativeColumns.length+'">◇ '+escape(projection.records[0]?.group||'Main group')+' <span class="mrh-group-count">'+fmt(all.length)+'</span></th></tr>'+
- (records.length?records.map(({record,overdue})=>rowMarkup(record,overdue)).join(''):'<tr><td colspan="'+nativeColumns.length+'">No matching materials in the authorized board.</td></tr>')+'</tbody></table></div></div>')+
+ (records.length?records.map(({record,overdue})=>rowMarkup(record,overdue,options.canCreate===true)).join(''):'<tr><td colspan="'+nativeColumns.length+'">No matching materials in the authorized board.</td></tr>')+'</tbody></table></div></div>'+
+ '<details class="ms-native-surface" aria-label="Archived materials"><summary>Archived materials ('+fmt(archivedRows.length)+(projection.itemsComplete?'':' loaded')+')</summary>'+
+ (archivedRows.length?'<ul>'+archivedRows.map(row=>'<li>'+escape(row.title)+' · Archived '+escape(date(row.archived_at))+' '+(options.canCreate===true?'<button type="button" class="secondary" data-action="mrh-native-restore" data-id="'+escape(row.id)+'" aria-label="Restore material '+escape(row.title)+'">Restore</button>':'')+'</li>').join('')+'</ul>':'<p>No archived Main group materials in the loaded records.</p>')+'</details>')+
  '<p class="ms-native-note">Main group is preserved. Load costs reads only the selected item through the existing signed contract. Stored manual selling prices remain separate from calculated pricing. Load authoritative pricing for board-wide saved calculations. Full reports and bulk import remain pending. Commercial values are not included in public CSV.</p></div></section>';
 }
 /** DOM-only sorting of loaded public fields; no write, storage, or commercial sorting. */
