@@ -123,6 +123,8 @@ begin
  -- Lock material first, serialize concurrent RFQ transitions and archive.
  perform 1 from public.work_board_items where id=p_item for update;
  w:=private.mrh_procurement_scope(p_item);
+ if not coalesce(public.work_board_access('617c4c0f-e343-4b3b-8456-50d47dcbaf99','edit'),false)
+ or private.material_request_hub_current_role(w) is distinct from 'ADMIN' then raise exception 'Procurement write denied' using errcode='42501'; end if;
  command_request:=jsonb_build_object('expected_revision',p_expected_revision,'payload',p_payload);
  select * into receipt from private.mrh_procurement_revisions where operation_id=p_operation;
  if found then
