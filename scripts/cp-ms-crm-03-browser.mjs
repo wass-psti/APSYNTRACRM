@@ -33,15 +33,20 @@ try{
  await page.evaluate(async({detail,workspaceId,userId,boardId})=>{
   const native=await import('/frontend/apps/MaterialSourcing/native-screen.js');
   const pricing=await import('/frontend/apps/MaterialSourcing/pricing-projection.js');
+  const lifecycle=await import('/frontend/apps/MaterialSourcing/lifecycle.js');
   const host=document.querySelector('.main-content');
   const initial=document.querySelectorAll('link[rel="stylesheet"]').length;
   const styles=native.ensureNativeMaterialSourcingStyles(document);
   if(initial!==1||styles!==native.ensureNativeMaterialSourcingStyles(document))throw Error('Native style delivery is not isolated');
   if(!styles.sheet)await new Promise((resolve,reject)=>{styles.addEventListener('load',resolve,{once:true});styles.addEventListener('error',reject,{once:true});});
-  let active=true,deny=false,delay=null,reads=0,empty=false,filters={},projectionReads=0,projectionDenied=false;
+  let active=true,deny=false,delay=null,reads=0,empty=false,filters={},projectionReads=0,projectionDenied=false,lifecycleWrites=0;
   const auth={isSignedIn:true,userId,getVerifiedUser:async()=>({id:auth.userId})};
   const api={context:async()=>({user_id:userId,workspace_id:workspaceId,profile:{status:'active'}}),
-   allowed:async()=>!deny,rpc:async(name,args)=>{
+   board:async()=>structuredClone(detail),invalidateBoardCache:()=>{},allowed:async()=>!deny,rpc:async(name,args)=>{
+    if(name==='wm_set_board_item_archived'){
+     const row=detail.items.find(i=>i.id===args.p_item_id);if(!row)throw Error('wrong lifecycle target');
+     lifecycleWrites++;row.archived_at=args.p_archived?'2026-11-28T12:00:00Z':null;return null;
+    }
     if(name==='mrh_pricing_board_projection'&&args.p_board_id===boardId){
      projectionReads++;
      if(projectionDenied)throw Error('synthetic projection unavailable');
@@ -66,13 +71,18 @@ try{
     render({...filters,source:filters.source===button.dataset.source?'all':button.dataset.source});
    }
    if(button.dataset.action==='mrh-native-sort')native.sortNativeMaterials(button);
+   if(['mrh-native-archive','mrh-native-restore'].includes(button.dataset.action)){
+    button.disabled=true;
+    void lifecycle.setMaterialArchived({api,auth,workspaceId,itemId:button.dataset.id,archived:button.dataset.action==='mrh-native-archive',isCurrent:()=>active})
+     .then(()=>{if(active)render();}).catch(error=>{window.msLifecycleError=error.message;});
+   }
    if(button.dataset.action==='mrh-native-pricing')void pricing.loadBoardPricing(button,{api,boardId,workspaceId,isCurrent:()=>active&&auth.isSignedIn&&auth.userId===userId});
    if(button.dataset.action==='mrh-native-commercial')void native.loadNativeCommercialRow(button,{api,auth,workspaceId,boardId,isCurrent:()=>active&&auth.isSignedIn&&auth.userId===userId});
    if(button.dataset.action==='mrh-add-view')render({}, {view:'add'});
    if(button.dataset.action==='mrh-show-items')render();
   });
   host.addEventListener('change',e=>{if(e.target.id==='mrh-tracker-source')render({...filters,source:e.target.value});});
-  window.msFixture={render,projectionReads:()=>projectionReads,denyProjection:()=>{projectionDenied=true;},empty:()=>{empty=true;},deny:()=>{deny=true;},allow:()=>{deny=false;},reads:()=>reads,
+  window.msFixture={render,lifecycleWrites:()=>lifecycleWrites,projectionReads:()=>projectionReads,denyProjection:()=>{projectionDenied=true;},empty:()=>{empty=true;},deny:()=>{deny=true;},allow:()=>{deny=false;},reads:()=>reads,
    delay:()=>{let resolve;const promise=new Promise(r=>resolve=r);delay={promise,resolve};},release:()=>{delay.resolve();delay=null;},
    leave:()=>{active=false;host.innerHTML='<h1>Overview</h1>';},return:()=>{active=true;render();}};
   render();
@@ -135,6 +145,15 @@ try{
  if(visualDir)await page.screenshot({path:resolve(visualDir,'native-add-light.png'),fullPage:true});
  await page.getByRole('button',{name:/All items/i}).click();
  check(await rows.count()===3,'existing return to list');
+ await page.getByRole('button',{name:'Archive material SYNTHETIC-B'}).click();
+ await page.getByText('Archived materials (1)',{exact:true}).waitFor();
+ check(await rows.count()===2,'archive removes only the selected material from active projection');
+ await page.getByText('Archived materials (1)',{exact:true}).click();
+ await page.getByRole('button',{name:'Restore material SYNTHETIC-B'}).click();
+ await page.getByText('Archived materials (0)',{exact:true}).waitFor();
+ check(await rows.count()===3,'restore returns original material to active list');
+ check(await page.evaluate(()=>window.msFixture.lifecycleWrites())===2,'one lifecycle RPC per operation');
+ check(await page.evaluate(()=>!window.msLifecycleError),'lifecycle readbacks succeed');
  for(const width of [1440,768,390,320]){
   await page.setViewportSize({width,height:900});
   const layout=await page.evaluate(()=>{const host=document.querySelector('.ms-native-sourcing'),scroller=host.querySelector('.ms-native-table-scroll');return {host:host.getBoundingClientRect().width,scroll:scroller.scrollWidth,client:scroller.clientWidth,document:document.documentElement.scrollWidth,viewport:innerWidth};});
