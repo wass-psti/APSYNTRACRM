@@ -2473,6 +2473,41 @@
       "sha256": "d50d56ef9691bad1879c26decc9df30d50c4b23964d2317050aad6cd75ed54e4"
     },
     {
+      "version": "20261127151620",
+      "name": "cp_ms_crm_04c1_mrh_fx_http_extension",
+      "file": "20261127151620_cp_ms_crm_04c1_mrh_fx_http_extension.sql",
+      "bytes": 565,
+      "sha256": "3d785034504666dee17e8b5e9356f0626a151c51464821d4be3dfb1b6d79fc6f"
+    },
+    {
+      "version": "20261127152748",
+      "name": "cp_ms_crm_04c1_mrh_pricing_v1",
+      "file": "20261127152748_cp_ms_crm_04c1_mrh_pricing_v1.sql",
+      "bytes": 4097,
+      "sha256": "ac2b69d3809301b388e1cd6b85ff4ac523e7c979ceccccde73bef38a3ac64d09"
+    },
+    {
+      "version": "20261127152803",
+      "name": "cp_ms_crm_04c1_mrh_fx_snapshots",
+      "file": "20261127152803_cp_ms_crm_04c1_mrh_fx_snapshots.sql",
+      "bytes": 9155,
+      "sha256": "c38c2253df673d919fac68e68499d5bb2c163b6109a27759fcaf0811df3134ea"
+    },
+    {
+      "version": "20261127152809",
+      "name": "cp_ms_crm_04c1_mrh_pricing_persistence",
+      "file": "20261127152809_cp_ms_crm_04c1_mrh_pricing_persistence.sql",
+      "bytes": 10652,
+      "sha256": "6c249257d265fceb853f7f4a4510ac050cb006911678c8b146e460ee468aebd8"
+    },
+    {
+      "version": "20261127152815",
+      "name": "cp_ms_crm_04c1_mrh_pricing_interface",
+      "file": "20261127152815_cp_ms_crm_04c1_mrh_pricing_interface.sql",
+      "bytes": 8935,
+      "sha256": "8bde77124d2cc292a4bcfaf3b8663c0a725eec2119c713b1d43be30fe2d97848"
+    },
+    {
       "version": "20261127160000",
       "name": "cp_tt_shared_read_visibility",
       "file": "20261127160000_cp_tt_shared_read_visibility.sql",
@@ -2492,6 +2527,13 @@
       "file": "20261127180000_cp_tt_ot_edit_decision.sql",
       "bytes": 6605,
       "sha256": "420838e000b7931240211e66831dec57c1792d86463b5c29d369fd2a4a3728a4"
+    },
+    {
+      "version": "20261128121317",
+      "name": "cp_ms_crm_04c1b_mrh_fx_acquisition",
+      "file": "20261128121317_cp_ms_crm_04c1b_mrh_fx_acquisition.sql",
+      "bytes": 7278,
+      "sha256": "25dea15a668a2eb7691cd716ab750f618db8a3489367142d7b81492df6bc397f"
     }
   ],
   "applied_only": [
