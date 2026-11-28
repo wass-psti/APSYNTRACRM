@@ -3,8 +3,11 @@ import assert from 'node:assert/strict';
 
 const pages = 'https://wass-psti.github.io';
 const preview = 'https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev';
+const watchdogPreview = 'https://apsyntracrm-preview.watchdog-521.workers.dev';
 const foreign = [
   'https://untrusted.invalid',
+  'https://apsyntracrm-preview.watchdog-521.workers.dev.evil.invalid',
+  'https://apsyntracrm.watchdog-521.workers.dev',
   'https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev.evil.invalid',
   'https://apsyntracrm.alexsenaganwatchdog.workers.dev',
   'http://apsyntracrm-preview.alexsenaganwatchdog.workers.dev',
@@ -42,12 +45,12 @@ const routes = [
   ['manage', () => import('../../supabase/functions/ws02d-manage/index.ts')],
 ] as const;
 for (const [name, load] of routes) {
-  Deno.test(name + ': actual handler supports exact dual origins and preserves rejection', async () => {
+  Deno.test(name + ': actual handler supports exact approved origins and preserves rejection', async () => {
     const original = Deno.env.get('APSYNTRA_ALLOWED_ORIGIN');
     Deno.env.delete('APSYNTRA_ALLOWED_ORIGIN');
     try {
       const handler = await capture(load);
-      for (const origin of [pages, preview]) {
+      for (const origin of [pages, preview, watchdogPreview]) {
         const preflight = await handler(request('OPTIONS', origin, {
           'access-control-request-method': 'POST',
           'access-control-request-headers': 'authorization,apikey,content-type',
@@ -76,7 +79,7 @@ for (const [name, load] of routes) {
         // Preserve existing operator override semantics; add only preview.
         const existing = 'https://configured.example.invalid';
         Deno.env.set('APSYNTRA_ALLOWED_ORIGIN', existing);
-        for (const origin of [existing, preview]) {
+        for (const origin of [existing, preview, watchdogPreview]) {
           const res = await handler(request('OPTIONS', origin));
           assert.equal(res.status, 204);
           cors(res, origin);

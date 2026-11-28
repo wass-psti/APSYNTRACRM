@@ -11,7 +11,11 @@ import {createB3UserScopedRpc} from './ws02d-b3-user-scoped-rpc.mjs';
  * Supabase/PostgREST client (RLS); never substitute a service-role client.
  * Calling this with arbitrary injected mocks is not genuine acceptance.
  */
-const ALLOWED_ORIGIN='https://wass-psti.github.io';
+const ALLOWED_ORIGINS=new Set([
+ 'https://wass-psti.github.io',
+ 'https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev',
+ 'https://apsyntracrm-preview.watchdog-521.workers.dev'
+]);
 const JWT=/^[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}$/;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const MODULES=Object.freeze([
@@ -25,7 +29,7 @@ const CHECKS=Object.freeze([
  'module-access-read','stable-signed-context'
 ]);
 
-function json(status,body,allowed){
+function json(status,body,origin){
  const headers={
   'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store, max-age=0',
@@ -33,10 +37,10 @@ function json(status,body,allowed){
   'vary':'Origin',
   'x-content-type-options':'nosniff'
  };
- if(allowed){
-  headers['access-control-allow-origin']=ALLOWED_ORIGIN;
+ if(origin){
+  headers['access-control-allow-origin']=origin;
   headers['access-control-allow-methods']='GET, OPTIONS';
-  headers['access-control-allow-headers']='authorization';
+  headers['access-control-allow-headers']='authorization, apikey';
  }
  return new Response(JSON.stringify(body),{status,headers});
 }
@@ -47,7 +51,8 @@ function isVerified(actor){
 }
 function scopeMatches(ctx,actor){
  return Boolean(ctx && ctx.user_id===actor.id &&
-   UUID.test(ctx.workspace_id) && ctx.profile?.status==='active');
+   UUID.test(ctx.workspace_id) && ctx.profile?.status==='active' &&
+   (!actor.workspaceId || ctx.workspace_id===actor.workspaceId));
 }
 
 /**
@@ -60,49 +65,49 @@ export function createB3SignedReadStaging({
  readSignedModuleAccess
 }={}){
  return async function readB3(request){
-  const allowed=request instanceof Request &&
-    request.headers.get('origin')===ALLOWED_ORIGIN;
+  const origin=request instanceof Request ? request.headers.get('origin') : null;
+  const allowed=ALLOWED_ORIGINS.has(origin) ? origin : null;
   if(!enabled)return json(503,{status:'BLOCKED'},allowed);
-  if(!allowed)return json(403,{status:'BLOCKED'},false);
-  if(request.method==='OPTIONS')return json(200,{},true);
-  if(request.method!=='GET')return json(405,{status:'BLOCKED'},true);
+  if(!allowed)return json(403,{status:'BLOCKED'},null);
+  if(request.method==='OPTIONS')return json(200,{},allowed);
+  if(request.method!=='GET')return json(405,{status:'BLOCKED'},allowed);
   if(typeof verifySignedActor!=='function' ||
      typeof readSignedContext!=='function' ||
      typeof readSignedModuleAccess!=='function')
-   return json(503,{status:'BLOCKED'},true);
+   return json(503,{status:'BLOCKED'},allowed);
   const header=request.headers.get('authorization')||'';
   if(header.length>10007 || !header.startsWith('Bearer ') ||
     !JWT.test(header.slice(7)) || header.length<65)
-   return json(401,{status:'BLOCKED'},true);
+   return json(401,{status:'BLOCKED'},allowed);
   const token=header.slice(7);
   let actor;
   try{actor=await verifySignedActor(token);}catch{
-   return json(401,{status:'BLOCKED'},true);
+   return json(401,{status:'BLOCKED'},allowed);
   }
-  if(!isVerified(actor))return json(401,{status:'BLOCKED'},true);
+  if(!isVerified(actor))return json(401,{status:'BLOCKED'},allowed);
   let context;
   try{
    context=await readSignedContext(Object.freeze({jwt:token}));
-  }catch{return json(503,{status:'BLOCKED'},true);}
-  if(!scopeMatches(context,actor))return json(403,{status:'BLOCKED'},true);
+  }catch{return json(503,{status:'BLOCKED'},allowed);}
+  if(!scopeMatches(context,actor))return json(403,{status:'BLOCKED'},allowed);
   let results;
   try{
    results=await Promise.all(MODULES.map(p_module_id=>
     readSignedModuleAccess(Object.freeze({jwt:token,p_module_id}))));
-  }catch{return json(503,{status:'BLOCKED'},true);}
+  }catch{return json(503,{status:'BLOCKED'},allowed);}
   if(results.length!==MODULES.length||
     !results.every(x=>typeof x==='boolean'))
-   return json(503,{status:'BLOCKED'},true);
+   return json(503,{status:'BLOCKED'},allowed);
   let again,updated;
   try{
    again=await verifySignedActor(token);
    updated=await readSignedContext(Object.freeze({jwt:token}));
-  }catch{return json(401,{status:'BLOCKED'},true);}
+  }catch{return json(401,{status:'BLOCKED'},allowed);}
   if(!isVerified(again)||again.id!==actor.id||
     again.sessionId!==actor.sessionId||
     !scopeMatches(updated,actor) ||
     updated.workspace_id!==context.workspace_id)
-   return json(401,{status:'BLOCKED'},true);
+   return json(401,{status:'BLOCKED'},allowed);
   return json(200,{
    checkpoint:'CP-WS-02D-B3-SIGNED-READ-PREFLIGHT',
    status:'PASS',
@@ -115,7 +120,7 @@ export function createB3SignedReadStaging({
    identifiersDisclosed:0,
    acceptanceBoundary:'READ_ONLY_NOT_DOMAIN_WRITE_OR_EMAIL_ACCEPTANCE',
    trustBoundary:'SERVER_VERIFIED_GOTRUE_AND_USER_SCOPED_READ'
-  },true);
+  },allowed);
  };
 }
 

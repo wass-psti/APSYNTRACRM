@@ -118,3 +118,64 @@ the new job is intentionally skipped and automatic delivery is not certified.
 Production activation also requires a private source/configuration export
 and genuine signed browser acceptance. The Cloudflare preview uses the real
 Supabase backend, so use only designated controlled QA fixtures for writes.
+
+## CP-CRM-CF-01A.2A — live activation and extended reconciliation
+
+Approved and deployed four functions against the verified candidate blobs at
+`d5f1a95e28cfcb7c309c873888076f485dee8850`. Versions after activation:
+native Issues 9, invite 7, accept 7, manage 6. All retain verify_jwt=true,
+all bundle files exactly matched uploaded source on readback. Each returned
+204 with its own exact origin for both Pages and preview, and 403 without
+allow-origin for an untrusted origin (12 live preflight checks). No database
+records, SQL migrations, secrets or production Worker changes were made.
+Rollback source for all four is commit
+`c72c69314ed08f32c519b7351e56256f49bf46f4` with prior JWT settings.
+
+Extended reconciliation baseline commit `018cdc4cbd2eb81531d1d372157c261a824d2c17` restores exact
+active Paseo v13 and B3 v8 sources from Supabase readback. Paseo's existing
+QR canonical URL helper and API prefix correction must remain. B3's
+existing workspace-match predicate and apikey CORS header must remain, as
+must the existing signed caller's session/membership check. The subsequent
+candidate adds only the exact Cloudflare preview origin to the two HTTP
+boundaries and to the B3 frontend diagnostic. Existing public guest/auth
+and B3 gates stay unchanged. No extended production deployment approved
+by this checkpoint. Obtain explicit approval for PDL (verify_jwt=false
+as existing) and B3 (verify_jwt=true as existing) after CI; rollback from
+the reconciled baseline if necessary. B3 is read-only diagnostics, not
+evidence of independent database isolation or mutation acceptance.
+
+The production Worker remains unchanged. Continuous deployment credential
+provisioning, private source export, and genuine authenticated runtime
+acceptance are still separate outstanding gates.
+
+## CP-CRM-CF-02 — Watchdog account transition
+
+Selected account `521910d64f92c18a0e6e3eb1b2e93c71`; active preview target `https://apsyntracrm-preview.watchdog-521.workers.dev`.
+The new production Worker remains untouched (original version
+`33de221b-45e0-4a5d-8cf3-99f50d2e3cee`, fetch handler, 100% traffic).
+The old account and its existing preview remain untouched. Historical notes above
+refer to the previous account and are not instructions for new deployments.
+Wrangler now pins both the preview Worker and Watchdog account; CI rejects
+account overrides to the old account. Automatic deployment remains disabled
+until a new account-specific token `CF_WATCHDOG_PREVIEW_API_TOKEN` and
+`CF_WATCHDOG_PREVIEW_AUTO_DEPLOY=true` are explicitly provisioned. No token
+reuse or production changes. Supabase origin changes require a separate
+reviewed candidate and approval; both old frontend origins remain intact
+until retirement is explicitly authorized. The new account initially had TLS
+handshake failures; recheck hosted HTTPS after isolated preview deployment.
+
+### Watchdog preview origin candidate
+
+The Watchdog preview was deployed using commit `3930dba48439bfd911f9cc67f7baa3191d5bb4c0`, version
+`1be510be-41bb-498b-a55b-8ed906ae1173`. Root HTTPS redirects to the CRM and
+the entry returns HTTP 200. Production version remains unchanged. All six
+identified functions returned 403 for the new preview origin before activation.
+This candidate adds the exact Watchdog preview origin while retaining Pages
+and the previous preview during transition; production origins remain excluded.
+No production function deployment is authorized by this commit. Reconcile
+all live bundles before deployment; the first four were already activated for
+the old account, while Paseo and B3 were still awaiting activation. Preserve
+existing JWT flags and approve all six candidate bundles explicitly. A separate
+Material Sourcing migration manifest failure on c7fb55b remains outside this
+scope; the browser runtime files were unchanged from the previously validated
+2e0e22a revision until this origin diagnostic change.

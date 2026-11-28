@@ -1,5 +1,6 @@
 {
   "name": "apsyntracrm-preview",
+  "account_id": "521910d64f92c18a0e6e3eb1b2e93c71",
   "compatibility_date": "2026-11-03",
   "assets": {
     "directory": "./.cloudflare-build",

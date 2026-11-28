@@ -46,6 +46,10 @@ jobs:
             echo 'Unexpected acceptance of production target' >&2
             exit 1
           fi
+          if CLOUDFLARE_ACCOUNT_ID=dcac8518b4a28968b37a6fbe678f3cbe node scripts/deploy-cloudflare-preview.mjs --dry-run; then
+            echo 'Unexpected acceptance of previous account' >&2
+            exit 1
+          fi
           node scripts/deploy-cloudflare-preview.mjs --dry-run
       - name: Verify static HTTP behavior in local Workers runtime on CI
         env:
@@ -79,10 +83,10 @@ jobs:
         with:
           persist-credentials: false
       - name: Compare hosted preview against this commit
-        run: bash scripts/verify-cloudflare-preview.sh https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev
+        run: bash scripts/verify-cloudflare-preview.sh https://apsyntracrm-preview.watchdog-521.workers.dev
   deploy-preview:
     # Explicitly opt in only after provisioning the dedicated CI credential.
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.CF_PREVIEW_AUTO_DEPLOY == 'true' }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.CF_WATCHDOG_PREVIEW_AUTO_DEPLOY == 'true' }}
     needs: static-preview
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -120,11 +124,11 @@ jobs:
       - name: Deploy only the validated preview artifact
         if: steps.current.outputs.deploy == 'true'
         env:
-          CLOUDFLARE_ACCOUNT_ID: dcac8518b4a28968b37a6fbe678f3cbe
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_PREVIEW_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 521910d64f92c18a0e6e3eb1b2e93c71
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_WATCHDOG_PREVIEW_API_TOKEN }}
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           node scripts/deploy-cloudflare-preview.mjs
       - name: Verify actual hosted release
         if: steps.current.outputs.deploy == 'true'
-        run: bash scripts/verify-cloudflare-preview.sh https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev
+        run: bash scripts/verify-cloudflare-preview.sh https://apsyntracrm-preview.watchdog-521.workers.dev

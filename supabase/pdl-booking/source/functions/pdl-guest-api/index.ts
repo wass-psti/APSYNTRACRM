@@ -7,8 +7,10 @@
  * become payable reservations as a side effect of deployment.
  */
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import { getGuestApiBaseUrl } from './_shared/urls.mjs';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+const guestApiBaseUrl = supabaseUrl ? getGuestApiBaseUrl(supabaseUrl) : '';
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const allowedOrigins = new Set(
@@ -19,6 +21,8 @@ const allowedOrigins = new Set(
 // APSYNTRA's existing GitHub Pages origin hosts the native public booking portal.
 // Additive only: preserve every existing configured allowed origin and admin gate.
 allowedOrigins.add('https://wass-psti.github.io');
+allowedOrigins.add('https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev');
+allowedOrigins.add('https://apsyntracrm-preview.watchdog-521.workers.dev');
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const receiptTokenPattern = /^[0-9a-f-]{72}$/i;
 const paymentMethods = new Set(['gcash', 'maya', 'bpi']);
@@ -328,7 +332,7 @@ async function handle(req: Request): Promise<Response> {
     }
     if (req.method === 'GET' && route === '/v1/payment-methods') {
       const data = await rpc('payment_methods', {});
-      const prefix = url.origin + url.pathname.slice(0, start);
+      const prefix = guestApiBaseUrl;
       const methods = Array.isArray(data.methods) ? data.methods.map((item) => {
         const value = item as { method: string; recipient: string; imageUrl: string | null };
         return { ...value, imageUrl: value.imageUrl ? prefix + value.imageUrl : null };

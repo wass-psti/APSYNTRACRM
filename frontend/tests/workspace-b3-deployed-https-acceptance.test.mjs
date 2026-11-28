@@ -132,3 +132,25 @@ test('sanitizer never upgrades an untrusted claim of PASS into accepted evidence
  assert.equal(safe.moduleProbeCount,0);
  assert.doesNotMatch(JSON.stringify(safe),/synthetic_signed_token_/);
 });
+
+
+test('Cloudflare preview uses the same pinned signed-read endpoint, rejects unapproved production origin',async()=>{
+ const f=fixture();
+ const r=await runWs02dB3DeployedHttpsAcceptance({...f,origin:'https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev'});
+ assert.equal(r.status,'PASS');
+ assert.deepEqual(f.count(),{calls:2,sends:1});
+ const blocked=fixture();
+ assert.equal((await runWs02dB3DeployedHttpsAcceptance({...blocked,origin:'https://apsyntracrm.alexsenaganwatchdog.workers.dev'})).stage,'prerequisite');
+ assert.equal(blocked.count().sends,0);
+});
+
+
+test('Watchdog preview diagnostic uses pinned endpoint; production origin remains excluded',async()=>{
+ const f=fixture();
+ const r=await runWs02dB3DeployedHttpsAcceptance({...f,origin:'https://apsyntracrm-preview.watchdog-521.workers.dev'});
+ assert.equal(r.status,'PASS');
+ assert.deepEqual(f.count(),{calls:2,sends:1});
+ const denied=fixture();
+ assert.equal((await runWs02dB3DeployedHttpsAcceptance({...denied,origin:'https://apsyntracrm.watchdog-521.workers.dev'})).stage,'prerequisite');
+ assert.equal(denied.count().sends,0);
+});
