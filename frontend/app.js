@@ -10141,6 +10141,21 @@ async function action(name,button){
    sortNativeMaterials(button);
   break;
  }
+ case 'mrh-native-batch':{
+  const snapshot={boardId:state.boardId,userId:auth.userId,workspaceId:state.context?.workspace_id};
+  const isCurrent=()=>boardHistoryAuthorized(snapshot)&&state.tab==='sourcing'&&!state.mrhAddView&&
+   state.edit===true&&!state.workspaceTransitionPending&&isMaterialTrackerBoard(state.board);
+  if(!isCurrent()||state.mrhAddBusy||state.mrhLifecycleBusy||state.mrhImportOpen)break;
+  state.mrhImportOpen=true;
+  try{
+   const {openMaterialBatch}=await import('./apps/MaterialSourcing/batch-operations-ui.js?v=cp-ms-crm-05c-20261128');
+   if(!isCurrent())break;
+   await openMaterialBatch({api:db,auth,workspaceId:snapshot.workspaceId,isCurrent,
+    onComplete:async()=>{if(isCurrent())await loadBoard(snapshot.boardId,'sourcing');}});
+  }catch(error){if(isCurrent())notice(error);}
+  finally{state.mrhImportOpen=false;}
+  break;
+ }
  case 'mrh-native-import':{
   const snapshot={boardId:state.boardId,userId:auth.userId,workspaceId:state.context?.workspace_id};
   const isCurrent=()=>boardHistoryAuthorized(snapshot)&&state.tab==='sourcing'&&!state.mrhAddView&&
