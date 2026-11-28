@@ -73,6 +73,8 @@ begin
  if s->>'status'<>'open' or s->>'selection' is not null or s->>'supplier_po_id' is not null then raise exception 'reopen did not clear current selection'; end if;
  perform public.mrh_procurement_apply(item,rfq,gen_random_uuid(),7,'cancel','{}');
  perform public.mrh_procurement_apply(item,rfq,gen_random_uuid(),8,'reopen','{}');
+ result:=public.mrh_procurement_apply(item,rfq,op,0,'create',create_payload);
+ if result->>'replayed' is distinct from 'true' or result->>'revision' is distinct from '1' then raise exception 'historical operation receipt lost'; end if;
  select count(*) into n from public.work_board_events where entity_id=item::text and event_type='sourcing.procurement_changed';
  if n<>9 then raise exception 'unexpected audit count %',n; end if;
  if (select title from public.work_board_items where id=item)<>'Original material' then raise exception 'material mutated'; end if;
@@ -84,23 +86,41 @@ do $$ begin
  if has_table_privilege('authenticated','private.mrh_procurement_revisions','SELECT') then raise exception 'direct private read granted'; end if;
  if has_function_privilege('anon','public.mrh_procurement_read(uuid,uuid,bigint,integer,integer)','EXECUTE') then raise exception 'anon read granted'; end if;
 end $$;
+-- A failed audit insert must roll back the entire candidate write.
+create function public.test_procurement_audit_failure() returns trigger language plpgsql as $
+begin
+ if new.event_type='sourcing.procurement_changed' then raise exception 'synthetic audit failure' using errcode='23514'; end if;
+ return new;
+end $;
+create trigger test_procurement_audit_failure before insert on public.work_board_events for each row execute function public.test_procurement_audit_failure();
+set role authenticated;
+do $ begin
+ begin
+  perform public.mrh_procurement_apply('22222222-2222-4222-8222-222222222222','44444444-4444-4444-8444-444444444444',gen_random_uuid(),9,'select_quote','{"quote_id":"55555555-5555-4555-8555-555555555555","reason":"rollback fixture"}');
+  raise exception 'audit failure did not propagate';
+ exception when check_violation then null; end;
+end $;
+reset role;
+drop trigger test_procurement_audit_failure on public.work_board_events;
+drop function public.test_procurement_audit_failure();
+do $ begin
+ if (select count(*) from private.mrh_procurement_revisions)<>9 or (select count(*) from public.work_board_events where event_type='sourcing.procurement_changed')<>9 then raise exception 'audit failure left a partial write'; end if;
+end $;
 delete from public.work_board_members where board_id='aa0d8acb-5f0e-4628-b0b4-76ef369b9f51';
 set role authenticated;
 do $$ begin
  if public.mrh_procurement_read('22222222-2222-4222-8222-222222222222','44444444-4444-4444-8444-444444444444',7)->'rows'->0->'snapshot' ? 'supplier_po_id' then raise exception 'revoked source exposed'; end if;
 end $$;
 reset role;
-update public.work_board_items set archived_at=now() where id='22222222-2222-4222-8222-222222222222';
 set role authenticated;
+select public.wm_set_board_item_archived('22222222-2222-4222-8222-222222222222',true);
 do $$ begin
  begin
   perform public.mrh_procurement_read('22222222-2222-4222-8222-222222222222');
   raise exception 'archived material read accepted';
  exception when sqlstate '42501' then null; end;
 end $$;
-reset role;
-update public.work_board_items set archived_at=null where id='22222222-2222-4222-8222-222222222222';
-set role authenticated;
+select public.wm_set_board_item_archived('22222222-2222-4222-8222-222222222222',false);
 do $$ begin
  if jsonb_array_length(public.mrh_procurement_read('22222222-2222-4222-8222-222222222222','44444444-4444-4444-8444-444444444444')->'rows')<>9 then raise exception 'restore history lost'; end if;
 end $$;
