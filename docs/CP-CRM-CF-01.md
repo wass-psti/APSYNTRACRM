@@ -77,3 +77,44 @@ and fixtures: login, refresh and logout, workspace switching, representative
 native app reads/writes and reload, uploads/downloads, PDF/export, GPS and Paseo
 deep-link recovery. Confirm old Pages remains operational and compare CORS and
 Auth callback behavior without changing it preemptively.
+
+## CP-CRM-CF-01A.2 — dual-origin candidate and continuous preview
+
+The hosted preview was synchronized to validated commit
+`c72c69314ed08f32c519b7351e56256f49bf46f4` on Cloudflare version
+`eb9042f6-eda7-47be-b67d-a06825847e62`; hosted workflow run 46158134545
+passed after a stale-revision mismatch was corrected. Production remains
+`ae4f8d6f-fad3-4786-9899-5145b6b71bab` (100%, fetch handler,
+compatibility date 2026-11-28, zero bindings).
+
+Before this candidate, all files in the four deployed bundles exactly matched
+the corresponding repository files at the above commit. Live JWT verification
+was true on native Issues v8, invite v6, accept v6 and manage v5.
+Only the two CORS implementations change: exact preview origin added, previous
+Pages/override behavior retained, no changes to authentication, SMTP, SQL,
+RLS, delivery flags or request handling. Deno tests exercise actual entrypoints
+without network or production credentials. No Edge deployment is authorized
+by this commit. Recheck live bundle parity before activation and deploy only
+the four reviewed functions with verify_jwt=true. Roll back using their exact
+previous repository sources if needed; recheck both origins and foreign denial.
+
+Expanded read-only preflight also identified pdl-guest-api and
+apsyntra-ws02d-b3-read rejecting the preview. These are outside the four-function
+candidate. PDL v13 deployed source differs from the repository source, and
+the signed-read entrypoint is not present under the repository functions
+directory. Reconcile live sources and actual consumers before separately
+approving changes; do not blindly redeploy either.
+
+Continuous preview delivery is implemented as an opt-in GitHub Actions job
+after existing static validation and frontend tests. The job downloads the
+same run's artifact, skips superseded main revisions, serializes deployment,
+targets only apsyntracrm-preview and verifies hosted assets. Do not enable
+until a dedicated Cloudflare CI API token is approved and stored as GitHub
+secret CF_PREVIEW_API_TOKEN, and the repository variable
+CF_PREVIEW_AUTO_DEPLOY is explicitly set to true. Never reuse the interactive
+OAuth credential in CI. Production is excluded. Without this provisioning
+the new job is intentionally skipped and automatic delivery is not certified.
+
+Production activation also requires a private source/configuration export
+and genuine signed browser acceptance. The Cloudflare preview uses the real
+Supabase backend, so use only designated controlled QA fixtures for writes.

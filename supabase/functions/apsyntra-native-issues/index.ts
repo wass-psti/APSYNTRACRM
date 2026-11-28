@@ -6,12 +6,14 @@ import {createLiveSb06NativeIssues} from './vendor/supabase-live.ts';
 import {Denied,VersionConflict,ServiceUnavailable,isUuid} from './vendor/sb02.ts';
 
 const PAGE_ORIGIN='https://wass-psti.github.io';
+const PREVIEW_ORIGIN='https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev';
+const isAllowedOrigin=(origin:string|null)=>origin===PAGE_ORIGIN||origin===PREVIEW_ORIGIN;
 const MAX_BYTES=230000;
 const headers=(origin:string|null)=>({
  'content-type':'application/json; charset=utf-8',
  'cache-control':'no-store',
  'x-content-type-options':'nosniff',
- ...(origin===PAGE_ORIGIN?{'access-control-allow-origin':PAGE_ORIGIN,'vary':'Origin'}:{}),
+ ...(origin!==null&&isAllowedOrigin(origin)?{'access-control-allow-origin':origin,'vary':'Origin'}:{}),
  'access-control-allow-headers':'authorization,apikey,content-type',
  'access-control-allow-methods':'POST,OPTIONS'
 });
@@ -20,7 +22,7 @@ function json(status:number,body:unknown,origin:string|null):Response{
 }
 Deno.serve(async(req:Request)=>{
  const origin=req.headers.get('origin');
- if(origin!==null&&origin!==PAGE_ORIGIN)return json(403,{error:'Origin denied'},null);
+ if(origin!==null&&!isAllowedOrigin(origin))return json(403,{error:'Origin denied'},null);
  if(req.method==='OPTIONS')return new Response(null,{status:204,headers:headers(origin)});
  if(req.method!=='POST')return json(405,{error:'Method not allowed'},origin);
  const rawAuth=req.headers.get('authorization')??'';

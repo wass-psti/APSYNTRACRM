@@ -1,0 +1,29 @@
+name: CP-CRM-CF-01A.2 Edge origin candidate
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - 'server/tests/cp-crm-cf-dual-origin.test.ts'
+      - '.github/workflows/cp-crm-cf-origin.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  edge-origin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.5.6
+      - name: Test real entrypoints without network or database access
+        run: deno test --no-check --allow-env=APSYNTRA_ALLOWED_ORIGIN server/tests/cp-crm-cf-dual-origin.test.ts
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Preserve existing invitation contract tests
+        run: node --test server/tests/ws02d-dormant-edge-handlers.test.mjs server/tests/ws02d-smtp-provider.test.mjs server/tests/ws02d-invitation-http-boundary.test.mjs server/tests/ws02d-invitation-accept-http-boundary.test.mjs

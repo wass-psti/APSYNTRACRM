@@ -19,6 +19,7 @@ const EMAIL = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/;
 const TOKEN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[0-9a-f]{64}$/;
 const MAX_BYTES = 4096;
 const DEFAULT_ORIGIN = 'https://wass-psti.github.io';
+const PREVIEW_ORIGIN = 'https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev';
 const userId = (v: unknown): v is string => typeof v === 'string' && UUID.test(v);
 const dataObject = (v: unknown): v is ObjectMap =>
   !!v && typeof v === 'object' && !Array.isArray(v);
@@ -27,9 +28,12 @@ class RouteError extends Error {
 }
 const fail = (status: number, msg: string): never => { throw new RouteError(status, msg); };
 
+function isAllowedOrigin(origin: string | null): boolean {
+  const allowed = Deno.env.get('APSYNTRA_ALLOWED_ORIGIN') || DEFAULT_ORIGIN;
+  return origin === allowed || origin === PREVIEW_ORIGIN;
+}
 function cors(req: Request) {
   const origin = req.headers.get('origin');
-  const allowed = Deno.env.get('APSYNTRA_ALLOWED_ORIGIN') || DEFAULT_ORIGIN;
   return {
     'content-type': 'application/json; charset=utf-8',
     'cache-control': 'no-store, max-age=0',
@@ -37,8 +41,8 @@ function cors(req: Request) {
     'referrer-policy': 'no-referrer',
     'x-content-type-options': 'nosniff',
     'vary': 'Origin',
-    ...(origin === allowed ? {
-      'access-control-allow-origin': allowed,
+    ...(origin !== null && isAllowedOrigin(origin) ? {
+      'access-control-allow-origin': origin,
       'access-control-allow-methods': 'POST, OPTIONS',
       'access-control-allow-headers': 'authorization,apikey,content-type',
     } : {}),
@@ -339,8 +343,7 @@ function status(error: unknown): RouteError {
 export function serveInvitationRoute(route: Route) {
   Deno.serve(async (req: Request) => {
     const origin = req.headers.get('origin');
-    const allowed = Deno.env.get('APSYNTRA_ALLOWED_ORIGIN') || DEFAULT_ORIGIN;
-    if (origin !== null && origin !== allowed)
+    if (origin !== null && !isAllowedOrigin(origin))
       return respond(req, 403, { state: 'denied' });
     if (req.method === 'OPTIONS') return new Response(null, {
       status: 204, headers: cors(req),
