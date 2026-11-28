@@ -117,3 +117,24 @@ test('revalidation after 12 reads catches revocation, actor switch and workspace
  assert.equal((await absent.run(request())).status,503);
  assert.deepEqual(absent.calls,{auth:0,context:0,modules:[]});
 });
+
+
+test('preview uses its own CORS response and preserves signed read checks',async()=>{
+ const preview='https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev';
+ const {calls,run}=fixture();
+ const options=await run(request('OPTIONS',token,preview));
+ assert.equal(options.status,200);
+ assert.equal(options.headers.get('access-control-allow-origin'),preview);
+ assert.equal(options.headers.get('access-control-allow-headers'),'authorization, apikey');
+ assert.deepEqual(calls,{auth:0,context:0,modules:[]});
+ const signed=await run(request('GET',token,preview));
+ assert.equal(signed.status,200);
+ assert.equal(signed.headers.get('access-control-allow-origin'),preview);
+ assert.equal((await signed.json()).moduleProbeCount,12);
+ const mismatch=fixture({verifySignedActor:async()=>({...actor,workspaceId:'00000000-0000-4000-8000-000000000002'})});
+ assert.equal((await mismatch.run(request('GET',token,preview))).status,403);
+ assert.equal(mismatch.calls.modules.length,0);
+ const other=await run(request('OPTIONS',token,preview+'.evil.invalid'));
+ assert.equal(other.status,403);
+ assert.equal(other.headers.get('access-control-allow-origin'),null);
+});

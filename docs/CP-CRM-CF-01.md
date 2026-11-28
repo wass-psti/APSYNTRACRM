@@ -118,3 +118,32 @@ the new job is intentionally skipped and automatic delivery is not certified.
 Production activation also requires a private source/configuration export
 and genuine signed browser acceptance. The Cloudflare preview uses the real
 Supabase backend, so use only designated controlled QA fixtures for writes.
+
+## CP-CRM-CF-01A.2A — live activation and extended reconciliation
+
+Approved and deployed four functions against the verified candidate blobs at
+`d5f1a95e28cfcb7c309c873888076f485dee8850`. Versions after activation:
+native Issues 9, invite 7, accept 7, manage 6. All retain verify_jwt=true,
+all bundle files exactly matched uploaded source on readback. Each returned
+204 with its own exact origin for both Pages and preview, and 403 without
+allow-origin for an untrusted origin (12 live preflight checks). No database
+records, SQL migrations, secrets or production Worker changes were made.
+Rollback source for all four is commit
+`c72c69314ed08f32c519b7351e56256f49bf46f4` with prior JWT settings.
+
+Extended reconciliation baseline commit `018cdc4cbd2eb81531d1d372157c261a824d2c17` restores exact
+active Paseo v13 and B3 v8 sources from Supabase readback. Paseo's existing
+QR canonical URL helper and API prefix correction must remain. B3's
+existing workspace-match predicate and apikey CORS header must remain, as
+must the existing signed caller's session/membership check. The subsequent
+candidate adds only the exact Cloudflare preview origin to the two HTTP
+boundaries and to the B3 frontend diagnostic. Existing public guest/auth
+and B3 gates stay unchanged. No extended production deployment approved
+by this checkpoint. Obtain explicit approval for PDL (verify_jwt=false
+as existing) and B3 (verify_jwt=true as existing) after CI; rollback from
+the reconciled baseline if necessary. B3 is read-only diagnostics, not
+evidence of independent database isolation or mutation acceptance.
+
+The production Worker remains unchanged. Continuous deployment credential
+provisioning, private source export, and genuine authenticated runtime
+acceptance are still separate outstanding gates.

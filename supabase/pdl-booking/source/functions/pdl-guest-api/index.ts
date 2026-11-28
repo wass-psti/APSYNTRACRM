@@ -21,6 +21,7 @@ const allowedOrigins = new Set(
 // APSYNTRA's existing GitHub Pages origin hosts the native public booking portal.
 // Additive only: preserve every existing configured allowed origin and admin gate.
 allowedOrigins.add('https://wass-psti.github.io');
+allowedOrigins.add('https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev');
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const receiptTokenPattern = /^[0-9a-f-]{72}$/i;
 const paymentMethods = new Set(['gcash', 'maya', 'bpi']);
