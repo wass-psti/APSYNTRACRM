@@ -5,3 +5,4 @@ supabase/.temp/
 !frontend/vendor/
 frontend/vendor/*
 !frontend/vendor/supabase-auth.js
+/.cloudflare-build/
