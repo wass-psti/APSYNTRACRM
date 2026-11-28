@@ -5,7 +5,7 @@ import {readFile,mkdir,mkdtemp,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {resolve,extname,sep} from 'node:path';
 import {chromium} from 'playwright';
-import {fixture,workspaceId,userId,boardId} from './fixtures/cp-ms-crm-03-fixture.mjs';
+import {fixture,workspaceId,userId,boardId,id} from './fixtures/cp-ms-crm-03-fixture.mjs';
 import {procurementFixture} from './fixtures/cp-ms-crm-05d-procurement-fixture.mjs';
 const cwd=process.cwd();
 const html='<!doctype html><html lang="en" data-aps-monday-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/frontend/apsyntra-styles.bundle.css"></head><body><div id="app"><div class="shell"><aside class="aps-sidebar"><nav><a href="#/overview">Overview</a></nav></aside><main class="main aps-board-shell"><header class="topbar"><div class="breadcrumb"><strong>Material Request Hub</strong></div></header><div class="main-content"></div></main></div></div></body></html>';
@@ -31,22 +31,27 @@ try{
  const page=await browser.newPage({viewport:{width:1440,height:900}});
  const errors=[],foreign=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(!r.url().startsWith(origin+'/')&&!r.url().startsWith('data:'))foreign.push(r.url());});
  await page.goto(origin+'/#/boards/'+boardId+'/sourcing');
- await page.evaluate(async({detail,workspaceId,userId,boardId,procurement})=>{
+ await page.evaluate(async({detail,workspaceId,userId,boardId,procurement,clientId})=>{
   const native=await import('/frontend/apps/MaterialSourcing/native-screen.js');
   const pricing=await import('/frontend/apps/MaterialSourcing/pricing-projection.js');
   const lifecycle=await import('/frontend/apps/MaterialSourcing/lifecycle.js');
   const bulkImport=await import('/frontend/apps/MaterialSourcing/bulk-import-ui.js');
   const batch=await import('/frontend/apps/MaterialSourcing/batch-operations-ui.js');
   const references=await import('/frontend/apps/MaterialSourcing/procurement-reference-ui.js');
+  const workflow=await import('/frontend/apps/MaterialSourcing/procurement-workflow-ui.js');
+  const {workflowFixture}=await import('/scripts/fixtures/cp-ms-crm-05d-workflow-fixture.mjs');
+  const procurementState=workflowFixture(clientId,workspaceId);
   const host=document.querySelector('.main-content');
   const initial=document.querySelectorAll('link[rel="stylesheet"]').length;
   const styles=native.ensureNativeMaterialSourcingStyles(document);
   if(initial!==1||styles!==native.ensureNativeMaterialSourcingStyles(document))throw Error('Native style delivery is not isolated');
   if(!styles.sheet)await new Promise((resolve,reject)=>{styles.addEventListener('load',resolve,{once:true});styles.addEventListener('error',reject,{once:true});});
   let active=true,deny=false,delay=null,reads=0,empty=false,filters={},projectionReads=0,projectionDenied=false,lifecycleWrites=0;
-  const auth={isSignedIn:true,userId,getVerifiedUser:async()=>({id:auth.userId})};
+  const auth={isSignedIn:true,userId,getVerifiedUser:async()=>({id:auth.userId}),authorized:async path=>procurementState.clientLookup(path)};
   const api={context:async()=>({user_id:userId,workspace_id:workspaceId,profile:{status:'active'}}),
    board:async(id)=>structuredClone(id===procurement.board.id?procurement:detail),invalidateBoardCache:()=>{},allowed:async()=>!deny,rpc:async(name,args)=>{
+    if(name==='mrh_procurement_read')return procurementState.read(args);
+    if(name==='mrh_procurement_apply')return procurementState.apply(args);
     if(name==='material_request_hub_bootstrap')return {workspaceId,role:'ADMIN'};
     if(name==='wm_set_board_item_archived'){
      const row=detail.items.find(i=>i.id===args.p_item_id);if(!row)throw Error('wrong lifecycle target');
@@ -77,6 +82,7 @@ try{
    }
    if(button.dataset.action==='mrh-native-sort')native.sortNativeMaterials(button);
    if(button.dataset.action==='mrh-native-import')void bulkImport.openMaterialImport({api,auth,workspaceId,isCurrent:()=>active,onComplete:async()=>render()});
+   if(button.dataset.action==='mrh-native-procurement')void workflow.openProcurementWorkflow(button,{api,auth,workspaceId,canEdit:true,isCurrent:()=>active&&button.isConnected&&auth.isSignedIn&&auth.userId===userId});
    if(button.dataset.action==='mrh-native-procurement-references')void references.toggleProcurementReferences(button,{api,auth,workspaceId,isCurrent:()=>active&&auth.isSignedIn&&auth.userId===userId});
    if(button.dataset.action==='mrh-native-batch')void batch.openMaterialBatch({api,auth,workspaceId,isCurrent:()=>active,onComplete:async()=>render()});
    if(['mrh-native-archive','mrh-native-restore'].includes(button.dataset.action)){
@@ -90,11 +96,11 @@ try{
    if(button.dataset.action==='mrh-show-items')render();
   });
   host.addEventListener('change',e=>{if(e.target.id==='mrh-tracker-source')render({...filters,source:e.target.value});});
-  window.msFixture={render,lifecycleWrites:()=>lifecycleWrites,projectionReads:()=>projectionReads,denyProjection:()=>{projectionDenied=true;},empty:()=>{empty=true;},deny:()=>{deny=true;},allow:()=>{deny=false;},reads:()=>reads,
+  window.msFixture={render,procurementCalls:procurementState.calls,loseProcurementReceipt:procurementState.loseNext,lifecycleWrites:()=>lifecycleWrites,projectionReads:()=>projectionReads,denyProjection:()=>{projectionDenied=true;},empty:()=>{empty=true;},deny:()=>{deny=true;},allow:()=>{deny=false;},reads:()=>reads,
    delay:()=>{let resolve;const promise=new Promise(r=>resolve=r);delay={promise,resolve};},release:()=>{delay.resolve();delay=null;},
    leave:()=>{active=false;host.innerHTML='<h1>Overview</h1>';},return:()=>{active=true;render();}};
   render();
- },{detail:fixture(),workspaceId,userId,boardId,procurement:procurementFixture()});
+ },{detail:fixture(),workspaceId,userId,boardId,procurement:procurementFixture(),clientId:id(800)});
  const rows=page.locator('tr[data-ms-item]');
  check(await page.locator('link[rel="stylesheet"]').count()===2,'single startup bundle plus one route-scoped stylesheet');
  check(await rows.count()===3,'native projection displays all three synthetic UUID records');
@@ -120,6 +126,70 @@ try{
  check(await referencesPanel.locator('tbody tr').count()===0,'existing board denial prevents reference disclosure');
  await referencesButton.click();
  await page.evaluate(()=>window.msFixture.allow());
+ const workflowButton=page.getByRole('button',{name:'Open procurement for SYNTHETIC-A',exact:true});
+ const workflowPanel=page.getByRole('region',{name:'RFQ and procurement workflow',exact:true});
+ const button=name=>workflowPanel.getByRole('button',{name,exact:true});
+ const label=name=>workflowPanel.getByLabel(name,{exact:true});
+ const saved=revision=>workflowPanel.getByText('Verified revision '+revision+'.',{exact:true}).waitFor();
+ await workflowButton.click();
+ await workflowPanel.getByText('Signed procurement workflow ready.',{exact:true}).waitFor();
+ await button('Create RFQ').click();
+ await label('RFQ reference').fill('RFQ-QA');
+ await label('Issued on').fill('2026-11-28');
+ await label('Due on').fill('2026-12-31');
+ await page.evaluate(()=>window.msFixture.loseProcurementReceipt());
+ await button('Save reviewed rfq').click();
+ await button('Retry same operation').click();
+ await saved(1);
+ const initialCalls=await page.evaluate(()=>window.msFixture.procurementCalls());
+ check(initialCalls.length===2&&initialCalls[0].p_operation===initialCalls[1].p_operation,'lost procurement receipt retries identical operation identity');
+ const addQuote=async(reference,price)=>{
+  await button('Add received quotation').click();
+  await label('Supplier name').fill('Synthetic Supplier');
+  await label('Quotation reference').fill(reference);
+  await label('Issued on').fill('2026-11-28');
+  await label('Valid until').fill('2026-12-31');
+  await label('Quantity').fill('5');
+  await label('Unit price').fill(price);
+  await label('Shipping total').fill('10');
+  await label('Tax basis').selectOption('tax_exclusive');
+  await button('Save reviewed received quotation').click();
+ };
+ await addQuote('QUOTE-A','100');await saved(2);
+ await addQuote('QUOTE-B','90');await saved(3);
+ await label('Compare on date').fill('2026-11-28');
+ check(await workflowPanel.getByText('460.00000000',{exact:true}).count()===1&&await workflowPanel.getByText('510.00000000',{exact:true}).count()===1,'native same-basis quotation comparison displays exact quoted totals');
+ const quoteB=workflowPanel.getByRole('row').filter({hasText:'QUOTE-B'});
+ await quoteB.getByRole('button',{name:'Amend',exact:true}).click();
+ await label('Unit price').fill('95');
+ await button('Save reviewed quotation amendment').click();await saved(4);
+ await quoteB.getByRole('button',{name:'Select',exact:true}).click();
+ await label('Selection reason').fill('Controlled QA selection');
+ await button('Save reviewed quotation selection').click();await saved(5);
+ check(await workflowPanel.getByText('Selected quotation: Synthetic Supplier — QUOTE-B (rev 2) · Reason: Controlled QA selection',{exact:true}).count()===1,'selection retains amended quotation revision');
+ await button('Link verified PO references').click();
+ await button('Load matching supplier PO records').click();
+ await workflowPanel.getByText('2 matching signed supplier PO records.',{exact:true}).waitFor();
+ await label('Supplier PO source').selectOption(id(650));
+ await label('Client PO number or UUID (optional lookup)').fill('CLIENT-QA');
+ await button('Find client PO').click();
+ await workflowPanel.getByText('1 matching signed client PO records.',{exact:true}).waitFor();
+ await button('Save reviewed verified po references').click();await saved(6);
+ check(await workflowPanel.getByText('RFQ-QA · po_linked · revision 6',{exact:true}).count()===1,'verified supplier and client PO linkage readback');
+ await button('View RFQ history').click();
+ await workflowPanel.getByText('Immutable RFQ history',{exact:true}).waitFor();
+ check(await workflowPanel.locator('details').count()===6,'immutable history includes six accepted revisions');
+ await button('Close procurement').click();await workflowButton.click();
+ await button('Open RFQ-QA').click();
+ check(await workflowPanel.getByText('RFQ-QA · po_linked · revision 6',{exact:true}).count()===1,'RFQ reopens from signed persistence');
+ await button('Reopen RFQ').click();await button('Save reviewed rfq reopening').click();await saved(7);
+ await button('Cancel RFQ').click();await button('Save reviewed rfq cancellation').click();await saved(8);
+ check(await workflowPanel.getByText('RFQ-QA · cancelled · revision 8',{exact:true}).count()===1,'reopen and cancel preserve immutable history');
+ await button('Close procurement').click();
+ await page.evaluate(()=>window.msFixture.deny());await workflowButton.click();
+ await workflowPanel.getByText('Sourcing board permission denied.',{exact:true}).waitFor();
+ check(await workflowPanel.locator('tbody tr').count()===0,'signed procurement denial exposes no RFQ records');
+ await button('Close procurement').click();await page.evaluate(()=>window.msFixture.allow());
  const projectionButton=page.getByRole('button',{name:'Load / refresh authoritative pricing'});
  await projectionButton.click();
  await page.getByText('Authoritative pricing loaded.',{exact:false}).waitFor();

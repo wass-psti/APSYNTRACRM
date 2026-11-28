@@ -8,6 +8,11 @@ on:
       - 'sql/tests/mrh-procurement-*.sql'
       - 'frontend/apps/MaterialSourcing/procurement-contract.js'
       - 'frontend/tests/material-sourcing-procurement-contract.test.mjs'
+      - 'frontend/apps/MaterialSourcing/procurement-workflow-ui.js'
+      - 'frontend/tests/material-sourcing-procurement-workflow.test.mjs'
+      - 'scripts/fixtures/cp-ms-crm-05d-workflow-fixture.mjs'
+      - 'scripts/cp-ms-crm-03-browser.mjs'
+      - 'supabase/migrations/20261128151659_cp_ms_crm_05d2a_mrh_procurement.sql'
       - '.github/workflows/cp-ms-crm-05d.yml'
 permissions:
   contents: read

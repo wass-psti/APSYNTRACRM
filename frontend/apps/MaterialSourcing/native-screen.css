@@ -82,3 +82,13 @@ html[data-aps-monday-theme="dark"] #app .ms-native-sourcing :is(.ms-native-heade
 .ms-native-batch-dialog button{margin:4px}
 html[data-aps-monday-theme="dark"] .ms-native-batch-dialog{color-scheme:dark;background:#1c2432;color:#e5edf9;border-color:#354154}
 html[data-aps-monday-theme="dark"] .ms-native-batch-dialog :is(th,td){border-color:#354154}
+
+/* CP-MS-CRM-05D.2A: scoped procurement work surface. */
+.ms-native-sourcing .ms-procurement-workflow{padding:16px;margin-bottom:18px;overflow-wrap:anywhere}
+.ms-native-sourcing .ms-procurement-workflow[hidden]{display:none}
+.ms-native-sourcing .ms-procurement-workflow h3,.ms-native-sourcing .ms-procurement-workflow h4{margin:10px 0;color:var(--ms-ink)}
+.ms-native-sourcing .ms-procurement-workflow button{margin:4px 5px 4px 0;white-space:normal}
+.ms-native-sourcing .ms-procurement-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:12px;margin:14px 0;padding:14px;border:1px solid var(--ms-line);border-radius:9px;min-width:0}
+.ms-native-sourcing .ms-procurement-workflow label{display:grid;gap:4px;min-width:0;color:var(--ms-ink)}
+.ms-native-sourcing .ms-procurement-workflow :is(input,textarea,select){max-width:100%;min-width:0;padding:7px;background:var(--ms-bg);color:var(--ms-ink);border:1px solid var(--ms-line);border-radius:6px}
+.ms-native-sourcing .ms-procurement-workflow details{padding:10px;border-bottom:1px solid var(--ms-line)}
