@@ -44,21 +44,37 @@ end $$;
 -- Per-request timeout bounds: 1.5s connect / 3.5s total, two requests.
 create function private.mrh_fx_fetch_latest()
 returns jsonb language plpgsql volatile set search_path=pg_catalog,mrh_fx_http,pg_temp set timezone='UTC'
-set http.curlopt_connecttimeout_ms='1500' set http.curlopt_timeout_ms='3500'
-set http.curlopt_ssl_verifypeer='1' set http.curlopt_ssl_verifyhost='2'
 as $$
 declare us int; es int; uc text; ec text; ut text; et text;
+ original_options jsonb; opt record; failed boolean:=false; cancelled boolean:=false;
 begin
+ -- Hosted HTTP 1.6 accepts callable options even when function-level SET is denied.
+ select coalesce(jsonb_object_agg(curlopt,value),'{}'::jsonb)
+ into original_options from mrh_fx_http.http_list_curlopt();
  begin
+  if mrh_fx_http.http_set_curlopt('CURLOPT_CONNECTTIMEOUT_MS','1500') is distinct from true
+   or mrh_fx_http.http_set_curlopt('CURLOPT_TIMEOUT_MS','3500') is distinct from true
+   or mrh_fx_http.http_set_curlopt('CURLOPT_SSL_VERIFYPEER','1') is distinct from true
+   or mrh_fx_http.http_set_curlopt('CURLOPT_SSL_VERIFYHOST','2') is distinct from true then
+   raise exception 'FX HTTP configuration unavailable' using errcode='PT502';end if;
   select status,content,content_type into us,uc,ut from mrh_fx_http.http_get('https://api.frankfurter.dev/v2/rate/USD/PHP?providers=ECB'::varchar);
   if us is distinct from 200 or ut is null or lower(split_part(ut,';',1))<>'application/json' then
    raise exception 'FX provider USD response unavailable' using errcode='PT502';end if;
   select status,content,content_type into es,ec,et from mrh_fx_http.http_get('https://api.frankfurter.dev/v2/rate/EUR/PHP?providers=ECB'::varchar);
   if es is distinct from 200 or et is null or lower(split_part(et,';',1))<>'application/json' then
    raise exception 'FX provider EUR response unavailable' using errcode='PT502';end if;
- exception when others then
-  raise exception 'FX provider unavailable; no new snapshot was saved' using errcode='PT502';
+ exception when query_canceled then cancelled:=true;
+ when others then failed:=true;
  end;
+ -- Restore the caller's options before validating or returning the provider pair.
+ if mrh_fx_http.http_reset_curlopt() is distinct from true then
+  raise exception 'FX HTTP configuration reset failed' using errcode='PT502';end if;
+ for opt in select key,value from jsonb_each_text(original_options) loop
+  if mrh_fx_http.http_set_curlopt(opt.key::varchar,opt.value::varchar) is distinct from true then
+   raise exception 'FX HTTP configuration restoration failed' using errcode='PT502';end if;
+ end loop;
+ if cancelled then raise exception 'FX provider request cancelled' using errcode='57014';end if;
+ if failed then raise exception 'FX provider unavailable; no new snapshot was saved' using errcode='PT502';end if;
  return private.mrh_fx_provider_pair(uc,ec,clock_timestamp());
 end $$;
 
