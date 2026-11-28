@@ -159,7 +159,7 @@ try{
  await addQuote('QUOTE-B','90');await saved(3);
  await label('Compare on date').fill('2026-11-28');
  check(await workflowPanel.getByText('460.00000000',{exact:true}).count()===1&&await workflowPanel.getByText('510.00000000',{exact:true}).count()===1,'native same-basis quotation comparison displays exact quoted totals');
- const quoteB=workflowPanel.getByRole('row').filter({has:workflowPanel.getByText('QUOTE-B',{exact:true})});
+ const quoteB=workflowPanel.getByRole('row').filter({hasText:'QUOTE-B'});
  await quoteB.getByRole('button',{name:'Amend',exact:true}).click();
  await label('Unit price').fill('95');
  await button('Save reviewed quotation amendment').click();await saved(4);
