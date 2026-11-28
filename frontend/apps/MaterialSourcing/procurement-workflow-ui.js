@@ -62,6 +62,7 @@ export function verifiedPoPayload(supplierId,selectedQuote,sourceRecords,clientI
  return {supplier_po_id:supplierId,client_po_id:client?.id??null,client_po_kind:client?.record_kind??null};
 }
 export async function lookupClientPo(scope,term){
+ if(!scope.isCurrent())throw Error('Material view changed.');
  const query=requiredText(term,240,'client PO number or UUID');
  const client=new OrderIntakeRegistryClient(scope),actor=scope.auth.userId;
  const params=new URLSearchParams({workspace_id:'eq.'+scope.workspaceId,archived:'eq.false',
@@ -162,6 +163,7 @@ export async function openProcurementWorkflow(button,{api,auth,workspaceId,isCur
    catch{message('Revision '+result.row.revision+' verified; refresh the list to read the latest state.');}
   }catch(error){
    if(!active())return;
+   if(!pending){message('Command receipt verified; reload the material before continuing.');return;}
    message((error.message||'Procurement outcome unavailable.')+' Operation '+pending.operationId+'. Retry the same command or refresh and review the server state.');
    editor.replaceChildren(node(doc,'p','The previous command may have committed. No new operation will be generated automatically.'));
    const retry=action(doc,'Retry same operation',()=>void execute());
