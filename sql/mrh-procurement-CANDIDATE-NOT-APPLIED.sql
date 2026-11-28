@@ -167,18 +167,18 @@ begin
    if q is null then raise exception 'Quotation unavailable' using errcode='PT409'; end if;
    s:=s||jsonb_build_object('status','selected','selection',jsonb_build_object('quote_id',qid,'quote_revision',(q->>'revision')::bigint,'reason',private.mrh_procurement_text(p_payload,'reason',2000)));
   elsif p_command='link_po' then
-   if state not in ('selected','ordered') or (p_payload-array['supplier_po_id','client_po_id','client_po_kind'])<>'{}'::jsonb then raise exception 'Select a quotation before linking a PO' using errcode='PT409'; end if;
+   if state not in ('selected','po_linked') or (p_payload-array['supplier_po_id','client_po_id','client_po_kind'])<>'{}'::jsonb then raise exception 'Select a quotation before linking a PO' using errcode='PT409'; end if;
    supplier_id:=(p_payload->>'supplier_po_id')::uuid;
    client_id:=(p_payload->>'client_po_id')::uuid; client_kind:=p_payload->>'client_po_kind';
-   select value into q from jsonb_array_elements(quotes) where value->>'id'=s#>>'{selection,quote_id}';
+   select value into q from jsonb_array_elements(quotes) where value->>'id'=(s#>>'{selection,quote_id}');
    if supplier_id is null or q is null or not private.mrh_procurement_supplier_source(w,supplier_id,q->>'supplier') then raise exception 'Supplier PO unavailable or mismatched' using errcode='42501'; end if;
    if (client_id is null)<>(client_kind is null) or (client_id is not null and (client_kind not in ('native','legacy') or not private.mrh_procurement_client_source(w,client_id,client_kind))) then raise exception 'Client PO unavailable' using errcode='42501'; end if;
-   s:=s||jsonb_build_object('status','ordered','supplier_po_id',supplier_id,'client_po_id',client_id,'client_po_kind',client_kind);
+   s:=s||jsonb_build_object('status','po_linked','supplier_po_id',supplier_id,'client_po_id',client_id,'client_po_kind',client_kind);
   elsif p_command='cancel' then
    if state not in ('open','selected') or p_payload<>'{}'::jsonb then raise exception 'Invalid cancellation state' using errcode='PT409'; end if;
    s:=s||jsonb_build_object('status','cancelled','selection',null);
   elsif p_command='reopen' then
-   if state not in ('selected','ordered','cancelled') or p_payload<>'{}'::jsonb then raise exception 'Invalid reopen state' using errcode='PT409'; end if;
+   if state not in ('selected','po_linked','cancelled') or p_payload<>'{}'::jsonb then raise exception 'Invalid reopen state' using errcode='PT409'; end if;
    s:=s||jsonb_build_object('status','open','selection',null,'supplier_po_id',null,'client_po_id',null,'client_po_kind',null);
   end if;
  end if;
@@ -216,7 +216,7 @@ begin
   select coalesce(jsonb_agg(jsonb_build_object('rfq_id',r.rfq_id,'revision',r.revision,'created_at',r.created_at,'command',r.command,'snapshot',private.mrh_procurement_visible_snapshot(r.snapshot,w)) order by r.revision desc),'[]'::jsonb)
   into rows from (select * from private.mrh_procurement_revisions where workspace_id=w and item_id=p_item and rfq_id=p_rfq and (p_before_revision is null or revision<p_before_revision) order by revision desc limit p_limit+1 offset p_offset) r;
  end if;
- return jsonb_build_object('item_id',p_item,'rows',rows,'has_more',jsonb_array_length(rows)>p_limit);
+ return jsonb_build_object('item_id',p_item,'rows',case when jsonb_array_length(rows)>p_limit then rows-p_limit else rows end,'has_more',jsonb_array_length(rows)>p_limit);
 end $$;
 
 revoke all on function private.mrh_procurement_scope(uuid),private.mrh_procurement_text(jsonb,text,integer),private.mrh_procurement_number(jsonb,text,numeric),private.mrh_procurement_date(jsonb,text),private.mrh_procurement_supplier_source(uuid,uuid,text),private.mrh_procurement_client_source(uuid,uuid,text),private.mrh_procurement_quote(jsonb,uuid,uuid,bigint),private.mrh_procurement_visible_snapshot(jsonb,uuid) from public,anon,authenticated;
