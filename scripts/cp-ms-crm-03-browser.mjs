@@ -34,6 +34,8 @@ try{
   const native=await import('/frontend/apps/MaterialSourcing/native-screen.js');
   const pricing=await import('/frontend/apps/MaterialSourcing/pricing-projection.js');
   const lifecycle=await import('/frontend/apps/MaterialSourcing/lifecycle.js');
+  const bulkImport=await import('/frontend/apps/MaterialSourcing/bulk-import-ui.js');
+  const batch=await import('/frontend/apps/MaterialSourcing/batch-operations-ui.js');
   const host=document.querySelector('.main-content');
   const initial=document.querySelectorAll('link[rel="stylesheet"]').length;
   const styles=native.ensureNativeMaterialSourcingStyles(document);
@@ -43,6 +45,7 @@ try{
   const auth={isSignedIn:true,userId,getVerifiedUser:async()=>({id:auth.userId})};
   const api={context:async()=>({user_id:userId,workspace_id:workspaceId,profile:{status:'active'}}),
    board:async()=>structuredClone(detail),invalidateBoardCache:()=>{},allowed:async()=>!deny,rpc:async(name,args)=>{
+    if(name==='material_request_hub_bootstrap')return {workspaceId,role:'ADMIN'};
     if(name==='wm_set_board_item_archived'){
      const row=detail.items.find(i=>i.id===args.p_item_id);if(!row)throw Error('wrong lifecycle target');
      lifecycleWrites++;row.archived_at=args.p_archived?'2026-11-28T12:00:00Z':null;return null;
@@ -71,6 +74,8 @@ try{
     render({...filters,source:filters.source===button.dataset.source?'all':button.dataset.source});
    }
    if(button.dataset.action==='mrh-native-sort')native.sortNativeMaterials(button);
+   if(button.dataset.action==='mrh-native-import')void bulkImport.openMaterialImport({api,auth,workspaceId,isCurrent:()=>active,onComplete:async()=>render()});
+   if(button.dataset.action==='mrh-native-batch')void batch.openMaterialBatch({api,auth,workspaceId,isCurrent:()=>active,onComplete:async()=>render()});
    if(['mrh-native-archive','mrh-native-restore'].includes(button.dataset.action)){
     button.disabled=true;
     void lifecycle.setMaterialArchived({api,auth,workspaceId,itemId:button.dataset.id,archived:button.dataset.action==='mrh-native-archive',isCurrent:()=>active})
@@ -154,6 +159,44 @@ try{
  check(await rows.count()===3,'restore returns original material to active list');
  check(await page.evaluate(()=>window.msFixture.lifecycleWrites())===2,'one lifecycle RPC per operation');
  check(await page.evaluate(()=>!window.msLifecycleError),'lifecycle readbacks succeed');
+ await page.getByRole('button',{name:'Bulk Import',exact:true}).click();
+ const importDialog=page.getByRole('dialog',{name:'Bulk material import'});
+ await importDialog.waitFor();
+ await importDialog.locator('input[type=file]').setInputFiles({name:'synthetic.csv',mimeType:'text/csv',buffer:Buffer.from('Part number,Source type,Brand,Material description,Quantity,Buying price,Currency\nBATCH-NEW,Local,Test,Description,2,100.50,PHP\nSYNTHETIC-A,Local,Test,Description,2,100,PHP\nBATCH-BAD,Local,Test,Description,-1,100,PHP')});
+ await importDialog.getByRole('button',{name:'Preview import'}).click();
+ await importDialog.getByText('ready: 1 · skipped: 1 · rejected: 1',{exact:true}).waitFor();
+ check(await importDialog.getByText('BATCH-NEW',{exact:true}).count()===1,'file preview shows new material');
+ check(await importDialog.getByText('skipped — Part number already exists (active or archived)',{exact:true}).count()===1,'file preview shows existing duplicate');
+ check(await importDialog.getByRole('button',{name:'Import reviewed new materials'}).isEnabled(),'review enables explicit import confirmation');
+ await importDialog.getByRole('button',{name:'Close',exact:true}).click();
+ await page.getByRole('button',{name:'Batch operations',exact:true}).click();
+ const batchDialog=page.getByRole('dialog',{name:'Material batch operations'});
+ await batchDialog.waitFor();
+ await batchDialog.locator('[data-action-choice]').selectOption('archive');
+ await batchDialog.getByLabel('SYNTHETIC-B',{exact:true}).check();
+ await batchDialog.getByLabel('SYNTHETIC-A',{exact:true}).check();
+ await batchDialog.getByRole('button',{name:'Review selected materials'}).click();
+ await batchDialog.getByText('Review 2 selected materials before applying.',{exact:true}).waitFor();
+ check(await batchDialog.getByText('SYNTHETIC-B · archive',{exact:true}).count()===1,'batch preview names selected materials');
+ page.once('dialog',dialog=>dialog.accept());
+ await batchDialog.getByRole('button',{name:'Apply reviewed batch'}).click();
+ await batchDialog.getByText('Batch complete. Review the verified results.',{exact:true}).waitFor();
+ check(await batchDialog.getByText('SYNTHETIC-B · verified',{exact:true}).count()===1,'batch archive verified per-item result');
+ await batchDialog.getByRole('button',{name:'Close',exact:true}).click();
+ check(await rows.count()===1,'batch archive removes two selected rows');
+ await page.getByRole('button',{name:'Batch operations',exact:true}).click();
+ await batchDialog.waitFor();
+ await batchDialog.locator('[data-action-choice]').selectOption('restore');
+ await batchDialog.getByLabel('SYNTHETIC-B',{exact:true}).check();
+ await batchDialog.getByLabel('SYNTHETIC-A',{exact:true}).check();
+ await batchDialog.getByRole('button',{name:'Review selected materials'}).click();
+ await batchDialog.getByText('Review 2 selected materials before applying.',{exact:true}).waitFor();
+ page.once('dialog',dialog=>dialog.accept());
+ await batchDialog.getByRole('button',{name:'Apply reviewed batch'}).click();
+ await batchDialog.getByText('Batch complete. Review the verified results.',{exact:true}).waitFor();
+ await batchDialog.getByRole('button',{name:'Close',exact:true}).click();
+ check(await rows.count()===3,'batch restore returns original rows');
+ check(await page.evaluate(()=>window.msFixture.lifecycleWrites())===6,'one existing lifecycle RPC per selected item');
  for(const width of [1440,768,390,320]){
   await page.setViewportSize({width,height:900});
   const layout=await page.evaluate(()=>{const host=document.querySelector('.ms-native-sourcing'),scroller=host.querySelector('.ms-native-table-scroll');return {host:host.getBoundingClientRect().width,scroll:scroller.scrollWidth,client:scroller.clientWidth,document:document.documentElement.scrollWidth,viewport:innerWidth};});

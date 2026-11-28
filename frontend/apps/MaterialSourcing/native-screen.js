@@ -61,7 +61,7 @@ function rowMarkup(record,overdue,canArchive){
 // document retains its single deterministic stylesheet; only this route adds
 // the scoped reference styles, once per document.
 export function ensureNativeMaterialSourcingStyles(doc){
- const href=new URL('./native-screen.css?v=cp-ms-crm-03a-20261127',import.meta.url).href;
+ const href=new URL('./native-screen.css?v=cp-ms-crm-05c-20261128',import.meta.url).href;
  const existing=Array.from(doc.querySelectorAll('link[rel="stylesheet"]')).find(link=>link.href===href);
  if(existing)return existing;
  const link=doc.createElement('link');link.rel='stylesheet';link.href=href;doc.head.append(link);return link;
@@ -98,7 +98,7 @@ export function renderNativeMaterialSourcing(detail,filters={},now=new Date(),op
  (projection.missingPublicFields.length?'<p class="mrh-data-warning" role="status">Some sourcing fields are not available in this board projection.</p>':'')+
  '<nav class="ms-native-tabs mrh-tracker-viewtabs" aria-label="Material Tracker views">'+
  (adding?'<button type="button" data-action="mrh-show-items">All items</button><span class="mrh-active-view" aria-current="page">Add Material</span>':'<span class="mrh-active-view" aria-current="page">All items</span><button type="button" data-action="mrh-add-view"> + Add Material</button>')+
- '<button type="button" disabled title="Requires the extended MRH transaction contract">Bulk Import</button></nav>'+
+ (options.canCreate===true&&!adding?'<button type="button" data-action="mrh-native-import">Bulk Import</button><button type="button" data-action="mrh-native-batch">Batch operations</button>':'<button type="button" disabled title="Use the active signed material list to import">Bulk Import</button>')+'</nav>'+
  (adding?'<div class="mrh-add-app ms-native-add"><div class="mrh-add-canvas">'+renderMaterialSourcingAddMaterial(detail,{canCreate:options.canCreate===true})+'</div></div>':
  '<div class="ms-native-surface"><div class="mrh-tracker-controls">'+
  '<label class="mrh-search-field"><span class="sr-only">Search materials</span><input type="search" id="mrh-tracker-search" placeholder="Search materials, part numbers, brands or RFQs…" maxlength="120" value="'+escape(filters.search||'')+'"></label>'+
@@ -110,7 +110,7 @@ export function renderNativeMaterialSourcing(detail,filters={},now=new Date(),op
  (records.length?records.map(({record,overdue})=>rowMarkup(record,overdue,options.canCreate===true)).join(''):'<tr><td colspan="'+nativeColumns.length+'">No matching materials in the authorized board.</td></tr>')+'</tbody></table></div></div>'+
  '<details class="ms-native-surface" aria-label="Archived materials"><summary>Archived materials ('+fmt(archivedRows.length)+(projection.itemsComplete?'':' loaded')+')</summary>'+
  (archivedRows.length?'<ul>'+archivedRows.map(row=>'<li>'+escape(row.title)+' · Archived '+escape(date(row.archived_at))+' '+(options.canCreate===true?'<button type="button" class="secondary" data-action="mrh-native-restore" data-id="'+escape(row.id)+'" aria-label="Restore material '+escape(row.title)+'">Restore</button>':'')+'</li>').join('')+'</ul>':'<p>No archived Main group materials in the loaded records.</p>')+'</details>')+
- '<p class="ms-native-note">Main group is preserved. Load costs reads only the selected item through the existing signed contract. Stored manual selling prices remain separate from calculated pricing. Load authoritative pricing for board-wide saved calculations. Full reports and bulk import remain pending. Commercial values are not included in public CSV.</p></div></section>';
+ '<p class="ms-native-note">Main group is preserved. Load costs reads only the selected item through the existing signed contract. Stored manual selling prices remain separate from calculated pricing. Load authoritative pricing for board-wide saved calculations. Bulk Import reviews CSV/XLSX rows before creating materials. Full reports remain pending. Commercial values are not included in public CSV.</p></div></section>';
 }
 /** DOM-only sorting of loaded public fields; no write, storage, or commercial sorting. */
 export function sortNativeMaterials(button){
