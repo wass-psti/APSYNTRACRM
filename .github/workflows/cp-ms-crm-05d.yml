@@ -1,0 +1,41 @@
+name: CP-MS-CRM-05D disposable procurement candidate
+on:
+  push:
+    branches: [integration/cp-ms-crm-05d-durable]
+  pull_request:
+    paths:
+      - 'sql/mrh-procurement-CANDIDATE-NOT-APPLIED.sql'
+      - 'sql/tests/mrh-procurement-*.sql'
+      - 'frontend/apps/MaterialSourcing/procurement-contract.js'
+      - 'frontend/tests/material-sourcing-procurement-contract.test.mjs'
+      - '.github/workflows/cp-ms-crm-05d.yml'
+permissions:
+  contents: read
+jobs:
+  procurement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Procurement and certified Material Sourcing frontend regression
+        run: node --test frontend/tests/material-sourcing*.test.mjs
+      - name: Disposable PostgreSQL procurement candidate
+        run: |
+          set -euo pipefail
+          NAME="mrh-procurement-$GITHUB_RUN_ID"
+          docker run --rm -d --name "$NAME" -e POSTGRES_PASSWORD=isolatedtest postgres@sha256:ff87138949ad9a46f32ff23bd6852b52ce024a13dffe9b4087be98292cdd3b4f >/dev/null
+          trap 'docker rm -f "$NAME" >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 30); do
+            if docker exec "$NAME" pg_isready -U postgres >/dev/null; then break; fi
+            sleep 1
+          done
+          docker cp sql/tests/mrh-atomic-edit-live-dependencies.sql "$NAME:/tmp/mrh-live-dependencies.sql"
+          docker cp sql/tests/mrh-procurement-fixture.sql "$NAME:/tmp/mrh-procurement-fixture.sql"
+          docker cp sql/mrh-procurement-CANDIDATE-NOT-APPLIED.sql "$NAME:/tmp/mrh-procurement.sql"
+          docker exec -i "$NAME" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -q < sql/tests/mrh-procurement-disposable.sql
+          bash scripts/cp-ms-crm-05d-concurrency.sh "$NAME"
