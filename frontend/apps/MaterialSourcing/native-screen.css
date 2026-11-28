@@ -70,3 +70,15 @@ html[data-aps-monday-theme="dark"] .ms-native-sourcing .ms-native-add :is(.mrh-a
 html[data-aps-monday-theme="dark"] #app .ms-native-sourcing .ms-native-tabs>button:not(:disabled){color:var(--ms-ink);background:transparent;border-color:transparent}
 html[data-aps-monday-theme="dark"] #app .ms-native-sourcing .ms-native-tabs>button:disabled{color:var(--ms-muted);opacity:.8;background:transparent;border-color:transparent}
 html[data-aps-monday-theme="dark"] #app .ms-native-sourcing :is(.ms-native-header-actions button,.mrh-export-csv){background:var(--ms-surface);color:var(--ms-ink);border-color:var(--ms-line)}
+
+/* CP-MS-CRM-05C: route-owned native dialogs, no inline styles. */
+.ms-native-batch-dialog{box-sizing:border-box;width:min(900px,94vw);max-height:85vh;overflow:auto;padding:20px;border:1px solid #dce2eb;border-radius:14px;background:#fff;color:#10192b;overflow-wrap:anywhere}
+.ms-native-batch-dialog::backdrop{background:#0008}
+.ms-native-batch-dialog label{display:inline-block;margin:5px}
+.ms-native-batch-dialog [data-preview]{overflow:auto;max-height:45vh;margin:12px 0}
+.ms-native-batch-dialog [data-items]{max-height:32vh;overflow:auto}
+.ms-native-batch-dialog table{width:100%;border-collapse:collapse;font-size:13px}
+.ms-native-batch-dialog :is(th,td){padding:8px;text-align:left;vertical-align:top;border-bottom:1px solid #dce2eb}
+.ms-native-batch-dialog button{margin:4px}
+html[data-aps-monday-theme="dark"] .ms-native-batch-dialog{color-scheme:dark;background:#1c2432;color:#e5edf9;border-color:#354154}
+html[data-aps-monday-theme="dark"] .ms-native-batch-dialog :is(th,td){border-color:#354154}
