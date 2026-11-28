@@ -61,7 +61,7 @@ function rowMarkup(record,overdue,canArchive){
 // document retains its single deterministic stylesheet; only this route adds
 // the scoped reference styles, once per document.
 export function ensureNativeMaterialSourcingStyles(doc){
- const href=new URL('./native-screen.css?v=cp-ms-crm-03a-20261127',import.meta.url).href;
+ const href=new URL('./native-screen.css?v=cp-ms-crm-05c-20261128',import.meta.url).href;
  const existing=Array.from(doc.querySelectorAll('link[rel="stylesheet"]')).find(link=>link.href===href);
  if(existing)return existing;
  const link=doc.createElement('link');link.rel='stylesheet';link.href=href;doc.head.append(link);return link;
