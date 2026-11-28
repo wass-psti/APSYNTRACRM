@@ -2541,6 +2541,13 @@
       "file": "20261128130403_cp_ms_crm_05a_mrh_pricing_board_projection.sql",
       "bytes": 4295,
       "sha256": "5af07c8f5cccefadd996e55304556997fbf9dd26594bf15ddbdf7f3e2a319650"
+    },
+    {
+      "version": "20261128151659",
+      "name": "cp_ms_crm_05d2a_mrh_procurement",
+      "file": "20261128151659_cp_ms_crm_05d2a_mrh_procurement.sql",
+      "bytes": 17768,
+      "sha256": "fd6727fa1ccdba4bd4a23c28c4beac3524b229f489d624a7f27571f37806c52b"
     }
   ],
   "applied_only": [
