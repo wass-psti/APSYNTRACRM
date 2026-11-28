@@ -71,7 +71,7 @@ export function verifyMaterialSourcingPublicChanges(detail,itemId,changes){
 export const MATERIAL_SOURCING_ATOMIC_EDIT_ENABLED=true;
 
 /** A single signed transaction; never fall back after an uncertain write. */
-export async function saveMaterialSourcingAtomic({api,auth,workspaceId,boardId,itemId,publicChanges=[],privateChanges=[]}){
+export async function saveMaterialSourcingAtomic({api,auth,workspaceId,boardId,itemId,publicChanges=[],privateChanges=[],retryInvalidatedReadback=false,isCurrent=()=>true}){
  const scope={api,auth,workspaceId,boardId,itemId};
  if(!Array.isArray(publicChanges)||!Array.isArray(privateChanges)||
     !publicChanges.length&&!privateChanges.length||
@@ -93,8 +93,22 @@ export async function saveMaterialSourcingAtomic({api,auth,workspaceId,boardId,i
     receipt?.private_count!==privateChanges.length)
   throw new ApiError('Atomic edit receipt could not be verified. Reconcile before retrying.',409);
  api.invalidateBoardCache?.(boardId,{invalidateContext:false});
- const [board,persisted]=await Promise.all([api.board(boardId),readProtectedSourcingItem(scope)]);
+ let board,persisted;
+ // Batch-only recovery: the mutation already returned a validated receipt.
+ // Retry only a locally invalidated board read, never the mutation.
+ for(let attempt=0;;attempt++){
+  if(!isCurrent())throw new ApiError('Material view changed after save. Reconcile before retrying.',409);
+  const [boardResult,protectedResult]=await Promise.allSettled([api.board(boardId),readProtectedSourcingItem(scope)]);
+  if(protectedResult.status==='rejected')throw protectedResult.reason;
+  if(boardResult.status==='rejected'){
+   if(!retryInvalidatedReadback||attempt!==0||boardResult.reason?.code!=='BOARD_READ_INVALIDATED')throw boardResult.reason;
+   await revalidateMaterialSourcingSession(scope,actor);
+   continue;
+  }
+  board=boardResult.value;persisted=protectedResult.value;break;
+ }
  await revalidateMaterialSourcingSession(scope,actor);
+ if(!isCurrent())throw new ApiError('Material view changed after save. Reconcile before retrying.',409);
  if(board?.board?.workspace_id!==workspaceId||
     !verifyMaterialSourcingPublicChanges(board,itemId,publicChanges)||
     privateChanges.some(change=>persisted[change.fieldName]?.value!==change.value||
