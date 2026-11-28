@@ -31,7 +31,7 @@ export async function toggleProcurementReferences(button,{api,auth,workspaceId,i
   const search=element(doc,'input');search.type='search';search.maxLength=240;
   search.placeholder='Supplier, PO, client or record ID';searchLabel.append(search);
   const supplierLabel=element(doc,'label',' Supplier ');
-  const select=element(doc,'select');
+  const select=element(doc,'select');select.setAttribute('aria-label','Supplier');
   const all=element(doc,'option','All supplier names');all.value='';select.append(all);
   for(const supplier of data.suppliers){
    const option=element(doc,'option',supplier.name+' ('+supplier.count+')');
