@@ -1,6 +1,6 @@
 import {MATERIAL_SOURCING_GROUP as group} from '../../material-sourcing-schema-plan.js';
 import {BATCH_LIMIT,PUBLIC_BATCH_FIELDS,PRIVATE_BATCH_FIELDS,loadBatchMaterials,
- reviewBatchOperation,executeBatchOperation} from './batch-operations.js';
+ reviewBatchOperation,executeBatchOperation} from './batch-operations.js?v=cp-ms-crm-05c1-readback-20261128';
 
 export async function openMaterialBatch({api,auth,workspaceId,isCurrent,onComplete=async()=>{}}){
  const actor=auth.userId,active=()=>isCurrent()&&auth.userId===actor;
