@@ -10147,7 +10147,7 @@ async function action(name,button){
    !state.mrhAddView&&!state.workspaceTransitionPending&&isMaterialTrackerBoard(state.board);
   if(!isCurrent())break;
   try{
-   const {openProcurementWorkflow}=await import('./apps/MaterialSourcing/procurement-workflow-ui.js?v=cp-ms-crm-05d2a-20261128');
+   const {openProcurementWorkflow}=await import('./apps/MaterialSourcing/procurement-workflow-ui.js?v=cp-ms-crm-05d2c-20261128');
    if(isCurrent())await openProcurementWorkflow(button,{api:db,auth,workspaceId:snapshot.workspaceId,isCurrent,canEdit:state.edit===true});
   }catch(error){if(isCurrent())notice(error);}
   break;

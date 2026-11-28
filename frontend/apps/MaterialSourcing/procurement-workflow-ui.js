@@ -3,7 +3,7 @@ import {readProcurement,applyProcurementCommand,compareProcurementQuotes} from '
 import {readProcurementReferences} from './procurement-reference.js';
 import {authorizeMaterialSourcingItem,revalidateMaterialSourcingSession} from '../../material-sourcing-application.js';
 import {MATERIAL_SOURCING_BOARD_ID} from '../../material-sourcing-schema-plan.js';
-import {OrderIntakeRegistryClient} from '../../order-intake-registry-client.js';
+import {OrderIntakeOperationalClient} from '../../order-intake-operational-client.js';
 
 const LIMIT=25;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -55,24 +55,30 @@ export function matchingSupplierSources(records,supplier){
  const name=norm(supplier);
  return name?records.filter(row=>row.supplier&&norm(row.supplier)===name):[];
 }
+// Historical null archive state is eligible only for legacy operational records.
+export function eligibleClientPo(row){
+ return row?.record_kind==='native'?row.archived===false:
+  row?.record_kind==='legacy'&&(row.archived===false||row.archived===null);
+}
 export function verifiedPoPayload(supplierId,selectedQuote,sourceRecords,clientId,clientRecords){
  if(!selectedQuote||!matchingSupplierSources(sourceRecords,selectedQuote.supplier).some(row=>row.id===supplierId))throw Error('Choose a verified supplier PO source for the selected quotation.');
- const client=clientId?clientRecords.find(row=>row.id===clientId&&row.archived===false&&['native','legacy'].includes(row.record_kind)):null;
+ const client=clientId?clientRecords.find(row=>row.id===clientId&&eligibleClientPo(row)):null;
  if(clientId&&!client)throw Error('Verify the client PO reference first.');
  return {supplier_po_id:supplierId,client_po_id:client?.id??null,client_po_kind:client?.record_kind??null};
 }
 export async function lookupClientPo(scope,term){
  if(!scope.isCurrent())throw Error('Material view changed.');
  const query=requiredText(term,240,'client PO number or UUID');
- const client=new OrderIntakeRegistryClient(scope),actor=scope.auth.userId;
- const params=new URLSearchParams({workspace_id:'eq.'+scope.workspaceId,archived:'eq.false',
+ const client=new OrderIntakeOperationalClient(scope),actor=scope.auth.userId;
+ const params=new URLSearchParams({workspace_id:'eq.'+scope.workspaceId,or:'(archived.eq.false,and(record_kind.eq.legacy,archived.is.null))',
   select:'id,workspace_id,record_kind,po_number,archived,revision,source_key',limit:'26',order:'id.asc'});
  params.set(UUID.test(query)?'id':'po_number','eq.'+query);
  const rows=await client.read(params);
  await revalidateMaterialSourcingSession(scope,actor);
  if(!scope.isCurrent())throw Error('Material view changed.');
  if(rows.length>25)throw Error('More than 25 matches. Search by exact source UUID.');
- if(rows.some(row=>!UUID.test(row.id)||row.archived!==false||!['native','legacy'].includes(row.record_kind)))throw Error('Invalid client PO source.');
+ if(rows.some(row=>!UUID.test(row.id)||!eligibleClientPo(row)||
+  (UUID.test(query)?row.id!==query.toLowerCase():row.po_number!==query)))throw Error('Invalid client PO source.');
  return rows;
 }
 

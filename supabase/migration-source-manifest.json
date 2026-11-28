@@ -2548,6 +2548,13 @@
       "file": "20261128151659_cp_ms_crm_05d2a_mrh_procurement.sql",
       "bytes": 17768,
       "sha256": "fd6727fa1ccdba4bd4a23c28c4beac3524b229f489d624a7f27571f37806c52b"
+    },
+    {
+      "version": "20261128154448",
+      "name": "cp_ms_crm_05d2c_mrh_procurement_client_po",
+      "file": "20261128154448_cp_ms_crm_05d2c_mrh_procurement_client_po.sql",
+      "bytes": 747,
+      "sha256": "9133aaa89875d7022744c112d2d9baec8618568c713518a7ca6088b3e4603a92"
     }
   ],
   "applied_only": [

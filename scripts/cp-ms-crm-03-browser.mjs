@@ -176,6 +176,7 @@ try{
  await workflowPanel.getByText('1 matching signed client PO records.',{exact:true}).waitFor();
  await button('Save reviewed verified po references').click();await saved(6);
  check(await workflowPanel.getByText('RFQ-QA · po_linked · revision 6',{exact:true}).count()===1,'verified supplier and client PO linkage readback');
+ check((await page.evaluate(()=>window.msFixture.procurementCalls())).at(-1).p_payload.client_po_kind==='legacy','historical client PO retains exact legacy kind');
  await button('View RFQ history').click();
  await workflowPanel.getByText('Immutable RFQ history',{exact:true}).waitFor();
  check(await workflowPanel.locator('details').count()===6,'immutable history includes six accepted revisions');

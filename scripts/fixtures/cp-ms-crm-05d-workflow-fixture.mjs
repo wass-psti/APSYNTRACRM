@@ -49,8 +49,8 @@ export function workflowFixture(clientId,workspaceId){
  return {read,apply,calls:()=>clone(calls),loseNext:()=>{loseNextReceipt=true;},
   clientLookup:path=>{
    const url=new URL(path,'https://fixture.invalid');
-   if(url.pathname!=='/rest/v1/order_intake_registry'||url.searchParams.get('workspace_id')!=='eq.'+workspaceId||url.searchParams.get('archived')!=='eq.false')throw Error('unexpected client lookup');
+   if(url.pathname!=='/rest/v1/order_intake_operational_registry'||url.searchParams.get('workspace_id')!=='eq.'+workspaceId||url.searchParams.get('or')!=='(archived.eq.false,and(record_kind.eq.legacy,archived.is.null))')throw Error('unexpected client lookup');
    if(url.searchParams.get('po_number')!=='eq.CLIENT-QA'&&url.searchParams.get('id')!=='eq.'+clientId)return [];
-   return [{id:clientId,workspace_id:workspaceId,record_kind:'native',po_number:'CLIENT-QA',archived:false,revision:1,source_key:null}];
+   return [{id:clientId,workspace_id:workspaceId,record_kind:'legacy',po_number:'CLIENT-QA',archived:null,revision:1,source_key:'legacy-client-qa'}];
   }};
 }
