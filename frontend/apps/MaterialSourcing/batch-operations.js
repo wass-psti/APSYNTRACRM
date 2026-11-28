@@ -1,5 +1,5 @@
 // Each selected material uses the same certified per-item edit/lifecycle contract.
-import {planMaterialSourcingPublicChanges,saveMaterialSourcingAtomic} from '../../material-sourcing-public-edit.js';
+import {planMaterialSourcingPublicChanges,saveMaterialSourcingAtomic} from '../../material-sourcing-public-edit.js?v=cp-ms-crm-05c1-readback-20261128';
 import {authorizeMaterialSourcingViewer,authorizeMaterialSourcingItem,revalidateMaterialSourcingSession,
  readProtectedSourcingItem,planProtectedSourcingChanges} from '../../material-sourcing-application.js';
 import {MATERIAL_SOURCING_BOARD_ID as boardId,MATERIAL_SOURCING_GROUP as group} from '../../material-sourcing-schema-plan.js';
@@ -64,7 +64,7 @@ export async function executeBatchOperation({api,auth,workspaceId,review,isCurre
    if(row.noChange){results.push({itemId:row.itemId,title:row.title,state:'unchanged'});continue;}
    if(row.action==='edit'){
     await saveMaterialSourcingAtomic({api,auth,workspaceId,boardId,itemId:row.itemId,
-     publicChanges:row.publicChanges,privateChanges:row.privateChanges});
+     publicChanges:row.publicChanges,privateChanges:row.privateChanges,retryInvalidatedReadback:true,isCurrent});
    }else if(['archive','restore'].includes(row.action)){
     await setMaterialArchived({api,auth,workspaceId,itemId:row.itemId,archived:row.action==='archive',isCurrent});
    }else fail('Unsupported batch action.');
