@@ -168,6 +168,8 @@ const BOARD_READ_RPC=new Set([
  'tool_traceability_get_item','toolbox_issues_list_issues','toolbox_issues_get_issue','toolbox_issues_users',
  'toolbox_issues_native_v2_capabilities',
  'material_request_hub_list_requests','material_request_hub_get_request',
+ // Verified STABLE, item-scoped commercial read; never invalidates a parallel board read.
+ 'mrh_sourcing_board_viewer_read',
  'employee_evaluation_management_snapshot','employee_evaluation_my_snapshot',
  'fm1_service_status_v1','fm1_list_tickets_v1','fm1_ticket_detail_v1',
  'fm1_notification_inbox_v1','fm1_deadline_warning_policy_v1','fm1_operational_report_v1'
