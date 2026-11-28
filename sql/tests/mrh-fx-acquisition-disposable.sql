@@ -2,6 +2,24 @@
 -- not the validation, capture, pricing persistence or historical readback.
 create schema mrh_fx_http;
 create table mrh_fx_http.calls(url text);
+-- Session configuration double: assert the real acquisition sets and restores options.
+create function mrh_fx_http.http_list_curlopt()
+returns table(curlopt text,value text) language sql as $
+ select key,value from jsonb_each_text(coalesce(nullif(current_setting('mrh.fixture_curlopts',true),''),'{}')::jsonb)
+$;
+create function mrh_fx_http.http_set_curlopt(curlopt varchar,value varchar)
+returns boolean language plpgsql as $
+begin
+ if current_setting('mrh.fx_mode',true)='config_failure' and curlopt='CURLOPT_TIMEOUT_MS' and value='3500' then return false;end if;
+ perform set_config('mrh.fixture_curlopts',
+  (coalesce(nullif(current_setting('mrh.fixture_curlopts',true),''),'{}')::jsonb||jsonb_build_object(curlopt,value))::text,false);
+ return true;
+end $;
+create function mrh_fx_http.http_reset_curlopt()
+returns boolean language plpgsql as $
+begin
+ perform set_config('mrh.fixture_curlopts','{}',false);return true;
+end $;
 create function mrh_fx_http.http_get(url varchar)
 returns table(status integer,content_type varchar,content text)
 language plpgsql as $$
@@ -10,6 +28,9 @@ declare d text:=to_char(clock_timestamp() at time zone 'UTC','YYYY-MM-DD');
  is_usd boolean:=url='https://api.frankfurter.dev/v2/rate/USD/PHP?providers=ECB';
 begin
  if not is_usd and url<>'https://api.frankfurter.dev/v2/rate/EUR/PHP?providers=ECB' then raise exception 'unexpected URL';end if;
+ if not (coalesce(nullif(current_setting('mrh.fixture_curlopts',true),''),'{}')::jsonb @>
+  '{"CURLOPT_CONNECTTIMEOUT_MS":"1500","CURLOPT_TIMEOUT_MS":"3500","CURLOPT_SSL_VERIFYPEER":"1","CURLOPT_SSL_VERIFYHOST":"2"}'::jsonb) then
+  raise exception 'expected HTTP configuration missing';end if;
  insert into mrh_fx_http.calls values(url);
  if mode='timeout' then raise exception 'synthetic timeout';end if;
  status:=case when mode='unavailable' and not is_usd then 503 else 200 end;
@@ -46,7 +67,14 @@ begin
  begin perform private.mrh_fx_provider_pair(replace(us,d,(d::date+1)::text),replace(es,d,(d::date+1)::text),clock_timestamp());
   raise exception 'future pair accepted';exception when sqlstate 'PT502' then null;end;
  select count(*) into n from private.mrh_fx_snapshots where item_id=i;
+ perform mrh_fx_http.http_reset_curlopt();
+ perform private.mrh_fx_fetch_latest();
+ if exists(select 1 from mrh_fx_http.http_list_curlopt()) then raise exception 'empty configuration not restored';end if;
+ perform mrh_fx_http.http_set_curlopt('CURLOPT_TIMEOUT_MS','2400');
+ perform mrh_fx_http.http_set_curlopt('CURLOPT_USERAGENT','fixture-agent');
  receipt:=public.mrh_capture_latest_fx(i);
+ if (select jsonb_object_agg(curlopt,value) from mrh_fx_http.http_list_curlopt()) is distinct from
+  '{"CURLOPT_TIMEOUT_MS":"2400","CURLOPT_USERAGENT":"fixture-agent"}'::jsonb then raise exception 'success configuration not restored';end if;
  fx:=(receipt->>'snapshotId')::uuid;
  if receipt->>'provider'<>'Frankfurter v2 / ECB' or receipt->>'provenance'<>'provider_reported'
   or receipt->>'usd'<>'64.45000000' or receipt->>'eur'<>'71.12345678'
@@ -59,11 +87,13 @@ begin
   and s->>'observedAt'=receipt->>'observedAt' and s->>'retrievedAt'=receipt->>'retrievedAt') then raise exception 'FX context metadata';end if;
  version:=public.mrh_save_pricing_atomic(i,fx,ctx->'state',draft);
  if version->>'fxSnapshotId'<>fx::text or version->'pricingInputs'->>'usd'<>'64.45000000' then raise exception 'combined pricing save';end if;
- foreach mode in array array['timeout','unavailable','html','mismatch'] loop
+ foreach mode in array array['timeout','unavailable','html','mismatch','config_failure'] loop
   perform set_config('mrh.fx_mode',mode,true);
   begin perform public.mrh_capture_latest_fx(i);raise exception 'failed provider created snapshot';
   exception when sqlstate 'PT502' then null;end;
   if (select count(*) from private.mrh_fx_snapshots where item_id=i)<>n+1 then raise exception 'partial FX persisted';end if;
+  if (select jsonb_object_agg(curlopt,value) from mrh_fx_http.http_list_curlopt()) is distinct from
+   '{"CURLOPT_TIMEOUT_MS":"2400","CURLOPT_USERAGENT":"fixture-agent"}'::jsonb then raise exception 'failure configuration not restored';end if;
  end loop;
  perform set_config('mrh.fx_mode','changed',true);
  repeated:=public.mrh_capture_latest_fx(i);
