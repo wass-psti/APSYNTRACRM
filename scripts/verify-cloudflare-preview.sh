@@ -3,7 +3,7 @@
 set -euo pipefail
 base="${1:?Supply local CI or hosted preview origin}"
 case "$base" in
-  http://127.0.0.1:8791|https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev) ;;
+  http://127.0.0.1:8791|https://apsyntracrm-preview.watchdog-521.workers.dev) ;;
   *) echo 'Unexpected preview origin' >&2; exit 1 ;;
 esac
 temp="$(mktemp -d)"

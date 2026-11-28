@@ -147,3 +147,19 @@ evidence of independent database isolation or mutation acceptance.
 The production Worker remains unchanged. Continuous deployment credential
 provisioning, private source export, and genuine authenticated runtime
 acceptance are still separate outstanding gates.
+
+## CP-CRM-CF-02 — Watchdog account transition
+
+Selected account `521910d64f92c18a0e6e3eb1b2e93c71`; active preview target `https://apsyntracrm-preview.watchdog-521.workers.dev`.
+The new production Worker remains untouched (original version
+`33de221b-45e0-4a5d-8cf3-99f50d2e3cee`, fetch handler, 100% traffic).
+The old account and its existing preview remain untouched. Historical notes above
+refer to the previous account and are not instructions for new deployments.
+Wrangler now pins both the preview Worker and Watchdog account; CI rejects
+account overrides to the old account. Automatic deployment remains disabled
+until a new account-specific token `CF_WATCHDOG_PREVIEW_API_TOKEN` and
+`CF_WATCHDOG_PREVIEW_AUTO_DEPLOY=true` are explicitly provisioned. No token
+reuse or production changes. Supabase origin changes require a separate
+reviewed candidate and approval; both old frontend origins remain intact
+until retirement is explicitly authorized. The new account initially had TLS
+handshake failures; recheck hosted HTTPS after isolated preview deployment.
