@@ -13,8 +13,7 @@ export async function openMaterialImport({api,auth,workspaceId,isCurrent,onCompl
  const storage=locks?.request?globalThis.localStorage:globalThis.sessionStorage;
  const key=importRecoveryKey(actor,workspaceId);
  const dialog=document.createElement('dialog');
- dialog.className='panel';
- dialog.style.cssText='width:min(900px,94vw);max-height:85vh;overflow:auto;';
+ dialog.className='panel ms-native-batch-dialog';
  dialog.setAttribute('aria-label','Bulk material import');
  dialog.innerHTML='<h2>Bulk material import</h2><p>CSV/XLSX · one material per row · up to '+IMPORT_LIMIT+' rows. Each material is saved atomically; a workbook may partially complete.</p>'+
  '<p>Existing part numbers (including archived materials) and repeated part numbers in the file are skipped. Invalid rows are rejected. No existing material is overwritten.</p>'+
