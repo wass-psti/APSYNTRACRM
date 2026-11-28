@@ -19,7 +19,7 @@ const EMAIL = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/;
 const TOKEN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[0-9a-f]{64}$/;
 const MAX_BYTES = 4096;
 const DEFAULT_ORIGIN = 'https://wass-psti.github.io';
-const PREVIEW_ORIGIN = 'https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev';
+const PREVIEW_ORIGINS = new Set(['https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev', 'https://apsyntracrm-preview.watchdog-521.workers.dev']);
 const userId = (v: unknown): v is string => typeof v === 'string' && UUID.test(v);
 const dataObject = (v: unknown): v is ObjectMap =>
   !!v && typeof v === 'object' && !Array.isArray(v);
@@ -30,7 +30,7 @@ const fail = (status: number, msg: string): never => { throw new RouteError(stat
 
 function isAllowedOrigin(origin: string | null): boolean {
   const allowed = Deno.env.get('APSYNTRA_ALLOWED_ORIGIN') || DEFAULT_ORIGIN;
-  return origin === allowed || origin === PREVIEW_ORIGIN;
+  return origin === allowed || (origin !== null && PREVIEW_ORIGINS.has(origin));
 }
 function cors(req: Request) {
   const origin = req.headers.get('origin');

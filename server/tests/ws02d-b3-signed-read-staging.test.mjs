@@ -138,3 +138,22 @@ test('preview uses its own CORS response and preserves signed read checks',async
  assert.equal(other.status,403);
  assert.equal(other.headers.get('access-control-allow-origin'),null);
 });
+
+
+test('Watchdog preview preserves exact CORS and workspace-bound signed read',async()=>{
+ const preview='https://apsyntracrm-preview.watchdog-521.workers.dev';
+ const {calls,run}=fixture();
+ const options=await run(request('OPTIONS',token,preview));
+ assert.equal(options.status,200);
+ assert.equal(options.headers.get('access-control-allow-origin'),preview);
+ assert.deepEqual(calls,{auth:0,context:0,modules:[]});
+ const response=await run(request('GET',token,preview));
+ assert.equal(response.status,200);
+ assert.equal(response.headers.get('access-control-allow-origin'),preview);
+ assert.equal((await response.json()).moduleProbeCount,12);
+ for(const origin of [preview+'.evil.invalid','https://apsyntracrm.watchdog-521.workers.dev']){
+  const denied=await run(request('OPTIONS',token,origin));
+  assert.equal(denied.status,403);
+  assert.equal(denied.headers.get('access-control-allow-origin'),null);
+ }
+});

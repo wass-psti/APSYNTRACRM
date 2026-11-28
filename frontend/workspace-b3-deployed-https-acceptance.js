@@ -11,7 +11,7 @@ import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
 import {validUuid} from './data.js';
 
 export const WS02D_B3_HTTPS_CHECKPOINT='CP-WS-02D-B3-DEPLOYED-SIGNED-HTTPS';
-const ORIGINS=new Set(['https://wass-psti.github.io','https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev']);
+const ORIGINS=new Set(['https://wass-psti.github.io','https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev','https://apsyntracrm-preview.watchdog-521.workers.dev']);
 const ENDPOINT='https://jtlusodorfnyzgyuewkz.supabase.co/functions/v1/apsyntra-ws02d-b3-read';
 const SERVER_CHECKPOINT='CP-WS-02D-B3-SIGNED-READ-PREFLIGHT';
 const CHECKS=new Set(['signed-identity','authoritative-workspace',

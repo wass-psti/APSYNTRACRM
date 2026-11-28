@@ -163,3 +163,19 @@ reuse or production changes. Supabase origin changes require a separate
 reviewed candidate and approval; both old frontend origins remain intact
 until retirement is explicitly authorized. The new account initially had TLS
 handshake failures; recheck hosted HTTPS after isolated preview deployment.
+
+### Watchdog preview origin candidate
+
+The Watchdog preview was deployed using commit `3930dba48439bfd911f9cc67f7baa3191d5bb4c0`, version
+`1be510be-41bb-498b-a55b-8ed906ae1173`. Root HTTPS redirects to the CRM and
+the entry returns HTTP 200. Production version remains unchanged. All six
+identified functions returned 403 for the new preview origin before activation.
+This candidate adds the exact Watchdog preview origin while retaining Pages
+and the previous preview during transition; production origins remain excluded.
+No production function deployment is authorized by this commit. Reconcile
+all live bundles before deployment; the first four were already activated for
+the old account, while Paseo and B3 were still awaiting activation. Preserve
+existing JWT flags and approve all six candidate bundles explicitly. A separate
+Material Sourcing migration manifest failure on c7fb55b remains outside this
+scope; the browser runtime files were unchanged from the previously validated
+2e0e22a revision until this origin diagnostic change.

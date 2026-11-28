@@ -6,8 +6,8 @@ import {createLiveSb06NativeIssues} from './vendor/supabase-live.ts';
 import {Denied,VersionConflict,ServiceUnavailable,isUuid} from './vendor/sb02.ts';
 
 const PAGE_ORIGIN='https://wass-psti.github.io';
-const PREVIEW_ORIGIN='https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev';
-const isAllowedOrigin=(origin:string|null)=>origin===PAGE_ORIGIN||origin===PREVIEW_ORIGIN;
+const PREVIEW_ORIGINS=new Set(['https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev','https://apsyntracrm-preview.watchdog-521.workers.dev']);
+const isAllowedOrigin=(origin:string|null)=>origin===PAGE_ORIGIN||(origin!==null&&PREVIEW_ORIGINS.has(origin));
 const MAX_BYTES=230000;
 const headers=(origin:string|null)=>({
  'content-type':'application/json; charset=utf-8',

@@ -13,7 +13,8 @@ import {createB3UserScopedRpc} from './ws02d-b3-user-scoped-rpc.mjs';
  */
 const ALLOWED_ORIGINS=new Set([
  'https://wass-psti.github.io',
- 'https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev'
+ 'https://apsyntracrm-preview.alexsenaganwatchdog.workers.dev',
+ 'https://apsyntracrm-preview.watchdog-521.workers.dev'
 ]);
 const JWT=/^[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}$/;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
