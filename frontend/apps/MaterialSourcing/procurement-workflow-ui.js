@@ -87,7 +87,7 @@ function action(doc,label,handler){
 }
 function field(doc,host,label,name,{value='',type='text',options=null,required=true,max=240}={}){
  const wrapper=node(doc,'label',label),control=node(doc,options?'select':type==='textarea'?'textarea':'input');
- control.name=name;
+ control.name=name;control.setAttribute('aria-label',label);
  if(options){
   for(const [key,title] of options){const option=node(doc,'option',title);option.value=key;control.append(option);}
  }else if(type!=='textarea'){control.type=type;if(type==='number'){control.step='0.0001';control.min='0';control.max='1000000000';}}
