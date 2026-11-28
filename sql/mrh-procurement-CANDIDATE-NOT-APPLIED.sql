@@ -44,7 +44,7 @@ declare v numeric;
 begin
  if jsonb_typeof(p->k) is distinct from 'number' then raise exception 'Invalid procurement amount: %',k using errcode='22023'; end if;
  v:=(p->>k)::numeric;
- if v<min_value or v>1000000000000 or v<>round(v,4) then raise exception 'Invalid procurement amount: %',k using errcode='22023'; end if;
+ if v<min_value or v>1000000000 or v<>round(v,4) then raise exception 'Invalid procurement amount: %',k using errcode='22023'; end if;
  return v;
 end $$;
 create function private.mrh_procurement_date(p jsonb,k text) returns date
@@ -102,9 +102,9 @@ begin
  if p ? 'notes' and (jsonb_typeof(p->'notes') is distinct from 'string' or length(p->>'notes')>2000) then raise exception 'Invalid quotation notes' using errcode='22023'; end if;
  return jsonb_build_object('id',qid,'revision',qrev,'supplier',supplier,'supplier_source_id',source_id,
   'reference',private.mrh_procurement_text(p,'reference',240),'issued_on',issued,'valid_until',expires,
-  'quantity',private.mrh_procurement_number(p,'quantity',0.0001),'unit_price',private.mrh_procurement_number(p,'unit_price',0),
-  'currency',currency,'shipping_total',private.mrh_procurement_number(p,'shipping_total',0),'shipping_currency',ship_currency,
-  'tax_basis',basis,'lead_weeks',private.mrh_procurement_number(p,'lead_weeks',0),'notes',coalesce(p->>'notes',''));
+  'quantity',private.mrh_procurement_number(p,'quantity',0.0001)::text,'unit_price',private.mrh_procurement_number(p,'unit_price',0)::text,
+  'currency',currency,'shipping_total',private.mrh_procurement_number(p,'shipping_total',0)::text,'shipping_currency',ship_currency,
+  'tax_basis',basis,'lead_weeks',private.mrh_procurement_number(p,'lead_weeks',0)::text,'notes',coalesce(p->>'notes',''));
 end $$;
 
 create function public.mrh_procurement_apply(p_item uuid,p_rfq uuid,p_operation uuid,p_expected_revision bigint,p_command text,p_payload jsonb)
